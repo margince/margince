@@ -230,7 +230,7 @@ export function BriefScreen() {
   const teamOffered =
     worklistQuery.data?.scope_options?.includes("team") ?? false;
   // The dials live in the ADDRESS, not in state — decision 2. The Brief is a
-  // destination people return to and send each other, which is the case the
+  // destination contacts return to and send each other, which is the case the
   // Worklist's "dials stay state" choice deliberately excluded.
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params, teamOffered);

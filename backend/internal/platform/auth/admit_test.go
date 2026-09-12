@@ -177,7 +177,7 @@ func TestAdmissionRefreshesThePrincipalAuthority(t *testing.T) {
 	// RBAC downstream runs on current authority, not the stamped copy.
 	livePerms := principal.Permissions{
 		RoleKeys: []string{"sales"},
-		Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
 		RowScope: principal.RowScopeTeam,
 	}
 	gate := NewGate(&stubAuthority{seat: principal.SeatFull, rbac: authz.RBAC{Permissions: livePerms}})
@@ -188,7 +188,7 @@ func TestAdmissionRefreshesThePrincipalAuthority(t *testing.T) {
 		t.Fatalf("admit: %v", err)
 	}
 	p, _ := principal.Actor(ctx)
-	if !p.Permissions.Allows("person", principal.ActionCreate) || p.Permissions.RowScope != principal.RowScopeTeam {
+	if !p.Permissions.Allows("contact", principal.ActionCreate) || p.Permissions.RowScope != principal.RowScopeTeam {
 		t.Fatalf("admitted principal carries %+v, want the live-resolved grants", p.Permissions)
 	}
 }
@@ -263,7 +263,7 @@ func (s *stubAuthority) AdmittedAuthority(_ context.Context, _, _, passport ids.
 // value says the credential is dead. Only the re-read does.
 func TestARevokedPassportIsRefusedAtTheNextToolCall(t *testing.T) {
 	authority := &stubAuthority{seat: principal.SeatFull, passportGone: true}
-	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
+	spec := mcp.ToolSpec{Name: "list_contacts", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
 
 	// Carrying a REAL passport, because that is the scenario: a run that
 	// authenticated once with a credential and had it killed while it was
@@ -288,7 +288,7 @@ func TestARevokedPassportIsRefusedAtTheNextToolCall(t *testing.T) {
 // from a bug.
 func TestTheGateAsksAboutThePrincipalsOwnPassport(t *testing.T) {
 	authority := &stubAuthority{seat: principal.SeatFull}
-	spec := mcp.ToolSpec{Name: "list_people", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
+	spec := mcp.ToolSpec{Name: "list_contacts", RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute}
 	passport := ids.NewV7()
 
 	if _, err := NewGate(authority).Admit(agentCtxWithPassport(passport, principal.ScopeRead), spec, noResolve); err != nil {

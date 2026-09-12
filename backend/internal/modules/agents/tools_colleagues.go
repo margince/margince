@@ -6,8 +6,8 @@ package agents
 // list_colleagues (🟢 read): who works here, as opposed to who we sell to.
 //
 // The surface had no way to name a colleague. app_user appeared in none of the
-// tools, so an assistant asked to assign work searched `person` — the customer
-// contacts — found two people with the right first name, and reported that
+// tools, so an assistant asked to assign work searched `contact` — the customer
+// contacts — found two contacts with the right first name, and reported that
 // neither was "listed under sales". The seat it wanted was the one the human
 // was signed in as.
 //
@@ -131,11 +131,11 @@ func attachEveryColleague(ctx context.Context, list ColleagueLister, out *ListCo
 	if truncated {
 		noteWarning(ctx, CodeNameMatchedNoColleague,
 			"Nobody here is spelled that way. `all_colleagues` is a CAPPED page of the roster, "+
-				"not all of it, so do not conclude from it that the person has no seat — narrow "+
+				"not all of it, so do not conclude from it that the colleague has no seat — narrow "+
 				"differently, on a surname or an email fragment.")
 		return
 	}
 	noteWarning(ctx, CodeNameMatchedNoColleague,
 		"Nobody here is spelled that way. `all_colleagues` is everyone who can receive work; "+
-			"pick from it, or tell the user the person has no seat.")
+			"pick from it, or tell the user the colleague has no seat.")
 }

@@ -121,7 +121,7 @@ var Timezone = settings.Define[string](
 		return nil
 	},
 ).AsInstallationIdentity().
-	// Read ungated when a scheduler needs the clock a person who has chosen none
+	// Read ungated when a scheduler needs the clock a contact who has chosen none
 	// is bookable on. Disclosure through behaviour IS the feature here: the slots
 	// a public booking page offers are in this zone, and a customer reads them
 	// off the page. Withholding the name while showing every time computed from
@@ -156,7 +156,7 @@ var BaseCurrency = settings.Define[string](
 ).AsInstallationIdentity()
 
 // BaseLanguage is the language AI writes in when what it writes is read by the
-// whole team rather than by one person.
+// whole team rather than by one contact.
 //
 // A model asked nothing about language answers in whatever language its input
 // happened to be in, so a Vietnamese thread produced a Vietnamese claim on a

@@ -87,7 +87,7 @@ type Page struct {
 // This is a real shape, not a defensive one. A site can announce its language
 // choice this way — an empty document whose whole content is
 // `<meta http-equiv="refresh" content="0; URL=/de">` — and a browser lands on
-// the real site without the person ever seeing the shell. A reader that stops
+// the real site without the contact ever seeing the shell. A reader that stops
 // at the shell sees a page with nothing on it, which is indistinguishable from
 // a parked domain and gets judged as one.
 func (p Page) MetaRefreshOnly() bool {

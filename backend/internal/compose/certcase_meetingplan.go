@@ -204,7 +204,7 @@ func citedMessageText(f meetingPlanFixture, label string) string {
 func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]string) {
 	now := time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC)
 	meeting := ids.NewV7().String()
-	person := ids.NewV7().String()
+	contact := ids.NewV7().String()
 	in := meetingbrief.Input{
 		ActivityID: meeting,
 		Subject:    f.Subject,
@@ -212,7 +212,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		Now:        now,
 		Company:    f.Company,
 		Attendees: []meetingbrief.AttendeeIn{
-			{PersonID: person, FullName: f.Attendee},
+			{ContactID: contact, FullName: f.Attendee},
 		},
 	}
 	byLabel := map[string]string{}
@@ -231,7 +231,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 	}
 	for _, claim := range f.Claims {
 		in.Commitments = append(in.Commitments, meetingbrief.ClaimIn{
-			PersonName: f.Attendee, Kind: claim.Kind, Body: claim.Body,
+			ContactName: f.Attendee, Kind: claim.Kind, Body: claim.Body,
 			Status: "open", SourceID: byLabel[claim.FromLabel],
 		})
 	}

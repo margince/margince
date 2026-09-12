@@ -15,7 +15,7 @@ package capture_test
 // ladder were ever widened to swallow channel records, its address-keyed
 // deferral would fail inside the gate savepoint and leave exactly such an
 // artifact behind. The fourth gate — the impersonation quarantine — lives in
-// people and is proved there (TestQuarantineSuspectNeedsADomainToJudge).
+// contacts and is proved there (TestQuarantineSuspectNeedsADomainToJudge).
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// recordingChannelEnsurer stands in for compose's people adapter — the true
+// recordingChannelEnsurer stands in for compose's contacts adapter — the true
 // module boundary. It records what the Sink asked for, which is the only way to
 // prove the channel seam was reached at all.
 type recordingChannelEnsurer struct {
@@ -43,7 +43,7 @@ func (r *recordingChannelEnsurer) EnsureChannelCounterparty(_ context.Context, r
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.requests = append(r.requests, req)
-	return capture.EnsureOutcome{PersonCreated: true}, nil
+	return capture.EnsureOutcome{ContactCreated: true}, nil
 }
 
 func (r *recordingChannelEnsurer) seen() []capture.EnsureChannelRequest {
@@ -55,7 +55,7 @@ func (r *recordingChannelEnsurer) seen() []capture.EnsureChannelRequest {
 // refusingMailEnsurer is wired so the mail seam is present and fails loudly if
 // a channel record is ever handed to it: the two contracts are not
 // interchangeable, and a record arriving on the wrong one would silently create
-// a person with no identity binding.
+// a contact with no identity binding.
 type refusingMailEnsurer struct{ t *testing.T }
 
 func (m refusingMailEnsurer) EnsureCounterparty(_ context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
@@ -222,7 +222,7 @@ func channelSinkContext(ctx context.Context, ws ids.UUID, connectorID string) co
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
-				"person":   {Create: true},
+				"contact":  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

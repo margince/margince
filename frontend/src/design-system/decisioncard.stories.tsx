@@ -289,7 +289,7 @@ const CLOSE_DATE_META = (
 // story shows the CARD, so it hands over finished strings the way the screen
 // does rather than importing the screen's vocabulary. The date appears once
 // because the sweep proposes the date the deal already carries — it keeps the
-// date on a stale deal and asks a person instead of guessing a new one — and
+// date on a stale deal and asks a contact instead of guessing a new one — and
 // two captions over one value is not a comparison.
 export const DeclaredFields: Story = {
   args: {
@@ -364,7 +364,7 @@ export const VerdictInFlight: Story = {
   args: { ...Deck.args, pending: true },
 };
 
-// The payload came back with nothing a person can read. `empty` is the one
+// The payload came back with nothing a human can read. `empty` is the one
 // state allowed to say "there is none", and the card says it in the caller's
 // words rather than drawing a blank body that reads as a render fault.
 export const NothingToRead: Story = {

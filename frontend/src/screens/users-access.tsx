@@ -39,7 +39,7 @@ type Role = operations["previewAccess"]["parameters"]["query"]["role"];
 
 // The objects worth a line in the preview: the record kinds a rep works.
 const PREVIEW_OBJECTS = [
-  "person",
+  "contact",
   "company",
   "lead",
   "deal",
@@ -136,7 +136,7 @@ function teamName(
   id: string,
 ): string {
   const found = entries?.find((entry) => entry.id === id);
-  // The roster is a union of people and teams under one cache key, so the
+  // The roster is a union of contacts and teams under one cache key, so the
   // narrowing is real rather than ceremonial — a `name` is what makes it a team.
   return found && "name" in found ? found.name : id;
 }
@@ -259,7 +259,7 @@ export function TeamsCard() {
               <EmptyState>{t("users.noTeamsYet")}</EmptyState>
             ) : (
               // One team per row, and the row OPENS: the name and how many
-              // people are in it on the summary line, who those people are
+              // contacts are in it on the summary line, who those contacts are
               // inside. A team's membership was previously fixed at invite —
               // the two endpoints that change it existed and nothing in the
               // product reached them.
@@ -426,7 +426,7 @@ function TeamMembers({
         // the seats the server will actually take. SetTeamMember refuses an
         // agent seat outright and refuses a non-active seat on the way in, so
         // offering either is offering a box that can only fail.
-        const people = list.flatMap((entry) =>
+        const contacts = list.flatMap((entry) =>
           "email" in entry && !entry.is_agent && entry.status === "active"
             ? [entry]
             : [],
@@ -438,19 +438,19 @@ function TeamMembers({
                 {problemMessageOf(setMember.error, t)}
               </Callout>
             )}
-            {people.length === 0 ? (
+            {contacts.length === 0 ? (
               <EmptyState>{t("users.teamNobodyToAdd")}</EmptyState>
             ) : (
               <fieldset className="users-team-members">
                 <legend className="t-caption">
                   {t("users.teamMembersLabel")}
                 </legend>
-                {people.map((person) => (
+                {contacts.map((contact) => (
                   <Checkbox
-                    key={person.id}
+                    key={contact.id}
                     className="t-body"
-                    label={person.display_name}
-                    checked={(person.team_ids ?? []).includes(team.id)}
+                    label={contact.display_name}
+                    checked={(contact.team_ids ?? []).includes(team.id)}
                     // Disabled rather than absent for a reader who may SEE
                     // membership and not change it: the list is the answer they
                     // came for and every box is part of it, so removing them
@@ -460,7 +460,7 @@ function TeamMembers({
                     disabled={setMember.isPending || !canEditTeam}
                     onChange={(event) =>
                       setMember.mutate({
-                        userId: person.id,
+                        userId: contact.id,
                         member: event.target.checked,
                       })
                     }

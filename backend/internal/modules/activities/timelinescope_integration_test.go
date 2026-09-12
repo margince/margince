@@ -34,21 +34,21 @@ import (
 // an empty page, tells the caller the company is there.
 func TestNarrowingTheTimelineToAnUnreadableCompanyAnswersNotFound(t *testing.T) {
 	e := setupPromises(t)
-	hiddenCompanyID, visiblePersonID, activityID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	hiddenCompanyID, visibleContactID, activityID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Zeta GmbH', $2, 'owner', 'seed', 'system')`, hiddenCompanyID, e.other)
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Visible Contact', $2, 'seed', 'system')`,
-		visiblePersonID, e.rep)
+		visibleContactID, e.rep)
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'Called about the rollout', now(), 'seed', 'system')`,
 		activityID)
-	// Linked to BOTH: the caller may read this activity through the person, so
+	// Linked to BOTH: the caller may read this activity through the contact, so
 	// the any-link scope admits it. Only the narrowing target is out of reach,
 	// which is precisely the case a scope check alone cannot catch.
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activityID, visiblePersonID)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activityID, visibleContactID)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, company_id)
 		VALUES ($1, $2, 'company', $3)`, ids.NewV7(), activityID, hiddenCompanyID)
 

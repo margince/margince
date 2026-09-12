@@ -91,7 +91,7 @@ func sqlLiterals(t *testing.T, path string) []string {
 }
 
 // erasureCascadeFiles are the sources that make up the Art. 17 cascade — the
-// files ErasePerson's own transaction executes SQL from. It is a LIST because
+// files EraseContact's own transaction executes SQL from. It is a LIST because
 // the cascade spans more than one file, and a gate pinned to a single path
 // silently stops covering a table the moment its scrub is extracted to a
 // neighbour. It is deliberately NOT the whole privacy
@@ -143,7 +143,7 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/transcriptreadings.go",
 	"internal/modules/privacy/deliveries.go",
 	// The subject's RESTRICTION record and the deal-room seats their address
-	// holds. Both are executed by ErasePerson's own transaction and both write
+	// holds. Both are executed by EraseContact's own transaction and both write
 	// subject tables — activity and deal_room_participant — which were
 	// invisible to every census keyed on this list while they were missing
 	// from it.
@@ -156,7 +156,7 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/erasurestrings.go",
 }
 
-// reachedButNotCascade are files ErasePerson's call graph reaches which are NOT
+// reachedButNotCascade are files EraseContact's call graph reaches which are NOT
 // part of the Art. 17 cascade, each with the reason it is not.
 //
 // The register exists because the census below derives what the cascade touches
@@ -168,7 +168,7 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
-	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. ErasePerson reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
+	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
 	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
 	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
 	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
@@ -691,7 +691,7 @@ func TestTheSQLReaderStepsOverWhatIsNotSQL(t *testing.T) {
 // from the given table, or "" when none does.
 //
 // It reads the SELECT list only. A withheld column is free to appear in a WHERE
-// or a JOIN — `WHERE person_id = $1` is how the section finds the subject's own
+// or a JOIN — `WHERE contact_id = $1` is how the section finds the subject's own
 // rows, and `expires_at <= now()` is how the outcome is derived — because
 // neither puts a value in the package. What must never happen is the column
 // reaching the output, so the question is what is being returned.

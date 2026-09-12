@@ -99,7 +99,7 @@ type StageInput struct {
 	Recipients []string
 	Cc         []string
 	// Bcc receives the message and is rendered into no header. It is stored so
-	// a retry addresses the same people the first attempt did.
+	// a retry addresses the same contacts the first attempt did.
 	Bcc     []string
 	Subject string
 	Body    string // unsubscribe footer already applied

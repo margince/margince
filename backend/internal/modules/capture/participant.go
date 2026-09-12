@@ -5,7 +5,7 @@ package capture
 
 // Who was in the interaction (ACT-DDL-3 / ADR-0078). The activity row records
 // that a message happened; activity_link records which RECORDS it concerns.
-// Neither says which of OUR people was in it, and that is the whole reason
+// Neither says which of OUR contacts was in it, and that is the whole reason
 // "who on our team knows this contact" cannot be answered today.
 //
 // Capture is the one place that knows. The connector principal carries the
@@ -40,9 +40,9 @@ const (
 // exchanged with.
 //
 // The counterparty lands as an ADDRESS or a CHANNEL ACCOUNT, never as a
-// person: capture creates the person after this transaction commits (the
+// contact: capture creates the contact after this transaction commits (the
 // tiered creation gate may also decide not to create one at all), so the bare
-// identity is the honest answer at this point. promoteParticipantToPerson
+// identity is the honest answer at this point. promoteParticipantToContact
 // upgrades the row later, when and if an identity resolves. Recording it now
 // rather than waiting is what keeps a suppressed or deferred counterparty from
 // vanishing from the record of who was in the conversation.
@@ -85,7 +85,7 @@ func stampCaptureParticipants(
 			return fmt.Errorf("capture: stamping the mailbox owner as a participant: %w", err)
 		}
 	}
-	// Normalized the same way person_email is, so the promotion below and the
+	// Normalized the same way contact_email is, so the promotion below and the
 	// erasure lookup both match without a runtime case fold.
 	address := strings.ToLower(strings.TrimSpace(counterparty.Email))
 	// Never the owner's OWN address as the other end. The connector derives the
@@ -95,8 +95,8 @@ func stampCaptureParticipants(
 	// at both ends of their own message, in the rows the interaction graph
 	// reads as "who talked to whom".
 	//
-	// Nothing promotes such a row to a person (the promotion needs a
-	// person_email, and the capture gates keep an alias from having one), so
+	// Nothing promotes such a row to a contact (the promotion needs a
+	// contact_email, and the capture gates keep an alias from having one), so
 	// what this prevents is a durable falsehood about the exchange rather than
 	// a contact record.
 	self, err := ownerIdentitiesTx(ctx, tx)
@@ -193,7 +193,7 @@ func namesSomebody(participants []connector.MessageParticipant) bool {
 //
 // Unlike the counterparty, these addresses are RESOLVED here rather than left
 // for a later promotion. The reason is the interaction graph: its recompute
-// joins a participant's user_id to a person_id (search.RecomputeEdgesForActivities),
+// joins a participant's user_id to a contact_id (search.RecomputeEdgesForActivities),
 // so an address-only row is invisible to it — and answering "who on our team
 // knows this contact" from CC lines was the entire point of recording them.
 // The counterparty can wait because the ensure path promotes its row moments
@@ -208,7 +208,7 @@ func namesSomebody(participants []connector.MessageParticipant) bool {
 // alongside the parties: an account id means nothing without the transport that
 // issued it, and the record already names that one. The party is then recorded
 // by account exactly as a mail party is recorded by address — the difference is
-// only which lookup can resolve them to a person.
+// only which lookup can resolve them to a contact.
 //
 // partyListIsAttested is what decides whether a colleague may be bound by
 // user_id, and it has two sources: our own provider attesting that this seat
@@ -245,7 +245,7 @@ func StampFurtherParticipants(
 	// two entries that differ by address, which is right for mail and wrong
 	// here, since a party described once with an address and once without is
 	// the same party described twice. Left to the index, the graph would count
-	// them as two people in the room.
+	// them as two contacts in the room.
 	// Where a party is named twice, the second description FILLS IN the first
 	// rather than being dropped. Skipping it would make the row depend on
 	// roster order — a party listed by account and then by account with an
@@ -255,7 +255,7 @@ func StampFurtherParticipants(
 	// The same collapse by ADDRESS, for the party a roster describes once with
 	// an account and once without. One address is one human just as surely, and
 	// the uniqueness index cannot say so here either — the two rows differ on
-	// the account column, so it keeps both and the graph counts one person
+	// the account column, so it keeps both and the graph counts one contact
 	// twice. Only an entry carrying NO account of its own folds this way: an
 	// account is the stronger identity, and two accounts sharing an address are
 	// two rows on purpose.
@@ -350,18 +350,18 @@ func StampFurtherParticipants(
 	//
 	// The address is kept alongside whichever id resolved, matching what the
 	// counterparty promotion does — the row records which address was actually
-	// written to, and a person may hold several.
+	// written to, and a contact may hold several.
 	//
 	// THE ACCOUNT ARM IS NOT UNDER THAT GATE, because it never reaches a seat.
-	// A chat roster resolves a party to a PERSON record through the binding
-	// person_channel_identity already holds, and to nothing else — no fact in
+	// A chat roster resolves a party to a CONTACT record through the binding
+	// contact_channel_identity already holds, and to nothing else — no fact in
 	// this system attests that a channel account belongs to a member, so there
 	// is no colleague arm for the attestation to guard. That is what keeps a
 	// roster a statement about who was in the room rather than a grant: the
 	// discovery gate reads `address IS NOT NULL` as its evidence, and a party
 	// known only by account carries neither that nor a user_id.
 	//
-	// The person arm is unguarded for both shapes for the same reason it always
+	// The contact arm is unguarded for both shapes for the same reason it always
 	// was: naming an existing contact on an activity discloses nothing to them
 	// and creates no reader.
 	//
@@ -370,27 +370,27 @@ func StampFurtherParticipants(
 	// address beside it CORROBORATES them (connector.Counterparty says so, and
 	// the counterparty ladder resolves in that order). Reversed, a party
 	// carrying both would file under whoever holds the ADDRESS while the row
-	// kept somebody else's account — one row naming two people, and an erasure
+	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, channel_user_id, role, display_name)
-		SELECT $1, u.id, pe.person_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
 		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
 		  LEFT JOIN app_user u
 		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
-		           (SELECT c.person_id
-		              FROM person_channel_identity c
+		           (SELECT c.contact_id
+		              FROM contact_channel_identity c
 		             WHERE inp.account <> '' AND c.provider = $7 AND c.channel_user_id = inp.account
 		               AND c.archived_at IS NULL
-		             ORDER BY c.person_id
+		             ORDER BY c.contact_id
 		             LIMIT 1),
-		           (SELECT p.person_id
-		              FROM person_email p
+		           (SELECT p.contact_id
+		              FROM contact_email p
 		             WHERE inp.address <> '' AND p.email = inp.address AND p.archived_at IS NULL
-		             ORDER BY p.person_id
-		             LIMIT 1)) AS person_id) pe ON u.id IS NULL
+		             ORDER BY p.contact_id
+		             LIMIT 1)) AS contact_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
 		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
@@ -409,7 +409,7 @@ func insertParticipant(
 	activityID ids.ActivityID,
 	role string,
 	userID *ids.UUID,
-	personID *ids.PersonID,
+	contactID *ids.ContactID,
 	address string,
 	channelUserID string,
 ) error {
@@ -419,12 +419,12 @@ func insertParticipant(
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, channel_user_id, role)
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role)
 		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5
 		 WHERE $2::uuid IS NULL
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE u.id = $2)
 		ON CONFLICT DO NOTHING`,
-		activityID, userID, personID, address, role, channelUserID)
+		activityID, userID, contactID, address, role, channelUserID)
 	return err
 }
 

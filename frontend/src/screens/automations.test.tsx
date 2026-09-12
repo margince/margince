@@ -771,7 +771,7 @@ const renewalReminderSchema = {
     },
     object: {
       type: "string",
-      enum: ["person", "company", "deal", "lead", "project"],
+      enum: ["contact", "company", "deal", "lead", "project"],
       description: "Which record type owns the watched date field.",
     },
     recurs_yearly: {
@@ -794,7 +794,7 @@ const renewalCatalogEntry: CatalogEntry = {
 function customField(overrides: Partial<CustomField>): CustomField {
   return {
     id: "cf-1",
-    object: "person",
+    object: "contact",
     label: "Field",
     slug: "field",
     type: "text",
@@ -807,10 +807,10 @@ function customField(overrides: Partial<CustomField>): CustomField {
   };
 }
 
-const PERSON_DATE_FIELDS: CustomField[] = [
+const CONTACT_DATE_FIELDS: CustomField[] = [
   customField({
     id: "cf-birthday",
-    object: "person",
+    object: "contact",
     label: "Birthday",
     slug: "birthday",
     type: "date",
@@ -820,7 +820,7 @@ const PERSON_DATE_FIELDS: CustomField[] = [
   // proving the picker's client-side filter reads both, not just one.
   customField({
     id: "cf-old",
-    object: "person",
+    object: "contact",
     label: "Old renewal date",
     slug: "old-renewal-date",
     type: "date",
@@ -829,7 +829,7 @@ const PERSON_DATE_FIELDS: CustomField[] = [
   }),
   customField({
     id: "cf-name",
-    object: "person",
+    object: "contact",
     label: "Nickname",
     slug: "nickname",
     type: "text",
@@ -851,7 +851,7 @@ function renewalBackend(calls: Recorded[]) {
     if (url.includes("/custom-fields")) {
       const object = new URL(url).searchParams.get("object");
       return jsonResponse({
-        data: PERSON_DATE_FIELDS.filter((field) => field.object === object),
+        data: CONTACT_DATE_FIELDS.filter((field) => field.object === object),
         page: { next_cursor: null },
       });
     }
@@ -884,7 +884,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
         key: "object",
         kind: "enum",
         initial: "",
-        options: ["person", "company", "deal", "lead", "project"],
+        options: ["contact", "company", "deal", "lead", "project"],
       },
       { key: "recurs_yearly", kind: "boolean", initial: "false" },
     ]);
@@ -932,7 +932,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "date_field" });
@@ -984,7 +984,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "date_field" });
@@ -1006,7 +1006,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
     await waitFor(() =>
       expect(
@@ -1027,7 +1027,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     expect(calls[0].body).toMatchObject({
       key: "renewal_reminder",
       params: {
-        object: "person",
+        object: "contact",
         date_field: "cf_birthday",
         recurs_yearly: true,
         days_before: 30,

@@ -72,14 +72,14 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	e.Vault = vault
 	apptest.BootstrapWorkspaceSession(t, e, "Test Mailbox E2E", "sender@fable.test", "Admin")
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Consented Buyer",
 		"emails":    []AnyMap{{"email": "buyer@preflight.test"}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	// A deal with the recipient staked on it — real evidence for the
 	// "transactional" claim below, since the purpose key alone authorizes
@@ -89,7 +89,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	// one consumer — TestTestMailboxFullLoop — so nothing else's authorization
 	// basis is silently changed by it.
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	dealID := apptest.StakeOnOpenDeal(t, e, "Test mailbox opportunity", stages, person.ID)
+	dealID := apptest.StakeOnOpenDeal(t, e, "Test mailbox opportunity", stages, contact.ID)
 
 	var activity struct {
 		ID string `json:"id"`
@@ -97,7 +97,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
 		"links": []AnyMap{
-			{"entity_type": "person", "entity_id": person.ID},
+			{"entity_type": "contact", "entity_id": contact.ID},
 			{"entity_type": "deal", "entity_id": dealID},
 		},
 	}, nil, &activity); status != http.StatusCreated {
@@ -122,7 +122,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "consent",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -136,7 +136,7 @@ func setupTestMailboxEnv(t *testing.T) *preflightEnv {
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}
-	return &preflightEnv{AppEnv: e, activityID: activity.ID, personID: person.ID, dealID: dealID, ws: ws, user: user}
+	return &preflightEnv{AppEnv: e, activityID: activity.ID, contactID: contact.ID, dealID: dealID, ws: ws, user: user}
 }
 
 // connectTestMailbox drives the REAL connect endpoint and returns the created

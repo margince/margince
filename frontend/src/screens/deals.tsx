@@ -750,7 +750,7 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
  * form does not even RENDER — `partner_attribution` on an installation with no
  * partners — resubmitted `null` as a real instruction to clear it. The API reads
  * an explicit null as "forget this" and refused, correctly, naming a field the
- * person had never seen. Nothing the person did not touch travels now.
+ * contact had never seen. Nothing the contact did not touch travels now.
  *
  * A blank over a stored value is still a change, and still travels as null: the
  * pickers offer "Unset" in words, so clearing a company or a partner is a
@@ -758,7 +758,7 @@ function forecastCategory(v: string): UpdateDealRequest["forecast_category"] {
  *
  * `amount` arrives in major units from the form and the wire is minor units
  * (deal creation applies the same conversion above). The two money halves are
- * compared as the form spells them, because that is where the person's edit is.
+ * compared as the form spells them, because that is where the contact's edit is.
  *
  * `masked` names the fields THIS reader was not shown. A withheld reference
  * arrives as null with `masked_fields` naming it — deliberately, so a reader
@@ -776,7 +776,7 @@ export function mapDealUpdate(
   const currency = str(values.currency);
   const amount = str(values.amount);
   const patch: UpdateDealRequest = {};
-  // One reading of "the person moved this field", over the form's own spelling
+  // One reading of "the contact moved this field", over the form's own spelling
   // of the value rather than the wire's: a select left alone holds exactly the
   // string it was seeded with, and the wire shape (minor units, a narrowed
   // vocabulary) is derived from that string afterwards.
@@ -795,7 +795,7 @@ export function mapDealUpdate(
       patch[wireKey] = value();
     }
   }
-  // A required field: an emptied name is a form the person has not finished,
+  // A required field: an emptied name is a form the contact has not finished,
   // not an instruction to erase the deal's name.
   onMove("name", "name", () => str(values.name) || undefined);
   // The money pair travels together whenever either half moves, because the
@@ -1512,7 +1512,7 @@ function dealColumns(
   return [
     {
       key: "name",
-      header: t("people.name"),
+      header: t("contacts.name"),
       cell: (deal) => deal.name,
       // Alphabetical, which a list of deals had no way to offer until the
       // API's sort vocabulary took the columns this list draws.
@@ -1677,7 +1677,7 @@ type AdvanceInput = {
  *
  * An advance is a write like any other, so it is pinned like any other: the
  * version the reader's own card or record was drawn from rides the variables,
- * and two people moving one deal at the same moment no longer both succeed —
+ * and two contacts moving one deal at the same moment no longer both succeed —
  * the second reads the version the first replaced and fails 409 version_skew
  * instead of quietly undoing a stage change nobody saw.
  */
@@ -2946,7 +2946,7 @@ function DealTable({ deals }: Readonly<{ deals: Deal[] }>) {
         columns={[
           {
             key: "name",
-            header: t("people.name"),
+            header: t("contacts.name"),
             render: (deal: Deal) => deal.name,
           },
           {
@@ -3186,9 +3186,9 @@ function editProjectFields(
   );
 }
 
-// The two people surfaces under the deal's overview.
+// The two contacts surfaces under the deal's overview.
 //
-// The seats are in the RAIL as context — who these people are. The map is in
+// The seats are in the RAIL as context — who these contacts are. The map is in
 // the column because it is a working surface: it draws how the deal is threaded
 // and where the cover is missing, which is what a reader acts on.
 //
@@ -3196,13 +3196,13 @@ function editProjectFields(
 // rail's seats and the map both read the coverage view, which carries no
 // relationship id and so can carry no verb — a deal's stakeholders were
 // readable on three surfaces and writable on none of them, reachable only from
-// whichever person happened to already be linked. It is the generic
+// whichever contact happened to already be linked. It is the generic
 // relationships panel under a deal scope, not a second one: create, edit and
 // remove have one implementation for every kind.
 //
 // Named rather than inlined so DealScreen's render callback stays under the
 // complexity ceiling.
-function DealPeoplePanels({
+function DealContactsPanels({
   dealId,
   overlay,
   refusedReasonId,
@@ -3411,7 +3411,7 @@ function DealActions({
                   { ...values, project_id: projectId ?? "" },
                   // The reading the form opened on, not the live one: `seeded`
                   // is rebuilt on every render, so a refetch mid-edit would make
-                  // somebody else's change read as this person's.
+                  // somebody else's change read as this contact's.
                   opened ?? seeded,
                   masked,
                 ),
@@ -4147,7 +4147,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           );
           return (
             <RecordView
-              // Context first: who these people are, before the verbs that act
+              // Context first: who these contacts are, before the verbs that act
               // on them. The seats moved out of the main column when the
               // readings band started counting them — the same two facts were
               // reaching a reader three times on one screen. The pane is the
@@ -4234,7 +4234,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             >
               {/* One stack for the whole overview: the work column draws its
                   children with no interval of its own, so the reading and the
-                  people under it take the record's rhythm from here rather
+                  contacts under it take the record's rhythm from here rather
                   than from a margin one of them carries. */}
               {tab === "overview" && (
                 <div className="record-stack">
@@ -4298,7 +4298,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       }
                     }}
                   />
-                  <DealPeoplePanels
+                  <DealContactsPanels
                     dealId={deal.id}
                     overlay={overlay}
                     refusedReasonId={refusedReasonId}

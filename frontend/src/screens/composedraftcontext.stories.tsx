@@ -33,10 +33,10 @@ const COMPANY_ID = "company-1";
 // Mirrors compose-links.test.tsx's COMPANY_VIEW.
 const COMPANY_VIEW = {
   company: { id: COMPANY_ID, name: "Acme" },
-  people: {
+  contacts: {
     data: [
-      { person_id: "per-1", full_name: "Dieter Klein" },
-      { person_id: "per-2", full_name: "Sara Vogel" },
+      { contact_id: "per-1", full_name: "Dieter Klein" },
+      { contact_id: "per-2", full_name: "Sara Vogel" },
     ],
   },
   deals: {
@@ -51,7 +51,7 @@ const COMPANY_VIEW = {
 // component says in words instead of offering a picker the rep cannot use.
 const COMPANY_VIEW_NO_CONTACTS = {
   ...COMPANY_VIEW,
-  people: { data: [] },
+  contacts: { data: [] },
   deals: { data: [] },
 };
 
@@ -65,7 +65,7 @@ const REASONS: readonly components["schemas"]["AccountDraftReason"][] = [
     kind: "recipient",
     label: "Dieter Klein leads the rollout",
     evidence_ref: {
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "per-1",
       name: "Dieter Klein",
     },

@@ -81,7 +81,7 @@ type DerivedSignal struct {
 }
 
 // visibilityOwner marks a signal its owner alone may read, matching the value
-// person and company carry for the same reason.
+// contact and company carry for the same reason.
 const visibilityOwner = "owner"
 
 // visibilityWorkspace marks a signal every seat that can see its subject may
@@ -300,7 +300,7 @@ func AcknowledgeTx(ctx context.Context, tx pgx.Tx, signalID ids.UUID) (bool, err
 //
 // The two are not the same question, and the account is not the answer to the
 // second. A signal is matched here by resolved_company_id, while signal row scope
-// is inherited from its SUBJECT (auth.SignalScopeClause: person, company
+// is inherited from its SUBJECT (auth.SignalScopeClause: contact, company
 // or deal). Those can differ — a signal resolved to this account whose subject
 // is a deal the decider may not see — so seeing the account is not seeing
 // every signal on it, and a bulk settle keyed on the account alone would

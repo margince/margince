@@ -134,7 +134,7 @@ func (b *backend) migrate() error {
 // license it was never issued. So a desktop bundle pinned to production could
 // not start at all — which is what happened, with the reason buried in api.log.
 //
-// `dev` is what a single person running their own copy actually is. What it
+// `dev` is what a single contact running their own copy actually is. What it
 // costs is narrow and worth naming precisely, because the obvious fear is
 // wrong: it does NOT arm the admin data-reset endpoint. That needs
 // operations.allow_data_reset in margince.yaml, which layout.go never writes,
@@ -177,7 +177,7 @@ const defaultRuntimeEnv = "dev"
 // The launcher therefore no longer looks for a routing file, and no longer
 // needs to: the user binds real models in Settings -> AI, with the provider key
 // beside them, and that outranks this without a restart. Deciding it here from
-// a file's presence meant the answer was fixed at boot by something the person
+// a file's presence meant the answer was fixed at boot by something the contact
 // changing it could not see.
 func (b *backend) aiFlags() []string {
 	return []string{"--ai-fake"}

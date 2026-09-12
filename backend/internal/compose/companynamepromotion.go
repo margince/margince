@@ -8,7 +8,7 @@ package compose
 // evidence that pass collects.
 //
 // A captured company is named from its mail domain and marked provisional.
-// This sweep replaces that name with the one the company's own people sign
+// This sweep replaces that name with the one the company's own contacts sign
 // with, but only when a second independent source agrees — the site dossier or
 // a second employee. A lone signature is not overruled and not obeyed either:
 // it becomes a 🟡 proposal, and a human decides.
@@ -29,7 +29,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,8 +69,8 @@ type companyNameProposal struct {
 	// human's refusal is remembered by, and it must survive a change of
 	// spelling, of evidence, or of the name the record currently holds.
 	ProposedNameKey string `json:"proposed_name_key"`
-	// Persons are the people whose signatures state the proposed name.
-	Persons []ids.PersonID `json:"persons"`
+	// Contacts are the contacts whose signatures state the proposed name.
+	Contacts []ids.ContactID `json:"contacts"`
 }
 
 // companyNameIdentity is the logical identity of a company-name proposal: WHICH record
@@ -106,7 +106,7 @@ func refusedNameKey(refused []json.RawMessage, nameKey string) bool {
 		}
 		key := prior.ProposedNameKey
 		if key == "" {
-			key = people.NormalizeCompanyName(prior.ProposedName)
+			key = contacts.NormalizeCompanyName(prior.ProposedName)
 		}
 		if key != "" && key == nameKey {
 			return true
@@ -118,7 +118,7 @@ func refusedNameKey(refused []json.RawMessage, nameKey string) bool {
 // CompanyNamePromoter runs the sweep for every workspace.
 type CompanyNamePromoter struct {
 	pool      *pgxpool.Pool
-	store     *people.Store
+	store     *contacts.Store
 	approvals *approvals.Service
 	log       *slog.Logger
 }
@@ -130,7 +130,7 @@ type CompanyNamePromoter struct {
 func NewCompanyNamePromoter(pool *pgxpool.Pool, log *slog.Logger) *CompanyNamePromoter {
 	return &CompanyNamePromoter{
 		pool:      pool,
-		store:     people.NewStore(InstallationDB(pool)),
+		store:     contacts.NewStore(InstallationDB(pool)),
 		approvals: approvals.NewService(InstallationDB(pool)),
 		log:       log,
 	}
@@ -185,8 +185,8 @@ func (p *CompanyNamePromoter) sweepWorkspace(ctx context.Context, ws ids.UUID) e
 	return nil
 }
 
-func (p *CompanyNamePromoter) decideOne(ctx context.Context, cand people.CompanyNameCandidate) error {
-	verdict, ok := people.DecideCompanyName(cand)
+func (p *CompanyNamePromoter) decideOne(ctx context.Context, cand contacts.CompanyNameCandidate) error {
+	verdict, ok := contacts.DecideCompanyName(cand)
 	if !ok {
 		return nil
 	}
@@ -219,8 +219,8 @@ func (p *CompanyNamePromoter) decideOne(ctx context.Context, cand people.Company
 // leave exactly the gap the check exists to close — reject lands in between,
 // and the rename the human refused is applied anyway. Rejecting deliberately
 // leaves name_source where it was, so the promotion CAS is no backstop here.
-func (p *CompanyNamePromoter) applyUnlessDeclined(ctx context.Context, cand people.CompanyNameCandidate,
-	verdict people.CompanyNameVerdict,
+func (p *CompanyNamePromoter) applyUnlessDeclined(ctx context.Context, cand contacts.CompanyNameCandidate,
+	verdict contacts.CompanyNameVerdict,
 ) error {
 	var promoted bool
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
@@ -248,15 +248,15 @@ func (p *CompanyNamePromoter) applyUnlessDeclined(ctx context.Context, cand peop
 
 // stageCompanyNameReview offers one uncorroborated name to a human. JoinPending
 // keeps a nightly re-run from stacking the same question in the inbox.
-func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand people.CompanyNameCandidate,
-	verdict people.CompanyNameVerdict, identity json.RawMessage,
+func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand contacts.CompanyNameCandidate,
+	verdict contacts.CompanyNameVerdict, identity json.RawMessage,
 ) error {
 	proposal := companyNameProposal{
 		CompanyID:       cand.CompanyID,
 		CurrentName:     cand.DisplayName,
 		ProposedName:    verdict.Name,
 		ProposedNameKey: verdict.NameKey,
-		Persons:         verdict.Persons,
+		Contacts:        verdict.Contacts,
 	}
 	body, err := json.Marshal(proposal)
 	if err != nil {
@@ -270,7 +270,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand p
 	// that produced it never goes away.
 	//
 	// Identity, not the diff hash, is what that memory keys on. The payload
-	// carries the corroborating persons and the record's current name; both move
+	// carries the corroborating contacts and the record's current name; both move
 	// on their own, and a refusal keyed on the whole payload would be forgotten
 	// the first time either did, re-offering the same rename every night until
 	// someone clicked approve.
@@ -294,7 +294,7 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand p
 // There is no reject effect. Rejecting leaves the provisional name exactly
 // where it is — the offer only ever renames, so a stale or declined one
 // destroys nothing.
-func companyNameAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func companyNameAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var proposal companyNameProposal
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
@@ -320,7 +320,7 @@ func companyNameAcceptEffect(svc *approvals.Service, store *people.Store) approv
 			// stronger source while the offer waited: the approval is spent,
 			// nothing is written, and the record keeps the better name.
 			_, err := store.PromoteCompanyNameTx(execCtx, tx, proposal.CompanyID,
-				proposal.ProposedName, people.CompanyNameCorroborationNone)
+				proposal.ProposedName, contacts.CompanyNameCorroborationNone)
 			return err
 		})
 	}

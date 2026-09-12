@@ -52,7 +52,7 @@ func TestReconcileConnectionStopsCleanlyWhenDisconnectedMidSweep(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass = "person" // canonical
+	rec.ObjectClass = "contact" // canonical
 	rec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlay.IncumbentClassContacts, rec)
 
@@ -132,7 +132,7 @@ func TestReconcileConnectionStopsCleanlyWhenReconnectedMidSweep(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass = "person"
+	rec.ObjectClass = "contact"
 	rec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlay.IncumbentClassContacts, rec)
 

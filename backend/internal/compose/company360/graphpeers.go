@@ -58,8 +58,8 @@ func (g *graphAssembly) placePeerEdges() error {
 		bucket := crmcontracts.CompanyGraphEdgeStrengthBucket(score.Bucket)
 		strength := score.Strength
 		g.out.Edges = append(g.out.Edges, crmcontracts.CompanyGraphEdge{
-			From:           openapi_types.UUID(edge.PersonA),
-			To:             openapi_types.UUID(edge.PersonB),
+			From:           openapi_types.UUID(edge.ContactA),
+			To:             openapi_types.UUID(edge.ContactB),
 			Kind:           crmcontracts.CompanyGraphEdgeKindCorrespondsWith,
 			StrengthBucket: &bucket,
 			Strength:       &strength,

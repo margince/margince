@@ -255,21 +255,21 @@ func TestAnUploadedFileOnAnOpenThreadKeepsItsName(t *testing.T) {
 	}
 }
 
-// TestADocumentOnAPersonKeepsItsName holds the other six parent types.
+// TestADocumentOnAContactKeepsItsName holds the other six parent types.
 //
-// An attachment hangs off person, company, deal, lead, activity, project or
+// An attachment hangs off contact, company, deal, lead, activity, project or
 // relationship. Only the activity parent has an audience, so treating every
 // attachment row as governed would withhold the filename of a contract filed on
 // a deal from the compliance log — audit data destroyed to protect an audience
 // that does not exist. The route resolves nothing for those six, and a row that
 // resolves nothing is not governed.
-func TestADocumentOnAPersonKeepsItsName(t *testing.T) {
+func TestADocumentOnAContactKeepsItsName(t *testing.T) {
 	e := setupAuditBoundary(t)
 	attachment := e.seedID(t, `
 		INSERT INTO attachment (id, entity_type, entity_id, filename,
 		                        storage_key, source, captured_by)
-		VALUES ($1, 'person', $2, 'Kuendigung.pdf', 'blob/p', 'upload',
-		        'human:'||$3::text)`, e.person, e.other)
+		VALUES ($1, 'contact', $2, 'Kuendigung.pdf', 'blob/p', 'upload',
+		        'human:'||$3::text)`, e.contact, e.other)
 	e.seedCollateralAudit(t, "attachment", attachment)
 
 	entityType, limit := "attachment", 50
@@ -285,7 +285,7 @@ func TestADocumentOnAPersonKeepsItsName(t *testing.T) {
 		}
 		found = true
 		if !strings.Contains(string(entry.After), "Kuendigung") {
-			t.Errorf("a document filed on a person was redacted; there is no activity audience "+
+			t.Errorf("a document filed on a contact was redacted; there is no activity audience "+
 				"to enforce, so this is audit data destroyed for nothing: %s", entry.After)
 		}
 	}

@@ -294,7 +294,7 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              -- default until somebody judges it, which is the honest
 		              -- state for a mailbox nobody has been asked about. The
 		              -- alternative — carrying the old answer — would silently
-		              -- apply one person's opt-out to another's mail, in either
+		              -- apply one contact's opt-out to another's mail, in either
 		              -- direction.
 		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
 		                                              ELSE capture_connection.signature_enrich_enabled END,

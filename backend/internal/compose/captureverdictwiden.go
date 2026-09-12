@@ -30,7 +30,7 @@ import (
 const (
 	// clearedSenderLiveBound is what one verdict transaction releases before
 	// leaving the rest to the pass below. It shares that transaction with a
-	// ledger resolution and a person record, and the recompute takes a row lock
+	// ledger resolution and a contact record, and the recompute takes a row lock
 	// per message, so a sender with a large backlog must not drain here.
 	clearedSenderLiveBound = 100
 	// clearedSenderSweepBudget is one workspace's share of a reconciling pass.
@@ -50,7 +50,7 @@ func (e *CounterpartyVerdictEngine) widenClearedSender(ctx context.Context, tx p
 }
 
 // WidenClearedSendersWorkspace re-opens the mail still held about senders this
-// workspace has already judged to be real people.
+// workspace has already judged to be real contacts.
 //
 // It is what makes the release survive a crash, a door that forgot to call the
 // live hook, and — the case it was written for — every sender judged before any

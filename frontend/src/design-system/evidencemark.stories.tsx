@@ -7,7 +7,7 @@ import { EvidenceMark } from "./evidencemark";
 
 // The one provenance affordance, in the three shapes a record page shows it:
 // a value read from a page, a value a connector supplied, and a value a
-// person typed — which carries no mark at all.
+// contact typed — which carries no mark at all.
 const meta: Meta<typeof EvidenceMark> = {
   title: "Design System/EvidenceMark",
   component: EvidenceMark,
@@ -50,8 +50,8 @@ export const FromAConnector: Story = {
   },
 };
 
-// A value a person typed is not marked: an underline on everything would
+// A value a human typed is not marked: an underline on everything would
 // teach the reader that the underline means nothing.
-export const TypedByAPerson: Story = {
+export const TypedByAContact: Story = {
   args: { value: "Brandt Automotive GmbH", source: undefined },
 };

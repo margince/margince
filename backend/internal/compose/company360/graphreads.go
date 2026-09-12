@@ -14,7 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -24,10 +24,10 @@ import (
 )
 
 // readEmployment reads the account's current employees, pruned to the
-// caller's person row scope. A person with more than one live employment row
+// caller's contact row scope. A contact with more than one live employment row
 // at the same account appears once — the lowest relationship id wins, so two
 // reads of the same account report the same ROLE for them. (The title comes
-// off the person row, so the dedupe cannot change it.)
+// off the contact row, so the dedupe cannot change it.)
 //
 // The read is bounded by graphScanCap, and the headcount rides the SAME
 // statement as the rows. Two statements would each take their own Read
@@ -37,7 +37,7 @@ import (
 // so the bound cannot be a top-N LIMIT; graphScanCap says what that costs on
 // an account past it.
 func (g *graphAssembly) readEmployment() error {
-	if err := auth.Require(g.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(g.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	var args []any
@@ -51,7 +51,7 @@ func (g *graphAssembly) readEmployment() error {
 	if err != nil {
 		return err
 	}
-	personScope, err := scopeClause(g.ctx, "person", "p", arg)
+	contactScope, err := scopeClause(g.ctx, "contact", "p", arg)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (g *graphAssembly) readEmployment() error {
 			SELECT p.id, p.full_name, p.title, r.role,
 			       row_number() OVER (PARTITION BY p.id ORDER BY r.id) AS edge_rank
 			FROM relationship r
-			JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
+			JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 			WHERE r.kind = 'employment' AND r.company_id = $%d
 			  AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			  AND (%s) AND (%s)
@@ -68,16 +68,16 @@ func (g *graphAssembly) readEmployment() error {
 		SELECT id, full_name, title, role, count(*) OVER () AS headcount
 		FROM employed WHERE edge_rank = 1
 		ORDER BY id
-		LIMIT %d`, companyPos, edgeBound, personScope, graphScanCap), args...)
+		LIMIT %d`, companyPos, edgeBound, contactScope, graphScanCap), args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var edge graphPersonEdge
+		var edge graphContactEdge
 		// Every row carries the same headcount; they agree because they come
 		// from one statement.
-		if err := rows.Scan(&edge.personID, &edge.fullName, &edge.title, &edge.role,
+		if err := rows.Scan(&edge.contactID, &edge.fullName, &edge.title, &edge.role,
 			&g.employeeTotal); err != nil {
 			return err
 		}
@@ -91,9 +91,9 @@ func (g *graphAssembly) readEmployment() error {
 // open deal of this account that this caller may list" — so this card can
 // never draw a deal the deals section would refuse to show.
 //
-// The seats are read behind their OWN person gate, inside readSeats: an edge
-// names two records, and a caller who may not read people may not learn who
-// sits on a deal either. A missing person grant leaves the seats out and the
+// The seats are read behind their OWN contact gate, inside readSeats: an edge
+// names two records, and a caller who may not read contacts may not learn who
+// sits on a deal either. A missing contact grant leaves the seats out and the
 // deals in, which is why that refusal is swallowed here rather than failing
 // the deals group with it.
 func (g *graphAssembly) readOpenDeals() error {
@@ -131,7 +131,7 @@ func (g *graphAssembly) readOpenDeals() error {
 		return err
 	}
 	if err := g.readSeats(g.selectedDealIDs()); errors.Is(err, apperrors.ErrPermissionDenied) {
-		// No person grant. The contacts group names that refusal, and the deals
+		// No contact grant. The contacts group names that refusal, and the deals
 		// still belong on the card — so this one is absorbed here rather than
 		// failing the deals group along with it.
 		return nil
@@ -154,11 +154,11 @@ func (g *graphAssembly) selectedDealIDs() []ids.UUID {
 }
 
 // readSeats reads the stakeholder seats on the given deals. It carries its own
-// PERSON and EDGE gates rather than trusting the order the groups happen to run
-// in: a seat names a person AND is itself an edge, so a reordered group list
+// CONTACT and EDGE gates rather than trusting the order the groups happen to run
+// in: a seat names a contact AND is itself an edge, so a reordered group list
 // must not be able to turn it into an ungated read of either.
 func (g *graphAssembly) readSeats(dealIDs []ids.UUID) error {
-	if err := auth.Require(g.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(g.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	if len(dealIDs) == 0 {
@@ -171,25 +171,25 @@ func (g *graphAssembly) readSeats(dealIDs []ids.UUID) error {
 	if err != nil {
 		return err
 	}
-	personScope, err := scopeClause(g.ctx, "person", "p", arg)
+	contactScope, err := scopeClause(g.ctx, "contact", "p", arg)
 	if err != nil {
 		return err
 	}
 	rows, err := g.tx.Query(g.ctx, fmt.Sprintf(`
 		SELECT r.deal_id, p.id, p.full_name, p.title, r.role
 		FROM relationship r
-		JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
+		JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%d)
 		  AND r.ended_at IS NULL AND r.archived_at IS NULL
 		  AND (%s) AND (%s)
-		ORDER BY r.deal_id, p.id, r.id`, dealsPos, edgeBound, personScope), args...)
+		ORDER BY r.deal_id, p.id, r.id`, dealsPos, edgeBound, contactScope), args...)
 	if err != nil {
 		return err
 	}
 	g.seats, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (graphSeat, error) {
 		var seat graphSeat
-		err := row.Scan(&seat.dealID, &seat.person.personID, &seat.person.fullName,
-			&seat.person.title, &seat.role)
+		err := row.Scan(&seat.dealID, &seat.contact.contactID, &seat.contact.fullName,
+			&seat.contact.title, &seat.role)
 		return seat, err
 	})
 	return err
@@ -197,15 +197,15 @@ func (g *graphAssembly) readSeats(dealIDs []ids.UUID) error {
 
 // readRouteIn reads the warm-intro path: the contact an active signal routes
 // through, ranked by the warm room's own ranking so this card can never name a
-// different person than the intro-path endpoint does.
+// different contact than the intro-path endpoint does.
 //
 // It asks for both of its own objects: the group exists only while there is a
-// live signal to route, and the thing it places is a person.
+// live signal to route, and the thing it places is a contact.
 func (g *graphAssembly) readRouteIn() error {
 	if err := auth.Require(g.ctx, "signal", principal.ActionRead); err != nil {
 		return err
 	}
-	if err := auth.Require(g.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(g.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	signalID, active, err := g.activeSignal()
@@ -260,47 +260,47 @@ func (g *graphAssembly) activeSignal() (ids.UUID, bool, error) {
 	return id, true, nil
 }
 
-// scorePeople resolves §4 for every person the graph touches in ONE batch:
+// scoreContacts resolves §4 for every contact the graph touches in ONE batch:
 // the employees, the stakeholders, and the warm room's route-in candidates.
 // One pass means one instant for every score, and it means the route-in
 // ranking sees the same candidates the warm room ranks over.
 //
-// A person whose strength the caller's row scope did not resolve is simply
+// A contact whose strength the caller's row scope did not resolve is simply
 // absent from the map: their node carries no strength rather than a zero,
 // and the route-in ranking drops them the way the warm room does.
-func (g *graphAssembly) scorePeople() error {
-	seen := map[ids.PersonID]bool{}
-	var wanted []ids.PersonID
-	add := func(personID ids.PersonID) {
-		if seen[personID] {
+func (g *graphAssembly) scoreContacts() error {
+	seen := map[ids.ContactID]bool{}
+	var wanted []ids.ContactID
+	add := func(contactID ids.ContactID) {
+		if seen[contactID] {
 			return
 		}
-		seen[personID] = true
-		wanted = append(wanted, personID)
+		seen[contactID] = true
+		wanted = append(wanted, contactID)
 	}
 	for _, edge := range g.employees {
-		add(edge.personID)
+		add(edge.contactID)
 	}
 	for _, seat := range g.seats {
-		add(seat.person.personID)
+		add(seat.contact.contactID)
 	}
 	for _, candidate := range g.routeIn {
-		add(candidate.PersonID)
+		add(candidate.ContactID)
 	}
 	if len(wanted) == 0 {
-		// Either no group produced a person, or the caller may not read people
-		// and every person read already refused. Both mean there is nothing to
-		// score — and returning early keeps the people store's own grant check
+		// Either no group produced a contact, or the caller may not read contacts
+		// and every contact read already refused. Both mean there is nothing to
+		// score — and returning early keeps the contacts store's own grant check
 		// from failing a whole graph that has already named contacts as
 		// withheld.
 		return nil
 	}
-	scored, err := people.StrengthForPeople(g.ctx, g.tx, wanted, g.now)
+	scored, err := contacts.StrengthForContacts(g.ctx, g.tx, wanted, g.now)
 	if err != nil {
 		return err
 	}
 	for _, contact := range scored {
-		g.strengths[contact.PersonID] = contact.Strength
+		g.strengths[contact.ContactID] = contact.Strength
 	}
 	return nil
 }

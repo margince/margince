@@ -24,7 +24,7 @@ Every workspace picks its SoR mode once, at connect time:
 
 | `workspace.x_sor_mode` | Who is canonical | Served by |
 |---|---|---|
-| `native` (default) | Margince's own tables (`person`, `deal`, …) | `compose.Provider` |
+| `native` (default) | Margince's own tables (`contact`, `deal`, …) | `compose.Provider` |
 | `overlay` | the connected incumbent (HubSpot today) | `overlay.Provider` |
 
 `x_sor_mode = overlay` requires `x_incumbent` to name one (`hubspot`/`salesforce`/`dynamics` — only
@@ -90,7 +90,7 @@ AI layers · MCP tools · capture · React UI
 datasource.SystemOfRecordProvider        ← FROZEN seam (13 methods)
         │
    dispatcher resolves workspace.x_sor_mode:
-        ├── native   → compose.Provider     (people/deals/activities/… tables)
+        ├── native   → compose.Provider     (contacts/deals/activities/… tables)
         └── overlay  → overlay.Provider     (the HubSpot-backed adapter)
 ```
 

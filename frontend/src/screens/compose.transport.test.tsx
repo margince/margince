@@ -16,7 +16,7 @@ import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
-import type { Transport } from "./persontransports";
+import type { Transport } from "./contacttransports";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -31,7 +31,7 @@ import {
 // the thread pane, the conversation offers and the permission preview. The dial
 // lives in the shared drawer now.
 //
-// The rules about WHICH transports exist are `persontransports.test.ts` — they
+// The rules about WHICH transports exist are `contacttransports.test.ts` — they
 // are statements about reachability and anchors, and asserting them through a
 // rendered composer meant mounting a drawer to find out whether a list had two
 // entries. What is here is what the DRAWER does with the answer.
@@ -116,9 +116,9 @@ function render(ui: ReactNode) {
 function drawer(transports: readonly Transport[], initial?: string) {
   return (
     <ComposeModal
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
-      personId="p-1"
+      contactId="p-1"
       recordAddress="dana@brandt.example"
       transports={transports}
       initialTransportId={initial}
@@ -225,9 +225,9 @@ describe("the composer's transport dial", () => {
   it("says so when the conversation a caller named is gone", async () => {
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         transports={[MAIL]}
         staleThread
         open
@@ -248,14 +248,14 @@ describe("a channel reply held to its carriage bounds", () => {
   // per-file cap; the survey is under it.
   const OFFER = {
     id: "att-1",
-    entity_type: "person",
+    entity_type: "contact",
     entity_id: "p-1",
     filename: "Offer_Nordwand_v3.pdf",
     byte_size: 412_000,
   };
   const SURVEY = {
     id: "att-2",
-    entity_type: "person",
+    entity_type: "contact",
     entity_id: "p-1",
     filename: "Site_note.txt",
     byte_size: 40_000,

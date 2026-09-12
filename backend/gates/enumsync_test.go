@@ -40,10 +40,10 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
-	"lead.status":                      {"internal/modules/people", "LeadStatus"},
+	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
-	"person_consent.state":             {"internal/modules/consent", "ConsentState"},
+	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},

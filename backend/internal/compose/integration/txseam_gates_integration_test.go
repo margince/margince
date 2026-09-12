@@ -35,8 +35,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,7 +47,7 @@ import (
 // create grant, one holding none of them.
 type gateFixture struct {
 	e        *Env
-	people   *people.Store
+	contacts *contacts.Store
 	deals    *deals.Store
 	granted  context.Context
 	ungated  context.Context
@@ -61,7 +61,7 @@ func setupGates(t *testing.T) gateFixture {
 	pipeline, stage, _ := DealFixture(t, e)
 	return gateFixture{
 		e:        e,
-		people:   people.NewStore(e.DB()),
+		contacts: contacts.NewStore(e.DB()),
 		deals:    deals.NewStore(e.DB(), installseam.Deals()),
 		granted:  e.As(e.Rep1, nil, txSeamPerms),
 		ungated:  e.As(e.Rep2, nil, principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll}),
@@ -110,50 +110,50 @@ func assertSameRefusal(t *testing.T, storeOpened, callerOpened error) {
 	}
 }
 
-func TestBothPersonCreatesRefuseTheSameThings(t *testing.T) {
+func TestBothContactCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := people.CreatePersonInput{FullName: "Ada Lovelace", Source: "ui"}
+	valid := contacts.CreateContactInput{FullName: "Ada Lovelace", Source: "ui"}
 
-	if _, err := f.people.CreatePerson(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := f.contacts.CreateContact(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
-	probe := f.refusedInTx(f.ungated, t, "person", func(tx pgx.Tx) error {
-		_, err := f.people.CreatePersonTx(f.ungated, tx, valid)
+	probe := f.refusedInTx(f.ungated, t, "contact", func(tx pgx.Tx) error {
+		_, err := f.contacts.CreateContactTx(f.ungated, tx, valid)
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the caller-opened create answered %v for a seat without the grant, want the refusal", probe.err)
 	}
 	if probe.rows != 0 {
-		t.Errorf("person rows inside the refusing transaction = %d, want 0 — the gate ran after the write", probe.rows)
+		t.Errorf("contact rows inside the refusing transaction = %d, want 0 — the gate ran after the write", probe.rows)
 	}
 
 	// A contact that does not parse: the validation both settle before any
 	// transaction opens.
-	malformed := people.CreatePersonInput{
+	malformed := contacts.CreateContactInput{
 		FullName: "Ada Lovelace", Source: "ui",
-		Emails: []people.PersonEmailInput{{Email: "not-an-address", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "not-an-address", EmailType: "work", IsPrimary: true}},
 	}
-	_, storeOpened := f.people.CreatePerson(f.granted, malformed)
-	probe = f.refusedInTx(f.granted, t, "person", func(tx pgx.Tx) error {
-		_, err := f.people.CreatePersonTx(f.granted, tx, malformed)
+	_, storeOpened := f.contacts.CreateContact(f.granted, malformed)
+	probe = f.refusedInTx(f.granted, t, "contact", func(tx pgx.Tx) error {
+		_, err := f.contacts.CreateContactTx(f.granted, tx, malformed)
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
 	if probe.rows != 0 {
-		t.Errorf("person rows inside the refusing transaction = %d, want 0 — the validation ran after the write", probe.rows)
+		t.Errorf("contact rows inside the refusing transaction = %d, want 0 — the validation ran after the write", probe.rows)
 	}
 }
 
 func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
-	valid := people.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui"}
+	valid := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui"}
 
-	if _, err := f.people.CreateCompany(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := f.contacts.CreateCompany(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "company", func(tx pgx.Tx) error {
-		_, err := f.people.CreateCompanyTx(f.ungated, tx, valid)
+		_, err := f.contacts.CreateCompanyTx(f.ungated, tx, valid)
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -166,10 +166,10 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 	// A size band outside the vocabulary: refused on create, not only on the
 	// patch, so the database never has to answer for it.
 	band := "enormous"
-	bad := people.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui", SizeBand: &band}
-	_, storeOpened := f.people.CreateCompany(f.granted, bad)
+	bad := contacts.CreateCompanyInput{DisplayName: "Analytical Engines", Source: "ui", SizeBand: &band}
+	_, storeOpened := f.contacts.CreateCompany(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "company", func(tx pgx.Tx) error {
-		_, err := f.people.CreateCompanyTx(f.granted, tx, bad)
+		_, err := f.contacts.CreateCompanyTx(f.granted, tx, bad)
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)
@@ -181,13 +181,13 @@ func TestBothCompanyCreatesRefuseTheSameThings(t *testing.T) {
 func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 	f := setupGates(t)
 	email := "jean@bartik.test"
-	valid := people.CreateLeadInput{Email: &email, Status: "new", Source: "ui"}
+	valid := contacts.CreateLeadInput{Email: &email, Status: "new", Source: "ui"}
 
-	if _, _, err := f.people.CreateLead(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := f.contacts.CreateLead(f.ungated, valid); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("the store-opened create answered %v for a seat without the grant, want the refusal", err)
 	}
 	probe := f.refusedInTx(f.ungated, t, "lead", func(tx pgx.Tx) error {
-		_, _, err := f.people.CreateLeadTx(f.ungated, tx, valid)
+		_, _, err := f.contacts.CreateLeadTx(f.ungated, tx, valid)
 		return err
 	})
 	if !errors.Is(probe.err, apperrors.ErrPermissionDenied) {
@@ -199,10 +199,10 @@ func TestBothLeadCreatesRefuseTheSameThings(t *testing.T) {
 
 	// A status outside the writable vocabulary — the normalization both
 	// entry points settle before any transaction opens.
-	bad := people.CreateLeadInput{Email: &email, Status: "promoted", Source: "ui"}
-	_, _, storeOpened := f.people.CreateLead(f.granted, bad)
+	bad := contacts.CreateLeadInput{Email: &email, Status: "promoted", Source: "ui"}
+	_, _, storeOpened := f.contacts.CreateLead(f.granted, bad)
 	probe = f.refusedInTx(f.granted, t, "lead", func(tx pgx.Tx) error {
-		_, _, err := f.people.CreateLeadTx(f.granted, tx, bad)
+		_, _, err := f.contacts.CreateLeadTx(f.granted, tx, bad)
 		return err
 	})
 	assertSameRefusal(t, storeOpened, probe.err)

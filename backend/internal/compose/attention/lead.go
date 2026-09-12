@@ -8,7 +8,7 @@ package attention
 //
 // The clock is not this file's to invent. `sla_state` and `sla_deadline_at`
 // are derived on every lead read (formulas §18.1), so what happens here is
-// ranking an answer the people module already gave — a second opinion about
+// ranking an answer the contacts module already gave — a second opinion about
 // when a reply is late would be one the lead screen could disagree with.
 
 import (
@@ -113,7 +113,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 	}
 }
 
-// leadStanding reads the state the people module derived, and says what it
+// leadStanding reads the state the contacts module derived, and says what it
 // means for the day's order.
 //
 // An unrecognised state ranks as agreed work rather than being dropped: the

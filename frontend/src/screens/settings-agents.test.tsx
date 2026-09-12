@@ -93,7 +93,7 @@ function agentToolsBackend() {
             name: "search_records",
             title: "Search records",
             description:
-              'Find people, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+              'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
             required_scope: "read",
             tier: "auto_execute",
             egress: false,
@@ -102,7 +102,7 @@ function agentToolsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,
@@ -162,7 +162,8 @@ describe("AgentToolsCard (IT-1)", () => {
       searchRow && within(searchRow).getByText("Search records"),
     ).toBeTruthy();
     expect(
-      searchRow && within(searchRow).getByText(/Find people, companies, deals/),
+      searchRow &&
+        within(searchRow).getByText(/Find contacts, companies, deals/),
     ).toBeTruthy();
     // Governance travels with it, because the server appends it to the same
     // string — the console must not show a shortened reading of what an agent
@@ -184,7 +185,7 @@ describe("AgentToolsCard (IT-1)", () => {
     ).toBeTruthy();
     expect(
       sendRow &&
-        within(sendRow).getByText(/Governance: a person approves every call/),
+        within(sendRow).getByText(/Governance: a human approves every call/),
     ).toBeTruthy();
     expect(sendRow && within(sendRow).getByText("send")).toBeTruthy();
   });
@@ -243,7 +244,7 @@ function agentToolsWithPassportsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,
@@ -445,7 +446,7 @@ function revocablePassportsBackend() {
             name: "send_email",
             title: "Send an email",
             description:
-              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+              'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
             required_scope: "send",
             tier: "confirmation_required",
             egress: true,

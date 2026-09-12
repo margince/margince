@@ -139,7 +139,7 @@ and it caps how much of the site one certification run can cover:
      field, because a data-protection control must not be load-bearing prose.
    - **`cost_unit`** — only for a task the pre-flight estimator prices, and only
      a name `internal/compose/costestimate` implements (today `per_message`,
-     `per_person`). Naming a rule that does not exist — or implementing one
+     `per_contact`). Naming a rule that does not exist — or implementing one
      nothing names — fails the build. Omit it for an unpriced task.
 
 2. **Regenerate** — `make gen`. `tools/gen-aitasks` compiles the contract into

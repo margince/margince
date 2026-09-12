@@ -15,7 +15,7 @@ import (
 
 // One brief, two surfaces.
 //
-// There were two answers to "prepare me for this meeting": a person read eight
+// There were two answers to "prepare me for this meeting": a contact read eight
 // cited sections, and an agent got a separate context walk with its open tasks
 // pulled forward. Both were individually reasonable, which is exactly why the
 // drift went unnoticed — nobody put the two answers side by side.
@@ -53,25 +53,25 @@ func wireBrief() crmcontracts.MeetingBrief {
 	}
 }
 
-func TestTheAgentReadsEverySectionThePersonReads(t *testing.T) {
+func TestTheAgentReadsEverySectionTheContactReads(t *testing.T) {
 	wire := wireBrief()
 	got := agentMeetingBrief(wire)
 
 	if len(got.Sections) != len(wire.Sections) {
-		t.Fatalf("sections: agent %d, person %d — the two surfaces would disagree about one meeting",
+		t.Fatalf("sections: agent %d, contact %d — the two surfaces would disagree about one meeting",
 			len(got.Sections), len(wire.Sections))
 	}
 	for i, section := range wire.Sections {
 		if got.Sections[i].Kind != string(section.Kind) {
-			t.Errorf("section %d: agent %q, person %q", i, got.Sections[i].Kind, section.Kind)
+			t.Errorf("section %d: agent %q, contact %q", i, got.Sections[i].Kind, section.Kind)
 		}
 		if len(got.Sections[i].Sentences) != len(section.Sentences) {
-			t.Errorf("section %s: agent %d lines, person %d", section.Kind,
+			t.Errorf("section %s: agent %d lines, contact %d", section.Kind,
 				len(got.Sections[i].Sentences), len(section.Sentences))
 		}
 		for j, sentence := range section.Sentences {
 			if got.Sections[i].Sentences[j].Text != sentence.Text {
-				t.Errorf("section %s line %d: agent %q, person %q", section.Kind, j,
+				t.Errorf("section %s line %d: agent %q, contact %q", section.Kind, j,
 					got.Sections[i].Sentences[j].Text, sentence.Text)
 			}
 		}

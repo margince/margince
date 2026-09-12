@@ -45,11 +45,11 @@ const BUCKET_TONE: Record<
 };
 
 async function fetchStrength(
-  kind: "person" | "company",
+  kind: "contact" | "company",
   id: string,
 ): Promise<RelationshipStrength> {
-  if (kind === "person") {
-    const { data, error } = await api.GET("/people/{id}/strength", {
+  if (kind === "contact") {
+    const { data, error } = await api.GET("/contacts/{id}/strength", {
       params: { path: { id } },
     });
     if (error) {
@@ -75,7 +75,7 @@ export function StrengthPanel({
   id,
   onOpenEmail,
 }: Readonly<{
-  kind: "person" | "company";
+  kind: "contact" | "company";
   id: string;
   // Opens one cited message in the host's own drawer. A host that mounts none
   // passes nothing, and the receipts render without an opener.
@@ -83,7 +83,7 @@ export function StrengthPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Relationship strength is computed over the native people graph, which the
+  // Relationship strength is computed over the native contacts graph, which the
   // incumbent mirror does not hold (the endpoint 404s in overlay). Show the
   // honest unavailable state and skip the doomed fetch.
   const overlay = useSorMode() === "overlay";

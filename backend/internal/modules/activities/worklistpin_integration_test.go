@@ -23,7 +23,7 @@ import (
 )
 
 // asColleague is the SECOND seat, for the case whose whole point is that a pin
-// belongs to one person. Same grants and the same row scope — what differs is
+// belongs to one contact. Same grants and the same row scope — what differs is
 // only who it is, which is what the pin is keyed on.
 func asColleague(e *sendEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
@@ -34,7 +34,7 @@ func asColleague(e *sendEnv) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

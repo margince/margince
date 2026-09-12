@@ -15,7 +15,7 @@ import { StoryProviders } from "./story-utils";
 // The manual path through the company interview: one question at a time, its
 // chapter and its position above it, and a hint under the prompt. It is the
 // route somebody takes when the read found nothing — so every state here is a
-// state of a person typing, not of a server answering.
+// state of a contact typing, not of a server answering.
 //
 // The position pair is what the stories move. `questionIndex` is the
 // component's OWN state and starts at zero, so there is no prop that opens the

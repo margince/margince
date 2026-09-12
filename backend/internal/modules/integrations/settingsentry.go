@@ -24,8 +24,8 @@ import (
 // forbids trading personal data, and buying broker data about a Vietnamese
 // contact is the sharpest form of that; an installation whose contacts fall
 // under it turns this off and looks a contact up by hand instead, which keeps
-// the decision with the person who made it. There is no per-contact fence
-// because there is nothing to fence on: a person's country is not a fact this
+// the decision with the contact who made it. There is no per-contact fence
+// because there is nothing to fence on: a contact's country is not a fact this
 // product holds, and deriving one from an email domain would be wrong in both
 // directions while looking like protection.
 //

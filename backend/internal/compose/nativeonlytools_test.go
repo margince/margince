@@ -135,7 +135,7 @@ func (r *recordingRetriever) AssembleContext(context.Context, datasource.EntityR
 func TestRetrieverRefusesBothVerbsInOverlayMode(t *testing.T) {
 	inner := &recordingRetriever{}
 	guarded := nativeOnlyRetriever{mode: overlayMode(), inner: inner}
-	anchor := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	anchor := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	if _, err := guarded.Search(context.Background(), retrieval.Query{Text: "acme"}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("Search err = %v, want ErrUnsupportedBySoR", err)

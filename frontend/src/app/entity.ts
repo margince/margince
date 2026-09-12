@@ -2,12 +2,12 @@ import type { Route } from "./router";
 
 // The one place the app's record kinds are enumerated. The history endpoints,
 // EntityRef, and LogActivity all speak this vocabulary; before this registry
-// each kept its own person|company|deal union (all missing lead).
+// each kept its own contact|company|deal union (all missing lead).
 // `activity` is intentionally absent: it is the timeline, not a 360 record.
-export type EntityKind = "person" | "company" | "deal" | "lead" | "project";
+export type EntityKind = "contact" | "company" | "deal" | "lead" | "project";
 
 export const ENTITY_KINDS = [
-  "person",
+  "contact",
   "company",
   "deal",
   "lead",
@@ -29,7 +29,7 @@ export type EntityDescriptor = {
 };
 
 export const ENTITY: Record<EntityKind, EntityDescriptor> = {
-  person: {
+  contact: {
     route: (id) => ({ screen: "contacts", id }),
   },
   company: {

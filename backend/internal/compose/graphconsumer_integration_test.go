@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -42,7 +42,7 @@ func envelopeFor(ws ids.UUID, eventType, entityType string, entity ids.UUID) kev
 }
 
 // seedExchange writes one activity with both participant rows and returns it.
-func seedExchange(t *testing.T, e *integration.Env, person ids.UUID) ids.UUID {
+func seedExchange(t *testing.T, e *integration.Env, contact ids.UUID) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -59,8 +59,8 @@ func seedExchange(t *testing.T, e *integration.Env, person ids.UUID) ids.UUID {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'from')`, id, person)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'from')`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding an exchange: %v", err)
@@ -68,12 +68,12 @@ func seedExchange(t *testing.T, e *integration.Env, person ids.UUID) ids.UUID {
 	return id
 }
 
-func edgeCount(t *testing.T, e *integration.Env, person ids.UUID) int {
+func edgeCount(t *testing.T, e *integration.Env, contact ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM graph_interaction_edge WHERE person_id = $1`, person).Scan(&n)
+			`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting edges: %v", err)
 	}
@@ -82,8 +82,8 @@ func edgeCount(t *testing.T, e *integration.Env, person ids.UUID) int {
 
 func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Consumed Contact")
-	activityID := seedExchange(t, e, person)
+	contact := seedGraphContact(t, e, "Consumed Contact")
+	activityID := seedExchange(t, e, contact)
 
 	gen := search.NewGraphEdgeGen(search.NewStore(e.DB()))
 	ctx := context.Background()
@@ -94,7 +94,7 @@ func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testin
 	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "deal.created", "deal", ids.NewV7())); err != nil {
 		t.Errorf("an unrelated event errored: %v", err)
 	}
-	if edgeCount(t, e, person) != 0 {
+	if edgeCount(t, e, contact) != 0 {
 		t.Fatal("an edge appeared before any activity event was delivered")
 	}
 
@@ -102,7 +102,7 @@ func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testin
 	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", activityID)); err != nil {
 		t.Fatalf("activity.captured: %v", err)
 	}
-	if edgeCount(t, e, person) != 1 {
+	if edgeCount(t, e, contact) != 1 {
 		t.Fatal("activity.captured did not fold the interaction into an edge")
 	}
 
@@ -113,22 +113,22 @@ func TestTheConsumerFoldsAnActivityEventAndIgnoresWhatIsNotItsBusiness(t *testin
 			t.Fatalf("redelivery %d: %v", i, err)
 		}
 	}
-	if got := edgeCount(t, e, person); got != 1 {
+	if got := edgeCount(t, e, contact); got != 1 {
 		t.Errorf("redelivery produced %d edges, want 1", got)
 	}
 }
 
 func TestRetentionAppliedReachesTheConsumer(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Retained Contact")
-	activityID := seedExchange(t, e, person)
+	contact := seedGraphContact(t, e, "Retained Contact")
+	activityID := seedExchange(t, e, contact)
 
 	gen := search.NewGraphEdgeGen(search.NewStore(e.DB()))
 	ctx := context.Background()
 	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "activity.captured", "activity", activityID)); err != nil {
 		t.Fatalf("folding: %v", err)
 	}
-	if edgeCount(t, e, person) != 1 {
+	if edgeCount(t, e, contact) != 1 {
 		t.Fatal("setup produced no edge")
 	}
 
@@ -146,15 +146,15 @@ func TestRetentionAppliedReachesTheConsumer(t *testing.T) {
 	if err := gen.HandleEvent(ctx, envelopeFor(e.WS, "retention.applied", "activity", activityID)); err != nil {
 		t.Fatalf("retention.applied: %v", err)
 	}
-	if got := edgeCount(t, e, person); got != 0 {
+	if got := edgeCount(t, e, contact); got != 0 {
 		t.Errorf("%d edges survived retention.applied — the fold did not react to the archive", got)
 	}
 }
 
 func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Agent Contact")
-	activityID := seedExchange(t, e, person)
+	contact := seedGraphContact(t, e, "Agent Contact")
+	activityID := seedExchange(t, e, contact)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
@@ -162,7 +162,7 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 	}
 
 	// who_knows, through the seam the tool actually calls.
-	colleagues, truncated, err := whoKnowsLister(e.Pool)(e.Admin(), person)
+	colleagues, truncated, err := whoKnowsLister(e.Pool)(e.Admin(), contact)
 	if err != nil {
 		t.Fatalf("who_knows seam: %v", err)
 	}
@@ -185,8 +185,8 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 
 func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedGraphPerson(t, e, "Coverage Contact")
-	activityID := seedExchange(t, e, person)
+	contact := seedGraphContact(t, e, "Coverage Contact")
+	activityID := seedExchange(t, e, contact)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
@@ -215,28 +215,28 @@ func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+			INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 			VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:test')`,
-			person, dealID)
+			contact, dealID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the deal: %v", err)
 	}
 
-	answer, err := coverageReader(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.Admin(), dealID)
+	answer, err := coverageReader(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.Admin(), dealID)
 	if err != nil {
 		t.Fatalf("coverage seam: %v", err)
 	}
 	if len(answer.OurSide) == 0 {
 		t.Fatal("coverage named no colleagues though one exchanged mail with the stakeholder")
 	}
-	// And the stakeholder is NAMED, against a real person row and a real
+	// And the stakeholder is NAMED, against a real contact row and a real
 	// gate. The unit tests hand toAgentCoverage a prepared map; only this one
-	// proves PersonNamesTx is actually reached and actually answers.
+	// proves ContactNamesTx is actually reached and actually answers.
 	if len(answer.Stakeholders) == 0 {
 		t.Fatal("coverage seated no stakeholder though one was captured")
 	}
-	if answer.Stakeholders[0].PersonName == "" {
+	if answer.Stakeholders[0].ContactName == "" {
 		t.Error("the stakeholder came back as a bare uuid — a rep cannot act on an id")
 	}
 	// A bare id leaves a model unable to say who to ask, which is the only
@@ -253,8 +253,8 @@ func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 // months after the LinkedIn export was uploaded, and the ghost attaches without
 // anybody running an import or clicking a button.
 //
-// The trigger is the EVENT, not the writer. Every path that creates a person
-// emits person.created because the write shape puts it in the outbox, so manual
+// The trigger is the EVENT, not the writer. Every path that creates a contact
+// emits contact.created because the write shape puts it in the outbox, so manual
 // entry, mail capture, a site read and a merge all reach this consumer without
 // any of them knowing it exists — and a writer added tomorrow is covered the
 // day it emits its first event.
@@ -274,41 +274,41 @@ func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
 		t.Fatalf("seeding the ghost: %v", err)
 	}
 
-	// The ghost's owner needs a real person grant: the matcher now runs under
+	// The ghost's owner needs a real contact grant: the matcher now runs under
 	// each owner's own authority, so a member the RBAC resolver reports as
 	// holding nothing is skipped. A fixture that only built a context proved
 	// nothing about that path.
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
 	// Months later a rep adds the contact by hand.
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Dana Buyer", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating the contact: %v", err)
 	}
 
 	// The consumer reacts to the event that create emitted.
-	matcher := NewLinkedInMatchGen(e.Pool, e.People, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
+	matcher := NewLinkedInMatchGen(e.Pool, e.Contacts, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
 	if err := matcher.HandleEvent(context.Background(),
-		envelopeFor(e.WS, "person.created", "person", ids.UUID(person.Id))); err != nil {
-		t.Fatalf("handling person.created: %v", err)
+		envelopeFor(e.WS, "contact.created", "contact", ids.UUID(contact.Id))); err != nil {
+		t.Fatalf("handling contact.created: %v", err)
 	}
 
 	var status string
 	var matched *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT match_status, matched_person_id FROM linkedin_connection
+			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
 	}); err != nil {
 		t.Fatalf("reading the ghost back: %v", err)
 	}
-	if status != "confirmed" || matched == nil || *matched != ids.UUID(person.Id) {
+	if status != "confirmed" || matched == nil || *matched != ids.UUID(contact.Id) {
 		t.Errorf("the ghost is %q → %v, want confirmed → %s — a contact added by "+
 			"hand must meet the connection that was already waiting for them",
-			status, matched, person.Id)
+			status, matched, contact.Id)
 	}
 }
 
@@ -321,16 +321,16 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	//
 	// Authority is a property of the READER — so the sweep has to run under
 	// each ghost owner's own authority, and this is the test that says so. A
-	// person is readable by every seat unless it is capture-private, so the
+	// contact is readable by every seat unless it is capture-private, so the
 	// specimen here is visibility='owner' to Rep1: the one row a matcher acting
 	// for Rep3 may not see.
 	e := integration.Setup(t)
 	ctx := context.Background()
 
 	// Both reps hold the SAME role, so the only thing separating them is row
-	// scope — which is what this test is about. A role that reads people with
+	// scope — which is what this test is about. A role that reads contacts with
 	// own-scope: Rep3 may read the contacts they own, and no others.
-	grantReadPeopleRole(t, e, e.Rep3, "own")
+	grantReadContactsRole(t, e, e.Rep3, "own")
 
 	// Rep3's ghost. Rep3 sits in Team2, alone.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -347,17 +347,17 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	// A contact capture-private to Rep1, on the OTHER team, carrying the
 	// address the ghost would match on.
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	person, err := e.People.CreatePerson(rep1, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(rep1, contacts.CreateContactInput{
 		FullName: "Dana Buyer", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating Rep1's contact: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", ids.UUID(person.Id), e.Rep1)
+	e.MakeCapturePrivate(t, "contact", ids.UUID(contact.Id), e.Rep1)
 
 	// The workspace sweep, the shape a company event triggers.
-	matcher := NewLinkedInMatchGen(e.Pool, e.People, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
+	matcher := NewLinkedInMatchGen(e.Pool, e.Contacts, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
 	if err := matcher.HandleEvent(ctx,
 		envelopeFor(e.WS, "company.created", "company", ids.NewV7())); err != nil {
 		t.Fatalf("sweeping: %v", err)
@@ -367,7 +367,7 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	var matched *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT match_status, matched_person_id FROM linkedin_connection
+			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
 	}); err != nil {
 		t.Fatalf("reading the ghost back: %v", err)
@@ -378,22 +378,22 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	}
 }
 
-// TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope is the
-// per-person twin of the test above, over the path that actually matters in
+// TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope is the
+// per-contact twin of the test above, over the path that actually matters in
 // practice — the one a normal capture/manual-entry write reaches
-// (person.created/person.updated), not just a company sweep.
+// (contact.created/contact.updated), not just a company sweep.
 //
 // Passing the owner filter as ids.Nil (SQL NULL, "every owner") would let a
 // member iterated by forEachGhostOwner for their OWN unrelated ghost also
 // match every OTHER member's ghosts under their authority — or, worse, under
 // no authority — turning a one-row CSV upload into a contact-existence oracle
 // for a contact the uploader may not read.
-func TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
+func TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
 
 	// Rep3: narrow (own) scope, holds the attacker's guessed-address ghost.
-	grantReadPeopleRole(t, e, e.Rep3, "own")
+	grantReadContactsRole(t, e, e.Rep3, "own")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
@@ -408,7 +408,7 @@ func TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T
 	// Rep2: wide (all) scope, holds an UNRELATED unmatched ghost — just
 	// enough to put Rep2 in forEachGhostOwner's enumeration, the way a real
 	// admin or ops member with their own pending import would be.
-	grantReadPeopleRole(t, e, e.Rep2, "all")
+	grantReadContactsRole(t, e, e.Rep2, "all")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
@@ -425,19 +425,19 @@ func TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T
 	// Rep2 too, which is why a match here could only come from a sweep that
 	// ran without any owner's authority at all.
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	person, err := e.People.CreatePerson(rep1, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(rep1, contacts.CreateContactInput{
 		FullName: "Dana Buyer", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: "dana@acme.test", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating Rep1's contact: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", ids.UUID(person.Id), e.Rep1)
+	e.MakeCapturePrivate(t, "contact", ids.UUID(contact.Id), e.Rep1)
 
-	// The per-person path: what a real capture/manual write triggers.
-	matcher := NewLinkedInMatchGen(e.Pool, e.People, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
+	// The per-contact path: what a real capture/manual write triggers.
+	matcher := NewLinkedInMatchGen(e.Pool, e.Contacts, identity.NewService(e.Pool), slog.New(slog.DiscardHandler))
 	if err := matcher.HandleEvent(ctx,
-		envelopeFor(e.WS, "person.updated", "person", ids.UUID(person.Id))); err != nil {
+		envelopeFor(e.WS, "contact.updated", "contact", ids.UUID(contact.Id))); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
 
@@ -445,24 +445,24 @@ func TestThePerPersonSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T
 	var matched *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT match_status, matched_person_id FROM linkedin_connection
+			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
 	}); err != nil {
 		t.Fatalf("reading the ghost back: %v", err)
 	}
 	if status != "unmatched" || matched != nil {
-		t.Errorf("the per-person match matched a contact outside the ghost owner's row scope: %q → %v — "+
+		t.Errorf("the per-contact match matched a contact outside the ghost owner's row scope: %q → %v — "+
 			"match_status is then an oracle for records the ghost's real owner cannot read", status, matched)
 	}
 }
 
-// grantReadPeopleRole gives one member a role that reads people at the named
+// grantReadContactsRole gives one member a role that reads contacts at the named
 // row scope.
 //
 // The matcher resolves authority from the DATABASE, not from a test principal,
 // so a fixture that only builds a context proves nothing about which member the
 // sweep will act for.
-func grantReadPeopleRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope string) {
+func grantReadContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope string) {
 	t.Helper()
 	ctx := context.Background()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -470,7 +470,7 @@ func grantReadPeopleRole(t *testing.T, e *integration.Env, user ids.UUID, rowSco
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO role (key, name, permissions)
 			VALUES ('ghost_owner_' || $1, 'Ghost owner test',
-			        format('{"row_scope":"%s","objects":{"person":{"read":true}}}', $1)::jsonb)
+			        format('{"row_scope":"%s","objects":{"contact":{"read":true}}}', $1)::jsonb)
 			ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name
 			RETURNING id`, rowScope).Scan(&roleID); err != nil {
 			return err

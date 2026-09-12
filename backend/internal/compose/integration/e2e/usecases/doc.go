@@ -17,7 +17,7 @@
 //  2. The business card          — one contact, never a second copy
 //  3. The spreadsheet arrives    — an import that tells the truth twice
 //  4. Use the moment             — who is nearby, and whose account it is
-//  5. Before the meeting         — a briefing that names people and dates
+//  5. Before the meeting         — a briefing that names contacts and dates
 //  6. Ask the company            — history answered from records, not prose
 //
 // # What is asserted, and from where

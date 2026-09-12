@@ -27,9 +27,9 @@ func (noConflicts) HumanOwnedConflicts(context.Context, string, ids.UUID, json.R
 	return nil, nil
 }
 
-func personFixture(t *testing.T, id ids.UUID) *fakeSoR {
+func contactFixture(t *testing.T, id ids.UUID) *fakeSoR {
 	t.Helper()
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 	return &fakeSoR{records: map[datasource.EntityRef]datasource.Record{
 		ref: nativeRecord(datasource.Record{
 			Ref: ref, Fields: json.RawMessage(`{"full_name":"Ada Lovelace"}`), Version: 3,
@@ -40,7 +40,7 @@ func personFixture(t *testing.T, id ids.UUID) *fakeSoR {
 func updateArgs(t *testing.T, id ids.UUID) json.RawMessage {
 	t.Helper()
 	in, err := json.Marshal(map[string]any{
-		"record_type": "person",
+		"record_type": "contact",
 		"id":          id,
 		"fields":      map[string]any{"title": "Analyst"},
 	})
@@ -54,7 +54,7 @@ func updateArgs(t *testing.T, id ids.UUID) json.RawMessage {
 // split's whole point is that a machine's own fields are not held hostage.
 func TestUpdateRecordAppliesAPatchWithNoHumanOwnedField(t *testing.T) {
 	id := ids.NewV7()
-	p := personFixture(t, id)
+	p := contactFixture(t, id)
 	approvals := &recordingApprovals{}
 	tool := updateRecord{p: p, ownership: noConflicts{}, staging: approvals}
 
@@ -73,7 +73,7 @@ func TestUpdateRecordAppliesAPatchWithNoHumanOwnedField(t *testing.T) {
 // re-asking the precedence question.
 func TestUpdateRecordAppliesAReleasedCall(t *testing.T) {
 	id := ids.NewV7()
-	p := personFixture(t, id)
+	p := contactFixture(t, id)
 	tool := updateRecord{p: p, ownership: noConflicts{}, staging: &recordingApprovals{}}
 
 	ctx := withApprovalRedeemed(context.Background(), 0, false)
@@ -89,7 +89,7 @@ func TestUpdateRecordAppliesAReleasedCall(t *testing.T) {
 // overwrite, so it refuses rather than applying one.
 func TestUpdateRecordRefusesAConflictItCannotStage(t *testing.T) {
 	id := ids.NewV7()
-	p := personFixture(t, id)
+	p := contactFixture(t, id)
 	tool := updateRecord{p: p, ownership: fixedOwnership{conflicts: []string{"title"}}, staging: nil}
 
 	_, err := tool.Handle(context.Background(), updateArgs(t, id))
@@ -108,7 +108,7 @@ func TestUpdateRecordRefusesAConflictItCannotStage(t *testing.T) {
 // tables. Refusing keeps every staging tool agreeing with the datasource seam,
 // which refuses the same write for the same reason.
 func TestStagingIsRefusedForANonAuthoritativeTarget(t *testing.T) {
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	mirrored := datasource.Record{Ref: ref, Fields: json.RawMessage(`{}`)}
 
 	err := refuseStagingElsewhere(mirrored)
@@ -128,7 +128,7 @@ func TestStagingIsRefusedForANonAuthoritativeTarget(t *testing.T) {
 // can release.
 func TestUpdateRecordRefusesStagingForATargetHeldElsewhere(t *testing.T) {
 	id := ids.NewV7()
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 	// Deliberately NOT nativeRecord: this record's authority lives elsewhere.
 	p := &fakeSoR{records: map[datasource.EntityRef]datasource.Record{
 		ref: {Ref: ref, Fields: json.RawMessage(`{"title":"Analyst"}`), Version: 3},

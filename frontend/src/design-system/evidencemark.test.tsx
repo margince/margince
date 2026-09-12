@@ -13,7 +13,7 @@ import { EvidenceMark } from "./evidencemark";
 
 // The one provenance affordance. What it has to get right:
 //
-//   - a value a PERSON typed carries no mark, or the underline stops meaning
+//   - a value a CONTACT typed carries no mark, or the underline stops meaning
 //     "this was derived" and starts meaning nothing;
 //   - the receipts are reachable by keyboard, and Escape gives focus back;
 //   - the quoted source text is presented as a quote, never as our own words.

@@ -21,7 +21,7 @@ import (
 var testNow = time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 
 func seat(engaged bool, role string) deals.DealStakeholder {
-	return deals.DealStakeholder{PersonID: ids.NewV7(), Role: role, Engaged: engaged}
+	return deals.DealStakeholder{ContactID: ids.NewV7(), Role: role, Engaged: engaged}
 }
 
 // daysAgo is the clock arithmetic the going-cold tests read in.
@@ -64,17 +64,17 @@ func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 	// A young deal: one colleague, but only two interactions ever. Flagging
 	// this would tell a rep their brand-new deal is dangerously concentrated.
 	young := DealCoverage{DealID: ids.NewV7(), Stakeholders: base, OurSide: []ColleagueEdge{
-		{UserID: rep, PersonID: champion.PersonID, Count90d: 2},
+		{UserID: rep, ContactID: champion.ContactID, Count90d: 2},
 	}}
 	if kinds(foldRisks(young, testNow))[RiskSingleThreadedOurs] {
 		t.Errorf("a deal with %d total interactions flagged as concentrated; the minimum is %d",
 			2, ourSideMinInteractions)
 	}
 
-	// A real one: plenty of contact, almost all of it one person's.
+	// A real one: plenty of contact, almost all of it one contact's.
 	concentrated := DealCoverage{DealID: ids.NewV7(), Stakeholders: base, OurSide: []ColleagueEdge{
-		{UserID: rep, PersonID: champion.PersonID, Count90d: 18},
-		{UserID: ids.NewV7(), PersonID: other.PersonID, Count90d: 1},
+		{UserID: rep, ContactID: champion.ContactID, Count90d: 18},
+		{UserID: ids.NewV7(), ContactID: other.ContactID, Count90d: 1},
 	}}
 	risks := foldRisks(concentrated, testNow)
 	if !kinds(risks)[RiskSingleThreadedOurs] {
@@ -91,8 +91,8 @@ func TestOurSideConcentrationNeedsBothVolumeAndDominance(t *testing.T) {
 
 	// Shared evenly across two colleagues is not a risk.
 	shared := DealCoverage{DealID: ids.NewV7(), Stakeholders: base, OurSide: []ColleagueEdge{
-		{UserID: rep, PersonID: champion.PersonID, Count90d: 10},
-		{UserID: ids.NewV7(), PersonID: other.PersonID, Count90d: 10},
+		{UserID: rep, ContactID: champion.ContactID, Count90d: 10},
+		{UserID: ids.NewV7(), ContactID: other.ContactID, Count90d: 10},
 	}}
 	if kinds(foldRisks(shared, testNow))[RiskSingleThreadedOurs] {
 		t.Error("evenly shared contact flagged as carried by one colleague")
@@ -337,7 +337,7 @@ func TestAChampionLeavingIsNotTheSameFindingAsAnyoneElseLeaving(t *testing.T) {
 	// Only the champion has left.
 	championGone := DealCoverage{
 		DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{champion, legal, user},
-		DepartedPersonIDs: []ids.UUID{champion.PersonID},
+		DepartedContactIDs: []ids.UUID{champion.ContactID},
 	}
 	risks := foldRisks(championGone, testNow)
 	got := kinds(risks)
@@ -352,15 +352,15 @@ func TestAChampionLeavingIsNotTheSameFindingAsAnyoneElseLeaving(t *testing.T) {
 			continue
 		}
 		// The finding must name WHO left, or a rep cannot go and replace them.
-		if len(r.PersonIDs) != 1 || r.PersonIDs[0] != champion.PersonID {
-			t.Errorf("champion_left names %v, want the departed champion %s", r.PersonIDs, champion.PersonID)
+		if len(r.ContactIDs) != 1 || r.ContactIDs[0] != champion.ContactID {
+			t.Errorf("champion_left names %v, want the departed champion %s", r.ContactIDs, champion.ContactID)
 		}
 	}
 
 	// Two other seats have left; the champion is still there.
 	othersGone := DealCoverage{
 		DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{champion, legal, user},
-		DepartedPersonIDs: []ids.UUID{user.PersonID, legal.PersonID},
+		DepartedContactIDs: []ids.UUID{user.ContactID, legal.ContactID},
 	}
 	risks = foldRisks(othersGone, testNow)
 	got = kinds(risks)
@@ -376,13 +376,13 @@ func TestAChampionLeavingIsNotTheSameFindingAsAnyoneElseLeaving(t *testing.T) {
 		if r.Kind != RiskStakeholderLeft {
 			continue
 		}
-		want := []ids.UUID{legal.PersonID, user.PersonID}
-		if len(r.PersonIDs) != len(want) {
-			t.Fatalf("stakeholder_left names %d people, want %d", len(r.PersonIDs), len(want))
+		want := []ids.UUID{legal.ContactID, user.ContactID}
+		if len(r.ContactIDs) != len(want) {
+			t.Fatalf("stakeholder_left names %d contacts, want %d", len(r.ContactIDs), len(want))
 		}
 		for i, id := range want {
-			if r.PersonIDs[i] != id {
-				t.Errorf("stakeholder_left[%d] = %s, want %s (seat order, not departure order)", i, r.PersonIDs[i], id)
+			if r.ContactIDs[i] != id {
+				t.Errorf("stakeholder_left[%d] = %s, want %s (seat order, not departure order)", i, r.ContactIDs[i], id)
 			}
 		}
 	}
@@ -394,9 +394,9 @@ func TestADepartureIsOnlyReportedForASeatTheDealActuallyHas(t *testing.T) {
 	// stranger's name on a rep's risk chip.
 	stranger := ids.NewV7()
 	c := DealCoverage{
-		DealID:            ids.NewV7(),
-		Stakeholders:      []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
-		DepartedPersonIDs: []ids.UUID{stranger},
+		DealID:             ids.NewV7(),
+		Stakeholders:       []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+		DepartedContactIDs: []ids.UUID{stranger},
 	}
 	got := kinds(foldRisks(c, testNow))
 	if got[RiskChampionLeft] || got[RiskStakeholderLeft] {

@@ -7,9 +7,9 @@
 // prior-interaction email match — and records the INSPECTABLE match basis
 // in signal_resolution. Three rules it never breaks (P12):
 // ambiguity is surfaced as low_confidence, never silently asserted; an
-// unattributable signal is dropped, never kept as a person-level dossier;
-// resolved_person_id is set only for an EXISTING person under a recorded
-// consent grant — the resolver creates no person rows, ever.
+// unattributable signal is dropped, never kept as a contact-level dossier;
+// resolved_contact_id is set only for an EXISTING contact under a recorded
+// consent grant — the resolver creates no contact rows, ever.
 
 package signals
 
@@ -188,10 +188,10 @@ func (s *Store) resolveTx(ctx context.Context, tx pgx.Tx, actor principal.Princi
 
 // stampResolution applies the resolver's verdict for this candidate set and
 // returns the audit after-image. The count IS the verdict (P12): zero
-// candidates drop the signal and link no person; exactly one resolves it to
-// that company under the consent-gated person link; several surface it as
+// candidates drop the signal and link no contact; exactly one resolves it to
+// that company under the consent-gated contact link; several surface it as
 // low_confidence for review — resolved_company_id stays NULL unless exactly one
-// company matched, and no branch ever creates a person.
+// company matched, and no branch ever creates a contact.
 func stampResolution(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, email string, candidates []candidate) (map[string]any, error) {
 	switch len(candidates) {
 	case 0:
@@ -204,7 +204,7 @@ func stampResolution(ctx context.Context, tx pgx.Tx, actor principal.Principal, 
 }
 
 // dropUnattributable is the drop-the-orphan guard (B-E08.1): an
-// unattributable signal is dropped with the "why" on record, and NO person
+// unattributable signal is dropped with the "why" on record, and NO contact
 // link. Returns the audit after-image.
 func dropUnattributable(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID) (map[string]any, error) {
 	if err := appendMatchBasis(ctx, tx, actor, signalID, "none", nil, nil,
@@ -219,13 +219,13 @@ func dropUnattributable(ctx context.Context, tx pgx.Tx, actor principal.Principa
 	return map[string]any{"resolution_state": "dropped"}, nil
 }
 
-// resolveToCompany stamps the single-candidate match: the consent-gated person
-// link (only an EXISTING person, only where the company match holds, only under
-// a recorded grant — never a person creation), the inspectable match basis,
+// resolveToCompany stamps the single-candidate match: the consent-gated contact
+// link (only an EXISTING contact, only where the company match holds, only under
+// a recorded grant — never a contact creation), the inspectable match basis,
 // and the resolved signal row. Returns the audit after-image.
 func resolveToCompany(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, email string, candidates []candidate) (map[string]any, error) {
 	chosen := candidates[0]
-	personID, err := consentedPerson(ctx, tx, email, chosen.CompanyID)
+	contactID, err := consentedContact(ctx, tx, email, chosen.CompanyID)
 	if err != nil {
 		return nil, err
 	}
@@ -238,23 +238,23 @@ func resolveToCompany(ctx context.Context, tx pgx.Tx, actor principal.Principal,
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE signal SET resolution_state = 'resolved', resolution_confidence = $2,
-		        resolved_company_id = $3, resolved_person_id = $4,
+		        resolved_company_id = $3, resolved_contact_id = $4,
 		        entity_type = COALESCE(entity_type, 'company'),
 		        entity_id = COALESCE(entity_id, $3)
 		 WHERE id = $1`,
-		signalID, chosen.Confidence, chosen.CompanyID, personID); err != nil {
+		signalID, chosen.Confidence, chosen.CompanyID, contactID); err != nil {
 		return nil, fmt.Errorf("stamp resolved signal: %w", err)
 	}
 	after := map[string]any{"resolution_state": resolutionResolved, "resolved_company_id": chosen.CompanyID, "matched_on": chosen.MatchedOn}
-	if personID != nil {
-		after["resolved_person_id"] = *personID
+	if contactID != nil {
+		after["resolved_contact_id"] = *contactID
 	}
 	return after, nil
 }
 
 // flagAmbiguous surfaces ambiguity rather than asserting it: several
 // plausible companies flag the signal for review, resolved_company_id stays NULL,
-// and no person is linked. Returns the audit after-image.
+// and no contact is linked. Returns the audit after-image.
 func flagAmbiguous(ctx context.Context, tx pgx.Tx, actor principal.Principal, signalID ids.SignalID, candidates []candidate) (map[string]any, error) {
 	top := candidates[0]
 	detail, err := candidateDetail(candidates, nil)
@@ -300,7 +300,7 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 		}
 	}
 	if a.Email != "" {
-		// Prior interaction: the sender is already a person in our graph,
+		// Prior interaction: the sender is already a contact in our graph,
 		// currently employed at the company — our own relational core, no
 		// external profiling.
 		// NOT o.is_anchor: our own staff are employed at the installation's own
@@ -309,8 +309,8 @@ func matchCandidates(ctx context.Context, tx pgx.Tx, a rawAttribution) ([]candid
 		// and name arms carry.
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT r.company_id
-			FROM person_email pe
-			JOIN relationship r ON r.person_id = pe.person_id
+			FROM contact_email pe
+			JOIN relationship r ON r.contact_id = pe.contact_id
 			 AND r.kind = 'employment' AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 			JOIN company o ON o.id = r.company_id
 			WHERE pe.email = $1 AND NOT o.is_anchor`, a.Email)
@@ -397,38 +397,38 @@ func eachID(rows pgx.Rows, fn func(ids.CompanyID)) error {
 	return rows.Err()
 }
 
-// consentedPerson returns the id of an EXISTING person the signal may be
-// linked to: the raw email must belong to a person currently employed at
-// the matched company, AND that person must hold a recorded consent grant
-// (person_consent.state='granted'). Anything less stays company-level —
-// and no person is ever created here (P12).
-func consentedPerson(ctx context.Context, tx pgx.Tx, email string, companyID ids.CompanyID) (*ids.PersonID, error) {
+// consentedContact returns the id of an EXISTING contact the signal may be
+// linked to: the raw email must belong to a contact currently employed at
+// the matched company, AND that contact must hold a recorded consent grant
+// (contact_consent.state='granted'). Anything less stays company-level —
+// and no contact is ever created here (P12).
+func consentedContact(ctx context.Context, tx pgx.Tx, email string, companyID ids.CompanyID) (*ids.ContactID, error) {
 	if email == "" {
 		return nil, nil
 	}
-	var personID ids.PersonID
+	var contactID ids.ContactID
 	err := tx.QueryRow(ctx, `
-		SELECT pe.person_id
-		FROM person_email pe
-		JOIN relationship r ON r.person_id = pe.person_id
+		SELECT pe.contact_id
+		FROM contact_email pe
+		JOIN relationship r ON r.contact_id = pe.contact_id
 		 AND r.kind = 'employment' AND r.company_id = $2
 		 AND `+employment.IsCurrentSQL("r.ended_at")+` AND r.archived_at IS NULL
 		WHERE pe.email = $1
-		  AND EXISTS (SELECT 1 FROM person_consent pc
-		              WHERE pc.person_id = pe.person_id AND pc.state = 'granted')
-		ORDER BY pe.is_primary DESC, pe.person_id
-		LIMIT 1`, email, companyID).Scan(&personID)
+		  AND EXISTS (SELECT 1 FROM contact_consent pc
+		              WHERE pc.contact_id = pe.contact_id AND pc.state = 'granted')
+		ORDER BY pe.is_primary DESC, pe.contact_id
+		LIMIT 1`, email, companyID).Scan(&contactID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("consent-gated person match: %w", err)
+		return nil, fmt.Errorf("consent-gated contact match: %w", err)
 	}
-	// resolved_person_id is a read of that person: only link one the caller
+	// resolved_contact_id is a read of that contact: only link one the caller
 	// can see under row-scope, else the signal stays company-level.
-	switch err := auth.EnsureLinkTarget(ctx, tx, "person", personID.UUID); {
+	switch err := auth.EnsureLinkTarget(ctx, tx, "contact", contactID.UUID); {
 	case err == nil:
-		return &personID, nil
+		return &contactID, nil
 	case errors.Is(err, apperrors.ErrNotFound):
 		return nil, nil
 	default:
@@ -485,8 +485,8 @@ func resolvedPayload(sig crmcontracts.Signal, candidates []candidate) crmcontrac
 	if sig.ResolvedCompanyId != nil {
 		payload.ResolvedCompanyId = sig.ResolvedCompanyId
 	}
-	if sig.ResolvedPersonId != nil {
-		payload.ResolvedPersonId = sig.ResolvedPersonId
+	if sig.ResolvedContactId != nil {
+		payload.ResolvedContactId = sig.ResolvedContactId
 	}
 	if len(candidates) > 0 {
 		matchedOn := candidates[0].MatchedOn

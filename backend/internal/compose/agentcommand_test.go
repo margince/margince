@@ -40,7 +40,7 @@ type seamRecord struct {
 // quietly become a refusal assertion.
 func (seamRecord) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
 	}, nil
 }
@@ -113,10 +113,10 @@ func TestAnArchiveOutsideTheToolSchemaStagesItsOwnTypeAndID(t *testing.T) {
 // authority on a call that was never going to run.
 func TestAnArchiveOfAnUnseeableRecordStagesNothing(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "archivePerson", Access: accessTool, Tool: "archive_record", RecordType: recordTypePerson}
+	pol := agentPolicy{Op: "archiveContact", Access: accessTool, Tool: "archive_record", RecordType: recordTypeContact}
 	rec := httptest.NewRecorder()
 
-	stageRefusal(rec, archiveRequest("/v1/people", ids.NewV7()), staging, restCommandDeps{records: hiddenRecord{}}, pol, nil)
+	stageRefusal(rec, archiveRequest("/v1/contacts", ids.NewV7()), staging, restCommandDeps{records: hiddenRecord{}}, pol, nil)
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("archiving a record the caller cannot see answered %d, want 404 — the refusal must not "+
@@ -136,10 +136,10 @@ func TestAnArchiveOfAnUnseeableRecordStagesNothing(t *testing.T) {
 // both read tables this record has no row in.
 func TestAnArchiveOfAnExternallyHeldRecordStagesNothing(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "archivePerson", Access: accessTool, Tool: "archive_record", RecordType: recordTypePerson}
+	pol := agentPolicy{Op: "archiveContact", Access: accessTool, Tool: "archive_record", RecordType: recordTypeContact}
 	rec := httptest.NewRecorder()
 
-	stageRefusal(rec, archiveRequest("/v1/people", ids.NewV7()), staging, restCommandDeps{records: mirroredRecord{}}, pol, nil)
+	stageRefusal(rec, archiveRequest("/v1/contacts", ids.NewV7()), staging, restCommandDeps{records: mirroredRecord{}}, pol, nil)
 
 	if staging.last.Tool != "" {
 		t.Errorf("an approval was staged for %q against a record whose authority lives elsewhere — nobody "+
@@ -237,11 +237,11 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 	staging := &capturingApprovals{}
 	// The tier floor is what makes this a test of the STAGING guard: Guards is
 	// asked on the path to staging, so an auto-execute archive would run the
-	// write without ever consulting it. archive_record on a person is the same
+	// write without ever consulting it. archive_record on a contact is the same
 	// (verb, record type) the both-doors gate floors, for the same reason.
 	reg := agents.NewRegistry(staging, auth.NewGate(fullSeat{}),
 		agents.WithTierFloor(func(tool, recordType string) (mcp.RiskTier, bool) {
-			if tool == "archive_record" && recordType == string(recordTypePerson) {
+			if tool == "archive_record" && recordType == string(recordTypeContact) {
 				return mcp.TierConfirmationRequired, true
 			}
 			return mcp.TierAutoExecute, false
@@ -249,7 +249,7 @@ func TestTheToolDoorRefusesAnExternallyHeldRecordItCanRead(t *testing.T) {
 	agents.RegisterCoreTools(reg, mirroredRecord{}, nil, nil, nil, nil, nil)
 
 	_, err := reg.Invoke(anArchivingAgent(), "archive_record",
-		json.RawMessage(`{"record_type":"person","id":"`+ids.NewV7().String()+`"}`))
+		json.RawMessage(`{"record_type":"contact","id":"`+ids.NewV7().String()+`"}`))
 
 	var staged *workflow.StagedApprovalError
 	if errors.As(err, &staged) {

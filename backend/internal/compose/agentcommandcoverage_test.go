@@ -104,18 +104,18 @@ func TestEveryAgentReachableMutatingRouteDecodesIntoACommand(t *testing.T) {
 // the guess read, so a door that resolved targets that way would stage happily
 // and pass everything except this.
 func TestAnOperationWithNoCommandIsRefusedRatherThanGuessedAt(t *testing.T) {
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	pol := agentPolicy{
 		Op: "archiveSomethingNoCommandDescribes", Access: accessTool, Tool: "archive_record",
-		RecordType: recordTypePerson, Tier: tierConfirmationRequired,
+		RecordType: recordTypeContact, Tier: tierConfirmationRequired,
 	}
 	if _, described := restCommands[pol.Op]; described {
 		t.Fatalf("%s has a command after all, so this test proves nothing about the door's answer without one", pol.Op)
 	}
 
-	req := httptest.NewRequest(http.MethodDelete, "/v1/people/"+person.String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/v1/contacts/"+contact.String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", person.String())
+	rctx.URLParams.Add("id", contact.String())
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	staging := &capturingApprovals{}
 	rec := httptest.NewRecorder()

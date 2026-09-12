@@ -157,7 +157,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 func (s *Service) GetScoped(
 	ctx context.Context, companyID ids.CompanyID, force bool, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyBrief, error) {
-	// A brief is a reading aid for a person; an agent reading records
+	// A brief is a reading aid for a contact; an agent reading records
 	// through a passport has the records themselves.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.CompanyBrief{}, err
@@ -230,7 +230,7 @@ func (s *Service) Ask(
 func (s *Service) AskScoped(
 	ctx context.Context, companyID ids.CompanyID, raw crmcontracts.CompanyQuestion, projectID *ids.ProjectID,
 ) (crmcontracts.CompanyAnswer, error) {
-	// A prepared question is a reading aid for a person; an agent asking about
+	// A prepared question is a reading aid for a contact; an agent asking about
 	// an account has the records themselves.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.CompanyAnswer{}, err

@@ -7,7 +7,7 @@ package privacy
 // evaluates ONE workspace's enabled policies and applies the policy's
 // single action to over-age records, one audited transaction per
 // record. legal_hold rows are NEVER auto-acted, and an activity is
-// held transitively when any linked person/company/deal is held —
+// held transitively when any linked contact/company/deal is held —
 // a hold on the subject must cover the evidence about them.
 //
 // The fleet is somebody else's problem: this engine takes the workspace it
@@ -54,7 +54,7 @@ func publishedRetentionAction(
 // retentionAppliedPayload builds the retention.applied wire payload — the
 // subject travels separately (the caller's own entityType, passed to
 // storekit.EmitEventForEntity), since this event's entity is dynamic
-// (ai_call / voice_learning_signal / a policy's object type / person, one
+// (ai_call / voice_learning_signal / a policy's object type / contact, one
 // per site). policyID/reason are each nil where that site's
 // action carries no such value — the union this schema's optional
 // policy/reason fields exist for.
@@ -97,7 +97,7 @@ const retentionBatch = 200
 // bound, not an enforced deadline — nothing in this engine cancels a record
 // mid-transaction — so it exists for the scheduler that must cap the pass and
 // has to know what a slow-but-healthy record costs. The heaviest action sets
-// it: person/erase is a ~30-statement transaction that also deletes the
+// it: contact/erase is a ~30-statement transaction that also deletes the
 // subject's attachment objects from the object store over the network.
 const maxRecordDuration = 10 * time.Second
 
@@ -223,7 +223,7 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 // consumer that also handles retention.applied to correct — late, but
 // corrected. There is no second path that ages raw_capture out:
 // PurgeRawCaptureTx's own comment says so, and says why the Art. 17 purge
-// cannot stand in (it is scoped to a PERSON, where a retention window is scoped
+// cannot stand in (it is scoped to a CONTACT, where a retention window is scoped
 // to time). So an unwired purger is not a degraded mode. It is a constructor
 // argument, and EvaluateInstallation refuses the whole pass if one arrives nil
 // anyway — before a single record is touched.
@@ -416,7 +416,7 @@ func (s *RetentionService) dueRecords(ctx context.Context, pol retentionPolicy, 
 		args = append(args, floor.Keep.String(), floor.Anchor == jurisdiction.AnchorCalendarYearEnd)
 	}
 	// The ids stay untyped: the selector's entity varies by policy scope (lead,
-	// activity, person, deal), so the kind is only known one dispatch deeper.
+	// activity, contact, deal), so the kind is only known one dispatch deeper.
 	var due []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, selector, args...)

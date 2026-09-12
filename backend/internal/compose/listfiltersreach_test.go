@@ -43,7 +43,7 @@ func TestEveryFilterAStoreBindsReachesTheAgentSurface(t *testing.T) {
 	published := string(spec.InputSchema)
 
 	for _, recordType := range []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany,
+		datasource.EntityContact, datasource.EntityCompany,
 		datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject,
 	} {
 		bound := NewProvider(nil).ListFilters(recordType)

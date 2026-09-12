@@ -68,14 +68,14 @@ cases:
     1:
       name: A briefing arrives without naming a record
       statement: >-
-        The request names the account the way a person says it out loud,
+        The request names the account the way a contact says it out loud,
         "Vietnam partner", and not the way the record carries it — so an answer
         that only repeats the question has found nothing, and what the record
         holds beyond it is the evidence that it was opened.
     2:
-      name: The people are named, not their seats
+      name: The contacts are named, not their seats
       statement: >-
-        The briefing names the people on the other side of the meeting rather
+        The briefing names the contacts on the other side of the meeting rather
         than describing the roles they hold.
     3:
       name: An empty calendar answer is not an empty diary
@@ -136,14 +136,14 @@ cases:
     3:
       name: The decision is taken, not handed back
       statement: >-
-        The person gave an explicit approve and an explicit reject, and an
+        The colleague gave an explicit approve and an explicit reject, and an
         assistant that returns the queue and sends them to the web app has
         reported a limitation this surface does not have.
   case9_filed_in_the_wrong_place:
     1:
       name: A misfiled message is moved, not also-linked
       statement: >-
-        The default is to add the new link beside the old one, and the person
+        The default is to add the new link beside the old one, and the contact
         asked for the mail to be off the wrong company — an association leaves
         the wrong timeline still showing it.
     2:
@@ -162,7 +162,7 @@ cases:
     1:
       name: A pre-authorized import is actually committed
       statement: >-
-        The person says they have been through the file and asks for it to go
+        The contact says they have been through the file and asks for it to go
         in, so stopping at the dry run to ask for permission already given is
         the work handed back.
     2:
@@ -215,13 +215,13 @@ cases:
     1:
       name: Real openings, from the host's own calendar
       statement: >-
-        Times a person can actually offer come back, worked out from the host's
+        Times a contact can actually offer come back, worked out from the host's
         calendar rather than described in general terms.
     2:
       name: The other side's calendar is not claimed to be known
       statement: >-
         Availability answers for one host and not for the invitee, and the
-        assistant must not report the slots as times both people are free.
+        assistant must not report the slots as times both humans are free.
   case30_a_word_for_it:
     1:
       name: The word the workspace already has is reused
@@ -259,7 +259,7 @@ cases:
     2:
       name: A fold nobody has released is reported as waiting
       statement: >-
-        Folding one word into another is a person's decision, and the answer
+        Folding one word into another is a contact's decision, and the answer
         names that decision rather than describing the vocabulary as already
         tidied up.
     3:

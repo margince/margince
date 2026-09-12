@@ -13,7 +13,7 @@ import (
 // TestEveryDeclaredToolVerbIsRegistered checks only that the VERB exists, so
 // two mappings sat broken in plain sight: GET /v1/users declared
 // search_records/app_user and GET /v1/teams declared search_records/team, and
-// search_records serves neither — its enum is person/company/deal/lead/
+// search_records serves neither — its enum is contact/company/deal/lead/
 // project and app_user is not even a datasource entity. The declaration read
 // as a working route to anyone auditing the contract, and answered nothing.
 //

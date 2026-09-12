@@ -120,7 +120,7 @@ func (r updateCustomFieldOptionsResolver) Guards(ctx context.Context, cmd Update
 
 // SetStakeholderCommand is one project-stakeholder attach or re-role,
 // whichever door asked for it — the routed project id only. It does not
-// carry the attached person or role: neither Guards nor Subject reads them
+// carry the attached contact or role: neither Guards nor Subject reads them
 // (setStakeholderResolver.Subject's own doc says why), the same reason
 // UpdateFactCommand's own doc (commandsidecar.go) gives for dropping a
 // value nothing here reads.
@@ -145,7 +145,7 @@ type setStakeholderResolver struct {
 
 // Subject names the PROJECT the approval binds to — a stakeholder edge has
 // no row of its own on the seam. Unlike removeStakeholderResolver's, there
-// is no path operand to carry into the summary: person_id and role arrive in
+// is no path operand to carry into the summary: contact_id and role arrive in
 // the BODY here, and the body's own fields are what the inbox shows beside
 // this line (proposed_change), the same reasoning patchResolver's own
 // Subject gives for not repeating a patch's values.
@@ -160,18 +160,18 @@ func (r setStakeholderResolver) Subject(_ context.Context, cmd SetStakeholderCom
 // Guards refuses, before anything is staged, a project the caller cannot see
 // or whose authority lives elsewhere — the same two refusals
 // patchResolver.Guards makes for its own target. It does not check whether
-// the named person exists or is already a stakeholder: those reads are the
+// the named contact exists or is already a stakeholder: those reads are the
 // handler's, not this approval's.
 func (r setStakeholderResolver) Guards(ctx context.Context, cmd SetStakeholderCommand) error {
 	return r.target.refuse(ctx, cmd.ID)
 }
 
 // RemoveStakeholderCommand is one project-stakeholder detach, whichever door
-// asked for it. PersonID is a second PATH parameter, not a body field — the
+// asked for it. ContactID is a second PATH parameter, not a body field — the
 // operand this whole task exists to carry.
 type RemoveStakeholderCommand struct {
-	ID       ids.UUID
-	PersonID ids.UUID
+	ID        ids.UUID
+	ContactID ids.UUID
 }
 
 // NewRemoveStakeholderCall binds one detach to the resolver that answers
@@ -188,20 +188,20 @@ type removeStakeholderResolver struct {
 	target routedRecordTarget
 }
 
-// Subject names the PROJECT the approval binds to, with the person being
+// Subject names the PROJECT the approval binds to, with the contact being
 // detached carried into the summary: the door-agnostic line
-// GovernedCall.Subject owes this operation, distinct per person, even
+// GovernedCall.Subject owes this operation, distinct per contact, even
 // though no door renders it today (confirmFactResolver's own doc says why).
 func (r removeStakeholderResolver) Subject(_ context.Context, cmd RemoveStakeholderCommand) (StageInfo, error) {
 	return StageInfo{
 		TargetType: projectRecordType,
 		TargetID:   cmd.ID,
-		Summary:    fmt.Sprintf("Remove stakeholder %s from project %s", cmd.PersonID, cmd.ID),
+		Summary:    fmt.Sprintf("Remove stakeholder %s from project %s", cmd.ContactID, cmd.ID),
 	}, nil
 }
 
 // Guards: the same two refusals as setStakeholderResolver's. It does not
-// check whether PersonID is currently a stakeholder — the edge's own
+// check whether ContactID is currently a stakeholder — the edge's own
 // existence is the handler's rule, and this approval binds to the project
 // regardless of whether the edge is still there when it is redeemed.
 func (r removeStakeholderResolver) Guards(ctx context.Context, cmd RemoveStakeholderCommand) error {

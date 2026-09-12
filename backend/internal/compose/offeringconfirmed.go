@@ -12,7 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -29,7 +29,7 @@ import (
 // rather than as an error. The 404 from GetCompany is the onboarding signal,
 // not a fault, and a workspace mid-onboarding should still get capped bands
 // with the reason spelled out — not a broken panel.
-func offeringConfirmed(store *people.Store) companydossier.SelfOffering {
+func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
 	return func(ctx context.Context) (companydossier.Offering, error) {
 		company, err := store.GetAnchorCompany(ctx)
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -60,7 +60,7 @@ func offeringConfirmed(store *people.Store) companydossier.SelfOffering {
 // The content never leaves as text — a fit derived from what WE sell is an
 // assessment about THEM and must still cite their records (DOSS-AC-6). Only the
 // digest travels, onto a cache key nothing renders.
-func offeringFingerprint(ctx context.Context, store *people.Store) (string, error) {
+func offeringFingerprint(ctx context.Context, store *contacts.Store) (string, error) {
 	scopes, err := companyContextScopesFor(ai.TaskGrowthFit)
 	if err != nil {
 		return "", err

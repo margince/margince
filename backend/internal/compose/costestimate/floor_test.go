@@ -45,22 +45,22 @@ func TestUnitsFloorTracksTheYieldlessRatios(t *testing.T) {
 	}
 
 	// embeddings cold-start floor counts MESSAGE-embeds only — captured ≈ scanned
-	// at connect. Person/company embeds are omitted from the floor on purpose: the
+	// at connect. Contact/company embeds are omitted from the floor on purpose: the
 	// floor prices every embed unit at a full email (embedItemTokens), so folding
-	// in expected persons would charge each name-sized person embed as a full
-	// email — a per-person overquote on the cheapest input-only lane. The observed
+	// in expected contacts would charge each name-sized contact embed as a full
+	// email — a per-contact overquote on the cheapest input-only lane. The observed
 	// path still counts them via yields; only the floor omits them.
 	if got := unitsFloor(ai.TaskEmbeddings, scanned); got != scanned {
-		t.Fatalf("unitsFloor(embeddings, %d) = %d, want %d (message-embeds only; person embeds omitted from the floor)", scanned, got, scanned)
+		t.Fatalf("unitsFloor(embeddings, %d) = %d, want %d (message-embeds only; contact embeds omitted from the floor)", scanned, got, scanned)
 	}
 
 	// enrich fires once per expected new correspondent — scanned × the one
 	// honest density constant (referenced, never a magic number here).
-	wantEnrich := int64(float64(scanned) * defaultPersonsPerMsg)
+	wantEnrich := int64(float64(scanned) * defaultContactsPerMsg)
 	if wantEnrich <= 0 {
 		t.Fatalf("test fixture bug: expected a positive enrich floor at scanned=%d", scanned)
 	}
 	if got := unitsFloor(ai.TaskEnrich, scanned); got != wantEnrich {
-		t.Fatalf("unitsFloor(enrich, %d) = %d, want %d (scanned × defaultPersonsPerMsg)", scanned, got, wantEnrich)
+		t.Fatalf("unitsFloor(enrich, %d) = %d, want %d (scanned × defaultContactsPerMsg)", scanned, got, wantEnrich)
 	}
 }

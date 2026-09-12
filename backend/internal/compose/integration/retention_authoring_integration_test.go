@@ -544,27 +544,27 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	}
 }
 
-// TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote covers the two
-// seeded policies the engine had no test for: person/no_consent_no_deal
+// TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote covers the two
+// seeded policies the engine had no test for: contact/no_consent_no_deal
 // anonymize, and the bare activity/ archive at 1095 days.
 //
-// Both destroy or retire real records, and person/anonymize is the heavier of the
+// Both destroy or retire real records, and contact/anonymize is the heavier of the
 // two — it deletes every satellite carrying the subject (emails, phones, socials,
 // channel identities, the enrichment sidecar) and scrubs the graph traces that
 // name them. An untested path there is an Art. 17 obligation nobody has watched
 // run.
-func TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote(t *testing.T) {
+func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.T) {
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 
-	personID, noteID := ids.NewV7(), ids.NewV7()
-	// A person past the 730-day window with no granted consent and no deal
+	contactID, noteID := ids.NewV7(), ids.NewV7()
+	// A contact past the 730-day window with no granted consent and no deal
 	// stakeholder role — the selector's whole definition of unattached.
-	e.WsExec(t, `INSERT INTO person (id, full_name, first_name, last_name, title, source, captured_by, created_at)
+	e.WsExec(t, `INSERT INTO contact (id, full_name, first_name, last_name, title, source, captured_by, created_at)
 		VALUES ($1, 'Old Contact', 'Old', 'Contact', 'Buyer', 'manual', 'human:x', now() - interval '800 days')`,
-		personID)
-	e.WsExec(t, `INSERT INTO person_email (person_id, email, source, captured_by)
-		VALUES ($1, 'old.contact@example.test', 'manual', 'human:x')`, personID)
+		contactID)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+		VALUES ($1, 'old.contact@example.test', 'manual', 'human:x')`, contactID)
 	// A NOTE, deliberately: an internal note is not commercial correspondence, so
 	// it carries no statutory floor and the 1095-day archive reaches it. An email
 	// of the same age would be shielded, which is the boundary
@@ -578,15 +578,15 @@ func TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote(t *testing.T
 		t.Fatal(err)
 	}
 
-	var personName string
+	var contactName string
 	var emails, noteArchived int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, personID).Scan(&personName); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&contactName); err != nil {
 			return err
 		}
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM person_email WHERE person_id = $1`, personID).Scan(&emails); err != nil {
+			`SELECT count(*) FROM contact_email WHERE contact_id = $1`, contactID).Scan(&emails); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx,
@@ -595,13 +595,13 @@ func TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote(t *testing.T
 		t.Fatal(err)
 	}
 
-	if personName == "Old Contact" {
-		t.Error("the over-age unattached person was not anonymized")
+	if contactName == "Old Contact" {
+		t.Error("the over-age unattached contact was not anonymized")
 	}
-	// The satellite is the half that matters: anonymizing the person row while
+	// The satellite is the half that matters: anonymizing the contact row while
 	// leaving the address behind leaves the subject readable and re-matchable.
 	if emails != 0 {
-		t.Errorf("%d person_email row(s) survived the anonymize — the subject's address "+
+		t.Errorf("%d contact_email row(s) survived the anonymize — the subject's address "+
 			"is still readable and still re-matchable", emails)
 	}
 	if noteArchived != 1 {
@@ -615,27 +615,27 @@ func TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote(t *testing.T
 // an employer only for equality where the eraser also matches a longer name.
 // Both gaps left a third party's name, employer and profile standing after the
 // installation's own clock said the subject was gone — data imported from a
-// colleague's export without that person ever being asked.
+// colleague's export without that contact ever being asked.
 func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 
-	personID, companyID := ids.NewV7(), ids.NewV7()
+	contactID, companyID := ids.NewV7(), ids.NewV7()
 	byURL, bySuffix, stranger := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	const handle = "https://linkedin.com/in/old-contact"
 
-	e.WsExec(t, `INSERT INTO person (id, full_name, first_name, last_name, source, captured_by, created_at)
-		VALUES ($1, 'Old Contact', 'Old', 'Contact', 'manual', 'human:x', now() - interval '800 days')`, personID)
+	e.WsExec(t, `INSERT INTO contact (id, full_name, first_name, last_name, source, captured_by, created_at)
+		VALUES ($1, 'Old Contact', 'Old', 'Contact', 'manual', 'human:x', now() - interval '800 days')`, contactID)
 	// The subject's LinkedIn address lives here, and the sweep clears this
 	// table on its way past — so the handles have to be read before it does.
-	e.WsExec(t, `INSERT INTO person_social (person_id, platform, handle)
-		VALUES ($1, 'linkedin', $2)`, personID, handle)
+	e.WsExec(t, `INSERT INTO contact_social (contact_id, platform, handle)
+		VALUES ($1, 'linkedin', $2)`, contactID, handle)
 	// An employer whose display name is LONGER than the ghost's company text,
 	// which is the shape the equality-only copy could not match.
 	e.WsExec(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, companyID)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, personID, companyID)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contactID, companyID)
 
 	ghost := `INSERT INTO linkedin_connection
 		  (id, owner_user_id, full_name, normalized_name, company_name, normalized_company,

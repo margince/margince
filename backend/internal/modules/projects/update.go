@@ -161,7 +161,7 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*s
 // clear — a constant in their place is invisible to it, and the census then
 // under-reports rather than failing.
 //
-//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns in the people module
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns in the contacts module
 func clearableProjectColumns(current crmcontracts.Project) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		"description":     {Column: "description", Current: current.Description},

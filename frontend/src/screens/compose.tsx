@@ -74,9 +74,9 @@ import {
   useRecentConversations,
   useThreadMessages,
 } from "./composethread";
+import { useContact360 } from "./contact360";
+import type { Transport } from "./contacttransports";
 import { useRoster } from "./entityref";
-import { usePerson360 } from "./person360";
-import type { Transport } from "./persontransports";
 import {
   stripEveryKeyTag,
   stripSubjectTag,
@@ -376,7 +376,7 @@ function answeringSentence(
   const when = formatDateTime(answering.occurred_at, locale, zone);
   const subject = answering.subject?.trim();
   // WHO, as soon as it is known. The composer used to ask the reader to pick
-  // the person, and picking them is what made the consent purpose beneath an
+  // the contact, and picking them is what made the consent purpose beneath an
   // attestation about a named human. Now the thread supplies the address, so
   // the line has to name it — a purpose chosen against a recipient the reader
   // never saw is a weaker attestation than the one this replaced.
@@ -453,7 +453,7 @@ function useThreadProject(activityId?: string): {
  *
  * It reads the ANCHOR's own project link rather than the picker's list, because
  * that link is what the send inherits — a channel conversation hangs off a
- * person, whose timeline reaches no project list at all, and it is filed all
+ * contact, whose timeline reaches no project list at all, and it is filed all
  * the same.
  *
  * Nothing renders while a read is unanswered, and nothing renders when the
@@ -514,7 +514,7 @@ async function draftFromLead({
   };
 }
 
-// The person-started draft: the composer's "Write email" on a contact.
+// The contact-started draft: the composer's "Write email" on a contact.
 //
 // The mirror of the account path, and simpler for one reason — the record in
 // the path is the recipient, so there is nobody to name. It takes the project
@@ -524,7 +524,7 @@ async function draftFromLead({
 // Answers the same `{available, draft}` shape as the three beside it, so the
 // fill cannot tell the origins apart and they cannot drift into different
 // clobber rules.
-async function draftFromPerson({
+async function draftFromContact({
   entityId,
   projectId,
   intent,
@@ -535,13 +535,16 @@ async function draftFromPerson({
   intent: string;
   t: ReturnType<typeof useT>;
 }>): Promise<DraftResult> {
-  const { data, error, response } = await api.POST("/people/{id}/draft-email", {
-    params: { path: { id: entityId } },
-    body: {
-      ...(projectId ? { project_id: projectId } : {}),
-      ...(intent.trim() ? { intent: intent.trim() } : {}),
+  const { data, error, response } = await api.POST(
+    "/contacts/{id}/draft-email",
+    {
+      params: { path: { id: entityId } },
+      body: {
+        ...(projectId ? { project_id: projectId } : {}),
+        ...(intent.trim() ? { intent: intent.trim() } : {}),
+      },
     },
-  });
+  );
   if (response.status === 501) {
     return { available: false as const, reason: "no_model" as const };
   }
@@ -583,19 +586,19 @@ async function draftFromAccount({
 }>): Promise<DraftResult> {
   // A LEAD grounds its own. The record IS the recipient — the address is on it
   // rather than on a contact behind it — so there is nobody to name and nothing
-  // to pick, which is the shape /people/{id}/draft-email describes and the same
+  // to pick, which is the shape /contacts/{id}/draft-email describes and the same
   // writer answers.
   if (entityType === "lead") {
     return draftFromLead({ entityId, intent, t });
   }
-  // A PERSON grounds its own, and the contract says so: /people/{id}/draft-email
-  // is the account path's mirror — written from the caller's own person 360 and
+  // A CONTACT grounds its own, and the contract says so: /contacts/{id}/draft-email
+  // is the account path's mirror — written from the caller's own contact 360 and
   // taking nothing but optional steering, because the record in the path IS the
   // recipient. This arm was missing, so the page fell through to the refusal
   // below and told the rep the model was not configured while making no request
   // at all, on a deployment answering every other AI call on the same screen.
-  if (entityType === "person") {
-    return draftFromPerson({ entityId, projectId, intent, t });
+  if (entityType === "contact") {
+    return draftFromContact({ entityId, projectId, intent, t });
   }
   // A company page has to be told which contact, because an account has many.
   // A deal grounds nothing here: writing to a contact from whatever account
@@ -609,7 +612,7 @@ async function draftFromAccount({
     {
       params: { path: { id: entityId } },
       body: {
-        person_id: recipientId,
+        contact_id: recipientId,
         ...(dealId ? { deal_id: dealId } : {}),
         // The project the rep attributed the message to. The server grounds
         // the draft in the 360 SCOPED to it, so the other projects'
@@ -646,7 +649,7 @@ async function draftFromAccount({
 // nothing to do about it here, while "not from this page" is ours and the rep
 // can still reach a draft from the account. They shared one sentence — "the
 // model is not configured" — and a rehearsal spent an afternoon looking for a
-// missing provider that was never missing: the person page simply made no
+// missing provider that was never missing: the contact page simply made no
 // request at all.
 export type DraftUnavailable = "no_model" | "unsupported_origin";
 
@@ -682,10 +685,10 @@ type DraftResult =
 // because that component already carries the send, the consent gate, the
 // refusal vocabulary and the voice-rejection flow.
 function useAccountGrounding(
-  personId: string | undefined,
+  contactId: string | undefined,
   onGroundingChanged: () => void,
 ) {
-  const [recipientId, setRecipientId] = useState(personId ?? "");
+  const [recipientId, setRecipientId] = useState(contactId ?? "");
   const [dealId, setDealId] = useState("");
   // One choice, two effects: the project scopes the draft's grounding AND
   // files the sent message under the project (composedLinks).
@@ -732,7 +735,7 @@ function useAccountGrounding(
 // to. The grounding choices ARE the attribution — they are the same statement,
 // so they travel together.
 //
-// Duplicates are dropped rather than sent twice: on a person page the anchor
+// Duplicates are dropped rather than sent twice: on a contact page the anchor
 // and the recipient are the same record, and the link table treats a repeat as
 // a conflict rather than a no-op. A link is identified by BOTH of its fields,
 // the way the server identifies it — matching on the id alone would drop a
@@ -781,7 +784,7 @@ function composedLinks(
     add("project", derivedProjectId);
     return links;
   }
-  add("person", chosen.recipientId);
+  add("contact", chosen.recipientId);
   add("deal", chosen.dealId);
   add("project", chosen.projectId);
   return links;
@@ -841,7 +844,7 @@ function rejectionTarget(
 // category now (commsauthz.Category.CarriesUnsubscribe), because the old
 // purpose-key question had no answer for a message carrying no key — and a
 // reply carries none, so the looser test predicted a refusal for every reply
-// to two people.
+// to two contacts.
 function sharedUnsubscribeAhead(
   to: string[],
   cc: string[],
@@ -903,7 +906,7 @@ async function sendFrom(args: {
 }) {
   if (args.isChannelReply) {
     if (!args.activityId) {
-      // A channel reply answers a conversation the person opened; there is no
+      // A channel reply answers a conversation the contact opened; there is no
       // way to start one with a stranger from a company page. Falling through
       // to the mail arm would post a channel message as an account EMAIL —
       // wrong transport, wrong body shape, and a message the rep never meant
@@ -1226,7 +1229,7 @@ function useDraftMutation({
  * The project the anchor RECORD names, for the sends whose anchor can name one.
  *
  * Only a deal does today: it carries `project_id` as a column, and a message
- * about a deal is a message about that deal's work. A company or a person
+ * about a deal is a message about that deal's work. A company or a contact
  * reaches several projects at once and names none of them, so there is nothing
  * to derive — those anchors answer nothing here and the account path's picker
  * is what asks.
@@ -1396,7 +1399,7 @@ export function ComposeModal({
   activityId,
   entityType,
   entityId,
-  personId,
+  contactId,
   recordAddress,
   kind,
   transports = NO_TRANSPORTS,
@@ -1416,7 +1419,7 @@ export function ComposeModal({
   activityId?: string;
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   /**
    * The record's own email address, for a FIRST message to it — a lead or a
    * contact nobody has written to yet, where there is no thread to resolve a
@@ -1553,7 +1556,7 @@ export function ComposeModal({
   // the fill, so their presence is what says the words on screen came from a
   // draft rather than from the rep — and a rep who typed their own message
   // and then picked a different contact must not lose it.
-  const account = useAccountGrounding(personId, () => {
+  const account = useAccountGrounding(contactId, () => {
     if (!provenance && !draftRef) {
       return;
     }
@@ -1698,7 +1701,7 @@ export function ComposeModal({
   // What the conversation's rows are CALLED. An activity link carries ids, and
   // "Sent to 8f21c4…" is not a reader telling you who was on a message. Two
   // sources, because a thread has two sides: colleagues come from the workspace
-  // roster, the account's own people from the record behind this drawer — whose
+  // roster, the account's own contacts from the record behind this drawer — whose
   // read is already in cache there, so this costs the composer nothing on the
   // page it opens over.
   const roster = useRoster("user", open);
@@ -1785,7 +1788,7 @@ export function ComposeModal({
   // What SHAPE the composer takes, split from what it GROUNDS. One flag used to
   // answer both, so a reply inherited the account path's box — and an account
   // that had mail lost the drawer that path was given. The shape is every
-  // record's, not the account's: a mail written from a person, lead or deal
+  // record's, not the account's: a mail written from a contact, lead or deal
   // keeps that record on screen beside it just as an account's does, so the
   // same verb cannot change shape with the page it was pressed on.
   const asDrawer = !isChannelReply;
@@ -1829,7 +1832,7 @@ export function ComposeModal({
   // account path keeps its own picker (it chooses a project rather than
   // inheriting one), so this covers the anchored sends: a reply, and a message
   // started from a deal.
-  // The person this mail is TO, however the composer came to know them: a
+  // The contact this mail is TO, however the composer came to know them: a
   // contact page names it as the record the composer was opened from, and a
   // company draft PICKS one in the account context — which is the flow with the
   // most reason to warn, since the rep is choosing between the account's
@@ -1837,19 +1840,19 @@ export function ComposeModal({
   // names none.
   //
   // The chosen recipient wins where there is one: on an account draft the record
-  // the composer was opened from is the company, and the person is whoever
+  // the composer was opened from is the company, and the contact is whoever
   // the reader just picked.
   //
   // Nothing at all for a channel reply. Its recipient is resolved server-side
   // and it draws no address fields, so asking would spend a composite read on an
   // answer with nowhere to go.
-  const recipientPerson = isChannelReply
+  const recipientContact = isChannelReply
     ? undefined
     : ((account.recipientId || undefined) ??
-      (entityType === "person" ? entityId : undefined));
-  const contact = usePerson360(
-    recipientPerson as string,
-    recipientPerson != null,
+      (entityType === "contact" ? entityId : undefined));
+  const contact = useContact360(
+    recipientContact as string,
+    recipientContact != null,
   );
   const anchorProject = useAnchorProject(entityType, entityId);
   // The project a message written from a PROJECT page is about: itself. Read as
@@ -1860,7 +1863,7 @@ export function ComposeModal({
   );
   // The account this message is around, whichever record it was started from: a
   // company IS one, a deal names one, a project names one. Its 360 answers two
-  // questions at once — which projects the filing may name, and which people the
+  // questions at once — which projects the filing may name, and which contacts the
   // recipient fields offer — under the key the account page itself fetches
   // under, so neither costs a request the drawer was not already making.
   //
@@ -1879,7 +1882,7 @@ export function ComposeModal({
   // composer offering a filing it could never make, and a message about a
   // project landing unfiled for the ladder to ask about afterwards.
   const reachableProjects = liveProjects(
-    entityType === "person"
+    entityType === "contact"
       ? contact.data?.projects
       : entityType === "project"
         ? projectItself(ownProject.project)
@@ -2069,7 +2072,7 @@ export function ComposeModal({
         // The SAME anchor the draft used. Split, these disagree in the worst
         // possible way: the draft answers a thread and writes "Re: …", and the
         // send then takes the account path — which files under the links the
-        // body names rather than the anchor's own (the person the mail was
+        // body names rather than the anchor's own (the contact the mail was
         // with gets none, so the message is missing from their timeline), and
         // starts a new RFC message-id chain, so what the reader was shown as a
         // reply reaches the recipient as an orphan.
@@ -2265,15 +2268,15 @@ export function ComposeModal({
   // conversation and has no field to pick a moment in).
   const scheduling = !isChannelReply && sendAt !== "";
   const scheduled = momentOf(sendAt);
-  // The person this mail is TO, however the composer came to know them: a
-  // person page names it as the record the composer was opened from, and a
+  // The contact this mail is TO, however the composer came to know them: a
+  // contact page names it as the record the composer was opened from, and a
   // company draft PICKS one in the account context — which is the flow with the
   // most reason to warn, since the rep is choosing between the account's
   // contacts rather than answering somebody who already wrote. A deal timeline
   // names none, and warns about nothing.
   //
   // The chosen recipient wins where there is one: on an account draft the
-  // record the composer was opened from is the company, and the person is
+  // record the composer was opened from is the company, and the contact is
   // whoever the reader just picked.
   //
   // Nothing at all for a channel reply. MailOnlyFields is not rendered for one
@@ -2290,7 +2293,7 @@ export function ComposeModal({
   // — the contact for its dead addresses and its projects, the account for the
   // filing it may name — so the offer costs no request of its own and cannot
   // disagree with the page behind it. A deal, a project and a company all reach
-  // their account's people this way; only a record with no account behind it
+  // their account's contacts this way; only a record with no account behind it
   // offers nothing, which is honest rather than empty.
   const recipients = recipientSuggestions(
     contact.data,
@@ -2568,7 +2571,7 @@ export function ComposeModal({
             {/* Asked only where the record does not already answer it. A reply
             derives its category from the thread it answers, so the reader is
             told what this message is rather than made to restate it — a
-            question with an obvious answer trains people to answer without
+            question with an obvious answer trains contacts to answer without
             reading, which is how the dropdown this replaces ended up set to
             whatever came first in the list. */}
             {asksWhy(anchorActivity) ? (
@@ -2628,7 +2631,7 @@ export function ComposeModal({
             )}
             <SendRefusal
               refusal={refusal}
-              personId={personId}
+              contactId={contactId}
               review={sendReview}
             />
             <p className="t-caption">
@@ -2667,7 +2670,7 @@ export function ComposeModal({
 //
 // The gate is the same one TimelineActions applies, and that sameness is the
 // point of the extraction rather than a happy accident: a `message` row is
-// withheld when the person behind it cannot be reached on the transport that
+// withheld when the contact behind it cannot be reached on the transport that
 // carried it, and a rep offered a reply on one surface and refused it on the
 // other would have no way to tell which answer was true.
 export function ChannelReplyAction({
@@ -2676,7 +2679,7 @@ export function ChannelReplyAction({
   channelProvider,
   entityType,
   entityId,
-  personId,
+  contactId,
   contentWithheld,
   onSent,
 }: Readonly<{
@@ -2685,7 +2688,7 @@ export function ChannelReplyAction({
   channelProvider?: string;
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   // Told when the message actually went, for a caller whose own view the send
   // changes. ComposeModal invalidates the RECORD timelines it knows about; a
   // surface listing the unanswered — the worklist's waiting lane — is not one
@@ -2701,7 +2704,7 @@ export function ChannelReplyAction({
   const [reply, setReply] = useState(false);
   const reachable = useChannelReachable(
     kind === "message",
-    personId,
+    contactId,
     channelProvider,
   );
   if (!reachable) {
@@ -2725,7 +2728,7 @@ export function ChannelReplyAction({
           activityId={contentWithheld ? undefined : activityId}
           entityType={entityType}
           entityId={entityId}
-          personId={personId}
+          contactId={contactId}
           // `email`, not the withheld row's own kind. ComposeModal reads
           // `message` as a CHANNEL reply and posts to send-message, which
           // needs the conversation it answers — and the anchor is exactly

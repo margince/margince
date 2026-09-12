@@ -28,7 +28,7 @@ func TestTheHeaderKeepsTheOneClickAPIURL(t *testing.T) {
 }
 
 // The two VISIBLE links are pages. This is the defect the whole change is
-// about: a person clicking the footer used to reach a POST-only endpoint
+// about: a contact clicking the footer used to reach a POST-only endpoint
 // (405) and a JSON document.
 func TestTheVisibleLinksArePagesNotTheAPI(t *testing.T) {
 	links := unsubscribeLinksFor("https://crm.example.com", unsubscribeTokens{stop: "tok", manage: "tok"}, "business_correspondence", textlang.German)
@@ -206,7 +206,7 @@ func TestTheManageLinkCarriesThePreferenceToken(t *testing.T) {
 }
 
 // A RECIPIENT WITH NOTHING TO MANAGE still gets a working stop link. A
-// lead-only address holds no person record, so no preference token can be
+// lead-only address holds no contact record, so no preference token can be
 // minted for it — and the manage link then falls back to the stop credential,
 // which draws the withdraw-only page rather than a dead link.
 func TestAManagelessRecipientFallsBackToTheStopCredential(t *testing.T) {

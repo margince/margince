@@ -188,7 +188,7 @@ func infrastructureCause(err error) bool {
 // act on it twice over: the request carried two ids (the path's and the
 // patch's) and it could not tell which was blamed, and the one that was blamed —
 // `owner_id` — references a USER, which no tool on this surface enumerates. It
-// then sent a person id that genuinely exists and got byte-identical text back.
+// then sent a contact id that genuinely exists and got byte-identical text back.
 // Advice that cannot be followed is worse than none: it reads as a transient
 // problem and invites the retry the rest of the sentence forbids.
 //

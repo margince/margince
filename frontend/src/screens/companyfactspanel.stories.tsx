@@ -17,7 +17,7 @@ type CompanyFact = components["schemas"]["CompanyFact"];
 // What we know about an account, and where each claim came from.
 //
 // The frames are about PROVENANCE and WRITE STANDING rather than about how many
-// rows arrived: a fact a person typed, a fact a site read produced with a
+// rows arrived: a fact a human typed, a fact a site read produced with a
 // snippet behind it, and a value whose shape contradicts the field it was filed
 // under all draw differently, and a reader who may not correct any of them sees
 // the same facts with the verbs gone and one sentence saying why.
@@ -61,7 +61,7 @@ const FACTS: readonly CompanyFact[] = [
     value_key: "201-500",
     source: "site_read",
     captured_by: "margince",
-    evidence_snippet: "Over 300 people across four sites in Bavaria.",
+    evidence_snippet: "Over 300 contacts across four sites in Bavaria.",
     source_url: "https://koreapartner.example/about",
     confidence: 0.82,
     retrieved_at: "2026-08-29T04:12:00Z",

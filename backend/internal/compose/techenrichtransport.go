@@ -18,7 +18,7 @@ import (
 	"github.com/riverqueue/river"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -35,9 +35,9 @@ type technicalEnqueuer interface {
 // technicalHandlers shadows the generated TechnicalEnrichCompany and
 // GetLatestTechnicalEnrich stubs. Nil until WithTechnicalEnrich wires them.
 type technicalHandlers struct {
-	pool    *pgxpool.Pool
-	people  *people.Store
-	enqueue technicalEnqueuer
+	pool     *pgxpool.Pool
+	contacts *contacts.Store
+	enqueue  technicalEnqueuer
 }
 
 // WithTechnicalEnrich wires the lookup's HTTP surface.
@@ -51,7 +51,7 @@ func WithTechnicalEnrich(enqueue technicalEnqueuer) Option {
 			return
 		}
 		s.technicalHandlers = technicalHandlers{
-			pool: pool, people: people.NewStore(InstallationDB(pool)), enqueue: enqueue,
+			pool: pool, contacts: contacts.NewStore(InstallationDB(pool)), enqueue: enqueue,
 		}
 	}
 }
@@ -82,7 +82,7 @@ func (h technicalHandlers) startTechnicalEnrich(
 	ctx context.Context, id ids.UUID,
 ) (crmcontracts.TechnicalEnrichStarted, error) {
 	companyID := ids.From[ids.CompanyKind](id)
-	_, ok, err := h.people.TechnicalDomain(ctx, companyID)
+	_, ok, err := h.contacts.TechnicalDomain(ctx, companyID)
 	if err != nil {
 		return crmcontracts.TechnicalEnrichStarted{}, err
 	}
@@ -124,7 +124,7 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 		httperr.NotImplemented(w, r, "getLatestTechnicalEnrich (no job runner configured)")
 		return
 	}
-	lanes, err := h.people.TechnicalLaneState(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
+	lanes, err := h.contacts.TechnicalLaneState(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -142,7 +142,7 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 }
 
 // technicalLanesWire carries the ledger onto the wire.
-func technicalLanesWire(lanes []people.TechnicalLaneState) []crmcontracts.TechnicalEnrichLane {
+func technicalLanesWire(lanes []contacts.TechnicalLaneState) []crmcontracts.TechnicalEnrichLane {
 	wire := make([]crmcontracts.TechnicalEnrichLane, 0, len(lanes))
 	for _, lane := range lanes {
 		row := crmcontracts.TechnicalEnrichLane{

@@ -13,8 +13,8 @@ import {
 
 type Lead = components["schemas"]["Lead"];
 
-// The lead queue. A lead is not a person yet, and the screen's whole job is to
-// keep that true: the row opens the LEAD's own page, never the person's, and
+// The lead queue. A lead is not a contact yet, and the screen's whole job is to
+// keep that true: the row opens the LEAD's own page, never the contact's, and
 // the owner column answers "whose lead is this" rather than "who typed it".
 //
 // Which leads a reader opens on is a ROLE question, not a filter the screen

@@ -148,7 +148,7 @@ func receipt(row receiptRow) crmcontracts.ClaimEvidence {
 		out.Gaps = &gaps
 	}
 	// A model confidence exists only where a model read something. Printing one
-	// beside a person's own answer or an imported row would fabricate a number
+	// beside a contact's own answer or an imported row would fabricate a number
 	// nobody computed (DOSS-AC-16).
 	if kind == crmcontracts.ClaimEvidenceSourceKindSiteRead {
 		out.Confidence = row.confidence
@@ -168,7 +168,7 @@ func quoted(excerpt *string) *string {
 
 // sourceKind maps the stored provenance vocabulary (migration 0099) onto the
 // receipt's. An unrecognized value reports as a rule rather than guessing at a
-// person or a connector: attributing a value to the wrong origin is a worse
+// contact or a connector: attributing a value to the wrong origin is a worse
 // answer than a vague one.
 func sourceKind(source string) crmcontracts.ClaimEvidenceSourceKind {
 	switch source {

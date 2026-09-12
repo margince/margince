@@ -2,9 +2,9 @@
 #
 # Case 3 asks whether an assistant shows the numbers BEFORE committing. This
 # asks the other half, and it has to be its own case for exactly that reason:
-# case 3's criterion 1 is that nothing is committed until the person has seen
+# case 3's criterion 1 is that nothing is committed until the asker has seen
 # what the import would do, so requiring commit_import there would contradict
-# the case. Here the person has already seen the file, says so, and asks for it
+# the case. Here the asker has already seen the file, says so, and asks for it
 # to be finished — and an assistant that stops at the dry run and asks for
 # permission it was already given has not done the job.
 #
@@ -14,7 +14,7 @@
 # WHY read_import_report IS REQUIRED. commit_import's own answer carries the run
 # state and a checkpoint — not the counts. The report is the only thing that
 # says how many rows landed and what was skipped, it is the same shape before
-# and after the commit, and the person asked for both numbers. The tool's own
+# and after the commit, and the asker wanted both numbers. The tool's own
 # description puts it more plainly: read the report first, nobody should approve
 # what they have not read.
 #
@@ -62,10 +62,10 @@ may_call:
   - read_record
   - query_workspace
 
-# THE OBJECT IS THE PLAN. preview_import takes company, person or lead, and
+# THE OBJECT IS THE PLAN. preview_import takes company, contact or lead, and
 # the three are not interchangeable: a lead lands unworked and waits for a human
 # to promote it, which is the right answer for a machine-scraped list and the
-# wrong one for a file two people have already been through line by line. The
+# wrong one for a file two colleagues have already been through line by line. The
 # tool name alone passes on a run that filed four companies as unworked leads
 # and then reported four companies created.
 #
@@ -94,7 +94,7 @@ must_mention:
   - "\b(?:4|four|vier)\b(?:(?!\b\d)[^.\n]){0,24}?(?:organi[sz]ations?|companies|company|records?|rows?|accounts?|Firmen|Unternehmen)|(?:organi[sz]ations?|companies|records?|rows?|accounts?)[^\n]{0,15}[:=]?\s*\b(?:4|four|vier)\b"
   # Criterion 2: it answers the second question too. "Nothing was skipped" is
   # the honest report of this file, and the answer that never says it has left
-  # the person to assume it. Both orders, because an answer writes either
+  # the asker to assume it. Both orders, because an answer writes either
   # "nothing was skipped" or "skipped: none".
   #
   # THE ZERO IS A WHOLE WORD. Without the boundary the "0" inside "10 rows
@@ -131,12 +131,12 @@ must_mention:
   # So the mapping it invented has to reach the reader. Anchored to a field name
   # the assistant chose rather than to the verb alone, and in both orders: a
   # report writes "I mapped size→size_band" or "size_band, from your size
-  # column". A run that names no invented field has not told the person what
+  # column". A run that names no invented field has not told the asker what
   # their spreadsheet actually became.
   - "(?:map\w*|→|->|=>|placed|put|assigned|matched|treated|filed|went)[^\n]{0,60}(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)|(?:size[_ ]band|address\.(?:city|country)|display[_ ]name)[^\n]{0,60}(?:map\w*|→|->|=>|from (?:your |the )?(?:size|country|city|name)\b)"
 
 must_not_mention:
-  # THE FAILURE THIS CASE EXISTS FOR. The person pre-authorized the write in the
+  # THE FAILURE THIS CASE EXISTS FOR. The asker pre-authorized the write in the
   # prompt; an assistant that previews and then asks whether to go ahead has
   # handed the work back. Anchored to the act it is asking about, so an offer to
   # do something ELSE afterwards — tag the batch, undo it, import a second file —

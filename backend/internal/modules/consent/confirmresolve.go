@@ -7,7 +7,7 @@ package consent
 //
 // The resolver lives here rather than beside the mint because what it writes is
 // the subject of linkfetch.go: a fetch is always recorded, an opening only when
-// the request presents as a person navigating to the page. Those two columns
+// the request presents as a human navigating to the page. Those two columns
 // are evidence, and keeping the rule and the write in sight of each other is
 // what stops the next author restoring the old one-line version.
 
@@ -38,22 +38,22 @@ import (
 //
 // IT RECORDS WHAT ACTUALLY HAPPENED, which is two different facts. Every
 // resolution counts a fetch (first_fetched_at, fetch_count); only one the
-// request itself presents as a person navigating to the page stamps opened_at.
+// request itself presents as a human navigating to the page stamps opened_at.
 //
 // That column is evidence — the middle of the ask-to-click chain a later reader
 // follows from the row, with a named data subject as its subject — and it used
-// to be written by every GET. Most GETs of a link in a mail are not people:
+// to be written by every GET. Most GETs of a link in a mail are not humans:
 // scanners, proxies and preview generators fetch them before the recipient sees
 // the message, and each one wrote a line saying somebody opened their consent
 // link. See linkfetch.go for what the request is asked and why the doubt falls
-// towards recording a person.
+// towards recording a human.
 func (s *Store) ResolveConfirmToken(
 	ctx context.Context, token string, by FetchKind,
 ) (ConfirmRef, error) {
 	var ref ConfirmRef
 	// The kind is read HERE and not only at the spend, because the read is a
 	// disclosure of its own: a consent link's page must show the subscription
-	// question and not the person's record card. Gating the write and leaving
+	// question and not the contact's record card. Gating the write and leaving
 	// the read open would hand whoever holds a consent link everything the
 	// record page shows, which is wider than the mail that carried it.
 	var purposeID *ids.PurposeID
@@ -64,11 +64,11 @@ func (s *Store) ResolveConfirmToken(
 			       fetch_count = ct.fetch_count + 1,
 			       opened_at = CASE WHEN $3 THEN coalesce(ct.opened_at, $2) ELSE ct.opened_at END
 			WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
-			  AND EXISTS (SELECT 1 FROM person p
-			               WHERE p.id = ct.person_id AND p.archived_at IS NULL)
-			RETURNING ct.person_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
-			hashPublicToken(token), s.now().UTC(), by == FetchByAPerson).Scan(
-			&ref.PersonID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
+			  AND EXISTS (SELECT 1 FROM contact p
+			               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
+			RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id`,
+			hashPublicToken(token), s.now().UTC(), by == FetchByAHuman).Scan(
+			&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

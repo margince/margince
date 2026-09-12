@@ -22,7 +22,7 @@ import (
 // UnsupportedEntityError maps to 422 on every surface. It is raised by the
 // provider a request reached, which owns a SUBSET of the vocabulary — so the
 // type it names is routinely a valid one sitting at the wrong provider
-// (`deal` at the people provider), not an invalid one. The refusal is
+// (`deal` at the contacts provider), not an invalid one. The refusal is
 // therefore about service, and the vocabulary rides along as a hint rather
 // than as the set being denied.
 type UnsupportedEntityError struct{ Type string }

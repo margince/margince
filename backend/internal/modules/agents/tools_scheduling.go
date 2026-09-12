@@ -7,7 +7,7 @@ package agents
 // 500-line cap. The seam they ride (Comms) and its registration still live
 // next door, because it serves both families — what separates them is the
 // subject: these two answer about TIME and commit a slot, where the mail and
-// channel verbs address a person and send them words.
+// channel verbs address a contact and send them words.
 //
 // check_availability is 🟢 (it proposes slots and commits nothing);
 // book_meeting is 🟡 — it writes a meeting and implies an invitation.
@@ -105,7 +105,7 @@ func calendarCaveat(backing CalendarBacking) (string, bool) {
 // your calendar tomorrow."
 // foreignCalendarMessage is the same caveat for a host who is not the acting
 // seat. It withholds the one thing the message above states — whether a
-// calendar is connected — because that is the other person's account, and a
+// calendar is connected — because that is the other contact's account, and a
 // caller able to ask it for any user id could read the whole roster's connector
 // state and watch a grant fail.
 const foreignCalendarMessage = "This window is what the meetings recorded in this CRM leave open for that " +

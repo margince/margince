@@ -61,7 +61,7 @@ func EnsureMeetingReference(ctx context.Context, tx pgx.Tx, ref ids.UUID) error 
 	// needs only to know it exists and when it ends; it reads no subject and no
 	// body. Demanding content authority would refuse a rep who can see a
 	// meeting is on the calendar but not what was said in it, which is exactly
-	// the person this snooze is for.
+	// the contact this snooze is for.
 	if err := auth.EnsureActivityVisible(ctx, tx, ref); err != nil {
 		return err
 	}

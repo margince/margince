@@ -65,8 +65,8 @@ func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
 		}
 	}()
 	if _, err := granting.Exec(ctx,
-		`UPDATE person_consent SET state = 'granted'
-		  WHERE person_id = $1 AND purpose_id = $2`, e.person, e.newsletter); err != nil {
+		`UPDATE contact_consent SET state = 'granted'
+		  WHERE contact_id = $1 AND purpose_id = $2`, e.contact, e.newsletter); err != nil {
 		t.Fatalf("granting: %v", err)
 	}
 
@@ -168,20 +168,20 @@ func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
 	}
 }
 
-// Two multi-purpose consent transactions for one person do not interleave.
+// Two multi-purpose consent transactions for one contact do not interleave.
 //
 // Each of the three writes several purposes in one transaction, and each takes
 // its row locks in its OWN order: the withdrawal sweeps go by ascending purpose
 // key, a granular save goes withdrawals-first so a refused grant cannot cost
 // the suppression beside it. A save of {grant a, withdraw b} therefore locks b
 // before a while an unsubscribe-everything locks a before b — and two at once
-// on one person deadlock. Postgres aborts one, and the reader sees a preference
+// on one contact deadlock. Postgres aborts one, and the reader sees a preference
 // change that failed for no reason they can act on.
 //
-// Held by taking the person's lock from another session and watching the write
+// Held by taking the contact's lock from another session and watching the write
 // wait for it. That is the mechanism itself rather than a race for the symptom:
 // a deadlock test would have to lose a coin toss to fail.
-func TestOnePersonsConsentWritesDoNotInterleave(t *testing.T) {
+func TestOneContactsConsentWritesDoNotInterleave(t *testing.T) {
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 
@@ -197,20 +197,20 @@ func TestOnePersonsConsentWritesDoNotInterleave(t *testing.T) {
 	// The same key the writes take, spelled the same way: a lock on some other
 	// number would be a test of nothing.
 	if _, err := holder.Exec(ctx,
-		`SELECT pg_advisory_lock(hashtextextended($1::text, 0))`, e.person); err != nil {
-		t.Fatalf("taking the person's lock: %v", err)
+		`SELECT pg_advisory_lock(hashtextextended($1::text, 0))`, e.contact); err != nil {
+		t.Fatalf("taking the contact's lock: %v", err)
 	}
 
 	pressed := make(chan error, 1)
 	go func() {
-		_, err := e.store.PublicWithdrawEverything(publicPreferencesCtx(e), e.person)
+		_, err := e.store.PublicWithdrawEverything(publicPreferencesCtx(e), e.contact)
 		pressed <- err
 	}()
 
 	waitUntilBlockedBy(t, holder)
 	if _, err := holder.Exec(ctx,
-		`SELECT pg_advisory_unlock(hashtextextended($1::text, 0))`, e.person); err != nil {
-		t.Fatalf("releasing the person's lock: %v", err)
+		`SELECT pg_advisory_unlock(hashtextextended($1::text, 0))`, e.contact); err != nil {
+		t.Fatalf("releasing the contact's lock: %v", err)
 	}
 
 	select {

@@ -14,7 +14,7 @@ that is two cases a sweep failing for a reason that is not the product's, and a
 red case reads as a finding.
 
 So the semantic half is asked of a model instead, and the scenario states the
-question in a sentence a person can read — one text that is both the prompt and
+question in a sentence a human can read — one text that is both the prompt and
 the documentation, rather than a regex and a comment that can drift apart.
 
 A CRITERION IS A STATEMENT ABOUT THE ANSWER AND "yes" MEANS IT HOLDS. That is
@@ -225,7 +225,7 @@ def _record(directory, criterion, answer, model):
     os.makedirs(directory, exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         # The criterion and an excerpt of the answer are stored beside the
-        # verdict so the corpus is readable by a person deciding whether the
+        # verdict so the corpus is readable by a contact deciding whether the
         # judge got it right — a directory of opaque digests would be a set of
         # assertions nobody can review.
         json.dump(

@@ -37,8 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -73,7 +73,7 @@ func acmeDeepBrain() laneFake {
 			{"f":"legal_name","v":"Acme Robotics GmbH","e":"s0","c":0.9}]}`,
 		pageReplies: map[string]string{
 			seedURL: `{"facts":[
-				{"f":"named_customer","v":"Scaling SaaS companies — who the site says it serves","e":"s0"}],"people":[]}`,
+				{"f":"named_customer","v":"Scaling SaaS companies — who the site says it serves","e":"s0"}],"contacts":[]}`,
 			seedURL + "/impressum": `{"facts":[
 				{"f":"phone","v":"+49 711 555 0100","e":"s0"}],
 				"entities":[{"n":"Acme Robotics GmbH","e":"s0"}]}`,
@@ -86,11 +86,11 @@ func acmeDeepBrain() laneFake {
 // exactly as compose wires them in production.
 func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) (*siteDeepReadWorker, *approvals.Service) {
 	svc := approvals.NewService(e.DB())
-	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, e.People))
+	svc.WithEffect(deepReadProposalKind, deepReadAcceptEffect(svc, e.Contacts))
 	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{})))
 	return &siteDeepReadWorker{
 		pool:      e.Pool,
-		people:    e.People,
+		contacts:  e.Contacts,
 		crawler:   testSiteCrawler(site),
 		extract:   evidenceExtractor{brain: brain, factBrain: brain},
 		approvals: svc,
@@ -106,9 +106,9 @@ func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) 
 
 // startDeepRead creates the queued dossier as Rep1 and shapes the job
 // args exactly as the start handler enqueues them.
-func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (people.SiteRead, SiteDeepReadArgs) {
+func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts.SiteRead, SiteDeepReadArgs) {
 	t.Helper()
-	read, joined, err := e.People.StartSiteRead(
+	read, joined, err := e.Contacts.StartSiteRead(
 		e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), seedURL, "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
@@ -124,7 +124,7 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (people.S
 	}
 }
 
-// companyIDOf types a harness-seeded untyped company id for the people store.
+// companyIDOf types a harness-seeded untyped company id for the contacts store.
 func companyIDOf(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
 
 // deepReadApprovals counts staged "deepread" rows (workspace-scoped).
@@ -143,7 +143,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 			done.ProposalIDs, deepReadApprovals(t, e))
 	}
 	// The human's authority rides the audit spine instead: the agent did the
-	// writing, on behalf of the person who asked.
+	// writing, on behalf of the contact who asked.
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE actor_id = 'agent:deepread' AND on_behalf_of = $1`,
 		e.Rep1); n == 0 {
 		t.Fatal("no audit row on behalf of the requesting human")
@@ -290,7 +290,7 @@ func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testin
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +315,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err == nil {
 		t.Fatal("a failed crawl returned nil — River would record success")
 	}
-	failed, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	failed, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +328,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after failed: %v", err)
 	}
-	after, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	after, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--ai-routing") {
 		t.Fatalf("run on a brainless worker → %v, want the actionable no-model-path error", err)
 	}
-	failed, gerr := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	failed, gerr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if gerr != nil {
 		t.Fatal(gerr)
 	}
@@ -373,7 +373,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	if !errors.As(err, &snooze) || snooze.Duration != next.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s", err, next.Sub(now))
 	}
-	deferred, getErr := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if getErr != nil {
 		t.Fatal(getErr)
 	}
@@ -398,7 +398,7 @@ func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	partial, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	partial, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,14 +450,14 @@ func servicesDeepBrain() laneFake {
 
 // runServicesDeepRead crawls acmeServicesSite with servicesDeepBrain as the one
 // corpus answer and returns the finished dossier.
-func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (people.SiteRead, *approvals.Service) {
+func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts.SiteRead, *approvals.Service) {
 	t.Helper()
 	worker, svc := newDeepReadTestWorker(e, acmeServicesSite(), servicesDeepBrain())
 	read, args := startDeepRead(t, e, company)
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -523,7 +523,7 @@ func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO site_read (id, company_id, target_kind, seed_url, requested_by)
 			VALUES ($1, $2, $3, $4, $5)`,
-			readID, company, people.TargetKindCompany, seedURL, "system:capture_auto_enrich"); err != nil {
+			readID, company, contacts.TargetKindCompany, seedURL, "system:capture_auto_enrich"); err != nil {
 			return err
 		}
 		args, err := json.Marshal(SiteDeepReadArgs{Workspace: e.WS, CompanyID: company, SiteReadID: readID, RequestedBy: "system:capture_auto_enrich"})
@@ -669,7 +669,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 	// The dossier is picked up (queued → running), then the work context dies
 	// — exactly the shape the live incident hit mid-extraction.
 	workCtx, cancel := context.WithCancel(deepReadWorkerCtx(context.Background(), args))
-	claim, err := worker.people.BeginSiteRead(workCtx, read.ID, worker.reclaimAfter())
+	claim, err := worker.contacts.BeginSiteRead(workCtx, read.ID, worker.reclaimAfter())
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -679,7 +679,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 		t.Fatalf("finish under a cancelled work context: %v", err)
 	}
 
-	got, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	got, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -721,7 +721,7 @@ func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
 	if n := len(site.pageCalls); n != 0 {
 		t.Errorf("the crawler fetched %d pages — cancelling after the crawl saves nothing", n)
 	}
-	done, err := e.People.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
+	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -751,7 +751,7 @@ func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames(t *testing.T) {
 	// The read applies its findings itself now, so the question is asked of the
 	// audit spine the writes left behind rather than of a proposal nobody
 	// stages any more. The spine is where a human's name lands: the actor is
-	// the agent that did the writing, and `on_behalf_of` is the person it did
+	// the agent that did the writing, and `on_behalf_of` is the contact it did
 	// it for — which is the pair `withClaimedRequester` builds, and the whole
 	// reason the dossier row outranks the payload.
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE actor_id = 'agent:deepread' AND on_behalf_of = $1`,

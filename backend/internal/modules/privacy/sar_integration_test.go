@@ -43,8 +43,8 @@ type sarIdentifierEnv struct {
 	// owner is the migration-role connection the fixture seeded through, kept
 	// so a test can add to the subject's history or read the live table
 	// definition. Held open for the test's lifetime by the cleanup below.
-	owner  *pgx.Conn
-	person ids.PersonID
+	owner   *pgx.Conn
+	contact ids.ContactID
 }
 
 // retiredAt is the archival instant every retired row below carries. A fixed
@@ -78,7 +78,7 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	}
 
 	ws, user := ids.NewV7(), ids.NewV7()
-	person := ids.New[ids.PersonKind]()
+	contact := ids.New[ids.ContactKind]()
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
@@ -88,12 +88,12 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by)
+		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'Sara Subject', 'manual', 'user:'||$2::text)`,
-		person, user); err != nil {
+		contact, user); err != nil {
 		t.Fatal(err)
 	}
-	seedIdentifierPairs(ctx, t, owner, person)
+	seedIdentifierPairs(ctx, t, owner, contact)
 
 	pool, err := testdb.Pool(ctx, appDSN)
 	if err != nil {
@@ -106,10 +106,10 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 
 	return &sarIdentifierEnv{
-		ctx:    exportContext(ws, user),
-		db:     database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)),
-		owner:  owner,
-		person: person,
+		ctx:     exportContext(ws, user),
+		db:      database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)),
+		owner:   owner,
+		contact: contact,
 	}
 }
 
@@ -119,40 +119,40 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 // unable to say which row it named.
 //
 // Every value is scoped to the subject through ident(). The dedupe indexes on
-// these tables are workspace-wide, not per-person, so a fixed literal binds the
+// these tables are workspace-wide, not per-contact, so a fixed literal binds the
 // fixture to being the only one in the database — the second test to seed a
 // subject fails on the first test's address rather than on anything it asserts.
-func seedIdentifierPairs(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID) {
+func seedIdentifierPairs(ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID) {
 	t.Helper()
 	for _, insert := range []struct {
 		statement     string
 		live, retired string
 	}{
 		{
-			`INSERT INTO person_email (person_id, email, source, captured_by, archived_at)
+			`INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
 		  VALUES ($1, $2, 'manual', 'user:test', NULL), ($1, $3, 'manual', 'user:test', $4)`,
-			ident(person, liveEmail), ident(person, retiredEmail),
+			ident(contact, liveEmail), ident(contact, retiredEmail),
 		},
 		{
-			`INSERT INTO person_phone (person_id, phone, source, captured_by, archived_at)
+			`INSERT INTO contact_phone (contact_id, phone, source, captured_by, archived_at)
 		  VALUES ($1, $2, 'manual', 'user:test', NULL), ($1, $3, 'manual', 'user:test', $4)`,
-			ident(person, livePhone), ident(person, retiredPhone),
+			ident(contact, livePhone), ident(contact, retiredPhone),
 		},
 		{
-			`INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by, archived_at)
+			`INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by, archived_at)
 		  VALUES ($1, 'telegram', $2, 'sara', 'connector:telegram', 'connector:telegram', NULL),
 		         ($1, 'telegram', $3, 'sara_old', 'connector:telegram', 'connector:telegram', $4)`,
-			ident(person, liveAccount), ident(person, retiredAccount),
+			ident(contact, liveAccount), ident(contact, retiredAccount),
 		},
 	} {
-		if _, err := owner.Exec(ctx, insert.statement, person, insert.live, insert.retired, retiredAt); err != nil {
+		if _, err := owner.Exec(ctx, insert.statement, contact, insert.live, insert.retired, retiredAt); err != nil {
 			t.Fatal(err)
 		}
 	}
 }
 
 // exportContext is the caller AssembleSAR demands: admin-mediated means the
-// person.delete grant AND an unbounded row scope, since the assembly crosses
+// contact.delete grant AND an unbounded row scope, since the assembly crosses
 // every rep's slice on purpose.
 func exportContext(ws, user ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
@@ -162,7 +162,7 @@ func exportContext(ws, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 				// The trail moved off the literal admin role onto its own object.
 				// Without it the audience suites reach a permission denial rather
 				// than the audience decision they are about.
@@ -194,12 +194,12 @@ const (
 // discriminator goes in the middle — dropping them would fold a fixture's live
 // and retired values onto one string, and the pair exists precisely to be
 // told apart.
-func ident(person ids.PersonID, shape string) string {
+func ident(contact ids.ContactID, shape string) string {
 	// The TAIL of the id, not its head. These are UUIDv7s, whose leading hex
 	// is a millisecond clock — two fixtures built in the same millisecond
 	// share that prefix and would collide on exactly the index this exists to
 	// avoid. The tail is the random half.
-	full := person.String()
+	full := contact.String()
 	tag := full[len(full)-8:]
 	if local, domain, ok := strings.Cut(shape, "@"); ok {
 		return local + "+" + tag + "@" + domain
@@ -220,7 +220,7 @@ func ident(person ids.PersonID, shape string) string {
 func TestTheSARExportDistinguishesARetiredBindingFromALiveOne(t *testing.T) {
 	e := setupSARIdentifiers(t)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -232,9 +232,9 @@ func TestTheSARExportDistinguishesARetiredBindingFromALiveOne(t *testing.T) {
 		live    string
 		retired string
 	}{
-		{"emails", pkg.Emails, "email", ident(e.person, liveEmail), ident(e.person, retiredEmail)},
-		{"phones", pkg.Phones, "phone", ident(e.person, livePhone), ident(e.person, retiredPhone)},
-		{"channel identities", pkg.ChannelIdentities, "channel_user_id", ident(e.person, liveAccount), ident(e.person, retiredAccount)},
+		{"emails", pkg.Emails, "email", ident(e.contact, liveEmail), ident(e.contact, retiredEmail)},
+		{"phones", pkg.Phones, "phone", ident(e.contact, livePhone), ident(e.contact, retiredPhone)},
+		{"channel identities", pkg.ChannelIdentities, "channel_user_id", ident(e.contact, liveAccount), ident(e.contact, retiredAccount)},
 	} {
 		t.Run(section.name, func(t *testing.T) {
 			byIdentifier := map[string]map[string]any{}

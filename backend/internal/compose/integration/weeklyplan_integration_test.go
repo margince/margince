@@ -13,7 +13,7 @@ package integration_test
 // harness for the same reason.
 //
 // What these defend is the access model and the settle, neither of which a unit
-// test can see: a plan is one person's, its second reader is gated on a live
+// test can see: a plan is one contact's, its second reader is gated on a live
 // team, and the week's close is idempotent because the dispatcher ticks more
 // than once inside a week.
 
@@ -75,7 +75,7 @@ func setupPlan(t *testing.T) *planEnv {
 	}
 }
 
-// A plan is one person's. Another rep's is not a thing this caller may read,
+// A plan is one colleague's. Another rep's is not a thing this caller may read,
 // and the answer is NOT FOUND rather than a refusal: whether a colleague has
 // planned their week is itself something a stranger may not learn.
 func TestAnotherRepsPlanIsNotFound(t *testing.T) {
@@ -92,7 +92,7 @@ func TestAnotherRepsPlanIsNotFound(t *testing.T) {
 	}
 }
 
-// The lead's read is the one path that names a person, and it is gated on the
+// The lead's read is the one path that names a contact, and it is gated on the
 // shared live team — the same question that decides whether a lead may open a
 // rep's queue.
 func TestATeammateReadsThePlanAndAnOutsiderDoesNot(t *testing.T) {
@@ -139,7 +139,7 @@ func TestALeadAnswersARequestAndAnOutsiderCannot(t *testing.T) {
 		t.Errorf("the answer read back as %q", got.ManagerResponse)
 	}
 	// The three columns move together, because an answer with nobody behind it
-	// cannot be shown to the person who asked.
+	// cannot be shown to the contact who asked.
 	if got.ManagerUserID == nil || *got.ManagerUserID != e.Rep2 {
 		t.Errorf("the answer names %v, wanted rep2", got.ManagerUserID)
 	}

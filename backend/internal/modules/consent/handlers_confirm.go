@@ -5,7 +5,7 @@ package consent
 
 // The no-login confirm-your-details transport. The public middleware has
 // already turned an unknown token away and bound the workspace plus a system
-// principal; each handler resolves the token again for the person it names —
+// principal; each handler resolves the token again for the contact it names —
 // the same infra read the preference surface makes — and then drives the store.
 
 import (
@@ -35,7 +35,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 	}
 	// A consent link is answered with the subscription question and nothing
 	// else. Its mail said "confirm this subscription"; serving the record card
-	// here would hand whoever holds the link the person's name, employer,
+	// here would hand whoever holds the link the contact's name, employer,
 	// address, phone and the whole provenance trail — wider than the mail
 	// described, and wider than the write side of this same link allows.
 	//
@@ -60,7 +60,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, apperrors.ErrNotFound)
 		return
 	}
-	card, err := h.store.confirmCardFor(r.Context(), ref.PersonID)
+	card, err := h.store.confirmCardFor(r.Context(), ref.ContactID)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

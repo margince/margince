@@ -3,7 +3,7 @@
 
 package privacy
 
-// The person tombstone: what an Art. 17 erasure certifies when it closes, and
+// The contact tombstone: what an Art. 17 erasure certifies when it closes, and
 // nothing about whom.
 
 import (
@@ -16,9 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// personErasureCounts is what an erasure tombstone certifies: how much each arm
+// contactErasureCounts is what an erasure tombstone certifies: how much each arm
 // of the cascade removed, and nothing whatsoever about whom.
-type personErasureCounts struct {
+type contactErasureCounts struct {
 	emailsSuppressed            int
 	rawRowsPurged               int64
 	aiPayloadsPurged            int64
@@ -27,13 +27,13 @@ type personErasureCounts struct {
 	channelIdentitiesSuppressed int
 }
 
-// tombstonePersonErasure closes the cascade with action=erase and counts only —
+// tombstoneContactErasure closes the cascade with action=erase and counts only —
 // proof without PII. The counts are evidence ABOUT the scrub, so they ride the
 // evidence column; before/after stay empty — they are reserved for field
 // images, and the record-history read serves a tombstone's images verbatim. The
 // paired event tells consumers the subject is gone.
-func tombstonePersonErasure(ctx context.Context, tx pgx.Tx, subject ids.PersonID, reason string, counts personErasureCounts) error {
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionErase, "person", subject.UUID, nil, nil, map[string]any{
+func tombstoneContactErasure(ctx context.Context, tx pgx.Tx, subject ids.ContactID, reason string, counts contactErasureCounts) error {
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionErase, "contact", subject.UUID, nil, nil, map[string]any{
 		"reason": reason, "emails_suppressed": counts.emailsSuppressed, "raw_rows_purged": counts.rawRowsPurged,
 		"ai_payloads_purged": counts.aiPayloadsPurged, "activities_redacted": counts.activitiesRedacted,
 		"activities_restricted":         counts.activitiesRestricted,
@@ -42,5 +42,5 @@ func tombstonePersonErasure(ctx context.Context, tx pgx.Tx, subject ids.PersonID
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEventForEntity(ctx, tx, auditID, "person", subject.UUID, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
+	return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", subject.UUID, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason))
 }

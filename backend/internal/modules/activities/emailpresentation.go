@@ -22,7 +22,7 @@ import (
 //
 // It reads through readActivity rather than writing a third SELECT over
 // activity: the withholding rule already exists twice in this tree, and the
-// file comment on compose/person360's hand-written sibling records that the
+// file comment on compose/contact360's hand-written sibling records that the
 // duplicate went missing a column for a whole slice, twice. What this file
 // adds is what a single Activity row cannot carry — who the message went to,
 // what came with it, and which write the caller's Access control performs.

@@ -12,8 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -38,7 +38,7 @@ func TestThreeCompaniesWorkOneProjectAndEachPageFindsIt(t *testing.T) {
 		company ids.UUID
 		role    string
 	}{{compB, "partner"}, {compC, "subcontractor"}} {
-		if _, err := e.People.SetProjectCompany(admin, people.SetProjectCompanyInput{
+		if _, err := e.Contacts.SetProjectCompany(admin, contacts.SetProjectCompanyInput{
 			ProjectID: p.ID, CompanyID: companyIDOf(on.company), Role: on.role,
 		}); err != nil {
 			t.Fatalf("put %s on the project: %v", on.role, err)
@@ -98,18 +98,18 @@ func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
 	compB := e.SeedCompany(t, "Beta Systeme", nil)
 	p := seedProject(admin, t, e, "Joint rollout", compA, nil)
 
-	if _, err := e.People.SetProjectCompany(admin, people.SetProjectCompanyInput{
+	if _, err := e.Contacts.SetProjectCompany(admin, contacts.SetProjectCompanyInput{
 		ProjectID: p.ID, CompanyID: companyIDOf(compB), Role: "partner",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	// Two on, so one may come off.
-	if err := e.People.RemoveProjectCompany(admin, p.ID, companyIDOf(compB)); err != nil {
+	if err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compB)); err != nil {
 		t.Fatalf("taking the partner off a project with two companies: %v", err)
 	}
 	// One left, so it may not.
-	err := e.People.RemoveProjectCompany(admin, p.ID, companyIDOf(compA))
-	var last *people.LastProjectCompanyError
+	err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compA))
+	var last *contacts.LastProjectCompanyError
 	if !errors.As(err, &last) {
 		t.Fatalf("taking the last company off answered %v, want the refusal", err)
 	}
@@ -117,7 +117,7 @@ func TestTheLastCompanyCannotBeTakenOffAProject(t *testing.T) {
 	// A company that was never on the project is not-found, not the last-company
 	// refusal: the two say different things to a caller.
 	compC := e.SeedCompany(t, "Gamma Bau", nil)
-	if err := e.People.RemoveProjectCompany(admin, p.ID, companyIDOf(compC)); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compC)); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("taking off a company that was never on it answered %v, want not-found", err)
 	}
 }
@@ -135,10 +135,10 @@ func TestTheGenericRelationshipSurfaceRefusesAProjectCompany(t *testing.T) {
 	other := e.SeedCompany(t, "Beta Systeme", nil)
 
 	companyID, projectID := companyIDOf(other), p.ID
-	_, err := e.People.CreateRelationship(admin, people.CreateRelationshipInput{
+	_, err := e.Contacts.CreateRelationship(admin, contacts.CreateRelationshipInput{
 		Kind: "project_company", CompanyID: &companyID, ProjectID: &projectID, Source: "manual",
 	})
-	var kind *people.RelationshipKindError
+	var kind *contacts.RelationshipKindError
 	if !errors.As(err, &kind) {
 		t.Fatalf("the generic surface accepted a project_company create: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestTheGenericRelationshipSurfaceRefusesAProjectCompany(t *testing.T) {
 	// way — the half a create-time vocabulary check cannot cover, because an
 	// archive names an existing row whatever the vocabulary says.
 	edge := oneProjectCompanyEdge(t, e, p.ID)
-	if _, err := e.People.ArchiveRelationship(admin, edge, nil); !errors.As(err, &kind) {
+	if _, err := e.Contacts.ArchiveRelationship(admin, edge, nil); !errors.As(err, &kind) {
 		t.Fatalf("the generic surface archived a project_company edge: %v", err)
 	}
 }
@@ -160,7 +160,7 @@ func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
 	compA := e.SeedCompany(t, "Alpha Werke", nil)
 	compB := e.SeedCompany(t, "Beta Systeme", nil)
 	p := seedProject(admin, t, e, "Joint rollout", compA, nil)
-	if _, err := e.People.SetProjectCompany(admin, people.SetProjectCompanyInput{
+	if _, err := e.Contacts.SetProjectCompany(admin, contacts.SetProjectCompanyInput{
 		ProjectID: p.ID, CompanyID: companyIDOf(compB), Role: "partner",
 	}); err != nil {
 		t.Fatal(err)
@@ -176,8 +176,8 @@ func TestACompanyWithDealsOnTheProjectCannotBeTakenOff(t *testing.T) {
 		t.Fatalf("seeding the partner's deal on the project: %v", err)
 	}
 
-	err := e.People.RemoveProjectCompany(admin, p.ID, companyIDOf(compB))
-	var held *people.CompanyHasDealsOnProjectError
+	err := e.Contacts.RemoveProjectCompany(admin, p.ID, companyIDOf(compB))
+	var held *contacts.CompanyHasDealsOnProjectError
 	if !errors.As(err, &held) {
 		t.Fatalf("taking off a company with deals on the project answered %v, want the refusal", err)
 	}

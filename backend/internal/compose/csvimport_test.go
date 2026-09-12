@@ -81,9 +81,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"address.country":     up.Address != nil && up.Address.Country != nil,
 				}
 		},
-		migration.ObjectPerson: func(fields map[string]string) (map[string]bool, map[string]bool) {
-			in := personCreateFrom(fields, "src")
-			up := personUpdateFrom(fields)
+		migration.ObjectContact: func(fields map[string]string) (map[string]bool, map[string]bool) {
+			in := contactCreateFrom(fields, "src")
+			up := contactUpdateFrom(fields)
 			return map[string]bool{
 					"full_name":           in.FullName != "",
 					"first_name":          in.FirstName != nil,
@@ -102,7 +102,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 					"last_name":  up.LastName != nil,
 					"title":      up.Title != nil,
 					// The half that did not exist before this object did: a
-					// person's emails are child rows, and the patch input
+					// contact's emails are child rows, and the patch input
 					// carried no member for them at all.
 					"email":               len(up.Emails) > 0,
 					"address.line1":       up.Address != nil && up.Address.Line1 != nil,
@@ -147,7 +147,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			}
 			if linksEmployer(object) {
 				assertNonFieldTarget(t, object, csvEmployerName, targets, created, patched,
-					"it names the company a person works AT, and writing it would put a company's name in a field on the person",
+					"it names the company a contact works AT, and writing it would put a company's name in a field on the contact",
 					"a contact file naming employers would be refused")
 			}
 		})
@@ -158,7 +158,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 // the import writes through refuses custom fields: offering one would accept a
 // column, report the row as written, and drop the value.
 func TestImportTargetsOfferNoCustomFields(t *testing.T) {
-	for _, object := range []string{migration.ObjectLead, migration.ObjectCompany, migration.ObjectPerson} {
+	for _, object := range []string{migration.ObjectLead, migration.ObjectCompany, migration.ObjectContact} {
 		targets, err := importTargets(object)
 		if err != nil {
 			t.Fatalf("importTargets(%s): %v", object, err)
@@ -542,7 +542,7 @@ func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
 // The dedup folds one row's dry-run skip onto its commit skip, keyed on the id.
 // A row the SOURCE could not identify is disclosed as `line 7`, so a real row
 // whose key value is that text collided with it and one of the two vanished
-// from a report whose whole job is to say which rows a person must go fix.
+// from a report whose whole job is to say which rows a contact must go fix.
 func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 	var issues []crmcontracts.ImportRowIssue
 	seen := map[string]bool{}
@@ -553,7 +553,7 @@ func TestARowKeyedLikeADisclosureIsNotFoldedOntoIt(t *testing.T) {
 		{ExternalID: "line 7", Line: 12, Reason: "not-a-uuid"},
 	})
 	if added != 2 || len(issues) != 2 {
-		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a person must go fix",
+		t.Fatalf("issues = %+v (added %d), want both rows — they are two rows a contact must go fix",
 			issues, added)
 	}
 	// And the fold that DOES belong still happens: one row skipped twice.
@@ -673,7 +673,7 @@ func TestTaggableObjectFollowsTheRecordVocabulary(t *testing.T) {
 
 	for _, object := range []string{
 		migration.ObjectCompany,
-		migration.ObjectPerson,
+		migration.ObjectContact,
 		migration.ObjectLead,
 	} {
 		if _, ok := taggableObjectOf(object); !ok {

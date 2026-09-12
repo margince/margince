@@ -77,9 +77,9 @@ must_call:
   - update_record
 
 # record_type on every write verb. Each serves several record types from one
-# door, and this prompt names people as well as companies — Lena Fischer, who
+# door, and this prompt names contacts as well as companies — Lena Fischer, who
 # takes the account — so the tool name alone passes a merge, an archive or an
-# owner change aimed at a person of that name. The type is what says the errand
+# owner change aimed at a contact of that name. The type is what says the errand
 # landed on the company.
 #
 # The ids are not pinned because the fixture mints them at seed time. Which

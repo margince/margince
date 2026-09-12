@@ -17,11 +17,11 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 //
 // The page exists because the posture rests on being checkable. A product that
 // decides silently which of your correspondents becomes a contact — and which
-// of them is family, and whose mail gets destroyed — is one a person has to
+// of them is family, and whose mail gets destroyed — is one a contact has to
 // trust rather than audit. This is the audit.
 //
 // Read-only for everybody but the owner: the endpoint answers the caller's own
-// senders and has no admin view, because whose mail a person keeps out is
+// senders and has no admin view, because whose mail a colleague keeps out is
 // itself private.
 
 type SenderDecision = components["schemas"]["CaptureSenderDecision"];
@@ -31,7 +31,7 @@ type SenderDecision = components["schemas"]["CaptureSenderDecision"];
 // to the raw token rather than rendering nothing, so a new kind shows up as
 // something to name instead of a blank cell.
 const kindLabel: Record<string, MessageKey> = {
-  person: "senders.kind.person",
+  contact: "senders.kind.contact",
   role_mailbox: "senders.kind.roleMailbox",
   company_sender: "senders.kind.companySender",
   newsletter: "senders.kind.newsletter",
@@ -44,7 +44,7 @@ const kindLabel: Record<string, MessageKey> = {
 // Which kinds mean "this sender's mail is in the CRM as a contact". The tone
 // carries it at a glance down the column; the words still say it, because
 // colour is never the only signal.
-const admitted = new Set(["person", "role_mailbox", "company_sender"]);
+const admitted = new Set(["contact", "role_mailbox", "company_sender"]);
 
 function useSenders() {
   return useQuery({

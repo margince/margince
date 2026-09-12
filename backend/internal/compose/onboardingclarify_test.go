@@ -8,39 +8,39 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 func TestEntityClarifiesDetectAmbiguousLegalIdentity(t *testing.T) {
-	entity := func(name, address string) people.SiteReadLegalEntity {
-		return people.SiteReadLegalEntity{
+	entity := func(name, address string) contacts.SiteReadLegalEntity {
+		return contacts.SiteReadLegalEntity{
 			Name: name, RegisteredAddress: address,
 			EvidenceSnippet: "Impressum: " + name, SourceURL: "https://acme.example/impressum",
 		}
 	}
 	tests := map[string]struct {
-		entities   []people.SiteReadLegalEntity
+		entities   []contacts.SiteReadLegalEntity
 		wantFields []string
 	}{
 		"single entity is unambiguous": {
-			entities: []people.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1")},
+			entities: []contacts.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1")},
 		},
 		"two entities with two addresses ask both questions": {
-			entities:   []people.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme Holding AG", "Zug 2")},
+			entities:   []contacts.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme Holding AG", "Zug 2")},
 			wantFields: []string{fieldLegalName, fieldRegisteredAddress},
 		},
 		"two entities sharing one address ask only for the name": {
-			entities:   []people.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme Holding AG", "Berlin 1")},
+			entities:   []contacts.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme Holding AG", "Berlin 1")},
 			wantFields: []string{fieldLegalName},
 		},
 		"duplicate census rows collapse to nothing": {
-			entities: []people.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme GmbH", "Berlin 1")},
+			entities: []contacts.SiteReadLegalEntity{entity("Acme GmbH", "Berlin 1"), entity("Acme GmbH", "Berlin 1")},
 		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			read := people.SiteRead{DraftVersion: 4, LegalEntities: tc.entities}
+			read := contacts.SiteRead{DraftVersion: 4, LegalEntities: tc.entities}
 			got := onboardingClarifies(read, nil, "en")
 			if len(got) != len(tc.wantFields) {
 				t.Fatalf("clarifies = %+v, want fields %v", got, tc.wantFields)
@@ -55,7 +55,7 @@ func TestEntityClarifiesDetectAmbiguousLegalIdentity(t *testing.T) {
 }
 
 func TestEntityClarifyOptionsCarryTheExactPrintedStringsAndEvidence(t *testing.T) {
-	read := people.SiteRead{DraftVersion: 1, LegalEntities: []people.SiteReadLegalEntity{
+	read := contacts.SiteRead{DraftVersion: 1, LegalEntities: []contacts.SiteReadLegalEntity{
 		{Name: "Acme GmbH", RegisteredAddress: "Musterstraße 1, Berlin", EvidenceSnippet: "Acme GmbH, Musterstraße 1", SourceURL: "https://acme.example/impressum"},
 		{Name: "Acme Holding AG", RegisteredAddress: "Bahnhofstrasse 2, Zug", SourceURL: "https://acme.example/legal"},
 	}}
@@ -84,11 +84,11 @@ func TestEntityClarifyOptionsCarryTheExactPrintedStringsAndEvidence(t *testing.T
 }
 
 func TestEntityClarifyOptionsAreCappedAtTheContractLimit(t *testing.T) {
-	entities := make([]people.SiteReadLegalEntity, 0, 9)
+	entities := make([]contacts.SiteReadLegalEntity, 0, 9)
 	for _, name := range []string{"A", "B", "C", "D", "E", "F", "G", "H", "I"} {
-		entities = append(entities, people.SiteReadLegalEntity{Name: name + " GmbH", SourceURL: "https://acme.example/impressum"})
+		entities = append(entities, contacts.SiteReadLegalEntity{Name: name + " GmbH", SourceURL: "https://acme.example/impressum"})
 	}
-	clarifies := onboardingClarifies(people.SiteRead{LegalEntities: entities}, nil, "en")
+	clarifies := onboardingClarifies(contacts.SiteRead{LegalEntities: entities}, nil, "en")
 	if len(clarifies) != 1 || len(clarifies[0].Options) != onboardingClarifyOptionLimit {
 		t.Fatalf("clarifies = %+v", clarifies)
 	}
@@ -100,10 +100,10 @@ func TestEntityClarifyOptionsAreCappedAtTheContractLimit(t *testing.T) {
 func TestEntityClarifiesFilterImplausibleCensusDebris(t *testing.T) {
 	chromeName := "Gradion Pte. Ltd.Solutions Products Industries About Careers Contact English Deutsch Solutions Products Industries About Careers Contact English Deutsch"
 	chromeAddress := "Solutions Products Industries About Careers Contact English Deutsch"
-	clean := people.SiteReadLegalEntity{Name: "Gradion Pte. Ltd.", RegisteredAddress: "10 Anson Road #22-02, Singapore 079903", SourceURL: "https://gradion.example/legal"}
+	clean := contacts.SiteReadLegalEntity{Name: "Gradion Pte. Ltd.", RegisteredAddress: "10 Anson Road #22-02, Singapore 079903", SourceURL: "https://gradion.example/legal"}
 
 	t.Run("one plausible survivor means no question at all", func(t *testing.T) {
-		read := people.SiteRead{DraftVersion: 1, LegalEntities: []people.SiteReadLegalEntity{
+		read := contacts.SiteRead{DraftVersion: 1, LegalEntities: []contacts.SiteReadLegalEntity{
 			clean,
 			{Name: chromeName, RegisteredAddress: chromeAddress, SourceURL: "https://gradion.example/legal"},
 		}}
@@ -113,7 +113,7 @@ func TestEntityClarifiesFilterImplausibleCensusDebris(t *testing.T) {
 	})
 
 	t.Run("two plausible survivors ask with only the plausible options", func(t *testing.T) {
-		read := people.SiteRead{DraftVersion: 1, LegalEntities: []people.SiteReadLegalEntity{
+		read := contacts.SiteRead{DraftVersion: 1, LegalEntities: []contacts.SiteReadLegalEntity{
 			clean,
 			{Name: "Gradion GmbH", RegisteredAddress: "Musterstraße 1, 10115 Berlin", SourceURL: "https://gradion.example/de/legal"},
 			{Name: chromeName, RegisteredAddress: chromeAddress, SourceURL: "https://gradion.example/legal"},
@@ -135,7 +135,7 @@ func TestEntityClarifiesFilterImplausibleCensusDebris(t *testing.T) {
 	})
 
 	t.Run("the verify gate accepts exactly the surviving set", func(t *testing.T) {
-		read := &people.SiteRead{DraftVersion: 1, LegalEntities: []people.SiteReadLegalEntity{
+		read := &contacts.SiteRead{DraftVersion: 1, LegalEntities: []contacts.SiteReadLegalEntity{
 			clean,
 			{Name: "Gradion GmbH", RegisteredAddress: "Musterstraße 1, 10115 Berlin", SourceURL: "https://gradion.example/de/legal"},
 			{Name: chromeName, RegisteredAddress: chromeAddress, SourceURL: "https://gradion.example/legal"},
@@ -154,10 +154,10 @@ func TestEntityClarifiesFilterImplausibleCensusDebris(t *testing.T) {
 func TestEveryEntityOptionIsOfferedInTheSpellingTheConfirmationMatches(t *testing.T) {
 	// The option value travels to the client and comes back verbatim, and the
 	// confirmation matches it against the census through
-	// people.PrintedSiteReadValue. An option not already in that spelling is one
+	// contacts.PrintedSiteReadValue. An option not already in that spelling is one
 	// the server offers and then refuses to recognize — and the pick lands as a
 	// human assertion instead of the website evidence it is.
-	read := people.SiteRead{DraftVersion: 1, LegalEntities: []people.SiteReadLegalEntity{
+	read := contacts.SiteRead{DraftVersion: 1, LegalEntities: []contacts.SiteReadLegalEntity{
 		{Name: "NFQ  Solutions GmbH", RegisteredAddress: "Deliusstraße 7,  24114 Kiel", SourceURL: "https://gradion.example/de/legal"},
 		{Name: "Gradion Pte. Ltd.", RegisteredAddress: "10 Anson Road #22-02, Singapore 079903", SourceURL: "https://gradion.example/legal"},
 	}}
@@ -167,7 +167,7 @@ func TestEveryEntityOptionIsOfferedInTheSpellingTheConfirmationMatches(t *testin
 	}
 	for _, clarify := range clarifies {
 		for _, option := range clarify.Options {
-			if got := people.PrintedSiteReadValue(option.Value); got != option.Value {
+			if got := contacts.PrintedSiteReadValue(option.Value); got != option.Value {
 				t.Fatalf("%s offers %q, which the confirmation reads as %q", clarify.Field, option.Value, got)
 			}
 			selection := crmcontracts.OnboardingClarifySelection{
@@ -207,12 +207,12 @@ func TestPlausibleClarifyValueBounds(t *testing.T) {
 
 func TestConflictClarifiesMapOntoTheResolutionContract(t *testing.T) {
 	current, source := "Acme Software", "human"
-	comparisons := []people.SiteReadComparison{
+	comparisons := []contacts.SiteReadComparison{
 		{Key: "display_name", ValueKind: "profile_field", Classification: "human_conflict", CurrentValue: &current, CurrentSource: &source, ProposedValue: "Acme GmbH"},
 		{Key: "industry", ValueKind: "profile_field", Classification: "machine_change", CurrentValue: &current, ProposedValue: "Software"},
 		{Key: "icp", ValueKind: "profile_field", Classification: "new", ProposedValue: "Mid-market"},
 	}
-	clarifies := onboardingClarifies(people.SiteRead{DraftVersion: 2}, comparisons, "en")
+	clarifies := onboardingClarifies(contacts.SiteRead{DraftVersion: 2}, comparisons, "en")
 	if len(clarifies) != 1 {
 		t.Fatalf("only the human conflict may clarify, got %+v", clarifies)
 	}
@@ -234,11 +234,11 @@ func TestConflictClarifiesMapOntoTheResolutionContract(t *testing.T) {
 
 func TestOpenClarifiesSkipQuestionsTheDraftAlreadyAnswers(t *testing.T) {
 	current := "Acme Software"
-	read := people.SiteRead{DraftVersion: 5, LegalEntities: []people.SiteReadLegalEntity{
+	read := contacts.SiteRead{DraftVersion: 5, LegalEntities: []contacts.SiteReadLegalEntity{
 		{Name: "Acme GmbH", RegisteredAddress: "Berlin 1", SourceURL: "https://acme.example/legal"},
 		{Name: "Acme Holding AG", RegisteredAddress: "Zug 2", SourceURL: "https://acme.example/legal"},
 	}}
-	comparisons := []people.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
+	comparisons := []contacts.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
 	openFields := func(draft identity.OnboardingCompanyDraft) []string {
 		open := openOnboardingClarifies(read, comparisons, "en", draft)
 		fields := make([]string, 0, len(open))
@@ -296,8 +296,8 @@ func TestOpenClarifiesSkipQuestionsTheDraftAlreadyAnswers(t *testing.T) {
 
 func TestClarifyQuestionsSpeakTheRequestedLocale(t *testing.T) {
 	current := "Acme"
-	comparisons := []people.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
-	read := people.SiteRead{LegalEntities: []people.SiteReadLegalEntity{
+	comparisons := []contacts.SiteReadComparison{{Key: "display_name", Classification: "human_conflict", CurrentValue: &current, ProposedValue: "Acme GmbH"}}
+	read := contacts.SiteRead{LegalEntities: []contacts.SiteReadLegalEntity{
 		{Name: "Acme GmbH", SourceURL: "https://a.example"}, {Name: "Acme AG", SourceURL: "https://a.example"},
 	}}
 	en := onboardingClarifies(read, comparisons, "en")

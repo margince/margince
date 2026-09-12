@@ -3,7 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, StoryProviders } from "../story-utils";
-import { PersonMeetingBrief } from "./drawer";
+import { ContactMeetingBrief } from "./drawer";
 import { briefReady } from "./fixtures";
 
 // What the DRAWER owns, as against the view: which URL goes out, and what the
@@ -40,7 +40,7 @@ describe("the meeting brief drawer", () => {
     });
     render(
       <StoryProviders>
-        <PersonMeetingBrief activityId="a-1" open onClose={() => {}} />
+        <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
       </StoryProviders>,
     );
     await waitFor(() => expect(urls).toHaveLength(1));
@@ -53,7 +53,7 @@ describe("the meeting brief drawer", () => {
     });
     render(
       <StoryProviders>
-        <PersonMeetingBrief activityId="a-1" open={false} onClose={() => {}} />
+        <ContactMeetingBrief activityId="a-1" open={false} onClose={() => {}} />
       </StoryProviders>,
     );
     expect(urls).toHaveLength(0);
@@ -74,7 +74,7 @@ describe("the meeting brief drawer", () => {
     ];
     const view = render(
       <StoryProviders>
-        <PersonMeetingBrief
+        <ContactMeetingBrief
           activityId="a-1"
           open
           onClose={() => {}}
@@ -93,7 +93,7 @@ describe("the meeting brief drawer", () => {
     // same drawer is reused for the next meeting on the page.
     view.rerender(
       <StoryProviders>
-        <PersonMeetingBrief
+        <ContactMeetingBrief
           activityId="a-2"
           open
           onClose={() => {}}
@@ -117,7 +117,7 @@ describe("the meeting brief drawer", () => {
     });
     render(
       <StoryProviders>
-        <PersonMeetingBrief activityId="a-1" open onClose={() => {}} />
+        <ContactMeetingBrief activityId="a-1" open onClose={() => {}} />
       </StoryProviders>,
     );
     const user = userEvent.setup();

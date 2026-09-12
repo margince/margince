@@ -190,7 +190,7 @@ func querySchemaDocument(vocab Vocabulary) querySchemaDoc {
 		// companies do now, so the operator answers for them.
 		//
 		// It is still unavailable for a record type that is not SOMEWHERE — a
-		// person's address is where they live, which this product does not
+		// contact's address is where they live, which this product does not
 		// geocode — but that is a per-target fact rather than a property of the
 		// deployment, so it is answered per call rather than declared here. A
 		// caller asking anyway gets the same note, naming the predicate.

@@ -95,10 +95,10 @@ export function memberKey(member: AudienceMember): string {
 }
 
 /**
- * The people and teams a message can be limited to.
+ * The contacts and teams a message can be limited to.
  *
  * Agent seats are excluded for the reason the share picker excludes them: a
- * message is limited to people and teams, never to an agent. The rule is spelled
+ * message is limited to contacts and teams, never to an agent. The rule is spelled
  * here rather than borrowed, because share.tsx's copy answers a different
  * question — who a RECORD is shared with — and one changing is no reason for
  * the other to.
@@ -158,7 +158,7 @@ export function AudienceMembers({
   if (candidates.length === 0) {
     // The list has not answered yet, or answered with nobody. Either way the
     // reader is told rather than shown an empty box that reads as an
-    // company with no people in it.
+    // company with no contacts in it.
     return <p className="t-caption">{t("compose.audienceMembersLoading")}</p>;
   }
   return (

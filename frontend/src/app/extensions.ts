@@ -64,7 +64,7 @@ export type ExtensionScreenRegistry = Readonly<
  * `RAIL_LESS_SCREENS` was reviewed with it and is unchanged: a unit's screen
  * wants the rail like any other destination, and `nav.ts` marks Settings
  * current while it is open. What it does NOT get is a badge or a phone-bar
- * slot — both are the product's judgement about what deserves a person's
+ * slot — both are the product's judgement about what deserves a contact's
  * attention, and it cannot make one for a surface it did not write.
  */
 export const EXTENSION_SCREEN = "ext";

@@ -32,8 +32,8 @@
         "read"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:ac280cee1e2abbb35179938867181fb62e0aa8aa0358b9c50b37c1d641cf7fda",
-      "digest": "sha256:f368c1515f9f6e2cbf75f4a8be2428fcea6ba7b5ded86ddf246c9746694db954"
+      "fragment_hash": "sha256:51ed7c385144575a341aba7c6da677a336805d8be617495f0722c6c4d8b1f528",
+      "digest": "sha256:65c0d743e9550fc15b9149aa095b604676278fb91ea9a6db3ef44e22839f504d"
     },
     {
       "id": "tool/openchannel_list_outbound",
@@ -48,8 +48,8 @@
         "read"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:919140974d9294eea4daafe75df196dac2da57703cc5e91f034b53d463947dce",
-      "digest": "sha256:91c3fd2dcec812a06b7f633579e887e4fb78e4debffb62bd5c623721f069c3e9"
+      "fragment_hash": "sha256:1dc1cb97926731580fa68350d48fcd13ce6c22b216f498e9d3a95c9fc381a569",
+      "digest": "sha256:1b2078d1f0190190322edb8218b80faac37f1aae8b068bd74acd961d21e36ade"
     },
     {
       "id": "tool/openchannel_mint_secret",
@@ -64,8 +64,8 @@
         "write"
       ],
       "tier": "confirmation_required",
-      "fragment_hash": "sha256:58b62dbfb3759014fdad0bd0b9309cfe7e2433e72979eb844292bacf59920b8d",
-      "digest": "sha256:0eb96bad96ef433f4254cd969378e0181079a4664ead3675742a761cfa2c94e4"
+      "fragment_hash": "sha256:331e68bec3956a7f09072eaf7b3a3241b9f591e8b3f372202294667695d5f346",
+      "digest": "sha256:809a7c4247e9cddb1a92ea9d669f62b0b0b8ccfa1617b53ec064261c7af15120"
     },
     {
       "id": "tool/openchannel_open",
@@ -80,8 +80,8 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:b2194507991eb0090a72cdc3250fb1ba8458884d671e392a6b7b84aa0e741ef6",
-      "digest": "sha256:fbf2ee83eeb1466679fb88336168bbd0ac553a1ccbf4c6c1802e43a6ebca522a"
+      "fragment_hash": "sha256:00acd29af7dd025e4ac8015c16012e50f8e5ee952141cd234533ebe3f0e51255",
+      "digest": "sha256:26cfcf6eff37beef421cb9f2a1e7eb1d4929a8d0f1cabf6dbb95081a37a36581"
     },
     {
       "id": "tool/openchannel_read_endpoint",
@@ -96,8 +96,8 @@
         "read"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:ad7b1deccc93f5f41167b61a2d59cd4f2b1f38ff030df0bfaf16b8e2e6eff5b9",
-      "digest": "sha256:b137f164baacc937995ee2fda571ce39ba268698a3ccacfe562ed65930bfdd5f"
+      "fragment_hash": "sha256:ada7f5da4bab57c5bdcb3c0d03480752fa92c41545acaf80ebda9c526e8c7e34",
+      "digest": "sha256:6f8f3cad5f9f58f016f169ac0d4ca53f95dc5d4270414319502eaaaef791be62"
     },
     {
       "id": "tool/openchannel_register_url",
@@ -112,8 +112,8 @@
         "write"
       ],
       "tier": "confirmation_required",
-      "fragment_hash": "sha256:002db2bebf9e0baed628c251379b924626e06a06e580ebf017ac841f53d88d89",
-      "digest": "sha256:a6a9ca41ec11fe06894b441bf12baadd09075ba0971f639da8a0d7cf8ef7e091"
+      "fragment_hash": "sha256:06769c59172c7ad9d480664c5e93f8e6ea1da81ef554e563482e0416f591cf35",
+      "digest": "sha256:325f41369f6a5d55a923dd98c72234d9bc4741406b9db0f0fa789952fda1b276"
     },
     {
       "id": "tool/openchannel_set_enabled",
@@ -128,8 +128,8 @@
         "write"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:72960d48c74cb08ee24aba74e7c30bc8b23c6ea5d7d0a9750813b00ac6b6d9f2",
-      "digest": "sha256:da21428043dc4167081d0cabd7bd2e16c15e8990f745ae931cd67f9591644d1b"
+      "fragment_hash": "sha256:bb4571c991e5be7040603b5fde2bbb14c86829026e4b5d255b2308e6825d1097",
+      "digest": "sha256:30460f95bdb5a33849d0c3da830b99bf4aee9450dfe3036f3e68556ee5a5373d"
     }
   ],
   "secrets": [

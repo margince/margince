@@ -25,7 +25,7 @@ import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
 // The basis act: what the setup settles right after the company is confirmed,
-// before any step about the person answering. Two things are asked. The
+// before any step about the human answering. Two things are asked. The
 // installation's reporting basis — base currency and reporting timezone — is
 // the one installation-wide answer the setup needs, and it belongs with the
 // company rather than at the end: every deal, report and brief that follows is

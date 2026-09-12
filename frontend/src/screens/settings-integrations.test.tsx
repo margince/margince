@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { jsonResponse, renderSettings } from "./settings.testkit";
 
-// The two entries one Connections tab became: the PERSON's mailbox and network
+// The two entries one Connections tab became: the CONTACT's mailbox and network
 // on Connections, the INSTALLATION's outside wiring on Integrations. Each page
 // has to carry its own half and none of the other's — a relabelling would pass
 // any claim that only ever looked at one of them.

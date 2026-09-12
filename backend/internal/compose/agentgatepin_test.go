@@ -163,7 +163,7 @@ func TestAWriteWithNoAdmittedPinIsForwardedUnconditioned(t *testing.T) {
 	agents.RegisterCoreTools(reg, deps.records, deps.stages, nil, nil, nil, nil)
 	// A create names no record and reads none, so its tool twin is static-tier:
 	// there is nothing for the gate to have proved anything about.
-	pol := agentPolicies["POST /v1/people"]
+	pol := agentPolicies["POST /v1/contacts"]
 	spec, _, ok := operationSpec(pol, reg)
 	if !ok {
 		t.Fatal("the registry serves no create_record spec for the REST twin to admit against")
@@ -173,7 +173,7 @@ func TestAWriteWithNoAdmittedPinIsForwardedUnconditioned(t *testing.T) {
 	}
 
 	body := []byte(`{"display_name":"Ada"}`)
-	r := httptest.NewRequest(http.MethodPost, "/v1/people", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPost, "/v1/contacts", bytes.NewReader(body))
 	r = r.WithContext(agentRequestCtx(r.Context()))
 	ctx, err := auth.NewGate(fullSeat{}).Admit(r.Context(), spec, tierInput(r.Context(), spec, pol, deps, r, body))
 	if err != nil {

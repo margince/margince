@@ -78,12 +78,12 @@ func TestUpdateRecordIsAutoExecuteOnBothArtifacts(t *testing.T) {
 // The credential class and the config surface the advance_deal floor reads must
 // stay human-only in the contract: lending authority, recording somebody's
 // consent and moving which stages count as won/lost are decisions that belong to
-// a person in their own seat, and no passport carries them.
+// a contact in their own seat, and no passport carries them.
 //
 // Deciding an approval is NOT in this class, and the difference is worth stating
 // because it reads like the same thing. A passport is a credential a human
 // minted and can revoke, carrying that human's own seat, grants and row scope;
-// answering a proposal on it is that person answering (ADR-0055), and what
+// answering a proposal on it is that contact answering (ADR-0055), and what
 // bounds the answer is what bounds them — plus the caps they chose to lend,
 // which is what stops "acting as the user" from meaning more than the user
 // granted. The operations below are different: each one would let a credential
@@ -162,7 +162,7 @@ func TestOperationSpecTightenOnly(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, nil)
 	agents.RegisterCoreTools(registry, nil, nil, nil, nil, nil, nil)
 
-	spec, _, ok := operationSpec(agentPolicy{Op: "archivePerson", Access: accessTool, Tool: "update_record", Tier: tierConfirmationRequired}, registry)
+	spec, _, ok := operationSpec(agentPolicy{Op: "archiveContact", Access: accessTool, Tool: "update_record", Tier: tierConfirmationRequired}, registry)
 	if !ok || spec.Tier != mcp.TierConfirmationRequired {
 		t.Fatalf("🟡 annotation over a 🟢 verb → tier %v ok=%v, want TierConfirmationRequired (tighten-only)", spec.Tier, ok)
 	}
@@ -175,11 +175,11 @@ func TestOperationSpecTightenOnly(t *testing.T) {
 // The redemption key is content, not serialization: key order and
 // whitespace hash equal; a changed value, path, or operation does not.
 func TestCanonicalRESTCallHashesContent(t *testing.T) {
-	_, h1, err := canonicalRESTCall("updatePerson", "/v1/people/x", http.Header{}, []byte(`{"b":2,"a":1}`), keyBindsTheRetry)
+	_, h1, err := canonicalRESTCall("updateContact", "/v1/contacts/x", http.Header{}, []byte(`{"b":2,"a":1}`), keyBindsTheRetry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, h2, err := canonicalRESTCall("updatePerson", "/v1/people/x", http.Header{}, []byte(` {"a": 1, "b": 2} `), keyBindsTheRetry)
+	_, h2, err := canonicalRESTCall("updateContact", "/v1/contacts/x", http.Header{}, []byte(` {"a": 1, "b": 2} `), keyBindsTheRetry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,11 +189,11 @@ func TestCanonicalRESTCallHashesContent(t *testing.T) {
 	// Both errors are asserted, not dropped: a refused input hashes to "", and an
 	// empty hash satisfies the inequality below while proving nothing about a
 	// different body or a different path.
-	_, h3, err := canonicalRESTCall("updatePerson", "/v1/people/x", http.Header{}, []byte(`{"a":1,"b":3}`), keyBindsTheRetry)
+	_, h3, err := canonicalRESTCall("updateContact", "/v1/contacts/x", http.Header{}, []byte(`{"a":1,"b":3}`), keyBindsTheRetry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, h4, err := canonicalRESTCall("updatePerson", "/v1/people/y", http.Header{}, []byte(`{"a":1,"b":2}`), keyBindsTheRetry)
+	_, h4, err := canonicalRESTCall("updateContact", "/v1/contacts/y", http.Header{}, []byte(`{"a":1,"b":2}`), keyBindsTheRetry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestCanonicalRESTCallHashesContent(t *testing.T) {
 	if _, _, err := canonicalRESTCall("op", "/p", http.Header{}, []byte(`{broken`), keyBindsTheRetry); err == nil {
 		t.Fatal("malformed JSON must be refused, not hashed")
 	}
-	_, hEmpty, err := canonicalRESTCall("archivePerson", "/v1/people/x", http.Header{}, nil, keyBindsTheRetry)
+	_, hEmpty, err := canonicalRESTCall("archiveContact", "/v1/contacts/x", http.Header{}, nil, keyBindsTheRetry)
 	if err != nil || hEmpty == "" {
 		t.Fatalf("bodyless mutations (DELETE) must canonicalize: %v", err)
 	}
@@ -269,9 +269,9 @@ func TestTheCanonicalCallIgnoresHeadersThatDoNotChangeExecution(t *testing.T) {
 // hash — not two in-process hashes compared to each other, which cannot see
 // a canonical-form change that moves both sides of the comparison together.
 func TestTheCanonicalCallIsByteCompatibleWithoutAHashedHeader(t *testing.T) {
-	const wantCanonical = `{"body":{"a":1,"b":2},"operation":"updatePerson","path":"/v1/people/x"}`
-	const wantHash = "8924889e55733baa0964dc3aa1929f9af6f315b49ed82d4c11e8c2c1190bba84"
-	canonical, hash, err := canonicalRESTCall("updatePerson", "/v1/people/x", http.Header{}, []byte(`{"a":1,"b":2}`), keyBindsTheRetry)
+	const wantCanonical = `{"body":{"a":1,"b":2},"operation":"updateContact","path":"/v1/contacts/x"}`
+	const wantHash = "7aa5e16779ab05964cb509f899dde2a30c251cb3a3f91da76e142d3cc20e1eb4"
+	canonical, hash, err := canonicalRESTCall("updateContact", "/v1/contacts/x", http.Header{}, []byte(`{"a":1,"b":2}`), keyBindsTheRetry)
 	if err != nil {
 		t.Fatal(err)
 	}

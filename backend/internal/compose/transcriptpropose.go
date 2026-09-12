@@ -7,7 +7,7 @@ package compose
 // staging each as a question a human answers.
 //
 // What this site may claim is bounded by what a transcript IS: a record of what
-// people said. So a proposal here is always "somebody said they would do this",
+// contacts said. So a proposal here is always "somebody said they would do this",
 // never "this deal should move to negotiation" — the second is a conclusion
 // about the account, and nothing in a transcript states it. Every proposal
 // cites the lines it was read from and writes NOTHING until a human accepts it
@@ -70,13 +70,13 @@ it states — a specific thing a named party said they would do. Report one only
 transcript SAYS it: "I'll send the pricing by Friday", "we'll get you the security review".
 Report nothing for topics discussed without a commitment, for things you are inferring
 rather than reading, and for anything about what the DEAL should do — a transcript records
-what people said, not what should happen to the account. Cite the line numbers the
+what contacts said, not what should happen to the account. Cite the line numbers the
 commitment is stated on. Reporting nothing is the correct answer for many transcripts.`
 
 // transcriptSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 // The language rule governs the "summary" field. "owner" is excluded by
-// promptlang.Rule's own carve-out for people's names — it is the party as the
-// transcript names them, and a translated name is a different person.
+// promptlang.Rule's own carve-out for contacts's names — it is the party as the
+// transcript names them, and a translated name is a different contact.
 func transcriptSystemFor(fence promptfence.Fence, lang string) string {
 	return transcriptSystem + "\n" + promptlang.Rule(lang) + "\n" + fence.Rule("line")
 }
@@ -142,7 +142,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 // SHIPPING request rather than a copy of it — a cert that grades a
 // hand-rewritten prompt certifies nothing about what runs.
 //
-//promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a person reads.
+//promptvoice:exempt returns next steps and commitments as structured rows quoted from the transcript; the task list that renders them is the surface a reader reads.
 func transcriptRequest(lines []string, meetingDay string, lang string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder

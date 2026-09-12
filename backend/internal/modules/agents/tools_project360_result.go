@@ -91,7 +91,7 @@ type Project360Deals struct {
 	Truncated bool          `json:"truncated"`
 }
 
-// Project360Stakeholders is the people seated on the project.
+// Project360Stakeholders is the contacts seated on the project.
 type Project360Stakeholders struct {
 	Items     []HandoffStakeholder `json:"items"`
 	Truncated bool                 `json:"truncated"`

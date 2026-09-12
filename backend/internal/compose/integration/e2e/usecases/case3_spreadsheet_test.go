@@ -12,7 +12,7 @@ package usecases
 //	Got this list from the trade fair. Can you get it into the CRM?
 //	I think I sent you that already, do it again to be safe
 //	One correction on that list — Rostock should be Hamburg and they are
-//	bigger than I said, 201-500 people
+//	bigger than I said, 201-500 contacts
 //
 // The second line is the whole case. It is what a user does when they are not
 // sure whether something worked, and the correct outcome is that nothing
@@ -242,7 +242,7 @@ func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
 	if size := s.readStringWhere(t,
 		`SELECT coalesce(size_band, '') FROM company WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); size != "201-500" {
-		t.Fatalf("case 3 criterion 4: the correction said 201-500 people and the record reads %q — "+
+		t.Fatalf("case 3 criterion 4: the correction said 201-500 contacts and the record reads %q — "+
 			"one update was reported and half the correction was dropped", size)
 	}
 	// Criterion 5: a field the correction's file does not CARRY is untouched.

@@ -113,7 +113,7 @@ func (e *busEnv) stage(t *testing.T, eventType string, entityID ids.UUID) kevent
 		Version:    1,
 		OccurredAt: time.Now().UTC(),
 		Actor:      kevents.Actor{Type: "human", ID: "human:" + ids.NewV7().String()},
-		Entity:     kevents.EntityRef{Type: "person", ID: entityID},
+		Entity:     kevents.EntityRef{Type: "contact", ID: entityID},
 		Trace:      kevents.Trace{CorrelationID: ids.NewV7(), AuditLogID: ids.NewV7()},
 	}
 	if err := env.Validate(); err != nil {
@@ -158,14 +158,14 @@ func (e *busEnv) streamEventIDs(t *testing.T, stream string) []string {
 
 func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 	e := setup(t)
-	env := e.stage(t, "person.created", ids.NewV7())
+	env := e.stage(t, "contact.created", ids.NewV7())
 
 	relay := e.relay(t)
 	if n, err := relay.relayBatch(t.Context()); err != nil || n != 1 {
 		t.Fatalf("first pass: published %d, err %v; want 1, nil", n, err)
 	}
 
-	got := e.streamEventIDs(t, "gw:events:crm:person")
+	got := e.streamEventIDs(t, "gw:events:crm:contact")
 	if len(got) != 1 || got[0] != env.EventID.String() {
 		t.Fatalf("stream carries %v, want exactly [%s]", got, env.EventID)
 	}
@@ -183,7 +183,7 @@ func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 	if n, err := relay.relayBatch(t.Context()); err != nil || n != 0 {
 		t.Fatalf("second pass: published %d, err %v; want 0, nil", n, err)
 	}
-	if got := e.streamEventIDs(t, "gw:events:crm:person"); len(got) != 1 {
+	if got := e.streamEventIDs(t, "gw:events:crm:contact"); len(got) != 1 {
 		t.Fatalf("second pass duplicated the entry: %v", got)
 	}
 }
@@ -238,15 +238,15 @@ func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 func TestRelayPreservesCommitOrderPerEntity(t *testing.T) {
 	e := setup(t)
 	entity := ids.NewV7()
-	first := e.stage(t, "person.created", entity)
-	second := e.stage(t, "person.updated", entity)
-	third := e.stage(t, "person.archived", entity)
+	first := e.stage(t, "contact.created", entity)
+	second := e.stage(t, "contact.updated", entity)
+	third := e.stage(t, "contact.archived", entity)
 
 	if _, err := e.relay(t).relayBatch(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{first.EventID.String(), second.EventID.String(), third.EventID.String()}
-	got := e.streamEventIDs(t, "gw:events:crm:person")
+	got := e.streamEventIDs(t, "gw:events:crm:contact")
 	if len(got) != 3 || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
 		t.Fatalf("stream order %v, want commit order %v", got, want)
 	}
@@ -293,13 +293,13 @@ func consumeUntil(t *testing.T, s *Subscriber, deadline time.Duration, done func
 
 func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 	e := setup(t)
-	e.stage(t, "person.created", ids.NewV7())
+	e.stage(t, "contact.created", ids.NewV7())
 	// A second entry on the same stream. This used to be another tenant's, and
 	// the assertion used to be that a workspace-scoped handler never saw it —
 	// the bus carries no tenant any more (ADR-0091 §6), so what is left to hold
 	// is the property that outlived it: every entry reaches the handler exactly
 	// once, and every entry is acked.
-	second := e.stage(t, "person.created", ids.NewV7())
+	second := e.stage(t, "contact.created", ids.NewV7())
 	if second.EventID.IsZero() {
 		t.Fatal("the second staged envelope has no event id")
 	}
@@ -308,7 +308,7 @@ func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 	}
 
 	var seen atomic.Int32
-	group := kevents.Group{Name: "cg:read-model", Streams: []string{"gw:events:crm:person"}}
+	group := kevents.Group{Name: "cg:read-model", Streams: []string{"gw:events:crm:contact"}}
 	s := NewSubscriber(e.rdb, group, func(_ context.Context, _ kevents.Envelope) error {
 		seen.Add(1)
 		return nil
@@ -317,7 +317,7 @@ func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 
 	pendingCount := func(t *testing.T) int64 {
 		t.Helper()
-		pending, err := e.rdb.XPending(t.Context(), "gw:events:crm:person", group.Name).Result()
+		pending, err := e.rdb.XPending(t.Context(), "gw:events:crm:contact", group.Name).Result()
 		if err != nil {
 			// Not a sentinel count: a Redis fault and a non-zero pending list
 			// are different failures, and folding them together would report
@@ -405,7 +405,7 @@ func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
 // has (so the third delivery is absorbed).
 func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
 	e := setup(t)
-	env := e.stage(t, "person.created", ids.NewV7())
+	env := e.stage(t, "contact.created", ids.NewV7())
 	markKey := dedupeKey("cg:context-graph", env)
 
 	var calls atomic.Int32

@@ -24,7 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -46,7 +46,7 @@ var newsroomPaths = []string{"/feed", "/rss", "/news/feed", "/blog/feed", "/feed
 // Errors are logged and dropped rather than returned: this lane is additive to
 // a read that has already succeeded, and a feed nobody could reach is not a
 // failed enrichment.
-func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim people.SiteReadClaim, crawl siteCrawl) {
+func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim contacts.SiteReadClaim, crawl siteCrawl) {
 	if w.fetch == nil || claim.CompanyID == nil {
 		return
 	}

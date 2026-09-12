@@ -103,7 +103,7 @@ distinguishing those rows from the ones it did write). A forward-only data repai
 has no meaningful inverse. `0183_list_tag_rbac.down.sql` says exactly this, and
 is the file to copy.
 
-### The typo that locks people out of login
+### The typo that locks contacts out of login
 
 `policy.Parse` **rejects** an unknown object key:
 

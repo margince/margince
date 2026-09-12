@@ -40,7 +40,7 @@ type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
 // The week just gone, on Brief.
 //
 // NO NAV ENTRY, deliberately. The product's own argument against one is in
-// nav.ts: Today is the single door to the work that waits on a person, and
+// nav.ts: Today is the single door to the work that waits on a contact, and
 // three sidebar rows for one question read as three separate piles. A
 // retrospective of the week is a view of that same work, so it lives here and
 // past weeks open through the picker rather than through a second destination.

@@ -32,7 +32,7 @@ func TestInScopeSubjectsReadsAMessagesSender(t *testing.T) {
 
 // A my_chat_member update's subject is the private CHAT, whose id is the
 // customer's own account. new_chat_member.user is the BOT: an extractor reading
-// it would hand the suppression probe an id no Person carries, so an erased
+// it would hand the suppression probe an id no Contact carries, so an erased
 // subject's block/unblock report would be persisted verbatim.
 func TestInScopeSubjectsReadsAMembershipUpdatesChatNotTheBot(t *testing.T) {
 	got, err := InScopeSubjects([]byte(telegramBlockedFixture))
@@ -46,7 +46,7 @@ func TestInScopeSubjectsReadsAMembershipUpdatesChatNotTheBot(t *testing.T) {
 
 // A group message names no subject this installation may keep. Design §1 puts
 // group chats out of scope, so no record is ever made of one — which means no
-// person_channel_identity, which means neither the erasure raw purge nor the
+// contact_channel_identity, which means neither the erasure raw purge nor the
 // subject-access raw section can ever reach the stored payload again. Answering
 // with the sender's account here would let the poller store their id, handle,
 // names and every word they wrote, permanently and unerasably.
@@ -94,7 +94,7 @@ func TestInScopeSubjectsRefusesAGroupMembershipUpdate(t *testing.T) {
 // and it must answer the same as Normalize — the poller persists on the
 // strength of this function while Normalize decides what is captured, so an
 // admitted update Normalize then skips is a verbatim payload stored with no
-// person_channel_identity any erasure could reach it by.
+// contact_channel_identity any erasure could reach it by.
 func TestInScopeSubjectsRefusesAGroupIDWearingThePrivateLabel(t *testing.T) {
 	got, err := InScopeSubjects([]byte(`{
 		"update_id": 905,
@@ -116,7 +116,7 @@ func TestInScopeSubjectsRefusesAGroupIDWearingThePrivateLabel(t *testing.T) {
 
 // The account read out of a membership update is the chat's own id, so the same
 // rule decides both halves there: a negative id names no account, and probing
-// the suppression list with one would ask about a key no Person carries.
+// the suppression list with one would ask about a key no Contact carries.
 func TestInScopeSubjectsRefusesANonAccountSender(t *testing.T) {
 	got, err := InScopeSubjects([]byte(`{
 		"update_id": 906,

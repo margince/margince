@@ -15,7 +15,7 @@
    read.
 3. **Automatic classification of senders and threads** — deciding whether a
    sender is a business contact and a thread ordinary business. Models run
-   locally. The Senders page shows every decision and a person's correction is
+   locally. The Senders page shows every decision and a contact's correction is
    final.
 4. **Destruction on the employee's own request** — text, provider original,
    attachments and their files, vectors, delivery copies. Commercial

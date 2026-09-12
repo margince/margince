@@ -102,7 +102,7 @@ describe("ProjectLinks", () => {
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
       // Every real adapter refuses through throwProblem (companyprojects,
-      // personprojects, projectcompanies all do), so the stand-in refuses the
+      // contactprojects, projectcompanies all do), so the stand-in refuses the
       // same way. A plain Error here would be a test supplying its own version
       // of production and proving nothing about it.
       attach: async () => {

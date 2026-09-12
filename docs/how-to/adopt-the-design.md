@@ -171,7 +171,7 @@ records and the remaining screens are in
 | 3 | Step 3: Panel, StatCard/StatStrip, RecordView head, RecordTabs trailing slot, PageAside right/closed, timeline, spine, 360 kit, EvidenceMark hover, trust rows, map colours, the responsive ladder (§8a) | `company-record.spec.ts` will go red here; keep the old assertions until PR 4 by feature-flagging the head layout, or land 3 and 4 together |
 | 4 | Step 4: shell, top bar, settings second level, agent chrome | `rail.test.tsx`, `ac.spec.ts`, 390px sweep |
 | 5 | §3 Company, with its e2e rewrite and state stories | `company-record.spec.ts`, `history.spec.ts`, `perf-mobile` |
-| 6 | §4 Contact | `person-network.spec.ts`, `person360.test.tsx` |
+| 6 | §4 Contact | `contact-network.spec.ts`, `contact360.test.tsx` |
 | 7 | §5 Deal, tabs into the URL | `deals.test.tsx`, `history.spec.ts` |
 | 8 | §6 Lead + §7 Project | `leads.spec.ts`, `projects.spec.ts` |
 | 9 | §8 sub pages and maps | `recordtabs.spec.ts` |

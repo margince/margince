@@ -32,12 +32,12 @@ const contractFile = "../../api/crm.yaml"
 
 // contractSchemaNameFor maps a canonical overlay entity to the contract
 // schema publishing its fields. Both spellings are load-bearing and differ
-// (person → Person), so the correspondence is declared rather than derived
+// (contact → Contact), so the correspondence is declared rather than derived
 // from a capitalization rule that would break on the first two-word type.
 // gatekit:fixture the contract schema name each overlay entity's fields are
 // read from — expected wiring, not a waived cost.
 var contractSchemaNameFor = map[string]string{
-	"person":  "Person",
+	"contact": "Contact",
 	"company": "Company",
 }
 

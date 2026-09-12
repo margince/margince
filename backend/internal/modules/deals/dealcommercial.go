@@ -3,7 +3,7 @@
 
 package deals
 
-// The deal's commercial context — the brief a person wrote, why the deal
+// The deal's commercial context — the brief a colleague wrote, why the deal
 // exists, how much a human says it matters, and which channel brought it.
 //
 // Its own file rather than more of deal.go: those four columns are read and

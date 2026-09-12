@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The two carrier kinds that are not scheduled specs: a human asking for an
@@ -44,7 +44,7 @@ import (
 // none as its own.
 const (
 	documentReadingKind = activities.ExtractionAITask
-	websiteReadingKind  = people.SiteReadActivityKind
+	websiteReadingKind  = contacts.SiteReadActivityKind
 	transcriptReadKind  = activities.TranscriptAITask
 	voiceBuildKind      = ai.VoiceBuildAITask
 )

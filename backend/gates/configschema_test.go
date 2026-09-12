@@ -174,7 +174,7 @@ func schemaFieldName(f reflect.StructField) (string, bool) {
 // yaml.v3 decodes `bootstrap_admin: null` — and a key left bare, which parses
 // the same way — into a nil pointer, which is how an operator comments a
 // section out without deleting it. A schema that flagged that would be wrong
-// about the file in the direction that teaches people to ignore the squiggle.
+// about the file in the direction that teaches contacts to ignore the squiggle.
 func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
 	t.Parallel()
 	const withNulls = `version: 1

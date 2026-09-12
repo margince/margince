@@ -235,7 +235,7 @@ type Extension struct {
 	// rules the core authorization engine consults before a message goes out.
 	// Policy suppliers like a jurisdiction pack, and never actors: a pack
 	// states what its jurisdiction requires and the engine decides, so there
-	// is one answer to "may we write to this person" rather than one per
+	// is one answer to "may we write to this contact" rather than one per
 	// country.
 	//
 	// At most one rule set per jurisdiction code across the composed set; two

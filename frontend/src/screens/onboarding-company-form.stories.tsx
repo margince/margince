@@ -94,7 +94,7 @@ function read(facts: readonly CompanySiteReadFact[]): CompanySiteRead {
     profile_fields: [],
     facts: [...facts],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "hash",

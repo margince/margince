@@ -246,7 +246,7 @@ func newGraphCalAuthorizer(resolve appResolver, g GraphConfig) graphAppAuthorize
 // per vendor.
 //
 // One constructor for both process roles. The api resolves an app to run a
-// person's consent flow and the worker to refresh a token on the sync poll, and
+// contact's consent flow and the worker to refresh a token on the sync poll, and
 // those two asking the same question in two hand-written spellings is how they
 // would come to disagree about which project this installation is.
 func newConnectorAppResolvers(

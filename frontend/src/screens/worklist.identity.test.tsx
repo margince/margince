@@ -77,7 +77,7 @@ describe("the worklist's routed identity", () => {
     );
   });
 
-  it("re-reads for a colleague's queue when the address names a person", async () => {
+  it("re-reads for a colleague's queue when the address names a contact", async () => {
     window.location.hash = "#/worklist";
     renderApp();
     await waitFor(() => expect(READS.length).toBeGreaterThan(0), {

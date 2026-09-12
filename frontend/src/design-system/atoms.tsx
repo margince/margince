@@ -437,13 +437,13 @@ export function Avatar({
   identity,
   src,
   size = "sm",
-  shape = "person",
+  shape = "contact",
 }: Readonly<{
   name: string;
   /**
    * What the tint is derived FROM, when that is not the displayed name — a
    * record id, an address, anything stable for the life of the record. The
-   * name is the fallback and it is a poor key: renaming a person or a company
+   * name is the fallback and it is a poor key: renaming a contact or a company
    * silently moves them to a different colour on every screen at once, which
    * reads as a different record rather than as a rename.
    */
@@ -463,12 +463,12 @@ export function Avatar({
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *
-   * A person is round, the way a face is drawn everywhere; a company is
+   * A contact is round, the way a face is drawn everywhere; a company is
    * a rounded square, the way a logo is. The distinction is not decoration —
    * on a page carrying both, the shape is what tells a reader whether a chip
    * is a company or somebody at it before they have read a word of it.
    */
-  shape?: "person" | "company";
+  shape?: "contact" | "company";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -854,7 +854,7 @@ export function Field({
 // would not.
 //
 // Six is the line, and it is about counting rather than width: "one of three
-// signals" is a set a reader checks off, and "two of ten people" is a share
+// signals" is a set a reader checks off, and "two of ten contacts" is a share
 // they read as a length. Drawn the other way round, three segments of a hundred
 // are invisible and a tenth of one track says nothing about which signal is out.
 const COUNTABLE = 6;
@@ -928,7 +928,7 @@ export function StatCard({
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
-  // people replying) — the difference is whether a reader would count them.
+  // contacts replying) — the difference is whether a reader would count them.
   //
   // Only for a reading that HAS a denominator. A figure with nothing to be out
   // of gets no bar rather than a bar with an invented one.
@@ -1169,7 +1169,7 @@ const PENDING_LINES = [
  *
  * `delayMs` holds the whole thing back until the wait has actually been long
  * enough to be worth reporting. It is for a surface that re-reads as a reader
- * types, where the usual answer arrives faster than a person can perceive: a
+ * types, where the usual answer arrives faster than a contact can perceive: a
  * placeholder that flashes on every keystroke is noise, and it reports work
  * that was already done. Nothing renders before the delay elapses — the spoken
  * line included, deliberately, because announcing a wait that is about to end
@@ -1335,7 +1335,7 @@ export function SectionHeader({
  * face so a column of them lines up, the reader's own number format, the host's
  * class, and the SEPARATOR — which is the one that was missing. Both strips
  * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
- * reader speaks was "People2", "Deals0", "Tasks0". The comma is
+ * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
  * visually hidden because the gap between them is already drawn in CSS; what it
  * fixes is the spoken name, where there was nothing between the two at all.
  *
@@ -1378,7 +1378,7 @@ export function SegmentedControl<Option extends string>({
   // count is a fact about the section and does not.
   //
   // Inside the button, so the count joins the option's accessible name and a
-  // screen reader announces "People 6" rather than leaving the figure to a
+  // screen reader announces "Contacts 6" rather than leaving the figure to a
   // sighted reader alone.
   counts?: Partial<Record<Option, number>>;
   // Accessible name for the control as a whole (the `fieldset` group); a

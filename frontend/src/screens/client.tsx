@@ -31,7 +31,7 @@ export function ClientSurfaceScreen() {
       if (error) {
         throwProblem(error);
       }
-      return data.data.filter((hit) => hit.type === "person");
+      return data.data.filter((hit) => hit.type === "contact");
     },
   });
 

@@ -459,7 +459,7 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 			t.Errorf("the census does not recognise %q as a prompt constant", name)
 		}
 	}
-	for _, name := range []string{"storedVersion", "auditKeyDomain", "entityTypePerson", "systemOfRecord"} {
+	for _, name := range []string{"storedVersion", "auditKeyDomain", "entityTypeContact", "systemOfRecord"} {
 		if promptConstantName.MatchString(name) {
 			t.Errorf("the census reports %q, which is not a prompt constant", name)
 		}

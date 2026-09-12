@@ -5,7 +5,7 @@ package approvals
 
 // The transport for a rep's own answer to "how much of this queue should answer
 // itself". Apart from handlers.go because it is a different surface: that file
-// carries the inbox — a list of things other people and machines proposed — and
+// carries the inbox — a list of things other contacts and machines proposed — and
 // this one carries a setting the reader holds about themselves.
 
 import (
@@ -19,7 +19,7 @@ import (
 // GetAutonomy answers with the reader's own settings, one row per eligible kind.
 func (h Handlers) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 	// Human-only, matching the contract. An agent asking what its principal has
-	// automated is asking a question about the person rather than about the work,
+	// automated is asking a question about the contact rather than about the work,
 	// and the answer would tell it which proposals it can expect to skip review.
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)

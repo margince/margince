@@ -18,18 +18,18 @@ import {
 //
 // The lookup is a mutation with no auto-run, so every state past the resting one
 // is reached by driving the control in play() rather than by seeding a cache.
-// Its single read is GET /search, filtered to person hits.
+// Its single read is GET /search, filtered to contact hits.
 const SEARCH = "GET /search";
 
-const person = {
+const contact = {
   id: "p-1042",
-  type: "person",
+  type: "contact",
   title: "Bettina Krause",
   snippet: "Head of Fleet · Brandt Automotive GmbH",
 };
 
 // A company hit in the same payload: the surface is a SENDER lookup, so it keeps
-// only the people. Leaving the company in the fixture is what proves the
+// only the contacts. Leaving the company in the fixture is what proves the
 // filter, rather than a payload that could not have shown the bug.
 const company = {
   id: "o-1",
@@ -74,7 +74,7 @@ export const Resting: Story = { render: story({}) };
 
 // A recognized sender: the mini record, with the way through to the full 360.
 export const RecognizedSender: Story = {
-  render: story({ [SEARCH]: searchPage([person, company]) }),
+  render: story({ [SEARCH]: searchPage([contact, company]) }),
   play: lookUpSender,
 };
 
@@ -94,7 +94,7 @@ export const UnknownSender: Story = {
 // grounds on trial.
 export const RecognizedSenderDark: Story = {
   globals: { theme: "dark" },
-  render: story({ [SEARCH]: searchPage([person, company]) }),
+  render: story({ [SEARCH]: searchPage([contact, company]) }),
   play: lookUpSender,
 };
 

@@ -16,6 +16,11 @@
 # no longer fit. Paying them back down is
 # https://github.com/margince/margince/issues/5025 — and re-freezing anything
 # else upward is what the seeder refuses to do for you.
+#
+# The same again, one noun over: the change that renamed the record to contact
+# widened `people` to `contacts` and `person_id` to `contact_id`, and biome
+# splits what no longer fits in 80 columns. Nothing was added to those files
+# either, and they pay back down through the same ticket.
 
 1007 frontend/src/screens/webhooks.tsx
 1031 frontend/src/app/shell.tsx
@@ -26,17 +31,17 @@
 1081 frontend/src/screens/auth.tsx
 1092 frontend/src/screens/onboarding-conversation/connect-act.test.tsx
 1098 frontend/src/screens/worklist.test.tsx
-1105 frontend/src/screens/personpage.test.tsx
+1105 frontend/src/screens/contactpage.test.tsx
 1109 frontend/src/screens/users-admin.test.tsx
 1125 frontend/src/design-system/listsurface.tsx
-1135 frontend/src/screens/companyrail.test.tsx
+1139 frontend/src/screens/companyrail.test.tsx
 1150 frontend/src/screens/record360/spine.test.tsx
 1160 frontend/src/screens/onboarding-conversation/company-act.tsx
 1161 frontend/src/design-system/conformance.test.ts
 1183 frontend/src/screens/onboarding-conversation/company-act.test.tsx
-1184 frontend/src/screens/personpage.tsx
+1184 frontend/src/screens/contactpage.tsx
 1200 frontend/src/screens/privacy.test.tsx
-1208 frontend/src/screens/personprovider.test.tsx
+1208 frontend/src/screens/contactprovider.test.tsx
 1208 frontend/src/screens/worklist.row.tsx
 1209 frontend/src/design-system/atoms.stories.tsx
 1245 frontend/src/screens/privacy.tsx
@@ -47,14 +52,14 @@
 1402 frontend/src/screens/listquery.tsx
 1424 frontend/src/screens/offers.tsx
 1428 frontend/src/screens/contacts.test.tsx
-1430 frontend/src/screens/personrail.tsx
+1433 frontend/src/screens/contactrail.tsx
 1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx
 1571 frontend/src/app/agentrail.tsx
 1650 frontend/src/design-system/listtable.tsx
 1728 frontend/src/screens/onboarding-facts.test.tsx
-1909 frontend/src/screens/personpage.stories.tsx
+1917 frontend/src/screens/contactpage.stories.tsx
 1913 frontend/src/screens/analytics.tsx
 2003 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
@@ -62,9 +67,9 @@
 2185 frontend/src/screens/leads.tsx
 2308 frontend/src/screens/company360.test.tsx
 2535 frontend/src/screens/companies.test.tsx
-2572 frontend/src/screens/companies.tsx
+2576 frontend/src/screens/companies.tsx
 2645 frontend/src/screens/deals.test.tsx
-2747 frontend/src/screens/compose.tsx
+2750 frontend/src/screens/compose.tsx
 2811 frontend/src/screens/settings.tsx
 2833 frontend/src/screens/leads.test.tsx
 3331 frontend/src/screens/compose.test.tsx
@@ -73,7 +78,7 @@
 507 frontend/src/design-system/briefitem.tsx
 509 frontend/src/design-system/emaildetail.tsx
 513 frontend/src/design-system/relationshipmap.tsx
-513 frontend/src/screens/person360.tsx
+513 frontend/src/screens/contact360.tsx
 514 frontend/src/screens/documentextraction.tsx
 514 frontend/src/screens/projectsections.tsx
 516 frontend/src/design-system/margince-workbench.tsx
@@ -108,13 +113,13 @@
 640 frontend/src/screens/retention.tsx
 648 frontend/src/screens/leads.list.tsx
 648 frontend/src/screens/partners.tsx
-661 frontend/src/screens/record360/citations.tsx
-591 frontend/src/screens/approvalkind.ts
+666 frontend/src/screens/record360/citations.tsx
+594 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
 671 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
 676 frontend/src/screens/worklist.dispositions.tsx
-680 frontend/src/screens/personcards.tsx
+682 frontend/src/screens/contactcards.tsx
 682 frontend/src/format/format.ts
 682 frontend/src/screens/companyraildetails.tsx
 702 frontend/src/screens/settingsnav.tsx
@@ -123,12 +128,12 @@
 762 frontend/src/screens/extension-access.tsx
 781 frontend/src/screens/onboarding-conversation/connect-scene.tsx
 789 frontend/src/screens/worklist.tsx
-790 frontend/src/screens/companypeople/summary.tsx
+790 frontend/src/screens/companycontacts/summary.tsx
 818 frontend/src/screens/import.tsx
 827 frontend/src/screens/voice-dna.tsx
-835 frontend/src/screens/record360/spine.tsx
+836 frontend/src/screens/record360/spine.tsx
 839 frontend/src/screens/buyerroom.tsx
-785 frontend/src/screens/relationships.tsx
+787 frontend/src/screens/relationships.tsx
 844 frontend/src/screens/filterbuilder.tsx
 856 frontend/src/screens/onboarding-gate.tsx
 857 frontend/src/screens/worklist.copy.ts
@@ -138,7 +143,7 @@
 906 frontend/src/screens/settingscatalog.ts
 938 frontend/src/screens/customfields.tsx
 940 frontend/src/screens/contacts.tsx
-941 frontend/src/screens/personprovider.tsx
+941 frontend/src/screens/contactprovider.tsx
 948 frontend/src/screens/share.tsx
 965 frontend/src/screens/integrations-provider.tsx
 981 frontend/src/design-system/decisiondeck.tsx

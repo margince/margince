@@ -36,7 +36,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -59,7 +59,7 @@ func openQuestion(t *testing.T, e *integration.Env, domain string) {
 // lets the trigger be best-effort.
 func stillDue(t *testing.T, e *integration.Env, domain string) bool {
 	t.Helper()
-	due, err := people.NewStore(e.DB()).ListDueDomains(e.Admin(), 50)
+	due, err := contacts.NewStore(e.DB()).ListDueDomains(e.Admin(), 50)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,7 +357,7 @@ func spendTriageAttempts(t *testing.T, e *integration.Env, domain string) {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE company_domain_disposition
 			   SET attempts = $2, next_attempt_at = now() - interval '1 day'
-			 WHERE domain = $1`, domain, people.DomainTriageMaxAttempts)
+			 WHERE domain = $1`, domain, contacts.DomainTriageMaxAttempts)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -366,8 +366,8 @@ func spendTriageAttempts(t *testing.T, e *integration.Env, domain string) {
 
 // The sweep must CLOSE a question no crawl will ever answer. A domain that spent
 // every attempt drops out of the due scan, so leaving it pending would strand
-// its people without a company and with nothing on the row to say why — the
-// person is created either way, and only the company waits on this.
+// its contacts without a company and with nothing on the row to say why — the
+// contact is created either way, and only the company waits on this.
 func TestTriageSweepSettlesADomainThatRanOutOfAttempts(t *testing.T) {
 	e := integration.Setup(t)
 	setAutoEnrich(t, e, true)

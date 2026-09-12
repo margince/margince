@@ -97,7 +97,7 @@ describe("where a cited value came from", () => {
     ).toBeTruthy();
   });
 
-  it("prints no confidence for a value a person entered", async () => {
+  it("prints no confidence for a value a contact entered", async () => {
     show({
       entity_type: "profile_field",
       entity_id: "p-1",
@@ -110,7 +110,7 @@ describe("where a cited value came from", () => {
     });
 
     expect(await screen.findByText("Entered by a person")).toBeTruthy();
-    // A person's assertion carries no model confidence, and a percentage
+    // A contact's assertion carries no model confidence, and a percentage
     // beside it would be a number nobody computed.
     expect(screen.queryByText(/confident/)).toBeNull();
   });
@@ -122,7 +122,7 @@ describe("where a cited value came from", () => {
       last_verified_at: "2026-08-06T09:00:00Z",
     });
 
-    // Two different assurances: a machine fetched it, and a person agreed.
+    // Two different assurances: a machine fetched it, and a contact agreed.
     // Merging them would let a re-read pass for an approval.
     // Anchored on a digit so this does not also match the "Read from their
     // website" origin badge, which is a different claim entirely.
@@ -185,7 +185,7 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
     expect(steps).toEqual([1, -1]);
   });
 
-  // The badge is DERIVED: a machine wrote it and no person has verified it
+  // The badge is DERIVED: a machine wrote it and no contact has verified it
   // since. Not stored, so the predicate has to be right here.
   it("marks a machine-written claim nobody has confirmed", async () => {
     show(SITE_READ);
@@ -194,14 +194,14 @@ describe("the receipt is a drawer beside the claim, not a box over it", () => {
     ).toBeTruthy();
   });
 
-  it("drops the mark once a person has verified it", async () => {
+  it("drops the mark once a contact has verified it", async () => {
     show({ ...SITE_READ, last_verified_at: "2026-08-05T09:00:00Z" });
     await screen.findByRole("dialog");
     expect(screen.queryByText(/AI extracted/)).toBeNull();
   });
 
   // Only a site read is a model extraction. The other four are not, and the
-  // badge would be false of each: a person typed a human value, an older
+  // badge would be false of each: a human typed a human value, an older
   // system holds a migration one, a connector value came out of an API
   // verbatim, and a rule value was computed by code somebody wrote.
   it.each(["human", "migration", "connector", "rule"] as const)(

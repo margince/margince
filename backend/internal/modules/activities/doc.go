@@ -3,7 +3,7 @@
 
 // Package activities owns the activity timeline — logging (with
 // source-system idempotency), reading and listing activities and their
-// polymorphic links to person/company/deal records — as store +
+// polymorphic links to contact/company/deal records — as store +
 // contract mapping + transport handlers + the activities slice of the
 // datasource provider, flat per ADR-0054 §3.
 //
@@ -43,7 +43,7 @@
 // Activities have no owner_id; their visibility walks the linked
 // records' row scope via platform/auth.ActivityContentClause — the scope
 // rule lives in the platform (one spelling, ADR-0054 §8) because
-// people's promotion-evidence check enforces the same clause. Single-row
+// contacts's promotion-evidence check enforces the same clause. Single-row
 // access carries that clause inside readActivity, so get, update, archive
 // and relink alike answer an out-of-scope id with ErrNotFound and no call
 // site can reach a row by forgetting to probe. Imports

@@ -564,7 +564,7 @@ describe("useClarifyAnswers — the siblings one legal pick settles", () => {
     ).toBe(false);
   });
 
-  it("never overwrites what a person already said about one of them", async () => {
+  it("never overwrites what a contact already said about one of them", async () => {
     stubAuthorizedReply();
     const { result } = setupHook(
       [gradionEntity],

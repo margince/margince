@@ -32,7 +32,7 @@ import (
 func edgeReaderContext(edgeGrant bool) context.Context {
 	user := ids.NewV7()
 	objects := map[string]principal.ObjectGrant{
-		"person": {Read: true}, "company": {Read: true},
+		"contact": {Read: true}, "company": {Read: true},
 		"deal": {Read: true}, "project": {Read: true},
 	}
 	if edgeGrant {
@@ -63,7 +63,7 @@ func TestAnEdgelessCallerRegistersNoEdgeArguments(t *testing.T) {
 	// keeps the arguments it had already bound. If the denial arrived AFTER an
 	// argument was registered, the record's own query would carry a placeholder
 	// nothing supplies and every history read would 500.
-	cte, args, err := renderEdgeCTE(edgeReaderContext(false), t, "person")
+	cte, args, err := renderEdgeCTE(edgeReaderContext(false), t, "contact")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a caller with no edge grant: err = %v, want permission denied", err)
 	}
@@ -208,9 +208,9 @@ func TestBothArmsOfTheWindowTakeTheSameKeyset(t *testing.T) {
 	ctx := edgeReaderContext(true)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	typePos, idPos := arg("person"), arg(ids.NewV7())
+	typePos, idPos := arg("contact"), arg(ids.NewV7())
 	keyset := fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", arg("cursor-time"), arg(ids.NewV7()))
-	cte, err := edgeSubjectCTE(ctx, "person", idPos, arg)
+	cte, err := edgeSubjectCTE(ctx, "contact", idPos, arg)
 	if err != nil {
 		t.Fatalf("rendering the CTE: %v", err)
 	}

@@ -3,16 +3,16 @@
 
 package identity
 
-// When one person is bookable, on their own clock.
+// When one contact is bookable, on their own clock.
 //
-// Personal, for the reason docs/explanation/scheduling.md states: people on one
+// Personal, for the reason docs/explanation/scheduling.md states: contacts on one
 // team sit in different countries, some work part time, and one pair of numbers
-// set by an admin is authoritatively wrong for most of them while the people it
+// set by an admin is authoritatively wrong for most of them while the contacts it
 // fails cannot change it. So this sits beside the display language — each
-// person sets their own and nobody sets it for anybody else.
+// contact sets their own and nobody sets it for anybody else.
 //
 // ABSENT MEANS NOBODY HAS CHOSEN, which is what makes the fallback honest: a
-// person who has chosen nothing is bookable 09:00–17:00 Monday to Friday in the
+// contact who has chosen nothing is bookable 09:00–17:00 Monday to Friday in the
 // installation's reporting zone, and that is a stated default rather than a
 // leftover constant.
 
@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The default a person who has chosen nothing is bookable in. Named, because it
+// The default a contact who has chosen nothing is bookable in. Named, because it
 // is a decision: treating unset as "no constraint" lets a customer book
 // somebody at 3am, and requiring a choice breaks booking for everybody until
 // they act.
@@ -55,7 +55,7 @@ const (
 	codeInvalid = "invalid"
 )
 
-// WorkingHours is one person's bookable window, as minutes past local midnight
+// WorkingHours is one contact's bookable window, as minutes past local midnight
 // on the days they work.
 //
 // Minutes rather than a time.Time: the pair is compared against a slot's own
@@ -72,7 +72,7 @@ type WorkingHours struct {
 	Timezone string
 }
 
-// DefaultWorkingHours is what a person who has chosen nothing is bookable in.
+// DefaultWorkingHours is what a contact who has chosen nothing is bookable in.
 func DefaultWorkingHours(zone string) WorkingHours {
 	return WorkingHours{
 		StartMinute: defaultWorkStartMinute,
@@ -82,7 +82,7 @@ func DefaultWorkingHours(zone string) WorkingHours {
 	}
 }
 
-// Works reports whether the given ISO weekday is one this person works.
+// Works reports whether the given ISO weekday is one this contact works.
 func (h WorkingHours) Works(weekday int) bool {
 	for _, day := range h.Days {
 		if day == weekday {
@@ -103,7 +103,7 @@ func (h WorkingHours) Location() (*time.Location, error) {
 	return loc, nil
 }
 
-// WorkingHoursOf answers one person's hours and whether they are that person's
+// WorkingHoursOf answers one contact's hours and whether they are that contact's
 // own, inside a transaction the caller already holds.
 //
 // The second return is not a formality. A screen offering the fallback as a

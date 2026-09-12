@@ -33,13 +33,13 @@ func TestBothOmittedGrantIDsAreNamed(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := svc.CreateRecordGrant(ctx, CreateGrantInput{
-		RecordType: "person", SubjectType: "user", Access: "read",
+		RecordType: "contact", SubjectType: "user", Access: "read",
 		SubjectID: ids.NewV7(),
 	})
 	faulttest.AssertNamesOmittedID(t, err, "record_id")
 
 	_, err = svc.CreateRecordGrant(ctx, CreateGrantInput{
-		RecordType: "person", SubjectType: "user", Access: "read",
+		RecordType: "contact", SubjectType: "user", Access: "read",
 		RecordID: ids.NewV7(),
 	})
 	faulttest.AssertNamesOmittedID(t, err, "subject_id")

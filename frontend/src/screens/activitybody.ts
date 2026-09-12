@@ -30,16 +30,16 @@ export type ActivityDraft = {
   assigneeId: string;
 };
 
-// A meeting and a call are WITH A PERSON, and the server refuses either one
+// A meeting and a call are WITH A CONTACT, and the server refuses either one
 // filed against a company — per link, so naming the company alongside the
-// person is refused too, and the company is reached through the attendee's
+// contact is refused too, and the company is reached through the attendee's
 // employer instead (activities/activitylinks.go, migration
-// "a meeting is with a person again").
+// "a meeting is with a contact again").
 //
 // So a form opened on a company has to ask WHO was in the room before it can
 // send one of these kinds at all. It offered no way to say, and the reader met
 // a 422 with no field to correct.
-export const KINDS_WITH_A_PERSON = new Set(["meeting", "call"]);
+export const KINDS_WITH_A_CONTACT = new Set(["meeting", "call"]);
 
 // The instant a logged activity carries. The picked day left on today — or, for
 // a note, pushed into the future, which nothing can have occurred in — means the
@@ -67,7 +67,7 @@ export function activityRequestBody(
   entityId: string,
   recordZone: string,
   // Who was in the room, when the form is open on a company and the kind is one
-  // that needs a person. Null everywhere else.
+  // that needs a contact. Null everywhere else.
   attendee: RecordPickerCandidate | null,
 ) {
   // source_system: transcript is what routes the body through the
@@ -113,15 +113,15 @@ export function activityRequestBody(
     // The attendee REPLACES the company link rather than joining it. The
     // server refuses a company link on a meeting or a call whichever
     // else are present, and the company still reaches the activity: the
-    // employer walk carries it there through the person who was named.
+    // employer walk carries it there through the contact who was named.
     //
     // Only for the kinds that ask for one. The picker stops rendering when the
-    // reader switches to a note or a task, but the person they had already
-    // chosen stays in state — and filing a company note against that person
+    // reader switches to a note or a task, but the contact they had already
+    // chosen stays in state — and filing a company note against that contact
     // takes it off the company screen it was written on.
     links:
-      attendee && KINDS_WITH_A_PERSON.has(input.kind)
-        ? [{ entity_type: "person" as const, entity_id: attendee.id }]
+      attendee && KINDS_WITH_A_CONTACT.has(input.kind)
+        ? [{ entity_type: "contact" as const, entity_id: attendee.id }]
         : [{ entity_type: entityType, entity_id: entityId }],
     source: "manual",
   };

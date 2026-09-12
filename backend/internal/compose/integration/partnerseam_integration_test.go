@@ -18,14 +18,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func partnerSeamProvider(e *Env) *people.Provider { return people.NewProvider(e.DB()) }
+func partnerSeamProvider(e *Env) *contacts.Provider { return contacts.NewProvider(e.DB()) }
 
 // partnerReader is a seat holding the partner and company grants the
 // read needs. AdminPerms carries no `partner` object on purpose (see

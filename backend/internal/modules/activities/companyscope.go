@@ -50,7 +50,7 @@ func CompanyLinkedActivityExists(companyPos int) string {
 //
 // The hierarchy roll-up needs it. Its 30-day count used to match
 // activity_link.company_id alone, which asked a narrower question than the
-// timeline the number is displayed above: capture files mail against the PERSON
+// timeline the number is displayed above: capture files mail against the CONTACT
 // it was with, so an account's busiest correspondence carries no company
 // link at all and went uncounted. One walk, two bind shapes — a fourth link
 // added to the model still reaches both.
@@ -79,7 +79,7 @@ func CompanyLinkedActivityExistsAny(companiesPos int) string {
 // account never gets a signal about it.
 var companyArms = `FROM activity_link l
 		    LEFT JOIN deal d ON d.id = l.deal_id
-		    LEFT JOIN relationship r ON r.person_id = l.person_id AND r.kind = 'employment'
+		    LEFT JOIN relationship r ON r.contact_id = l.contact_id AND r.kind = 'employment'
 		      AND ` + employment.IsCurrentSQL("r.ended_at") + ` AND r.archived_at IS NULL`
 
 // participantEmployerArm is the READER's fourth arm: the employer of somebody
@@ -87,9 +87,9 @@ var companyArms = `FROM activity_link l
 //
 // The three arms above all start from activity_link, and a meeting may not
 // carry a direct company link at all — a company is not somebody you can
-// meet. So a meeting whose only person is on the invitation reaches no company
+// meet. So a meeting whose only contact is on the invitation reaches no company
 // through them, and the account whose contact sat in the room sees an empty
-// afternoon. search.employerSubjects already walks BOTH person sources for the
+// afternoon. search.employerSubjects already walks BOTH contact sources for the
 // context prep; this is the same pair for the reach walk, and the two agreeing
 // is the point.
 //
@@ -105,7 +105,7 @@ var companyArms = `FROM activity_link l
 // relationship in scope under that name reads as the first.
 var participantEmployerArm = `EXISTS (
 		    SELECT 1 FROM activity_participant ap
-		      JOIN relationship emp ON emp.person_id = ap.person_id AND emp.kind = 'employment'
+		      JOIN relationship emp ON emp.contact_id = ap.contact_id AND emp.kind = 'employment'
 		        AND ` + employment.IsCurrentSQL("emp.ended_at") + ` AND emp.archived_at IS NULL
 		    WHERE ap.activity_id = a.id AND emp.company_id = %s)`
 
@@ -140,7 +140,7 @@ func activityReachesCompany(operand string) string {
 // below already draws the line it sits on: a timeline showing something is
 // arguably being helpful, a signal filed against that account is a claim
 // nobody made. Somebody Cc'd on a message is weaker evidence than somebody the
-// message was filed against, and filing against every Cc'd person's employer
+// message was filed against, and filing against every Cc'd contact's employer
 // would put claims on accounts that were never in the conversation.
 //
 // TestTheReachSetDoesNotFileThroughParticipants holds the split, so collapsing
@@ -165,7 +165,7 @@ func activityReachesCompany(operand string) string {
 // therefore reaches whoever employs them today. A timeline showing it is
 // arguably being helpful; a signal FILED against that account is a claim
 // nobody made. Bounding the arm by relationship.started_at is the fix, and it
-// is not available yet — people.plantEmploymentEdge writes no start date, so
+// is not available yet — contacts.plantEmploymentEdge writes no start date, so
 // the bound would resolve nothing (see the follow-up issue). Until then the
 // extractor's one-account rule carries most of the weight, since a contact
 // with two live employers makes their conversations ambiguous and skipped.
@@ -195,7 +195,7 @@ func CompanyReachSet() string {
 //
 // It must be a subquery over the activity's links rather than a test on a link
 // row already joined — `activity_link_shape` admits exactly ONE target per row,
-// so a person-link row carries a NULL project_id by construction and a
+// so a contact-link row carries a NULL project_id by construction and a
 // predicate on it would be true everywhere and narrow nothing. Both arms probe
 // `uq_activity_link_project`, which is keyed on activity_id.
 //
@@ -236,7 +236,7 @@ func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID
 	return auth.EnsureVisibleLive(ctx, tx, string(datasource.RecordProject), projectID.UUID)
 }
 
-// openTaskAssigneeClause narrows the timeline to the OPEN tasks one person
+// openTaskAssigneeClause narrows the timeline to the OPEN tasks one contact
 // holds — the queue read the contract declares ("Open tasks for an
 // assignee"), spelled as the predicate the partial index behind it is built
 // on (idx_activity_tasks: workspace_id, assignee_id, due_at WHERE kind='task'
@@ -244,7 +244,7 @@ func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID
 //
 // Done-ness belongs to the filter rather than to a dial of its own, and that
 // is the whole point: no parameter answers it, so binding assignee_id as a
-// plain column match would hand back every task the person ever closed under
+// plain column match would hand back every task the contact ever closed under
 // a name the contract says means the open ones. A wider answer wearing the
 // declared answer's shape is the failure this filter exists to close, not a
 // convenience to preserve.
@@ -259,7 +259,7 @@ func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
 	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee))
 }
 
-// ownQueueClause narrows to the open tasks one person is answerable for:
+// ownQueueClause narrows to the open tasks one contact is answerable for:
 // assigned to them, and to nobody else.
 //
 // It used to admit unassigned tasks too, on the ground that a rep who writes
@@ -290,9 +290,9 @@ func unassignedQueueClause() string {
 	return "a.assignee_id IS NULL AND a.kind = 'task' AND NOT a.is_done"
 }
 
-// onMeetingOfClause is the meetings one person is actually on.
+// onMeetingOfClause is the meetings one contact is actually on.
 //
-// Three sources, because a meeting reaches a person three ways and any one of
+// Three sources, because a meeting reaches a contact three ways and any one of
 // them alone is wrong. The host column names whose calendar it came off, which
 // misses every meeting a colleague was invited to. The import row names the seat
 // whose connector landed it, which misses a meeting booked in the app. The
@@ -324,7 +324,7 @@ func entityLinkFilter(
 	}
 	if *in.EntityType == string(datasource.RecordCompany) {
 		// An account's timeline is wider than its direct links: mail is
-		// filed against the PERSON it was with, so a flat company_id
+		// filed against the CONTACT it was with, so a flat company_id
 		// match hides every message the company actually exchanged.
 		// CompanyLinkedActivityExists is the walk the company view's other
 		// readers already use. EXISTS rather than a join, so an activity
@@ -439,7 +439,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
 	}
 	if in.Query != nil && *in.Query != "" {
-		// subject + body are the two human-readable columns a person would
+		// subject + body are the two human-readable columns a human would
 		// recognize an item by. The wildcard is escaped, so a caller typing %
 		// searches for a percent sign rather than matching everything.
 		pos := arg("%" + storekit.EscapeLike(*in.Query) + "%")

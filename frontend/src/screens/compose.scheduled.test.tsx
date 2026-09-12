@@ -22,7 +22,7 @@ import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
 // The composer's "why are you writing?" dial, named rather than reached for
 // by role alone: the To, Cc and Bcc lines are comboboxes of their own now
-// (they offer the record's people), so a bare role query matches four
+// (they offer the record's contacts), so a bare role query matches four
 // controls and the readiness signal every suite waits on has to say which.
 const WHY_ASK = "Why are you writing?";
 // The door out of a scheduled send.
@@ -104,7 +104,7 @@ async function composeAndSend() {
   render(
     <ComposeModal
       activityId="act-1"
-      entityType="person"
+      entityType="contact"
       entityId="p-1"
       open
       onClose={onClose}

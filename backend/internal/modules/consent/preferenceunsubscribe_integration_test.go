@@ -97,7 +97,7 @@ func TestUnsubscribeAllStopsALiveBusinessCorrespondenceLane(t *testing.T) {
 		t.Fatalf("seed the business_correspondence purpose: %v", err)
 	}
 	// Nothing is seeded for it on purpose: no row at all is exactly the
-	// state a person is in when they have simply been written to.
+	// state a contact is in when they have simply been written to.
 	if got := consentStateOf(t, e, business); got != "" {
 		t.Fatalf("precondition: business_correspondence = %q, want no row", got)
 	}
@@ -131,9 +131,9 @@ func TestUnsubscribeAllLeavesTransactionalAlone(t *testing.T) {
 	}
 	var state string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT coalesce(max(pc.state), '') FROM person_consent pc
+		`SELECT coalesce(max(pc.state), '') FROM contact_consent pc
 		   JOIN consent_purpose cp ON cp.id = pc.purpose_id
-		  WHERE pc.person_id = $1 AND cp.key = $2`, e.person, PurposeTransactional).Scan(&state); err != nil {
+		  WHERE pc.contact_id = $1 AND cp.key = $2`, e.contact, PurposeTransactional).Scan(&state); err != nil {
 		t.Fatalf("read transactional state: %v", err)
 	}
 	if state == string(StateWithdrawn) {

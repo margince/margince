@@ -22,7 +22,7 @@ const ACCEPTED_IMAGES =
   "image/png,image/jpeg,image/gif,image/webp,image/svg+xml,image/x-icon";
 
 /**
- * The installation's own marks: what they are now, and what a person can do
+ * The installation's own marks: what they are now, and what a contact can do
  * about each.
  *
  * TWO of them, because the sidebar shows the company at two widths. The wide
@@ -35,7 +35,7 @@ const ACCEPTED_IMAGES =
  * The wide mark is normally the one the website read resolved from the
  * company's own site. This is the other door — for an installation whose site
  * declares no icon, and for the read that resolved the wrong picture. Uploading
- * takes the field: while a person's own mark stands, a later read leaves it
+ * takes the field: while a contact's own mark stands, a later read leaves it
  * alone. Removing gives it back, so the record returns to its monogram and the
  * next read may resolve one again. Nothing but an upload ever fills the square
  * slot, so it has no read to hold off.

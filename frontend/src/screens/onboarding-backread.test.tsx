@@ -408,7 +408,7 @@ describe("the tallies", () => {
         messages_scanned: 600,
         captured: 512,
         skipped: 88,
-        people_created: 90,
+        contacts_created: 90,
         companies_created: 20,
         dedupe_candidates: 7,
       },

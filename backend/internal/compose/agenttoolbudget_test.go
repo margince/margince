@@ -241,7 +241,7 @@ func TestTheCrossReferenceScanReadsTheCopyAndNotItsShape(t *testing.T) {
 		// No "Use" anywhere: a use-clause pattern would report no edge here,
 		// and this is how catch_me_up_on actually names its neighbours.
 		{Name: "catch_me_up_on", Description: "prep_for_meeting when a meeting is about to happen, read_record for the stored fields."},
-		{Name: "prep_for_meeting", Description: "Assemble what a person needs before they walk in."},
+		{Name: "prep_for_meeting", Description: "Assemble what a contact needs before they walk in."},
 		{Name: "read_record", Description: "Read one record's own stored fields; mentions no other tool."},
 	}
 	graph := crossReferences(specs)

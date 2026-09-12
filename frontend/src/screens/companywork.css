@@ -86,7 +86,7 @@
   color: var(--textPrimary);
 }
 
-/* The reason this item wants a person, under a hairline. Dividing two pieces
+/* The reason this item wants a contact, under a hairline. Dividing two pieces
    of the item's CONTENT, so the rule is the item's own width rather than the
    card's. */
 /* Above the card's own hit area, so the records this line names stay

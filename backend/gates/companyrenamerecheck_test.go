@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	peoplePackage = "internal/modules/people"
-	renameRecheck = "recheckCompanyNameForDuplicates"
-	companyName   = "company.display_name / company.legal_name"
+	contactsPackage = "internal/modules/contacts"
+	renameRecheck   = "recheckCompanyNameForDuplicates"
+	companyName     = "company.display_name / company.legal_name"
 )
 
 // setsACompanyName matches a statement that moves a name column.
@@ -202,10 +202,10 @@ func TestEveryCompanyRenameReachesTheDuplicateRecheck(t *testing.T) {
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
 	defer remembersTheRecheckItself.AssertAllMatched(t)
 
-	graph := packageCallGraph(t, peoplePackage)
+	graph := packageCallGraph(t, contactsPackage)
 	if _, known := graph[renameRecheck]; !known {
 		t.Fatalf("%s is not in the graph, so every writer would trivially fail to reach it — "+
-			"the re-check has been renamed or moved out of %s", renameRecheck, peoplePackage)
+			"the re-check has been renamed or moved out of %s", renameRecheck, contactsPackage)
 	}
 
 	var findings, unreadable []string

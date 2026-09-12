@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -39,13 +39,13 @@ func linkedInMatchFixture(ctx context.Context, t *testing.T, e *integration.Env)
 			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&companyID)
 	}, "seeding the account")
 
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Andreas Muller", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
-	employAt(t, e, ids.UUID(person.Id), companyID)
+	employAt(t, e, ids.UUID(contact.Id), companyID)
 
 	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(c, `
@@ -57,15 +57,15 @@ func linkedInMatchFixture(ctx context.Context, t *testing.T, e *integration.Env)
 			e.Rep1, companyID)
 		return err
 	}, "seeding the connection")
-	return ids.UUID(person.Id)
+	return ids.UUID(contact.Id)
 }
 
 func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	person := linkedInMatchFixture(ctx, t, e)
+	contact := linkedInMatchFixture(ctx, t, e)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -90,18 +90,18 @@ func TestApprovingAStagedLinkedInMatchLinksTheConnectionAndWritesTheURL(t *testi
 	var handle *string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
-			SELECT match_status, matched_person_id FROM linkedin_connection
+			SELECT match_status, matched_contact_id FROM linkedin_connection
 			 WHERE normalized_name = 'andreas muller'`).Scan(&status, &matched); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(), `
-			SELECT handle FROM person_social
-			 WHERE person_id = $1 AND platform = 'linkedin'`, person).Scan(&handle)
+			SELECT handle FROM contact_social
+			 WHERE contact_id = $1 AND platform = 'linkedin'`, contact).Scan(&handle)
 	}); err != nil {
 		t.Fatalf("reading the outcome: %v", err)
 	}
-	if status != "confirmed" || matched == nil || *matched != person {
-		t.Errorf("the connection is %q → %v after approval, want confirmed → %s", status, matched, person)
+	if status != "confirmed" || matched == nil || *matched != contact {
+		t.Errorf("the connection is %q → %v after approval, want confirmed → %s", status, matched, contact)
 	}
 	if handle == nil || *handle != "https://www.linkedin.com/in/amueller" {
 		t.Errorf("the contact carries %v, want the connection's own profile URL", handle)
@@ -116,7 +116,7 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -146,20 +146,20 @@ func TestARefusedLinkedInMatchIsNeverProposedAgain(t *testing.T) {
 // No sweep runs here, deliberately — that is the whole claim. An hourly job
 // that repairs the event path is a feature that works an hour late, and only
 // for the owners that enumeration happens to reach.
-func TestAPersonEventStagesTheLinkedInSuggestionItProduced(t *testing.T) {
+func TestAContactEventStagesTheLinkedInSuggestionItProduced(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	person := linkedInMatchFixture(ctx, t, e)
+	contact := linkedInMatchFixture(ctx, t, e)
 	// The pass runs under the ghost OWNER's own resolved authority, so the
 	// owner needs a real grant — a member the resolver reports as holding
 	// nothing is skipped, and the test would prove nothing about this path.
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	matcher := NewLinkedInMatchGen(e.Pool, people.NewStore(e.DB()), identity.NewService(e.Pool),
+	matcher := NewLinkedInMatchGen(e.Pool, contacts.NewStore(e.DB()), identity.NewService(e.Pool),
 		slog.New(slog.DiscardHandler))
 	if err := matcher.HandleEvent(context.Background(),
-		envelopeFor(e.WS, "person.created", "person", person)); err != nil {
-		t.Fatalf("handling person.created: %v", err)
+		envelopeFor(e.WS, "contact.created", "contact", contact)); err != nil {
+		t.Fatalf("handling contact.created: %v", err)
 	}
 
 	// Exactly one, and it is the folded-name match: onlyPendingLinkedInMatch
@@ -176,11 +176,11 @@ func TestTheSweepStagesALinkedInSuggestionNobodyWasEverAskedAbout(t *testing.T) 
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
 	// The residue, seeded through the real matcher rather than by hand: match
 	// and do NOT stage, which is exactly the state the old event path left.
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -210,9 +210,9 @@ func TestTheSweepNeverReasksALinkedInMatchThatWasRefused(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -269,16 +269,16 @@ func linkedInMatchStatus(t *testing.T, e *integration.Env) string {
 // A contact edit must not cancel a LinkedIn match waiting to be decided.
 //
 // The proposal's claim is "this imported connection is this contact", and no
-// field on the contact can make that false. Pinning the person's version bound
+// field on the contact can make that false. Pinning the contact's version bound
 // the approval to content nobody judged, so any edit between staging and
 // decision — a title correction, an owner change, a second match applying —
 // failed the redemption's re-check and the member's yes did nothing.
 func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	person := linkedInMatchFixture(ctx, t, e)
+	contact := linkedInMatchFixture(ctx, t, e)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -291,7 +291,7 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 	// Through the real writer, so the row's version moves exactly the way any
 	// edit in the product moves it.
 	title := "Head of Procurement"
-	if _, err := store.UpdatePerson(ctx, ids.From[ids.PersonKind](person), people.UpdatePersonInput{
+	if _, err := store.UpdateContact(ctx, ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
 		Title: &title, Source: "manual",
 	}); err != nil {
 		t.Fatalf("editing the contact: %v", err)
@@ -305,14 +305,14 @@ func TestAContactEditDoesNotCancelAWaitingLinkedInMatch(t *testing.T) {
 	var matched *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT match_status, matched_person_id FROM linkedin_connection
+			SELECT match_status, matched_contact_id FROM linkedin_connection
 			 WHERE normalized_name = 'andreas muller'`).Scan(&status, &matched)
 	}); err != nil {
 		t.Fatalf("reading the outcome: %v", err)
 	}
-	if status != "confirmed" || matched == nil || *matched != person {
+	if status != "confirmed" || matched == nil || *matched != contact {
 		t.Errorf("the connection is %q → %v after an approved match, want confirmed → %s — "+
-			"the approval was released but its effect did not run", status, matched, person)
+			"the approval was released but its effect did not run", status, matched, contact)
 	}
 }
 
@@ -371,9 +371,9 @@ func TestARefusalDoesNotOverwriteAMatchConfirmedSince(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -425,9 +425,9 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -464,20 +464,20 @@ func TestAFailedLinkedInApplyLeavesTheApprovalUnconsumed(t *testing.T) {
 	}
 }
 
-// linkedInMatchPair reads the connection's status AND the person it points at,
+// linkedInMatchPair reads the connection's status AND the contact it points at,
 // because a refusal has to move both: a row left pointing at the contact it was
 // refused for still carries a pair claim nobody released.
 func linkedInMatchPair(t *testing.T, e *integration.Env) (string, *ids.UUID) {
 	t.Helper()
 	var status string
-	var person *ids.UUID
+	var contact *ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT match_status, matched_person_id FROM linkedin_connection`).Scan(&status, &person)
+			`SELECT match_status, matched_contact_id FROM linkedin_connection`).Scan(&status, &contact)
 	}); err != nil {
 		t.Fatalf("reading the connection's match pair: %v", err)
 	}
-	return status, person
+	return status, contact
 }
 
 // Rejecting the card moves the ghost row, in the decision's own transaction.
@@ -491,9 +491,9 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -506,15 +506,15 @@ func TestRejectingALinkedInMatchMarksTheGhostRowAtTheMomentItIsRejected(t *testi
 		t.Fatalf("rejecting: %v", err)
 	}
 
-	status, person := linkedInMatchPair(t, e)
+	status, contact := linkedInMatchPair(t, e)
 	if status != "rejected" {
 		t.Errorf("the connection is %q immediately after the rejection, want rejected — the card says "+
 			"declined and the record still offers the suggestion, and nothing closes the gap until a "+
 			"sweep happens to run", status)
 	}
-	if person != nil {
-		t.Errorf("the refused connection still names person %s — the row's answer was no, and a pair "+
-			"claim nobody released is what matchRankOrder and the pending read must not find", person)
+	if contact != nil {
+		t.Errorf("the refused connection still names contact %s — the row's answer was no, and a pair "+
+			"claim nobody released is what matchRankOrder and the pending read must not find", contact)
 	}
 }
 
@@ -529,9 +529,9 @@ func TestThePendingReadExcludesARefusedConnectionThatIsStillThere(t *testing.T) 
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -584,9 +584,9 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	linkedInMatchFixture(ctx, t, e)
-	grantReadPeopleRole(t, e, e.Rep1, "all")
+	grantReadContactsRole(t, e, e.Rep1, "all")
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if _, err := store.MatchLinkedInConnections(ctx, e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
 	}
@@ -598,12 +598,12 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 	// The matcher moves the still-suggested row to a different contact after
 	// the card was staged. Written directly because what is under test is the
 	// refusal's predicate, not how the row came to point elsewhere.
-	moved, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Andrea Muller", Source: "manual"})
+	moved, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Andrea Muller", Source: "manual"})
 	if err != nil {
 		t.Fatalf("seeding the contact the row moves to: %v", err)
 	}
 	seedAsAdmin(t, e, func(c context.Context, tx pgx.Tx) error {
-		_, execErr := tx.Exec(c, `UPDATE linkedin_connection SET matched_person_id = $1`, ids.UUID(moved.Id))
+		_, execErr := tx.Exec(c, `UPDATE linkedin_connection SET matched_contact_id = $1`, ids.UUID(moved.Id))
 		return execErr
 	}, "re-pointing the suggestion")
 
@@ -611,13 +611,13 @@ func TestARefusalDoesNotDiscardASuggestionStagedForSomebodyElse(t *testing.T) {
 		t.Fatalf("rejecting: %v", err)
 	}
 
-	status, person := linkedInMatchPair(t, e)
+	status, contact := linkedInMatchPair(t, e)
 	if status != "suggested" {
 		t.Errorf("the connection is %q, want it left at suggested — the member refused a suggestion for "+
 			"somebody else, and this one has never been put to them", status)
 	}
-	if person == nil || *person != ids.UUID(moved.Id) {
+	if contact == nil || *contact != ids.UUID(moved.Id) {
 		t.Errorf("the connection names %v, want the contact it was moved to (%s) — a refusal aimed at "+
-			"one pair discarded another", person, ids.UUID(moved.Id))
+			"one pair discarded another", contact, ids.UUID(moved.Id))
 	}
 }

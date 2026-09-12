@@ -13,8 +13,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,11 +26,11 @@ var onboardingRequiredFields = []string{fieldDisplayName, fieldOfferSummary, fie
 const onboardingCompanyDraftMaxRunes = 2_000
 
 type onboardingCompanyAssistant struct {
-	state   onboardingStateReader
-	people  onboardingSiteReadReader
-	brain   completer
-	runtime runTransparencyReader
-	rollout *string
+	state    onboardingStateReader
+	contacts onboardingSiteReadReader
+	brain    completer
+	runtime  runTransparencyReader
+	rollout  *string
 	// voice backs the voice act's deterministic context; nil means the
 	// role wired no voice store and the act answers without corpus numbers.
 	voice onboardingVoiceReader
@@ -44,7 +44,7 @@ type onboardingStateReader interface {
 }
 
 type onboardingSiteReadReader interface {
-	GetCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error)
+	GetCompanySiteRead(context.Context, ids.UUID) (contacts.SiteRead, []contacts.SiteReadComparison, error)
 }
 
 type onboardingConversationContext struct {
@@ -163,7 +163,7 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 // converse routes the message to its act's answer path and returns the
 // reply plus the deterministic attachments the act produced: the
 // detected clarify question (company act) or the act's next action.
-func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontracts.OnboardingCompanyMessageRequest, act, message string, history []model.Message, conversation onboardingConversationContext, research onboardingResearchState, read *people.SiteRead, comparisons []people.SiteReadComparison, runID ids.UUID) (companyReadModelReply, *crmcontracts.OnboardingClarify, *crmcontracts.OnboardingCompanyMessageReplyAvailableAction, error) {
+func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontracts.OnboardingCompanyMessageRequest, act, message string, history []model.Message, conversation onboardingConversationContext, research onboardingResearchState, read *contacts.SiteRead, comparisons []contacts.SiteReadComparison, runID ids.UUID) (companyReadModelReply, *crmcontracts.OnboardingClarify, *crmcontracts.OnboardingCompanyMessageReplyAvailableAction, error) {
 	locale := string(req.Locale)
 	remaining := conversation.RemainingRequired
 	switch {
@@ -341,11 +341,11 @@ func oversizedOnboardingDraftField(draft crmcontracts.OnboardingCompanyDraft) st
 	return ""
 }
 
-func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, state identity.OnboardingState) ([]companyReadEvidence, ids.UUID, onboardingResearchState, *people.SiteRead, []people.SiteReadComparison, error) {
+func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, state identity.OnboardingState) ([]companyReadEvidence, ids.UUID, onboardingResearchState, *contacts.SiteRead, []contacts.SiteReadComparison, error) {
 	if state.SiteReadID == nil {
 		return nil, state.ID, onboardingResearchState{ready: true}, nil, nil, nil
 	}
-	read, comparisons, err := a.people.GetCompanySiteRead(ctx, *state.SiteReadID)
+	read, comparisons, err := a.contacts.GetCompanySiteRead(ctx, *state.SiteReadID)
 	if err != nil {
 		return nil, ids.UUID{}, onboardingResearchState{}, nil, nil, err
 	}

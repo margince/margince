@@ -58,7 +58,7 @@ func TestBriefL2ReordersWithinTheCandidateSet(t *testing.T) {
 		t.Fatalf("deterministic queue = %v, want [Deal A, Deal B]", queueDeals(deterministic.Queue))
 	}
 
-	l2 := NewBriefEngine(b.Pool, b.People).WithL2Ranker(scriptedBrain{order: []ids.UUID{b.dealB, b.dealA}}, nil)
+	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(scriptedBrain{order: []ids.UUID{b.dealB, b.dealA}}, nil)
 	ranked, err := l2.Rank(b.repCtx, briefClock)
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
 
 	fabricated := ids.NewV7()
 	brain := scriptedBrain{order: []ids.UUID{b.dealC, fabricated, b.dealB, b.dealA}}
-	l2 := NewBriefEngine(b.Pool, b.People).WithL2Ranker(brain, nil)
+	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(brain, nil)
 
 	ranked, err := l2.Rank(b.repCtx, briefClock)
 	if err != nil {
@@ -109,7 +109,7 @@ func TestBriefL2CannotBreachTheCutoffOrInventDeals(t *testing.T) {
 func TestBriefL2FallsBackToTheDeterministicOrder(t *testing.T) {
 	b := setupBrief(t)
 
-	l2 := NewBriefEngine(b.Pool, b.People).WithL2Ranker(scriptedBrain{err: errors.New("model unavailable")}, nil)
+	l2 := NewBriefEngine(b.Pool, b.Contacts).WithL2Ranker(scriptedBrain{err: errors.New("model unavailable")}, nil)
 	ranked, err := l2.Rank(b.repCtx, briefClock)
 	if err != nil {
 		t.Fatalf("an unavailable L2 model must not fail the brief: %v", err)

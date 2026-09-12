@@ -5,14 +5,14 @@ package leaddraft
 
 // How a lead and its correspondence fold into the draft's Input.
 //
-// The Input, and everything that reads it, is persondraft's. This file only
+// The Input, and everything that reads it, is contactdraft's. This file only
 // says which lead field answers which of its questions.
 
 import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
@@ -30,20 +30,20 @@ func FromLead(
 	activities []crmcontracts.Activity,
 	intent string,
 	envelope draftfloor.Envelope,
-) persondraft.Input {
-	return persondraft.Input{
+) contactdraft.Input {
+	return contactdraft.Input{
 		Intent:    strings.TrimSpace(intent),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
-		Recent:    persondraft.FoldRecent(activities),
+		Recent:    contactdraft.FoldRecent(activities),
 	}
 }
 
 // recipientOf is who the draft is addressed to, off the lead's own columns.
-func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) persondraft.RecipientIn {
+func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) contactdraft.RecipientIn {
 	full := deref(lead.FullName)
 	first, last := splitName(full)
-	out := persondraft.RecipientIn{
+	out := contactdraft.RecipientIn{
 		ID:        lead.Id.String(),
 		Name:      full,
 		FirstName: first,
@@ -71,7 +71,7 @@ func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) per
 // lead has.
 //
 // A lead carries `full_name` and nothing else — no stored first or last name,
-// which is what persondraft prefers when a contact has them. So the split IS
+// which is what contactdraft prefers when a contact has them. So the split IS
 // the answer here rather than a fallback, and a one-word name is a name: it
 // becomes the greeting name with no surname, not an empty greeting.
 func splitName(full string) (first, last string) {

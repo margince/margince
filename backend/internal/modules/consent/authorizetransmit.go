@@ -8,7 +8,7 @@ package consent
 //
 // A staging decision answers "may this be written down and queued". It cannot
 // answer "may this go out NOW", because the two are separated by a queue: a
-// person can withdraw consent, object, or have their address hard-bounce in
+// contact can withdraw consent, object, or have their address hard-bounce in
 // between, and a delivery that waited a day on a retry ladder was authorized
 // against a world that no longer exists. So the question is asked again here,
 // and the answer is persisted before any provider I/O rather than after — a
@@ -121,7 +121,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		ticket.Reason = refusalReason(set, legacyAllowed)
 		// THIS REFUSAL IS ABOUT THE RECIPIENTS, which is the one a recorded
 		// human decision can answer — they were shown the engine's verdict
-		// about the people, and that is what they signed for.
+		// about the contacts, and that is what they signed for.
 		//
 		// Set here, from the engine's own answer, and never widened below: the
 		// wording check that follows refuses for a reason NOBODY has looked at,
@@ -232,10 +232,10 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
-	personID, found, err := resolvePerson(ctx, tx, r)
+	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		// Ambiguity refuses rather than picking, and that is an ANSWER about
-		// this send: no verdict can be about one person.
+		// this send: no verdict can be about one contact.
 		if errors.Is(err, apperrors.ErrConsentNotGranted) {
 			d.Verdict = commsauthz.VerdictDeny
 			d.ReasonCode = commsauthz.ReasonNoSubject
@@ -244,7 +244,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		return commsauthz.Decision{}, err
 	}
 	if !found {
-		// No person: this may still be a LEAD, which is a subject the engine
+		// No contact: this may still be a LEAD, which is a subject the engine
 		// can answer about. Without this arm every lead-only recipient came
 		// back `review`, so a category moved to enforce would refuse exactly
 		// the sends the legacy gate allows — an inversion rather than a
@@ -252,16 +252,16 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// mode rather than the day this code was written.
 		return g.decideLead(ctx, tx, r, req, d, phase)
 	}
-	parsed, err := ids.Parse(personID)
+	parsed, err := ids.Parse(contactID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved subject is not an id: %w", err)
 	}
-	d.SubjectKind, d.SubjectID = entityPerson, parsed
+	d.SubjectKind, d.SubjectID = entityContact, parsed
 
 	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
 	// depends on what the message is, and nothing knows that until the record
 	// has been resolved — see applySuppression.
-	kinds, err := liveSuppression(ctx, tx, personID, r)
+	kinds, err := liveSuppression(ctx, tx, contactID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -276,7 +276,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, err = g.decideResolved(ctx, tx, req, subjectRef{
-		Kind: entityPerson, ID: personID, Address: address,
+		Kind: entityContact, ID: contactID, Address: address,
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 	}, d, phase, len(kinds) > 0)
 	if err != nil {
@@ -293,7 +293,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // prose meant an ordinary copy edit in verdict.go could silently reclassify a
 // legal fact, and it collapsed three different blocks into "objection" — a
 // withdrawal under Art. 7(3), and a purpose class this installation has no
-// transport for, both recorded as though the person had objected. A subject
+// transport for, both recorded as though the contact had objected. A subject
 // access request discloses these rows, so a wrong label there is a false
 // statement about somebody.
 //

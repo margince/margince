@@ -59,7 +59,7 @@ func (w *siteDeepReadWorker) deferForBudget(ctx context.Context, readID ids.UUID
 	}
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	if err := w.people.DeferSiteRead(tctx, readID, deferral.NextAttemptAt); err != nil {
+	if err := w.contacts.DeferSiteRead(tctx, readID, deferral.NextAttemptAt); err != nil {
 		return true, errors.Join(cause, fmt.Errorf("recording budget deferral on the dossier: %w", err))
 	}
 	return true, cause

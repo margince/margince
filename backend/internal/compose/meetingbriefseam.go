@@ -10,7 +10,7 @@ package compose
 // What crosses is one function: assemble the brief for one meeting.
 //
 // It exists because there were TWO answers to "prepare me for this meeting".
-// A person read eight cited sections; an agent asking the same question got a
+// A contact read eight cited sections; an agent asking the same question got a
 // separate context walk with its open tasks pulled forward, sharing no code
 // with the brief. Both were individually reasonable, which is why the drift
 // went unnoticed. One engine, two surfaces.
@@ -19,21 +19,21 @@ import (
 	"context"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// meetingBriefReader binds the tool to the same service the person page calls.
+// meetingBriefReader binds the tool to the same service the contact page calls.
 //
 // Nothing about the read changes here — the service applies the caller's own
 // object grants and row scope, refuses a non-meeting with not-found, and
@@ -42,7 +42,7 @@ import (
 // is who is asking.
 //
 // It takes the SERVER's service rather than building a second one. This used to
-// construct its own person360 and its own meetingbrief.Service from the pool,
+// construct its own contact360 and its own meetingbrief.Service from the pool,
 // which was one engine in name only: WithMeetingBriefWriter binds the model
 // lane to the server's instance, so the human surface would have got model
 // prose while the agent surface silently kept the deterministic floor —
@@ -115,11 +115,11 @@ func agentBriefLine(sentence crmcontracts.CompanyBriefSentence) agents.MeetingBr
 // from; this is the only one, and the api role still passes its own.
 func newMeetingBriefService(db *database.DB) *meetingbrief.Service {
 	pool := db.Pool()
-	peopleStore := people.NewStore(db)
-	view := person360.NewService(pool, peopleStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
+	contactsStore := contacts.NewStore(db)
+	view := contact360.NewService(pool, contactsStore, deals.NewStore(db, DealsInstallation()), ProjectsStore(pool),
 		consent.NewStore(db),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		ai.NewFeedbackStore(db), time.Now)
-	return meetingbrief.NewService(pool, view, peopleStore, time.Now).
+	return meetingbrief.NewService(pool, view, contactsStore, time.Now).
 		WithEmailSummaries(activities.NewStore(db))
 }

@@ -35,7 +35,7 @@ const toolVersionV1 = "1.0.0"
 // there is how the three spellings this replaced got started.
 //
 // It is `manual` — the same word the web app writes — because `source` names
-// where a row came from, and a tool call is a person asking for it through an
+// where a row came from, and a tool call is a contact asking for it through an
 // assistant rather than through a form. Which door it came through, and who
 // walked through it, are recorded in captured_by, where retrieval ranking and
 // the record history both read them.
@@ -122,7 +122,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 		OpenAPIOp: "search",
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own."},
-			"record_type":{"type":"string","enum":["person","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","project","partner"],"description":"Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one."},
 			"limit":{"type":"integer","minimum":1,"maximum":50},
 			"cursor":{"type":"string","description":"Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too."}},
 			"additionalProperties":false}`),
@@ -206,9 +206,9 @@ func (t readRecord) Spec() mcp.ToolSpec {
 		Name: "read_record", Title: "Read a record", Version: toolVersionV1,
 		Description:   readRecordCopy.render(),
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "getPerson/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
+		OpenAPIOp: "getContact/getCompany/getDeal/getLead/getActivity/getProject/getPartner",
 		InputSchema: schema(`{"type":"object","required":["record_type","id"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","partner"],"description":"partner is addressed by its COMPANY's id: the row is that company's partner terms, not a separate record."},
 			"id":{"type":"string","format":"uuid"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
@@ -247,9 +247,9 @@ func (t createRecord) Spec() mcp.ToolSpec {
 		Name: "create_record", Title: "Create a record", Version: toolVersionV1,
 		Description:   createRecordCopy.render(),
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-		OpenAPIOp: "createPerson/createCompany/createDeal/createLead/createProject/createRelationship",
+		OpenAPIOp: "createContact/createCompany/createDeal/createLead/createProject/createRelationship",
 		InputSchema: schema(`{"type":"object","required":["record_type","fields"],"properties":{
-			"record_type":{"type":"string","enum":["person","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
 			"fields":{"type":"object","description":` + jsonString(recordFieldsDescription) + `},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
@@ -371,7 +371,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a person approves. A meeting or a call is with a PERSON and reaches their company through them — linking one to a company is REFUSED, so name the person who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project writes a write-once retention mark, so it is made through relink_activity, which a human approves. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval a human must decide before it takes effect."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

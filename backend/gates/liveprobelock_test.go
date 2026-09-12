@@ -58,20 +58,20 @@ const (
 // Every entry so far shares one reason, and it is the only reason that makes the
 // residue nil rather than small: the subject is CREATED by the very transaction
 // that writes its children. An Art. 17 erasure races a row it can see, and no
-// other transaction can see this person until this one commits — so there is no
+// other transaction can see this contact until this one commits — so there is no
 // window to lose, and a lock would be taken against nobody.
 //
 // These three reach the live probe through the employment edge they attach,
-// which probes the person it hangs on. That edge takes lockPersonForAttach on
+// which probes the contact it hangs on. That edge takes lockContactForAttach on
 // the same row, for the archive race one level down; the walk does not read it
-// as the subject lock because it deliberately is not one (personattachlock.go
+// as the subject lock because it deliberately is not one (contactattachlock.go
 // says why at length — routing it through the mutation door would answer a
 // product question as a side effect of a concurrency fix).
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
-	"internal/modules/people:Store.QuickCapture":            "quick capture creates the person and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
-	"internal/modules/people:Store.quickCaptureInTx":        "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same person before writing its socials",
-	"internal/modules/people:Store.CreateFromVCardReviewTx": "a reviewed card accepted into a new person: CreatePersonTx mints the row and its socials, and the employer attach that follows is what reaches the probe. The subject is this transaction's own creation, so there is no concurrent erasure to lose a race to",
-	"internal/modules/people:Store.createFromCard":          "the import arm for a card nobody matched. The probe it carries is of the card's SOURCE MESSAGE rather than of a subject, and the erasure-cleared tables it inserts into — person_email, person_phone, person_social — all belong to the person CreatePersonTx mints in this same transaction, so no erasure can be holding them. It does read pre-existing rows (manualDedupePerson can reference another person, employerByName can resolve an existing company), but the tables those writes touch — dedupe_candidate, relationship, company — are not ones erasure deletes",
+	"internal/modules/contacts:Store.QuickCapture":            "quick capture creates the contact and its phone in one transaction, then attaches the employer edge whose probe puts this function here. The subject did not exist outside this transaction when the probe ran, so no erasure can be in flight against it",
+	"internal/modules/contacts:Store.quickCaptureInTx":        "the same capture running inside a caller's transaction, reached only from QuickCapture and creating the same contact before writing its socials",
+	"internal/modules/contacts:Store.CreateFromVCardReviewTx": "a reviewed card accepted into a new contact: CreateContactTx mints the row and its socials, and the employer attach that follows is what reaches the probe. The subject is this transaction's own creation, so there is no concurrent erasure to lose a race to",
+	"internal/modules/contacts:Store.createFromCard":          "the import arm for a card nobody matched. The probe it carries is of the card's SOURCE MESSAGE rather than of a subject, and the erasure-cleared tables it inserts into — contact_email, contact_phone, contact_social — all belong to the contact CreateContactTx mints in this same transaction, so no erasure can be holding them. It does read pre-existing rows (manualDedupeContact can reference another contact, employerByName can resolve an existing company), but the tables those writes touch — dedupe_candidate, relationship, company — are not ones erasure deletes",
 })
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
@@ -174,7 +174,7 @@ func moduleDirsWith(t *testing.T, identifier string) []string {
 // difference is not cosmetic: consent_doi_token is deleted by Art. 17 and is not
 // in that registry, so a corpus derived from the declarations would have missed
 // the sharpest case this gate exists for — a bearer capability minted for an
-// erased person. A registry records what somebody remembered to declare; the
+// erased contact. A registry records what somebody remembered to declare; the
 // statements record what the code does.
 func tablesArticle17Deletes(t *testing.T) map[string]bool {
 	t.Helper()

@@ -19,7 +19,7 @@ import {
 } from "./decisiondeck";
 import { AutonomyDot } from "./trust";
 
-// The morning queue. Every frame here is about the same question: can a person
+// The morning queue. Every frame here is about the same question: can a contact
 // answer a stack of irreversible decisions quickly WITHOUT the speed being what
 // makes them irreversible. The tray is the answer — a verdict is staged, and the
 // commit is a separate, deliberate press.
@@ -134,7 +134,7 @@ const BUNDLE: DecisionDeckItem = {
   bundleId: "0198c3aa-7f10-7bbb-9999-000000000001",
   members: Array.from({ length: 12 }, (_, index) =>
     approval(40 + index, {
-      summary: `Introduce ourselves to person ${index + 1} found on the site.`,
+      summary: `Introduce ourselves to contact ${index + 1} found on the site.`,
       kind: "site_lead",
     }),
   ),
@@ -288,7 +288,7 @@ export const Committing: Story = {
 };
 
 // The commit came back refused, and the tray STILL HOLDS the verdicts. They are
-// the only copy of a person's answers; clearing them on failure would ask for
+// the only copy of a contact's answers; clearing them on failure would ask for
 // all of them again.
 export const CommitFailed: Story = {
   args: {

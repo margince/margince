@@ -168,7 +168,7 @@ func TestMigrationsLayerIsGovernedByItsOwnRule(t *testing.T) {
 		},
 		{
 			name:       "a table outside the unit namespace",
-			migrations: map[string]string{"0001_x.up.sql": "CREATE TABLE ext.person (id uuid);\n"},
+			migrations: map[string]string{"0001_x.up.sql": "CREATE TABLE ext.contact (id uuid);\n"},
 			wantErr:    "outside the unit's namespace",
 		},
 		{
@@ -193,7 +193,7 @@ func TestMigrationsLayerIsGovernedByItsOwnRule(t *testing.T) {
 
 	t.Run("a refusal carries the file and line", func(t *testing.T) {
 		_, err := unitWithMigrations(t, "x", map[string]string{
-			"0001_x.up.sql": "-- a comment\n\nCREATE TABLE ext.person (id uuid);\n",
+			"0001_x.up.sql": "-- a comment\n\nCREATE TABLE ext.contact (id uuid);\n",
 		})
 		if err == nil || !strings.Contains(err.Error(), "migrations/0001_x.up.sql:3") {
 			t.Fatalf("err = %v, want the position of the offending statement", err)
@@ -205,7 +205,7 @@ func TestMigrationScanIgnoresCommentsAndLiterals(t *testing.T) {
 	// A table name inside a comment, a string, or a dollar-quoted function
 	// body is prose, not a declaration — mistaking one for a declaration
 	// would refuse a legitimate migration for a table it never creates.
-	sql := `-- CREATE TABLE person (id uuid);
+	sql := `-- CREATE TABLE contact (id uuid);
 /* nested /* CREATE TABLE public.other (id uuid); */ still a comment */
 CREATE TABLE ext.ext_x_note (id uuid);
 INSERT INTO ext.ext_x_note (id) VALUES ('CREATE TABLE public.injected (x int)');

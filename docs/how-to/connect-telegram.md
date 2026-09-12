@@ -1,7 +1,7 @@
 # Connect a Telegram bot
 
 Bind a Telegram bot so Margince captures the messages customers send it onto the timeline — creating
-people and activities through the one dedupe chokepoint — and so a rep can reply from that timeline.
+contacts and activities through the one dedupe chokepoint — and so a rep can reply from that timeline.
 Everything here is done in the app; the REST surface behind it is the contract
 (`backend/api/crm.yaml`, `/channel-connections*`), and nothing below requires you to call it by hand.
 For the mental model on the inbound side — the connector seam, the one Sink, credential custody — read
@@ -29,7 +29,7 @@ consequences, all load-bearing:
   all hold read — a rep needs to know whether the channel is live before expecting a reply to arrive
   there. Every operation is also `x-agent-access: human-only`: the bot token grants read of every
   message the bot receives, so an agent must never bind one on its own initiative.
-- **The customer messages the bot first.** A Telegram bot cannot open a conversation. A person becomes
+- **The customer messages the bot first.** A Telegram bot cannot open a conversation. A contact becomes
   reachable only when an inbound message binds a channel identity for them, which is why the composer's
   **How to send** picker offers Telegram only for someone who already has a conversation on it — and
   labels it *"Continues your Telegram conversation"* rather than pretending it could start one.
@@ -148,7 +148,7 @@ captured stays in your CRM."* Three kinds of state, three different outcomes:
 |---|---|
 | The binding row | **Archived**, status `disconnected`. Archiving is what actually stops ingress — the due-scan selects only live `connected` rows — and it frees the live-row unique index, so the same bot (or another) can be connected here again later. |
 | The bot token | **Destroyed** in the vault. That is the custody guarantee: withdrawing a connection removes the credential, not just the row. |
-| Captured activities, people, channel identities | **Kept.** Disconnecting stops capture; it does not erase history. (Erasure is Art. 17's job — see [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).) |
+| Captured activities, contacts, channel identities | **Kept.** Disconnecting stops capture; it does not erase history. (Erasure is Art. 17's job — see [explanation/privacy-and-consent.md](../explanation/privacy-and-consent.md).) |
 
 Like connect and rotate, this needs the vault: without one it refuses rather than archiving a row whose
 sealed token nothing could then destroy.
@@ -164,12 +164,12 @@ sealed token nothing could then destroy.
    `channel_provider` — so asking for Telegram means `channel_provider=telegram`.) A message whose
    payload is media with no words reads as a bracketed placeholder (`[photo]`, `[voice message]`) — the
    customer did reach out, and the timeline says so.
-3. **The person was auto-created.** The Sink routes the sender through the people module's **one dedupe
-   chokepoint**, exactly as a mail counterparty goes through it. The person is deliberately
+3. **The contact was auto-created.** The Sink routes the sender through the contacts module's **one dedupe
+   chokepoint**, exactly as a mail counterparty goes through it. The contact is deliberately
    **ownerless**: a workspace bot acts for no one human, and the connection's `connected_by` is audit
    only, so reusing the connecting admin as an owner is precisely what is refused. **No company is
    derived** — a channel identity carries no mail domain to derive one from.
-4. **Grant consent.** Open the person, find the **Consent** section, and **Grant** the purpose you
+4. **Grant consent.** Open the contact, find the **Consent** section, and **Grant** the purpose you
    intend to send under (some purposes need a double opt-in token first). Outbound is default-deny *per
    purpose*: a grant for one purpose never authorizes another.
 5. **Reply from the timeline.** **Reply** on the inbound entry opens the composer with no Subject and
@@ -177,12 +177,12 @@ sealed token nothing could then destroy.
    message?"**: *"You are sending this message now. This is an outbound, irreversible action."*
    - **The recipient is never named by you.** The entry you replied to *is* the conversation; its
      `channel_provider` names the medium; the recipient is resolved server-side as the channel identity
-     of the person that conversation is with. The request carries only the body, the consent purpose,
+     of the contact that conversation is with. The request carries only the body, the consent purpose,
      and optionally attachments already in the record library (named by id, never uploaded here).
    - Without a grant the send is suppressed and the composer says so — **"Send blocked — no consent"**,
-     with a **Review consent** link back to the person. That refusal is the whole reason the surface
+     with a **Review consent** link back to the contact. That refusal is the whole reason the surface
      shows a purpose picker at all.
-   - **Reply does not appear** for a person the channel cannot reach — an unbound identity, or one
+   - **Reply does not appear** for a contact the channel cannot reach — an unbound identity, or one
      Telegram has reported as blocking the bot. A button that could only fail is not offered.
 6. **The reply is filed on the conversation it answers.** The outbound activity carries the anchor's
    `thread_key`, which is what lets capture's reply detection match the customer's next inbound message
@@ -226,7 +226,7 @@ find in a log or an audit row.
   was blocked by the user" and for a deactivated account; a staged delivery **parks at once** rather
   than burning the retry ladder — the park reason says retrying and reconnecting the channel both
   change nothing. Separately, Telegram reports the block as a `my_chat_member` update, which sets
-  `blocked_at` on the person's channel identity; from then on the **Reply** button is not offered at
+  `blocked_at` on the contact's channel identity; from then on the **Reply** button is not offered at
   all. Unblocking clears it, ordered by the update's own `update_id` so two transitions cannot apply
   backwards.
 - **Private chats only.** Group and supergroup messages are refused before anything is stored: a bot in
@@ -253,13 +253,13 @@ find in a log or an audit row.
 | The pure update → activity mapping, and the membership (block/unblock) parse | `backend/internal/modules/capture/telegram/normalize.go`, `membership.go` |
 | The registered connector + its `MessageSender` seam | `backend/internal/modules/capture/telegram/send.go` |
 | Composition: the connect surface, the poll dispatcher + worker, the ingest worker | `backend/internal/compose/channelconnect.go`, `telegrampoll.go`, `telegrampollscope.go`, `telegramingest.go` |
-| Reachability (`blocked_at`) and the identity binding | `backend/internal/modules/people/channelidentity.go` |
+| Reachability (`blocked_at`) and the identity binding | `backend/internal/modules/contacts/channelidentity.go` |
 | The governed reply — recipient resolution, gate order, staging | `backend/internal/modules/activities/channelsend.go` |
-| The tables | `channel_connection` (0151), `person_channel_identity` (0152), `erasure_suppression` channel rows (0153), `comms_outbound`'s channel shape (0155/0156) |
+| The tables | `channel_connection` (0151), `contact_channel_identity` (0152), `erasure_suppression` channel rows (0153), `comms_outbound`'s channel shape (0155/0156) |
 | The REST contract | `backend/api/crm.yaml` (`/channel-connections*`, `/activities/{id}/send-message`) |
 | The job declarations | `backend/api/jobs.yaml` (`telegram_poll_sweep`, `telegram_poll`, `telegram_ingest`) |
 | The card, the connect/replace modal, and the status vocabulary | `frontend/src/screens/connectors.tsx`, `telegram-connect-form.tsx`, `connector-status.ts` |
-| The reply composer and the timeline **Reply** action | `frontend/src/screens/compose.tsx`, `persontransports.ts` |
+| The reply composer and the timeline **Reply** action | `frontend/src/screens/compose.tsx`, `contacttransports.ts` |
 
 ## Where to go next
 

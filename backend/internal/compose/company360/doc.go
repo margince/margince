@@ -13,7 +13,7 @@
 // but the same posture: one transaction, one instant, per-group grants, and a
 // cap that reports what it left out.
 //
-// It lives in compose because it spans company, person, relationship,
+// It lives in compose because it spans company, contact, relationship,
 // deal, activity, tag, list and approval — the composition layer's charter
 // — and it durably owns two tables of its own, both per-user view state rather
 // than record facts, so both are written without an audit row or an outbox event:
@@ -30,7 +30,7 @@
 // stamp is what keeps that honest instead of hidden. No section opens a
 // second transaction, which is why every module store this package calls
 // exposes a transaction-taking variant of its read. The one exception is
-// the custom-field catalog, which the people store resolves through the
+// the custom-field catalog, which the contacts store resolves through the
 // fieldcatalog seam on its own connection: it describes the workspace's
 // column set, not the account's rows, so reading it a moment earlier
 // changes no answer here.

@@ -28,9 +28,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	collectionsmod "github.com/margince/margince/backend/internal/modules/collections"
+	contactsmod "github.com/margince/margince/backend/internal/modules/contacts"
 	customfieldsmod "github.com/margince/margince/backend/internal/modules/customfields"
 	dealsmod "github.com/margince/margince/backend/internal/modules/deals"
-	peoplemod "github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -51,7 +51,7 @@ var testPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field": fullGrant,
-		"person":       fullGrant,
+		"contact":      fullGrant,
 		"company":      fullGrant,
 		"deal":         fullGrant,
 		"lead":         fullGrant,
@@ -63,7 +63,7 @@ var testPerms = principal.Permissions{
 }
 
 // fixture bundles one migrated environment with the store wiring compose
-// itself uses (serverassembly.go): the collections store and the people
+// itself uses (serverassembly.go): the collections store and the contacts
 // store both widened by the SAME customfields service, so a test that
 // writes a value through one and filters through the other is exercising
 // the real cross-module seam, not a hand-built stand-in for it.
@@ -71,7 +71,7 @@ type fixture struct {
 	e        *integration.Env
 	ctx      context.Context
 	svc      *customfieldsmod.Service
-	people   *peoplemod.Store
+	contacts *contactsmod.Store
 	projects *projects.Store
 	lists    *collectionsmod.Store
 }
@@ -88,13 +88,13 @@ func setupFixture(t *testing.T) fixture {
 		// TestARecordWhoseOwnerIsInNoTeamIsCoveredByNoTeam owns a record through.
 		ctx:      e.As(e.Rep1, nil, testPerms),
 		svc:      svc,
-		people:   peoplemod.NewStore(e.DB()).WithFieldCatalog(svc),
+		contacts: contactsmod.NewStore(e.DB()).WithFieldCatalog(svc),
 		projects: integration.ProjectsStore(e.DB()).WithFieldCatalog(svc),
 		lists:    collectionsmod.NewStore(e.DB()).WithFieldCatalog(svc),
 	}
 }
 
-// createTextField defines an active text field on person and answers its
+// createTextField defines an active text field on contact and answers its
 // physical column and catalog id. label must be unique across this
 // package's own tests: testdb.Reset truncates the custom_field catalog
 // between tests but never reverts the ALTER TABLE a create ran, so a
@@ -103,7 +103,7 @@ func setupFixture(t *testing.T) fixture {
 func (f fixture) createTextField(t *testing.T, label string) (column string, id ids.UUID) {
 	t.Helper()
 	field, err := f.svc.Create(f.ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: label, Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: label, Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatalf("defining %q: %v", label, err)
@@ -128,12 +128,12 @@ func assertSoleMember(t *testing.T, f fixture, listID ids.ListID, want ids.UUID)
 }
 
 // defineField creates a custom field of any of the six catalog types on
-// person and answers its physical column — createTextField's generalized
+// contact and answers its physical column — createTextField's generalized
 // sibling, used by the per-type coverage below. label must stay unique
 // across this package (see createTextField's own note on testdb.Reset).
 func (f fixture) defineField(t *testing.T, spec customfieldsmod.FieldSpec) string {
 	t.Helper()
-	spec.Object = "person"
+	spec.Object = "contact"
 	spec.Source = "ui"
 	field, err := f.svc.Create(f.ctx, spec)
 	if err != nil {
@@ -145,15 +145,15 @@ func (f fixture) defineField(t *testing.T, spec customfieldsmod.FieldSpec) strin
 	return *field.ColumnName
 }
 
-// seedTwoPeople creates two bare person records for a typed-filter test to
+// seedTwoContacts creates two bare contact records for a typed-filter test to
 // set a custom field value on afterward.
-func (f fixture) seedTwoPeople(t *testing.T, name string) (a, b ids.UUID) {
+func (f fixture) seedTwoContacts(t *testing.T, name string) (a, b ids.UUID) {
 	t.Helper()
-	pa, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: name + " A", Source: "manual"})
+	pa, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: name + " A", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create %s A: %v", name, err)
 	}
-	pb, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: name + " B", Source: "manual"})
+	pb, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: name + " B", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create %s B: %v", name, err)
 	}
@@ -165,23 +165,23 @@ func (f fixture) seedTwoPeople(t *testing.T, name string) (a, b ids.UUID) {
 // filters against.
 //
 //craft:ignore naked-any value is a wire-shaped custom-field value, spanning every scalar type a cf_* column can hold
-func (f fixture) setField(t *testing.T, person ids.UUID, column string, value any) {
+func (f fixture) setField(t *testing.T, contact ids.UUID, column string, value any) {
 	t.Helper()
-	if _, err := f.people.UpdatePerson(f.ctx, integration.PersonIDOf(person), peoplemod.UpdatePersonInput{
+	if _, err := f.contacts.UpdateContact(f.ctx, integration.ContactIDOf(contact), contactsmod.UpdateContactInput{
 		CustomFields: map[string]any{column: value},
 	}); err != nil {
 		t.Fatalf("setting %s=%v: %v", column, value, err)
 	}
 }
 
-// filterList builds a one-leaf dynamic list on person and answers its id,
+// filterList builds a one-leaf dynamic list on contact and answers its id,
 // failing the test if the definition is refused.
 //
 //craft:ignore naked-any value is a predicate leaf's operand, which spans every scalar and array shape the filter DSL accepts
 func (f fixture) filterList(t *testing.T, name, field, op string, value any) ids.ListID {
 	t.Helper()
 	created, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: name, EntityType: "person", ListType: "dynamic",
+		Name: name, EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": field, "op": op, "value": value},
 	})
 	if err != nil {
@@ -197,7 +197,7 @@ func (f fixture) filterList(t *testing.T, name, field, op string, value any) ids
 func TestANumberCustomFieldFiltersOnEqAndGt(t *testing.T) {
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Deal Score", Type: customfieldsmod.TypeNumber})
-	high, low := f.seedTwoPeople(t, "Score")
+	high, low := f.seedTwoContacts(t, "Score")
 	f.setField(t, high, column, 42.5)
 	f.setField(t, low, column, 10.0)
 
@@ -215,14 +215,14 @@ func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.
 	column := f.defineField(t, customfieldsmod.FieldSpec{
 		Label: "Lifetime Value", Type: customfieldsmod.TypeCurrency, Currency: strPtr("USD"),
 	})
-	big, small := f.seedTwoPeople(t, "LTV")
+	big, small := f.seedTwoContacts(t, "LTV")
 	f.setField(t, big, column, float64(500000))
 	f.setField(t, small, column, float64(100))
 
 	assertSoleMember(t, f, f.filterList(t, "ltv eq", column, "eq", float64(500000)), big)
 
 	_, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "ltv fractional", EntityType: "person", ListType: "dynamic",
+		Name: "ltv fractional", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": 12.5},
 	})
 	var pred *storekit.PredicateError
@@ -236,7 +236,7 @@ func TestACurrencyCustomFieldFiltersOnEqAndRefusesAFractionalOperand(t *testing.
 func TestADateCustomFieldFiltersOnGt(t *testing.T) {
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Renewal Date", Type: customfieldsmod.TypeDate})
-	later, earlier := f.seedTwoPeople(t, "Renewal")
+	later, earlier := f.seedTwoContacts(t, "Renewal")
 	f.setField(t, later, column, "2027-06-01")
 	f.setField(t, earlier, column, "2026-01-01")
 
@@ -248,7 +248,7 @@ func TestADateCustomFieldFiltersOnGt(t *testing.T) {
 func TestABooleanCustomFieldFiltersOnEq(t *testing.T) {
 	f := setupFixture(t)
 	column := f.defineField(t, customfieldsmod.FieldSpec{Label: "Is VIP", Type: customfieldsmod.TypeBoolean})
-	vip, plain := f.seedTwoPeople(t, "VIP")
+	vip, plain := f.seedTwoContacts(t, "VIP")
 	f.setField(t, vip, column, true)
 	f.setField(t, plain, column, false)
 
@@ -262,7 +262,7 @@ func TestAPicklistCustomFieldFiltersOnIn(t *testing.T) {
 	column := f.defineField(t, customfieldsmod.FieldSpec{
 		Label: "Region", Type: customfieldsmod.TypePicklist, Options: []string{"emea", "apac", "amer"},
 	})
-	emea, amer := f.seedTwoPeople(t, "Region")
+	emea, amer := f.seedTwoContacts(t, "Region")
 	f.setField(t, emea, column, "emea")
 	f.setField(t, amer, column, "amer")
 
@@ -277,16 +277,16 @@ func TestADynamicListFiltersOnACustomFieldValue(t *testing.T) {
 	f := setupFixture(t)
 	column, _ := f.createTextField(t, "Loyalty Tier")
 
-	matching, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Match", Source: "manual"})
+	matching, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Match", Source: "manual"})
 	if err != nil {
-		t.Fatalf("create matching person: %v", err)
+		t.Fatalf("create matching contact: %v", err)
 	}
-	if _, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Other", Source: "manual"}); err != nil {
-		t.Fatalf("create non-matching person: %v", err)
+	if _, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Other", Source: "manual"}); err != nil {
+		t.Fatalf("create non-matching contact: %v", err)
 	}
 	// Set through the update path, not at create: a field a customer fills
 	// in later must filter exactly as one set at creation would.
-	if _, err := f.people.UpdatePerson(f.ctx, integration.PersonIDOf(ids.UUID(matching.Id)), peoplemod.UpdatePersonInput{
+	if _, err := f.contacts.UpdateContact(f.ctx, integration.ContactIDOf(ids.UUID(matching.Id)), contactsmod.UpdateContactInput{
 		CustomFields: map[string]any{column: "gold"},
 	}); err != nil {
 		t.Fatalf("setting the custom field through the update path: %v", err)
@@ -296,7 +296,7 @@ func TestADynamicListFiltersOnACustomFieldValue(t *testing.T) {
 	// if the catalogue is not wired into this store, exactly the defect an
 	// earlier fix closed in only one of the two collections stores.
 	created, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "Gold tier", EntityType: "person", ListType: "dynamic",
+		Name: "Gold tier", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": "gold"},
 	})
 	if err != nil {
@@ -324,7 +324,7 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 	}
 	column := *field.ColumnName
 
-	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Baer Pharma", Source: "manual"})
+	company, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{DisplayName: "Baer Pharma", Source: "manual"})
 	if err != nil {
 		t.Fatalf("create company: %v", err)
 	}
@@ -363,26 +363,26 @@ func TestAProjectCustomFieldIsFilterable(t *testing.T) {
 // status flip, never a column drop: a segment saved against a field that
 // is later retired must keep returning the same rows. Dropping the clause
 // instead would silently WIDEN the target list — the way someone ends up
-// emailing people they never meant to target.
+// emailing contacts they never meant to target.
 func TestRetiringACustomFieldLeavesItsSegmentEvaluable(t *testing.T) {
 	f := setupFixture(t)
 	column, fieldID := f.createTextField(t, "Renewal Segment")
 
-	matching, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Match", Source: "manual"})
+	matching, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Match", Source: "manual"})
 	if err != nil {
-		t.Fatalf("create matching person: %v", err)
+		t.Fatalf("create matching contact: %v", err)
 	}
-	if _, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Other", Source: "manual"}); err != nil {
-		t.Fatalf("create non-matching person: %v", err)
+	if _, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Other", Source: "manual"}); err != nil {
+		t.Fatalf("create non-matching contact: %v", err)
 	}
-	if _, err := f.people.UpdatePerson(f.ctx, integration.PersonIDOf(ids.UUID(matching.Id)), peoplemod.UpdatePersonInput{
+	if _, err := f.contacts.UpdateContact(f.ctx, integration.ContactIDOf(ids.UUID(matching.Id)), contactsmod.UpdateContactInput{
 		CustomFields: map[string]any{column: "renew"},
 	}); err != nil {
 		t.Fatalf("setting the custom field: %v", err)
 	}
 
 	created, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "Renewals", EntityType: "person", ListType: "dynamic",
+		Name: "Renewals", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": "renew"},
 	})
 	if err != nil {
@@ -400,7 +400,7 @@ func TestRetiringACustomFieldLeavesItsSegmentEvaluable(t *testing.T) {
 	// A NEW list on the same, now-retired field must still validate — a
 	// saved segment naming a retired column is not a mistake to refuse.
 	if _, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "Renewals, take two", EntityType: "person", ListType: "dynamic",
+		Name: "Renewals, take two", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": "renew"},
 	}); err != nil {
 		t.Fatalf("a new list on a retired field's column was refused: %v", err)
@@ -417,11 +417,11 @@ func TestFilteredExportOfASegmentMatchesItsMembership(t *testing.T) {
 	column, _ := f.createTextField(t, "Export Match Flag")
 
 	seed := func(name, value string) ids.UUID {
-		p, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: name, Source: "manual"})
+		p, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: name, Source: "manual"})
 		if err != nil {
 			t.Fatalf("create %s: %v", name, err)
 		}
-		if _, err := f.people.UpdatePerson(f.ctx, integration.PersonIDOf(ids.UUID(p.Id)), peoplemod.UpdatePersonInput{
+		if _, err := f.contacts.UpdateContact(f.ctx, integration.ContactIDOf(ids.UUID(p.Id)), contactsmod.UpdateContactInput{
 			CustomFields: map[string]any{column: value},
 		}); err != nil {
 			t.Fatalf("set %s's field: %v", name, err)
@@ -432,7 +432,7 @@ func TestFilteredExportOfASegmentMatchesItsMembership(t *testing.T) {
 	seed("C", "red")
 
 	created, err := f.lists.CreateList(f.ctx, collectionsmod.CreateListInput{
-		Name: "Blues", EntityType: "person", ListType: "dynamic",
+		Name: "Blues", EntityType: "contact", ListType: "dynamic",
 		Definition: map[string]any{"field": column, "op": "eq", "value": "blue"},
 	})
 	if err != nil {
@@ -450,9 +450,9 @@ func TestFilteredExportOfASegmentMatchesItsMembership(t *testing.T) {
 		t.Fatalf("membership = %v, want exactly [%s %s]", rows, a, b)
 	}
 
-	engine, ok, err := f.lists.SegmentEngine(f.ctx, "person")
+	engine, ok, err := f.lists.SegmentEngine(f.ctx, "contact")
 	if err != nil || !ok {
-		t.Fatalf("resolve person engine: ok=%v err=%v", ok, err)
+		t.Fatalf("resolve contact engine: ok=%v err=%v", ok, err)
 	}
 	result, err := compose.NewFilteredExportWriter(f.e.Pool).WriteFiltered(f.ctx, engine,
 		storekit.Predicate{Field: column, Op: "eq", Value: "blue"}, "csv")
@@ -507,7 +507,7 @@ func entityTypeCheckValues(t *testing.T, f fixture, table string) map[string]boo
 // TestEveryEnumOverTheRecordVocabularyMatchesTheCheckConstraint proves the
 // Go-side taggable set is not just consistent with itself (the unit lane's job)
 // but COMPLETE against the schema's own CHECK (LVS-DDL-2) — the authority
-// every other spelling answers to. The CHECK admits five values: person,
+// every other spelling answers to. The CHECK admits five values: contact,
 // company, deal, lead and project (0131_project.up.sql's
 // taggable_entity_type_check).
 //
@@ -632,22 +632,22 @@ func strPtr(s string) *string { return &s }
 func (f fixture) seedTaggablePair(t *testing.T, entity string, pipeline ids.PipelineID, stage ids.StageID) (tagged, plain ids.UUID) {
 	t.Helper()
 	switch entity {
-	case "person":
-		a, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Tagged Person", Source: "manual"})
+	case "contact":
+		a, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Tagged Contact", Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := f.people.CreatePerson(f.ctx, peoplemod.CreatePersonInput{FullName: "Plain Person", Source: "manual"})
+		b, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{FullName: "Plain Contact", Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		return ids.UUID(a.Id), ids.UUID(b.Id)
 	case "company":
-		a, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Tagged Company"})
+		a, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{DisplayName: "Tagged Company"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{DisplayName: "Plain Company"})
+		b, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{DisplayName: "Plain Company"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -655,11 +655,11 @@ func (f fixture) seedTaggablePair(t *testing.T, entity string, pipeline ids.Pipe
 	case "deal":
 		return f.e.SeedDeal(t, "Tagged Deal", pipeline, stage, nil), f.e.SeedDeal(t, "Plain Deal", pipeline, stage, nil)
 	default: // lead
-		a, _, err := f.people.CreateLead(f.ctx, peoplemod.CreateLeadInput{FullName: strPtr("Tagged Lead"), Source: "manual"})
+		a, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: strPtr("Tagged Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		b, _, err := f.people.CreateLead(f.ctx, peoplemod.CreateLeadInput{FullName: strPtr("Plain Lead"), Source: "manual"})
+		b, _, err := f.contacts.CreateLead(f.ctx, contactsmod.CreateLeadInput{FullName: strPtr("Plain Lead"), Source: "manual"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -694,7 +694,7 @@ func (f fixture) assertTagSegment(t *testing.T, entity, tagID string, tagged, pl
 
 // TestATagFilterSelectsTaggedRecordsPerEntityType proves the tag leaf
 // reaches the polymorphic taggable join for every entity type that can
-// carry one — person, company, deal and lead — not just the one the
+// carry one — contact, company, deal and lead — not just the one the
 // unit lane happened to exercise.
 func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 	f := setupFixture(t)
@@ -704,7 +704,7 @@ func TestATagFilterSelectsTaggedRecordsPerEntityType(t *testing.T) {
 	}
 	pipeline, open, _ := integration.DealFixture(t, f.e)
 
-	for _, entity := range []string{"person", "company", "deal", "lead"} {
+	for _, entity := range []string{"contact", "company", "deal", "lead"} {
 		tagged, plain := f.seedTaggablePair(t, entity, pipeline, open)
 		if _, err := f.lists.ApplyTag(f.ctx, tag.ID, entity, tagged); err != nil {
 			t.Fatalf("%s: apply tag: %v", entity, err)
@@ -730,7 +730,7 @@ func TestACatalogueReadFailureIsNeverMisreportedAsAFilterMistake(t *testing.T) {
 	dead, cancel := context.WithCancel(f.ctx)
 	cancel()
 
-	_, _, err := f.lists.SegmentEngine(dead, "person")
+	_, _, err := f.lists.SegmentEngine(dead, "contact")
 	if err == nil {
 		t.Fatal("a canceled catalogue read returned no error")
 	}
@@ -775,7 +775,7 @@ func (f fixture) dealForCustomer(
 // customerCompany seeds one company with (or without) an industry.
 func (f fixture) customerCompany(t *testing.T, name string, industry *string) ids.CompanyID {
 	t.Helper()
-	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
+	company, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{
 		DisplayName: name, Industry: industry, Source: "manual",
 	})
 	if err != nil {
@@ -874,7 +874,7 @@ func TestArchivingTheCustomerLeavesItsDealsInTheIndustryFilter(t *testing.T) {
 	}
 	assertSoleMember(t, f, list.ID, deal)
 
-	if _, err := f.people.ArchiveCompany(f.ctx, company, nil); err != nil {
+	if _, err := f.contacts.ArchiveCompany(f.ctx, company, nil); err != nil {
 		t.Fatalf("archive company: %v", err)
 	}
 	assertSoleMember(t, f, list.ID, deal)

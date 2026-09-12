@@ -3,11 +3,11 @@
 
 package compose
 
-// Linking an imported person to the company they work for.
+// Linking an imported contact to the company they work for.
 //
 // A contact file's company column is the one mapped target that writes nothing
-// to the row it sits on. It names an EDGE — this person works at that company —
-// and the two records at its ends are found in different ways: the person by the
+// to the row it sits on. It names an EDGE — this contact works at that company —
+// and the two records at its ends are found in different ways: the contact by the
 // key the run identifies rows with, the company by its NAME, which is the only
 // thing a spreadsheet carries.
 //
@@ -16,7 +16,7 @@ package compose
 // name AS WRITTEN, or no link is written. Nothing here scores, ranks or breaks a
 // tie. The argument is the one csvtargetid.go makes at length for the `id`
 // column — the dedupe ladder blurs on purpose, which is right when it proposes a
-// review to a human and is a way to attach a person to the wrong employer when
+// review to a human and is a way to attach a contact to the wrong employer when
 // it decides a write.
 //
 // NormalizeCompanyName is deliberately NOT the comparison, and that is the one thing
@@ -39,8 +39,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -48,10 +48,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// csvEmployerName is the column naming the company a person works for.
+// csvEmployerName is the column naming the company a contact works for.
 //
 // It is not in csvTargets and never will be: that map is what a row WRITES, and
-// this writes nothing to the person. It is advertised through importTargets the
+// this writes nothing to the contact. It is advertised through importTargets the
 // same way `id` is, and excluded from comparison the same way — see
 // isNonFieldTarget, which states why both must be.
 //
@@ -90,10 +90,10 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	switch {
 	case !ok:
 		return employerResolution{reason: fmt.Sprintf(
-			"no company named %q is in the CRM, so there was nothing to link this person to", strings.TrimSpace(name))}, nil
+			"no company named %q is in the CRM, so there was nothing to link this contact to", strings.TrimSpace(name))}, nil
 	case hit.count > 1:
 		return employerResolution{reason: fmt.Sprintf(
-			"more than one company is named %q, so which one employs this person is a question only a human can answer",
+			"more than one company is named %q, so which one employs this contact is a question only a human can answer",
 			strings.TrimSpace(name))}, nil
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
@@ -127,7 +127,7 @@ type employerCandidate struct {
 
 // employerIndex builds the normalized-name lookup ONCE per run.
 //
-// Per row it would be one full scan per person — 19,000 scans for a file that
+// Per row it would be one full scan per contact — 19,000 scans for a file that
 // size. The index is bounded by the number of companies in the estate, not by
 // the number of rows in the file.
 //
@@ -202,26 +202,26 @@ func (w *csvWriters) employerIndex(ctx context.Context) (map[string]employerCand
 	return index, nil
 }
 
-// linkEmployer writes one person→company employment edge.
+// linkEmployer writes one contact→company employment edge.
 //
 // The `From` endpoint resolves through the run's identity map, which knows the
-// person this run just landed. The `To` endpoint is a NAME and resolves through
+// contact this run just landed. The `To` endpoint is a NAME and resolves through
 // resolveEmployer, exactly once per distinct name thanks to the cached index.
 //
-// A conflict is convergence, not a failure: the edge is unique per (person,
+// A conflict is convergence, not a failure: the edge is unique per (contact,
 // company), and the engine's association phase is replayed whole by a
 // resumed run. Every other error still stops the run, because an edge that
 // failed for an unknown reason is not an edge anybody should assume landed.
 func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
-	personID, found, err := w.lookup(ctx, migration.ObjectPerson, a.FromID)
+	contactID, found, err := w.lookup(ctx, migration.ObjectContact, a.FromID)
 	if err != nil {
 		return migration.AssocResult{}, err
 	}
 	if !found {
 		// The row never landed — refused, skipped, or not yet committed. The
-		// person is the thing missing, so that is what the report says.
+		// contact is the thing missing, so that is what the report says.
 		return migration.AssocResult{Reason: fmt.Sprintf(
-			"the person identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID)}, nil
+			"the contact identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID)}, nil
 	}
 	resolved, err := w.resolveEmployer(ctx, a.ToID)
 	if err != nil {
@@ -231,11 +231,11 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 		return migration.AssocResult{Reason: resolved.reason}, nil
 	}
 
-	pid := ids.From[ids.PersonKind](personID)
+	pid := ids.From[ids.ContactKind](contactID)
 	oid := resolved.id
-	if _, err := w.people.CreateRelationship(ctx, people.CreateRelationshipInput{
+	if _, err := w.contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
 		Kind:      relationshipKindEmployment,
-		PersonID:  &pid,
+		ContactID: &pid,
 		CompanyID: &oid,
 		// Stated rather than left nil: a company column on a contact row means
 		// THE employer, singular, and a caller who said so must not have the
@@ -244,9 +244,9 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 		Source:           w.provenanceOf(a.FromID + "→" + a.ToID),
 	}); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			// The edge is unique per (person, company), so a conflict means
+			// The edge is unique per (contact, company), so a conflict means
 			// one is already there. Reported as APPLIED because the run's promise
-			// is the end state — this person is linked to this company — and a
+			// is the end state — this contact is linked to this company — and a
 			// resumed run replaying its association phase must converge rather
 			// than accumulate failures.
 			//

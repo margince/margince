@@ -12,7 +12,7 @@ import (
 )
 
 // The attribution is added from the CONTEXT, so an ordinary core write — a
-// person or an agent on the product's own surface — carries none. The absence
+// contact or an agent on the product's own surface — carries none. The absence
 // is as load-bearing as the presence: it is what makes the member's presence
 // mean "an extension wrote this".
 func TestEvidenceCarriesNoAttributionOutsideAnExtension(t *testing.T) {

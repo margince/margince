@@ -92,7 +92,7 @@ func seedDerivedRows(t *testing.T, e *Env, activity, subject ids.UUID) {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
 		VALUES ('activity', $1, 0, 'h', 'fake/test@3', '[1,2,3]'::vector)`, activity)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'from')`,
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`,
 		activity, subject)
 }
 
@@ -101,7 +101,7 @@ func derivedRows(t *testing.T, e *Env, activity ids.UUID) (embeddings, participa
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT (SELECT count(*) FROM embedding WHERE entity_type = 'activity' AND entity_id = $1),
-			       (SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND person_id IS NOT NULL)`,
+			       (SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND contact_id IS NOT NULL)`,
 			activity).Scan(&embeddings, &participants)
 	}); err != nil {
 		t.Fatalf("counting derived rows of %s: %v", activity, err)
@@ -112,16 +112,16 @@ func derivedRows(t *testing.T, e *Env, activity ids.UUID) (embeddings, participa
 func TestErasureKeepsASubjectOnlyNoteFiledUnderAHeldProject(t *testing.T) {
 	e := Setup(t)
 	f := seedProjectHoldFixture(t, e)
-	subject := e.SeedPerson(t, "Delivery Contact", nil)
-	person := activities.ActivityLinkInput{EntityType: "person", EntityID: subject}
-	onHeld := logNote(t, e, "Acceptance dispute", time.Now(), person,
+	subject := e.SeedContact(t, "Delivery Contact", nil)
+	contact := activities.ActivityLinkInput{EntityType: "contact", EntityID: subject}
+	onHeld := logNote(t, e, "Acceptance dispute", time.Now(), contact,
 		activities.ActivityLinkInput{EntityType: "project", EntityID: f.held})
-	onFree := logNote(t, e, "Kick-off", time.Now(), person,
+	onFree := logNote(t, e, "Kick-off", time.Now(), contact,
 		activities.ActivityLinkInput{EntityType: "project", EntityID: f.free})
 	seedDerivedRows(t, e, onHeld, subject)
 	seedDerivedRows(t, e, onFree, subject)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatalf("erasing an unheld subject: %v", err)
 	}
 

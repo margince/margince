@@ -140,7 +140,7 @@ func describeSend(cmd SendEmailCommand) string {
 //
 // It carries the message BODY where its mail twin does not, and that asymmetry
 // is the transport's rather than an omission: a channel reply names no
-// addressee — the recipient is the person the anchor conversation is with,
+// addressee — the recipient is the contact the anchor conversation is with,
 // resolved server-side — so the text IS the whole of what a human is asked to
 // release, and Guards refuses an empty one.
 type SendMessageCommand struct {
@@ -193,7 +193,7 @@ func (r *sendMessageResolver) Subject(ctx context.Context, cmd SendMessageComman
 //
 // SendMessage has two more permanent refusals this does not guard:
 // ChannelRecipientError (the conversation reaches nobody, or more than one
-// person) and ChannelNotSendCapableError (the workspace has no bot bound for
+// contact) and ChannelNotSendCapableError (the workspace has no bot bound for
 // the provider). Both are the same "yes with no path to actually happening"
 // shape as the two guarded here, but closing them needs a reachability read
 // this call does not have: the record read below returns the anchor's fields,
@@ -234,7 +234,7 @@ func (r *sendMessageResolver) Guards(ctx context.Context, cmd SendMessageCommand
 		return &BadArgsError{
 			Cause: fmt.Errorf("activity %s was carried by %q, which this installation has no connector for",
 				cmd.ActivityID, anchor.ChannelProvider),
-			Guidance: "no reply can be sent on this transport; answer the person another way",
+			Guidance: "no reply can be sent on this transport; answer the contact another way",
 		}
 	}
 	return nil

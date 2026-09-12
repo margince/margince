@@ -105,7 +105,7 @@ describe("what a reader may change before accepting", () => {
 // What a proposal SHOWS, which is the read-side half of EDITABLE_FIELDS above.
 //
 // The defect these pin: a card that printed its payload's own JSON keys handed
-// a person `deal_id`, `flags: ["unrealistic_stale"]` and `target_version` and
+// a contact `deal_id`, `flags: ["unrealistic_stale"]` and `target_version` and
 // asked them to make a business decision from it.
 describe("what a staged proposal shows", () => {
   const day = (value: string) => value.split("-").reverse().join(".");
@@ -191,7 +191,7 @@ describe("what a staged proposal shows", () => {
       {
         connection_name: "Ada B",
         connection_company: "Helvetia",
-        person_name: "Ada B",
+        contact_name: "Ada B",
       },
       t,
       day,
@@ -199,7 +199,7 @@ describe("what a staged proposal shows", () => {
     expect(shown(fields).map((entry) => entry.field)).toEqual([
       "connection_name",
       "connection_company",
-      "person_name",
+      "contact_name",
     ]);
   });
 

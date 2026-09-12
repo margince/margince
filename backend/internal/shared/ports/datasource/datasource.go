@@ -24,7 +24,7 @@ type EntityType string
 // The record types a provider can be asked about. One word per thing: the
 // engine, the wire and the database all use these.
 const (
-	EntityPerson   EntityType = "person"
+	EntityContact  EntityType = "contact"
 	EntityCompany  EntityType = "company"
 	EntityDeal     EntityType = "deal"
 	EntityLead     EntityType = "lead"
@@ -78,7 +78,7 @@ const (
 // is how `object=activity` came to be creatable and never served.
 func EntityTypes() []EntityType {
 	return []EntityType{
-		EntityPerson, EntityCompany, EntityDeal, EntityLead,
+		EntityContact, EntityCompany, EntityDeal, EntityLead,
 		EntityActivity, EntityProject, EntityRelationship, EntityPartner,
 	}
 }
@@ -95,7 +95,7 @@ type RecordType string
 // The record vocabulary. Each value is mirrored by a schema CHECK, pinned
 // together by TestEveryDomainEnumMatchesItsSchemaCheck.
 const (
-	RecordPerson  RecordType = "person"
+	RecordContact RecordType = "contact"
 	RecordCompany RecordType = "company"
 	RecordDeal    RecordType = "deal"
 	RecordLead    RecordType = "lead"
@@ -107,7 +107,7 @@ const (
 // polymorphic column maps — rather than branch on a single value. It hands
 // back a fresh slice so no caller can widen the vocabulary for the others.
 func RecordTypes() []RecordType {
-	return []RecordType{RecordPerson, RecordCompany, RecordDeal, RecordLead, RecordProject}
+	return []RecordType{RecordContact, RecordCompany, RecordDeal, RecordLead, RecordProject}
 }
 
 // EntityRef points at one record.
@@ -148,21 +148,21 @@ type SystemOfRecordProvider interface {
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
 	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
-	// Archive soft-deletes one person/company/deal/project, or one
+	// Archive soft-deletes one contact/company/deal/project, or one
 	// relationship edge (🟡 on the tool surface: a visibility change is hard to
 	// undo for whoever needed the row). Leads leave through their own lifecycle
-	// verbs. Archiving an edge is how a person's employment ENDS on this seam —
+	// verbs. Archiving an edge is how a contact's employment ENDS on this seam —
 	// an edge's endpoints are what it is, so they are never patched.
 	Archive(ctx context.Context, ref EntityRef) (EntityRef, error)
-	// Merge folds source into target (person/company only), non-lossy,
+	// Merge folds source into target (contact/company only), non-lossy,
 	// and returns the survivor's ref (features/01 §1.3). 🟡 on the tool
 	// surface: collapsing two records into one is destructive and hard to
 	// reverse, so an agent stages it for human confirmation. It is a
 	// cross-module orchestration owned by the composition root's
 	// composite, never one module writing a sibling's tables (ADR-0054 §9).
 	Merge(ctx context.Context, in MergeInput) (EntityRef, error)
-	// PromoteLead graduates a lead into a person (dedupe-aware: merged
-	// reports true when an existing person absorbed the lead). 🟡 — a
+	// PromoteLead graduates a lead into a contact (dedupe-aware: merged
+	// reports true when an existing contact absorbed the lead). 🟡 — a
 	// lifecycle transition that materializes records; cross-module
 	// orchestration like Merge.
 	PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (ref EntityRef, merged bool, err error)
@@ -183,7 +183,7 @@ type Record struct {
 }
 
 // CreateInput — Fields is the typed domain struct for EntityType
-// (*crmcore.Person, …); the provenance stamps are required, not optional.
+// (*crmcore.Contact, …); the provenance stamps are required, not optional.
 type CreateInput struct {
 	EntityType EntityType
 	Fields     any
@@ -236,7 +236,7 @@ type AdvanceDealInput struct {
 	IfVersion                *int64
 }
 
-// MergeInput folds SourceID into TargetID (the survivor). Type is person
+// MergeInput folds SourceID into TargetID (the survivor). Type is contact
 // or company only — deals and leads have no merge verb. The audit
 // provenance comes from the acting Principal on ctx, like every write.
 type MergeInput struct {

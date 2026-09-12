@@ -96,7 +96,7 @@ default.
   `color-mix()` of a canonical token, never a new hex, so it follows the dark
   theme's accent lift automatically and passes the purity gate. Then atoms, the
   **EvidenceMark** (`evidencemark*`) — the ONE §4 provenance affordance: a dotted
-  underline on a value that came from somewhere other than a person typing it,
+  underline on a value that came from somewhere other than a contact typing it,
   opening to where it came from, how sure we were, the text it was read from, and
   when. One mark is open across the page at a time, for pointer and keyboard
   alike. It replaces the stack of three chips that used to sit under every value;

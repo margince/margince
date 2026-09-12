@@ -18,7 +18,7 @@ auditing a subsystem.
 
 ## What counts as a topic
 
-A topic is whatever a reader would name in one phrase: "how a person's name is
+A topic is whatever a reader would name in one phrase: "how a contact's name is
 normalized for dedupe", "how weighted pipeline value is computed", "what a
 retention anonymize scrubs", "how we build a system prompt for correspondence",
 "how we fetch a URL the tenant supplied". If you cannot name it in a phrase, you
@@ -42,7 +42,7 @@ writing anything.
 | Topic kind | The choke point | Where |
 |---|---|---|
 | Writing a domain row | the module's store method, and `storekit.Audit`/`Emit` inside one tx | `modules/<name>/`, `platform/database/storekit` |
-| Reading one record's world | `person360.Service.Assemble` / `company360.Service.Assemble`, reached through the `Assembler` interface each consumer declares | `compose/person360`, `compose/company360` |
+| Reading one record's world | `contact360.Service.Assemble` / `company360.Service.Assemble`, reached through the `Assembler` interface each consumer declares | `compose/contact360`, `compose/company360` |
 | An MCP tool that answers a question a page already answers | a `compose/*seam*.go` file | `internal/compose/` |
 | A model system prompt for correspondence | `draftrules.Shared` | `compose/draftrules` |
 | Fetching a tenant-supplied URL | `platform/webread` (SSRF-guarded via `platform/netguard`) | `platform/webread` |
@@ -187,7 +187,7 @@ the answer is more than one, either the topic has no choke point yet — whateve
 the comments say — or it has a **declared divergence**, which is the legitimate
 multi-site case. The difference is whether each site says, in the code, what
 makes it different. An undeclared N is the finding; a declared N is a decision
-somebody already made and wrote down. This is the probe that found `person_profile_field`'s five writers
+somebody already made and wrote down. This is the probe that found `contact_profile_field`'s five writers
 and `relationship`'s four.
 
 ## The rules, and what each one cost
@@ -217,7 +217,7 @@ always the wrong one.
 `deals/offer_lines.go` does — or use `storekit.InsertFragments`. Nothing in this
 repo checks that a statement's column count, placeholder count and argument count
 agree, so a hand-numbered statement is one careless sweep away from binding every
-column to the wrong value. It shipped in `people/researchclaim.go`, and the accept
+column to the wrong value. It shipped in `contacts/researchclaim.go`, and the accept
 path was dead for two days because no test executed the statement.
 
 The `%s` there is the COLUMN, and it carries its own rule: a compile-time

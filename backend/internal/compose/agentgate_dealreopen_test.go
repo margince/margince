@@ -160,24 +160,24 @@ var wellFormedDynamicCalls = map[string]func(t *testing.T, stage ids.UUID) (*htt
 		return requestForDeal(t, ids.NewV7()), []byte(`{"to_stage_id":"` + stage.String() + `"}`)
 	},
 	// A relink's tier turns on the DESTINATION type, not on any record, so the
-	// well-formed call is an ordinary move onto a person — the auto-executing
+	// well-formed call is an ordinary move onto a contact — the auto-executing
 	// side. The project side is what the pair below proves separately.
 	"relinkActivity": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return requestForRelink(t, ids.NewV7()),
-			[]byte(`{"entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			[]byte(`{"entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 	},
 	// The batch forms answer the same destination question off the same
 	// argument, with no routed id to carry.
 	"relinkThread": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return httptest.NewRequest(http.MethodPost, "/v1/activities/relink-thread", http.NoBody),
-			[]byte(`{"thread_key":"thread-1","entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			[]byte(`{"thread_key":"thread-1","entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 	},
 	"relinkActivities": func(t *testing.T, _ ids.UUID) (*http.Request, []byte) {
 		t.Helper()
 		return httptest.NewRequest(http.MethodPost, "/v1/activities/relink-bulk", http.NoBody),
-			[]byte(`{"activity_ids":["` + ids.NewV7().String() + `"],"entity_type":"person","entity_id":"` +
+			[]byte(`{"activity_ids":["` + ids.NewV7().String() + `"],"entity_type":"contact","entity_id":"` +
 				ids.NewV7().String() + `"}`)
 	},
 }
@@ -233,7 +233,7 @@ func TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot(t *testing.
 			"filing under a project writes an irreversible six-year retention floor",
 		},
 		{
-			"person", mcp.TierAutoExecute,
+			"contact", mcp.TierAutoExecute,
 			"an ordinary association a member can undo by relinking again",
 		},
 		{

@@ -102,7 +102,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the facts a person can state and take away", () => {
+describe("the facts a contact can state and take away", () => {
   it("draws every stored row a reader may remove, past the preview cap", async () => {
     // Two rules could each uncover a row after a delete, and both have to be
     // off where the verb is offered: the COLLAPSE (these two spellings of one

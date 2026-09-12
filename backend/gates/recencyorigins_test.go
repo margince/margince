@@ -8,7 +8,7 @@ package gates_test
 // Every reading of "when was this record last touched" excludes the origins the
 // system wrote itself.
 //
-// Two activity origins are the product writing rather than a person:
+// Two activity origins are the product writing rather than a contact:
 // system_remediation is work filed ABOUT a record (a forecast-assurance review
 // task) and system_notice is a message the installation owes somebody (the
 // confirm-details link). Neither means a buyer engaged.

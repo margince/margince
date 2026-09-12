@@ -67,7 +67,7 @@ type Evidence struct {
 
 type AssembleOptions struct {
 	// MaxItems bounds the assembled context per section (recent touches,
-	// open questions, related people).
+	// open questions, related contacts).
 	MaxItems int
 	// ProjectID narrows the picture to ONE body of work, when the caller knows
 	// which. Empty is the ordinary case and filters nothing.

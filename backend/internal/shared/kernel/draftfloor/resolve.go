@@ -94,7 +94,7 @@ func (r *Resolver) Now() time.Time {
 // Separate fields rather than one blob because they are not equally good
 // evidence. Stored is a fact somebody wrote down at capture; Body and Subject
 // are text to read; and the subject is the weaker of the two, being a line
-// people often leave in the sender's language on a reply they wrote in theirs.
+// contacts often leave in the sender's language on a reply they wrote in theirs.
 type Written struct {
 	// Stored is the language recorded on the message, empty when none is.
 	// It outranks detection: the same message read twice must not answer two
@@ -122,7 +122,7 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 	now := r.Now()
 	name, email := r.actor(ctx)
 	// The register is read from the WHOLE correspondence, quoted history
-	// included: which register two people are on is a property of the
+	// included: which register two contacts are on is a property of the
 	// relationship, and a single reply may contain neither form while the
 	// exchange behind it is unmistakably du.
 	//

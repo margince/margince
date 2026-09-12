@@ -221,7 +221,7 @@ const READ_FULL: ProfileDigestRead = {
       confidence: 0.58,
     },
   ],
-  people: [
+  contacts: [
     {
       name: "Mara Voss",
       role: "Co-founder",
@@ -331,7 +331,7 @@ export const SidebarValuesMissing: Story = {
         root_url: SITE,
         pages: [{ url: `${SITE}/`, status: "fetched", kind: "home" }],
         facts: [],
-        people: [],
+        contacts: [],
         legal_entities: [],
       }}
     />

@@ -215,7 +215,7 @@ var approvalTargetRules = func() map[string]approvalTargetRule {
 	// door would assert the two vocabularies are one, which is the claim this table
 	// exists to make one row at a time.
 	rules := map[string]approvalTargetRule{
-		"person":           targetRuleRowScoped,
+		"contact":          targetRuleRowScoped,
 		"company":          targetRuleRowScoped,
 		"deal":             targetRuleRowScoped,
 		"lead":             targetRuleRowScoped,

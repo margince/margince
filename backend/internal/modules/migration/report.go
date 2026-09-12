@@ -14,7 +14,7 @@ package migration
 // SkippedRow is one disclosed skip in the run report.
 type SkippedRow struct {
 	ExternalID string `json:"external_id"`
-	// Line is the file line the row came from, so the person reading the report
+	// Line is the file line the row came from, so the reader reading the report
 	// can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
@@ -40,7 +40,7 @@ type ObjectReport struct {
 	// Collisions are rows that WILL land and also name a record the estate
 	// already holds. They are NOT skips: each is counted in Created, and the
 	// disposition's four counts must keep summing to the rows read. The
-	// warning exists so a person approving "create 3" is not surprised by a
+	// warning exists so a contact approving "create 3" is not surprised by a
 	// duplicate afterwards.
 	Collisions []SkippedRow `json:"collisions,omitempty"`
 	// WillDuplicate and Duplicated count rows naming a record the estate

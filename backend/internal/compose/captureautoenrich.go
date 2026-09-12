@@ -6,7 +6,7 @@ package compose
 // The captured-company auto-enrich sweep (CAP-PARAM-7, ADR-0072):
 // a leader-elected periodic pass (run-on-start + daily) that gives every
 // company with a primary domain and no dossier a governed web one — however it
-// was named, since a person creating one is usually the moment they want it.
+// was named, since a contact creating one is usually the moment they want it.
 // The anchor is excluded; cold start has already read it. Per workspace, when
 // the capture_auto_enrich flag is on, it enqueues a deep read
 // (system:capture_auto_enrich, auto-applied on completion) for each due company —
@@ -33,7 +33,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -55,7 +55,7 @@ import (
 //     to the next window at the monthly cap, whatever this counter says.
 //   - And a read only ever happens for a company the workspace CREATED, which
 //     the tiered gate allows only for an address the owner has corresponded with
-//     or already has a person for. A stranger's mail defers to the ledger and
+//     or already has a contact for. A stranger's mail defers to the ledger and
 //     mints nothing, so an outsider cannot aim this at a domain of their choosing.
 //
 // What is left for this counter is PACING, and 500 is sized for the moment that
@@ -132,7 +132,7 @@ func (CaptureAutoEnrichSweepArgs) FleetWide() {}
 // captureAutoEnrichSweepWorker runs one sweep pass across every workspace.
 type captureAutoEnrichSweepWorker struct {
 	pool       *pgxpool.Pool
-	people     *people.Store
+	contacts   *contacts.Store
 	settings   *capture.SettingsStore
 	autoEnrich *capture.AutoEnrichStore
 	dailyCap   int
@@ -143,7 +143,7 @@ type captureAutoEnrichSweepWorker struct {
 func newCaptureAutoEnrichSweepWorker(pool *pgxpool.Pool, log *slog.Logger) *captureAutoEnrichSweepWorker {
 	return &captureAutoEnrichSweepWorker{
 		pool:       pool,
-		people:     people.NewStore(InstallationDB(pool)),
+		contacts:   contacts.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
 		dailyCap:   autoEnrichDailyCap(log),
@@ -174,7 +174,7 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 	}
 	// The open domain questions are swept whatever the setting says. With
 	// crawling off the worker settles each one from what the workspace already
-	// knows; skipping them would leave every person captured under that setting
+	// knows; skipping them would leave every contact captured under that setting
 	// without a company, permanently.
 	if err := w.sweepDomainTriage(wsCtx, w.dailyCap); err != nil {
 		return err
@@ -215,7 +215,7 @@ func (w *captureAutoEnrichSweepWorker) sweepWorkspace(ctx context.Context, ws id
 // triggerEnrich starts a system-requested deep read for one company and arms its
 // cursor, returning the reserved slot when no read came of it.
 func (w *captureAutoEnrichSweepWorker) triggerEnrich(ctx context.Context, company capture.DueCompany, slot capture.BudgetSlot) error {
-	return startEnrichOrRefund(ctx, w.people, w.autoEnrich, company.CompanyID, company.Domain, slot)
+	return startEnrichOrRefund(ctx, w.contacts, w.autoEnrich, company.CompanyID, company.Domain, slot)
 }
 
 // refundTimeout bounds the compensating write. Short: it is one indexed UPDATE,
@@ -236,10 +236,10 @@ const refundTimeout = 5 * time.Second
 // and the context it would run on is already dead. Compensating on the dying
 // context leaks the slot exactly when it is most likely to leak. Same
 // detach-and-deadline shape the connector teardown and the AI tracer use.
-func startEnrichOrRefund(ctx context.Context, peopleStore *people.Store,
+func startEnrichOrRefund(ctx context.Context, contactsStore *contacts.Store,
 	autoEnrich *capture.AutoEnrichStore, companyID ids.CompanyID, domain string, slot capture.BudgetSlot,
 ) error {
-	started, err := startAutoEnrichRead(ctx, peopleStore, autoEnrich, companyID, domain)
+	started, err := startAutoEnrichRead(ctx, contactsStore, autoEnrich, companyID, domain)
 	if started {
 		return err
 	}
@@ -273,7 +273,7 @@ func startEnrichOrRefund(ctx context.Context, peopleStore *people.Store,
 // crawl and charge that company two of its bounded attempts. The
 // cursor is armed only by the caller that started something, for the same
 // reason.
-func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
+func startAutoEnrichRead(ctx context.Context, contactsStore *contacts.Store,
 	autoEnrich *capture.AutoEnrichStore, companyID ids.CompanyID, domain string,
 ) (bool, error) {
 	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
@@ -281,8 +281,8 @@ func startAutoEnrichRead(ctx context.Context, peopleStore *people.Store,
 		return false, err
 	}
 	seedURL := "https://" + domain
-	_, joined, err := peopleStore.StartSiteReadQueued(ctx, companyID, seedURL, systemAutoEnrichActor,
-		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
+	_, joined, err := contactsStore.StartSiteReadQueued(ctx, companyID, seedURL, systemAutoEnrichActor,
+		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
 				Workspace:   storekit.MustWorkspace(ctx),
 				CompanyID:   companyID.UUID,

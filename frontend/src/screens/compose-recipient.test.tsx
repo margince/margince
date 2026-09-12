@@ -21,7 +21,7 @@ import {
 //
 // Sending REQUIRES a recipient, so an empty To field is not a missing
 // nicety: it is a reply the reader must address by hand against a thread
-// that already names the person. These tests assert what stands in the
+// that already names the contact. These tests assert what stands in the
 // field on open, and that a reader's own typing survives it.
 
 type Sent = { key: string; body: unknown };
@@ -115,7 +115,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -171,7 +171,7 @@ describe("ComposeModal recipient", () => {
   // A CONTACT's address, as the SERVER picked it.
   //
   // The composer is handed one address and offers it — it does not choose from
-  // a list, and neither does any other screen: `person.primary_email` is the
+  // a list, and neither does any other screen: `contact.primary_email` is the
   // product's one answer to "which address is this contact reachable at",
   // decided in the read that builds the row. A retired address never reaches
   // this prop, which is why the assertion below is about what is OFFERED
@@ -180,9 +180,9 @@ describe("ComposeModal recipient", () => {
     stubRoutes();
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         recordAddress="anna@buyer.test"
         open
         onClose={vi.fn()}
@@ -242,7 +242,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -277,7 +277,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -318,7 +318,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -357,7 +357,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -393,7 +393,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -434,7 +434,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -465,7 +465,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}

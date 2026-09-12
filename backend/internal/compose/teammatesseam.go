@@ -6,11 +6,11 @@ package compose
 // Who are my teammates?
 //
 // One question with four askers, in three shapes. The Worklist asks the yes/no
-// shape to decide whether a team-scoped reader may open a named person's queue;
+// shape to decide whether a team-scoped reader may open a named contact's queue;
 // coaching asks the same one to decide whether a lead may put a notice in
 // somebody's queue; the team board asks the enumerating shape to draw its rows;
 // the team's frozen week asks the by-team-id shape, because a snapshot names a
-// team rather than a person. All four read through this one seam rather than
+// team rather than a contact. All four read through this one seam rather than
 // each deriving membership for itself — two derivations would drift, and the
 // pair that drifts here is "may I see your day" against "may I speak into it".
 //
@@ -45,7 +45,7 @@ func (t teammatesSeam) SharesLiveTeamWithCaller(ctx context.Context, other ids.U
 	return t.svc.SharesLiveTeamWithCaller(ctx, ids.From[ids.UserKind](other))
 }
 
-// CallerLeadsLiveTeam names a TEAM rather than a person, which is the shape the
+// CallerLeadsLiveTeam names a TEAM rather than a contact, which is the shape the
 // frozen team week needs: its subject is a team id off the request, and the
 // question is whether the reader belongs to it.
 func (t teammatesSeam) CallerLeadsLiveTeam(ctx context.Context, team ids.UUID) (bool, error) {

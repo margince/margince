@@ -17,7 +17,7 @@ import (
 
 // The tag filter every list surface shares.
 //
-// People, companies and deals all narrow by tag, and the three predicates are
+// Contacts, companies and deals all narrow by tag, and the three predicates are
 // the same shape over one polymorphic table. Written once here, in the layer
 // each module already depends on, because three copies of a NOT EXISTS is
 // three chances for one of them to mean something subtly different — and the
@@ -60,7 +60,7 @@ func ParseTagMode(raw *string) (TagMode, error) {
 // an RBAC object nor a table name even where all three read the same. The
 // column has its own closed vocabulary and this names a member of it.
 //
-// `idColumn` is how the outer query names the record's own id — "person.id",
+// `idColumn` is how the outer query names the record's own id — "contact.id",
 // "o.id" — because each list builds its own FROM and this has to attach to it.
 //
 // EXISTS rather than a join, in every mode: a record carries many tags, and a
@@ -106,7 +106,7 @@ func TagFilterClause(ctx context.Context, taggableType, idColumn string, tagIDs 
 // from one rule — a retired word is not part of the vocabulary a filter can
 // name — and the alternative is worse. Honouring an archived id would let a
 // saved view keep selecting by a word an admin retired precisely to stop
-// people selecting by it, and after a merge releases a name the re-coined word
+// contacts selecting by it, and after a merge releases a name the re-coined word
 // would drag the old tag's records along.
 //
 // The picker never offers a retired word, so reaching this state means a saved

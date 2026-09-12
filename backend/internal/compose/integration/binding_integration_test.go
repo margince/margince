@@ -60,14 +60,14 @@ func TestReindexNeededAfterStaleIdentityRow(t *testing.T) {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Stale Row Person', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Stale Row Contact', 'manual', 'human:x')`)
 	// A row stamped under a DIFFERENT identity than currentIdentity — the
 	// entity has an embedding row, just not a current one, so it must
 	// still count as pending (the swap case, distinct from "no row at all").
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-		VALUES ('person', $1, 0, 'stale-hash', 'fake/old@1024', '[1,2,3]'::vector)`,
-		personID); err != nil {
+		VALUES ('contact', $1, 0, 'stale-hash', 'fake/old@1024', '[1,2,3]'::vector)`,
+		contactID); err != nil {
 		t.Fatalf("seeding the stale-identity row: %v", err)
 	}
 
@@ -321,21 +321,21 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	const nameCompany = "Pending Company"
 	const nameTwo = "Pending Two"
 
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, '`+nameOne+`', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, '`+nameOne+`', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, '`+nameCompany+`', 'manual', 'human:x')`)
 	// A lead with every text-bearing column NULL: concat_ws collapses to
 	// '', so it must NOT count as pending — the non-empty qualifier.
 	e.SeedID(t, `INSERT INTO lead (id, source, captured_by) VALUES ($1, 'manual', 'human:x')`)
 	// Already covered at the current identity: must not count as pending.
-	coveredID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Already Covered', 'manual', 'human:x')`)
+	coveredID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Already Covered', 'manual', 'human:x')`)
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-		VALUES ('person', $1, 0, 'covered-hash', $2, '[1,2,3]'::vector)`,
+		VALUES ('contact', $1, 0, 'covered-hash', $2, '[1,2,3]'::vector)`,
 		coveredID, identity); err != nil {
 		t.Fatalf("seeding the already-covered row: %v", err)
 	}
 
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, '`+nameTwo+`', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, '`+nameTwo+`', 'manual', 'human:x')`)
 
 	counts, err := e.Store.PendingByWorkspace(ctx, identity)
 	if err != nil {
@@ -353,17 +353,17 @@ func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
 	wsKey := ids.From[ids.WorkspaceKind](e.WS)
 	ws2Key := ids.From[ids.WorkspaceKind](ws2)
 
-	// Both people and the company count under BOTH workspaces, and that is
+	// Both contacts and the company count under BOTH workspaces, and that is
 	// the honest answer rather than a leak: ADR-0091 §8 phase D took the tenant
-	// column off person and company alike, so they belong to the
+	// column off contact and company alike, so they belong to the
 	// installation and every workspace this rollup enumerates sees them. The
-	// covered person is excluded from both for the same reason — one embedding
+	// covered contact is excluded from both for the same reason — one embedding
 	// at this identity covers an installation-wide row wherever it is counted.
 	// The two numbers converge on one when the re-embed fan-out itself collapses
 	// and there is a single pass to report.
-	const wantPerWorkspace = 3 // two people + the company
+	const wantPerWorkspace = 3 // two contacts + the company
 	if counts[wsKey] != wantPerWorkspace {
-		t.Fatalf("counts[e.WS] = %d, want %d (both people + the company; the null lead and the already-covered person must be excluded)", counts[wsKey], wantPerWorkspace)
+		t.Fatalf("counts[e.WS] = %d, want %d (both contacts + the company; the null lead and the already-covered contact must be excluded)", counts[wsKey], wantPerWorkspace)
 	}
 	if counts[ws2Key] != wantPerWorkspace {
 		t.Fatalf("counts[ws2] = %d, want %d (the same installation-wide rows)", counts[ws2Key], wantPerWorkspace)

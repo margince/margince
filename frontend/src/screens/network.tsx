@@ -34,14 +34,14 @@ import {
 // second implementation of the decay formula, and the two would disagree the
 // moment either changed.
 
-type PersonNetworkColleague = components["schemas"]["PersonNetworkColleague"];
+type ContactNetworkColleague = components["schemas"]["ContactNetworkColleague"];
 
 // The per-user band vocabulary is PO-F-3b's — none/weak/moderate/strong — and
 // deliberately NOT the workspace-wide card's dormant/weak/warm/strong. The two
 // measure different things, and giving them one set of words on screen would
 // invite a reader to compare numbers that are not comparable.
 const COLLEAGUE_TONE: Record<
-  PersonNetworkColleague["strength_bucket"],
+  ContactNetworkColleague["strength_bucket"],
   "success" | "accent" | "warn" | undefined
 > = {
   strong: "success",
@@ -50,10 +50,10 @@ const COLLEAGUE_TONE: Record<
   none: undefined,
 };
 
-async function fetchPersonNetwork(
+async function fetchContactNetwork(
   id: string,
-): Promise<components["schemas"]["PersonNetwork"]> {
-  const { data, error } = await api.GET("/people/{id}/network", {
+): Promise<components["schemas"]["ContactNetwork"]> {
+  const { data, error } = await api.GET("/contacts/{id}/network", {
     params: { path: { id } },
   });
   if (error) {
@@ -63,7 +63,7 @@ async function fetchPersonNetwork(
 }
 
 /** The colleagues who know this contact, warmest first. */
-export function PersonNetworkPanel({ id }: Readonly<{ id: string }>) {
+export function ContactNetworkPanel({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -72,8 +72,8 @@ export function PersonNetworkPanel({ id }: Readonly<{ id: string }>) {
   // than a doomed fetch that renders as "nobody knows them".
   const overlay = useSorMode() === "overlay";
   const query = useQuery({
-    queryKey: ["person-network", id],
-    queryFn: () => fetchPersonNetwork(id),
+    queryKey: ["contact-network", id],
+    queryFn: () => fetchContactNetwork(id),
     enabled: !overlay,
   });
   const colleagues = query.data?.colleagues ?? [];

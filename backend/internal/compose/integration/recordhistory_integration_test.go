@@ -30,14 +30,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedRecordAuditRow inserts a raw person audit row with full control
+// seedRecordAuditRow inserts a raw contact audit row with full control
 // over the actor columns — the record-history read renders actor_id and
 // on_behalf_of, which seedAuditActionRow (fieldhistory suite) pins to a
 // fixed literal. This suite exercises entity-type dispatch through the
 // shared gate stack (proven per-type by the fieldhistory suite), so its
-// seeds stay on person. INSERT is the one verb the append-only trigger
+// seeds stay on contact. INSERT is the one verb the append-only trigger
 // admits, and the append-only trigger admits it.
-func seedRecordAuditRow(t *testing.T, e *Env, action string, personID ids.UUID,
+func seedRecordAuditRow(t *testing.T, e *Env, action string, contactID ids.UUID,
 	actorType, actorID string, onBehalfOf *ids.UUID, before, after map[string]any, occurredAt time.Time,
 ) ids.UUID {
 	t.Helper()
@@ -47,7 +47,7 @@ func seedRecordAuditRow(t *testing.T, e *Env, action string, personID ids.UUID,
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of,
 			                        action, entity_type, entity_id, before, after, occurred_at)
-			 VALUES ($1, $2, $3, $4, $5, 'person', $6, $7, $8, $9)`, rowID, actorType, actorID, onBehalfOf, action, personID, storekit.JSONArg(before), storekit.JSONArg(after), occurredAt)
+			 VALUES ($1, $2, $3, $4, $5, 'contact', $6, $7, $8, $9)`, rowID, actorType, actorID, onBehalfOf, action, contactID, storekit.JSONArg(before), storekit.JSONArg(after), occurredAt)
 		return err
 	})
 	if err != nil {
@@ -72,25 +72,25 @@ func seedWorkspaceUser(t *testing.T, e *Env, displayName string) ids.UUID {
 
 func TestRecordHistoryGatesOnPrincipalPermissionAndVisibility(t *testing.T) {
 	e := Setup(t)
-	// Captured privately by Rep1: a person is otherwise readable by every
+	// Captured privately by Rep1: a contact is otherwise readable by every
 	// seat with the grant, so the out-of-scope assertion needs a private
 	// capture to exclude the other caller.
-	personID := e.SeedPerson(t, "Gated Subject", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", personID, e.Rep1)
+	contactID := e.SeedContact(t, "Gated Subject", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contactID, e.Rep1)
 
 	// Rep3 is not the captor: 404, not an empty page — existence-hiding
 	// on the row-scope gate like every record read.
 	outsider := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
 	if _, err := privacy.ListRecordHistory(outsider, e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("out-of-scope read: err = %v, want not found", err)
 	}
 
-	// A principal without person:read at all: 403 before any row is touched.
+	// A principal without contact:read at all: 403 before any row is touched.
 	noRead := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{RowScope: principal.RowScopeTeam})
 	if _, err := privacy.ListRecordHistory(noRead, e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("no-permission read: err = %v, want permission denied", err)
 	}
@@ -98,7 +98,7 @@ func TestRecordHistoryGatesOnPrincipalPermissionAndVisibility(t *testing.T) {
 	// The history surface is human-only: an agent principal is refused
 	// outright, before the entity gate.
 	if _, err := privacy.ListRecordHistory(e.AgentCtx(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("agent-principal read: err = %v, want permission denied", err)
 	}
@@ -106,24 +106,24 @@ func TestRecordHistoryGatesOnPrincipalPermissionAndVisibility(t *testing.T) {
 
 func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "History Subject", nil)
+	contactID := e.SeedContact(t, "History Subject", nil)
 	uma := seedWorkspaceUser(t, e, "Uma Underwriter")
 	ada := seedWorkspaceUser(t, e, "Ada Authority")
 
-	// SeedPerson's create row is stamped at real "now"; the four actor
+	// SeedContact's create row is stamped at real "now"; the four actor
 	// rows are dated forward so ordering is unambiguous.
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
-	seedRecordAuditRow(t, e, "update", personID, "human", "human:"+uma.String(), nil,
+	seedRecordAuditRow(t, e, "update", contactID, "human", "human:"+uma.String(), nil,
 		map[string]any{"email": "old@x.com"}, map[string]any{"email": "new@x.com"}, base)
-	seedRecordAuditRow(t, e, "update", personID, "agent", "agent:enrich", &ada,
+	seedRecordAuditRow(t, e, "update", contactID, "agent", "agent:enrich", &ada,
 		nil, map[string]any{"title": "CTO"}, base.Add(time.Hour))
-	seedRecordAuditRow(t, e, "archive", personID, "system", "system", nil,
+	seedRecordAuditRow(t, e, "archive", contactID, "system", "system", nil,
 		nil, nil, base.Add(2*time.Hour))
-	seedRecordAuditRow(t, e, "update", personID, "connector", "connector:hubspot", nil,
+	seedRecordAuditRow(t, e, "update", contactID, "connector", "connector:hubspot", nil,
 		nil, map[string]any{"phone": "1"}, base.Add(3*time.Hour))
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -206,18 +206,18 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 // honest disclosure, not a leak.
 func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Selma Subject", nil)
+	contactID := e.SeedContact(t, "Selma Subject", nil)
 	past := time.Now().Add(-2 * time.Hour).UTC().Truncate(time.Microsecond)
-	seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
+	seedRecordAuditRow(t, e, "update", contactID, "human", "user-1", nil,
 		map[string]any{"email": "selma@example.com"},
 		map[string]any{"email": "selma.subject@example.com"}, past)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("post-erasure list: %v", err)
@@ -245,10 +245,10 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 	// ordinary history again, and on a newest-first page it reads BEFORE the
 	// erase line.
 	future := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
-	seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
+	seedRecordAuditRow(t, e, "update", contactID, "human", "user-1", nil,
 		nil, map[string]any{"owner_id": "rep-2"}, future)
 	page, err = privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("post-scrub list: %v", err)
@@ -263,13 +263,13 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 // most recent change and ends at the record's genesis.
 func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
 	e := Setup(t)
-	// SeedPerson's create row is the true oldest line and is therefore served
+	// SeedContact's create row is the true oldest line and is therefore served
 	// LAST; two forward-dated updates make three rows total.
-	personID := e.SeedPerson(t, "Paging Subject", nil)
+	contactID := e.SeedContact(t, "Paging Subject", nil)
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
-	r2 := seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
+	r2 := seedRecordAuditRow(t, e, "update", contactID, "human", "user-1", nil,
 		map[string]any{"phone": "1"}, map[string]any{"phone": "2"}, base)
-	r3 := seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
+	r3 := seedRecordAuditRow(t, e, "update", contactID, "human", "user-1", nil,
 		map[string]any{"phone": "2"}, map[string]any{"phone": "3"}, base.Add(time.Hour))
 
 	one := 1
@@ -277,7 +277,7 @@ func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
 	var cursor *string
 	for pageNo := 1; pageNo <= 3; pageNo++ {
 		page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-			EntityType: "person", EntityID: personID, Limit: &one, Cursor: cursor,
+			EntityType: "contact", EntityID: contactID, Limit: &one, Cursor: cursor,
 		})
 		if err != nil {
 			t.Fatalf("page %d: %v", pageNo, err)
@@ -315,16 +315,16 @@ func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
 // still runs, and the scan matches nothing.
 func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Quiet Subject", nil)
+	contactID := e.SeedContact(t, "Quiet Subject", nil)
 
 	full, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("full list: %v", err)
 	}
 	if len(full.Entries) == 0 {
-		t.Fatal("SeedPerson must have audited its own create — harness drift")
+		t.Fatal("SeedContact must have audited its own create — harness drift")
 	}
 	last := full.Entries[len(full.Entries)-1]
 	pastTheEnd, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
@@ -333,7 +333,7 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 	}
 
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID, Cursor: &pastTheEnd,
+		EntityType: "contact", EntityID: contactID, Cursor: &pastTheEnd,
 	})
 	if err != nil {
 		t.Fatalf("empty page must not error: %v", err)
@@ -345,7 +345,7 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 
 // TestRecordHistoryErasureBoundsCollateralScrubs mirrors the field-history
 // sibling (TestFieldHistoryErasureBoundsCollateralScrubs): the eraser's
-// reach is entity-generic — it doesn't stop at the person it was called
+// reach is entity-generic — it doesn't stop at the contact it was called
 // on. The lead twin shares the subject's email (the tie the eraser
 // follows) and the activity carries the subject's name in its subject
 // line; both create images predate the scrub and both records get their
@@ -355,24 +355,24 @@ func TestRecordHistoryHonestEmptyPageBeyondTheFinalRow(t *testing.T) {
 // images, and the pre-erasure email never surfacing in any entry.
 func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Selma Subject", nil)
+	contactID := e.SeedContact(t, "Selma Subject", nil)
 	const twinEmail = "selma.twin@example.test"
-	// The subject's address is what ties the twin to the person: the
+	// The subject's address is what ties the twin to the contact: the
 	// eraser wipes any lead carrying one of the subject's emails.
-	e.WsExec(t, `INSERT INTO person_email (person_id, email, source, captured_by)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
 		 VALUES ($1, $2, 'manual', 'human:x')`,
-		personID, twinEmail)
+		contactID, twinEmail)
 	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Call with Selma"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: personID}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
 		t.Fatalf("log activity: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
@@ -427,10 +427,10 @@ func TestRecordHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 
 func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Cursor Subject", nil)
+	contactID := e.SeedContact(t, "Cursor Subject", nil)
 	bad := "%%%not-a-cursor"
 	_, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID, Cursor: &bad,
+		EntityType: "contact", EntityID: contactID, Cursor: &bad,
 	})
 	var malformed *storekit.MalformedCursorError
 	if !errors.As(err, &malformed) {
@@ -453,18 +453,18 @@ func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
 // case would pass over a `WHERE` nobody wired.
 func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Filtered Subject", nil)
+	contactID := e.SeedContact(t, "Filtered Subject", nil)
 	actor := seedWorkspaceUser(t, e, "Vera Verb")
 
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
 	for i, action := range []string{"update", "assign", "archive", "update", "restore"} {
-		seedRecordAuditRow(t, e, action, personID, "human", "human:"+actor.String(), nil,
+		seedRecordAuditRow(t, e, action, contactID, "human", "human:"+actor.String(), nil,
 			nil, map[string]any{"n": i}, base.Add(time.Duration(i)*time.Hour))
 	}
 
 	archive := "archive"
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID, Action: &archive,
+		EntityType: "contact", EntityID: contactID, Action: &archive,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -497,13 +497,13 @@ func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
 // concludes something false about their data.
 func TestRecordHistoryAnswersAnEmptyPageForAVerbThisRecordNeverSaw(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Refusal Subject", nil)
+	contactID := e.SeedContact(t, "Refusal Subject", nil)
 
 	// Reaches the store, which is where an empty page would be manufactured.
 	// The wire refusal is the handler's and is asserted where the handler is.
 	neverHappened := "restore"
 	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
-		EntityType: "person", EntityID: personID, Action: &neverHappened,
+		EntityType: "contact", EntityID: contactID, Action: &neverHappened,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)

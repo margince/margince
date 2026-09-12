@@ -201,7 +201,7 @@ func refuseUnlessCallerMayAssign(ctx context.Context, tx pgx.Tx, actor Identity,
 	//
 	// Full containment was the first rule here and it was wrong in the direction
 	// that matters: a member administrator delegated onboarding holds user_admin
-	// and little else, so requiring them to hold deal.create and person.update
+	// and little else, so requiring them to hold deal.create and contact.update
 	// before they could invite a rep refused the exact delegation this change
 	// exists to enable. An admit test caught it; the refusal arms alone would
 	// have passed against a guard that refused everybody.

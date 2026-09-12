@@ -17,7 +17,7 @@ package integration
 // strength of "a purchase once wrote here" — passes every unit test there is.
 //
 // It lives in this suite rather than beside the store because it needs the REAL
-// cross-module binding: integrations cannot name people, so a fixture that
+// cross-module binding: integrations cannot name contacts, so a fixture that
 // stubbed the callbacks would prove its own stubs.
 
 import (
@@ -64,7 +64,7 @@ func TestDeletingBoughtDataSparesWhatSomebodyElseWrote(t *testing.T) {
 
 	untouched := plantBoughtTitle(t, e, "Founder & CEO")
 	corrected := plantBoughtTitle(t, e, "Founder & CEO")
-	execAsOwner(t, e, `UPDATE person SET title = 'Managing Director' WHERE id = $1`, corrected)
+	execAsOwner(t, e, `UPDATE contact SET title = 'Managing Director' WHERE id = $1`, corrected)
 
 	if err := store.DeleteProviderData(providerAdmin(e), "surfe"); err != nil {
 		t.Fatal(err)
@@ -117,14 +117,14 @@ func TestDeletingBoughtDataReachesAnArchivedContact(t *testing.T) {
 	// used to refuse an archived subject and roll the whole revert back.
 	archived := plantBoughtTitle(t, e, "Head of Partnerships")
 	handle := plantBoughtHandle(t, e, archived, "linkedin.com/in/archived-one")
-	execAsOwner(t, e, `UPDATE person SET archived_at = now() WHERE id = $1`, archived)
+	execAsOwner(t, e, `UPDATE contact SET archived_at = now() WHERE id = $1`, archived)
 
 	if err := store.DeleteProviderData(providerAdmin(e), "surfe"); err != nil {
 		t.Fatal(err)
 	}
 
 	var handles int
-	queryAsOwner(t, e, `SELECT count(*) FROM person_social WHERE id = $1`, &handles, handle)
+	queryAsOwner(t, e, `SELECT count(*) FROM contact_social WHERE id = $1`, &handles, handle)
 	if handles != 0 {
 		t.Error("an archived contact kept its bought profile link — archiving is not erasure, " +
 			"so the purchase is still on the record and the action said it was gone")
@@ -136,23 +136,23 @@ func TestDeletingBoughtDataReachesAnArchivedContact(t *testing.T) {
 
 // plantBoughtHandle adds a bought profile link to an existing contact, recorded
 // by ROW as the applier records it.
-func plantBoughtHandle(t *testing.T, e *Env, person ids.UUID, handle string) ids.UUID {
+func plantBoughtHandle(t *testing.T, e *Env, contact ids.UUID, handle string) ids.UUID {
 	t.Helper()
 	var rowID ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO person_social (person_id, platform, handle)
-			VALUES ($1, 'linkedin', $2) RETURNING id`, person, handle).Scan(&rowID)
+			INSERT INTO contact_social (contact_id, platform, handle)
+			VALUES ($1, 'linkedin', $2) RETURNING id`, contact, handle).Scan(&rowID)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	var run ids.UUID
-	queryAsOwner(t, e, `SELECT id FROM provider_run WHERE person_id = $1 LIMIT 1`, &run, person)
+	queryAsOwner(t, e, `SELECT id FROM provider_run WHERE contact_id = $1 LIMIT 1`, &run, contact)
 	execAsOwner(t, e, `
 		INSERT INTO provider_applied_field
-		       (person_id, run_id, provider, target_table, target_field, target_row_id, captured_by)
-		VALUES ($1, $2, 'surfe', 'person_social', 'linkedin', $3, 'connector:surfe')`,
-		person, run, rowID)
+		       (contact_id, run_id, provider, target_table, target_field, target_row_id, captured_by)
+		VALUES ($1, $2, 'surfe', 'contact_social', 'linkedin', $3, 'connector:surfe')`,
+		contact, run, rowID)
 	return rowID
 }
 
@@ -174,40 +174,40 @@ func providerStoreFor(t *testing.T, e *Env) *integrations.Store {
 // way the applier records it.
 func plantBoughtTitle(t *testing.T, e *Env, title string) ids.UUID {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	// Its own seeder rather than seedSubject: that one hardcodes one address,
 	// so a second call collides on the cross-record uniqueness. This case needs
 	// two contacts and no addresses at all.
 	execAsOwner(t, e, `
-		INSERT INTO person (id, full_name, first_name, title, source, captured_by)
-		VALUES ($1, 'Revert Subject', 'Revert', $2, 'manual', 'human:x')`, person, title)
+		INSERT INTO contact (id, full_name, first_name, title, source, captured_by)
+		VALUES ($1, 'Revert Subject', 'Revert', $2, 'manual', 'human:x')`, contact, title)
 
 	var run ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
-			       (person_id, subject_kind, provider, trigger, state, connection_version,
+			       (contact_id, subject_kind, provider, trigger, state, connection_version,
 			        connection_epoch, configuration_snapshot, requested_categories,
 			        input_fingerprint, external_correlation_id, completed_at)
-			VALUES ($1, 'person', 'surfe', 'manual', 'completed', 1, 1, '{}'::jsonb,
+			VALUES ($1, 'contact', 'surfe', 'manual', 'completed', 1, 1, '{}'::jsonb,
 			        ARRAY['current_employment'], $2, gen_random_uuid(), now())
-			RETURNING id`, person, "fp-revert-"+person.String()).Scan(&run)
+			RETURNING id`, contact, "fp-revert-"+contact.String()).Scan(&run)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	execAsOwner(t, e, `
 		INSERT INTO provider_applied_field
-		       (person_id, run_id, provider, target_table, target_field, applied_value, captured_by)
-		VALUES ($1, $2, 'surfe', 'person', 'title', $3, 'connector:surfe')`,
-		person, run, title)
-	return person
+		       (contact_id, run_id, provider, target_table, target_field, applied_value, captured_by)
+		VALUES ($1, $2, 'surfe', 'contact', 'title', $3, 'connector:surfe')`,
+		contact, run, title)
+	return contact
 }
 
 // titleOf reads a contact's title, empty when it carries none.
-func titleOf(t *testing.T, e *Env, person ids.UUID) string {
+func titleOf(t *testing.T, e *Env, contact ids.UUID) string {
 	t.Helper()
 	var title *string
-	queryAsOwner(t, e, `SELECT title FROM person WHERE id = $1`, &title, person)
+	queryAsOwner(t, e, `SELECT title FROM contact WHERE id = $1`, &title, contact)
 	if title == nil {
 		return ""
 	}

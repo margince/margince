@@ -187,7 +187,7 @@ describe("BriefScreen — the context rail", () => {
     capture: {
       messages_synced: 42,
       activities_created: 42,
-      people_created: 5,
+      contacts_created: 5,
       companies_created: 2,
     },
     review: {

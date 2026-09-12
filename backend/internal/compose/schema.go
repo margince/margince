@@ -29,7 +29,7 @@ import (
 )
 
 var schemaObjects = []datasource.ObjectDef{
-	{Type: datasource.EntityPerson, Label: "Person", Fields: []datasource.FieldDef{
+	{Type: datasource.EntityContact, Label: "Contact", Fields: []datasource.FieldDef{
 		{Name: "full_name", Type: "text"},
 		{Name: "owner_id", Type: "uuid", Nullable: true},
 		{Name: "source", Type: "text"},

@@ -179,8 +179,8 @@ async function renderSettledGrid(
 // The two legal-identity fields that live only in the evidence sidecar. Before
 // these rows a rep could read a VAT number the crawl had found and could not
 // state one it had missed — and most sites print no imprint at all, so the
-// field a person most often knows was the field they could never record.
-describe("the legal identity a person can state", () => {
+// field a contact most often knows was the field they could never record.
+describe("the legal identity a contact can state", () => {
   it("invites a VAT number and a registry address on a record carrying neither", async () => {
     await renderSettledGrid(COMPANY);
 
@@ -379,7 +379,7 @@ describe("the legal identity a person can state", () => {
     await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
     await user.keyboard("{Enter}");
 
-    // Two people correcting the same number: unpinned, the second silently
+    // Two contacts correcting the same number: unpinned, the second silently
     // replaces a change its author never saw.
     const written = await waitFor(() => {
       const call = calls.find((one) => one.method === "PATCH");

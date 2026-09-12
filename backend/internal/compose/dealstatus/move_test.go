@@ -251,16 +251,16 @@ func TestTheFirstMoveOnAnUncontactedDealNamesWhoToOpenWith(t *testing.T) {
 		t.Errorf("the advice does not name who to open with: %q", mv.Reason)
 	}
 	if !strings.Contains(mv.Reason, "champion") {
-		t.Errorf("the advice does not say why that person: %q", mv.Reason)
+		t.Errorf("the advice does not say why that contact: %q", mv.Reason)
 	}
 	// The count is what makes the sentence checkable against the page.
-	if !strings.Contains(mv.Reason, "3 people") {
+	if !strings.Contains(mv.Reason, "3 contacts") {
 		t.Errorf("the advice does not say how many are named: %q", mv.Reason)
 	}
 }
 
 func TestTheFirstMoveNeverOpensWithTheBlocker(t *testing.T) {
-	// A deal whose ONLY named seat is the person most likely to refuse it. No
+	// A deal whose ONLY named seat is the contact most likely to refuse it. No
 	// advice is the right answer; naming them would be worse than silence.
 	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
 		{Role: "blocker", Name: "Patrick Ganzmann"},
@@ -295,7 +295,7 @@ func TestTheFirstMoveTakesTheBestAvailableRole(t *testing.T) {
 }
 
 func TestASeatTheReaderMayNotNameStillCarriesItsRole(t *testing.T) {
-	// The reader holds deal:read without person:read, so the seam supplies the
+	// The reader holds deal:read without contact:read, so the seam supplies the
 	// seats unnamed. The role is not the secret and the advice still works.
 	f := facts{deal: openDeal(), now: testNow, seats: []Seat{{Role: "champion"}}}
 
@@ -328,7 +328,7 @@ func TestAContactedDealKeepsItsOwnMove(t *testing.T) {
 
 func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
 	// Nobody is named, so there is nobody to open with. The card falls back to
-	// its old sentence rather than inventing a person.
+	// its old sentence rather than inventing a contact.
 	f := facts{deal: openDeal(), now: testNow}
 
 	mv := decideMove(f)

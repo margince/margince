@@ -269,6 +269,6 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 	// The receipt has to say the machine did it, or the day's lane puts the
 	// rep's name on a click they never made.
 	if !bySystem {
-		t.Fatal("an automatic apply is recorded as a person's decision")
+		t.Fatal("an automatic apply is recorded as a contact's decision")
 	}
 }

@@ -19,8 +19,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -35,14 +35,14 @@ import (
 // share opens here is a capture-private contact of rep3's.
 func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 	e := SetupSearch(t)
-	foreign := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Shared Secret', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
+	foreign := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Shared Secret', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 
 	repCtx := e.AsTeamRep(e.Rep1, e.Team1)
-	peopleStore := people.NewStore(e.DB())
+	contactsStore := contacts.NewStore(e.DB())
 
 	// Before the grant: capture privacy hides rep3's record from rep1.
-	if _, err := peopleStore.GetPerson(repCtx, PersonIDOf(foreign), storekit.LiveOnly); err == nil {
-		t.Fatal("foreign person visible before any grant")
+	if _, err := contactsStore.GetContact(repCtx, ContactIDOf(foreign), storekit.LiveOnly); err == nil {
+		t.Fatal("foreign contact visible before any grant")
 	}
 	// A search misses it too.
 	page, err := e.Store.Search(repCtx, search.Input{Query: "Shared Secret"})
@@ -51,12 +51,12 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 	}
 
 	grantID := e.SeedID(t, `INSERT INTO record_grant (id, record_type, record_id, subject_type, subject_id, access, granted_by)
-		VALUES ($1, 'person', $2, 'user', $3, 'read', $4)`, foreign, e.Rep1, e.Rep3)
+		VALUES ($1, 'contact', $2, 'user', $3, 'read', $4)`, foreign, e.Rep1, e.Rep3)
 
 	// After: the direct read, the search branch, and the link probe all
 	// see the record through the SAME widened predicate.
-	if _, err := peopleStore.GetPerson(repCtx, PersonIDOf(foreign), storekit.LiveOnly); err != nil {
-		t.Fatalf("granted person still hidden: %v", err)
+	if _, err := contactsStore.GetContact(repCtx, ContactIDOf(foreign), storekit.LiveOnly); err != nil {
+		t.Fatalf("granted contact still hidden: %v", err)
 	}
 	page, err = e.Store.Search(repCtx, search.Input{Query: "Shared Secret"})
 	if err != nil || len(page.Hits) != 1 {
@@ -70,7 +70,7 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := peopleStore.GetPerson(repCtx, PersonIDOf(foreign), storekit.LiveOnly); err == nil {
+	if _, err := contactsStore.GetContact(repCtx, ContactIDOf(foreign), storekit.LiveOnly); err == nil {
 		t.Fatal("revoked grant still widens visibility")
 	}
 }
@@ -78,7 +78,7 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 // Scope-intersection (crm.yaml: "A grant can never exceed the granting
 // principal's own access"). The visibility arm counts every live grant
 // regardless of its access, because write satisfies read — so a `read` share
-// is enough to pass EnsureLinkTarget, and without a separate probe the person
+// is enough to pass EnsureLinkTarget, and without a separate probe the contact
 // it was shared with could hand on write: to a colleague, or by re-asserting
 // their own grant onto themselves.
 //
@@ -106,7 +106,7 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 	e := SetupSearch(t)
 	// Owned by rep3 in team2, so rep1 in team1 has no path to it but a share.
-	foreign := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Out Of Scope', $2, 'manual', 'human:x')`, e.Rep3)
+	foreign := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Out Of Scope', $2, 'manual', 'human:x')`, e.Rep3)
 	colleague := e.SeedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'colleague@search.test', 'Colleague')`)
 	svc := identity.NewService(e.Pool)
 
@@ -115,7 +115,7 @@ func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 	// production cannot reach.
 	share := func(as context.Context, subject ids.UUID, access string) error {
 		_, err := svc.CreateRecordGrant(as, identity.CreateGrantInput{
-			RecordType: "person", RecordID: foreign,
+			RecordType: "contact", RecordID: foreign,
 			SubjectType: "user", SubjectID: subject, Access: access,
 		})
 		return err
@@ -172,7 +172,7 @@ func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 	}
 }
 
-// grantingPrincipal mints a human who may read and update people at one row
+// grantingPrincipal mints a human who may read and update contacts at one row
 // scope — the two permissions sharing a record needs, and nothing else, so a
 // refusal in these tests can only come from the rule under test.
 func grantingPrincipal(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []ids.UUID) context.Context {
@@ -181,7 +181,7 @@ func grantingPrincipal(e *SearchEnv, user ids.UUID, scope principal.RowScope, te
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs: teams,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 			RowScope: scope,
 		},
 	})
@@ -195,7 +195,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 	}
 	// Sharing with a random subject refuses (the subject must exist).
 	if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
-		"record_type": "person", "record_id": e.personID,
+		"record_type": "contact", "record_id": e.contactID,
 		"subject_type": "user", "subject_id": "00000000-0000-7000-8000-00000000dead",
 		"access": "read",
 	}, nil, nil); status != http.StatusNotFound {
@@ -203,7 +203,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 	}
 	subject := meUserID(t, e)
 	if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
-		"record_type": "person", "record_id": e.personID,
+		"record_type": "contact", "record_id": e.contactID,
 		"subject_type": "user", "subject_id": subject,
 		"access": "write", "reason": "deal desk assist",
 	}, nil, &grant); status != http.StatusCreated {
@@ -215,7 +215,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 			ID string `json:"id"`
 		} `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/record-grants?record_type=person&record_id="+e.personID, nil, nil, &listed); status != http.StatusOK || len(listed.Data) != 1 {
+	if status := e.Call(t, "GET", "/v1/record-grants?record_type=contact&record_id="+e.contactID, nil, nil, &listed); status != http.StatusOK || len(listed.Data) != 1 {
 		t.Fatalf("list grants → %d %+v", status, listed)
 	}
 	if status := e.Call(t, "DELETE", "/v1/record-grants/"+grant.ID, nil, nil, nil); status != http.StatusNoContent {
@@ -246,7 +246,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 
 	assert := func(body AnyMap) (int, grantBody) {
 		var got grantBody
-		body["record_type"], body["record_id"] = "person", e.personID
+		body["record_type"], body["record_id"] = "contact", e.contactID
 		body["subject_type"], body["subject_id"] = "user", subject
 		return e.Call(t, "POST", "/v1/record-grants", body, nil, &got), got
 	}
@@ -296,7 +296,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 	var rows int
 	if err := e.Owner.QueryRow(t.Context(),
 		`SELECT count(*) FROM record_grant WHERE record_id = $1 AND subject_id = $2`,
-		e.personID, subject).Scan(&rows); err != nil {
+		e.contactID, subject).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 1 {
@@ -313,7 +313,7 @@ func TestReAssertingAGrantAuditsWhatItDisplaced(t *testing.T) {
 	share := func(access string) {
 		t.Helper()
 		if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
-			"record_type": "person", "record_id": e.personID,
+			"record_type": "contact", "record_id": e.contactID,
 			"subject_type": "user", "subject_id": subject, "access": access,
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("share %s → %d", access, status)
@@ -567,7 +567,7 @@ func TestAStrangerToTheRecordCannotRestateItsGrants(t *testing.T) {
 		// The mirror of what mayRevoke already refuses. Its own comment gives
 		// the reason: "anyone the record was ever shared with — read-only —
 		// could delete a colleague's write grant on it, which is not an
-		// escalation but is a way to take work away from people who are doing
+		// escalation but is a way to take work away from contacts who are doing
 		// it." Revoking was gated. Re-asserting `read` over a stored `write`
 		// reaches the same end through SET access = EXCLUDED.access, and was
 		// not — the write-seat check returns early for a non-write assert, and

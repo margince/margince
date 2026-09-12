@@ -14,7 +14,7 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { CompanyScreen } from "./companies";
 import { AskSection } from "./company360";
-import { PersonMeetingBrief } from "./meetingbrief";
+import { ContactMeetingBrief } from "./meetingbrief";
 
 // Every AI surface can be told which project it is about, through the one
 // picker, and every scoped output says so in one line the server's counts
@@ -286,7 +286,7 @@ describe("the meeting brief, scoped to a project", () => {
         ),
     });
     render(
-      <PersonMeetingBrief
+      <ContactMeetingBrief
         activityId="a-1"
         open
         onClose={() => {}}
@@ -312,7 +312,7 @@ describe("the meeting brief, scoped to a project", () => {
         jsonResponse(meetingBrief({ ...erpScope, in_scope: 3, total: 9 })),
     });
     render(
-      <PersonMeetingBrief
+      <ContactMeetingBrief
         activityId="a-1"
         open
         onClose={() => {}}
@@ -333,7 +333,7 @@ describe("the meeting brief, scoped to a project", () => {
           meetingBrief({ project_id: "p-erp", name: "ERP rollout", key: null }),
         ),
     });
-    render(<PersonMeetingBrief activityId="a-1" open onClose={() => {}} />);
+    render(<ContactMeetingBrief activityId="a-1" open onClose={() => {}} />);
     expect(await screen.findByText("Scoped to ERP rollout")).toBeTruthy();
   });
 });
@@ -346,7 +346,7 @@ describe("Prepare meeting on the company page", () => {
         activity_id: "a-1",
         starts_at: "2026-08-20T13:00:00Z",
         subject: "Renewal review",
-        participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+        participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
       },
     };
     const seen = stubFetch({

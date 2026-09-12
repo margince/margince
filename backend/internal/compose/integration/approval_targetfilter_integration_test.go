@@ -6,7 +6,7 @@
 package integration
 
 // The inbox filtered to ONE record. A deep site read stages a proposal per
-// person it found, plus the read itself, so a freshly created company can carry
+// contact it found, plus the read itself, so a freshly created company can carry
 // dozens of pending approvals — the filter is what lets a record page ask for
 // its own instead of paging the whole workspace queue.
 //
@@ -35,7 +35,7 @@ var siteReadPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Create: true, Read: true, Update: true},
-		"person":                {Create: true, Read: true, Update: true},
+		"contact":               {Create: true, Read: true, Update: true},
 		"lead":                  {Create: true, Read: true, Update: true},
 		"installation_settings": {Read: true},
 	},
@@ -202,7 +202,7 @@ func TestApprovalListFilteredStillPrunesUndecidableKinds(t *testing.T) {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"company":               {Read: true, Update: true},
-			"person":                {Read: true},
+			"contact":               {Read: true},
 			"installation_settings": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,

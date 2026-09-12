@@ -210,7 +210,7 @@ type tableWrite struct {
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
 var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/people:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the company_fact constant and to company_profile_field, and people owns both",
+	"internal/modules/contacts:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the company_fact constant and to company_profile_field, and contacts owns both",
 })
 
 // tableArgText reads a storekit table argument: a string literal, or an
@@ -344,7 +344,7 @@ const storekitWriteFloor = 25
 // table it reaches into, and the INSTANCE that reaches it.
 //
 // The declaration is the point. Keyed on owner and table alone, one entry
-// ratifies the CATEGORY — "people may write activity_link" — and a second,
+// ratifies the CATEGORY — "contacts may write activity_link" — and a second,
 // differently written copy of that write inside the same package is admitted by
 // the entry the first one earned, with no finding to notice. A cross-store
 // write is ratified on its own evidence or it is not ratified.
@@ -420,14 +420,14 @@ func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
 func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 	t.Parallel()
 	const (
-		owner = "internal/modules/people"
+		owner = "internal/modules/contacts"
 		table = "activity_link"
-		first = "ensure.go:Store.linkActivityToPerson"
+		first = "ensure.go:Store.linkActivityToContact"
 	)
-	ratified := tableWrite{pos: "internal/modules/people/ensure.go:1:1", table: table, site: first}
+	ratified := tableWrite{pos: "internal/modules/contacts/ensure.go:1:1", table: table, site: first}
 	// Same package, same table, a different declaration.
 	planted := tableWrite{
-		pos:   "internal/modules/people/planted.go:1:1",
+		pos:   "internal/modules/contacts/planted.go:1:1",
 		table: table,
 		site:  "planted.go:aSecondWriterOfARatifiedTable",
 	}

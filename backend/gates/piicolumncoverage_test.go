@@ -174,7 +174,7 @@ var erasureColumnBaseline = map[string][]string{
 		"status",
 		"status_set_by",
 	},
-	"person": {
+	"contact": {
 		"captured_by",
 		"source",
 		"visibility",
@@ -355,7 +355,7 @@ func renderSQL(expr ast.Expr, consts map[string]string) string {
 		// The statement is the FORMAT STRING. A cascade statement built with
 		// Sprintf carries its columns in the format and its values in the
 		// arguments, so rendering the format is rendering the statement — and
-		// rendering nothing loses person's and lead's redactions entirely.
+		// rendering nothing loses contact's and lead's redactions entirely.
 		//
 		// ReplaceAll is the same shape one level along: what it substitutes is
 		// a bind position, not a column or a table.
@@ -477,7 +477,7 @@ func assignmentsAreReadable(statement string) bool {
 	clauses := setClause.FindAllStringSubmatch(statement, -1)
 	// NO CLAUSE AT ALL is unreadable, not readable. The caller has already
 	// decided this statement assigns something; a SET the scan cannot find is
-	// therefore a SET that the marker swallowed whole — `"UPDATE person " +
+	// therefore a SET that the marker swallowed whole — `"UPDATE contact " +
 	// clearEverything` — and the token this pattern anchors on went with it.
 	// Answering "readable" there let the loop run zero times and returned the
 	// same true a fully rendered redaction gets, which is this census skipping
@@ -537,7 +537,7 @@ func splitSetClause(clause string) []string {
 }
 
 // writesSomething matches the keyword of a statement that ASSIGNS, across any
-// whitespace: `UPDATE\n  person SET …` is one write laid out over two lines,
+// whitespace: `UPDATE\n  contact SET …` is one write laid out over two lines,
 // and a check for the literal "UPDATE " discards it before its target is ever
 // read.
 var writesSomething = regexp.MustCompile(`(?is)\b(?:update|merge\s+into)\s`)
@@ -695,8 +695,8 @@ func TestAWriteIsPlacedByItsOwnTargetOrNotAtAll(t *testing.T) {
 	}{
 		{
 			name: "a plain update is one write",
-			sql:  "UPDATE person SET full_name = '' WHERE id = $1",
-			want: []write{{table: "person", text: "UPDATE person SET full_name = '' WHERE id = $1"}},
+			sql:  "UPDATE contact SET full_name = '' WHERE id = $1",
+			want: []write{{table: "contact", text: "UPDATE contact SET full_name = '' WHERE id = $1"}},
 		}, {
 			// The approval redaction's shape. Read whole, the first target
 			// owns every SET clause: workflow_run's assignments become

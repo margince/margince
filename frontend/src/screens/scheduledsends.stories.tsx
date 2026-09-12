@@ -9,12 +9,12 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // The queue behind "send later": what a rep has written that has not gone out
 // yet, and the two things they can do about it.
 //
-// It is one person's own list — an unsent body and its blind-copy list are not
+// It is one contact's own list — an unsent body and its blind-copy list are not
 // workspace-readable the way a sent activity is — so there is no owner column
 // here and no sharing affordance, and none of these stories is about a role.
 //
 // The three groups are the reading, not a filter: `held` first because it is the
-// only one waiting on a person, `scheduled` as the queue proper, and everything
+// only one waiting on a contact, `scheduled` as the queue proper, and everything
 // settled below them. A rep with nothing scheduled reads ONE sentence rather
 // than three empty blocks, which is `NothingScheduled`.
 const meta: Meta = {

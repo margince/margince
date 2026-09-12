@@ -106,23 +106,23 @@ func assertAcceptHTTPHappyPath(t *testing.T, e *apptest.AppEnv, attID, dealID, r
 	}
 }
 
-// assertAcceptHTTPNonDeal422 uploads a person-scoped attachment and checks
+// assertAcceptHTTPNonDeal422 uploads a contact-scoped attachment and checks
 // the typed unsupported_entity_type refusal.
 func assertAcceptHTTPNonDeal422(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Attachment Holder", "source": "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
-	personAtt := uploadAttachmentHTTP(t, e, "person", person["id"].(string), "cv.pdf")
+	contactAtt := uploadAttachmentHTTP(t, e, "contact", contact["id"].(string), "cv.pdf")
 
 	// The entity-type refusal fires before the accept resolves a reading, so a
-	// person-scoped attachment needs none — and naming one it could not have is
+	// contact-scoped attachment needs none — and naming one it could not have is
 	// what proves the order.
 	var problem acceptProblemWire
-	status := e.Call(t, "POST", "/v1/attachments/"+personAtt+"/extraction:accept", AnyMap{
+	status := e.Call(t, "POST", "/v1/attachments/"+contactAtt+"/extraction:accept", AnyMap{
 		"extraction_id": ids.NewV7().String(), "field_keys": []string{"amount_minor"},
 	}, nil, &problem)
 	if status != http.StatusUnprocessableEntity || problem.Code != "unsupported_entity_type" {

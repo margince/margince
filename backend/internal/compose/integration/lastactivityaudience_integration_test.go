@@ -29,8 +29,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,11 +40,11 @@ import (
 func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Held Clock Company", nil)
-	person := e.SeedPerson(t, "Held Clock Contact", nil)
-	personID := ids.From[ids.PersonKind](person)
+	contact := e.SeedContact(t, "Held Clock Contact", nil)
+	contactID := ids.From[ids.ContactKind](contact)
 	companyID := ids.From[ids.CompanyKind](company)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 		IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	links := []activities.ActivityLinkInput{
-		{EntityType: "person", EntityID: person},
+		{EntityType: "contact", EntityID: contact},
 		{EntityType: "company", EntityID: company},
 		{EntityType: "deal", EntityID: ids.UUID(deal.Id)},
 		{EntityType: "project", EntityID: project},
@@ -73,7 +73,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	// Every clock sits on the newest message while it is open. Asserted before
 	// narrowing, so a later "the clock is at `older`" cannot pass because the
 	// newest message never registered at all.
-	for name, got := range e.everyClock(t, personID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
+	for name, got := range e.everyClock(t, contactID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
 		if got == nil || !got.Equal(newest) {
 			t.Fatalf("%s clock = %v before narrowing, want %v — the fixture never took effect",
 				name, got, newest)
@@ -85,7 +85,7 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 		t.Fatalf("narrowing the newest message: %v", err)
 	}
 
-	for name, got := range e.everyClock(t, personID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
+	for name, got := range e.everyClock(t, contactID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
 		if got == nil || !got.Equal(older) {
 			t.Errorf("%s clock = %v after narrowing the newest message, want %v: a colleague "+
 				"who cannot read that message is still told it happened", name, got, older)
@@ -98,11 +98,11 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 	// nothing at all would pass the test above.
 	e := Setup(t)
 	company := e.SeedCompany(t, "Widen Clock Company", nil)
-	person := e.SeedPerson(t, "Widen Clock Contact", nil)
-	personID := ids.From[ids.PersonKind](person)
+	contact := e.SeedContact(t, "Widen Clock Contact", nil)
+	contactID := ids.From[ids.ContactKind](contact)
 	companyID := ids.From[ids.CompanyKind](company)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, CompanyID: &companyID,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &companyID,
 		IsCurrentPrimary: boolPtr(true), Source: "manual",
 	}); err != nil {
 		t.Fatal(err)
@@ -110,15 +110,15 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
-	held := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
+	held := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 
 	heldID := ids.From[ids.ActivityKind](held)
 	if _, err := e.Activities.SetAudience(e.Admin(), heldID,
 		activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("narrowing: %v", err)
 	}
-	if got := e.personClock(t, personID); got == nil || !got.Equal(older) {
+	if got := e.contactClock(t, contactID); got == nil || !got.Equal(older) {
 		t.Fatalf("clock = %v while the newest message is held, want %v", got, older)
 	}
 
@@ -126,7 +126,7 @@ func TestLastActivityAudience_WideningTheMessageMovesTheClockForward(t *testing.
 		activities.SetAudienceInput{Audience: "workspace"}); err != nil {
 		t.Fatalf("widening: %v", err)
 	}
-	if got := e.personClock(t, personID); got == nil || !got.Equal(newest) {
+	if got := e.contactClock(t, contactID); got == nil || !got.Equal(newest) {
 		t.Errorf("clock = %v after re-opening the message, want %v: widening must move the "+
 			"clock forward again, or a mistaken hold is permanent", got, newest)
 	}
@@ -144,12 +144,12 @@ func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
 	// the activity trigger and move the clock back for the wrong reason,
 	// leaving this test green against a link trigger that did nothing.
 	e := Setup(t)
-	person := e.SeedPerson(t, "Born Held Contact", nil)
-	personID := ids.From[ids.PersonKind](person)
+	contact := e.SeedContact(t, "Born Held Contact", nil)
+	contactID := ids.From[ids.ContactKind](contact)
 
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 
 	// Unlinked, so no clock has heard of it yet.
 	born := ids.NewV7()
@@ -157,16 +157,16 @@ func TestLastActivityAudience_AMessageBornHeldNeverMovesTheClock(t *testing.T) {
 		INSERT INTO activity (id, kind, subject, audience, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'born held', 'participants', $2, 'manual', 'human:test')`,
 		born, newest)
-	if got := e.personClock(t, personID); got == nil || !got.Equal(older) {
+	if got := e.contactClock(t, contactID); got == nil || !got.Equal(older) {
 		t.Fatalf("clock = %v before the link exists, want %v — the fixture is not isolating "+
 			"the link trigger", got, older)
 	}
 
 	e.WsExec(t, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, born, person)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, born, contact)
 
-	if got := e.personClock(t, personID); got == nil || !got.Equal(older) {
+	if got := e.contactClock(t, contactID); got == nil || !got.Equal(older) {
 		t.Errorf("clock = %v after linking a message that was born held, want %v: the link "+
 			"trigger counted an activity nobody but its participants may read", got, older)
 	}
@@ -178,27 +178,27 @@ func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
 	// four tables and suppresses itself only inside a clock move's own guard
 	// setting, which move_last_activity sets and a bare UPDATE does not. A
 	// recompute written as a plain UPDATE would bump version on every deal,
-	// company, person and project in the installation, invalidating every
+	// company, contact and project in the installation, invalidating every
 	// If-Match a client holds.
 	//
 	// Its sibling next door asserts the same property for an ordinary clock
 	// move; this is the audience-driven one, which reaches the same movers by a
 	// different route.
 	e := Setup(t)
-	person := e.SeedPerson(t, "Version Clock Contact", nil)
-	personID := ids.From[ids.PersonKind](person)
+	contact := e.SeedContact(t, "Version Clock Contact", nil)
+	contactID := ids.From[ids.ContactKind](contact)
 
 	older := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	newest := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
-	held := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "person", EntityID: person})
+	e.logAt(t, older, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
+	held := e.logAt(t, newest, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 
-	before, err := e.People.GetPerson(e.Admin(), personID, storekit.LiveOnly)
+	before, err := e.Contacts.GetContact(e.Admin(), contactID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if before.Version == nil {
-		t.Fatal("a created person carries a version")
+		t.Fatal("a created contact carries a version")
 	}
 
 	if _, err := e.Activities.SetAudience(e.Admin(), ids.From[ids.ActivityKind](held),
@@ -206,7 +206,7 @@ func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
 		t.Fatalf("narrowing: %v", err)
 	}
 
-	after, err := e.People.GetPerson(e.Admin(), personID, storekit.LiveOnly)
+	after, err := e.Contacts.GetContact(e.Admin(), contactID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +215,7 @@ func TestLastActivityAudience_AClockMoveIsNotAnEdit(t *testing.T) {
 			after.LastActivityAt, older)
 	}
 	if after.Version == nil || *after.Version != *before.Version {
-		t.Errorf("person.version = %v after a clock move, want %v unchanged: a client holding "+
+		t.Errorf("contact.version = %v after a clock move, want %v unchanged: a client holding "+
 			"the old version would be refused an edit it is entitled to make",
 			after.Version, *before.Version)
 	}
@@ -237,10 +237,10 @@ func (e *Env) logAt(t *testing.T, when time.Time, links ...activities.ActivityLi
 // everyClock reads all four stored last_activity_at values, keyed by the table
 // they came from so a failure names which helper is wrong.
 func (e *Env) everyClock(
-	t *testing.T, person ids.PersonID, company ids.CompanyID, deal ids.DealID, project ids.UUID,
+	t *testing.T, contact ids.ContactID, company ids.CompanyID, deal ids.DealID, project ids.UUID,
 ) map[string]*time.Time {
 	t.Helper()
-	record, err := e.People.GetCompany(e.Admin(), company, storekit.LiveOnly)
+	record, err := e.Contacts.GetCompany(e.Admin(), company, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,20 +249,20 @@ func (e *Env) everyClock(
 		t.Fatal(err)
 	}
 	return map[string]*time.Time{
-		"person":  e.personClock(t, person),
+		"contact": e.contactClock(t, contact),
 		"company": record.LastActivityAt,
 		"deal":    got.LastActivityAt,
 		"project": e.projectClock(t, project),
 	}
 }
 
-func (e *Env) personClock(t *testing.T, id ids.PersonID) *time.Time {
+func (e *Env) contactClock(t *testing.T, id ids.ContactID) *time.Time {
 	t.Helper()
-	person, err := e.People.GetPerson(e.Admin(), id, storekit.LiveOnly)
+	contact, err := e.Contacts.GetContact(e.Admin(), id, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return person.LastActivityAt
+	return contact.LastActivityAt
 }
 
 // projectClock reads the column directly: project has no read surface in this

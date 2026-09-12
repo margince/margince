@@ -57,8 +57,8 @@ describe("edit record flow", () => {
         fields={fields}
         record={record}
         update={vi.fn(async () => record)}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage="Saved."
       />,
     );
@@ -76,8 +76,8 @@ describe("edit record flow", () => {
         fields={fields}
         record={record}
         update={update}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage="Saved."
       />,
     );
@@ -94,7 +94,7 @@ describe("edit record flow", () => {
   // what the user typed is the bug this pins.
   const twoFields = [
     { key: "full_name", label: "create.fullName" as const, required: true },
-    { key: "title", label: "create.personTitle" as const },
+    { key: "title", label: "create.contactTitle" as const },
   ];
   const twoFieldRecord = {
     id: "p1",
@@ -155,8 +155,8 @@ describe("edit record flow", () => {
         fields={fields}
         record={record}
         update={update}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage="Saved."
       />,
     );
@@ -175,8 +175,8 @@ describe("edit record flow", () => {
         fields={fields}
         record={record}
         update={update}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage="Saved."
       />,
     );
@@ -203,8 +203,8 @@ describe("what a save says", () => {
           ...record,
           full_name: String(values.full_name),
         })}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage={(saved) => `${saved.full_name} saved`}
       />,
     );
@@ -229,8 +229,8 @@ describe("what a save says", () => {
         fields={fields}
         record={record}
         update={async () => throwProblem({ detail: "the record is locked" })}
-        invalidate="people"
-        recordKey="person"
+        invalidate="contacts"
+        recordKey="contact"
         savedMessage="Saved."
       />,
     );
@@ -245,11 +245,11 @@ describe("what a save says", () => {
 describe("what an edit is a reading of", () => {
   // The guard this defeats is the whole reason the version column exists.
   //
-  // A background refetch mid-edit — another person's save, a websocket
+  // A background refetch mid-edit — another contact's save, a websocket
   // invalidation, a window refocus — advances the record the screen renders
-  // from while the form's own values stay as the person left them. If the
+  // from while the form's own values stay as the contact left them. If the
   // write takes its version from the LIVE record, the server's concurrency
-  // check compares the other person's version against itself and passes: the
+  // check compares the other contact's version against itself and passes: the
   // 409 that should have said "somebody changed this while you were editing"
   // cannot fire, and the overwrite lands silently.
   //
@@ -279,8 +279,8 @@ describe("what an edit is a reading of", () => {
             fields={fields}
             record={record}
             savedMessage="saved"
-            invalidate="people"
-            recordKey="person"
+            invalidate="contacts"
+            recordKey="contact"
             update={async (_values, _rows, opened) => {
               seen.push({ opened, live: record });
               return { id: "p1" };
@@ -319,7 +319,7 @@ describe("what an edit is a reading of", () => {
   });
 
   // The same reading has to be the diff baseline, or an untouched field whose
-  // value moved under the dialog reads as this person's edit and is sent —
+  // value moved under the dialog reads as this contact's edit and is sent —
   // overwriting a change nobody here made.
   // A screen can swap the record under an open dialog without remounting it.
   // The form is then showing one record's
@@ -347,8 +347,8 @@ describe("what an edit is a reading of", () => {
             fields={fields}
             record={record}
             savedMessage="saved"
-            invalidate="people"
-            recordKey="person"
+            invalidate="contacts"
+            recordKey="contact"
             update={async (_values, _rows, opened) => {
               seen.push({ opened, live: record });
               return { id: "p1" };

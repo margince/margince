@@ -12,7 +12,7 @@ const DAY = 24 * HOUR;
 
 describe("daysPast", () => {
   it("calls a promise late the instant it passes, not a day later", () => {
-    // The case the person card got wrong: 23 hours past due is zero WHOLE days
+    // The case the contact card got wrong: 23 hours past due is zero WHOLE days
     // past due and unambiguously late. Every other surface — the task list,
     // shared/kernel/deadline, the SQL — has always said so.
     expect(daysPast(NOW - 23 * HOUR, NOW)).toEqual({ days: 0, late: true });

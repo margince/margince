@@ -7,7 +7,7 @@ package knowledge
 //
 // The product ships prose about itself, so the question "how do I reopen a
 // closed deal" has an answer on the installation rather than only in a
-// repository the person asking cannot see. The corpus is therefore not seeded
+// repository the contact asking cannot see. The corpus is therefore not seeded
 // once at install: it is reconciled on every boot, because the handbook belongs
 // to the RELEASE and an upgrade that left the old pages in place would answer
 // questions about a version that is no longer running — with a citation, which

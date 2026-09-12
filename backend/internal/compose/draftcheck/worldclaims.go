@@ -35,7 +35,7 @@ type Grounds struct {
 // Checked at every band, which is what separates this list from assumedMemory
 // above. "As discussed" at band fresh is ordinary: an exchange is running and
 // both sides are holding it. "It was a pleasure connecting earlier this week"
-// is a different claim entirely — it says two people SPOKE, on a date, and
+// is a different claim entirely — it says two contacts SPOKE, on a date, and
 // nothing in any drafting input can support that. The 360 carries activities;
 // a meeting the drafter can see is one on the calendar, and a calendar entry is
 // not evidence that it took place or that anyone enjoyed it.
@@ -75,9 +75,9 @@ var spokenExchange = map[textlang.Lang][]string{
 // attributedClaim are the ways a draft puts words in the recipient's mouth.
 //
 // Also every band, and for the same reason. A drafting surface knows what its
-// input said, never who said it: an activity reaches a person or an account
+// input said, never who said it: an activity reaches a contact or an account
 // through links that record what a message CONCERNS rather than who wrote it,
-// and no 360 carries participants. The person and account prompts both state
+// and no 360 carries participants. The contact and account prompts both state
 // this ("say 'the question about X' and never 'you wrote'"), which is exactly
 // why it needs a check — a rule the prompt states is a rule the model has
 // already been observed breaking three times in this program.
@@ -106,7 +106,7 @@ var attributedClaim = map[textlang.Lang][]string{
 //
 // Checked only where nothing is booked, which is what separates it from
 // spokenExchange above. With a meeting on file "am Donnerstag" is the drafter
-// doing its job — the person prompt asks for exactly that phrasing over a
+// doing its job — the contact prompt asks for exactly that phrasing over a
 // timestamp. With none, the same words hand a customer an appointment nobody
 // made.
 //

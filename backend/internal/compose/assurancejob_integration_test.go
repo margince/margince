@@ -97,7 +97,7 @@ func (e *assuranceJobEnv) run(t *testing.T) error {
 }
 
 // latestRun is the read the Forecast tab opens on, taken as an ordinary seat
-// rather than as the fleet: what this ticket is about is what a PERSON gets.
+// rather than as the fleet: what this ticket is about is what a CONTACT gets.
 func (e *assuranceJobEnv) latestRun(t *testing.T) (assurance.Run, error) {
 	t.Helper()
 	return assurance.NewStore(InstallationDB(e.Pool)).LatestRun(e.Admin())

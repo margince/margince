@@ -8,7 +8,7 @@ package integration
 // Applying a proposal because its owner said to, and the four cases where it
 // must not.
 //
-// Every claim here is SQL: whose policy was consulted, whether that person is
+// Every claim here is SQL: whose policy was consulted, whether that contact is
 // still live, and what the decision wrote. A unit test with hand-built rows
 // could not fail on any of them — and the refusals are the half that matters,
 // because a sweep that applied nothing would pass a refusal-only suite while
@@ -153,7 +153,7 @@ func TestAProposalAppliesWhenItsOwnerSaidSo(t *testing.T) {
 		t.Errorf("status = %q, want approved", status)
 	}
 	if !bySystem {
-		t.Error("the row does not say the system decided it, so the receipt would name a person who was never asked")
+		t.Error("the row does not say the system decided it, so the receipt would name a contact who was never asked")
 	}
 }
 
@@ -175,7 +175,7 @@ func TestAProposalWaitsWhenNobodyOptedIn(t *testing.T) {
 		t.Fatalf("applied %d proposals, want none — nobody opted in", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
-		t.Errorf("status = %q, want the proposal still waiting for a person", status)
+		t.Errorf("status = %q, want the proposal still waiting for a contact", status)
 	}
 }
 
@@ -230,7 +230,7 @@ func TestAProposalWhoseOwnerHasLeftDoesNotApply(t *testing.T) {
 		t.Fatalf("applied %d proposals, want none — the owner is no longer live", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
-		t.Errorf("status = %q, want the proposal left for a person to answer", status)
+		t.Errorf("status = %q, want the proposal left for a contact to answer", status)
 	}
 }
 
@@ -255,7 +255,7 @@ func TestAnIneligibleKindNeverApplies(t *testing.T) {
 // Auto-apply is allowed to happen without asking BECAUSE the rep can undo it,
 // so a change the restore path cannot reverse is not a change this may make.
 // Nothing new reverses it — the audit row the apply wrote goes back through the
-// same record-history restore a person's Undo button uses, which is the point
+// same record-history restore a contact's Undo button uses, which is the point
 // of computing reversibility rather than storing a flag beside the approval.
 //
 // A company rename rather than a close date, and deliberately: a confirmed close
@@ -269,7 +269,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	svc := approvals.NewService(e.DB())
 	company := e.SeedCompany(t, "Weber GmbH", &e.Rep1)
 	grantCompanyRepRole(t, e, e.Rep1)
-	// A promotion only overrides a name the DOMAIN produced — a name a person
+	// A promotion only overrides a name the DOMAIN produced — a name a contact
 	// typed outranks a signature, and the store refuses to touch it. The seed
 	// leaves another source, so the fixture states the precondition the
 	// promotion is actually about rather than silently proving nothing.
@@ -311,7 +311,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	// The write is recorded against a MACHINE and carries the owner it acted
 	// for. Which machine is the effect's own business — a company rename stamps
 	// its provenance as the signature it read, not as the pass that released
-	// it — but no automatic write may be recorded as a person having typed it,
+	// it — but no automatic write may be recorded as a contact having typed it,
 	// because the receipts lane's whole claim is that nobody was asked.
 	var auditID ids.UUID
 	var actor string
@@ -323,7 +323,7 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 		t.Fatalf("finding the audit row the apply wrote: %v", err)
 	}
 	if strings.HasPrefix(actor, "human:") {
-		t.Errorf("the change is recorded against %q — a person is named for a write nobody was asked about", actor)
+		t.Errorf("the change is recorded against %q — a contact is named for a write nobody was asked about", actor)
 	}
 	if onBehalfOf == nil || *onBehalfOf != e.Rep1 {
 		t.Errorf("on_behalf_of = %v, want the owner whose policy authorized it", onBehalfOf)
@@ -335,13 +335,13 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 		t.Fatalf("reading the record version: %v", err)
 	}
 
-	// A PERSON undoes it, through the record-history restore a rep's Undo
+	// A CONTACT undoes it, through the record-history restore a rep's Undo
 	// button uses. The route is human-only, which is the other half of the
 	// bargain: the machine may apply without asking, and only somebody who can
 	// see the record may put it back.
 	// The undoing rep's authority is RESOLVED, not declared. The machine got
 	// its grants from role_assignment through EffectiveAuthority, so a
-	// hand-written Permissions here would put the person on a different footing
+	// hand-written Permissions here would put the contact on a different footing
 	// and the test would pass even if grantCompanyRepRole granted the wrong thing.
 	// Same call, same source, both sides.
 	rbac, seat, err := identity.NewService(e.Pool).EffectiveAuthority(
@@ -400,7 +400,7 @@ func grantCompanyRepRole(t *testing.T, e *Env, user ids.UUID) {
 // sweep steps over it and keeps going.
 //
 // "Stranded" is about the WRITE, not the decision: the decision commits and the
-// effect then fails, exactly as it does when a person clicks approve on a stale
+// effect then fails, exactly as it does when a colleague clicks approve on a stale
 // pin. What this holds is that the failure stays with its own row.
 func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 	e := Setup(t)
@@ -448,6 +448,6 @@ func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if failure == nil {
-		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a person")
+		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a contact")
 	}
 }

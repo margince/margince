@@ -11,7 +11,7 @@ package consent
 // product already holds and the verdict derives them itself.
 //
 // The fourth happened away from every system. Somebody handed over a card at a
-// trade fair, and the only record of it is the memory of the person who was
+// trade fair, and the only record of it is the memory of the contact who was
 // there. This is where they write it down — and the note is required, because
 // there is no message to cite and no deal to point at, so the note IS the
 // evidence. A basis nobody can check is not accountability.
@@ -43,7 +43,7 @@ import (
 // first case sends a derived kind and requires the refusal.
 const kindInPerson = "in_person"
 
-// KindRequestedBySubject is the person asking us to write to them, away from
+// KindRequestedBySubject is the contact asking us to write to them, away from
 // every system: a phone call, a conversation at a counter, a message on a
 // channel this product does not capture.
 //
@@ -71,7 +71,7 @@ var handRecordedKinds = map[string]bool{
 
 // KindMeeting is the event derived from a meeting the subject was in
 // (qualifyingground.go). Exported because the capture ladder reads the same
-// fact — a person we are meeting is a counterparty — and one spelling of the
+// fact — a contact we are meeting is a counterparty — and one spelling of the
 // word is what stops the two answers drifting apart.
 const KindMeeting = "meeting"
 
@@ -91,7 +91,7 @@ const fieldOccurredAt = "occurred_at"
 // before a date reads as a claim about the future rather than a fast watch.
 const clockSkewAllowance = 5 * time.Minute
 
-// RecordQualifyingEventInput is one exchange, as the person who was there
+// RecordQualifyingEventInput is one exchange, as the contact who was there
 // states it.
 type RecordQualifyingEventInput struct {
 	Kind       string
@@ -102,11 +102,11 @@ type RecordQualifyingEventInput struct {
 // RecordQualifyingEvent writes the exchange and returns it as it now stands.
 //
 // Gated on the SUBJECT rather than on a consent object: what this asserts is a
-// fact about a person, it changes what may be sent to them, and the authority
+// fact about a contact, it changes what may be sent to them, and the authority
 // to make that assertion is the authority to write their record.
 func (s *Store) RecordQualifyingEvent(
 	ctx context.Context,
-	personID ids.PersonID,
+	contactID ids.ContactID,
 	in RecordQualifyingEventInput,
 ) (QualifyingEvent, error) {
 	if !handRecordedKinds[in.Kind] {
@@ -144,13 +144,13 @@ func (s *Store) RecordQualifyingEvent(
 		}
 	}
 	// Human-only HERE, not only on the route: an agent never asserts that a
-	// person met somebody. The REST gate refuses the route today, and an
+	// contact met somebody. The REST gate refuses the route today, and an
 	// in-process caller carrying an agent principal would otherwise reach this
 	// exported method with nothing between it and the row.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return QualifyingEvent{}, err
 	}
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return QualifyingEvent{}, err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -160,10 +160,10 @@ func (s *Store) RecordQualifyingEvent(
 
 	out := QualifyingEvent{Kind: in.Kind, Note: note, OccurredAt: in.OccurredAt}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The row-scope probe first: this changes what may be SENT to a person,
+		// The row-scope probe first: this changes what may be SENT to a contact,
 		// which is a change to their record however little of the row it
 		// touches.
-		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		// The same exchange, re-sent, is one exchange. A retry — a double click,
@@ -171,18 +171,18 @@ func (s *Store) RecordQualifyingEvent(
 		// claiming a second meeting happened, because the rows ARE the legal
 		// evidence and a duplicated one is a claim nobody made.
 		//
-		// Matched on the person, the moment and the words: two genuinely
-		// different exchanges with the same person do not share all three.
+		// Matched on the contact, the moment and the words: two genuinely
+		// different exchanges with the same contact do not share all three.
 		var inserted bool
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
-				(person_id, kind, note, occurred_at, source, captured_by)
+				(contact_id, kind, note, occurred_at, source, captured_by)
 			SELECT $1, $2, $3, $4, 'human', $5
 			 WHERE NOT EXISTS (
 				SELECT 1 FROM consent_qualifying_event
-				 WHERE person_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
+				 WHERE contact_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
 			RETURNING true`,
-			personID, in.Kind, note, in.OccurredAt, by).Scan(&inserted); err != nil {
+			contactID, in.Kind, note, in.OccurredAt, by).Scan(&inserted); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Already on file. The caller's claim stands, and nothing was
 				// written twice — so there is nothing to audit either.
@@ -195,11 +195,11 @@ func (s *Store) RecordQualifyingEvent(
 		// auditor asks — who said this happened, and what did they say — is a
 		// row question rather than a subscriber's.
 		//
-		// The entity is `person`, which is the row the caller was authorized
+		// The entity is `contact`, which is the row the caller was authorized
 		// against and the row this changes the sendability of. Naming
-		// `person_consent` would have put a rule in the trail
-		// (`person_consent.create`) that authorized nothing here.
-		_, err := storekit.AuditEvent(ctx, tx, "update", "person", personID.UUID, map[string]any{
+		// `contact_consent` would have put a rule in the trail
+		// (`contact_consent.create`) that authorized nothing here.
+		_, err := storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
 			"qualifying_event": in.Kind,
 			fieldNote:          note,
 			fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),

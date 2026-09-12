@@ -46,7 +46,7 @@ func tokenPrefixes() []string {
 		// logged — it is the only admission check on a route that WRITES. But
 		// it is a public identifier the host hands out, not a mailed token, so
 		// its answers disclose the host's availability rather than a named
-		// person's record, and no case in the census drives them.
+		// contact's record, and no case in the census drives them.
 		//
 		// noStoreOnCredentialPaths does stamp them, and compose's own
 		// TestEveryCredentialPathAnswersUncacheable asserts that for every

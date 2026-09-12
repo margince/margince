@@ -118,7 +118,7 @@ describe("contact create flow", () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "POST /people": (body) =>
+        "POST /contacts": (body) =>
           jsonResponse(
             {
               id: "p-new",
@@ -140,7 +140,7 @@ describe("contact create flow", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Primary" }));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
-    const post = captured.find((entry) => entry.key === "POST /people");
+    const post = captured.find((entry) => entry.key === "POST /contacts");
     expect(post?.body).toMatchObject({
       full_name: "Peter Neu",
       source: "manual",
@@ -151,13 +151,13 @@ describe("contact create flow", () => {
   });
 
   // A WORK primary and a PERSONAL primary are independent, matching what the
-  // server itself enforces (personformfields.ts's personEditFields: only a
+  // server itself enforces (contactformfields.ts's contactEditFields: only a
   // SAME-type primary swap is refused).
   it("keeps a WORK primary and a PERSONAL primary independent", async () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "POST /people": (body) =>
+        "POST /contacts": (body) =>
           jsonResponse(
             {
               id: "p-new",
@@ -200,7 +200,7 @@ describe("contact create flow", () => {
 
     await user.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
-    const post = captured.find((entry) => entry.key === "POST /people");
+    const post = captured.find((entry) => entry.key === "POST /contacts");
     expect(post?.body).toMatchObject({
       emails: [
         {
@@ -278,7 +278,7 @@ describe("contact create flow", () => {
 
   it("renders the server's 422 detail verbatim and stays open", async () => {
     stubApi({
-      "POST /people": () =>
+      "POST /contacts": () =>
         jsonResponse(
           { title: "Unprocessable", detail: "full_name must not be blank" },
           422,
@@ -317,7 +317,7 @@ describe("multiselect CreateField", () => {
       options: [
         { value: "deal.created", label: "Deal created" },
         { value: "deal.won", label: "Deal won" },
-        { value: "person.created", label: "Person created" },
+        { value: "contact.created", label: "Contact created" },
       ],
     },
   ];
@@ -356,7 +356,7 @@ describe("multiselect CreateField", () => {
     );
     await userEvent.type(screen.getByLabelText("Name *"), "Peter");
     await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByLabelText("Person created"));
+    await userEvent.click(screen.getByLabelText("Contact created"));
     // toggling back off removes it from the collected selection
     await userEvent.click(screen.getByLabelText("Deal created"));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -365,7 +365,7 @@ describe("multiselect CreateField", () => {
     const [values] = onSubmit.mock.calls[0] as [Record<string, string>];
     expect(values.name).toBe("Peter");
     expect(splitMultiselectValue(values.event_types)).toEqual([
-      "person.created",
+      "contact.created",
     ]);
   });
 });

@@ -4,7 +4,7 @@
 package compose
 
 // The auto-enrich daily cap paces how many companies a backfill day can mint.
-// Sizing it wrong in either direction is visible only days later — people
+// Sizing it wrong in either direction is visible only days later — contacts
 // without companies, or a crawler burst — so the resolution rules are pinned
 // here: absent and zero take the compiled default, a positive integer replaces
 // it, and anything else refuses rather than silently pacing at the default.

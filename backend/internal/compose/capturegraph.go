@@ -87,7 +87,7 @@ func newGraphOAuth(c GraphConfig) graph.OAuth {
 // newGraphCalOAuth builds the Microsoft CALENDAR authorization on the same app.
 //
 // A separate authorization requesting the calendar permission alone, exactly as
-// the Google pair splits Gmail from Calendar: one consent each, so a person can
+// the Google pair splits Gmail from Calendar: one consent each, so a contact can
 // bring their calendar without their mail, and disconnecting either leaves the
 // other standing. The scopes are read from the graphcal package rather than
 // restated here, so the consent requests exactly the permissions that connector
@@ -200,7 +200,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		// The env-composed clients exist only where the ENVIRONMENT actually
 		// carries the app. Built unconditionally they are usable-looking clients
 		// holding an empty client id, and the fallback would reach for them the
-		// moment the stored app is not servable — sending a person to Microsoft's
+		// moment the stored app is not servable — sending a contact to Microsoft's
 		// consent screen with `client_id=`, which fails there rather than here and
 		// gives them nothing to act on.
 		if c.canSync() {

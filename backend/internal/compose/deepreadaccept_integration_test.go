@@ -29,7 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -55,8 +55,8 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 	// being judged against a precondition no human could have created, and a
 	// drift in captured_by, in source, or in that derivation would have left
 	// this case green while production moved.
-	humanService := people.FactCreateInput{Category: "offering", Field: "service", Value: "CRM Rollout"}
-	if _, err := people.NewStore(e.DB()).CreateCompanyFact(
+	humanService := contacts.FactCreateInput{Category: "offering", Field: "service", Value: "CRM Rollout"}
+	if _, err := contacts.NewStore(e.DB()).CreateCompanyFact(
 		e.As(e.Rep1, nil, integration.AdminPerms), ids.From[ids.CompanyKind](company), humanService,
 	); err != nil {
 		t.Fatalf("seeding the human-claimed service fact: %v", err)
@@ -109,10 +109,10 @@ func TestDeepReadOfferingsDedupeOnValueKeyAndTheApplyRespectsHumanPrecedence(t *
 
 func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	employeeRangeFact := func(value string) []people.DeepReadFact {
-		return []people.DeepReadFact{{
+	employeeRangeFact := func(value string) []contacts.DeepReadFact {
+		return []contacts.DeepReadFact{{
 			Category: "company", Field: "employee_range", Value: value,
 			EvidenceSnippet: "our team of " + value, SourceURL: "https://acme.example/about", Confidence: 0.9,
 		}}
@@ -130,7 +130,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 
 	// A cleanly-phrased range fills the chip's column on accept.
 	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
+	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](company),
 		SourceURL: "https://acme.example",
 		Facts:     employeeRangeFact("25 to 50"),
@@ -142,10 +142,10 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	}
 
 	// A later read never overwrites the standing value — fill-once.
-	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
+	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](company),
 		SourceURL: "https://acme.example",
-		Facts:     employeeRangeFact("about 300 people"),
+		Facts:     employeeRangeFact("about 300 contacts"),
 	}); err != nil {
 		t.Fatalf("second ApplyDeepRead: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	// A range spanning two bands abstains: the fact lands as evidence, the
 	// column stays empty rather than holding a guess.
 	vague := insertCompany(t, e, e.Rep1, "vague.example", "")
-	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
+	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](vague),
 		SourceURL: "https://vague.example",
 		Facts:     employeeRangeFact("50-200 employees"),
@@ -187,14 +187,14 @@ func TestAcceptedEmployeeRangeFactFillsSizeBandWhenUnambiguous(t *testing.T) {
 	// CreateCompanyFact makes, and a fixture that merely resembles one
 	// keeps passing after the writer's shape has moved.
 	if _, err := store.CreateCompanyFact(ctx, ids.From[ids.CompanyKind](claimed),
-		people.FactCreateInput{Category: "company", Field: "employee_range", Value: "11-50"},
+		contacts.FactCreateInput{Category: "company", Field: "employee_range", Value: "11-50"},
 	); err != nil {
 		t.Fatalf("seeding the human-claimed employee_range fact: %v", err)
 	}
-	if err := store.ApplyDeepRead(ctx, people.DeepReadProposal{
+	if err := store.ApplyDeepRead(ctx, contacts.DeepReadProposal{
 		CompanyID: ids.From[ids.CompanyKind](claimed),
 		SourceURL: "https://claimed.example",
-		Facts:     employeeRangeFact("about 300 people"),
+		Facts:     employeeRangeFact("about 300 contacts"),
 	}); err != nil {
 		t.Fatalf("ApplyDeepRead against a human-claimed fact: %v", err)
 	}
@@ -243,8 +243,8 @@ func (f *fakeInserter) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs
 
 func newDeepReadTestEngine(e *integration.Env, inserter *fakeInserter) *deepReadEngine {
 	return &deepReadEngine{
-		people:  e.People,
-		enqueue: inserter,
+		contacts: e.Contacts,
+		enqueue:  inserter,
 	}
 }
 
@@ -267,8 +267,8 @@ func postDeepRead(t *testing.T, e *integration.Env, engine *deepReadEngine, call
 
 // servicesOfferings is what the services fixture evidences: one service and
 // one product, already deduped on their value keys.
-func servicesOfferings() []people.DeepReadFact {
-	return []people.DeepReadFact{
+func servicesOfferings() []contacts.DeepReadFact {
+	return []contacts.DeepReadFact{
 		{
 			Category: "offering", Field: "service",
 			Value: "CRM Rollout — implementation projects", ValueKey: "crm rollout",

@@ -7,7 +7,7 @@ package consent
 // may receive in a rolling window, and why the count is of messages that were
 // actually delivered.
 //
-// A cap is a fact about VOLUME rather than about a person. Nothing the
+// A cap is a fact about VOLUME rather than about a contact. Nothing the
 // recipient did refuses the message, and the same message becomes lawful again
 // once the window rolls — which is why a cap refusal is not one of the absolute
 // denials and why its reason code says so.
@@ -181,7 +181,7 @@ func normalizeCapAddress(address string) string {
 // observe mode (which records what the engine would have said while the old
 // gate ruled) and a delivery that was staged and then parked — both of which
 // describe a message nobody received. Counting either would consume somebody's
-// statutory allowance for mail that never arrived, and the person would be
+// statutory allowance for mail that never arrived, and the contact would be
 // silenced for a day by an accounting error. So a delivered message is a
 // comms_outbound row that reached 'sent' joined to its own transmit decision:
 // the delivery says it went, the decision says what it was.
@@ -202,7 +202,7 @@ func normalizeCapAddress(address string) string {
 // Art. 17 erasure rewrites recipient_address to a placeholder, so a subject's
 // advertising history stops matching this count and a re-captured address
 // starts from zero. That is the right answer — the count is evidence about a
-// person, and erasure is meant to destroy it — but it is worth saying, because
+// contact, and erasure is meant to destroy it — but it is worth saying, because
 // nothing else in this file would tell a reader that another engine can empty
 // the record the ceiling rests on.
 func advertisingMessagesReceived(ctx context.Context, tx pgx.Tx, address string, since time.Time) (int, error) {

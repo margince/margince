@@ -25,7 +25,7 @@ function aWaitingBuyer(over = {}) {
     band: "now",
     destination: "today",
     actions: ["open", "reply"],
-    subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000c2" },
+    subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000c2" },
     ...over,
   });
 }

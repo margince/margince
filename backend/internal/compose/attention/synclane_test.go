@@ -35,7 +35,7 @@ func TestASyncConcernCarriesItsConditionAndItsFacts(t *testing.T) {
 	svc := syncLaneService(&stubSyncHealth{rows: []SyncConcern{
 		{Kind: "sync_failing", ErrorClass: "auth", Failures: 4},
 		{Kind: "budget_degraded", Band: "shed"},
-		{Kind: "objects_stale", Objects: []string{"deal", "person"}},
+		{Kind: "objects_stale", Objects: []string{"deal", "contact"}},
 	}})
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -50,7 +50,7 @@ func TestASyncConcernCarriesItsConditionAndItsFacts(t *testing.T) {
 	for i, want := range []struct{ kind, detail string }{
 		{"sync_failing", "auth"},
 		{"budget_degraded", "shed"},
-		{"objects_stale", "deal, person"},
+		{"objects_stale", "deal, contact"},
 	} {
 		item := (*out.SyncHealth)[i]
 		if item.Source != crmcontracts.AttentionItemSource("sync_health") {

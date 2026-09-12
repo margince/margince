@@ -237,16 +237,16 @@ func TestADisagreementBetweenTheTwoServerPinsFailsClosed(t *testing.T) {
 // the ownership split over it would stage a second approval for the overwrite
 // just approved.
 func TestAReleasedRetryOnAStaticTierIsPinnedAndNotResplit(t *testing.T) {
-	person := ids.NewV7()
-	pol := agentPolicies["PATCH /v1/people/{id}"]
+	contact := ids.NewV7()
+	pol := agentPolicies["PATCH /v1/contacts/{id}"]
 	if pol.Tier != tierAutoExecute || pol.Tool != "update_record" {
-		t.Fatalf("PATCH /v1/people/{id} is %q on %s — this case is about a redeemed retry of the split", pol.Tier, pol.Tool)
+		t.Fatalf("PATCH /v1/contacts/{id} is %q on %s — this case is about a redeemed retry of the split", pol.Tier, pol.Tool)
 	}
 	body := []byte(`{"display_name":"Ada"}`)
-	r := httptest.NewRequest(http.MethodPatch, "/v1/people/"+person.String(), http.NoBody)
+	r := httptest.NewRequest(http.MethodPatch, "/v1/contacts/"+contact.String(), http.NoBody)
 	r.Header.Set(approvalTokenHeader, ids.New[ids.ApprovalKind]().String())
 	routeCtx := chi.NewRouteContext()
-	routeCtx.URLParams.Add("id", person.String())
+	routeCtx.URLParams.Add("id", contact.String())
 	r = r.WithContext(context.WithValue(agentRequestCtx(r.Context()), chi.RouteCtxKey, routeCtx))
 
 	var saw sawRequest

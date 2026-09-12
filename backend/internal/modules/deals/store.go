@@ -91,7 +91,7 @@ type Installation struct {
 	// transaction that recorded the win (projectseam.go).
 	StartDeliveryForWonDeal StartDeliveryForWonDeal
 	// EnsurePartner refuses a partner_company_id that names a company with no
-	// partner programme. `people` owns that table, so the edge is injected
+	// partner programme. `contacts` owns that table, so the edge is injected
 	// here rather than read across the module boundary (ADR-0054).
 	EnsurePartner EnsurePartner
 }
@@ -148,7 +148,7 @@ func (i Installation) orRefusing() Installation {
 func refusingEnsurePartner() EnsurePartner {
 	return func(context.Context, pgx.Tx, ids.CompanyID) error {
 		return errors.New("deals: the EnsurePartner seam was not injected; " +
-			"construct this store with installseam.Deals(), which binds people's " +
+			"construct this store with installseam.Deals(), which binds contacts's " +
 			"EnsureCompanyIsPartner")
 	}
 }
@@ -230,7 +230,7 @@ var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
 // it is exported only because the caller of a tx-accepting seam is outside
 // this package.
 //
-// Unlike people's twin it takes no grant of its own: its one caller is the
+// Unlike contacts's twin it takes no grant of its own: its one caller is the
 // extraction accept-write, which has already taken deal:update before it
 // reaches the write phase, and deal:read is not what that seat holds this for.
 func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {

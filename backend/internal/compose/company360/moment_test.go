@@ -11,7 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,11 +22,11 @@ func due(days int) *time.Time {
 	return &at
 }
 
-func commitment(body string, dueInDays int, who string) people.CompanyCommitment {
-	return people.CompanyCommitment{
+func commitment(body string, dueInDays int, who string) contacts.CompanyCommitment {
+	return contacts.CompanyCommitment{
 		ID:          ids.NewV7(),
-		PersonID:    ids.From[ids.PersonKind](ids.NewV7()),
-		PersonName:  who,
+		ContactID:   ids.From[ids.ContactKind](ids.NewV7()),
+		ContactName: who,
 		Body:        body,
 		SourceQuote: "Ich schicke es Ihnen.",
 		ActivityID:  ids.NewV7(),
@@ -50,8 +50,8 @@ func stepsOf(rows ...crmcontracts.Company360NextStep) ([]crmcontracts.Company360
 // accountMomentOf reads as one call at the call sites, where pairing tasks with
 // their filing moments is not the thing under test.
 func accountMomentOf(
-	tasks []crmcontracts.Company360NextStep, claims []people.CompanyCommitment,
-) crmcontracts.PersonMoment {
+	tasks []crmcontracts.Company360NextStep, claims []contacts.CompanyCommitment,
+) crmcontracts.ContactMoment {
 	rows, filed := stepsOf(tasks...)
 	return accountMoment(momentNow, rows, filed, claims)
 }
@@ -72,11 +72,11 @@ func task(subject string, dueInDays int) crmcontracts.Company360NextStep {
 // The company page had no card at all: an account could owe three promises and
 // open on a screen that said nothing about any of them.
 func TestAnAccountWithAnOverduePromiseSaysSo(t *testing.T) {
-	got := accountMomentOf(nil, []people.CompanyCommitment{
+	got := accountMomentOf(nil, []contacts.CompanyCommitment{
 		commitment("Send the signed order form", -4, "Carol Wagner"),
 	})
 
-	if got.Rule != crmcontracts.PersonMomentRuleOverduePromise {
+	if got.Rule != crmcontracts.ContactMomentRuleOverduePromise {
 		t.Fatalf("rule = %q, want overdue_promise", got.Rule)
 	}
 	if got.Headline != "You owe Carol Wagner: Send the signed order form" {
@@ -93,7 +93,7 @@ func TestAnAccountWithAnOverduePromiseSaysSo(t *testing.T) {
 // The same rule the contact page uses: which of the two places a promise was
 // recorded may not decide what a reader is shown.
 func TestTheAccountCardRanksBothSourcesByDateAlone(t *testing.T) {
-	claim := []people.CompanyCommitment{commitment("Send the quote", -1, "Carol Wagner")}
+	claim := []contacts.CompanyCommitment{commitment("Send the quote", -1, "Carol Wagner")}
 
 	// The task slipped longer ago, so the claim — the latest slip — leads.
 	got := accountMomentOf(tasksOf(task("Return the redlines", -20)), claim)
@@ -102,7 +102,7 @@ func TestTheAccountCardRanksBothSourcesByDateAlone(t *testing.T) {
 	}
 
 	// Reverse the dates and the task leads, on the same rule.
-	older := []people.CompanyCommitment{commitment("Send the quote", -20, "Carol Wagner")}
+	older := []contacts.CompanyCommitment{commitment("Send the quote", -20, "Carol Wagner")}
 	got = accountMomentOf(tasksOf(task("Return the redlines", -1)), older)
 	if got.Headline != "You owe them: Return the redlines" {
 		t.Errorf("headline = %q, want the task, whose deadline passed most recently", got.Headline)
@@ -112,10 +112,10 @@ func TestTheAccountCardRanksBothSourcesByDateAlone(t *testing.T) {
 // A promise still ahead is owed and belongs on the card; only an account with
 // nothing outstanding gets the quiet state.
 func TestAnUpcomingPromiseIsTheCard(t *testing.T) {
-	got := accountMomentOf(nil, []people.CompanyCommitment{
+	got := accountMomentOf(nil, []contacts.CompanyCommitment{
 		commitment("Send the security questionnaire", 3, "Carol Wagner"),
 	})
-	if got.Rule != crmcontracts.PersonMomentRuleOpenPromise {
+	if got.Rule != crmcontracts.ContactMomentRuleOpenPromise {
 		t.Fatalf("rule = %q, want open_promise", got.Rule)
 	}
 	if got.WhyNow != "Due in 3 days." {
@@ -125,7 +125,7 @@ func TestAnUpcomingPromiseIsTheCard(t *testing.T) {
 
 func TestAnAccountOwingNothingGetsTheQuietState(t *testing.T) {
 	got := accountMomentOf(nil, nil)
-	if got.Rule != crmcontracts.PersonMomentRuleNothingNeeded {
+	if got.Rule != crmcontracts.ContactMomentRuleNothingNeeded {
 		t.Errorf("rule = %q, want nothing_needed", got.Rule)
 	}
 	if got.Headline == "" {
@@ -158,7 +158,7 @@ func TestTwoAccountPromisesDismissApart(t *testing.T) {
 	}
 }
 
-// A promise whose person the caller may not name still belongs on the card —
+// A promise whose contact the caller may not name still belongs on the card —
 // the account owes it either way. The sentence drops the name, never the
 // promise.
 func TestAPromiseWithNoNameableContactStillShows(t *testing.T) {
@@ -173,7 +173,7 @@ func TestAPromiseWithNoNameableContactStillShows(t *testing.T) {
 // that would land the reader nowhere.
 func TestATaskLinkedToNothingOffersNoDestination(t *testing.T) {
 	got := accountTaskCard(momentNow, task("Renew the certificate", -1), true)
-	if got.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
+	if got.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("action state = %q, want blocked when there is no record to open",
 			got.RecommendedAction.State)
 	}
@@ -185,17 +185,17 @@ func TestATaskLinkedToNothingOffersNoDestination(t *testing.T) {
 // A task filed against a contact routes there, which is where the reader can
 // see the conversation and act.
 func TestATaskLinkedToAContactRoutesThere(t *testing.T) {
-	person := openapi_types.UUID(ids.NewV7())
+	contact := openapi_types.UUID(ids.NewV7())
 	step := task("Send the plan", -1)
-	step.LinkedPersonId = &person
+	step.LinkedContactId = &contact
 
 	got := accountTaskCard(momentNow, step, true)
 
-	if got.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable {
+	if got.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Fatalf("action state = %q, want available", got.RecommendedAction.State)
 	}
 	if got.RecommendedAction.Destination.EntityId == nil ||
-		*got.RecommendedAction.Destination.EntityId != person {
+		*got.RecommendedAction.Destination.EntityId != contact {
 		t.Error("the action does not route to the contact the task is filed against")
 	}
 }
@@ -212,7 +212,7 @@ func TestTwoPromisesDueTheSameDayRankByWhenTheyWerePromised(t *testing.T) {
 	// applies. The older promise leads.
 	newer.OccurredAt = momentNow.AddDate(0, 0, -1)
 
-	got := accountMomentOf(tasksOf(older), []people.CompanyCommitment{newer})
+	got := accountMomentOf(tasksOf(older), []contacts.CompanyCommitment{newer})
 
 	if got.Headline != "You owe them: Return the redlines" {
 		t.Errorf("headline = %q; of two promises due the same day the one promised first leads", got.Headline)

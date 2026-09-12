@@ -34,7 +34,7 @@ import (
 // duration, so the REST and MCP transports cannot drift.
 //
 // The business-hours envelope is NOT here any more. Which hours a host is
-// bookable in is a fact about that PERSON — see docs/explanation/scheduling.md —
+// bookable in is a fact about that CONTACT — see docs/explanation/scheduling.md —
 // so it arrives through hostHours rather than being a pair of numbers this
 // package holds for everybody.
 const (
@@ -432,28 +432,28 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 }
 
 // consentSubjectLink resolves which linked record the CaptureConsent
-// passthrough attaches to: exactly one linked person. The ConsentCapturer
-// seam is person-keyed (the compose adapter records against a person), so
+// passthrough attaches to: exactly one linked contact. The ConsentCapturer
+// seam is contact-keyed (the compose adapter records against a contact), so
 // a lead-only booking cannot carry consent through this endpoint yet —
 // that refuses loudly rather than accepting a consent it would not
 // record. Returns false after writing the response.
 func consentSubjectLink(w http.ResponseWriter, r *http.Request, links []ActivityLinkInput) (ids.UUID, bool) {
-	var persons []ids.UUID
+	var contacts []ids.UUID
 	for _, l := range links {
-		if l.EntityType == "person" {
-			persons = append(persons, l.EntityID)
+		if l.EntityType == "contact" {
+			contacts = append(contacts, l.EntityID)
 		}
 	}
-	switch len(persons) {
+	switch len(contacts) {
 	case 1:
-		return persons[0], true
+		return contacts[0], true
 	case 0:
 		httperr.Write(w, r, httperr.Validation("consent", "subject_required",
-			"recording consent with a booking requires a linked person to attach it to"))
+			"recording consent with a booking requires a linked contact to attach it to"))
 		return ids.UUID{}, false
 	default:
 		httperr.Write(w, r, httperr.Validation("consent", "subject_ambiguous",
-			"recording consent with a booking requires exactly one linked person"))
+			"recording consent with a booking requires exactly one linked contact"))
 		return ids.UUID{}, false
 	}
 }

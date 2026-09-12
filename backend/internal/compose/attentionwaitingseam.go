@@ -107,7 +107,7 @@ func (w attentionWaiting) Unanswered(
 			EmailSummary:       summary,
 			Subject:            row.Subject,
 			Since:              row.OccurredAt,
-			PersonID:           row.PersonID,
+			ContactID:          row.ContactID,
 			CompanyID:          row.CompanyID,
 			DealID:             row.DealID,
 			HasOpenDeal:        row.HasOpenDeal,
@@ -124,7 +124,7 @@ func (w attentionWaiting) Unanswered(
 	return out, cut, nil
 }
 
-// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+// keepWaitingCustomers keeps the rows that are a CONTACT waiting on this reader.
 //
 // Two rules, both learned from the live page.
 //
@@ -138,7 +138,7 @@ func (w attentionWaiting) Unanswered(
 // obligations to somebody scanning the page.
 //
 // Keyed on sender AND subject, never subject alone: two customers both writing
-// "Re: proposal" are two people waiting, and folding them would drop the second
+// "Re: proposal" are two contacts waiting, and folding them would drop the second
 // one silently — the worst failure this queue has, because nothing on the page
 // would say a customer had been hidden.
 //

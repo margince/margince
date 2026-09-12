@@ -4,10 +4,10 @@
 // Who is behind a decision, and what their credential may spend on it.
 //
 // authority.go answers whether an approval is decidable AT ALL by the grants
-// and row scope its release needs — the same question for a person in their own
+// and row scope its release needs — the same question for a contact in their own
 // seat and for an agent acting on their behalf. This file answers the other one,
 // which only exists because a decision can now arrive on a lent credential: is
-// there a person behind this call, and did they lend it enough to release THIS.
+// there a contact behind this call, and did they lend it enough to release THIS.
 //
 // The split is the difference between authority and admission. A passport
 // carries its human's grants, so nothing in authority.go needs to know it is a
@@ -31,10 +31,10 @@ import (
 // transport it arrived on.
 //
 // A passport carries the human it was minted by: AgentIdentity.Principal sets
-// UserID, OnBehalfOf, the seat, the teams and the permissions from that person,
+// UserID, OnBehalfOf, the seat, the teams and the permissions from that human,
 // so an agent call is already bounded by everything a decision is bounded by —
 // the RBAC the staged effect needs, row-scope visibility of its target, and the
-// licensing ceiling. A person answering in a chat window is the same person
+// licensing ceiling. A contact answering in a chat window is the same contact
 // answering in a browser tab (ADR-0055), and the decision happens when they give
 // the instruction.
 //
@@ -56,12 +56,12 @@ func actingForAHuman(ctx context.Context) error {
 		return nil
 	case principal.PrincipalAgent:
 		if p.OnBehalfOf.IsZero() {
-			return fmt.Errorf("this credential names no person it acts for, so it decides nothing: %w",
+			return fmt.Errorf("this credential names no human it acts for, so it decides nothing: %w",
 				apperrors.ErrPermissionDenied)
 		}
 		return nil
 	default:
-		return fmt.Errorf("approvals are decided by people, not by %s principals: %w",
+		return fmt.Errorf("approvals are decided by contacts, not by %s principals: %w",
 			p.Type, apperrors.ErrPermissionDenied)
 	}
 }
@@ -102,7 +102,7 @@ func ReleaseSends(kind string) bool { return sendingKinds[kind] }
 // Three questions, one place, because they fail the same way if any is missed:
 // a credential must not release what its human did not lend it, it must not be
 // the thing that confirms its own proposal, and it must not stand in for a
-// person it does not act for — two passports lent by two people otherwise walk
+// contact it does not act for — two passports lent by two contacts otherwise walk
 // a confirm-first action through end to end with nobody having looked.
 //
 // A human decides on the strength of their seat and their grants; an agent
@@ -123,7 +123,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 		return nil
 	}
 	// THE PROPOSER DOES NOT CONFIRM ITS OWN PROPOSAL. A 🟡 call is refused so a
-	// person sees what the agent wanted before it happens; a credential that
+	// contact sees what the agent wanted before it happens; a credential that
 	// could then approve the row it just staged and re-issue the call has walked
 	// through the tier by itself, and the confirmation was of nothing.
 	//
@@ -132,16 +132,16 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// able to take its own request off somebody's desk rather than leave it
 	// there.
 	//
-	// It binds the CREDENTIAL and not the person, which is what makes it a rule
+	// It binds the CREDENTIAL and not the human, which is what makes it a rule
 	// rather than an obstacle: the same human answers this in the app, or on a
 	// credential they had to be present to mint. What it stops is the loop that
 	// needs nobody at all.
 	if approve && a.PassportID != nil && p.PassportID != ids.Nil && a.PassportID.UUID == p.PassportID {
 		return fmt.Errorf("this credential proposed the action, so it does not also release it — "+
-			"the person it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
+			"the contact it acts for answers it in the CRM: %w", apperrors.ErrPermissionDenied)
 	}
-	// AND IT DOES NOT CONFIRM ANOTHER PERSON'S. The rule above binds the
-	// credential; this one binds the PERSON behind it, and without the second the
+	// AND IT DOES NOT CONFIRM ANOTHER CONTACT'S. The rule above binds the
+	// credential; this one binds the HUMAN behind it, and without the second the
 	// first buys nothing. Two humans each lend a passport: A's stages the
 	// confirm-first call, B's approves it, A's redeems it, and the whole tier has
 	// been satisfied by two autonomous agents with nobody having looked. The
@@ -149,7 +149,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// of its own — which is what turns a bounded loan into a way around the tier
 	// rather than an exercise of it.
 	//
-	// What a lent credential may answer is what the person who lent it could have
+	// What a lent credential may answer is what the human who lent it could have
 	// answered in the CRM themselves, and a proposal staged for somebody else is
 	// not that. UserID, not OnBehalfOf, is the comparison: a passport carries its
 	// lender's user id (AgentIdentity.Principal), so this is the same "is this
@@ -167,8 +167,8 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// request off a desk is an obstacle rather than a rule.
 	if approve && a.OnBehalfOf != nil &&
 		(p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
-		return fmt.Errorf("this credential acts for somebody other than the person this action was "+
-			"staged for, so it does not release it — that person answers it themselves: %w",
+		return fmt.Errorf("this credential acts for somebody other than the human this action was "+
+			"staged for, so it does not release it — that contact answers it themselves: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	kind := a.Kind
@@ -179,7 +179,7 @@ func agentMayDecide(p principal.Principal, a row, approve bool) error {
 	// just the release: the lender is who this card was raised for, and an agent
 	// answering it at all takes the question away from them.
 	if kind == KindVolumeRelease {
-		return fmt.Errorf("a volume step-up is answered by the person who lent this credential, not by it: %w",
+		return fmt.Errorf("a volume step-up is answered by the human who lent this credential, not by it: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if !p.Scopes.Has(principal.ScopeWrite) {

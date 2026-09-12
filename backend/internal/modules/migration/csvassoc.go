@@ -7,13 +7,13 @@ package migration
 //
 // A flat file has no edge table, and for a long time this source answered that
 // it therefore has no edges at all. That was true of its SHAPE and false of its
-// CONTENT: a contact export names each person's employer in a column, which is a
+// CONTENT: a contact export names each contact's employer in a column, which is a
 // relationship between two records written the only way a spreadsheet can write
 // one — by name, in a cell on the row.
 //
 // So one edge per row that names a company, and the endpoints are found in two
-// different ways. The person is named by the run's source key, which the identity
-// map can resolve because this run is landing that person. The company is named
+// different ways. The contact is named by the run's source key, which the identity
+// map can resolve because this run is landing that contact. The company is named
 // by TEXT, which no identity map can resolve, so it travels as text and the
 // writer resolves it. `AssocTargetCompanyName` exists to say that
 // explicitly: an endpoint that is a name and not an id must not be handed to a
@@ -32,12 +32,12 @@ import (
 // `company` there would be right to send the value to its identity map,
 // which holds ids — and would get nothing, silently, for every row.
 //
-// It doubles as the mapping target a person file points its company column at.
+// It doubles as the mapping target a contact file points its company column at.
 // compose assigns its own csvEmployerName from this constant rather than
 // spelling it again, so both sides are one value by construction.
 const AssocTargetCompanyName = "company_name"
 
-// assocCategoryEmployment is what the edge means: this person works here.
+// assocCategoryEmployment is what the edge means: this contact works here.
 const assocCategoryEmployment = "employment"
 
 // Associations answers one edge per row naming an employer.
@@ -50,11 +50,11 @@ const assocCategoryEmployment = "employment"
 // tempted to add some should know the bound is the upload limit, not the row
 // count.
 //
-// Empty for every object but a person run, and for a person run whose mapping
+// Empty for every object but a contact run, and for a contact run whose mapping
 // names no company column: a company or lead import is unaffected by this
 // file existing.
 func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
-	if s.object != ObjectPerson {
+	if s.object != ObjectContact {
 		return nil, nil
 	}
 	column := s.columnFor(AssocTargetCompanyName)
@@ -65,9 +65,9 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 	var out []Assoc
 	// The SAME claim rule Rows applies, and it is load-bearing rather than
 	// defensive. A row whose source key an earlier line already claimed is NOT
-	// delivered — so no person is landed for it — and the identity map holds the
-	// earlier row's person under that key. An edge emitted for the undelivered
-	// row would resolve its `From` endpoint to the FIRST row's person and attach
+	// delivered — so no contact is landed for it — and the identity map holds the
+	// earlier row's contact under that key. An edge emitted for the undelivered
+	// row would resolve its `From` endpoint to the FIRST row's contact and attach
 	// a human to a company they have nothing to do with. The rule is not
 	// duplicated for tidiness; leaving it out writes wrong data.
 	claimed := map[string]bool{}
@@ -89,12 +89,12 @@ func (s *CSVSource) Associations(ctx context.Context) ([]Assoc, error) {
 		}
 		name := strings.TrimSpace(record[at])
 		if name == "" {
-			// The file said nothing about this person's employer, which is not
+			// The file said nothing about this contact's employer, which is not
 			// the same as saying they have none. No edge, no disclosure.
 			return nil
 		}
 		out = append(out, Assoc{
-			FromType: ObjectPerson,
+			FromType: ObjectContact,
 			FromID:   row.ExternalID,
 			ToType:   AssocTargetCompanyName,
 			ToID:     name,

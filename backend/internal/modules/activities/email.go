@@ -179,7 +179,7 @@ type DeliveryRequest struct {
 	// THE TWO DIFFER AND THE DIFFERENCE MATTERS HERE. Body is what goes on the
 	// wire, with the signature and the unsubscribe footer already applied; a
 	// footer carries a withdrawal link minted for this send, so the rendered
-	// text is never the same twice. What a person acknowledged when they
+	// text is never the same twice. What a human acknowledged when they
 	// decided to send a refused message is the text they read, and comparing
 	// their decision against a freshly rendered body would find every message
 	// changed.
@@ -215,7 +215,7 @@ func MintMessageID(domain string) string {
 // AUTHORIZATION REFUSES BEFORE CONSENT ANSWERS. A caller with no rights over
 // the anchor must get the row-scope answer and nothing else — a 500 that names
 // the delivery wiring, or a consent verdict, both tell them something about a
-// record and a person they may not read. Every guard is fail-closed; only
+// record and a contact they may not read. Every guard is fail-closed; only
 // their order carries this rule, which is why they are one function and not
 // scattered through the send.
 // It RETURNS the provider it resolved, so the send that follows uses the very
@@ -233,7 +233,7 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// and an empty addressee line.
 	//
 	// The consent gate does refuse a wholly empty list, but with
-	// ErrConsentNotGranted — which reads as "this person opted out" for a call
+	// ErrConsentNotGranted — which reads as "this contact opted out" for a call
 	// that named nobody at all. A FieldFault pointing at `to` is the difference
 	// between a caller who can fix their argument and one who goes looking for
 	// a consent record that was never the problem.
@@ -327,7 +327,7 @@ func (s *Store) messageIDDomain() string {
 // toRecipients returns the To: addresses: the merged consent list with the
 // Cc addresses taken out. SendEmailInput.Recipients is the merged superset
 // (consent is owed to every addressee), so rendering it as To: would copy
-// every cc'd person twice. Addresses are matched case- and space-
+// every cc'd contact twice. Addresses are matched case- and space-
 // insensitively, the way a mail server treats them.
 func toRecipients(recipients, cc, bcc []string) []string {
 	if len(cc) == 0 && len(bcc) == 0 {

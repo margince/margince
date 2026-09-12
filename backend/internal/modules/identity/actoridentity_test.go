@@ -15,7 +15,7 @@ import (
 //
 // The resolution order is the interesting part and it is decided entirely from
 // the principal: an agent acting under somebody's authority writes as that
-// person, and a principal with nobody behind it writes as nobody. Both are
+// contact, and a principal with nobody behind it writes as nobody. Both are
 // answered before the query, so this exercises the decision without a pool.
 func TestTheActingHumanIsResolvedFromThePrincipal(t *testing.T) {
 	human := ids.New[ids.UserKind]().UUID

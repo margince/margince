@@ -67,7 +67,7 @@ review every field and fact before anything is written. A rail beside it narrate
 where you are — Read · Confirm · Voice · Ready · Connect. It is resumable and
 skippable, and explained in
 [explanation/company-context.md](../explanation/company-context.md). After
-that you have people, leads, the deal board, and the activity timeline —
+that you have contacts, leads, the deal board, and the activity timeline —
 empty, because `make dev` boots a cold installation on purpose: what you see
 is what a first customer sees. Run `make seed-dev` against the running stack
 when you want demo records (idempotent, re-runnable).

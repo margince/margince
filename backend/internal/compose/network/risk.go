@@ -5,7 +5,7 @@
 // who on our team knows this account, and which deals are at risk because of
 // how — or by whom — they are covered.
 //
-// It lives in compose because every answer joins deals, people, activities and
+// It lives in compose because every answer joins deals, contacts, activities and
 // the interaction projection, and a module never imports a sibling.
 //
 // THE THRESHOLDS ARE NOT INVENTED HERE. Single-threading, the no-touch windows
@@ -41,7 +41,7 @@ import (
 const (
 	// RiskSingleThreadedTheirs is REPORT-PARAM-1 verbatim: fewer than two
 	// engaged contacts on an open deal. Their side — the customer is
-	// represented by one person, and if that person leaves or goes quiet the
+	// represented by one contact, and if that contact leaves or goes quiet the
 	// deal has no other way in.
 	RiskSingleThreadedTheirs = "single_threaded_theirs"
 	// RiskSingleThreadedOurs is GRAPH-RISK-1, and it is genuinely NEW rather
@@ -83,17 +83,17 @@ type Risk struct {
 	Kind    string
 	DealID  ids.UUID
 	Summary string
-	// PersonIDs and UserIDs are the records the finding is ABOUT — the
+	// ContactIDs and UserIDs are the records the finding is ABOUT — the
 	// unengaged stakeholder, the colleague carrying the thread. They are ids
 	// rather than names so the caller renders them under its own row scope.
-	PersonIDs []ids.UUID
-	UserIDs   []ids.UUID
+	ContactIDs []ids.UUID
+	UserIDs    []ids.UUID
 	// DaysSinceTouch is set on going-cold; zero elsewhere.
 	DaysSinceTouch int
 }
 
 // DealCoverage is the whole picture for one deal: who sits on it, who is
-// actually engaged, which of our people carry it, and what is wrong.
+// actually engaged, which of our contacts carry it, and what is wrong.
 type DealCoverage struct {
 	DealID ids.UUID
 	// Status is the deal's own status. Going-cold is an in-pipeline rule, and
@@ -126,11 +126,11 @@ type DealCoverage struct {
 	// every seat is unengaged by construction and the findings that follow
 	// from that describe the calendar rather than the deal.
 	EverTouched bool
-	// DepartedPersonIDs are the stakeholders whose employment at the account
+	// DepartedContactIDs are the stakeholders whose employment at the account
 	// has ended. Gathered rather than folded because it takes a second read,
 	// and carried as ids so the fold stays pure.
-	DepartedPersonIDs []ids.UUID
-	Stakeholders      []deals.DealStakeholder
+	DepartedContactIDs []ids.UUID
+	Stakeholders       []deals.DealStakeholder
 	// OurSide is the colleagues with recorded interaction with the deal's
 	// stakeholders, warmest first.
 	OurSide []ColleagueEdge
@@ -168,12 +168,12 @@ func edgeWithheldSections() []string {
 	return []string{SectionStakeholders, SectionOurSide, SectionRisks}
 }
 
-// ColleagueEdge is one of our people's relationship with one contact, scored.
+// ColleagueEdge is one of our contacts's relationship with one contact, scored.
 type ColleagueEdge struct {
-	UserID   ids.UUID
-	PersonID ids.UUID
-	Strength relstrength.Score
-	Count90d int
+	UserID    ids.UUID
+	ContactID ids.UUID
+	Strength  relstrength.Score
+	Count90d  int
 }
 
 // CoverageFor assembles one deal's coverage and its risks.
@@ -218,26 +218,26 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	}
 	out.Stakeholders = stakeholders
 
-	people := make([]ids.UUID, 0, len(stakeholders))
+	contacts := make([]ids.UUID, 0, len(stakeholders))
 	for _, s := range stakeholders {
-		people = append(people, s.PersonID)
+		contacts = append(contacts, s.ContactID)
 	}
-	out.DepartedPersonIDs, err = readDeparted(ctx, tx, facts.companyID, people)
+	out.DepartedContactIDs, err = readDeparted(ctx, tx, facts.companyID, contacts)
 	if err != nil {
 		return out, err
 	}
-	edges, err := search.EdgesForPeople(ctx, tx, people)
+	edges, err := search.EdgesForContacts(ctx, tx, contacts)
 	if err != nil {
 		return out, err
 	}
 	// Ranked warmest first, with the id tie-break every ordered payload in
-	// this codebase carries. EdgesForPeople returns last-contact order, which
+	// this codebase carries. EdgesForContacts returns last-contact order, which
 	// is not what a coverage view is asking — and an unordered list would make
 	// the same deal render differently on two loads.
 	search.SortByStrength(edges, now)
 	for _, e := range edges {
 		out.OurSide = append(out.OurSide, ColleagueEdge{
-			UserID: e.UserID, PersonID: e.PersonID,
+			UserID: e.UserID, ContactID: e.ContactID,
 			Strength: e.StrengthOf(now), Count90d: e.Count90d,
 		})
 	}
@@ -282,17 +282,17 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 	engaged := make([]ids.UUID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
 		if s.Engaged {
-			engaged = append(engaged, s.PersonID)
+			engaged = append(engaged, s.ContactID)
 		}
 	}
 	if c.EverTouched && len(engaged) < reportThreadingFloor {
 		risks = append(risks, Risk{
-			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, PersonIDs: engaged,
+			Kind: RiskSingleThreadedTheirs, DealID: c.DealID, ContactIDs: engaged,
 			Summary: "fewer than two engaged contacts — the deal rests on one relationship",
 		})
 	}
 
-	// GRAPH-RISK-1: one of OUR people carries almost all the contact.
+	// GRAPH-RISK-1: one of OUR contacts carries almost all the contact.
 	if r, found := ourSideConcentration(c); found {
 		risks = append(risks, r)
 	}
@@ -330,8 +330,8 @@ func foldRisks(c DealCoverage, now time.Time) []Risk {
 // seat leaving means a name on the list is now wrong. Collapsing them would
 // make the milder case shout and the severe one whisper.
 func departureRisks(c DealCoverage) []Risk {
-	departed := make(map[ids.UUID]bool, len(c.DepartedPersonIDs))
-	for _, id := range c.DepartedPersonIDs {
+	departed := make(map[ids.UUID]bool, len(c.DepartedContactIDs))
+	for _, id := range c.DepartedContactIDs {
 		departed[id] = true
 	}
 	var champions, others []ids.UUID
@@ -339,25 +339,25 @@ func departureRisks(c DealCoverage) []Risk {
 	// findings come out in the deal's own seat order and two reads of an
 	// unchanged deal render identically.
 	for _, s := range c.Stakeholders {
-		if !departed[s.PersonID] {
+		if !departed[s.ContactID] {
 			continue
 		}
 		if s.Role == roleChampion {
-			champions = append(champions, s.PersonID)
+			champions = append(champions, s.ContactID)
 			continue
 		}
-		others = append(others, s.PersonID)
+		others = append(others, s.ContactID)
 	}
 	var out []Risk
 	if len(champions) > 0 {
 		out = append(out, Risk{
-			Kind: RiskChampionLeft, DealID: c.DealID, PersonIDs: champions,
-			Summary: "the champion has left the account — the person arguing for this deal no longer works there",
+			Kind: RiskChampionLeft, DealID: c.DealID, ContactIDs: champions,
+			Summary: "the champion has left the account — the contact arguing for this deal no longer works there",
 		})
 	}
 	if len(others) > 0 {
 		out = append(out, Risk{
-			Kind: RiskStakeholderLeft, DealID: c.DealID, PersonIDs: others,
+			Kind: RiskStakeholderLeft, DealID: c.DealID, ContactIDs: others,
 			Summary: "a stakeholder has left the account — the seat is still on the deal, the relationship is not",
 		})
 	}
@@ -398,7 +398,7 @@ const reportThreadingFloor = 2
 // ourSideConcentration is GRAPH-RISK-1: one colleague holding at least
 // ourSideDominanceShare of at least ourSideMinInteractions interactions.
 //
-// The minimum matters as much as the share. Without it a deal where one person
+// The minimum matters as much as the share. Without it a deal where one contact
 // sent the only two messages that have ever been exchanged would flag as
 // concentrated, when it is simply new.
 func ourSideConcentration(c DealCoverage) (Risk, bool) {

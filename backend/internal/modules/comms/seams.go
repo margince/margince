@@ -239,16 +239,16 @@ func consentRecipients(del Delivery) []connector.Recipient {
 	return connector.EmailRecipients(addressees(del))
 }
 
-// addressees is every person this delivery reaches — To, Cc and Bcc together,
+// addressees is every contact this delivery reaches — To, Cc and Bcc together,
 // in that order, deduplicated case- and space-insensitively the way a mail
 // server treats an address.
 //
 // The delivery stores the three lists apart because the wire needs them apart,
 // and consent is owed to EVERY addressee however they were addressed. Gating on
-// the To list alone would leave a Cc'd person no suppression at all: their
+// the To list alone would leave a Cc'd contact no suppression at all: their
 // one-click unsubscribe, and an erasure of their record, would both land
 // between staging and transmit and change nothing about the message they
-// receive. A blind copy is the same person with less visibility, not less
+// receive. A blind copy is the same contact with less visibility, not less
 // standing — and the invisibility is exactly why omitting them here would go
 // unnoticed.
 //

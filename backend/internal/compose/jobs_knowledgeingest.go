@@ -200,7 +200,7 @@ func ingestDetail(err error) string {
 
 // addKnowledgeIngestJobs registers the ingest. It registers even with no object
 // storage bound, and with no embed lane: a document queued on an installation
-// missing either then reaches a state a person can act on, rather than sitting
+// missing either then reaches a state a contact can act on, rather than sitting
 // queued forever behind a worker nobody composed.
 func addKnowledgeIngestJobs(reg *jobRegistry, pool *pgxpool.Pool, blob blobstore.Store, embedder vectorkit.Embedder, log *slog.Logger) {
 	addDeclaredWorker[KnowledgeIngestArgs](reg, newKnowledgeIngestWorker(pool, blob, embedder, log))

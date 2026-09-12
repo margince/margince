@@ -33,7 +33,7 @@ import { extensionLayers, filesMatching } from "../../scripts/lib/source-tree";
 //                 primitive's own definition, not a caption under the wrong
 //                 name. A reader of one rule cannot tell that coincidence from a
 //                 copy, and in the tier that owns both, a wrong fire teaches
-//                 people to waive. The document root is the other exemption:
+//                 contacts to waive. The document root is the other exemption:
 //                 `body` setting the body size is the default being declared,
 //                 not a rule restating it.
 //
@@ -317,7 +317,7 @@ function shown(finding: Finding): string {
  *
  * A COUNT PER SHEET rather than a list of lines: a line number moves whenever
  * anything above it is edited, and a baseline that churns on unrelated changes
- * is one people learn to regenerate without reading.
+ * is one contacts learn to regenerate without reading.
  */
 const eyebrowBaseline: Record<string, number> = {
   "src/app/agentrail.css": 1,
@@ -334,7 +334,7 @@ const eyebrowBaseline: Record<string, number> = {
   "src/screens/onboarding-gate.css": 2,
   "src/screens/onboarding-live-panel.css": 2,
   "src/screens/onboarding.css": 4,
-  "src/screens/person360.css": 2,
+  "src/screens/contact360.css": 2,
   "src/screens/preferences.css": 1,
   "src/screens/record360/spine.css": 1,
 };

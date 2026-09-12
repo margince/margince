@@ -13,8 +13,8 @@ package gates
 // the only one with no gate. The other three each have theirs — tableownership
 // (writes only tables it owns), updateguard (carries a concurrency guard),
 // writeauthority + writeshape (probes write authority, audits and emits) — and
-// that single gap produced eight defects across company, person,
-// person_consent, attachment, contract, commission_entry and site_read, every
+// that single gap produced eight defects across company, contact,
+// contact_consent, attachment, contract, commission_entry and site_read, every
 // one of them individually defensible where it sat. What they had in common was
 // not a module or a table: it was that nothing asked the question.
 //
@@ -133,12 +133,12 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// sentence: an erasure stamps archived_at itself, so its own subject is
 	// archived by the time the statement beside it runs.
 	"internal/modules/privacy:anonymizeSubjectRows":    "Art. 17 erasure of the subject row, and it is the statement that SETS archived_at — coalesced, so a subject already archived keeps the instant they were retired. A liveness filter here would make erasure refuse every already-archived subject, which is the population most likely to ask for it",
-	"internal/modules/privacy:anonymizeLeadTwins":      "the lead half of the same erasure, reaching the twins a promotion left behind. They are found by promoted_person_id and by address, and an archived twin holds the same personal data a live one does",
+	"internal/modules/privacy:anonymizeLeadTwins":      "the lead half of the same erasure, reaching the twins a promotion left behind. They are found by promoted_contact_id and by address, and an archived twin holds the same personal data a live one does",
 	"internal/modules/privacy:archiveActivity":         "the retention sweep retiring a message whose window closed. The write IS the archive transition, chosen by a clock rather than by a caller",
 	"internal/modules/privacy:archiveDeal":             "the deal arm of the same sweep, and the same transition: a deal past its window is archived because of when it closed",
 	"internal/modules/privacy:anonymizeLead":           "the retention sweep's lead anonymization, which stamps archived_at as part of the destruction and must run on a lead an earlier pass already retired",
 	"internal/modules/privacy:eraseActivityContent":    "the retention sweep destroying a message's text. It coalesces archived_at, so refusing an archived row would spare exactly the messages the sweep already took off the timeline and left the words standing",
-	"internal/modules/privacy:anonymizePersonRecord":   "the retention sweep's person arm, stamping the tombstone name and archived_at together. Its subject is chosen by a retention policy, and an archived contact still holds every column this nulls",
+	"internal/modules/privacy:anonymizeContactRecord":  "the retention sweep's contact arm, stamping the tombstone name and archived_at together. Its subject is chosen by a retention policy, and an archived contact still holds every column this nulls",
 	"internal/modules/privacy:eraseVoiceSignalContent": "the time-based sweep over voice learning signals, which carry no subject linkage for Art. 17 to find — the clock is the only thing that reaches them, and the row's own state is not a reason to leave the text",
 	"internal/modules/privacy:liftAndEraseHeldRecord":  "lifting a statutory hold and destroying what it preserved, in one statement. The record was archived when the hold was placed; requiring it to be live would make the lift unable to reach anything it is ever asked about",
 	"internal/modules/privacy:PinToFloor":              "placing a statutory hold, which archives the record as part of placing it. The refusal it does carry is stronger than liveness — restricted_at IS NULL — so a second controller pinning the same record is declined rather than overwriting the first one's window",
@@ -164,14 +164,14 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// only through a caller or a helper that has already resolved the row live,
 	// and each entry names it — the scan reads one function at a time and cannot
 	// follow either edge.
-	"internal/modules/people:resolveOrCreateAnchor":        "guarded in its helper: anchorCompany carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
-	"internal/modules/people:recordGeocodeAfter":           "guarded by addressHashInTx, which re-reads the address `WHERE id = $1 AND archived_at IS NULL`: an archived company yields no hash, the comparison fails, and the function returns without writing. The liveness and the address-moved check are one test",
-	"internal/modules/people:touchRevertedPerson":          "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE with IncludeArchived from the top of its transaction — deliberately, because the subject of a bought-data revert may be archived — so re-taking liveness here would refuse the case the function exists for",
+	"internal/modules/contacts:resolveOrCreateAnchor":      "guarded in its helper: anchorCompany carries `WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, so the row this renames was resolved live and is held for the rest of the transaction",
+	"internal/modules/contacts:recordGeocodeAfter":         "guarded by addressHashInTx, which re-reads the address `WHERE id = $1 AND archived_at IS NULL`: an archived company yields no hash, the comparison fails, and the function returns without writing. The liveness and the address-moved check are one test",
+	"internal/modules/contacts:touchRevertedContact":       "the aggregate bump after a revert removed a child row. RevertProviderFills holds this contact FOR UPDATE with IncludeArchived from the top of its transaction — deliberately, because the subject of a bought-data revert may be archived — so re-taking liveness here would refuse the case the function exists for",
 	"internal/modules/activities:finalizeRelinkedActivity": "the row is already held FOR UPDATE by relinkActivityRow, its only caller, through lockActivityForWrite — two hops past what a per-function scan follows, and the same indirection updateguard ratifies for this function",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock through visibleOfferLocked, except createOfferTx where the offer was inserted in the same transaction",
 	"internal/modules/customfields:Rename":                 "runs under the catalog row lock lockField mints, and the field's own mutability is checked under it. custom_field is retired through `status`; nothing in the tree writes its archived_at",
 	"internal/modules/customfields:setOptionsInTx":         "runs under the catalog row lock lockPicklistField mints, plus the per-table advisory lock serializeSchemaChange takes, and the same status-not-archived_at retirement applies",
-	"internal/modules/people:recomputeUnderOverrideTx":     "the scoring pass refreshing the machine value beside a human override. Its subject comes from the recompute's own selection of live leads, and the CAS on score_computed is what makes a lost race write nothing",
+	"internal/modules/contacts:recomputeUnderOverrideTx":   "the scoring pass refreshing the machine value beside a human override. Its subject comes from the recompute's own selection of live leads, and the CAS on score_computed is what makes a lost race write nothing",
 
 	// THE WRITE CANNOT REACH A RETIRED ROW, because of what it is rather than
 	// because of a predicate. Each says which fact makes that true.
@@ -187,13 +187,13 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/activities:reKeyActivity":                 "restating the provider identity of a captured message so a later delivery folds into it rather than duplicating it. An absorbed echo is archived by design and is exactly the row whose identity has to be re-keyed",
 	"internal/modules/activities:StampCorrespondenceForProject": "the retention CLASSIFICATION, which decides how long a message must be kept. An archived message still has a statutory window, and the stamp only ever fills a class nobody has set",
 	"internal/modules/signals:dropUnattributable":               "the resolver recording that a market signal matched no company. The row is one the resolution pass selected, and the write moves resolution_state alone — no content, no link",
-	"internal/modules/signals:resolveToCompany":                 "the resolver stamping the single-candidate match on a signal its own pass selected; the person link it may write is separately consent-gated and never creates a record",
+	"internal/modules/signals:resolveToCompany":                 "the resolver stamping the single-candidate match on a signal its own pass selected; the contact link it may write is separately consent-gated and never creates a record",
 	"internal/modules/signals:flagAmbiguous":                    "the resolver flagging a signal for review when several companies are plausible, on a row from the same pass. It links nobody and resolves nothing",
-	"internal/modules/people:setDedupeDispositionTx":            "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
-	"internal/modules/people:reopenDedupeCandidateTx":           "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
-	"internal/modules/people:RefreshDisplayNameTx":              "showing the name a contact's own first and last columns already carry. It refuses a name a human set, and an erasure NULLs both halves — so an erased subject fails the both-halves check before any write is attempted",
-	"internal/modules/people:completePersonName":                "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
-	"internal/modules/people:absorbCompanyReferences":           "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
+	"internal/modules/contacts:setDedupeDispositionTx":          "disposing a duplicate-candidate row, not either record it names. `disposition = 'open'` is the guard, and a candidate is closed rather than archived",
+	"internal/modules/contacts:reopenDedupeCandidateTx":         "the undo of the same disposition, read and written under the candidate's own lock; nothing writes dedupe_candidate.archived_at",
+	"internal/modules/contacts:RefreshDisplayNameTx":            "showing the name a contact's own first and last columns already carry. It refuses a name a human set, and an erasure NULLs both halves — so an erased subject fails the both-halves check before any write is attempted",
+	"internal/modules/contacts:completeContactName":             "filling first and last from a confident parse, and only into columns that are both still empty. The predicate is also the concurrency guard, and an erased subject has had them nulled with the row's other identity columns",
+	"internal/modules/contacts:absorbCompanyReferences":         "the merge relinking a retired source's references onto its survivor. A merge deliberately reaches the row it is retiring — that is what a merge is — and mergePair resolved the pair under LockPair before this runs",
 	"internal/modules/ai:persistBuildVersion":                   "recording the artifact a voice build produced, on the profile that build was raised for. The build row carries the profile id and the build itself is the selection; nothing in the tree writes voice_profile.archived_at",
 	"internal/modules/ai:finishBuildTx":                         "closing out a build's own status row. A build is completed or failed, never archived, and the row is the one this pass is executing",
 	"internal/modules/ai:RecordSendOutcomeTx":                   "closing a learning signal on the human's judgment of a draft, on a row lockJudgeableSignal has already held and confirmed is still `drafted`. That guard is narrower than liveness",

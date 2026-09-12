@@ -66,7 +66,7 @@ const (
 	// package spells them in the probe classification, the decision-grant map and
 	// the version-table whitelist, and a typo makes a target undecidable in the
 	// first and unpinnable in the last without announcing either.
-	tablePerson  = "person"
+	tableContact = "contact"
 	tableCompany = "company"
 	tableDeal    = "deal"
 	tableLead    = "lead"

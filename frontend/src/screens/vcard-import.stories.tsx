@@ -20,7 +20,7 @@ export default meta;
 
 type Story = StoryObj<typeof VCardImport>;
 
-const ROUTE = "POST /people/vcard-import";
+const ROUTE = "POST /contacts/vcard-import";
 
 async function openDialog(canvasElement: HTMLElement) {
   const canvas = within(canvasElement.ownerDocument.body);
@@ -60,7 +60,7 @@ export const MixedReport: Story = {
               index: 2,
               full_name: "Alan Turing",
               outcome: "needs_review",
-              person_id: "01a04fdf-7a3c-75f6-bdf6-5f868ea3a705",
+              contact_id: "01a04fdf-7a3c-75f6-bdf6-5f868ea3a705",
             },
             {
               index: 3,
@@ -98,7 +98,7 @@ export const MixedReport: Story = {
 };
 
 /** A card the parser could not read fails the WHOLE request rather than being
- * skipped, because an import that quietly drops a person is worse than one
+ * skipped, because an import that quietly drops a contact is worse than one
  * that refuses. */
 export const Refused: Story = {
   render: () => {

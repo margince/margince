@@ -15,7 +15,7 @@ import (
 const (
 	meetingID  = "0198f000-0000-7000-8000-000000000001"
 	dealID     = "0198f000-0000-7000-8000-000000000002"
-	personID   = "0198f000-0000-7000-8000-000000000003"
+	contactID  = "0198f000-0000-7000-8000-000000000003"
 	activityID = "0198f000-0000-7000-8000-000000000004"
 	projectID  = "0198f000-0000-7000-8000-000000000005"
 )
@@ -43,10 +43,10 @@ func fullInput() Input {
 			AmountMinor: 9500000, Currency: "EUR", CloseDate: ptr(at(30)),
 		},
 		Attendees: []AttendeeIn{
-			{PersonID: personID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
+			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
 		},
 		Commitments: []ClaimIn{{
-			PersonName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
+			ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
 			Status:   statusOpen,
 			SourceID: activityID, SourceLabel: "Re: security review", DueAt: ptr(at(8)),
 		}},
@@ -128,7 +128,7 @@ func TestRisksIsAbsentWhenNothingInTheRecordIsWrong(t *testing.T) {
 func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	in := fullInput()
 	in.Commitments = append(in.Commitments, ClaimIn{
-		PersonName: "Ana Roth", Kind: kindCommitmentOurs, Body: "share the reference call",
+		ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "share the reference call",
 		Status: statusOpen, SourceID: activityID, DueAt: ptr(at(9)),
 	})
 	sections := Deterministic(in)
@@ -185,7 +185,7 @@ func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 	in := fullInput()
 	in.Commitments[0].DueAt = ptr(at(18))
 	in.Commitments = append(in.Commitments, ClaimIn{
-		PersonName: "Ana Roth", Kind: kindOpenQuestion, Body: "who signs the DPA",
+		ContactName: "Ana Roth", Kind: kindOpenQuestion, Body: "who signs the DPA",
 		Status: statusOpen, SourceID: activityID,
 	})
 	goal := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindGoal)
@@ -199,7 +199,7 @@ func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 }
 
 // A dismissed claim is one a human said was never true. Resurrecting it in prep
-// would put the correction in front of the person it was wrong about.
+// would put the correction in front of the contact it was wrong about.
 func TestADismissedClaimNeverReachesTheBrief(t *testing.T) {
 	folded := foldClaims("Ana Roth", []crmcontracts.ConversationClaim{{
 		Kind:   crmcontracts.ConversationClaimKindCommitmentTheirs,
@@ -383,8 +383,8 @@ func TestAnAttendeeWithNoRecordedContactReadsAsAFirstMeeting(t *testing.T) {
 		Company:    "Asia Flight Services",
 		Now:        time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC),
 		Attendees: []AttendeeIn{{
-			PersonID: "01998f00-0000-7000-8000-00000000000b",
-			FullName: "Rainer Vogt",
+			ContactID: "01998f00-0000-7000-8000-00000000000b",
+			FullName:  "Rainer Vogt",
 			// Neither spelling set, which is what a caller assembling an
 			// attendee by hand produces.
 		}},

@@ -92,12 +92,12 @@ export function MeetingBriefView({
     <>
       <div className="drawer-head">
         <div className="pe-drawer-title">
-          <h2 id={titleId}>{t("person.meeting.title")}</h2>
+          <h2 id={titleId}>{t("contact.meeting.title")}</h2>
           <Button
             small
             iconOnly
             onClick={onClose}
-            aria-label={t("person.drawer.close")}
+            aria-label={t("contact.drawer.close")}
           >
             <X aria-hidden="true" />
           </Button>
@@ -114,8 +114,8 @@ export function MeetingBriefView({
           {scopeSlot}
           <SurfaceState
             state={stateOf(state)}
-            emptyLabel={t("person.meeting.empty")}
-            loadingLabel={t("person.meeting.loading")}
+            emptyLabel={t("contact.meeting.empty")}
+            loadingLabel={t("contact.meeting.loading")}
             loadingLines={8}
             detail={
               state.kind === "failed" ? { onRetry: state.onRetry } : undefined
@@ -222,9 +222,9 @@ export function MeetingBriefView({
       </div>
       <div className="drawer-foot">
         <span className="pe-disclosure t-caption">
-          {t("person.meeting.assembledNow")}
+          {t("contact.meeting.assembledNow")}
         </span>
-        <Button onClick={onClose}>{t("person.drawer.close")}</Button>
+        <Button onClick={onClose}>{t("contact.drawer.close")}</Button>
       </div>
     </>
   );

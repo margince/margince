@@ -35,7 +35,7 @@ func asOther(e *loadEnv) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"manager"},
 			Objects: map[string]principal.ObjectGrant{
-				"activity": {Read: true, Update: true}, "person": {Read: true},
+				"activity": {Read: true, Update: true}, "contact": {Read: true},
 				"deal": {Read: true}, "company": {Read: true},
 				"lead": {Read: true},
 			},
@@ -59,14 +59,14 @@ func window() (time.Time, time.Time) {
 //
 // Through the same columns seedWait uses, so what varies between this file's
 // fixtures and the waiting lane's is only whether a reply exists.
-func seedAnswered(t *testing.T, e *loadEnv, person ids.UUID, ago, after time.Duration) {
+func seedAnswered(t *testing.T, e *loadEnv, contact ids.UUID, ago, after time.Duration) {
 	t.Helper()
 	inbound, thread := ids.NewV7(), "thread-"+ids.NewV7().String()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
 		VALUES ($1, 'email', 'inbound', 'Question', now() - $2::interval, $3, 'seed', 'system')`,
 		inbound, ago.String(), thread)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), inbound, person)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), inbound, contact)
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
 		VALUES ($1, 'email', 'outbound', 'Re: Question', now() - $2::interval, $3, 'seed', 'system')`,
 		ids.NewV7(), (ago - after).String(), thread)
@@ -80,14 +80,14 @@ func seedAnswered(t *testing.T, e *loadEnv, person ids.UUID, ago, after time.Dur
 // answers differ enough to tell apart.
 func TestTheResponseTimeIsTheMedianRatherThanTheMean(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	// Waits of 1h, 2h and 100h. Median 2h = 120 minutes; the mean would be
 	// roughly 34 hours, which describes nobody's experience.
-	seedAnswered(t, e, person, 48*time.Hour, time.Hour)
-	seedAnswered(t, e, person, 47*time.Hour, 2*time.Hour)
-	seedAnswered(t, e, person, 46*time.Hour, 100*time.Hour)
+	seedAnswered(t, e, contact, 48*time.Hour, time.Hour)
+	seedAnswered(t, e, contact, 47*time.Hour, 2*time.Hour)
+	seedAnswered(t, e, contact, 46*time.Hour, 100*time.Hour)
 
 	from, to := window()
 	got, err := metricsStore(e).ResponseWindow(e.as(), from, to)
@@ -115,15 +115,15 @@ func TestTheResponseTimeIsTheMedianRatherThanTheMean(t *testing.T) {
 // for a week would read as a week-long wait.
 func TestTheWaitIsMeasuredToTheFirstReplyNotTheLast(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	inbound, thread := ids.NewV7(), "thread-"+ids.NewV7().String()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
 		VALUES ($1, 'email', 'inbound', 'Question', now() - interval '10 days', $2, 'seed', 'system')`,
 		inbound, thread)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), inbound, person)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), inbound, contact)
 	// Answered in an hour, then talked to for another nine days.
 	for _, at := range []string{"10 days", "1 day"} {
 		e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
@@ -155,16 +155,16 @@ func TestTheWaitIsMeasuredToTheFirstReplyNotTheLast(t *testing.T) {
 // report the workspace as answering everything.
 func TestAnUnansweredThreadIsNotCountedAsAnswered(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A wait with no reply — exactly what the Worklist queue is made of.
-	e.seedWait(t, "Nobody answered this", "person_id", person)
+	e.seedWait(t, "Nobody answered this", "contact_id", contact)
 
 	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -186,10 +186,10 @@ func TestAnUnansweredThreadIsNotCountedAsAnswered(t *testing.T) {
 // tidied up, reporting less judgement the more of it happened.
 func TestDispositionsAreCountedFromTheAuditRowRatherThanTheStateTable(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Set aside then withdrawn", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Set aside then withdrawn", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -227,10 +227,10 @@ func TestDispositionsAreCountedFromTheAuditRowRatherThanTheStateTable(t *testing
 // customers being written off.
 func TestOnlyTheWorkspaceWideJudgementCountsAsNotSales(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Snoozed", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Snoozed", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -262,10 +262,10 @@ func TestOnlyTheWorkspaceWideJudgementCountsAsNotSales(t *testing.T) {
 // work down.
 func TestAnOrdinaryActivityUpdateIsNotADisposition(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Edited", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Edited", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -320,9 +320,9 @@ func TestABackwardsWindowIsRefusedRatherThanAnsweredWithZeros(t *testing.T) {
 // restatement here honest.
 func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -340,8 +340,8 @@ func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
 		VALUES ($1, 'email', 'inbound', 'Forged root', now() - interval '2 hours', $2, 'seed', 'system')`,
 		inbound, forged)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), inbound, person)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), inbound, contact)
 
 	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -368,10 +368,10 @@ func TestAReplyOnAnotherMediumDoesNotAnswerAForgedMailThread(t *testing.T) {
 // the audit row is a test agreeing with itself about what the writer produces.
 func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Second thoughts", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Second thoughts", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -404,10 +404,10 @@ func TestSettingARowAsideAndTakingItBackCountsAsNoDisposition(t *testing.T) {
 // The same for the workspace-wide judgement, which has its own undo verb.
 func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Not sales after all", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Not sales after all", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -452,10 +452,10 @@ func TestTakingBackANotSalesCountsAsNoFurtherJudgement(t *testing.T) {
 // is invisible to `e.rep` and its judgement must be too.
 func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Someone Else''s Buyer', $2, 'seed', 'system')`, person, e.other)
-	activity := e.seedWait(t, "A held conversation", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Someone Else''s Buyer', $2, 'seed', 'system')`, contact, e.other)
+	activity := e.seedWait(t, "A held conversation", "contact_id", contact)
 	// Held to a named audience that does not include this reader, and captured
 	// by the other seat — so no arm of the audience test admits `e.rep`.
 	e.exec(t, `UPDATE activity SET audience = 'selected', captured_by = $2 WHERE id = $1`,
@@ -497,10 +497,10 @@ func TestAJudgementOnAnUnreadableConversationCountsForNobody(t *testing.T) {
 // refuses EVERYTHING. The same fixture, readable: the judgement lands.
 func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "An open conversation", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "An open conversation", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {
@@ -536,10 +536,10 @@ func TestAJudgementOnAReadableConversationIsStillCounted(t *testing.T) {
 // different route, and it is the direction this figure must not fail in.
 func TestArchivingAThreadDoesNotUnmakeTheJudgementOnIt(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
-	activity := e.seedWait(t, "Judged then archived", "person_id", person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
+	activity := e.seedWait(t, "Judged then archived", "contact_id", contact)
 	from, to := window()
 	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
 	if err != nil {

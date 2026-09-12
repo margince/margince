@@ -9,7 +9,7 @@ package capture
 // It exists because every other record of these decisions is unattributable: an
 // activity's audit row says a message WAS captured, and the decisions that
 // captured nothing are `system_log` breadcrumbs carrying a natural key and no
-// member. So the one question the people using this system actually ask — what
+// member. So the one question the contacts using this system actually ask — what
 // happened to MY messages — had no answer short of psql.
 //
 // A trace is not a record. Nothing links to it, nothing derives from it, and it
@@ -150,11 +150,11 @@ type TraceEntry struct {
 
 	ActivityID ids.UUID
 
-	// SourceIDNamesAPerson reports that SourceID embeds a provider ACCOUNT id
+	// SourceIDNamesAContact reports that SourceID embeds a provider ACCOUNT id
 	// rather than naming a message — which is personal data, and is hashed on
 	// write. Carried from the natural key, whose producer is the only party
 	// that knows what its own key is made of.
-	SourceIDNamesAPerson bool
+	SourceIDNamesAContact bool
 
 	// Counterparty and Subject are written only when the deployment turned
 	// payload capture on.
@@ -170,7 +170,7 @@ type TraceEntry struct {
 	// CounterpartyProvider and CounterpartyAccountID are the channel identity the
 	// counterparty holds, for a record that names its human that way. They are
 	// NOT written to the trace: they are what the erasure check is made against,
-	// so the name below is withheld for a person an erasure covered.
+	// so the name below is withheld for a contact an erasure covered.
 	CounterpartyProvider  string
 	CounterpartyAccountID string
 	// CounterpartyName is what a human calls that account, and is what the trace
@@ -184,7 +184,7 @@ type TraceEntry struct {
 // Asked of the counterparty fields, which are where the answer is, and named so
 // that a reader cannot mistake it for the question the source id asks. A record
 // can be either, both or neither: a notification keyed by its own id may still
-// name a person by their channel account, and a chat message keyed by an
+// name a contact by their channel account, and a chat message keyed by an
 // account id may still be from somebody with an address.
 func (in TraceEntry) namesItsHumanByAccount() bool { return in.CounterpartyProvider != "" }
 
@@ -254,7 +254,7 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 		ON CONFLICT (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
 		             source_system, source_id, stage, outcome) DO NOTHING`,
 		nullableID(in.UserID), in.Connector, in.SourceSystem,
-		traceSourceID(in.SourceID, in.SourceIDNamesAPerson),
+		traceSourceID(in.SourceID, in.SourceIDNamesAContact),
 		string(in.Stage), string(in.Outcome), in.Reason, nullableID(in.ActivityID),
 		counterparty, subject)
 	if err != nil {
@@ -321,7 +321,7 @@ func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) 
 	if address == "" {
 		// NO ADDRESS IS NOT NO SENDER. A record naming its human by a provider
 		// account has one, and a trace that left the column NULL reported "no
-		// sender recorded" about a message whose person the pipeline had just
+		// sender recorded" about a message whose contact the pipeline had just
 		// resolved and created a contact for — the reader was told the pipeline
 		// knew less than it did.
 		return traceChannelPayload(ctx, tx, in)
@@ -352,7 +352,7 @@ func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) 
 // its own function rather than three lines above. An erased channel identity is
 // on `erasure_suppression` under kind `channel_identity`, which the email list
 // knows nothing about — so running the address check against a display name would
-// answer "not suppressed" for every erased person and write the name an erasure
+// answer "not suppressed" for every erased contact and write the name an erasure
 // existed to remove.
 func traceChannelPayload(ctx context.Context, tx pgx.Tx, in TraceEntry) (*string, *string, error) {
 	name := strings.TrimSpace(in.CounterpartyName)
@@ -403,10 +403,10 @@ func (in TraceEntry) validate() error {
 //
 // Mail keeps its message id. ADR-0082 §1 permits a drop to record the external
 // id, and that permission was written about mail, where the id identifies a
-// message rather than a person — and where it is what makes a support question
+// message rather than a contact — and where it is what makes a support question
 // answerable at all.
-func traceSourceID(sourceID string, namesAPerson bool) string {
-	if !namesAPerson {
+func traceSourceID(sourceID string, namesAContact bool) string {
+	if !namesAContact {
 		return sourceID
 	}
 	sum := sha256.Sum256([]byte(sourceID))

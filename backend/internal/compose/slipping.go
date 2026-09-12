@@ -232,8 +232,8 @@ func followUpDrafter(provider datasource.SystemOfRecordProvider) agents.FollowUp
 		ref, err := provider.Create(ctx, datasource.CreateInput{
 			EntityType: datasource.EntityActivity,
 			Fields:     fields,
-			// A person asked for this through an assistant, which is the same
-			// origin as a person asking through a form; captured_by comes from
+			// A contact asked for this through an assistant, which is the same
+			// origin as a contact asking through a form; captured_by comes from
 			// the principal, never from here, and it is what says which.
 			Source: agents.ToolSource,
 		})

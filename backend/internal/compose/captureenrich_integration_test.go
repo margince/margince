@@ -8,7 +8,7 @@ package compose
 // The signature-enrich pass over a real Postgres: an evidence-grounded
 // title and phone land with their PO-DDL-12 evidence rows; a fabricated
 // snippet is dropped by the code-side gate; a human's correction is never
-// overwritten; a person once enriched leaves the candidate set; and a pass
+// overwritten; a contact once enriched leaves the candidate set; and a pass
 // that filled its limit says so, so the worker can queue the next slice
 // instead of leaving it until tonight.
 
@@ -23,7 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,22 +45,22 @@ func (s *signatureScriptBrain) Complete(context.Context, model.Request) (model.R
 	return model.Response{Text: string(payload)}, nil
 }
 
-// seedEnrichPerson plants one connector-created person with a linked
+// seedEnrichContact plants one connector-created contact with a linked
 // inbound email whose body carries the signature.
-func seedEnrichPerson(t *testing.T, e *integration.Env, email, body string) ids.UUID {
+func seedEnrichContact(t *testing.T, e *integration.Env, email, body string) ids.UUID {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	activity := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person (id, full_name, source, captured_by)
-			VALUES ($1, 'Bob Person', 'gmail:seed', 'connector:gmail')`, person); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Bob Contact', 'gmail:seed', 'connector:gmail')`, contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person_email (person_id, email, email_type, is_primary, source, captured_by)
-			VALUES ($1, $2, 'work', true, 'gmail:seed', 'connector:gmail')`, person, email); err != nil {
+			INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
+			VALUES ($1, $2, 'work', true, 'gmail:seed', 'connector:gmail')`, contact, email); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -70,28 +70,28 @@ func seedEnrichPerson(t *testing.T, e *integration.Env, email, body string) ids.
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, activity, person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
 			return err
 		}
 		// The sender, as capture stamps one. Without it the mail reaches this
-		// person without anybody having written it, which is the shape the
+		// contact without anybody having written it, which is the shape the
 		// candidate query now refuses.
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, address, role)
-			VALUES ($1, $2, $3, 'from')`, activity, person, email)
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
+			VALUES ($1, $2, $3, 'from')`, activity, contact, email)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return person
+	return contact
 }
 
 func TestSignatureEnrichPass(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\n+49 30 1234567\nAcme GmbH"
-	person := seedEnrichPerson(t, e, "bob@acme.example", body)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH"
+	contact := seedEnrichContact(t, e, "bob@acme.example", body)
 
 	brain := &signatureScriptBrain{fields: []map[string]any{
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
@@ -109,16 +109,16 @@ func TestSignatureEnrichPass(t *testing.T) {
 	var phones, evidence, linkedinRows int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT title FROM person WHERE id = $1`, person).Scan(&title); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM person_phone WHERE person_id = $1`, person).Scan(&phones); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM contact_phone WHERE contact_id = $1`, contact).Scan(&phones); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&evidence); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&evidence); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT count(*) FROM person_profile_field WHERE person_id = $1 AND field = 'linkedin'`, person).Scan(&linkedinRows)
+		return tx.QueryRow(ctx, `SELECT count(*) FROM contact_profile_field WHERE contact_id = $1 AND field = 'linkedin'`, contact).Scan(&linkedinRows)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -137,8 +137,8 @@ func TestSignatureEnrichPass(t *testing.T) {
 	}
 
 	t.Run("the same mail is never read twice", func(t *testing.T) {
-		// The read cursor, not the field set, is what retires a person: this
-		// person still has no company_name evidence, so the field predicate would
+		// The read cursor, not the field set, is what retires a contact: this
+		// contact still has no company_name evidence, so the field predicate would
 		// select them again — and asking would show the model the identical
 		// window and get the identical answer, nightly, forever.
 		before := brain.calls
@@ -146,28 +146,28 @@ func TestSignatureEnrichPass(t *testing.T) {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls != before {
-			t.Fatal("a person whose latest mail was already read must not be re-asked")
+			t.Fatal("a contact whose latest mail was already read must not be re-asked")
 		}
 	})
 
-	t.Run("newer mail reopens the person", func(t *testing.T) {
+	t.Run("newer mail reopens the contact", func(t *testing.T) {
 		newer := ids.NewV7()
 		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			ctx := context.Background()
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source_system, source_id, source, captured_by)
 				VALUES ($1, 'email', 'again', $2, 'inbound', now() + interval '1 hour', 'gmail', $3, 'gmail:seed', 'connector:gmail')`,
-				newer, "Hi again,\n\nBob Person\nCTO\nAcme Holding GmbH", newer.String()); err != nil {
+				newer, "Hi again,\n\nBob Contact\nCTO\nAcme Holding GmbH", newer.String()); err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO activity_link (activity_id, entity_type, person_id)
-				VALUES ($1, 'person', $2)`, newer, person); err != nil {
+				INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				VALUES ($1, 'contact', $2)`, newer, contact); err != nil {
 				return err
 			}
 			_, err := tx.Exec(ctx, `
-				INSERT INTO activity_participant (activity_id, person_id, address, role)
-				VALUES ($1, $2, 'bob@acme.example', 'from')`, newer, person)
+				INSERT INTO activity_participant (activity_id, contact_id, address, role)
+				VALUES ($1, $2, 'bob@acme.example', 'from')`, newer, contact)
 			return err
 		})
 		if err != nil {
@@ -178,16 +178,16 @@ func TestSignatureEnrichPass(t *testing.T) {
 			t.Fatalf("Run: %v", err)
 		}
 		if brain.calls == before {
-			t.Fatal("a person who has written again must be read again — the new signature may state what the old one did not")
+			t.Fatal("a contact who has written again must be read again — the new signature may state what the old one did not")
 		}
 	})
 
 	t.Run("an occupied title is never touched", func(t *testing.T) {
-		occupied := seedEnrichPerson(t, e, "carol@acme.example",
+		occupied := seedEnrichContact(t, e, "carol@acme.example",
 			"Cheers,\nCarol\nVP Sales\n+49 30 7654321")
 		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
-				`UPDATE person SET title = 'Handwritten Title' WHERE id = $1`, occupied)
+				`UPDATE contact SET title = 'Handwritten Title' WHERE id = $1`, occupied)
 			return err
 		})
 		if err != nil {
@@ -202,7 +202,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 		var title string
 		err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
-				`SELECT title FROM person WHERE id = $1`, occupied).Scan(&title)
+				`SELECT title FROM contact WHERE id = $1`, occupied).Scan(&title)
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -234,7 +234,7 @@ func (f *faultyEnrichBrain) Complete(context.Context, model.Request) (model.Resp
 
 func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	e := integration.Setup(t)
-	seedEnrichPerson(t, e, "flaky@acme.example", "Thanks,\nFlaky Person\nCOO\n+49 30 1111111")
+	seedEnrichContact(t, e, "flaky@acme.example", "Thanks,\nFlaky Contact\nCOO\n+49 30 1111111")
 
 	t.Run("garbage output fails the candidate, not the pass", func(t *testing.T) {
 		brain := &faultyEnrichBrain{garbage: true}
@@ -263,14 +263,14 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 	})
 }
 
-// enrichEvidenceCount counts the person's evidence rows by primary email.
+// enrichEvidenceCount counts the contact's evidence rows by primary email.
 func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 	t.Helper()
 	var n int
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT count(*) FROM person_profile_field f
-			JOIN person_email pe ON pe.person_id = f.person_id
+			SELECT count(*) FROM contact_profile_field f
+			JOIN contact_email pe ON pe.contact_id = f.contact_id
 			WHERE pe.email = $1`, email).Scan(&n)
 	})
 	if err != nil {
@@ -290,13 +290,13 @@ func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 // whether the pass can find a real one.
 func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\n+49 30 1234567\nAcme GmbH"
-	person := seedEnrichPerson(t, e, "corrected@acme.example", body)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\n+49 30 1234567\nAcme GmbH"
+	contact := seedEnrichContact(t, e, "corrected@acme.example", body)
 
 	ctx := e.Admin()
 	if err := ai.NewFeedbackStore(InstallationDB(e.Pool)).Record(ctx, ai.RecordInput{
-		SubjectType: "person",
-		SubjectID:   person,
+		SubjectType: "contact",
+		SubjectID:   contact,
 		ClaimKind:   ai.ClaimProfileField,
 		ClaimPath:   ai.ProfileFieldClaimPath("title"),
 		Verdict:     ai.VerdictCorrected,
@@ -320,17 +320,17 @@ func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 	var title *string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
-		if err := tx.QueryRow(c, `SELECT title FROM person WHERE id = $1`, person).Scan(&title); err != nil {
+		if err := tx.QueryRow(c, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
 		}
 		return tx.QueryRow(c,
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1 AND field = 'title'`,
-			person).Scan(&titleRows)
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1 AND field = 'title'`,
+			contact).Scan(&titleRows)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if title != nil {
-		t.Errorf("person.title = %q — a corrected field was overwritten by a fresh inference", *title)
+		t.Errorf("contact.title = %q — a corrected field was overwritten by a fresh inference", *title)
 	}
 	if titleRows != 0 {
 		t.Errorf("%d title evidence rows, want 0: the pass wrote over a human's ruling", titleRows)
@@ -338,16 +338,16 @@ func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 }
 
 // TestAFullPassAsksForAContinuation drives the boundary the continuation turns
-// on: a pass whose candidate set filled the limit reports that more people are
+// on: a pass whose candidate set filled the limit reports that more contacts are
 // due, and one that came back short does not.
 //
-// The limit is set to 2 rather than seeding a hundred people. What is under
+// The limit is set to 2 rather than seeding a hundred contacts. What is under
 // test is the comparison against the pass's own limit, and that comparison is
 // the same one at 2 as at 100.
 func TestAFullPassAsksForAContinuation(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
-		people     int
+		contacts   int
 		wantFilled bool
 	}{
 		// One short of the limit: nobody is waiting, and a continuation would
@@ -359,9 +359,9 @@ func TestAFullPassAsksForAContinuation(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
-			body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
-			for i := range tc.people {
-				seedEnrichPerson(t, e, fmt.Sprintf("full%d@acme.example", i), body)
+			body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
+			for i := range tc.contacts {
+				seedEnrichContact(t, e, fmt.Sprintf("full%d@acme.example", i), body)
 			}
 
 			brain := &signatureScriptBrain{fields: []map[string]any{
@@ -376,7 +376,7 @@ func TestAFullPassAsksForAContinuation(t *testing.T) {
 			}
 			if filled != tc.wantFilled {
 				t.Errorf("filled = %v, want %v for %d candidates against a limit of 2",
-					filled, tc.wantFilled, tc.people)
+					filled, tc.wantFilled, tc.contacts)
 			}
 		})
 	}
@@ -387,9 +387,9 @@ func TestAFullPassAsksForAContinuation(t *testing.T) {
 // candidate set was full, which is the signal that would otherwise fire.
 func TestABudgetStopAsksForNoContinuation(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	for i := range 2 {
-		seedEnrichPerson(t, e, fmt.Sprintf("budget%d@acme.example", i), body)
+		seedEnrichContact(t, e, fmt.Sprintf("budget%d@acme.example", i), body)
 	}
 
 	enricher := NewCaptureEnricher(e.Pool, &budgetStoppedBrain{}, slog.New(slog.DiscardHandler))
@@ -405,7 +405,7 @@ func TestABudgetStopAsksForNoContinuation(t *testing.T) {
 }
 
 // budgetStoppedBrain is the model lane refusing on budget, which is the one
-// error RunWorkspace treats as ending the pass rather than skipping a person.
+// error RunWorkspace treats as ending the pass rather than skipping a contact.
 type budgetStoppedBrain struct{}
 
 func (b *budgetStoppedBrain) Complete(context.Context, model.Request) (model.Response, error) {
@@ -422,9 +422,9 @@ func (b *budgetStoppedBrain) Complete(context.Context, model.Request) (model.Res
 // it because nothing ever fails.
 func TestAPassThatMovedNobodyAsksForNoContinuation(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
 	for i := range 2 {
-		seedEnrichPerson(t, e, fmt.Sprintf("stuck%d@acme.example", i), body)
+		seedEnrichContact(t, e, fmt.Sprintf("stuck%d@acme.example", i), body)
 	}
 
 	// Output the pass cannot parse: the candidate fails, is logged, and keeps
@@ -457,7 +457,7 @@ func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Respo
 // first two dedupe on the queue's uniqueness window; the continuation is
 // enqueued from inside a running job with the same args and deliberately
 // cannot. Without mutual exclusion here, the second pass selects the same
-// people, makes the same model calls, and each one spends for them.
+// contacts, makes the same model calls, and each one spends for them.
 //
 // The holder is staged as a REAL lock on its own connection rather than as a
 // second goroutine racing this one: what is under test is that a pass finding
@@ -465,8 +465,8 @@ func (b *unparseableBrain) Complete(context.Context, model.Request) (model.Respo
 // happened to lose.
 func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
-	seedEnrichPerson(t, e, "contended@acme.example", body)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
+	seedEnrichContact(t, e, "contended@acme.example", body)
 
 	holder, err := e.Pool.Acquire(context.Background())
 	if err != nil {
@@ -511,8 +511,8 @@ func TestAPassStandsDownWhileAnotherHoldsTheInstallation(t *testing.T) {
 // seed, with nobody holding, enriches.
 func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
-	seedEnrichPerson(t, e, "uncontended@acme.example", body)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
+	seedEnrichContact(t, e, "uncontended@acme.example", body)
 
 	brain := &signatureScriptBrain{fields: []map[string]any{
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
@@ -531,8 +531,8 @@ func TestThePassRunsWhenNobodyHoldsTheInstallation(t *testing.T) {
 // enriches once and then goes quiet until the worker restarts.
 func TestThePassReleasesWhatItHeld(t *testing.T) {
 	e := integration.Setup(t)
-	body := "Hi,\n\nsounds good.\n\nBest,\nBob Person\nCTO\nAcme GmbH"
-	seedEnrichPerson(t, e, "first@acme.example", body)
+	body := "Hi,\n\nsounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH"
+	seedEnrichContact(t, e, "first@acme.example", body)
 
 	brain := &signatureScriptBrain{fields: []map[string]any{
 		{"field": "title", "value": "CTO", "evidence_snippet": "CTO", "confidence": 0.9},
@@ -543,9 +543,9 @@ func TestThePassReleasesWhatItHeld(t *testing.T) {
 		t.Fatalf("the first pass: %v", err)
 	}
 
-	// A second person, and a second pass. It can only reach them if the first
+	// A second contact, and a second pass. It can only reach them if the first
 	// pass gave the lock back.
-	seedEnrichPerson(t, e, "second@acme.example", body)
+	seedEnrichContact(t, e, "second@acme.example", body)
 	before := brain.calls
 	if _, err := enricher.RunWorkspace(ctx); err != nil {
 		t.Fatalf("the second pass: %v", err)
@@ -556,7 +556,7 @@ func TestThePassReleasesWhatItHeld(t *testing.T) {
 	}
 }
 
-// seedForeignSignature seeds a mail this person RECEIVED: linked to them, with
+// seedForeignSignature seeds a mail this contact RECEIVED: linked to them, with
 // somebody else as its sender, and that sender's signature at the foot. It is
 // the exact shape that put a partner manager's title, employer and street onto
 // a consultant's profile — the mail was legitimately linked to her, and every
@@ -571,18 +571,18 @@ func seedForeignSignature(t *testing.T, e *integration.Env) ids.UUID {
 		body      = foreignSignatureBody
 	)
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	activity := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person (id, full_name, source, captured_by)
-			VALUES ($1, 'Judith Recipient', 'gmail:seed', 'connector:gmail')`, person); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Judith Recipient', 'gmail:seed', 'connector:gmail')`, contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person_email (person_id, email, email_type, is_primary, source, captured_by)
-			VALUES ($1, $2, 'work', true, 'gmail:seed', 'connector:gmail')`, person, recipient); err != nil {
+			INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
+			VALUES ($1, $2, 'work', true, 'gmail:seed', 'connector:gmail')`, contact, recipient); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -592,8 +592,8 @@ func seedForeignSignature(t *testing.T, e *integration.Env) ids.UUID {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, activity, person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
 			return err
 		}
 		// Somebody else wrote it. She is on it as a recipient, which is why the
@@ -604,14 +604,14 @@ func seedForeignSignature(t *testing.T, e *integration.Env) ids.UUID {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, address, role)
-			VALUES ($1, $2, $3, 'to')`, activity, person, recipient)
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
+			VALUES ($1, $2, $3, 'to')`, activity, contact, recipient)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return person
+	return contact
 }
 
 // The signature block of a mail somebody else sent, with every field a
@@ -619,9 +619,9 @@ func seedForeignSignature(t *testing.T, e *integration.Env) ids.UUID {
 const foreignSignatureBody = "Hallo Judith,\n\ngerne.\n\nViele Grüße\nMarcus Sender\n" +
 	"PARTNER MANAGER DACH\nOther Company GmbH\nSomestreet 7"
 
-func TestASignatureIsNotReadOffAMessageThePersonDidNotSend(t *testing.T) {
+func TestASignatureIsNotReadOffAMessageTheContactDidNotSend(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedForeignSignature(t, e)
+	contact := seedForeignSignature(t, e)
 
 	// The model would happily extract all three, and every snippet is verbatim
 	// in the window — so the evidence gate alone cannot refuse them.
@@ -640,10 +640,10 @@ func TestASignatureIsNotReadOffAMessageThePersonDidNotSend(t *testing.T) {
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&fields); err != nil {
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT title FROM person WHERE id = $1`, person).Scan(&title)
+		return tx.QueryRow(ctx, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -651,25 +651,25 @@ func TestASignatureIsNotReadOffAMessageThePersonDidNotSend(t *testing.T) {
 		t.Errorf("%d profile fields written off another sender's signature, want 0", fields)
 	}
 	if title != nil {
-		t.Errorf("title = %q, want none: that title belongs to the person who WROTE the mail", *title)
+		t.Errorf("title = %q, want none: that title belongs to the contact who WROTE the mail", *title)
 	}
 	if brain.calls != 0 {
-		t.Errorf("the model was asked %d times about a message this person did not send, want 0", brain.calls)
+		t.Errorf("the model was asked %d times about a message this contact did not send, want 0", brain.calls)
 	}
 }
 
-func TestABackfilledSenderRowIsReadByItsAddressNotItsPersonID(t *testing.T) {
+func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedForeignSignature(t, e)
+	contact := seedForeignSignature(t, e)
 
-	// The participant backfill takes person_id from the FIRST activity_link and
+	// The participant backfill takes contact_id from the FIRST activity_link and
 	// address from activity.counterparty_email, so a historical row can name the
 	// recipient while carrying the sender's address. A predicate that trusted
-	// person_id would admit exactly the mail this test refuses.
+	// contact_id would admit exactly the mail this test refuses.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			UPDATE activity_participant SET person_id = $1
-			 WHERE role = 'from' AND address = 'marcus@other.test'`, person)
+			UPDATE activity_participant SET contact_id = $1
+			 WHERE role = 'from' AND address = 'marcus@other.test'`, contact)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -686,7 +686,7 @@ func TestABackfilledSenderRowIsReadByItsAddressNotItsPersonID(t *testing.T) {
 	var fields int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&fields)
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -701,7 +701,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 	// is a forwarded colleague's. The sender predicate admits the mail; only
 	// the name check can refuse the block.
 	body := "Hi,\n\nforwarding this on.\n\nBest,\nSomebody Else\nHEAD OF NOTHING\nElsewhere GmbH"
-	person := seedEnrichPerson(t, e, "bob@acme.example", body)
+	contact := seedEnrichContact(t, e, "bob@acme.example", body)
 
 	brain := &signatureScriptBrain{fields: []map[string]any{
 		{"field": "title", "value": "HEAD OF NOTHING", "evidence_snippet": "HEAD OF NOTHING", "confidence": 1},
@@ -714,7 +714,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 	var fields int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&fields)
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -728,7 +728,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 
 func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedForeignSignature(t, e)
+	contact := seedForeignSignature(t, e)
 
 	// What the pass wrote before it knew to ask who sent the mail. Written
 	// through the real applier, so the row carries the source and source_ref
@@ -736,13 +736,13 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	var activity ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT activity_id FROM activity_link WHERE person_id = $1`, person).Scan(&activity)
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if _, err := e.People.ApplySignatureFields(e.Admin(), ids.From[ids.PersonKind](person), activity,
-		[]people.SignatureField{{
+	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{{
 			Name: "title", Value: "PARTNER MANAGER DACH",
 			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
 			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
@@ -760,10 +760,10 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if err := tx.QueryRow(c,
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&fields); err != nil {
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields); err != nil {
 			return err
 		}
-		return tx.QueryRow(c, `SELECT title FROM person WHERE id = $1`, person).Scan(&title)
+		return tx.QueryRow(c, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -771,7 +771,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 		t.Errorf("%d misattributed profile fields survived the pass, want 0", fields)
 	}
 	if title != nil {
-		t.Errorf("title = %q, want it taken back off the person it never belonged to", *title)
+		t.Errorf("title = %q, want it taken back off the contact it never belonged to", *title)
 	}
 
 	// The write shape. Taking a field back is the same size of change to the
@@ -782,13 +782,13 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 		c := context.Background()
 		if err := tx.QueryRow(c, `
 			SELECT count(*) FROM audit_log
-			 WHERE entity_type = 'person' AND entity_id = $1
-			   AND evidence->>'source' = 'capture_enrich'`, person).Scan(&audits); err != nil {
+			 WHERE entity_type = 'contact' AND entity_id = $1
+			   AND evidence->>'source' = 'capture_enrich'`, contact).Scan(&audits); err != nil {
 			return err
 		}
 		return tx.QueryRow(c, `
 			SELECT count(*) FROM event_outbox
-			 WHERE envelope->'entity'->>'id' = $1::text`, person).Scan(&events)
+			 WHERE envelope->'entity'->>'id' = $1::text`, contact).Scan(&events)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -802,18 +802,18 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 
 func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedForeignSignature(t, e)
+	contact := seedForeignSignature(t, e)
 
 	var activity ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT activity_id FROM activity_link WHERE person_id = $1`, person).Scan(&activity)
+			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
 		t.Fatal(err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if _, err := e.People.ApplySignatureFields(e.Admin(), ids.From[ids.PersonKind](person), activity,
-		[]people.SignatureField{{
+	if _, err := e.Contacts.ApplySignatureFields(e.Admin(), ids.From[ids.ContactKind](contact), activity,
+		[]contacts.SignatureField{{
 			Name: "title", Value: "PARTNER MANAGER DACH",
 			Evidence: "PARTNER MANAGER DACH", Confidence: 1,
 			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath("title")),
@@ -821,12 +821,12 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 		t.Fatalf("seeding the wrong field: %v", err)
 	}
 
-	// A human sees the wrong title and types the right one. UpdatePerson writes
+	// A human sees the wrong title and types the right one. UpdateContact writes
 	// the COLUMN and leaves the sidecar row alone, so the row still says the
 	// machine's value while the page shows theirs.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE person SET title = 'Geschäftsführerin' WHERE id = $1`, person)
+			`UPDATE contact SET title = 'Geschäftsführerin' WHERE id = $1`, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("the human's correction: %v", err)
@@ -841,11 +841,11 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	var fields int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
-		if err := tx.QueryRow(c, `SELECT title FROM person WHERE id = $1`, person).Scan(&title); err != nil {
+		if err := tx.QueryRow(c, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
 		}
 		return tx.QueryRow(c,
-			`SELECT count(*) FROM person_profile_field WHERE person_id = $1`, person).Scan(&fields)
+			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields)
 	}); err != nil {
 		t.Fatal(err)
 	}

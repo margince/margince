@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +31,7 @@ import (
 func seedLeadFor(t *testing.T, e *weekEnv, name string, owner ids.UUID) ids.LeadID {
 	t.Helper()
 	ownerID := ids.From[ids.UserKind](owner)
-	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Status: "new", OwnerID: &ownerID, Source: "manual",
 	})
 	if err != nil {
@@ -44,7 +44,7 @@ func seedLeadFor(t *testing.T, e *weekEnv, name string, owner ids.UUID) ids.Lead
 // audit images the scorecard reads.
 func moveLead(t *testing.T, e *weekEnv, id ids.LeadID, to string) {
 	t.Helper()
-	if _, err := e.People.UpdateLead(e.Admin(), id, people.UpdateLeadInput{Status: &to}); err != nil {
+	if _, err := e.Contacts.UpdateLead(e.Admin(), id, contacts.UpdateLeadInput{Status: &to}); err != nil {
 		t.Fatalf("moving lead to %s: %v", to, err)
 	}
 }
@@ -246,7 +246,7 @@ func TestTheScorecardTravelsOnTheWireWithItsBlocks(t *testing.T) {
 
 // A DEMOTION IS NOT AN ADVANCE. The ladder has a direction, and a lead pushed
 // back down it must not read as progress — the count is judged from BOTH ends
-// of the transition, mirroring people.LeadStatus.Advances.
+// of the transition, mirroring contacts.LeadStatus.Advances.
 func TestALeadPushedBackDownTheLadderIsNotCountedAsAnAdvance(t *testing.T) {
 	e := setupWeekly(t)
 	lead := seedLeadFor(t, e, "Backwards", e.Rep1)

@@ -92,7 +92,7 @@ var domainField = storekit.Field{
 // signals here, so the pin is what keeps a future non-signal `technology` fact
 // out of these segments rather than silently widening them.
 //
-// SOURCE is deliberately not pinned. A person correcting a machine-read value
+// SOURCE is deliberately not pinned. A contact correcting a machine-read value
 // rewrites the row's source to `human` (company_evidence_write.go), so a
 // source-constrained leaf would drop exactly the accounts somebody cared enough
 // to fix — the opposite of what a segment naming that value means.

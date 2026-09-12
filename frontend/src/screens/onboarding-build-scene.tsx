@@ -29,7 +29,7 @@ import "./onboarding-build-scene.css";
  *    named by the sentence it also prints.
  *  - under `prefers-reduced-motion` there is no scene at all. The end state of
  *    a decorative delay is *being past it*, so the callback fires immediately
- *    and nothing renders. Anything else makes the people who asked for less
+ *    and nothing renders. Anything else makes the contacts who asked for less
  *    motion wait longest.
  */
 

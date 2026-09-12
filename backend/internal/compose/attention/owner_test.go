@@ -218,7 +218,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 // TestOnlyAReaderBoundLaneNamesTheReader is the claim's evidence.
 //
 // `ownedByWhoeverIsReading` asserts something specific about the LANE: its
-// query takes the acting user, so no other person's row could have come back.
+// query takes the acting user, so no other contact's row could have come back.
 // That is checkable, and four of the lanes that first carried the claim failed
 // it — decisions, meetings, DSR and three of the five system sources are read
 // under the caller's ROW SCOPE instead, which is a different thing. A
@@ -236,8 +236,8 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
 		"bounce":               "HardBouncesFor is the comms store's per-user read",
 		"undelivered":          "the same per-user read as the bounce beside it",
-		"notice":               "a notice is addressed to one person",
-		"capture_health":       "a mailbox belongs to one person",
+		"notice":               "a notice is addressed to one contact",
+		"capture_health":       "a mailbox belongs to one contact",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
 	for _, row := range rows {
@@ -313,7 +313,7 @@ func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
 	}
 }
 
-// taskAssignedTo is a task one named person holds.
+// taskAssignedTo is a task one named contact holds.
 func taskAssignedTo(assignee ids.UUID) crmcontracts.AttentionItem {
 	at := item("assigned", "task")
 	held := openapi_types.UUID(assignee)
@@ -344,7 +344,7 @@ func TestAWithheldOwnerIsNotAnUnassignedOne(t *testing.T) {
 		t.Errorf("a withheld owner reached the wire as %+v, want the field absent — "+
 			"`unassigned` would say nobody owes a reply somebody does owe", *owner)
 	}
-	// And a readable one still names its person, so the case above is about
+	// And a readable one still names its contact, so the case above is about
 	// the reading rather than about the lane.
 	owed := ids.MustParse("01a05500-0000-7000-8000-0000000000ed")
 	named := classifyWaiting(WaitingCustomer{Since: rankInstant, OwnerID: owed}, rankInstant)

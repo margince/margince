@@ -22,7 +22,7 @@ ebba6a86f90624338680763bbae9cbeb0397637c 0d6f0de48c8ab32e50ffa70dde5befc602c9182
 6f6398ca46583a8e1feec91e9d911064c03604f3 72d1e9c22c7ff1ff8f330691b7bf91b0e10b09dd ratified-one-written-deal-status-card-replaces-the-brief-health-and-next-move-trio
 489e8594425c507f856b15cd2f11ab4383d9d68b 9b5734d1e30b4920cbef5cb88c5d9346fb799614 ratified-deal360-is-a-briefing-with-a-verdict-and-an-opening-line-not-a-status-line
 5551feee814a0d97e7db1e6664470a88854839d1 d4ba516d106073353a764d37cd367cf7427076fc ratified-a-message-is-filed-by-its-project-key-the-ladder-never-guesses
-e62948a0abb7c599c3280ac974d51c0bdeb1e014 c23d4316960d00c693f7c7aa39de4ff16d5dd6dc ratified-a-person-record-shows-one-section-per-data-provider-not-one-unnamed-card
+e62948a0abb7c599c3280ac974d51c0bdeb1e014 c23d4316960d00c693f7c7aa39de4ff16d5dd6dc ratified-a-contact-record-shows-one-section-per-data-provider-not-one-unnamed-card
 a35057f55a688d0b19b9e0e295f54bafa5193517 5b2fdab6f36d98ba92f83b152962152b47cd611b ratified-consent-screen-grants-scopes-not-a-borrowed-passport
 142f5d323c5e284fa67ae49affb69e616a212b4f 01e2dc08823384222d7416a2c96b8e2f8bc58af7 ratified-consent-screen-grants-scopes-not-a-borrowed-passport
 5d27bdf8d88f1313480daca24b8e2229f6e05ea8 2a7d64e559a8435ac313169829f7c9c2d89e88d6 ratified-one-oauth-app-resource-per-vendor-microsoft-joins-google
@@ -38,3 +38,4 @@ e0c11716048a939f1f1187d6992754335300ac41 ce200199d82e76fca7c07e5781a7af1a963b496
 e4bc6bbe59911e0290a06f515c0c3ea9a3ae0218 fe9c2b0a85863adcbfc9a90825e181736ed76db8 ratified-1898-the-access-preview-is-a-read-and-carries-the-methods-of-one
 79fa8c2d60fdf8f8d8d71882a948cc8464b98c30 57058d94cf5a272de7ee74470eb2bdf212227590 ratified-a-confirm-link-answers-the-shape-its-mail-promised
 fff190e7be7ab8f126c2f57bc60dd3ccc77885d5 7ae4e67e4641faf851351a4502c34dfb4e2c5505 ratified-2025-the-record-type-is-called-company
+e3f137e00f6409dbbaa0e805d01f745c1c6feb94 9be587d2f86d1ab30eac64d5819338629ddf23e2 ratified-the-record-is-called-a-contact-pre-live-resync

@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The explicit form's two keys are the whole vocabulary. A mistyped one would
@@ -115,8 +115,8 @@ func TestSitePageFactsCaseFailsAReplyThatFilesAForbiddenField(t *testing.T) {
 	// verdict is this case's to make rather than the gate's.
 	audit := sitePageFactsCatalogID(t, "Cloud Cost Audit")
 	reply := `{"facts":[` +
-		sitePageFactsClaim(people.FactService, "Cloud Cost Audit", audit) + `,` +
-		sitePageFactsClaim(people.FactGeography, "Cloud Cost Audit", audit) + `]}`
+		sitePageFactsClaim(contacts.FactService, "Cloud Cost Audit", audit) + `,` +
+		sitePageFactsClaim(contacts.FactGeography, "Cloud Cost Audit", audit) + `]}`
 	trace, err := prepared.Run(context.Background(), sitePageFactsCompleterStub{reply: reply})
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
@@ -127,7 +127,7 @@ func TestSitePageFactsCaseFailsAReplyThatFilesAForbiddenField(t *testing.T) {
 	if outcome.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("a reply filing a forbidden field scored %q, want a wrong answer", outcome.Result)
 	}
-	if !strings.Contains(outcome.Detail, people.FactGeography) {
+	if !strings.Contains(outcome.Detail, contacts.FactGeography) {
 		t.Errorf("the detail does not name the field that was filed: %q", outcome.Detail)
 	}
 }

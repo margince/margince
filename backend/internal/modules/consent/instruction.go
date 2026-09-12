@@ -11,7 +11,7 @@ package consent
 // send.
 //
 // THIS IS NOT A CONSENT GRANT AND IS NEVER RECORDED AS ONE. The refusal stays
-// exactly where it is; this row sits beside it saying a person overrode it, who
+// exactly where it is; this row sits beside it saying a contact overrode it, who
 // they were, and what they said their reason was. A subject asking later why
 // they received a message must be shown the refusal AND the decision, not a
 // grant nobody made.
@@ -41,7 +41,7 @@ import (
 //
 // Its own object rather than a corner of consent_config, because the two are
 // different authorities: consent_config is who may change the RULES, and this
-// is who may act against the answer the rules produced about one person. An
+// is who may act against the answer the rules produced about one contact. An
 // installation that delegates the first has not thereby delegated the second.
 const entityCommunicationException = "communication_exception"
 
@@ -55,7 +55,7 @@ const EntityCommunicationException = entityCommunicationException
 // and a free-text-only reason cannot be counted — an installation asking "how
 // often do we override, and for what" needs an answer it can group.
 //
-// `other` is present deliberately: a closed list with no escape makes people
+// `other` is present deliberately: a closed list with no escape makes contacts
 // pick the nearest wrong entry, which is worse than one honest bucket whose
 // explanation carries the meaning.
 const (
@@ -93,7 +93,7 @@ const fieldReasonCode = "reason_code"
 // regardless; this is the outer bound on how stale they may be.
 const InstructionValidity = 24 * time.Hour
 
-// DirectInput is what the person directing the send says.
+// DirectInput is what the contact directing the send says.
 type DirectInput struct {
 	ReasonCode  string
 	Explanation string
@@ -121,7 +121,7 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// RequireHuman, because the claim is that a PERSON took responsibility. An
+// RequireHuman, because the claim is that a CONTACT took responsibility. An
 // agent acting under somebody's passport inherits their grants, so without this
 // an agent could mint the very record that says a human decided — which is the
 // one assertion this table exists to make truthfully.
@@ -134,7 +134,7 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Instruction{}, err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
@@ -252,7 +252,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 // decision back would leave a sent message with no recorded authority behind
 // it, which is worse than the decision standing.
 func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason string) error {
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return err
 	}
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionDelete); err != nil {
@@ -328,7 +328,7 @@ func validateDirect(in DirectInput) error {
 	}
 	// A VERSION THIS BUILD ACTUALLY SERVES, not merely a non-empty string.
 	//
-	// The record's whole claim is that a named person read particular words. A
+	// The record's whole claim is that a named human read particular words. A
 	// caller free to name any version could write "v99" onto an instruction and
 	// the record would assert an acknowledgement of text nobody ever wrote —
 	// which is exactly the assertion a dispute about an override turns on.
@@ -355,7 +355,7 @@ type directableReview struct {
 	State    string
 	OpenedAt time.Time
 	// IntentID is the held message this review is about, so the decision can
-	// fingerprint what the person is looking at.
+	// fingerprint what the human is looking at.
 	IntentID ids.UUID
 }
 
@@ -383,26 +383,26 @@ func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (dir
 	return out, nil
 }
 
-// requireAPersonAtTheKeyboard admits a HUMAN and nothing else.
+// requireAHumanAtTheKeyboard admits a HUMAN and nothing else.
 //
 // auth.RequireHuman is not enough here, and the gap is exact: it refuses buyers
 // and agents, and ADMITS a connector. A connector runs with the granting
 // human's UserID and their whole permission set (capture/registry.go), so an
-// integration would mint a row saying that person decided to send a refused
+// integration would mint a row saying that contact decided to send a refused
 // message — attributing an override to somebody who was not there.
 //
 // Every other human-only surface can live with that, because a connector
 // acting under somebody's authority is doing what they configured it to do.
-// This one cannot: the row's entire content is the claim that a named person
+// This one cannot: the row's entire content is the claim that a named contact
 // took responsibility, and a claim like that must be true of the moment it
 // records.
-func requireAPersonAtTheKeyboard(ctx context.Context) error {
+func requireAHumanAtTheKeyboard(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return fmt.Errorf("directing a send is a person's own decision: %w",
+		return fmt.Errorf("directing a send is a contact's own decision: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return nil

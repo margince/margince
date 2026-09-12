@@ -48,18 +48,18 @@ func stampParties(t *testing.T, e *Env, activity ids.ActivityID, trusted bool, p
 }
 
 // participantRow reads back one stamped party.
-func participantRow(t *testing.T, activity ids.ActivityID, address string) (userID, personID *ids.UUID, found bool) {
+func participantRow(t *testing.T, activity ids.ActivityID, address string) (userID, contactID *ids.UUID, found bool) {
 	t.Helper()
 	err := OwnerConn(t).QueryRow(context.Background(), `
-		SELECT user_id, person_id FROM activity_participant
-		 WHERE activity_id = $1 AND address = $2`, activity, address).Scan(&userID, &personID)
+		SELECT user_id, contact_id FROM activity_participant
+		 WHERE activity_id = $1 AND address = $2`, activity, address).Scan(&userID, &contactID)
 	if err == pgx.ErrNoRows {
 		return nil, nil, false
 	}
 	if err != nil {
 		t.Fatalf("reading the participant row: %v", err)
 	}
-	return userID, personID, true
+	return userID, contactID, true
 }
 
 // The forgery gate. An outsider mails a synced mailbox with a colleague on the
@@ -115,23 +115,23 @@ func TestAnAttestedHeaderBindsTheColleague(t *testing.T) {
 }
 
 // A known contact resolves on either arm: their identity comes from
-// person_email, not from who wrote the header.
+// contact_email, not from who wrote the header.
 func TestAKnownContactResolvesFromAnUntrustedHeaderToo(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedInteraction(t, e)
-	person := e.SeedPerson(t, "Sam Second", &e.Rep1)
-	SeedIDRow(t, owner, `INSERT INTO person_email (id, person_id, email, source, captured_by)
-		VALUES ($1, '`+person.String()+`', 'sam@target.example', 'manual', 'human:x')`)
+	contact := e.SeedContact(t, "Sam Second", &e.Rep1)
+	SeedIDRow(t, owner, `INSERT INTO contact_email (id, contact_id, email, source, captured_by)
+		VALUES ($1, '`+contact.String()+`', 'sam@target.example', 'manual', 'human:x')`)
 
 	stampParties(t, e, activity, false,
 		connector.MessageParticipant{Email: "sam@target.example", Role: connector.ParticipantRoleCC})
 
-	_, personID, found := participantRow(t, activity, "sam@target.example")
+	_, contactID, found := participantRow(t, activity, "sam@target.example")
 	if !found {
 		t.Fatal("the copied contact was not recorded")
 	}
-	if personID == nil || *personID != person {
+	if contactID == nil || *contactID != contact {
 		t.Error("a known contact did not resolve; who they are is a fact about them, not about the header")
 	}
 }

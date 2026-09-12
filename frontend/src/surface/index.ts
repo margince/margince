@@ -23,7 +23,7 @@ import type { MessageKey } from "../i18n/en";
 
 export { useCan, useCanWrite } from "../app/capability";
 // `formatNumber` alongside `formatDateTime` for the same reason: a unit's screen
-// renders figures a person reads, `useT` below refuses a raw number, and the
+// renders figures a reader reads, `useT` below refuses a raw number, and the
 // only alternative left to a unit would be `String(n)` — which groups for
 // nobody. A surface that narrows the parameter without exporting the formatter
 // has told the unit to write the defect a different way.

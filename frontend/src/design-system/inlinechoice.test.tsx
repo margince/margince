@@ -382,14 +382,14 @@ describe("editing free text where it is read", () => {
 
   // The disclosure both controls used to make. `auth.Require` composes a
   // refusal's detail from the RBAC object and the verb, so showing a caught
-  // error's own text handed the person who was just refused the name of the
+  // error's own text handed the contact who was just refused the name of the
   // permission they lack and the record kind it governs.
   it("answers a permission refusal in the reader's words, never the server's", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn(async () => {
       throw new ProblemError({
         code: "permission_denied",
-        detail: "person.update: permission denied",
+        detail: "contact.update: permission denied",
       });
     });
     renderText({ onSave });
@@ -403,7 +403,7 @@ describe("editing free text where it is read", () => {
       ),
     );
     expect(screen.getByRole("alert").textContent).not.toContain(
-      "person.update",
+      "contact.update",
     );
     expect(screen.getByRole("alert").textContent).not.toContain(
       "permission denied",

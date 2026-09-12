@@ -15,7 +15,7 @@ package capture
 // seat's, and a workspace-wide list would let anyone keep a colleague's
 // customer out of the shared CRM by naming their domain. The exclusion list
 // beside it answers a different question: an exclusion keeps mail OUT of the
-// product entirely, a hold captures it and keeps it to the people on it.
+// product entirely, a hold captures it and keeps it to the contacts on it.
 
 import (
 	"context"
@@ -63,7 +63,7 @@ func NewCounterpartyHoldStore(db *database.DB) *CounterpartyHoldStore {
 //
 // No id parameter and no scope clause: the statement matches on the
 // authenticated user, so there is nothing a caller could pass to read a
-// colleague's list. Whose mail a person keeps private is itself private.
+// colleague's list. Whose mail a colleague keeps private is itself private.
 func (s *CounterpartyHoldStore) List(ctx context.Context) ([]CounterpartyHold, error) {
 	actor, err := seatItself(ctx)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *CounterpartyHoldStore) Add(ctx context.Context, kind, value string) (Co
 // Lifting widens NOTHING that is already captured. Mail held while the hold
 // stood was held for a reason that was true at the time, and re-opening a
 // year of correspondence as a side effect of tidying a list is not something a
-// person asked for. Re-sharing that history is its own call.
+// contact asked for. Re-sharing that history is its own call.
 func (s *CounterpartyHoldStore) Remove(ctx context.Context, id ids.UUID) error {
 	actor, err := seatItself(ctx)
 	if err != nil {

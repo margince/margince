@@ -105,7 +105,7 @@ func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *tes
 
 	// The two words have to be RELATED, not merely both present. A whole-body
 	// substring search passes while company radius search is broken, because
-	// the same document advertises an address radius for people — which is
+	// the same document advertises an address radius for contacts — which is
 	// exactly the predicate this case's third test proves unanswerable.
 	if !advertisesOperator(t, answer.Vocabulary, "company", "address", "within_radius") {
 		t.Fatalf("case 4 criterion 1: the vocabulary does not say that an COMPANY's `address` "+
@@ -119,7 +119,7 @@ func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *tes
 //
 // Decoded into the document's real shape rather than searched as text. The two
 // words being present somewhere is not the claim: `address` supports
-// `within_radius` on PERSON too, and that predicate is the one the third test
+// `within_radius` on CONTACT too, and that predicate is the one the third test
 // proves unanswerable — so a substring search passes while company radius
 // search is broken.
 func advertisesOperator(t *testing.T, document json.RawMessage, target, field, operator string) bool {
@@ -256,15 +256,15 @@ func distanceOf(t *testing.T, rows map[ids.UUID]agents.QueryWorkspaceRow, id ids
 }
 
 // TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway pins criterion
-// 7. A person HAS an address, so both the field and the operator exist and the
-// plan looks answerable — but this product does not geocode where people live,
+// 7. A contact HAS an address, so both the field and the operator exist and the
+// plan looks answerable — but this product does not geocode where contacts live,
 // so there is nothing to measure from.
 func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T) {
 	s := boot(t, scopesRead)
 	s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
 
 	result := s.queryPlan(t, `{
-		"version": "v1", "target": "person",
+		"version": "v1", "target": "contact",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Köln", "radius_km": 50}}]}`)
 
@@ -283,7 +283,7 @@ func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T)
 //
 // Run 1 of the real scenario returned seven correct companies and never said
 // Sofia Meier owned one of them, because the row carried owner_id as a bare
-// uuid — data present, correct, and useless to the person reading it. Two
+// uuid — data present, correct, and useless to the reader reading it. Two
 // thirds of the accounts in the demo CRM belong to somebody other than the
 // caller, so this is the common case rather than an edge.
 func TestCase4EveryCompanySaysWhoOwnsItByName(t *testing.T) {

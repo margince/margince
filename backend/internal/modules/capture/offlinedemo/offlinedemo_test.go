@@ -16,7 +16,7 @@ import (
 )
 
 // TestTheConnectorCannotSend is the guarantee the whole design rests on. The
-// addresses in this dataset are synthesized for identifiable real people, and
+// addresses in this dataset are synthesized for identifiable real contacts, and
 // the dataset's own rule is that nothing is ever delivered to one. A connector
 // that grew a send seam would break that rule silently, so the absence is
 // pinned rather than described.
@@ -44,7 +44,7 @@ func demoMailbox() Mailbox {
 			Name:      "Acme GmbH", Domain: "acme.de", Lifecycle: "customer",
 			ContractNumber: "V-1234-ACME",
 			Now:            time.Date(2026, 8, 17, 9, 0, 0, 0, time.UTC),
-			People:         []Person{{Name: "Petra Wolf", Email: "petra.wolf@acme.de", Role: "Head of IT"}},
+			Contacts:       []Contact{{Name: "Petra Wolf", Email: "petra.wolf@acme.de", Role: "Head of IT"}},
 			Deals:          []Deal{{ID: "01a00000-0000-7000-8000-0000000000bb", Name: "Acme Rollout", Stage: "Proposal"}},
 		}},
 	}
@@ -109,13 +109,13 @@ func TestEveryMessageIdIsValid(t *testing.T) {
 }
 
 // TestEveryAddressIsKnown — the generator must never invent a correspondent.
-// An address outside the mailbox and its accounts would be a real person
+// An address outside the mailbox and its accounts would be a real contact
 // nobody in this dataset agreed to.
 func TestEveryAddressIsKnown(t *testing.T) {
 	box := demoMailbox()
 	known := map[string]bool{box.Email: true, box.ColleagueEmail: true}
 	for _, a := range box.Accounts {
-		for _, p := range a.People {
+		for _, p := range a.Contacts {
 			known[p.Email] = true
 		}
 	}
@@ -200,13 +200,13 @@ func TestMailRecordsLinkTheAccount(t *testing.T) {
 	}
 }
 
-// TestAnAccountWithNoPeopleWritesNothing — most Automation World companies
-// publish no staff, and a thread addressed to a company rather than a person
+// TestAnAccountWithNoContactsWritesNothing — most Automation World companies
+// publish no staff, and a thread addressed to a company rather than a contact
 // is not correspondence.
-func TestAnAccountWithNoPeopleWritesNothing(t *testing.T) {
+func TestAnAccountWithNoContactsWritesNothing(t *testing.T) {
 	box := demoMailbox()
 	account := box.Accounts[0]
-	account.People = nil
+	account.Contacts = nil
 	if msgs := generate(box, account); len(msgs) != 0 {
 		t.Errorf("an account with no contacts generated %d messages", len(msgs))
 	}

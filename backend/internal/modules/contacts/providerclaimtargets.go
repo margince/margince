@@ -1,0 +1,115 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// Finding what a bought value attaches to, and attaching it.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// insertSocialHandle puts one platform handle on a contact, leaving any handle
+// already there alone, and reports whether it landed.
+//
+// Shared with the LinkedIn-match apply, which had this statement first: a
+// handle on the record is somebody's statement, and neither confirming a match
+// nor buying a profile is grounds to replace it. Two writers of one rule, one
+// spelling.
+//
+// It takes NO lock. Every caller holds the subject from the top of its own
+// transaction — ApplyLinkedInMatch through HoldWritableLive, the provider
+// hand-off through the holding fence — and re-taking it here would be the
+// ordering the eraser deadlocks against.
+func insertSocialHandle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, platform, handle string) (ids.UUID, bool, error) {
+	var rowID ids.UUID
+	err := tx.QueryRow(ctx, `
+		INSERT INTO contact_social (contact_id, platform, handle)
+		VALUES ($1, $3, $2)
+		ON CONFLICT (contact_id, platform) DO NOTHING
+		RETURNING id`, contactID, handle, platform).Scan(&rowID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("contacts: writing a contact's %s handle: %w", platform, err)
+	}
+	return rowID, true, nil
+}
+
+// companyByDomain answers which company owns a domain, and whether one
+// does at all.
+//
+// Domain only, never display name. Two live companies may share a name — the
+// schema permits it and nothing dedupes it — so matching on one would attach a
+// contact's employment to whichever row sorted first, which is a false
+// statement about where somebody works. A domain is unique by constraint.
+func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.CompanyID, bool, error) {
+	var company ids.CompanyID
+	err := tx.QueryRow(ctx, `
+		SELECT d.company_id
+		  FROM company_domain d
+		  JOIN company o ON o.id = d.company_id
+		 WHERE lower(d.domain) = lower($1)
+		   AND d.archived_at IS NULL
+		   AND o.archived_at IS NULL
+		 LIMIT 1`, domain).Scan(&company)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.CompanyID{}, false, nil
+	}
+	if err != nil {
+		return ids.CompanyID{}, false, fmt.Errorf("contacts: resolving a bought employer's domain: %w", err)
+	}
+	return company, true, nil
+}
+
+// plantProviderEmploymentEdge attaches a contact to a company a provider named,
+// and only when they hold no current employer.
+//
+// The same two partial uniques guard it as the capture path's edge, and
+// ON CONFLICT DO NOTHING makes either a no-op: a purchase has nothing to add to
+// an employment that already exists, and it never reassigns one.
+//
+// The audit says `origin: provider`, not `capture`. Somebody was paid to assert
+// this, which is a different kind of claim from one inferred out of the
+// installation's own correspondence.
+func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.UUID, companyID ids.CompanyID, providerName string) (ids.UUID, bool, error) {
+	subject := ids.ContactID{UUID: contactID}
+	// The edge hangs off the contact, so an archive in flight must not be
+	// outrun — the same reason the capture path's edge takes it. The hand-off
+	// holds this subject already; re-taking the same lock in the same
+	// transaction is free, and it is what makes this writer's own correctness
+	// readable without tracing back to its caller.
+	if err := lockContactForAttach(ctx, tx, subject); err != nil {
+		return ids.UUID{}, false, err
+	}
+	var edgeID ids.UUID
+	err := tx.QueryRow(ctx, `
+		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
+		SELECT 'employment', $1, $2, true, $3, $4
+		WHERE NOT EXISTS (
+			SELECT 1 FROM relationship
+			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
+		ON CONFLICT DO NOTHING
+		RETURNING id`,
+		contactID, companyID, providerName, connectorCapturedBy(providerName)).Scan(&edgeID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Either guard skipped it: the contact already has a current employer,
+		// or this exact edge exists. Nothing written, so nothing audited.
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, fmt.Errorf("contacts: linking a contact to a bought employer: %w", err)
+	}
+	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
+		return ids.UUID{}, false, err
+	}
+	return edgeID, true, nil
+}

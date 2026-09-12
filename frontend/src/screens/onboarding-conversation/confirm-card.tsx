@@ -60,7 +60,7 @@ import {
 
 type Proposal = components["schemas"]["OnboardingCompanyProposal"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
-type SitePerson = components["schemas"]["CompanySiteReadPerson"];
+type SiteContact = components["schemas"]["CompanySiteReadContact"];
 type SiteFact = components["schemas"]["CompanySiteReadFact"];
 
 // This card no longer re-asks a clarify of its own — that surface is the
@@ -72,7 +72,7 @@ type CompanyConfirmCardProps = Readonly<{
   proposal: Proposal;
   draft: CompanyDraft;
   answers: readonly ClarifyAnswer[];
-  /** The read behind the proposal; the card keeps its people and coverage
+  /** The read behind the proposal; the card keeps its contacts and coverage
    * honesty reachable below the fields. Null on a proposal-only render. */
   read?: CompanySiteRead | null;
   selectedFactKeys: readonly string[];
@@ -511,7 +511,7 @@ const NAV_NAMED_LIMIT = 5;
 // reading a single named list) already tells settled from advisory from
 // blocking apart. Only the shape differs by tier: the blocking count keeps
 // the danger pill (the one count that actually gates confirm), the
-// advisory count is the same quiet mono numeral the People/Facts counts
+// advisory count is the same quiet mono numeral the Contacts/Facts counts
 // use — never the danger tone, since none of these fields stop anything.
 function SectionBadge({
   blocking,
@@ -617,7 +617,7 @@ function NavOutstandingList({
   );
 }
 
-// The count beside People or Facts means something else entirely from the
+// The count beside Contacts or Facts means something else entirely from the
 // counts beside a field section: "this is what I found", never "this needs
 // you". Sharing SectionBadge's pill shape (or its red) would say the crawl
 // itself is an obstacle, which it is not — nothing under either section is
@@ -662,16 +662,16 @@ function SectionNav({
   groups,
   activeKey,
   rowByField,
-  peopleCount,
+  contactsCount,
   factsCount,
   t,
 }: Readonly<{
   groups: readonly FrozenGroup[];
   activeKey: string | null;
   rowByField: ReadonlyMap<CompanyFieldName, ReviewRow>;
-  /** null when no read backs this proposal — the People section itself
+  /** null when no read backs this proposal — the Contacts section itself
    * does not exist in that case either (see the `frozen` builder). */
-  peopleCount: number | null;
+  contactsCount: number | null;
   factsCount: number;
   t: ReturnType<typeof useT>;
 }>) {
@@ -685,7 +685,7 @@ function SectionNav({
             node?.scrollIntoView?.({ block: "start", behavior: "smooth" });
           };
           const current = group.key === activeKey ? "true" : undefined;
-          if (group.key === PEOPLE_KEY) {
+          if (group.key === CONTACTS_KEY) {
             return (
               <li key={group.key}>
                 <button
@@ -696,8 +696,8 @@ function SectionNav({
                 >
                   <span>{t(group.labelKey)}</span>
                   <SectionQuantity
-                    count={peopleCount ?? 0}
-                    labelKey="ob.conv.triage.peopleCount"
+                    count={contactsCount ?? 0}
+                    labelKey="ob.conv.triage.contactsCount"
                     t={t}
                   />
                 </button>
@@ -844,38 +844,38 @@ function CompanyIdentityCard({
   );
 }
 
-// The people section's key: fixed, so the frozen layout, the section nav and
-// the group renderer all agree on which slot is the read's people rather
+// The contacts section's key: fixed, so the frozen layout, the section nav and
+// the group renderer all agree on which slot is the read's contacts rather
 // than a profile field.
-const PEOPLE_KEY = "people";
+const CONTACTS_KEY = "contacts";
 
-// A person is evidence-or-omit like any other finding: the contract requires
+// A contact is evidence-or-omit like any other finding: the contract requires
 // a snippet and a source for every one the read reports, so this is never a
 // guess at whether they exist, only a defensive floor against a quote with
 // nothing in it. Whitespace counts as nothing — a chip whose proof is three
 // spaces claims evidence it does not have.
-function personEvidence(person: SitePerson): Evidence | null {
-  return person.evidence_snippet.trim() === "" ||
-    person.evidence_url.trim() === ""
+function contactEvidence(contact: SiteContact): Evidence | null {
+  return contact.evidence_snippet.trim() === "" ||
+    contact.evidence_url.trim() === ""
     ? null
-    : { snippet: person.evidence_snippet, source: person.evidence_url };
+    : { snippet: contact.evidence_snippet, source: contact.evidence_url };
 }
 
-// One person the read found: name, role, and whatever else it carries
+// One contact the read found: name, role, and whatever else it carries
 // (a published address, a network profile), with the page it read them from
 // one toggle away — the same collapsed evidence chip a profile field uses.
-function PersonRow({ person }: Readonly<{ person: SitePerson }>) {
-  const evidence = personEvidence(person);
+function ContactRow({ contact }: Readonly<{ contact: SiteContact }>) {
+  const evidence = contactEvidence(contact);
   return (
-    <li className="ob-triage-person">
-      <span className="ob-triage-person-name">{person.name}</span>
-      <span className="t-sub">{person.role}</span>
-      {person.published_email && (
-        <span className="t-caption">{person.published_email}</span>
+    <li className="ob-triage-contact">
+      <span className="ob-triage-contact-name">{contact.name}</span>
+      <span className="t-sub">{contact.role}</span>
+      {contact.published_email && (
+        <span className="t-caption">{contact.published_email}</span>
       )}
-      {person.linkedin_url && (
-        <span className="ob-triage-person-url t-caption">
-          {person.linkedin_url}
+      {contact.linkedin_url && (
+        <span className="ob-triage-contact-url t-caption">
+          {contact.linkedin_url}
         </span>
       )}
       {evidence && <EvidenceChip evidence={evidence} collapsed />}
@@ -884,40 +884,40 @@ function PersonRow({ person }: Readonly<{ person: SitePerson }>) {
 }
 
 /**
- * The people the read found, promoted to a section of their own: they are
+ * The contacts the read found, promoted to a section of their own: they are
  * company facts (who to talk to), the same class of thing as an office or a
  * service line, not a footnote under "everything else". There is nothing
  * here for a human to resolve — no field, no confidence band — so the
  * section carries no outstanding count; it only ever states what was found,
  * or says plainly that nothing was.
  */
-function PeopleGroupSection({
-  people,
+function ContactsGroupSection({
+  contacts,
   t,
-}: Readonly<{ people: readonly SitePerson[]; t: ReturnType<typeof useT> }>) {
+}: Readonly<{ contacts: readonly SiteContact[]; t: ReturnType<typeof useT> }>) {
   const { locale } = useLocale();
   return (
-    <section id={groupDomId(PEOPLE_KEY)} className="ob-triage-group">
+    <section id={groupDomId(CONTACTS_KEY)} className="ob-triage-group">
       <div className="ob-triage-group-head">
         <h3>{t("ob.conv.triage.contactsLabel")}</h3>
-        {people.length > 0 && (
+        {contacts.length > 0 && (
           <span className="t-caption">
-            {t("ob.conv.triage.peopleCount", {
-              count: formatNumber(people.length, locale),
+            {t("ob.conv.triage.contactsCount", {
+              count: formatNumber(contacts.length, locale),
             })}
           </span>
         )}
       </div>
-      {people.length === 0 ? (
-        <p className="ob-triage-people-empty t-sub">
+      {contacts.length === 0 ? (
+        <p className="ob-triage-contacts-empty t-sub">
           {t("ob.conv.triage.contactsEmpty")}
         </p>
       ) : (
-        <ul className="ob-triage-people-rows">
-          {people.map((person) => (
-            <PersonRow
-              key={`${person.name}:${person.evidence_url}`}
-              person={person}
+        <ul className="ob-triage-contacts-rows">
+          {contacts.map((contact) => (
+            <ContactRow
+              key={`${contact.name}:${contact.evidence_url}`}
+              contact={contact}
             />
           ))}
         </ul>
@@ -926,7 +926,7 @@ function PeopleGroupSection({
   );
 }
 
-// The facts section's key, alongside PEOPLE_KEY: another slot the frozen
+// The facts section's key, alongside CONTACTS_KEY: another slot the frozen
 // layout, the section nav and the group renderer all agree carries no
 // profile field.
 const FACTS_KEY = "facts";
@@ -1189,9 +1189,9 @@ function GroupBody({
   locale: Locale;
   t: ReturnType<typeof useT>;
 }>) {
-  if (group.key === PEOPLE_KEY) {
+  if (group.key === CONTACTS_KEY) {
     return read === null ? null : (
-      <PeopleGroupSection people={read.people} t={t} />
+      <ContactsGroupSection contacts={read.contacts} t={t} />
     );
   }
   if (group.key === FACTS_KEY) {
@@ -1356,13 +1356,13 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
     // human's to resolve, only theirs to see. Facts join once the read
     // actually produced any — an empty facts section would be nothing to
     // navigate to. Fields come first in the list on purpose: they are the
-    // decisions the human owes, people and facts are what the read found —
+    // decisions the human owes, contacts and facts are what the read found —
     // last in the nav and last in the scroll order keeps the board's
     // weight on the work, however many facts the crawl turned up.
     const extra: FrozenGroup[] = [];
     if (readAtMount != null) {
       extra.push({
-        key: PEOPLE_KEY,
+        key: CONTACTS_KEY,
         labelKey: "ob.conv.triage.contactsLabel" as const,
         order: [],
         workCount: 0,
@@ -1435,7 +1435,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           groups={frozen}
           activeKey={activeSection}
           rowByField={rowByField}
-          peopleCount={props.read?.people.length ?? null}
+          contactsCount={props.read?.contacts.length ?? null}
           factsCount={facts.length}
           t={t}
         />
@@ -1460,7 +1460,7 @@ export function CompanyConfirmCard(props: CompanyConfirmCardProps) {
           <p>{t("ob.conv.review.skipped", { fields: dismissedLabels })}</p>
         </div>
       )}
-      {/* The read's remaining honesty: what it read or skipped. People and
+      {/* The read's remaining honesty: what it read or skipped. Contacts and
           facts both moved up onto the board as findings of their own — this
           is crawl provenance, not a finding, so it is the one thing left
           under a tail head of its own. */}

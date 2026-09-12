@@ -172,7 +172,7 @@ it may WRITE:
 - **all** — every record in the workspace.
 
 Both questions have to pass, and they do not bind equally. Row scope narrows
-WRITES; a customer record — person, company, lead, deal, project — is read
+WRITES; a customer record — contact, company, lead, deal, project — is read
 by every seat that holds its read grant, whatever their scope. So a rep holding
 CRU- on deals reads the whole workspace's deals and may update only the ones
 their scope reaches, while a read-only auditor holding R--- reads them all and
@@ -189,33 +189,33 @@ Read this as one of several answers, not as the whole access-control story.
 Parts of the system are not governed by these objects at all. They are open to
 the admin role and to nobody else, whatever the table above says:
 
-- **User administration** — inviting someone, changing a person's role,
+- **User administration** — inviting someone, changing a colleague's role,
   deactivating or reactivating an account.
 - **Privacy and GDPR work** — erasing a subject's data, and assembling the
   export that answers a subject-access request.
 - **The audit log** — reading the record of who changed what.
 
 If the question is whether somebody can reach one of those, this page cannot
-answer it. The only question there is whether that person holds the admin role.
+answer it. The only question there is whether that seat holds the admin role.
 
 ### An agent gets no more than a row here shows, and normally much less
 
-A person can lend their access to an AI agent by issuing it a passport. The
+A seat can lend their access to an AI agent by issuing it a passport. The
 passport carries no role from this table. Its holder may do only what *both* of
 these allow, at the moment of each call:
 
 - the scopes written into the passport when it was issued, which are chosen for
-  one job and are usually a narrow slice of what the person can do; and
-- the live permissions of the person who granted it, re-read on every single
-  call — so changing that person's role, or deactivating them, narrows or ends
+  one job and are usually a narrow slice of what the seat can do; and
+- the live permissions of the seat who granted it, re-read on every single
+  call — so changing that seat's role, or deactivating them, narrows or ends
   the agent's reach immediately, part-way through whatever it was doing.
 
 The effect is an intersection: an agent's real permission is never wider than
 the row you are reading, and is usually far narrower. Some actions narrow
-further still — they stop and wait for a person to confirm them before they take
+further still — they stop and wait for a human to confirm them before they take
 effect, and a few are closed to agents outright.
 
-### Sharing one record with one person
+### Sharing one record with one colleague
 
 Row scope is not the last word on which records somebody sees: an individual
 record can also be shared with an individual user. That widens *which* records

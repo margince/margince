@@ -29,7 +29,7 @@ type Extension struct {
 	Version string
 	// Via names the surface the call arrived on — `tool/file_note`,
 	// `route/POST /ext/notes/file` — so an audit reader can tell an agent's
-	// call from a person's without a second lookup.
+	// call from a contact's without a second lookup.
 	Via string
 
 	// Detail is the unit's OWN free-form context about ONE write, and the only
@@ -65,7 +65,7 @@ func WithExtension(ctx context.Context, ext Extension) context.Context {
 }
 
 // ExtensionFrom reports the bound attribution. ok is false for an ordinary core
-// write — a person or an agent calling the product's own surface — which is
+// write — a contact or an agent calling the product's own surface — which is
 // what makes "this row was written through an extension" a fact the absence of
 // the key states as clearly as its presence.
 func ExtensionFrom(ctx context.Context) (Extension, bool) {

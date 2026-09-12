@@ -251,7 +251,7 @@ func seedHeldThreadMail(t *testing.T, e *integration.Env, threadKey, from, subje
 
 func TestOneSeatsVerdictDoesNotPublishAColleaguesHeldMessage(t *testing.T) {
 	// The per-owner model, at the point where it is easiest to break. A thread
-	// reaching two mailboxes is two people's correspondence: each seat gets its
+	// reaching two mailboxes is two contacts's correspondence: each seat gets its
 	// own ledger row, each may conclude differently, and the message ends at
 	// the STRICTEST of their answers.
 	//
@@ -849,7 +849,7 @@ func TestArchivedMessagesDoNotStarveTheSweep(t *testing.T) {
 // TestAnOwnersSharedThreadIsNotReopenedByTheRepair holds the owner's decision
 // against the repair.
 //
-// A person clicking "share this thread" ends the question: no later pass
+// A contact clicking "share this thread" ends the question: no later pass
 // re-asks, because a classifier that could overturn them would make the click
 // advisory. The repair applies the OWNER's answer to the messages that never
 // took it — and must not, on finding a party the owner's decision predates,
@@ -881,7 +881,7 @@ func TestAnOwnersSharedThreadIsNotReopenedByTheRepair(t *testing.T) {
 	}
 
 	if got := threadStatus(t, e, threadID); got != capture.VerdictSharedByOwner {
-		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a person's "+
+		t.Fatalf("thread status = %q, want shared_by_owner: the repair handed a contact's "+
 			"decision back to the classifier, which makes the click advisory", got)
 	}
 	// And the message the owner never spoke for stays held rather than being

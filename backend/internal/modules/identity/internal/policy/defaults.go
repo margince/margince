@@ -35,7 +35,7 @@ import (
 // rather than by hand.
 //
 // integrations (ADR-0101/A152) — a rep reads whether a provider is connected,
-// so a dated value on a person record has an explanation; connecting one spends
+// so a dated value on a contact record has an explanation; connecting one spends
 // money and is admin/ops.
 //
 // offer_template follows product and offer rather than the pipeline-config
@@ -247,7 +247,7 @@ var defaults = map[string]Document{
 			"offer":             writeNoDelete,
 			"offer_template":    writeNoDelete,
 			"company":           writeNoDelete,
-			"person":            writeNoDelete,
+			"contact":           writeNoDelete,
 			"product":           writeNoDelete,
 			"project":           writeNoDelete,
 			"relationship":      writeNoDelete,
@@ -339,10 +339,10 @@ var defaults = map[string]Document{
 			// The administration objects, and the sharpest place admin and ops
 			// differ. Ops administers the installation's WIRING: the consent
 			// vocabulary, the OAuth applications, the queues, the composed units.
-			// It does not administer PEOPLE — no user_admin, no team_admin — and it
+			// It does not administer CONTACTS — no user_admin, no team_admin — and it
 			// does not read the audit trail or hold the reset, because an operator
 			// is not the party those two exist to hold to account. role_admin is
-			// read: answering "why can this person not see that" needs the policy
+			// read: answering "why can this contact not see that" needs the policy
 			// in front of you, and changing it does not.
 			objUserAdmin:            none,
 			objRoleAdmin:            readOnly,
@@ -356,7 +356,7 @@ var defaults = map[string]Document{
 			objAuthenticationPolicy: readOnly,
 			objSeatUsage:            readOnly,
 			// Ops configures the rules and does not send under them. Directing
-			// a message past the engine's answer about a person is a decision
+			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has
 			// none — it holds consent_config precisely because that is the
 			// other authority.

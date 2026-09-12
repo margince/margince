@@ -120,7 +120,7 @@ func TestSearchNarrowsToASiteInTheQuery(t *testing.T) {
 	}
 }
 
-// These searches name a person and their employer, so the query string is
+// These searches name a contact and their employer, so the query string is
 // personal data. An error message outlives the request and is an observability
 // surface — it must carry the failure and nothing about who was searched for.
 func TestASearchFailureNamesTheProviderAndNotTheSubject(t *testing.T) {
@@ -141,7 +141,7 @@ func TestASearchFailureNamesTheProviderAndNotTheSubject(t *testing.T) {
 }
 
 // A body the decoder cannot read is reported as such, again without echoing
-// the payload — which is about a person.
+// the payload — which is about a contact.
 func TestAnUnreadableAnswerIsReportedWithoutThePayload(t *testing.T) {
 	b, _ := braveStub(t, http.StatusOK, `{"web": {"results": [ NOT JSON`)
 

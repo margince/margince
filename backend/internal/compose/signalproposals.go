@@ -34,7 +34,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -236,7 +236,7 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, account contradic
 // right and the reading wrong; the record is already what they want, and the
 // signal stays open because they did not say the mail was wrong, only that
 // the record was not.
-func lifecycleAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func lifecycleAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var proposal lifecycleProposal
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {

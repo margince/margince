@@ -94,7 +94,7 @@ func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 // returned — the message is already on the timeline and stays there.
 //
 // Nothing re-runs the ladder over it afterwards. link_reconcile repairs the
-// PERSON links a captured message is owed; a project attribution it never made
+// CONTACT links a captured message is owed; a project attribution it never made
 // is a filing decision nobody has re-asked, and saying otherwise here would
 // describe a repair that does not exist.
 func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
@@ -152,7 +152,7 @@ func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRec
 // is the three-rung ladder, which has nothing left to decide — not the write
 // that makes the answer durable.
 //
-// Only a project link counts. An activity filed under a person or a deal has
+// Only a project link counts. An activity filed under a contact or a deal has
 // not been asked this question yet, and treating any link as an answer would
 // make the retry it exists for unreachable for exactly the messages that carry
 // other links — which is most of them.

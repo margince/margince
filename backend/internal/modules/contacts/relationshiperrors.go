@@ -1,0 +1,183 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+)
+
+// What a relationship edge may not be, and the ONE mapping that turns the
+// database's refusal of each rule into a typed one. relationship.go owns the
+// writes; every refusal they can produce lives here.
+//
+// Each carries its verdict on itself, so one mapping serves every surface, and
+// each carries the RIGHT verdict: a FieldFault names an argument the caller can
+// change, a MessageFault names a condition no single argument owns.
+
+// RelationshipShapeError refuses an edge whose endpoints do not match its kind
+// — an employment without a company, a deal stakeholder without a deal.
+//
+// MessageFault, not FieldFault: the mismatch is between the kind and the PAIR of
+// endpoints, so no single argument is the wrong one. Naming one would send the
+// caller to change a field that may well be correct.
+type RelationshipShapeError struct{ Kind string }
+
+func (e *RelationshipShapeError) Error() string {
+	// No indefinite article: "a employment relationship" is wrong for the two
+	// kinds that begin with a vowel, and picking one per kind is a rule about
+	// English that the refusal does not need.
+	return "kind " + strconv.Quote(e.Kind) + " does not take this combination of endpoints"
+}
+
+// MessageFault names the condition and what to check, with no field: the
+// mismatch is between the kind and the endpoint pair, so no single argument is
+// the wrong one.
+func (e *RelationshipShapeError) MessageFault() (code, message string) {
+	return "relationship_shape_invalid",
+		e.Error() + " — check which contact/company/deal/project fields this kind requires"
+}
+
+// relationshipKindField is the wire path both kind refusals name: the omitted-kind
+// RequiredFieldError and the invalid-kind one below.
+const relationshipKindField = "kind"
+
+// RelationshipKindError refuses a kind outside the closed vocabulary.
+//
+// FieldFault on `kind`: unlike the shape error next door, this one HAS a single
+// offending argument, and the fix is to change that one value — so the message
+// names the set to choose from rather than leaving the caller to guess which
+// spelling the server wanted.
+type RelationshipKindError struct{ Kind string }
+
+func (e *RelationshipKindError) Error() string {
+	return "`" + relationshipKindField + "` " + strconv.Quote(e.Kind) + " is not a relationship kind; use one of " + relationshipKindList
+}
+
+// FieldFault names kind and the contract's code for a value outside an enum.
+func (e *RelationshipKindError) FieldFault() (field, code, message string) {
+	return relationshipKindField, "invalid_value", e.Error()
+}
+
+// relationshipKindList renders the vocabulary from relationshipKinds rather than
+// restating it, so a kind added to the map cannot be missing from the refusal
+// that teaches it. Sorted, because a map's order would make the message differ
+// between processes for one rule.
+var relationshipKindList = func() string {
+	kinds := make([]string, 0, len(relationshipKinds))
+	for kind := range relationshipKinds {
+		kinds = append(kinds, kind)
+	}
+	sort.Strings(kinds)
+	return strings.Join(kinds, ", ")
+}()
+
+// RelationshipDatesError refuses an edge that ended before it started.
+type RelationshipDatesError struct{}
+
+func (e *RelationshipDatesError) Error() string {
+	return "`ended_at` must not precede `started_at`"
+}
+
+// FieldFault names ended_at: it is a real argument, and moving it is the fix.
+func (e *RelationshipDatesError) FieldFault() (field, code, message string) {
+	return "ended_at", "invalid_date_range", e.Error()
+}
+
+// RelationshipConflictError names the uniqueness rule that refused an edge.
+//
+// It carries the constraint so a caller racing ITSELF — an idempotent attach
+// whose insert lost to a concurrent one — can tell which rule fired and
+// recover by adopting the winner. Wrapping the driver error would say the same
+// thing and cost too much: a *pgconn.PgError anywhere in the chain makes
+// httperr treat the refusal as an infrastructure fault (blanking the client's
+// detail and logging at ERROR), and the agent runner echoes err.Error() into
+// its transcript, which would put SQLSTATE text in a model prompt.
+type RelationshipConflictError struct{ Constraint string }
+
+// employmentUnique is the index that makes a second employment at the same
+// company detectable rather than duplicated (migration 1787111736). Named here
+// because the mapper below and its client-facing detail must not drift apart.
+const employmentUnique = "uq_rel_employment"
+
+// dealRoleUnique is the index behind "one role per contact per deal".
+const dealRoleUnique = "uq_rel_deal_contact_role"
+
+// relationshipConflictDetails says what each rule actually refused, in the
+// caller's terms. One shared sentence cannot serve all four: the primary-
+// employer index is keyed on the CONTACT alone, so its conflict is with a
+// different company entirely — telling that caller "this already exists
+// between these records" would name the wrong pair and send them looking for
+// a row that is not there. Its neighbour employmentUnique, keyed on the PAIR,
+// is the one that sentence would have fitted.
+var relationshipConflictDetails = map[string]string{
+	"uq_rel_current_primary_employer": "this contact already has a current primary employer — end that employment, or add this one without the primary flag",
+	dealRoleUnique:                    "this contact already holds that role on the deal",
+	employmentUnique:                  "this contact already works at that company — end the employment they have there before recording a new one",
+	projectStakeholderUnique:          "this contact is already a stakeholder on the project",
+}
+
+// Error says what the caller can act on. The constraint name stays OFF the
+// wire: httperr sends a sentinel's own text as the 409 detail, and an index
+// name is a database internal — it tells a client nothing it can use and
+// describes our schema to anyone probing it.
+func (e *RelationshipConflictError) Error() string {
+	if detail, ok := relationshipConflictDetails[e.Constraint]; ok {
+		return detail
+	}
+	// A rule added to the switch above but not described here: still a
+	// truthful refusal, just a less specific one.
+	return "a live relationship already conflicts with this one"
+}
+
+// Is reports this as the conflict sentinel, so every transport that maps
+// ErrConflict to 409 keeps doing so without knowing this type exists.
+func (e *RelationshipConflictError) Is(target error) bool { return target == apperrors.ErrConflict }
+
+// AlreadyRecorded reports whether this refusal means the edge the caller
+// offered is ALREADY on file — the answer an idempotent writer needs before it
+// treats a conflict as convergence.
+//
+// Only the rules keyed on the tuple being inserted qualify. The primary-
+// employer index is keyed on the CONTACT alone, so its conflict is with a
+// different company entirely and the offered edge did NOT land: an importer
+// that read every 409 as "already there" would report a row it never wrote,
+// and the contact would keep an employer nobody recorded.
+func (e *RelationshipConflictError) AlreadyRecorded() bool {
+	switch e.Constraint {
+	case employmentUnique, projectStakeholderUnique, "uq_rel_deal_contact_role", "uq_rel_works_with":
+		return true
+	default:
+		return false
+	}
+}
+
+// mapRelationshipConstraint turns the insert's constraint failures into
+// typed input errors: the rel_* CHECKs are the kind→endpoint shape rules
+// (migration 0007) — bad input, not a fault — and the partial unique
+// indexes are the edge dedupe rules (a second identical edge conflicts
+// with the existing one). Anything else surfaces unchanged.
+func mapRelationshipConstraint(err error, kind string) error {
+	if constraint, ok := storekit.CheckViolation(err); ok {
+		switch constraint {
+		case "rel_employment_shape", "rel_stakeholder_shape", "rel_partner_shape", "rel_project_stakeholder_shape",
+			"rel_works_with_shape":
+			return &RelationshipShapeError{Kind: kind}
+		case "rel_dates":
+			return &RelationshipDatesError{}
+		}
+	}
+	if constraint, ok := storekit.UniqueViolation(err); ok {
+		switch constraint {
+		case "uq_rel_current_primary_employer", "uq_rel_deal_contact_role", employmentUnique, projectStakeholderUnique,
+			"uq_rel_works_with":
+			return &RelationshipConflictError{Constraint: constraint}
+		}
+	}
+	return err
+}

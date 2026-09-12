@@ -233,7 +233,7 @@ function ProjectDealRow({
 }
 
 /**
- * The people seated on the project, each with the seat they hold — and the
+ * The contacts seated on the project, each with the seat they hold — and the
  * verbs that put them there.
  *
  * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
@@ -309,14 +309,14 @@ function StakeholderRow({
   const t = useT();
   return (
     <PanelRow className="project-row">
-      <EntityRef kind="person" id={seat.person_id} name={seat.person_name} />
+      <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
       <span className="project-row-meta t-caption">
         {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
             projectId={projectId}
-            personId={seat.person_id}
-            personName={seat.person_name}
+            contactId={seat.contact_id}
+            contactName={seat.contact_name}
             returnFocusTo={returnFocusTo}
           />
         )}

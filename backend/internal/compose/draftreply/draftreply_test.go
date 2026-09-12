@@ -69,7 +69,7 @@ func TestTheRefusalNamesWhoIsMissing(t *testing.T) {
 	_, _, err := draftreply.Parse(
 		`{"subject":"Intro?","body":"Hi Sofia, could you introduce me?"}`, "Sofia", "Philipp Königs")
 	if err == nil {
-		t.Fatal("accepted a draft naming only one of two people")
+		t.Fatal("accepted a draft naming only one of two contacts")
 	}
 	if !strings.Contains(err.Error(), "Philipp Königs") {
 		t.Errorf("the refusal does not name who is missing: %v", err)

@@ -84,7 +84,7 @@ const readingRead = {
   ],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

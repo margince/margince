@@ -95,7 +95,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"archiveOffer":         archiveCommand,
 	"archiveOfferTemplate": archiveCommand,
 	"archiveCompany":       archiveCommand,
-	"archivePerson":        archiveCommand,
+	"archiveContact":       archiveCommand,
 	"archiveProduct":       archiveCommand,
 	"archiveProject":       archiveCommand,
 	"archiveRelationship":  archiveCommand,
@@ -110,7 +110,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"createLead":                createCommand,
 	"createOfferTemplate":       createCommand,
 	"createCompany":             createCommand,
-	"createPerson":              createCommand,
+	"createContact":             createCommand,
 	"createProduct":             createCommand,
 	"createTag":                 createCommand,
 	"createProject":             createCommand,
@@ -125,7 +125,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"updateLead":                patchCommand,
 	"updateOffer":               patchCommand,
 	"updateCompany":             patchCommand,
-	"updatePerson":              patchCommand,
+	"updateContact":             patchCommand,
 	"updateProduct":             patchCommand,
 	"updateTag":                 patchCommand,
 	"updateProject":             patchCommand,
@@ -184,7 +184,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// because every one of these operations is reachable as a tool call too.
 	//
 	// Two commands serve two operations each, and neither pair is a duplicate:
-	// merge_records is the person and company halves of one verb, and
+	// merge_records is the contact and company halves of one verb, and
 	// enrich is one verb at its two DEPTHS — a page read and a whole-site
 	// crawl, told apart by which decoder was reached rather than by anything on
 	// the wire (agentcommandrecord.go says why that has to be structural).
@@ -201,7 +201,7 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	"demoteLead":          demoteLeadCommand,
 	"advanceProjectPhase": advanceProjectPhaseCommand,
 	"advanceDeal":         advanceDealCommand,
-	"mergePerson":         mergeCommand,
+	"mergeContact":        mergeCommand,
 	"mergeCompany":        mergeCommand,
 	// mergeTags is NOT one of those two. They fold a record into another
 	// record through the SoR provider; this folds a vocabulary word, which no
@@ -263,7 +263,7 @@ func previewImportCommand(_ agentPolicy, deps restCommandDeps, _ *http.Request, 
 }
 
 // commitImportCommand decodes POST /v1/imports/{id}/approve. The run id IS the
-// target: what a person approves is one validated run, and the report they
+// target: what a human approves is one validated run, and the report they
 // read belongs to that id.
 //
 //nolint:ireturn // every decoder in restCommands returns GovernedCall — that IS the table's value type, and a concrete return would not satisfy it.

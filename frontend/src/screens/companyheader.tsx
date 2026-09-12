@@ -114,7 +114,7 @@ export function CompanyPrimaryActions({
   const reasonId = archivedReasonId ?? ownReasonId;
   const archived = company.archived_at ? reasonId : undefined;
   // useCanWrite, not useCan: the two log verbs below issue a POST, and a read
-  // seat is refused before RBAC is consulted — the same rule personpage.tsx
+  // seat is refused before RBAC is consulted — the same rule contactpage.tsx
   // states for the identical verb. Independent of `archived`: a live record a
   // seat may not write to is refused for this reason, not that one, and the
   // two must not be merged into one sentence that names the wrong cause.
@@ -123,7 +123,7 @@ export function CompanyPrimaryActions({
   const logRefusedId = useId();
   // A guard that has not answered yet refuses nothing: claiming a refusal
   // `/me` has not decided is worse than a control that is briefly quiet — the
-  // same rule personpage.tsx's writeRefusal states for the identical shape.
+  // same rule contactpage.tsx's writeRefusal states for the identical shape.
   const logGrantKnown = me.data?.authorization !== undefined;
   const logRefused =
     archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
@@ -151,7 +151,7 @@ export function CompanyPrimaryActions({
         onOpen={onComposerOpen}
         disabledReasonId={archived}
       />
-      {/* Icon AND words, the shape personactions.tsx draws the same two verbs
+      {/* Icon AND words, the shape contactactions.tsx draws the same two verbs
           in: a strip of label-only buttons reads as a list of links, and
           neither glyph says the verb on its own — a tick box is the mark for
           COMPLETING a task, not for filing one. The button sizes them. */}
@@ -533,7 +533,7 @@ function CompanyEditAction({
   const roster = useRoster("user", true);
   const rosterPartial = useRosterPartial("user", true);
   // The roster hook serves users and teams alike, so narrow to the entries
-  // that actually carry a person's name rather than asserting the shape.
+  // that actually carry a contact's name rather than asserting the shape.
   const owners = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry
       ? [{ id: entry.id, display_name: entry.display_name }]
@@ -931,11 +931,11 @@ export function CompanyIdentityLine({
       </span>,
     );
   }
-  if (wayIn?.contributor_person_id) {
+  if (wayIn?.contributor_contact_id) {
     facts.push(
       <span key="wayin">
         {t("co.pulse.strongestLead")}{" "}
-        <EntityRef kind="person" id={wayIn.contributor_person_id} />{" "}
+        <EntityRef kind="contact" id={wayIn.contributor_contact_id} />{" "}
         {plural("co.pulse.strengthTail", wayIn.contact_count, {
           count: formatNumber(wayIn.contact_count, locale),
         })}

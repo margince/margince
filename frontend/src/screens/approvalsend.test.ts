@@ -154,7 +154,7 @@ describe("an agent's account-started mail", () => {
           kind: "send_account_email",
           proposed_change: {
             to: ["buyer@example.test"],
-            links: [{ entity_type: "person", entity_id: "p-1" }],
+            links: [{ entity_type: "contact", entity_id: "p-1" }],
             communication_context: "security_notice",
           },
         }),

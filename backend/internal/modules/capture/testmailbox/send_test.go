@@ -23,9 +23,9 @@ func TestSendEmailRefusesAddressesOutsideTheQuarantine(t *testing.T) {
 		name string
 		msg  connector.EmailMessage
 	}{
-		{"to outside reserved domain", connector.EmailMessage{MessageID: "a@test.example", To: []string{"real.person@gmail.com"}}},
-		{"cc outside reserved domain", connector.EmailMessage{MessageID: "b@test.example", To: []string{"buyer@example.com"}, Cc: []string{"real.person@gmail.com"}}},
-		{"bcc outside reserved domain", connector.EmailMessage{MessageID: "c@test.example", To: []string{"buyer@example.com"}, Bcc: []string{"real.person@gmail.com"}}},
+		{"to outside reserved domain", connector.EmailMessage{MessageID: "a@test.example", To: []string{"real.contact@gmail.com"}}},
+		{"cc outside reserved domain", connector.EmailMessage{MessageID: "b@test.example", To: []string{"buyer@example.com"}, Cc: []string{"real.contact@gmail.com"}}},
+		{"bcc outside reserved domain", connector.EmailMessage{MessageID: "c@test.example", To: []string{"buyer@example.com"}, Bcc: []string{"real.contact@gmail.com"}}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -8,7 +8,7 @@ package integration
 // Answering a refusal by saying what happened away from the system.
 //
 // The engine refuses a send to somebody it has no evidence about, and it is
-// right to: nothing on the record connects this workspace to that person. But
+// right to: nothing on the record connects this workspace to that contact. But
 // the record is not the world. A customer rang and asked for a quote; somebody
 // took a card at a stand. The rep who was there is the only place that fact
 // exists, and the review that refused them is where they put it on the record.
@@ -32,22 +32,22 @@ import (
 // deal, no meeting. The fixture's own subject has an inbound on file, which is
 // exactly the evidence these tests need to be missing.
 type coldContact struct {
-	personID string
-	address  string
+	contactID string
+	address   string
 }
 
 func aColdContact(t *testing.T, c *consentEnv, address string) coldContact {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/people", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Cold Contact",
 		"emails":    []AnyMap{{"email": address}},
-	}, nil, &person); status != http.StatusCreated {
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the cold contact → %d", status)
 	}
-	return coldContact{personID: person.ID, address: address}
+	return coldContact{contactID: contact.ID, address: address}
 }
 
 // sendCold attempts the account-started send that has nothing behind it, and
@@ -61,7 +61,7 @@ func sendCold(t *testing.T, c *consentEnv, who coldContact) (int, string) {
 		"subject":         "About your order",
 		"body":            "Here is the quote you asked for.",
 		"to":              []string{who.address},
-		"links":           []AnyMap{{"entity_type": "person", "entity_id": who.personID}},
+		"links":           []AnyMap{{"entity_type": "contact", "entity_id": who.contactID}},
 		"consent_purpose": "business_correspondence",
 	}, nil, &problem)
 	return status, problem.Code
@@ -96,7 +96,7 @@ func TestAFirsthandStatementLetsTheRefusedMessageGo(t *testing.T) {
 
 	rang := time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "Rang about the March order and asked me to send the quote by email.",
 		"occurred_at": rang,
@@ -113,10 +113,10 @@ func TestAFirsthandStatementLetsTheRefusedMessageGo(t *testing.T) {
 	}
 }
 
-// A STATEMENT NAMES THE PERSON IT IS ABOUT.
+// A STATEMENT NAMES THE CONTACT IT IS ABOUT.
 //
 // The reverted attempt copied one sentence onto every refused recipient, so a
-// note about a phone call with one person became recorded evidence about
+// note about a phone call with one contact became recorded evidence about
 // others who had nothing to do with it. The subject is named in the body, and
 // a subject this review was not refused for is not found.
 func TestAStatementAboutSomebodyElseIsNotFound(t *testing.T) {
@@ -130,7 +130,7 @@ func TestAStatementAboutSomebodyElseIsNotFound(t *testing.T) {
 	review := liveReviewFor(t, c)
 
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  stranger.personID,
+		"subject_id":  stranger.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "Rang me about something else entirely.",
 		"occurred_at": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
@@ -142,19 +142,19 @@ func TestAStatementAboutSomebodyElseIsNotFound(t *testing.T) {
 	// evidence would be the same defect wearing a different status code.
 	var events int
 	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`,
-		stranger.personID).Scan(&events); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`,
+		stranger.contactID).Scan(&events); err != nil {
 		t.Fatalf("counting what was recorded about the stranger: %v", err)
 	}
 	if events != 0 {
-		t.Errorf("%d qualifying event(s) recorded about a person this review never named", events)
+		t.Errorf("%d qualifying event(s) recorded about a contact this review never named", events)
 	}
 }
 
 // A STATEMENT DOES NOT OVERRIDE THE SUBJECT'S OWN DECISION.
 //
 // A qualifying event settles whether ordinary correspondence is lawful at all.
-// It does not touch a stop the person themselves recorded — and an endpoint
+// It does not touch a stop the contact themselves recorded — and an endpoint
 // that accepted the sentence anyway would write a row that changes nothing,
 // which is the failure mode this whole slice exists to end.
 //
@@ -164,7 +164,7 @@ func TestAStatementCannotAnswerAStopTheSubjectRecorded(t *testing.T) {
 	c := setupConsent(t)
 	who := aColdContact(t, c, "asked.us.to.stop@cold.test")
 
-	if status := c.Call(t, "POST", "/v1/people/"+who.personID+"/consent/suppress", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+who.contactID+"/consent/suppress", AnyMap{
 		"kind":   "subject_request",
 		"reason": "Asked us not to contact them again.",
 	}, nil, nil); status >= 400 {
@@ -186,7 +186,7 @@ func TestAStatementCannotAnswerAStopTheSubjectRecorded(t *testing.T) {
 		} `json:"details"`
 	}
 	status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "But they rang me and asked for this one.",
 		"occurred_at": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339),
@@ -229,7 +229,7 @@ func TestAnExchangeTooOldToCountIsRefusedNotAccepted(t *testing.T) {
 	// Well past the 365-day default window.
 	longAgo := time.Now().Add(-400 * 24 * time.Hour).UTC().Format(time.RFC3339)
 	status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "Rang me, but it was a very long time ago.",
 		"occurred_at": longAgo,
@@ -243,8 +243,8 @@ func TestAnExchangeTooOldToCountIsRefusedNotAccepted(t *testing.T) {
 	// leave dead evidence behind and shadow nothing useful.
 	var events int
 	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`,
-		who.personID).Scan(&events); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`,
+		who.contactID).Scan(&events); err != nil {
 		t.Fatalf("counting what was recorded: %v", err)
 	}
 	if events != 0 {
@@ -255,7 +255,7 @@ func TestAnExchangeTooOldToCountIsRefusedNotAccepted(t *testing.T) {
 // A STOP RECORDED AFTER THE REVIEW OPENED IS SEEN.
 //
 // The refusals on the review row are a snapshot taken when the send was
-// refused. A person who asks us to stop AFTER that is not in them, so a review
+// refused. A contact who asks us to stop AFTER that is not in them, so a review
 // still reading "no evidence" can belong to somebody who has since said no —
 // and accepting a statement there reports success about a message that will be
 // refused anyway.
@@ -268,9 +268,9 @@ func TestAStopRecordedAfterTheReviewOpenedIsStillSeen(t *testing.T) {
 	}
 	review := liveReviewFor(t, c)
 
-	// The person asks us to stop, AFTER the review was opened and its refusals
+	// The contact asks us to stop, AFTER the review was opened and its refusals
 	// frozen onto the row.
-	if status := c.Call(t, "POST", "/v1/people/"+who.personID+"/consent/suppress", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+who.contactID+"/consent/suppress", AnyMap{
 		"kind":   "subject_request",
 		"reason": "Rang back and asked us not to contact them.",
 	}, nil, nil); status >= 400 {
@@ -278,7 +278,7 @@ func TestAStopRecordedAfterTheReviewOpenedIsStillSeen(t *testing.T) {
 	}
 
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "They did ask me for this earlier though.",
 		"occurred_at": time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339),
@@ -314,7 +314,7 @@ func TestAReviewThatIsOverTakesNoStatement(t *testing.T) {
 	}
 
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "They rang me about it.",
 		"occurred_at": time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339),
@@ -324,8 +324,8 @@ func TestAReviewThatIsOverTakesNoStatement(t *testing.T) {
 
 	var events int
 	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`,
-		who.personID).Scan(&events); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`,
+		who.contactID).Scan(&events); err != nil {
 		t.Fatalf("counting what was recorded: %v", err)
 	}
 	if events != 0 {
@@ -338,7 +338,7 @@ func TestAReviewThatIsOverTakesNoStatement(t *testing.T) {
 // This pins the correction to a round-one fix that was itself too blunt. The
 // first spelling of the stop check refused a statement whenever ANY live
 // suppression existed, which turned somebody who had opted out of the
-// newsletter into a person a rep could not record a phone call about — while
+// newsletter into a contact a rep could not record a phone call about — while
 // the send path would have let the ordinary letter through, because a marketing
 // objection binds marketing only (authorizesuppression.go, suppressionBinds).
 //
@@ -348,7 +348,7 @@ func TestAMarketingObjectionDoesNotBlockEvidenceForAnOrdinaryLetter(t *testing.T
 	c := setupConsent(t)
 	who := aColdContact(t, c, "no.newsletter@cold.test")
 
-	if status := c.Call(t, "POST", "/v1/people/"+who.personID+"/consent/suppress", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+who.contactID+"/consent/suppress", AnyMap{
 		"kind":   "marketing_objection",
 		"reason": "Asked us to stop sending the newsletter.",
 	}, nil, nil); status >= 400 {
@@ -361,7 +361,7 @@ func TestAMarketingObjectionDoesNotBlockEvidenceForAnOrdinaryLetter(t *testing.T
 	review := liveReviewFor(t, c)
 
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
-		"subject_id":  who.personID,
+		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
 		"note":        "Rang about the March order and asked me to send the quote.",
 		"occurred_at": time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339),
@@ -381,8 +381,8 @@ func TestAMarketingObjectionDoesNotBlockEvidenceForAnOrdinaryLetter(t *testing.T
 	var live int
 	if err := c.Owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM communication_suppression
-		  WHERE person_id = $1 AND kind = 'marketing_objection' AND revoked_at IS NULL`,
-		who.personID).Scan(&live); err != nil {
+		  WHERE contact_id = $1 AND kind = 'marketing_objection' AND revoked_at IS NULL`,
+		who.contactID).Scan(&live); err != nil {
 		t.Fatalf("reading the objection: %v", err)
 	}
 	if live != 1 {

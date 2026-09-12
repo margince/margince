@@ -3,7 +3,7 @@
 
 package compose
 
-// The counterparty-hold surface: list whose mail the caller keeps to the people
+// The counterparty-hold surface: list whose mail the caller keeps to the contacts
 // on it, place a hold, lift one. Thin transport — the capture store owns the
 // gate (a human seat, and the row must be theirs) and the audited write.
 

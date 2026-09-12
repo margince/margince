@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   goal: >-
-    Which of my open deals are resting on one person? If that contact goes
+    Which of my open deals are resting on one contact? If that contact goes
     quiet we have nothing to fall back on.
   trigger_ref: manual:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e21
   grounding:

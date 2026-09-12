@@ -16,7 +16,7 @@ name: Release
 # now a decision somebody makes, which is the only cadence a dispatch can have.
 #
 # The desktop bundles and the GitHub release are NOT here. They belong to
-# release-tag.yml, which runs on a v* tag: a bundle is something a person
+# release-tag.yml, which runs on a v* tag: a bundle is something a contact
 # downloads and runs, so it is attached to a release page named with a version
 # somebody chose, and that version is a semver tag rather than the
 # YYYY.edition.bugfix string the dist service orders on. Two release kinds, two

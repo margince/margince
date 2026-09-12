@@ -14,7 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,10 +26,10 @@ import (
 // states no register number for this entity" and "this entity has a blank
 // register number" are different claims, and only one of them is true.
 func TestCompanySiteReadCarriesTheLegalCensus(t *testing.T) {
-	read := people.SiteRead{
+	read := contacts.SiteRead{
 		SeedURL: seedURL,
 		Status:  "partial",
-		LegalEntities: []people.SiteReadLegalEntity{
+		LegalEntities: []contacts.SiteReadLegalEntity{
 			{
 				Name:              "Acme GmbH",
 				RegisteredAddress: "Deliusstrasse 7, 24114 Kiel",
@@ -66,7 +66,7 @@ func TestCompanySiteReadCarriesTheLegalCensus(t *testing.T) {
 // A site with no legal notice states no entities: the array is empty, and
 // the client renders no choice rather than an empty question.
 func TestCompanySiteReadCensusIsEmptyWhenNothingWasRead(t *testing.T) {
-	got := companySiteRead(people.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
+	got := companySiteRead(contacts.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
 	if got.LegalEntities == nil {
 		t.Fatal("the field must be present and empty, never null")
 	}
@@ -81,7 +81,7 @@ func TestCompanySiteReadCensusIsEmptyWhenNothingWasRead(t *testing.T) {
 // and a broken one are the same screen.
 func TestCompanySiteReadSaysWhyTheCrawlStopped(t *testing.T) {
 	stopped := "page_cap"
-	got := companySiteRead(people.SiteRead{
+	got := companySiteRead(contacts.SiteRead{
 		SeedURL: seedURL, Status: "partial", StoppedReason: &stopped,
 	}, nil, nil)
 	if got.StoppedReason == nil {
@@ -93,7 +93,7 @@ func TestCompanySiteReadSaysWhyTheCrawlStopped(t *testing.T) {
 
 	// Discovery ran out on its own: nothing stopped this read, so the wire
 	// says nothing rather than naming a cause that never fired.
-	exhausted := companySiteRead(people.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
+	exhausted := companySiteRead(contacts.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
 	if exhausted.StoppedReason != nil {
 		t.Errorf("a read that exhausted discovery stopped for no reason: %q", *exhausted.StoppedReason)
 	}
@@ -111,12 +111,12 @@ func TestConfirmingASiteReadGivesEachRefusalItsOwnCode(t *testing.T) {
 	}{
 		{
 			name: "already confirmed",
-			err:  fmt.Errorf("confirm company site read: %w", people.ErrSiteReadAlreadyConfirmed),
+			err:  fmt.Errorf("confirm company site read: %w", contacts.ErrSiteReadAlreadyConfirmed),
 			code: "already_confirmed",
 		},
 		{
 			name: "no draft to confirm yet",
-			err:  fmt.Errorf("confirm company site read: %w", people.ErrSiteReadNotConfirmable),
+			err:  fmt.Errorf("confirm company site read: %w", contacts.ErrSiteReadNotConfirmable),
 			code: "not_confirmable",
 		},
 		{
@@ -191,7 +191,7 @@ func TestOnboardingSiteReadHandlersStayExplicitWithoutAConfiguredEngine(t *testi
 // and says nothing at all while none was resolved.
 func TestCompanySiteReadPointsAtTheMarkItResolved(t *testing.T) {
 	key := "logos/site-read/abc.png"
-	read := people.SiteRead{ID: ids.NewV7(), SeedURL: seedURL, Status: "done", LogoObjectKey: &key}
+	read := contacts.SiteRead{ID: ids.NewV7(), SeedURL: seedURL, Status: "done", LogoObjectKey: &key}
 	got := companySiteRead(read, nil, nil)
 	if got.LogoUrl == nil {
 		t.Fatal("a resolved mark never reached the wire")
@@ -203,7 +203,7 @@ func TestCompanySiteReadPointsAtTheMarkItResolved(t *testing.T) {
 		t.Error("the storage key reached the wire")
 	}
 
-	none := companySiteRead(people.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
+	none := companySiteRead(contacts.SiteRead{SeedURL: seedURL, Status: "done"}, nil, nil)
 	if none.LogoUrl != nil {
 		t.Errorf("a read that resolved no mark claims one: %q", *none.LogoUrl)
 	}

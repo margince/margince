@@ -240,30 +240,30 @@ func (r *fakeRuns) record(rep Report) {
 
 func twoObjectSource() *fakeSource {
 	return &fakeSource{
-		order: []string{"company", "person"},
+		order: []string{"company", "contact"},
 		objects: map[string][]Row{
 			"company": {
 				{ExternalID: "company-1", Fields: map[string]any{"display_name": "BÄR Pharma"}},
 				{ExternalID: "company-2", Fields: map[string]any{"display_name": "Gitex"}},
 			},
-			"person": {
+			"contact": {
 				{ExternalID: "p-1", Fields: map[string]any{"full_name": "Mor Anders"}},
 				{ExternalID: "p-2", Fields: map[string]any{}}, // payload-less → disclosed skip
 				{ExternalID: "p-3", Fields: map[string]any{"full_name": "Riya Patel"}},
 			},
 		},
 		assocs: []Assoc{
-			{FromType: "person", FromID: "p-1", ToType: "company", ToID: "company-1", Category: "employment"},
+			{FromType: "contact", FromID: "p-1", ToType: "company", ToID: "company-1", Category: "employment"},
 			// An edge whose target never landed: disclosed, never counted
 			// as applied.
-			{FromType: "person", FromID: "p-1", ToType: "nowhere", ToID: "x-1", Category: "employment"},
+			{FromType: "contact", FromID: "p-1", ToType: "nowhere", ToID: "x-1", Category: "employment"},
 		},
 	}
 }
 
 func TestDryRunClassifiesWithoutWriting(t *testing.T) {
 	src := twoObjectSource()
-	w := &fakeWriters{landed: map[string]bool{"person/p-1": true}, mapped: map[string]bool{"person/p-1": true}}
+	w := &fakeWriters{landed: map[string]bool{"contact/p-1": true}, mapped: map[string]bool{"contact/p-1": true}}
 	e := &Engine{w: w} // no run records on purpose: a dry-run must never touch them
 
 	rep, err := e.DryRun(context.Background(), src)
@@ -281,12 +281,12 @@ func TestDryRunClassifiesWithoutWriting(t *testing.T) {
 	if company.WillCreate != 2 || company.WillUpdate != 0 || company.MirrorCount != 2 {
 		t.Errorf("company report = %+v, want 2 creates of 2", company)
 	}
-	person := byObject["person"]
-	if person.WillCreate != 1 || person.WillUpdate != 1 {
-		t.Errorf("person report = %+v, want 1 create + 1 update", person)
+	contact := byObject["contact"]
+	if contact.WillCreate != 1 || contact.WillUpdate != 1 {
+		t.Errorf("contact report = %+v, want 1 create + 1 update", contact)
 	}
-	if len(person.Skipped) != 1 || person.Skipped[0].Reason != "empty_payload" || person.Skipped[0].ExternalID != "p-2" {
-		t.Errorf("person skips = %+v, want p-2 skipped as empty_payload", person.Skipped)
+	if len(contact.Skipped) != 1 || contact.Skipped[0].Reason != "empty_payload" || contact.Skipped[0].ExternalID != "p-2" {
+		t.Errorf("contact skips = %+v, want p-2 skipped as empty_payload", contact.Skipped)
 	}
 	if rep.Associations != 2 {
 		t.Errorf("dry-run associations = %d, want 2 (edges OFFERED — the dry-run resolves no endpoints)", rep.Associations)
@@ -303,7 +303,7 @@ func TestRunImportsInOrderWithSkipsDisclosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	wantOrder := []string{"company/company-1", "company/company-2", "person/p-1", "person/p-3"}
+	wantOrder := []string{"company/company-1", "company/company-2", "contact/p-1", "contact/p-3"}
 	if len(w.ensured) != len(wantOrder) {
 		t.Fatalf("ensured %v, want %v", w.ensured, wantOrder)
 	}
@@ -328,21 +328,21 @@ func TestRunImportsInOrderWithSkipsDisclosed(t *testing.T) {
 		t.Errorf("run = %+v, want complete with report", runs.run)
 	}
 	// The skip is disclosed, never silent (AC-mode-flip-7).
-	var personRep ObjectReport
+	var contactRep ObjectReport
 	for _, or := range rep.Objects {
-		if or.Object == "person" {
-			personRep = or
+		if or.Object == "contact" {
+			contactRep = or
 		}
 	}
-	if len(personRep.Skipped) != 1 || personRep.Skipped[0].Reason != "empty_payload" {
-		t.Errorf("person skips = %+v, want the payload-less row disclosed", personRep.Skipped)
+	if len(contactRep.Skipped) != 1 || contactRep.Skipped[0].Reason != "empty_payload" {
+		t.Errorf("contact skips = %+v, want the payload-less row disclosed", contactRep.Skipped)
 	}
 }
 
 func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 	src := twoObjectSource()
 	w := newFakeWriters()
-	w.failAt = 3 // crash on person/p-1
+	w.failAt = 3 // crash on contact/p-1
 	runs := newFakeRuns()
 	e := &Engine{runs: runs, w: w}
 
@@ -378,7 +378,7 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		t.Errorf("unique rows landed = %d, want 4 (identical to an uninterrupted run)", len(uniq))
 	}
 	if rep.Imported != 2 {
-		t.Errorf("resumed attempt imported = %d, want 2 (only the remaining person rows)", rep.Imported)
+		t.Errorf("resumed attempt imported = %d, want 2 (only the remaining contact rows)", rep.Imported)
 	}
 
 	// The RETURNED report is this attempt's leg — but the RECORDED one is
@@ -391,7 +391,7 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		t.Fatal("a completed run must record a report")
 	}
 	if stored.Imported != 4 {
-		t.Errorf("recorded imported = %d, want 4 — the two pre-crash companies plus the two resumed persons", stored.Imported)
+		t.Errorf("recorded imported = %d, want 4 — the two pre-crash companies plus the two resumed contacts", stored.Imported)
 	}
 	landed := map[string]int{}
 	for _, or := range stored.Objects {
@@ -400,8 +400,8 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 		}
 		landed[or.Object] = or.Created + or.Updated
 	}
-	if landed["company"] != 2 || landed["person"] != 2 {
-		t.Errorf("recorded dispositions = %v, want 2 companies and 2 persons across both attempts", landed)
+	if landed["company"] != 2 || landed["contact"] != 2 {
+		t.Errorf("recorded dispositions = %v, want 2 companies and 2 contacts across both attempts", landed)
 	}
 }
 
@@ -410,13 +410,13 @@ func TestRunResumesFromCheckpointAndConverges(t *testing.T) {
 // wrongly tracks the finished class's cursor sends the loop backwards.
 func threeObjectSource() *fakeSource {
 	return &fakeSource{
-		order: []string{"company", "person", "deal"},
+		order: []string{"company", "contact", "deal"},
 		objects: map[string][]Row{
 			"company": {
 				{ExternalID: "company-1", Fields: map[string]any{"display_name": "One"}},
 				{ExternalID: "company-2", Fields: map[string]any{"display_name": "Two"}},
 			},
-			"person": {
+			"contact": {
 				{ExternalID: "p-1", Fields: map[string]any{"full_name": "Ada"}},
 				{ExternalID: "p-2", Fields: map[string]any{"full_name": "Mor"}},
 			},
@@ -499,8 +499,8 @@ func TestGuardIncumbentSourceBlocksRevokedAndError(t *testing.T) {
 // native record instead of disclosing the skip (AC-mode-flip-7).
 func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 	src := &fakeSource{
-		order: []string{"person"},
-		objects: map[string][]Row{"person": {
+		order: []string{"contact"},
+		objects: map[string][]Row{"contact": {
 			{ExternalID: "p-blank", OwnerExternalID: "owner-1"},
 			{ExternalID: "p-real", OwnerExternalID: "owner-1", Fields: map[string]any{"full_name": "Real"}},
 		}},
@@ -515,7 +515,7 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 	}
 	if got := dry.Objects[0]; got.WillCreate != 1 || len(got.Skipped) != 1 ||
 		got.Skipped[0].ExternalID != "p-blank" || got.Skipped[0].Reason != "empty_payload" {
-		t.Errorf("dry-run person = %+v, want p-blank skipped and only p-real counted", got)
+		t.Errorf("dry-run contact = %+v, want p-blank skipped and only p-real counted", got)
 	}
 
 	w := newFakeWriters()
@@ -523,8 +523,8 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if len(w.ensured) != 1 || w.ensured[0] != "person/p-real" {
-		t.Errorf("ensured %v, want only person/p-real — a blank row must never reach the writer", w.ensured)
+	if len(w.ensured) != 1 || w.ensured[0] != "contact/p-real" {
+		t.Errorf("ensured %v, want only contact/p-real — a blank row must never reach the writer", w.ensured)
 	}
 	if rep.Imported != 1 {
 		t.Errorf("imported = %d, want 1; a nameless row counted as imported overstates the cutover", rep.Imported)
@@ -543,16 +543,16 @@ func TestAnOwnedRowWithNoPayloadIsStillAnEmptyPayloadSkip(t *testing.T) {
 func TestAResumeAdoptsRecordsTheCrashLandedButNeverMapped(t *testing.T) {
 	src := twoObjectSource()
 	w := newFakeWriters()
-	w.failAt, w.failAfterCreate = 3, true // person/p-1 lands, then the process dies
+	w.failAt, w.failAfterCreate = 3, true // contact/p-1 lands, then the process dies
 	runs := newFakeRuns()
 	e := &Engine{runs: runs, w: w}
 
 	if _, err := e.Run(context.Background(), RunID{}, src); err == nil {
 		t.Fatal("Run must surface the injected crash")
 	}
-	if !w.landed["person/p-1"] || w.mapped["person/p-1"] {
+	if !w.landed["contact/p-1"] || w.mapped["contact/p-1"] {
 		t.Fatalf("the crash should leave p-1 landed but unmapped (landed=%v mapped=%v)",
-			w.landed["person/p-1"], w.mapped["person/p-1"])
+			w.landed["contact/p-1"], w.mapped["contact/p-1"])
 	}
 
 	runs.run.Status = StatusRunning
@@ -567,8 +567,8 @@ func TestAResumeAdoptsRecordsTheCrashLandedButNeverMapped(t *testing.T) {
 	for _, k := range w.ensured {
 		seen[k]++
 	}
-	if seen["person/p-1"] != 1 {
-		t.Errorf("person/p-1 was written %d times; the record the crash landed was created again", seen["person/p-1"])
+	if seen["contact/p-1"] != 1 {
+		t.Errorf("contact/p-1 was written %d times; the record the crash landed was created again", seen["contact/p-1"])
 	}
 	if len(seen) != 4 {
 		t.Errorf("distinct records = %d (%v), want the same 4 an uninterrupted run lands", len(seen), seen)
@@ -651,13 +651,13 @@ func TestAResumedRunCountsEveryDuplicateItMetAndCountsEachOnce(t *testing.T) {
 	// a merge that double-counted one are different answers from the truth.
 	w.duplicates["company-1"] = true
 	w.duplicates["p-3"] = true
-	w.failAt = 3 // crash on person/p-1, after both companies landed
+	w.failAt = 3 // crash on contact/p-1, after both companies landed
 	runs := newFakeRuns()
 	// What the dry run predicted, recorded before the commit ever ran. It must
 	// not be added to what the attempts observe.
 	runs.run.Report = &Report{Objects: []ObjectReport{
 		{Object: "company", WillDuplicate: 1},
-		{Object: "person", WillDuplicate: 1},
+		{Object: "contact", WillDuplicate: 1},
 	}}
 	e := &Engine{runs: runs, w: w}
 

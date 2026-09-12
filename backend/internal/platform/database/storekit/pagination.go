@@ -167,13 +167,13 @@ func QuickFindClause(pos int, nameExpr string) string {
 	return QuickFindClauseWith(pos, nameExpr, Identifier{})
 }
 
-// Identifier is a record's identifier table — the addresses and domains people
+// Identifier is a record's identifier table — the addresses and domains contacts
 // paste in when they are not typing a name.
 //
 // Table is joined by FK to the row's own id, and Column is matched EXACTLY
 // against the lower-cased query. Both identifier tables store their values
 // lower-cased under a CHECK and carry a unique index on the value alone
-// (uq_person_email_dedupe, uq_company_domain), so this arm is one index lookup.
+// (uq_contact_email_dedupe, uq_company_domain), so this arm is one index lookup.
 //
 // Exact, with no prefix arm: `LIKE 'x%'` is not reliably indexed under the
 // database's collation, and a search that silently reads the whole table is

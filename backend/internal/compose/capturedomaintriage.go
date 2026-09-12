@@ -10,7 +10,7 @@ package compose
 // The shape is the auto-enrich trigger's, and for the same reasons: it is
 // best-effort in the enqueue direction because the sweep is the reconciler, and
 // it does no crawling itself. The difference is what a miss costs. A missed
-// enrich leaves a company without a dossier; a missed triage leaves a PERSON
+// enrich leaves a company without a dossier; a missed triage leaves a CONTACT
 // whose company nobody has decided on, so the sweep matters more here, not less.
 
 import (
@@ -23,7 +23,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,7 +31,7 @@ import (
 // domainTriageTrigger queues the read that decides whether a domain capture
 // just met deserves a company.
 type domainTriageTrigger struct {
-	people     *people.Store
+	contacts   *contacts.Store
 	settings   *capture.SettingsStore
 	autoEnrich *capture.AutoEnrichStore
 	dailyCap   int
@@ -40,7 +40,7 @@ type domainTriageTrigger struct {
 
 func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageTrigger {
 	return &domainTriageTrigger{
-		people:     people.NewStore(InstallationDB(pool)),
+		contacts:   contacts.NewStore(InstallationDB(pool)),
 		settings:   capture.NewSettings(NewSettingsStore(pool)),
 		autoEnrich: capture.NewAutoEnrichStore(InstallationDB(pool)),
 		dailyCap:   autoEnrichDailyCap(log),
@@ -53,7 +53,7 @@ func newDomainTriageTrigger(pool *pgxpool.Pool, log *slog.Logger) *domainTriageT
 //
 // It never returns an error, and that is the contract rather than laziness: it
 // is called from the capture pipeline's post-commit step, which must never fail
-// a capture. The message and the person are already committed by the time this
+// a capture. The message and the contact are already committed by the time this
 // runs; the worst outcome is a domain whose verdict waits for the sweep.
 func (t *domainTriageTrigger) domainPending(ctx context.Context, domain string) {
 	if domain == "" {
@@ -112,7 +112,7 @@ func (t *domainTriageTrigger) queueTriage(ctx context.Context, domain string) er
 // was started. A zero slot is the setting-off path, which reserved nothing and
 // therefore has nothing to give back.
 func (t *domainTriageTrigger) startOrRefund(ctx context.Context, domain string, slot capture.BudgetSlot) error {
-	started, err := startDomainTriageRead(ctx, t.people, domain)
+	started, err := startDomainTriageRead(ctx, t.contacts, domain)
 	if started || !slot.Reserved {
 		return err
 	}
@@ -139,13 +139,13 @@ func (t *domainTriageTrigger) startOrRefund(ctx context.Context, domain string, 
 // It reports whether a read was actually STARTED, as opposed to joined onto one
 // already in flight. A join means the caller's budget slot bought nothing, and
 // arming the cursor again would charge a second attempt for one crawl.
-func startDomainTriageRead(ctx context.Context, peopleStore *people.Store, domain string) (bool, error) {
+func startDomainTriageRead(ctx context.Context, contactsStore *contacts.Store, domain string) (bool, error) {
 	client, err := river.ClientFromContextSafely[pgx.Tx](ctx)
 	if err != nil {
 		return false, err
 	}
-	_, joined, err := peopleStore.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor,
-		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
+	_, joined, err := contactsStore.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor,
+		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			_, insErr := client.InsertTx(ctx, tx, SiteDeepReadArgs{
 				Workspace:   storekit.MustWorkspace(ctx),
 				SiteReadID:  read.ID,
@@ -163,7 +163,7 @@ func startDomainTriageRead(ctx context.Context, peopleStore *people.Store, domai
 	if joined {
 		return false, nil
 	}
-	return true, peopleStore.MarkTriageQueued(ctx, domain)
+	return true, contactsStore.MarkTriageQueued(ctx, domain)
 }
 
 // triageSweepPageSize bounds one sweep pass over open domain questions. The
@@ -178,19 +178,19 @@ const triageSweepPageSize = 50
 func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, dailyCap int) error {
 	// First, close the questions no crawl will ever answer. A domain that used
 	// every attempt drops out of the due scan below, so leaving it pending with
-	// no reason would strand its people without a company and without a word on
+	// no reason would strand its contacts without a company and without a word on
 	// the row saying why. It is answered from what the workspace already knows:
 	// a domain that is somebody's NAME becomes personal and settles, and
 	// anything else is marked unevidenced — open, visible to a human, and never
 	// auto-created on the strength of having failed twice.
-	exhausted, err := w.people.ExhaustedDomains(ctx, triageSweepPageSize)
+	exhausted, err := w.contacts.ExhaustedDomains(ctx, triageSweepPageSize)
 	if err != nil {
 		return err
 	}
 	for _, domain := range exhausted {
-		if _, err := w.people.ResolveUnreadableDomainTriage(ctx, people.ResolveDomainTriageInput{
+		if _, err := w.contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{
 			Domain:  domain.Domain,
-			SeedURL: people.TriageSeedURL(domain.Domain),
+			SeedURL: contacts.TriageSeedURL(domain.Domain),
 			Evidence: "every attempt to read this site failed, so the question was answered " +
 				"from what the workspace already knew",
 		}); err != nil {
@@ -199,7 +199,7 @@ func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, da
 		}
 	}
 
-	due, err := w.people.ListDueDomains(ctx, triageSweepPageSize)
+	due, err := w.contacts.ListDueDomains(ctx, triageSweepPageSize)
 	if err != nil {
 		return err
 	}
@@ -218,11 +218,11 @@ func (w *captureAutoEnrichSweepWorker) sweepDomainTriage(ctx context.Context, da
 		// stale one has to be retired before the start, or the start joins the
 		// very row that is stuck and refunds, and the domain is offered again
 		// on every pass for ever without anything moving.
-		if err := w.people.RetireStaleTriageRead(ctx, domain.Domain); err != nil {
+		if err := w.contacts.RetireStaleTriageRead(ctx, domain.Domain); err != nil {
 			w.log.WarnContext(ctx, "domain triage: could not retire a stale dossier",
 				"domain", domain.Domain, "err", err)
 		}
-		started, startErr := startDomainTriageRead(ctx, w.people, domain.Domain)
+		started, startErr := startDomainTriageRead(ctx, w.contacts, domain.Domain)
 		if !started {
 			refundCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), refundTimeout)
 			releaseErr := w.autoEnrich.ReleaseBudget(refundCtx, slot)

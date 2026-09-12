@@ -4,7 +4,7 @@
 package privacy
 
 // GDPR Art. 15 subject-access assembly (admin-mediated in V1): one
-// operation gathers everything held about a person — the normalized
+// operation gathers everything held about a contact — the normalized
 // row, channels, relationships, deals they hold a stake in, timeline
 // activities, consent state and proof log, and the raw capture
 // payloads that mention them — into a single export package. The
@@ -78,7 +78,7 @@ type SARPackage struct {
 	CommunicationDecisions   []map[string]any `json:"communication_decisions"`
 	CommunicationBases       []map[string]any `json:"communication_bases"`
 	CommunicationSuppression []map[string]any `json:"communication_suppression"`
-	// The times a named person decided a message to this subject went out
+	// The times a named contact decided a message to this subject went out
 	// DESPITE a refusal. Art. 15 owes what is held, and a subject asking why
 	// they received something the installation had refused is owed the override
 	// as much as the refusal — an export showing only the second describes a
@@ -97,7 +97,7 @@ type SARPackage struct {
 	EnrichedFields []map[string]any `json:"enriched_fields"`
 	// Corrections is what a human recorded over what the system inferred
 	// about this subject. It is theirs twice over: the value was typed by a
-	// person about them, and the suppressions are the record of which claims
+	// contact about them, and the suppressions are the record of which claims
 	// this installation has agreed to stop making.
 	Corrections []map[string]any `json:"corrections"`
 	// ReplyJudgements is what this installation concluded the subject's own
@@ -108,9 +108,9 @@ type SARPackage struct {
 	// know not only what they wrote but what we decided it meant, and which
 	// classifier decided it.
 	ReplyJudgements []map[string]any `json:"reply_judgements"`
-	// Handoffs is each time this person was passed from one seat to another as a
+	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
-	// is what one colleague wrote ABOUT them, and the decision is one people
+	// is what one colleague wrote ABOUT them, and the decision is one colleagues
 	// made about whether they were worth working at all.
 	//
 	// That this section exists at all is held by:
@@ -159,10 +159,10 @@ type SARPackage struct {
 }
 
 // AssembleSAR builds the package. It is a privileged read: the caller must be
-// a human holding the person.delete grant (the same trust level erasure needs)
+// a human holding the contact.delete grant (the same trust level erasure needs)
 // over an unbounded row scope — see the checks below.
-func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (SARPackage, error) {
-	if err := auth.Require(ctx, "person", principal.ActionDelete); err != nil {
+func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) (SARPackage, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return SARPackage{}, err
 	}
 	// Human-only, for the reason the grant above cannot express: an agent
@@ -177,40 +177,40 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 	// The assembly deliberately crosses the caller's row scope — Art. 15 owes
 	// the subject everything held, not the slice one rep may see — so a bounded
 	// caller cannot run it. Scope is the second condition, not a stand-in for
-	// authority: the person.delete grant above is what limits this to the roles
+	// authority: the contact.delete grant above is what limits this to the roles
 	// trusted with erasure, and it is what keeps read_only out.
 	//
 	// Together those two admit MORE than admin: the seeded defaults give
-	// person.delete and row scope `all` to ops and management as well. That is
+	// contact.delete and row scope `all` to ops and management as well. That is
 	// this function's contract — the erasure trust level — and callers that owe
 	// a narrower one gate before they get here. The subject-request route does:
 	// it reads the request through the queue's own admin-only gate first, which
 	// TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins from both sides. A
-	// future caller assembling from a person id alone would be reachable by two
+	// future caller assembling from a contact id alone would be reachable by two
 	// more roles, and would need its own gate.
 	if !auth.Unbounded(actor) {
 		return SARPackage{}, apperrors.ErrPermissionDenied
 	}
 	var pkg SARPackage
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisibleForSubjectRights(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.EnsureVisibleForSubjectRights(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		// The subject's addresses and lead twins, read BEFORE the sections run:
 		// the staged-approvals section matches on them, and unlike erasure this
 		// path destroys nothing, so they are still there to read.
-		emails, leads, identities, err := subjectReach(ctx, tx, personID)
+		emails, leads, identities, err := subjectReach(ctx, tx, contactID)
 		if err != nil {
 			return err
 		}
-		sections := sarSections(&pkg, personID, emails, leads, identities)
+		sections := sarSections(&pkg, contactID, emails, leads, identities)
 
 		subject, err := rowMaps(ctx, tx, `
 			SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
-			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM person_social ps WHERE ps.person_id = p.id) AS social,
+			       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
 			       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
 			       p.source, p.created_at
-			FROM person p WHERE p.id = $1`, personID)
+			FROM contact p WHERE p.id = $1`, contactID)
 		if err != nil {
 			return err
 		}
@@ -218,14 +218,14 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 			return apperrors.ErrNotFound
 		}
 		pkg.Subject = subject[0]
-		if err := appendSubjectCustomValues(ctx, tx, personID, pkg.Subject); err != nil {
+		if err := appendSubjectCustomValues(ctx, tx, contactID, pkg.Subject); err != nil {
 			return err
 		}
 
 		for _, section := range sections {
 			args := section.args
 			if args == nil {
-				args = []any{personID}
+				args = []any{contactID}
 			}
 			rows, err := rowMaps(ctx, tx, section.query, args...)
 			if err != nil {
@@ -234,7 +234,7 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 			*section.dest = rows
 		}
 
-		_, err = storekit.Audit(ctx, tx, "export", "person", personID.UUID, nil, map[string]any{
+		_, err = storekit.Audit(ctx, tx, "export", "contact", contactID.UUID, nil, map[string]any{
 			"kind": "sar", "activities": len(pkg.Activities), "raw_rows": len(pkg.RawCapture),
 		})
 		return err
@@ -249,14 +249,14 @@ func AssembleSAR(ctx context.Context, db *database.DB, personID ids.PersonID) (S
 // its values. Extraction rides the same storekit mechanics the record
 // surface reads with, so each value exports in its documented wire shape;
 // a NULL column stays absent, like every other empty section detail.
-func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, personID ids.PersonID, subject map[string]any) error {
-	columns, err := subjectCustomColumns(ctx, tx, "person")
+func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, subject map[string]any) error {
+	columns, err := subjectCustomColumns(ctx, tx, "contact")
 	if err != nil || len(columns) == 0 {
 		return err
 	}
 	dests := storekit.ScanDests(columns)
-	query := `SELECT ` + strings.TrimPrefix(storekit.SelectSuffix(columns), ", ") + ` FROM person WHERE id = $1`
-	if err := tx.QueryRow(ctx, query, personID).Scan(dests...); err != nil {
+	query := `SELECT ` + strings.TrimPrefix(storekit.SelectSuffix(columns), ", ") + ` FROM contact WHERE id = $1`
+	if err := tx.QueryRow(ctx, query, contactID).Scan(dests...); err != nil {
 		return err
 	}
 	for name, value := range storekit.ExtractValues(columns, dests) {
@@ -266,13 +266,13 @@ func appendSubjectCustomValues(ctx context.Context, tx pgx.Tx, personID ids.Pers
 }
 
 // sarSection pairs a destination package section with the query that fills
-// it. Every query is keyed to the single personID bound param ($1).
+// it. Every query is keyed to the single contactID bound param ($1).
 type sarSection struct {
 	dest  *[]map[string]any
 	query string
-	// args overrides the default single person-id argument. Only the staged
+	// args overrides the default single contact-id argument. Only the staged
 	// approvals section needs it: it reaches rows by the subject's addresses
-	// and lead twins as well as by their person id, through the SAME predicate
+	// and lead twins as well as by their contact id, through the SAME predicate
 	// erasure uses — and that predicate takes those as bound parameters rather
 	// than rebuilding them in SQL, so the export and the erasure cannot come to
 	// different conclusions about which rows are the subject's.
@@ -306,7 +306,7 @@ func rowMaps(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]map[s
 // A uuid column arrives from pgx as [16]byte, and encoding/json has one
 // rendering for a byte ARRAY: sixteen numbers. Nothing is lost — the bytes are
 // the id — but the document this builds is what a data subject receives under
-// Art. 15, and `[1,160,94,189,…]` is not something a person can read, act on,
+// Art. 15, and `[1,160,94,189,…]` is not something a contact can read, act on,
 // or quote back when they dispute it.
 //
 // Fixed HERE rather than at the two columns that showed it, because those two
@@ -328,7 +328,7 @@ func readableValue(value any) any {
 	return value
 }
 
-// subjectReach reads the two things beyond a person id that identify the
+// subjectReach reads the two things beyond a contact id that identify the
 // subject in a staged proposal: the addresses a message to them carries, and
 // the lead rows that were the same human before promotion.
 //
@@ -337,21 +337,21 @@ func readableValue(value any) any {
 // Erasure cannot read them at that point — it has already destroyed them — so
 // the predicate takes them as arguments and each caller supplies them from
 // wherever it still can.
-func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]string, []ids.UUID, []ids.UUID, error) {
+func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]string, []ids.UUID, []ids.UUID, error) {
 	emails, err := subjectStrings(ctx, tx,
-		`SELECT email FROM person_email WHERE person_id = $1 AND email <> ''`, personID)
+		`SELECT email FROM contact_email WHERE contact_id = $1 AND email <> ''`, contactID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's addresses for the export: %w", err)
 	}
 	// THE ADDRESSES OF EVERY IDENTITY THIS SUBJECT IS, not only the surviving
-	// row's. A merged-away predecessor keeps its own person_email rows, and the
+	// row's. A merged-away predecessor keeps its own contact_email rows, and the
 	// sections that match by address — the participant reach above, staged
 	// approvals — would otherwise miss a conversation held under the address
 	// the subject used before the cleanup.
 	priorEmails, err := subjectStrings(ctx, tx, `
-		SELECT email FROM person_email
-		 WHERE person_id IN (SELECT id FROM person WHERE merged_into_id = $1)
-		   AND email <> ''`, personID)
+		SELECT email FROM contact_email
+		 WHERE contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
+		   AND email <> ''`, contactID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the merged-away addresses for the export: %w", err)
 	}
@@ -362,9 +362,9 @@ func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]stri
 	// on the lead.
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
-		 WHERE promoted_person_id = $1
-		    OR promoted_person_id IN (SELECT id FROM person WHERE merged_into_id = $1)`,
-		personID.UUID)
+		 WHERE promoted_contact_id = $1
+		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)`,
+		contactID.UUID)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}
@@ -380,14 +380,14 @@ func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]stri
 	if err := rows.Err(); err != nil {
 		return nil, nil, nil, err
 	}
-	// EVERY PERSON ID THIS SUBJECT IS. The surviving row first, then each
+	// EVERY CONTACT ID THIS SUBJECT IS. The surviving row first, then each
 	// record merged into it — which keeps its own rows on purpose, because a
 	// predecessor's objection is evidence that THAT record's subject refused,
 	// and repointing it would make the history say somebody else objected.
 	//
 	// One hop, not a walk: a merge repoints the loser's own predecessors at the
 	// survivor as it goes, so the pointers are flat rather than a chain.
-	identities, err := subjectIdentities(ctx, tx, personID)
+	identities, err := subjectIdentities(ctx, tx, contactID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -395,13 +395,13 @@ func subjectReach(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]stri
 }
 
 // subjectIdentities returns the survivor's own id plus the id of each record
-// merged into them, which together are the person rows an export must reach.
-func subjectIdentities(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]ids.UUID, error) {
+// merged into them, which together are the contact rows an export must reach.
+func subjectIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ids.UUID, error) {
 	// The survivor's own id is carried in the WHERE rather than selected as a
 	// bare parameter: a lone `SELECT $1` in a UNION gives Postgres nothing to
 	// infer the type from, and it refuses to prepare the statement.
 	rows, err := tx.Query(ctx, `
-		SELECT id FROM person WHERE id = $1 OR merged_into_id = $1`, personID.UUID)
+		SELECT id FROM contact WHERE id = $1 OR merged_into_id = $1`, contactID.UUID)
 	if err != nil {
 		return nil, fmt.Errorf("reading the identities this subject is, for the export: %w", err)
 	}
@@ -418,8 +418,8 @@ func subjectIdentities(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([
 }
 
 // subjectStrings runs a one-column text query into a slice.
-func subjectStrings(ctx context.Context, tx pgx.Tx, query string, personID ids.PersonID) ([]string, error) {
-	rows, err := tx.Query(ctx, query, personID.UUID)
+func subjectStrings(ctx context.Context, tx pgx.Tx, query string, contactID ids.ContactID) ([]string, error) {
+	rows, err := tx.Query(ctx, query, contactID.UUID)
 	if err != nil {
 		return nil, err
 	}

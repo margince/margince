@@ -172,11 +172,11 @@ func TestTheWriterIsToldWhichSubjectsToStayOffOf(t *testing.T) {
 	restricted := crmcontracts.Company360{
 		Company:         crmcontracts.Company{DisplayName: "Nordwind AG"},
 		SectionsOmitted: []crmcontracts.Company360SectionsOmitted{"deals"},
-		People: &struct {
+		Contacts: &struct {
 			Data []crmcontracts.Company360Contact `json:"data"`
 			Page crmcontracts.PageInfo            `json:"page"`
 		}{Data: []crmcontracts.Company360Contact{{
-			PersonId: openapi_types.UUID(ids.NewV7()), FullName: "Dana Buyer",
+			ContactId: openapi_types.UUID(ids.NewV7()), FullName: "Dana Buyer",
 		}}},
 	}
 

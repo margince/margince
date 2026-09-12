@@ -17,10 +17,10 @@ import { meFixture } from "../app/mefixture";
 import { activityTimeline } from "../design-system/activitytimeline";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
-import { ContactsScreen, PersonScreen } from "./contacts";
-// The header's overflow menu is the same control on both person surfaces, so
+// The header's overflow menu is the same control on both contact surfaces, so
 // the openers are the testkit's rather than this file's.
-import { openRecordMenu, pressRecordVerb } from "./personpage.testkit";
+import { openRecordMenu, pressRecordVerb } from "./contactpage.testkit";
+import { ContactScreen, ContactsScreen } from "./contacts";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
 // the honest error state. Lead-specific acceptance (score thresholds,
@@ -79,7 +79,7 @@ const anna = {
 const employmentRel = {
   id: "rel-1",
   kind: "employment",
-  person_id: "p-1",
+  contact_id: "p-1",
   company_id: "o-1",
   role: "cto",
   is_current_primary: true,
@@ -93,7 +93,7 @@ const employmentRel = {
 };
 
 describe("ContactsScreen (B-EP09.10a)", () => {
-  it("names the owner on each row and navigates to the person 360", async () => {
+  it("names the owner on each row and navigates to the contact 360", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -158,7 +158,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() => expect(screen.getByText("Brandt AG")).toBeTruthy());
-    // The name rides on the person row, so the column costs no second read:
+    // The name rides on the contact row, so the column costs no second read:
     // one company per contact would otherwise be one fetch per row.
     expect(urls.filter((url) => url.includes("/companies"))).toHaveLength(0);
     // A contact whose employer the wire withheld — no edge grant, no grant on
@@ -174,7 +174,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
   // destinations in one row, and the reader picks.
   //
   // The company used to be plain text, on the reasoning that the row is
-  // already a link — but it is a link to the person, so a reader scanning who
+  // already a link — but it is a link to the contact, so a reader scanning who
   // works for whom had to open a contact to reach the account behind them.
   it("sends the row and the company to different records", async () => {
     vi.stubGlobal(
@@ -198,7 +198,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
 
     const company = await screen.findByRole("link", { name: "Brandt AG" });
     expect(company.getAttribute("href")).toBe("#/companies/o-1");
-    // The row's own identity link still goes to the person. Asserting BOTH is
+    // The row's own identity link still goes to the contact. Asserting BOTH is
     // what says these are two destinations rather than one of them having
     // quietly taken the other's place.
     const links = await screen.findAllByRole("link");
@@ -214,7 +214,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
           {
             type: "about:blank",
             title: "Forbidden",
-            detail: "missing scope people:read",
+            detail: "missing scope contacts:read",
           },
           403,
         ),
@@ -224,15 +224,15 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     await waitFor(() =>
       expect(screen.getByText("Couldn't load this view.")).toBeTruthy(),
     );
-    expect(screen.getByText("missing scope people:read")).toBeTruthy();
+    expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
   });
 });
 
 // The dormant/no-interactions strength response — the default backstop for
 // every stubFetch call below that isn't itself exercising the strength card
-// (P-4): the Person Overview now fires this GET unconditionally, and none of
+// (P-4): the Contact Overview now fires this GET unconditionally, and none of
 // those pre-existing tests care about its shape, so they get an honest
-// zero/dormant reading rather than a mismatched shape from the person-fixture
+// zero/dormant reading rather than a mismatched shape from the contact-fixture
 // catch-all.
 const dormantStrength = {
   score: 0,
@@ -255,9 +255,9 @@ function stubFetch(
   ) => Promise<Response>,
   options?: Readonly<{
     strength?: unknown;
-    // The deals this person sits on and the buying role they hold on each —
+    // The deals this contact sits on and the buying role they hold on each —
     // the identity rail's own section, empty for every test that isn't about it.
-    dealRoles?: readonly components["schemas"]["Person360DealRole"][];
+    dealRoles?: readonly components["schemas"]["Contact360DealRole"][];
   }>,
 ): { fetchMock: ReturnType<typeof vi.fn>; urls: string[] } {
   const urls: string[] = [];
@@ -270,7 +270,7 @@ function stubFetch(
     if (pathname.endsWith("/360")) {
       return jsonResponse({
         as_of: "2026-08-04T09:00:00Z",
-        person: anna,
+        contact: anna,
         sections_omitted: [],
         strength: options?.strength ?? dormantStrength,
         last_inbound_at: "2026-07-01T09:00:00Z",
@@ -284,7 +284,7 @@ function stubFetch(
     }
     if (pathname.endsWith("/context")) {
       return jsonResponse({
-        anchor: { type: "person", id: "p-1" },
+        anchor: { type: "contact", id: "p-1" },
         sections: [],
       });
     }
@@ -301,7 +301,7 @@ function stubFetch(
       return jsonResponse(
         meFixture({
           allow: {
-            person: ["read", "create", "update", "delete"],
+            contact: ["read", "create", "update", "delete"],
             relationship: ["read", "create", "update", "delete"],
             activity: ["read", "create"],
           },
@@ -436,7 +436,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
   it("posts full_name + emails + source:manual on submit", async () => {
     let posted: unknown = null;
     stubFetch(async (url, method, request) => {
-      if (method === "POST" && url.includes("/people")) {
+      if (method === "POST" && url.includes("/contacts")) {
         posted = JSON.parse(await request.text());
         return jsonResponse({ ...anna, id: "p-new" }, 201);
       }
@@ -465,8 +465,8 @@ describe("ContactsScreen — rich create (P-15)", () => {
   });
 });
 
-describe("PersonScreen — edit with If-Match (P-1)", () => {
-  it("PATCHes /people/{id} with If-Match:<version> and the changed field", async () => {
+describe("ContactScreen — edit with If-Match (P-1)", () => {
+  it("PATCHes /contacts/{id} with If-Match:<version> and the changed field", async () => {
     let patchHeader: string | null = null;
     let patchBody: unknown = null;
     stubFetch(async (url, method, request) => {
@@ -480,7 +480,7 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
@@ -511,7 +511,7 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
@@ -532,11 +532,11 @@ describe("PersonScreen — edit with If-Match (P-1)", () => {
   });
 });
 
-describe("PersonScreen — correcting an address that refused a send", () => {
+describe("ContactScreen — correcting an address that refused a send", () => {
   // A bounced send names the address that refused it and routes the reader
   // here. Until this form carried the field, that route ended at a page which
   // reported the failure and could not fix it: `emails` was on
-  // UpdatePersonRequest and on the create form, and on no edit form anywhere.
+  // UpdateContactRequest and on the create form, and on no edit form anywhere.
   it("sends the corrected set, not an addition to it", async () => {
     let patchBody: unknown = null;
     stubFetch(async (url, method, request) => {
@@ -549,7 +549,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
 
@@ -606,7 +606,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
       }
       return jsonResponse(twoAddresses);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
 
@@ -633,7 +633,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
   });
 
   it("offers the way to the contact already holding a corrected address", async () => {
-    // An address names exactly one live record (uq_person_email_dedupe), so a
+    // An address names exactly one live record (uq_contact_email_dedupe), so a
     // correction can land on one somebody else already holds. Create has always
     // offered this route; edit could not collide until it carried the field.
     stubFetch(async (url, method) => {
@@ -655,7 +655,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     const address = await screen.findByDisplayValue(
@@ -699,7 +699,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     const address = await screen.findByDisplayValue(
@@ -728,7 +728,7 @@ describe("PersonScreen — correcting an address that refused a send", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
 
@@ -747,11 +747,11 @@ describe("PersonScreen — correcting an address that refused a send", () => {
   });
 });
 
-describe("PersonScreen — archive (P-3)", () => {
-  it("opens a confirm, DELETEs /people/{id} on confirm, and navigates to the list", async () => {
+describe("ContactScreen — archive (P-3)", () => {
+  it("opens a confirm, DELETEs /contacts/{id} on confirm, and navigates to the list", async () => {
     let deleted = false;
     stubFetch(async (url, method) => {
-      if (method === "DELETE" && url.includes("/people/p-1")) {
+      if (method === "DELETE" && url.includes("/contacts/p-1")) {
         deleted = true;
         return jsonResponse({ ...anna, archived_at: "2026-07-13T00:00:00Z" });
       }
@@ -760,7 +760,7 @@ describe("PersonScreen — archive (P-3)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("archive-record");
     expect(
@@ -775,8 +775,8 @@ describe("PersonScreen — archive (P-3)", () => {
   });
 });
 
-describe("PersonScreen — overlay mode write affordances", () => {
-  // The mirror's own write-back seam serves update and archive for a person
+describe("ContactScreen — overlay mode write affordances", () => {
+  // The mirror's own write-back seam serves update and archive for a contact
   // (overlay/provider_writes.go SupportsWrite), so both render here; merge
   // has no incumbent-first projection and stays refused, so it stays hidden.
   function meResponse() {
@@ -801,7 +801,7 @@ describe("PersonScreen — overlay mode write affordances", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await openRecordMenu();
     expect(await screen.findByTestId("edit-record")).toBeTruthy();
@@ -829,7 +829,7 @@ describe("PersonScreen — overlay mode write affordances", () => {
       }
       return jsonResponse(current);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     const title = await screen.findByLabelText("Title");
@@ -850,7 +850,7 @@ describe("PersonScreen — overlay mode write affordances", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("edit-record");
     expect(
@@ -876,7 +876,7 @@ describe("ContactsScreen — archived marking (P-3)", () => {
 describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
   it("renders a link to the collided record on a duplicate_email 409", async () => {
     stubFetch(async (url, method) => {
-      if (method === "POST" && url.includes("/people")) {
+      if (method === "POST" && url.includes("/contacts")) {
         return jsonResponse(
           {
             type: "about:blank",
@@ -892,7 +892,7 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
     });
     render(<ContactsScreen />);
     await userEvent.click(screen.getByTestId("new-record"));
-    await userEvent.type(screen.getByLabelText("Full name *"), "Dup Person");
+    await userEvent.type(screen.getByLabelText("Full name *"), "Dup Contact");
     await userEvent.click(screen.getByText("Add email"));
     await userEvent.type(screen.getByLabelText("Email *"), "dup@example.test");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -905,19 +905,19 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
   });
 });
 
-describe("PersonScreen — merge into target (P-2)", () => {
+describe("ContactScreen — merge into target (P-2)", () => {
   const otto = { ...anna, id: "p-2", full_name: "Otto Fischer" };
 
   it("searches, excludes the source row, and merges into the picked target", async () => {
     let mergeBody: unknown = null;
     let mergeHeader: string | null = null;
     stubFetch(async (url, method, request) => {
-      if (method === "POST" && url.includes("/people/p-1/merge")) {
+      if (method === "POST" && url.includes("/contacts/p-1/merge")) {
         mergeHeader = request.headers.get("If-Match");
         mergeBody = JSON.parse(await request.text());
         return jsonResponse({ ...otto, version: 2 });
       }
-      if (url.includes("/people?") && url.includes("q=otto")) {
+      if (url.includes("/contacts?") && url.includes("q=otto")) {
         return jsonResponse({
           data: [anna, otto],
           page: { next_cursor: null, has_more: false },
@@ -928,7 +928,7 @@ describe("PersonScreen — merge into target (P-2)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("merge-record");
     await userEvent.type(screen.getByPlaceholderText("Search…"), "otto");
@@ -960,7 +960,7 @@ describe("PersonScreen — merge into target (P-2)", () => {
 
   it("shows a search error instead of an unhandled rejection when the target search fails", async () => {
     stubFetch(async (url) => {
-      if (url.includes("/people?") && url.includes("q=otto")) {
+      if (url.includes("/contacts?") && url.includes("q=otto")) {
         return jsonResponse(
           { type: "about:blank", title: "server error", detail: "boom" },
           500,
@@ -971,7 +971,7 @@ describe("PersonScreen — merge into target (P-2)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await pressRecordVerb("merge-record");
     await userEvent.type(screen.getByPlaceholderText("Search…"), "otto");
@@ -990,10 +990,10 @@ describe("PersonScreen — merge into target (P-2)", () => {
   });
 });
 
-describe("PersonScreen — Relationships tab (P-5)", () => {
-  it("shows an Overview/Relationships tab bar and lists relationships by person_id", async () => {
+describe("ContactScreen — Relationships tab (P-5)", () => {
+  it("shows an Overview/Relationships tab bar and lists relationships by contact_id", async () => {
     stubFetch(async (url) => {
-      if (url.includes("/relationships") && url.includes("person_id=p-1")) {
+      if (url.includes("/relationships") && url.includes("contact_id=p-1")) {
         return jsonResponse({
           data: [employmentRel],
           page: { next_cursor: null, has_more: false },
@@ -1004,7 +1004,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await waitFor(() => expect(screen.getByText("Overview")).toBeTruthy());
     await userEvent.click(screen.getByText("People & companies"));
@@ -1021,7 +1021,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
         posted = JSON.parse(await request.text());
         return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
       }
-      if (url.includes("/relationships") && url.includes("person_id=p-1")) {
+      if (url.includes("/relationships") && url.includes("contact_id=p-1")) {
         return emptyPage();
       }
       if (url.includes("/companies?") && url.includes("q=brandt")) {
@@ -1035,7 +1035,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
     await waitFor(() => expect(screen.getByText("Overview")).toBeTruthy());
     await userEvent.click(screen.getByText("People & companies"));
     await waitFor(() =>
@@ -1060,7 +1060,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
 
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
-      person_id: "p-1",
+      contact_id: "p-1",
       company_id: "o-1",
       kind: "employment",
       source: "manual",
@@ -1077,7 +1077,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
           archived_at: "2026-07-13T00:00:00Z",
         });
       }
-      if (url.includes("/relationships") && url.includes("person_id=p-1")) {
+      if (url.includes("/relationships") && url.includes("contact_id=p-1")) {
         return jsonResponse({
           data: [employmentRel],
           page: { next_cursor: null, has_more: false },
@@ -1088,7 +1088,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
     await waitFor(() => expect(screen.getByText("Overview")).toBeTruthy());
     await userEvent.click(screen.getByText("People & companies"));
     await waitFor(() =>
@@ -1104,7 +1104,7 @@ describe("PersonScreen — Relationships tab (P-5)", () => {
   });
 });
 
-describe("PersonScreen — relationship-strength card (P-4)", () => {
+describe("ContactScreen — relationship-strength card (P-4)", () => {
   it("leads with the relationship in words, not a verdict number", async () => {
     stubFetch(
       async (url) => {
@@ -1125,7 +1125,7 @@ describe("PersonScreen — relationship-strength card (P-4)", () => {
         },
       },
     );
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     // Both directions, never folded: which way went last is the fact a rep
     // acts on, and one "last touch" date hides it.
@@ -1150,7 +1150,7 @@ describe("PersonScreen — relationship-strength card (P-4)", () => {
       },
       { strength: dormantStrength },
     );
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await waitFor(() =>
       expect(
@@ -1162,7 +1162,7 @@ describe("PersonScreen — relationship-strength card (P-4)", () => {
   });
 });
 
-describe("PersonScreen — archived is read-only (P-3)", () => {
+describe("ContactScreen — archived is read-only (P-3)", () => {
   it("keeps edit/merge/archive/share visible but refused, each reachable from the one sentence naming the archive", async () => {
     stubFetch(async (url) => {
       if (url.includes("/activities")) {
@@ -1170,7 +1170,7 @@ describe("PersonScreen — archived is read-only (P-3)", () => {
       }
       return jsonResponse({ ...anna, archived_at: "2026-07-13T00:00:00Z" });
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await waitFor(() => expect(screen.getByText("Archived")).toBeTruthy());
     await openRecordMenu();
@@ -1187,14 +1187,14 @@ describe("PersonScreen — archived is read-only (P-3)", () => {
       // sentence the control does not point at reaches no reader who needed it.
       const describedBy = control.getAttribute("aria-describedby");
       expect(document.getElementById(describedBy ?? "")?.textContent).toBe(
-        en["person.rail.archivedReadOnly"],
+        en["contact.rail.archivedReadOnly"],
       );
     }
   });
 });
 
-describe("PersonScreen — relationship kinds by scope (P-5)", () => {
-  it("offers deal_stakeholder (not company↔company) from a person, searches deals, confirms, and POSTs deal_id", async () => {
+describe("ContactScreen — relationship kinds by scope (P-5)", () => {
+  it("offers deal_stakeholder (not company↔company) from a contact, searches deals, confirms, and POSTs deal_id", async () => {
     const user = userEvent.setup();
     let posted: unknown = null;
     stubFetch(async (url, method, request) => {
@@ -1202,7 +1202,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
         posted = JSON.parse(await request.text());
         return jsonResponse({ ...employmentRel, id: "rel-new" }, 201);
       }
-      if (url.includes("/relationships") && url.includes("person_id=p-1")) {
+      if (url.includes("/relationships") && url.includes("contact_id=p-1")) {
         return emptyPage();
       }
       if (url.includes("/deals")) {
@@ -1216,7 +1216,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
     await waitFor(() => expect(screen.getByText("Overview")).toBeTruthy());
     await user.click(screen.getByText("People & companies"));
     await waitFor(() =>
@@ -1224,7 +1224,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
     );
     await user.click(screen.getByTestId("add-relationship"));
 
-    // A person can anchor employment + deal_stakeholder; the company↔company kinds
+    // A contact can anchor employment + deal_stakeholder; the company↔company kinds
     // (partner_of/…) need two companies and must not be offered here. The kinds only
     // exist in the DOM while the popup is open, hence the click before the
     // absence is asserted.
@@ -1255,7 +1255,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
     await user.click(screen.getByTestId("add-relationship-submit"));
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
-      person_id: "p-1",
+      contact_id: "p-1",
       deal_id: "d-1",
       kind: "deal_stakeholder",
       source: "manual",
@@ -1264,7 +1264,7 @@ describe("PersonScreen — relationship kinds by scope (P-5)", () => {
   });
 });
 
-describe("PersonScreen — History tab", () => {
+describe("ContactScreen — History tab", () => {
   it("shows a History tab that lists record changes", async () => {
     stubFetch(async (url) => {
       if (url.includes("/history")) {
@@ -1287,7 +1287,7 @@ describe("PersonScreen — History tab", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
@@ -1301,11 +1301,11 @@ describe("PersonScreen — History tab", () => {
 });
 
 // consent.test.tsx covers ConsentSection's own behaviour exhaustively; what
-// it can't see is whether the Person 360 actually renders the component at
+// it can't see is whether the Contact 360 actually renders the component at
 // all. It didn't, once — an extraction (consent.tsx, pulled out of this
 // file) can compile clean and pass every existing suite while quietly
 // leaving the caller's JSX without the import it needs.
-describe("PersonScreen — consent section wiring", () => {
+describe("ContactScreen — consent section wiring", () => {
   it("renders the Art. 7 consent card on the overview tab", async () => {
     stubFetch(async (url) => {
       if (url.includes("/consent-purposes")) {
@@ -1322,7 +1322,7 @@ describe("PersonScreen — consent section wiring", () => {
       }
       return jsonResponse(anna);
     });
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     // The zone's title names it as a region — an absent import would leave no
     // such region on the page at all.
@@ -1334,7 +1334,7 @@ describe("PersonScreen — consent section wiring", () => {
 // word for it lives in the catalog map the account page's role badge already
 // reads. The rail said the enum, so the same role read two different ways on
 // two pages about the same deal.
-describe("PersonScreen — the buying role in the identity rail", () => {
+describe("ContactScreen — the buying role in the identity rail", () => {
   it("names a buying role in the product's words, not the wire's token", async () => {
     stubFetch(
       async (url) => {
@@ -1354,7 +1354,7 @@ describe("PersonScreen — the buying role in the identity rail", () => {
         ],
       },
     );
-    render(<PersonScreen id="p-1" />);
+    render(<ContactScreen id="p-1" />);
 
     // co.role.economic_buyer — the key the account page reads for the same role.
     expect(await screen.findByText("economic buyer")).toBeTruthy();

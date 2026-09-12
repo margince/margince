@@ -199,7 +199,7 @@ type JobRunnerConfig struct {
 	// pass existed.
 	OwedBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
-	// by omission and connector-created people keep their empty fields.
+	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer
 	// VerdictBrain is the ADR-0072 counterparty-verdict lane. Nil = no AI
 	// configured, and the consequence is deliberate: deferred senders stay

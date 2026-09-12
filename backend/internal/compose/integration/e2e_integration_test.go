@@ -19,27 +19,27 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// exercisePersonWriteInvariants runs the person write shape: create with
+// exerciseContactWriteInvariants runs the contact write shape: create with
 // server-stamped provenance, duplicate-email 409 with the existing id,
-// If-Match version skew, then the versioned update. Returns the person id.
-func exercisePersonWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID string) string {
+// If-Match version skew, then the versioned update. Returns the contact id.
+func exerciseContactWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID string) string {
 	t.Helper()
-	var person AnyMap
-	status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Grace Hopper",
 		"source":    "ui",
 		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
-	}, nil, &person)
+	}, nil, &contact)
 	if status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
-	personID := person["id"].(string)
-	if person["captured_by"] != "human:"+adminUserID {
-		t.Errorf("captured_by = %v; the server must stamp the acting principal", person["captured_by"])
+	contactID := contact["id"].(string)
+	if contact["captured_by"] != "human:"+adminUserID {
+		t.Errorf("captured_by = %v; the server must stamp the acting principal", contact["captured_by"])
 	}
 
 	var dup AnyMap
-	status = e.Call(t, "POST", "/v1/people", AnyMap{
+	status = e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Grace Clone",
 		"source":    "ui",
 		"emails":    []AnyMap{{"email": "grace@navy.mil"}},
@@ -47,24 +47,24 @@ func exercisePersonWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID 
 	if status != http.StatusConflict {
 		t.Fatalf("duplicate email = %d, want 409", status)
 	}
-	if dup["details"].(AnyMap)["existing_id"] != personID {
-		t.Errorf("409 existing_id = %v, want %s", dup["details"], personID)
+	if dup["details"].(AnyMap)["existing_id"] != contactID {
+		t.Errorf("409 existing_id = %v, want %s", dup["details"], contactID)
 	}
 
 	var conflict AnyMap
-	status = e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Rear Admiral"},
+	status = e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"title": "Rear Admiral"},
 		map[string]string{"If-Match": "42"}, &conflict)
 	if status != http.StatusConflict || conflict["code"] != "version_skew" {
 		t.Fatalf("stale If-Match = %d %v, want 409 version_skew", status, conflict)
 	}
 
-	var person2 AnyMap
-	status = e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Rear Admiral"},
-		map[string]string{"If-Match": "1"}, &person2)
-	if status != http.StatusOK || person2["version"].(float64) != 2 {
-		t.Fatalf("If-Match update = %d version %v, want 200 v2", status, person2["version"])
+	var contact2 AnyMap
+	status = e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"title": "Rear Admiral"},
+		map[string]string{"If-Match": "1"}, &contact2)
+	if status != http.StatusOK || contact2["version"].(float64) != 2 {
+		t.Fatalf("If-Match update = %d version %v, want 200 v2", status, contact2["version"])
 	}
-	return personID
+	return contactID
 }
 
 // exerciseActivityIdempotentCapture logs an email activity against the
@@ -108,7 +108,7 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 	}
 
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	personID := exercisePersonWriteInvariants(t, e, me["user"].(AnyMap)["id"].(string))
+	contactID := exerciseContactWriteInvariants(t, e, me["user"].(AnyMap)["id"].(string))
 	dealID := apptest.ExerciseDealToWon(t, e, stages)
 
 	exerciseActivityIdempotentCapture(t, e, dealID)
@@ -133,22 +133,22 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 	}
 
 	// --- archive cascades and stays fetchable by id ---
-	var person AnyMap
-	if status := e.Call(t, "DELETE", "/v1/people/"+personID, nil, nil, &person); status != http.StatusOK {
-		t.Fatalf("archive person = %d", status)
+	var contact AnyMap
+	if status := e.Call(t, "DELETE", "/v1/contacts/"+contactID, nil, nil, &contact); status != http.StatusOK {
+		t.Fatalf("archive contact = %d", status)
 	}
-	if person["archived_at"] == nil {
-		t.Error("archived person carries no archived_at")
+	if contact["archived_at"] == nil {
+		t.Error("archived contact carries no archived_at")
 	}
-	var people struct {
+	var contacts struct {
 		Data []AnyMap `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/people", nil, nil, &people); status != http.StatusOK {
-		t.Fatalf("list people = %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts", nil, nil, &contacts); status != http.StatusOK {
+		t.Fatalf("list contacts = %d", status)
 	}
-	for _, p := range people.Data {
-		if p["id"] == personID {
-			t.Error("archived person still appears in the default list")
+	for _, p := range contacts.Data {
+		if p["id"] == contactID {
+			t.Error("archived contact still appears in the default list")
 		}
 	}
 
@@ -157,17 +157,17 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 		Data []AnyMap `json:"data"`
 		Page AnyMap   `json:"page"`
 	}
-	if status := e.Call(t, "GET", "/v1/audit-log?entity_type=person&action=archive", nil, nil, &audit); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/audit-log?entity_type=contact&action=archive", nil, nil, &audit); status != http.StatusOK {
 		t.Fatalf("audit log = %d", status)
 	}
 	found := false
 	for _, entry := range audit.Data {
-		if entry["entity_id"] == personID && entry["actor_type"] == "human" {
+		if entry["entity_id"] == contactID && entry["actor_type"] == "human" {
 			found = true
 		}
 	}
 	if !found {
-		t.Errorf("the person archive is missing from the filtered audit view: %v", audit.Data)
+		t.Errorf("the contact archive is missing from the filtered audit view: %v", audit.Data)
 	}
 }
 

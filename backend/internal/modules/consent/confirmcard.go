@@ -3,13 +3,13 @@
 
 package consent
 
-// What the confirm page shows a person about themselves.
+// What the confirm page shows a contact about themselves.
 //
-// A purpose-built projection, never the Person360 read model. That one carries
+// A purpose-built projection, never the Contact360 read model. That one carries
 // internal fields — owner, lifecycle, scores, the research trail — which are
 // this workspace's working notes about a contact rather than the contact's own
 // data, and which no subject asked to be shown. This read names its columns
-// one at a time so a field added to the person record cannot arrive on a public
+// one at a time so a field added to the contact record cannot arrive on a public
 // page by inheritance.
 
 import (
@@ -38,7 +38,7 @@ const (
 
 // confirmCorrectableFields is the closed set a submission may name. The company
 // is deliberately absent: which company employs somebody is a relationship
-// this workspace maintains, not a string on the person, and a correction to it
+// this workspace maintains, not a string on the contact, and a correction to it
 // would have to create or merge a company record — which is a rep's judgment
 // and not a text box on a public page.
 var confirmCorrectableFields = map[string]bool{
@@ -48,7 +48,7 @@ var confirmCorrectableFields = map[string]bool{
 	ConfirmFieldPhone:    true,
 }
 
-// ConfirmCard is one person's own view of what is held about them.
+// ConfirmCard is one contact's own view of what is held about them.
 type ConfirmCard struct {
 	FullName string
 	Title    string
@@ -58,7 +58,7 @@ type ConfirmCard struct {
 	// Provenance answers Art. 14 per field: where this value came from and when
 	// it was recorded. Empty for a field nothing has stamped.
 	Provenance []FieldOrigin
-	// Marketing is the subject's current answer, so a person who already said
+	// Marketing is the subject's current answer, so a contact who already said
 	// yes is not asked as though they had not.
 	Marketing string
 }
@@ -74,14 +74,14 @@ type FieldOrigin struct {
 // row-level security like every other read on this surface: there is no session,
 // and the token the caller already redeemed IS the authority.
 //
-// The caller must have resolved a live token for this person. Nothing here
+// The caller must have resolved a live token for this contact. Nothing here
 // re-checks that, which is why it is unexported to the transport and reached
 // only from the handler that resolves first.
-func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (ConfirmCard, error) {
+func (s *Store) confirmCardFor(ctx context.Context, contactID ids.ContactID) (ConfirmCard, error) {
 	var card ConfirmCard
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		// The employer comes through the live employment relationship rather
-		// than a column: a person's company is a relationship, and reading it
+		// than a column: a contact's company is a relationship, and reading it
 		// any other way would show a company they have left.
 		//
 		// The currency test is a DATE comparison and not a null check, matching
@@ -94,32 +94,32 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 			SELECT coalesce(p.full_name, ''), coalesce(p.title, ''),
 			       coalesce((SELECT o.display_name FROM relationship r
 			                   JOIN company o ON o.id = r.company_id
-			                  WHERE r.person_id = p.id AND r.kind = 'employment'
+			                  WHERE r.contact_id = p.id AND r.kind = 'employment'
 			                    AND `+employment.IsCurrentSQL("r.ended_at")+`
 			                    AND r.archived_at IS NULL
 			                  ORDER BY r.created_at DESC LIMIT 1), ''),
 			       `+primaryEmailSQL("p.id")+`,
-			       coalesce((SELECT pp.phone FROM person_phone pp
-			                  WHERE pp.person_id = p.id AND pp.archived_at IS NULL
+			       coalesce((SELECT pp.phone FROM contact_phone pp
+			                  WHERE pp.contact_id = p.id AND pp.archived_at IS NULL
 			                  ORDER BY pp.is_primary DESC, pp.created_at LIMIT 1), '')
-			  FROM person p
+			  FROM contact p
 			 WHERE p.id = $1 AND p.archived_at IS NULL`,
-			personID).Scan(&card.FullName, &card.Title, &card.Company, &card.Email, &card.Phone)
+			contactID).Scan(&card.FullName, &card.Title, &card.Company, &card.Email, &card.Phone)
 		if err != nil {
 			return err
 		}
-		card.Provenance, err = fieldOriginsFor(ctx, tx, personID)
+		card.Provenance, err = fieldOriginsFor(ctx, tx, contactID)
 		if err != nil {
 			return err
 		}
-		// No answer on record reads as empty rather than as an error: a person
+		// No answer on record reads as empty rather than as an error: a contact
 		// who has never been asked is the ordinary case on this page.
 		err = tx.QueryRow(ctx, `
 			SELECT pc.state
-			  FROM person_consent pc
+			  FROM contact_consent pc
 			  JOIN consent_purpose cp ON cp.id = pc.purpose_id
-			 WHERE pc.person_id = $1 AND cp.key = $2`,
-			personID, PurposeMarketingEmail).Scan(&card.Marketing)
+			 WHERE pc.contact_id = $1 AND cp.key = $2`,
+			contactID, PurposeMarketingEmail).Scan(&card.Marketing)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -134,12 +134,12 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 // This is the strongest part of the page and it costs nothing to render,
 // because the provenance rows already exist — every capture path stamps them.
 // Most CRMs cannot answer it at all.
-func fieldOriginsFor(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]FieldOrigin, error) {
+func fieldOriginsFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]FieldOrigin, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT field_name, source, to_char(captured_at, 'YYYY-MM-DD')
 		  FROM field_provenance
-		 WHERE object_type = 'person' AND object_id = $1
-		 ORDER BY field_name`, personID)
+		 WHERE object_type = 'contact' AND object_id = $1
+		 ORDER BY field_name`, contactID)
 	if err != nil {
 		return nil, err
 	}
@@ -172,11 +172,11 @@ func (s *Store) consentCardFor(ctx context.Context, ref ConfirmRef) (Subscriptio
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT cp.key, cp.label,
-			       coalesce((SELECT pc.state FROM person_consent pc
-			                  WHERE pc.person_id = $1 AND pc.purpose_id = cp.id), 'unknown')
+			       coalesce((SELECT pc.state FROM contact_consent pc
+			                  WHERE pc.contact_id = $1 AND pc.purpose_id = cp.id), 'unknown')
 			  FROM consent_purpose cp
 			 WHERE cp.id = $2 AND cp.archived_at IS NULL`,
-			ref.PersonID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.State)
+			ref.ContactID, ref.PurposeID).Scan(&card.PurposeKey, &card.PurposeLabel, &card.State)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The purpose was archived after the link went out. The link is live

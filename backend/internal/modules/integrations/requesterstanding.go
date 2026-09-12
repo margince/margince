@@ -5,7 +5,7 @@ package integrations
 
 // Whose scope a submission travels under.
 //
-// A run is queued by a person and submitted by the CONNECTOR: actingForProvider
+// A run is queued by a contact and submitted by the CONNECTOR: actingForProvider
 // replaces the actor with a system principal before anything leaves, and a
 // system principal passes every object gate. So the question "may the employer
 // travel with this subject" cannot be asked of the context at submission time —
@@ -40,7 +40,7 @@ func (s *Store) WithRequesterStanding(holds RequesterHoldsFunc) *Store {
 // read companies, so the employer must not travel with the subject.
 //
 // A run with no requester is the automatic sweep: it acts for the installation
-// rather than for a person, and there is no scope to answer for.
+// rather than for a contact, and there is no scope to answer for.
 func (s *Store) employerWithheldFrom(ctx context.Context, tx pgx.Tx, runID string) (bool, error) {
 	if s.requesterHolds == nil {
 		return false, errors.New("integrations: no requester-standing check is bound, so a run cannot say whose scope it travels under")

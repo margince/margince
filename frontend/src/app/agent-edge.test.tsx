@@ -15,7 +15,7 @@ import {
 
 // The margins are decoration with a job: they are the only place on a screen
 // that says the agent is working, and the only place that says something has
-// stopped for a person. What these cases hold is the difference between those
+// stopped for a contact. What these cases hold is the difference between those
 // two and silence, because silence is the default and a mark drawn by mistake
 // would be the surface claiming work nobody asked for.
 

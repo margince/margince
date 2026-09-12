@@ -25,7 +25,7 @@ import (
 //
 // Its own reader rather than a filter over AtRisk, because a fresh inbound
 // makes a deal LESS quiet: deriving "waiting" from "quiet" loses the newest
-// cases, which are the ones a rep most needs. It also reaches a person with no
+// cases, which are the ones a rep most needs. It also reaches a contact with no
 // deal at all, whom the deal-shaped lanes never see.
 type Waiting interface {
 	// The bool reports that the read was CUT — the lane scanned to its own bound
@@ -106,7 +106,7 @@ type WaitingCustomer struct {
 	Since time.Time
 	// The record the thread is filed under, most specific first. Any may be
 	// zero: a message from a stranger names nobody.
-	PersonID  ids.UUID
+	ContactID ids.UUID
 	CompanyID ids.UUID
 	DealID    ids.UUID
 	// HasOpenDeal reports whether money this reader can see is still on this

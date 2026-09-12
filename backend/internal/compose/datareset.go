@@ -254,7 +254,7 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// The provider platform needs no pass of its own any more. It used to:
 		// its five tables carry no workspace_id, so the sweep's old
 		// column-derived list could not see them, and a reset left purchased
-		// personal data about people it had just deleted. The list is derived
+		// personal data about contacts it had just deleted. The list is derived
 		// by exclusion now, so they are ordinary targets.
 		counts.TablesCleared = len(tables)
 

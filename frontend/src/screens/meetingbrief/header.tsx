@@ -3,7 +3,7 @@
 //
 // The meeting's own facts arrive as props rather than from the brief, because
 // the wire does not carry them: `MeetingBrief` is the prepared prose, and the
-// subject, the time and the person are what the page that opened the drawer
+// subject, the time and the contact are what the page that opened the drawer
 // already holds. A caller that holds none of it — the deal page opens this
 // from an activity id alone — passes none, and the band falls back to the
 // brief's own `header` section rather than inventing a line.
@@ -20,7 +20,7 @@ type MeetingBrief = components["schemas"]["MeetingBrief"];
 export type MeetingFacts = Readonly<{
   subject?: string | null;
   startsAt?: string;
-  participants?: readonly { person_id: string; full_name: string }[];
+  participants?: readonly { contact_id: string; full_name: string }[];
 }>;
 
 // Who the brief is about, for the line under the title.
@@ -51,11 +51,11 @@ export function BriefHeader({
       {preparedFor && (
         <p className="mb-prepared-for t-sub">
           {preparedFor.companyName
-            ? t("person.meeting.preparedForAt", {
+            ? t("contact.meeting.preparedForAt", {
                 name: preparedFor.name,
                 company: preparedFor.companyName,
               })
-            : t("person.meeting.preparedFor", { name: preparedFor.name })}
+            : t("contact.meeting.preparedFor", { name: preparedFor.name })}
         </p>
       )}
       {meeting?.subject && (

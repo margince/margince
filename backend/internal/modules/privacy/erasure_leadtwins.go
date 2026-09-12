@@ -21,9 +21,9 @@ import (
 // The communication arms are here rather than in deleteConsentCapabilities for
 // the reason the four scrubs above them are: this is an ANONYMIZE, so the lead
 // row survives and no ON DELETE CASCADE fires. A decision written while the
-// subject was still a lead carries subject_kind='lead', which a person-keyed
+// subject was still a lead carries subject_kind='lead', which a contact-keyed
 // statement cannot see — it would keep a live address and a lead id that still
-// points at the erased person through promoted_person_id.
+// points at the erased contact through promoted_contact_id.
 //
 // anonymizeLeadTwins wipes the subject's segregated lead rows and everything
 // keyed to them, answering with the twins it touched. One CTE on purpose:
@@ -38,7 +38,7 @@ import (
 // carries a colleague's name and their written judgement about them. This is
 // an ANONYMIZE, so the lead row survives and nothing cascades — each has to
 // be named here or it outlives the erasure (ADR-0105).
-func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) ([]ids.UUID, error) {
+func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string) ([]ids.UUID, error) {
 	leadCustom, err := subjectCustomColumns(ctx, tx, "lead")
 	if err != nil {
 		return nil, err
@@ -49,8 +49,8 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		    company_name = NULL, candidate_company_key = NULL, raw = NULL, linkedin_url = NULL,
 		    disqualify_note = NULL, score_override_reason = NULL,
 		    archived_at = coalesce(archived_at, now())%s
-		  WHERE promoted_person_id = $1
-		     OR id IN (SELECT converted_from_lead_id FROM person WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
+		  WHERE promoted_contact_id = $1
+		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
 		     OR (email IS NOT NULL AND lower(email) = ANY($2))
 		  RETURNING id
 		), pruned AS (
@@ -86,11 +86,11 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		         subject_id = NULL, subject_kind = NULL
 		   WHERE subject_kind = 'lead' AND subject_id IN (SELECT id FROM wiped)
 		), leadreviews AS (
-		  -- The refused-send reviews that named this LEAD. The person sweep
-		  -- reaches a review by the person's own id or one of their addresses,
+		  -- The refused-send reviews that named this LEAD. The contact sweep
+		  -- reaches a review by the contact's own id or one of their addresses,
 		  -- and an unpromoted lead has neither — so a message refused for the
 		  -- lead before promotion would keep their address here after the
-		  -- person it became was erased.
+		  -- contact it became was erased.
 		  UPDATE communication_review
 		     SET refusals = '[]'::jsonb
 		   WHERE EXISTS (
@@ -100,7 +100,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, personID ids.PersonID, e
 		               OR lower(refusal->>'address') = ANY($2))
 		)
 		SELECT id FROM wiped`, nullColumnAssignments(leadCustom)),
-		personID, lowercased(emails))
+		contactID, lowercased(emails))
 	if err != nil {
 		return nil, err
 	}

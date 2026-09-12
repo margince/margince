@@ -91,7 +91,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 			ruleType: TypeAmountVsOffer,
 			fires:    func(s Subject) Subject { s.OfferTotalMinor = money(300_000); return s },
 			// A gap below materiality is rounding somewhere, and a finding
-			// about it costs a person's morning to dismiss.
+			// about it costs a contact's morning to dismiss.
 			quiet: func(s Subject) Subject { s.OfferTotalMinor = money(499_990); return s },
 		},
 		{

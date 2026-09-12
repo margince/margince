@@ -14,7 +14,7 @@
 }
 
 /* The trigger is the AVATAR and nothing else. The strip is chrome true of the
-   whole session rather than a row about a person, so it takes the strip's own
+   whole session rather than a row about a contact, so it takes the strip's own
    control size — from the token, so it follows the coarse-pointer bump its three
    neighbours take instead of staying at whatever the pointer-precise number was.
    The name and the address are not drawn: the sentence they carry reaches a

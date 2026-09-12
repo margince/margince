@@ -222,8 +222,8 @@ func TestTheTraceDoorWithholdsAnActivityOutsideTheReadersRowScope(t *testing.T) 
 	// read, so an absent object grant is a seat that cannot exist — and it
 	// refuses in auth.Require before any SQL, which is not the half that breaks
 	// silently. Two things are therefore load-bearing in this seed: the activity
-	// is LINKED only to a person another rep captured privately (an unlinked
-	// activity is workspace-shared and visible at every scope, and a person
+	// is LINKED only to a contact another rep captured privately (an unlinked
+	// activity is workspace-shared and visible at every scope, and a contact
 	// who is merely owned by somebody else is readable by every seat), and the
 	// reader is at TEAM scope (an unbounded reader makes the scope clause
 	// empty). Remove either and the row-scope half of the gate can be deleted
@@ -231,9 +231,9 @@ func TestTheTraceDoorWithholdsAnActivityOutsideTheReadersRowScope(t *testing.T) 
 	e := Setup(t)
 	owner := OwnerConn(t)
 	msg := seedTracedMessage(t, e, e.Rep1, capturedMail("hidden-activity"))
-	theirPerson := e.SeedPerson(t, "Out Of Reach", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPerson, e.Rep3)
-	LinkActivity(t, owner, msg.activityID, "person", theirPerson)
+	theirContact := e.SeedContact(t, "Out Of Reach", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
+	LinkActivity(t, owner, msg.activityID, "contact", theirContact)
 
 	narrow := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 	got, err := ladderAssembler(e, false).ByTraceID(narrow, msg.traceID)
@@ -268,9 +268,9 @@ func TestTheActivityDoorRefusesAMessageOutsideTheReadersRowScope(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	msg := seedTracedMessage(t, e, e.Rep1, capturedMail("out-of-scope"))
-	theirPerson := e.SeedPerson(t, "Out Of Reach", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPerson, e.Rep3)
-	LinkActivity(t, owner, msg.activityID, "person", theirPerson)
+	theirContact := e.SeedContact(t, "Out Of Reach", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
+	LinkActivity(t, owner, msg.activityID, "contact", theirContact)
 	narrow := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
 	_, err := ladderAssembler(e, false).ByActivityID(narrow, msg.activityID)
@@ -278,13 +278,13 @@ func TestTheActivityDoorRefusesAMessageOutsideTheReadersRowScope(t *testing.T) {
 		t.Errorf("err = %v, want ErrNotFound — any error would otherwise pass, "+
 			"including a nil dereference", err)
 	}
-	// The control, over the SAME seed: the owner of the linked private person
+	// The control, over the SAME seed: the owner of the linked private contact
 	// reads it. Without this, an activity that was never seeded — or a link
 	// that landed nowhere — answers ErrNotFound too, and the refusal above
 	// would prove only that the fixture failed.
 	reaches := e.As(e.Rep3, []ids.UUID{e.Team2}, AccountRepPerms)
 	if _, err := ladderAssembler(e, false).ByActivityID(reaches, msg.activityID); err != nil {
-		t.Fatalf("the owner of the linked person could not read it either: %v — "+
+		t.Fatalf("the owner of the linked contact could not read it either: %v — "+
 			"the seed did not land, so the refusal above proves nothing", err)
 	}
 }

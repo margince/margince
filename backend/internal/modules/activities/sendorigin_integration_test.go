@@ -431,7 +431,7 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 // TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames is
 // the gap the field closes.
 //
-// A reply inherits the anchor's links, which is right for the people and the
+// A reply inherits the anchor's links, which is right for the contacts and the
 // deal a conversation is about — and wrong for a record attached to the deal
 // AFTER the conversation started. A deal whose project was filed later has an
 // anchor with no project link, so every reply in that thread went out unfiled:
@@ -441,7 +441,7 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	inherited := e.linkPerson(t, anchor, "Mara Vogt")
+	inherited := e.linkContact(t, anchor, "Mara Vogt")
 	// The record the anchor does not carry — the shape a project attached to
 	// the deal after the conversation began takes.
 	late := e.seedCompany(t)
@@ -460,7 +460,7 @@ func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t
 			filed[string(l.EntityType)+"/"+ids.UUID(l.EntityId).String()] = true
 		}
 	}
-	if !filed["person/"+inherited.String()] {
+	if !filed["contact/"+inherited.String()] {
 		t.Errorf("the reply lost a link its anchor carried; filed = %v — naming a record must ADD to the "+
 			"conversation's own filing, never replace it", filed)
 	}
@@ -503,11 +503,11 @@ func TestAReplyRefusesAnAddedLinkTheCallerCannotSee(t *testing.T) {
 func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	inherited := e.linkPerson(t, anchor, "Mara Vogt")
+	inherited := e.linkContact(t, anchor, "Mara Vogt")
 
 	sent, err := e.store(stubUnsubscribeLinker{}).SendEmail(
 		e.as(principal.RowScopeAll),
-		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "person", EntityID: inherited}}),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "contact", EntityID: inherited}}),
 		sendInput("transactional"), stubConsentGate{}, &recordingStager{})
 	if err != nil {
 		t.Fatalf("reply SendEmail: %v", err)
@@ -516,13 +516,13 @@ func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
 	seen := 0
 	if sent.Links != nil {
 		for _, l := range *sent.Links {
-			if string(l.EntityType) == "person" && ids.UUID(l.EntityId) == inherited {
+			if string(l.EntityType) == "contact" && ids.UUID(l.EntityId) == inherited {
 				seen++
 			}
 		}
 	}
 	if seen != 1 {
-		t.Errorf("the person is filed %d times, want once", seen)
+		t.Errorf("the contact is filed %d times, want once", seen)
 	}
 }
 
@@ -537,7 +537,7 @@ func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) 
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	for i := 0; i < maxActivityLinks; i++ {
-		e.linkPerson(t, anchor, fmt.Sprintf("Person %d", i))
+		e.linkContact(t, anchor, fmt.Sprintf("Contact %d", i))
 	}
 	company := e.seedCompany(t)
 	gate := &countingConsentGate{}

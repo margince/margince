@@ -68,7 +68,7 @@ func EmailSuppressed(ctx context.Context, tx pgx.Tx, email string) (bool, error)
 // GLOBAL rather than bot-scoped, so keying on the bot would make an
 // erasure stop holding the moment the workspace rotated its bot — the
 // erased subject's next message would resurrect them, with nothing
-// erroring and nothing logged. person_channel_identity's unique key omits
+// erroring and nothing logged. contact_channel_identity's unique key omits
 // the bot id for the same reason (0152).
 func ChannelIdentityHash(provider, channelUserID string) string {
 	return SuppressionHash(strings.TrimSpace(provider) + ":" + strings.TrimSpace(channelUserID))
@@ -77,7 +77,7 @@ func ChannelIdentityHash(provider, channelUserID string) string {
 // ChannelIdentitySuppressed reports whether a channel identity belongs to
 // an erased subject in this installation, under exactly the scope
 // EmailSuppressed documents. It is the channel twin of EmailSuppressed: an
-// ingest path that can create or re-bind a Person from an inbound message
+// ingest path that can create or re-bind a Contact from an inbound message
 // consults it first.
 func ChannelIdentitySuppressed(ctx context.Context, tx pgx.Tx, provider, channelUserID string) (bool, error) {
 	var suppressed bool
@@ -103,7 +103,7 @@ type ChannelIdentityKey struct {
 // transactions at READ COMMITTED, so an ingest that probes, finds nothing, and
 // then writes can have a whole erasure commit between its two statements: the
 // row it goes on to write names a subject whose suppression is already armed,
-// which guarantees person_channel_identity is never recreated — and every lane
+// which guarantees contact_channel_identity is never recreated — and every lane
 // that could reach that row later (the erasure raw purge, the SAR raw section)
 // drives off exactly those rows. Re-probing after the write narrows the window
 // without closing it, because the erasure's own purge has already run by the
@@ -176,7 +176,7 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 // Nothing heals that. The erasure set archived_at, so the retention selector
 // (`archived_at IS NULL`) can never pick the activity up again; the body is
 // NULL, so the transcript selector (`body IS NOT NULL`) cannot either; and a
-// subject-only activity is redacted by no other person's erasure. The
+// subject-only activity is redacted by no other contact's erasure. The
 // quotations stay in the approvals inbox permanently.
 //
 // A re-check without this lock only narrows the window while reading as

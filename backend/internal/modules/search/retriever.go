@@ -55,7 +55,7 @@ func (r *Retriever) Search(ctx context.Context, q retrieval.Query) (retrieval.Re
 }
 
 // AssembleContext is the §2.2 assembled-picture affordance for one
-// anchor: profile, recent touches, related people/companies, and
+// anchor: profile, recent touches, related contacts/companies, and
 // open tasks — every item provenance-stamped, every read row-scoped.
 func (r *Retriever) AssembleContext(ctx context.Context, anchor datasource.EntityRef, opts retrieval.AssembleOptions) (retrieval.Context, error) {
 	maxItems := opts.MaxItems

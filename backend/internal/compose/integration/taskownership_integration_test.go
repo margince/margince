@@ -38,11 +38,11 @@ func storedAssignee(t *testing.T, id string) *ids.UUID {
 func TestASelfWrittenTaskIsStoredAgainstItsAuthor(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	person := e.SeedPerson(t, "A Contact", &e.Rep1)
+	contact := e.SeedContact(t, "A Contact", &e.Rep1)
 
 	task, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "task", Subject: strPtr("Call them back"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("logging the task: %v", err)
@@ -63,11 +63,11 @@ func TestASelfWrittenTaskIsStoredAgainstItsAuthor(t *testing.T) {
 func TestANoteIsStoredWithNoAssignee(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	person := e.SeedPerson(t, "A Contact", &e.Rep1)
+	contact := e.SeedContact(t, "A Contact", &e.Rep1)
 
 	note, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("They mentioned a rollout"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("logging the note: %v", err)

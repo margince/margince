@@ -98,7 +98,7 @@ func (c Category) CarriesUnsubscribe() bool { return c == CategoryMarketing }
 // ServesTheSubject reports whether this category exists to serve the recipient
 // rather than the sender. These five may pass a hard suppression, and only
 // through a registered template: a security warning, a privacy notice, or the
-// acknowledgement of somebody's own opt-out are messages a person is worse off
+// acknowledgement of somebody's own opt-out are messages a contact is worse off
 // for not receiving. A marketing objection does not reach them, because it is
 // an objection to marketing.
 //

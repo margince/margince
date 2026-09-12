@@ -66,8 +66,8 @@ const verdictReasonGeneric = "verdict"
 // confidence", and it is ALSO the reason the sink writes when a SENDER marked
 // the subject line. Those look alike and behave nothing alike: the activities
 // derivation carries the sink's reason among the holds that survive an opening
-// verdict, because a person marked that message and no model overrules a
-// person. A model's own answer belongs in no such set — it is a judgement, and
+// verdict, because a contact marked that message and no model overrules a
+// contact. A model's own answer belongs in no such set — it is a judgement, and
 // the seat whose mail it is may disagree with it.
 //
 // Sharing one word made a model verdict unclearable. A rep whose ordinary deal

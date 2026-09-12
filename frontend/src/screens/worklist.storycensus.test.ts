@@ -8,7 +8,7 @@ import { KNOWN_SOURCES } from "./worklist.copy";
 
 // Every source the queue can draw has a story that draws it.
 //
-// A story is where a person LOOKS at a row. The row for a source nobody has a
+// A story is where a contact LOOKS at a row. The row for a source nobody has a
 // story for is one nobody has seen outside the running product — and this tree
 // has shipped two rows that were wrong in ways a glance would have caught: a
 // brief item offering three verbs the client drew none of, and a failed

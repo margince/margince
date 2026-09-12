@@ -69,7 +69,7 @@ func TestWhatEachSuppressionBinds(t *testing.T) {
 		commsauthz.ReasonHardBounce: all,
 		// The subject said stop, so nothing goes EXCEPT the three the
 		// controller owes them whatever they want sent — the same three
-		// Art. 18(2) spares. Binding all fourteen meant a person who asked
+		// Art. 18(2) spares. Binding all fourteen meant a contact who asked
 		// us to stop never received the confirmation that we had stopped.
 		commsauthz.ReasonSubjectRequest: restricted,
 		// A reason code this function does not recognise refuses everything.
@@ -109,7 +109,7 @@ func TestTheEarlyExitAgreesWithTheRule(t *testing.T) {
 
 // TestEveryLiveKindIsAsked holds the loop in applySuppression.
 //
-// A person may carry several suppressions at once, and since reach became
+// A contact may carry several suppressions at once, and since reach became
 // category-dependent they no longer agree: an objection binds only marketing
 // while a hard bounce binds everything. Asking one and stopping — which the
 // reader did for years, ordered by a fixed strength — lets the others through.

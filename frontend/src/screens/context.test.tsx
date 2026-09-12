@@ -42,7 +42,7 @@ describe("RecordContextPanel", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          anchor: { type: "person", id: "p1" },
+          anchor: { type: "contact", id: "p1" },
           sections: [
             {
               name: "Recent touches",
@@ -55,20 +55,20 @@ describe("RecordContextPanel", () => {
               ],
             },
             {
-              name: "Related people",
+              name: "Related contacts",
               items: [
-                { ref: { type: "person", id: "p2" }, summary: "Dana Buyer" },
+                { ref: { type: "contact", id: "p2" }, summary: "Dana Buyer" },
               ],
             },
           ],
         }),
       ),
     );
-    render(<RecordContextPanel entityType="person" id="p1" />);
+    render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
       expect(screen.getByText("Recent touches")).toBeTruthy(),
     );
-    expect(screen.getByText("Related people")).toBeTruthy();
+    expect(screen.getByText("Related contacts")).toBeTruthy();
     expect(screen.getByText(/renewal/)).toBeTruthy();
   });
 
@@ -77,7 +77,7 @@ describe("RecordContextPanel", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          anchor: { type: "person", id: "p1" },
+          anchor: { type: "contact", id: "p1" },
           sections: [
             {
               name: "Recent touches",
@@ -92,7 +92,7 @@ describe("RecordContextPanel", () => {
         }),
       ),
     );
-    render(<RecordContextPanel entityType="person" id="p1" />);
+    render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
       expect(screen.getByText("Recent touches")).toBeTruthy(),
     );
@@ -108,15 +108,15 @@ describe("RecordContextPanel", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          anchor: { type: "person", id: "p1" },
+          anchor: { type: "contact", id: "p1" },
           sections: [
             {
               name: "Profile",
               items: [
                 {
-                  ref: { type: "person", id: "p1" },
+                  ref: { type: "contact", id: "p1" },
                   summary: "Anna Weber",
-                  evidence: [{ snippet: "Anna Weber", source: "person:p1" }],
+                  evidence: [{ snippet: "Anna Weber", source: "contact:p1" }],
                 },
               ],
             },
@@ -134,7 +134,7 @@ describe("RecordContextPanel", () => {
         }),
       ),
     );
-    render(<RecordContextPanel entityType="person" id="p1" />);
+    render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
       expect(screen.getByText("Recent touches")).toBeTruthy(),
     );
@@ -149,16 +149,16 @@ describe("RecordContextPanel", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          anchor: { type: "person", id: "p1" },
+          anchor: { type: "contact", id: "p1" },
           sections: [
             {
-              name: "Related people",
+              name: "Related contacts",
               items: [
                 {
-                  ref: { type: "person", id: "p2" },
+                  ref: { type: "contact", id: "p2" },
                   summary: "Dana Buyer",
                   evidence: [
-                    { snippet: "Dana Buyer", source: "person:p2" },
+                    { snippet: "Dana Buyer", source: "contact:p2" },
                     { snippet: "…intro call…", source: "email:msg-9" },
                   ],
                 },
@@ -168,9 +168,9 @@ describe("RecordContextPanel", () => {
         }),
       ),
     );
-    render(<RecordContextPanel entityType="person" id="p1" />);
+    render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
-      expect(screen.getByText("Related people")).toBeTruthy(),
+      expect(screen.getByText("Related contacts")).toBeTruthy(),
     );
     expect(screen.getByText(/intro call/)).toBeTruthy();
     // The self-citation is the only thing gone: one chip, not two, and the row
@@ -185,10 +185,10 @@ describe("RecordContextPanel", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse({ anchor: { type: "person", id: "p1" }, sections: [] }),
+        jsonResponse({ anchor: { type: "contact", id: "p1" }, sections: [] }),
       ),
     );
-    render(<RecordContextPanel entityType="person" id="p1" />);
+    render(<RecordContextPanel entityType="contact" id="p1" />);
     await waitFor(() =>
       expect(screen.getByText("Nothing related yet.")).toBeTruthy(),
     );

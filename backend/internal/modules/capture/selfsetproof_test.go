@@ -40,7 +40,7 @@ func TestALoginAddressNamesTheSeatWithoutProvingDelivery(t *testing.T) {
 
 // A seat whose only address is their login is not an empty set. Reading it as
 // empty would skip every gate that guards on it, which fails in the direction
-// that files a person as their own counterparty again.
+// that files a contact as their own counterparty again.
 func TestASeatKnownOnlyByTheirLoginIsNotAnEmptySet(t *testing.T) {
 	t.Parallel()
 	self := NewSelfSetWithIdentityOnly(nil, []string{"owner@corp.example"}, nil)

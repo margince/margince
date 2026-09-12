@@ -915,6 +915,158 @@ func (stubs) CreateConsentPurpose(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "CreateConsentPurpose")
 }
 
+func (stubs) ListContacts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListContactsParams) {
+	httperr.NotImplemented(w, r, "ListContacts")
+}
+
+func (stubs) CreateContact(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateContactParams) {
+	httperr.NotImplemented(w, r, "CreateContact")
+}
+
+func (stubs) QuickCaptureContact(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.QuickCaptureContactParams) {
+	httperr.NotImplemented(w, r, "QuickCaptureContact")
+}
+
+func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ImportVCards")
+}
+
+func (stubs) ArchiveContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchiveContactParams) {
+	httperr.NotImplemented(w, r, "ArchiveContact")
+}
+
+func (stubs) GetContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContact")
+}
+
+func (stubs) UpdateContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateContactParams) {
+	httperr.NotImplemented(w, r, "UpdateContact")
+}
+
+func (stubs) GetContact360(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetContact360Params) {
+	httperr.NotImplemented(w, r, "GetContact360")
+}
+
+func (stubs) GetContactBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactBrief")
+}
+
+func (stubs) RegenerateContactBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RegenerateContactBrief")
+}
+
+func (stubs) RecordConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordConversationClaim")
+}
+
+func (stubs) GetContactConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactConsent")
+}
+
+func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RecordConsentParams) {
+	httperr.NotImplemented(w, r, "RecordConsent")
+}
+
+func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
+}
+
+func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "IssueDoubleOptIn")
+}
+
+func (stubs) GetContactConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactConsentGuard")
+}
+
+func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
+}
+
+func (stubs) SuppressContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SuppressContact")
+}
+
+func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "LiftSuppression")
+}
+
+func (stubs) DraftContactEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftContactEmail")
+}
+
+func (stubs) CreateContactEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreateContactEnrichmentRunParams) {
+	httperr.NotImplemented(w, r, "CreateContactEnrichmentRun")
+}
+
+func (stubs) GetContactEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, runId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetContactEnrichmentRun")
+}
+
+func (stubs) GetContactGraph(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactGraph")
+}
+
+func (stubs) DraftIntroNote(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DraftIntroNote")
+}
+
+func (stubs) ListIntroRequests(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListIntroRequests")
+}
+
+func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "CreateIntroRequest")
+}
+
+func (stubs) MergeContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeContactParams) {
+	httperr.NotImplemented(w, r, "MergeContact")
+}
+
+func (stubs) DismissContactMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissContactMoment")
+}
+
+func (stubs) GetContactNetwork(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetContactNetwork")
+}
+
+func (stubs) RestoreRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreRelationshipNudge")
+}
+
+func (stubs) DismissRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DismissRelationshipNudge")
+}
+
+func (stubs) GetContactProfileFields(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactProfileFields")
+}
+
+func (stubs) RestoreContactProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.ContactProfileFieldKey) {
+	httperr.NotImplemented(w, r, "RestoreContactProfileField")
+}
+
+func (stubs) PublishCapturedContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PublishCapturedContact")
+}
+
+func (stubs) RunContactResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RunContactResearch")
+}
+
+func (stubs) SaveContactResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SaveContactResearch")
+}
+
+func (stubs) GetContactStrength(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetContactStrength")
+}
+
+func (stubs) AcknowledgeContactView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AcknowledgeContactView")
+}
+
 func (stubs) CreateContract(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateContractParams) {
 	httperr.NotImplemented(w, r, "CreateContract")
 }
@@ -1707,158 +1859,6 @@ func (stubs) RevokePassport(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "RevokePassport")
 }
 
-func (stubs) ListPeople(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPeopleParams) {
-	httperr.NotImplemented(w, r, "ListPeople")
-}
-
-func (stubs) CreatePerson(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreatePersonParams) {
-	httperr.NotImplemented(w, r, "CreatePerson")
-}
-
-func (stubs) QuickCapturePerson(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.QuickCapturePersonParams) {
-	httperr.NotImplemented(w, r, "QuickCapturePerson")
-}
-
-func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ImportVCards")
-}
-
-func (stubs) ArchivePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePersonParams) {
-	httperr.NotImplemented(w, r, "ArchivePerson")
-}
-
-func (stubs) GetPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPerson")
-}
-
-func (stubs) UpdatePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdatePersonParams) {
-	httperr.NotImplemented(w, r, "UpdatePerson")
-}
-
-func (stubs) GetPerson360(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetPerson360Params) {
-	httperr.NotImplemented(w, r, "GetPerson360")
-}
-
-func (stubs) GetPersonBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonBrief")
-}
-
-func (stubs) RegeneratePersonBrief(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RegeneratePersonBrief")
-}
-
-func (stubs) RecordConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RecordConversationClaim")
-}
-
-func (stubs) GetPersonConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonConsent")
-}
-
-func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RecordConsentParams) {
-	httperr.NotImplemented(w, r, "RecordConsent")
-}
-
-func (stubs) RequestDetailsConfirmation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RequestDetailsConfirmation")
-}
-
-func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "IssueDoubleOptIn")
-}
-
-func (stubs) GetPersonConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonConsentGuard")
-}
-
-func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
-}
-
-func (stubs) SuppressPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "SuppressPerson")
-}
-
-func (stubs) LiftSuppression(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, suppressionId openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "LiftSuppression")
-}
-
-func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DraftPersonEmail")
-}
-
-func (stubs) CreatePersonEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreatePersonEnrichmentRunParams) {
-	httperr.NotImplemented(w, r, "CreatePersonEnrichmentRun")
-}
-
-func (stubs) GetPersonEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, runId openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "GetPersonEnrichmentRun")
-}
-
-func (stubs) GetPersonGraph(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonGraph")
-}
-
-func (stubs) DraftIntroNote(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DraftIntroNote")
-}
-
-func (stubs) ListIntroRequests(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "ListIntroRequests")
-}
-
-func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "CreateIntroRequest")
-}
-
-func (stubs) MergePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergePersonParams) {
-	httperr.NotImplemented(w, r, "MergePerson")
-}
-
-func (stubs) DismissPersonMoment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DismissPersonMoment")
-}
-
-func (stubs) GetPersonNetwork(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "GetPersonNetwork")
-}
-
-func (stubs) RestoreRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RestoreRelationshipNudge")
-}
-
-func (stubs) DismissRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DismissRelationshipNudge")
-}
-
-func (stubs) GetPersonProfileFields(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonProfileFields")
-}
-
-func (stubs) RestorePersonProfileField(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, field crmcontracts.PersonProfileFieldKey) {
-	httperr.NotImplemented(w, r, "RestorePersonProfileField")
-}
-
-func (stubs) PublishCapturedPerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "PublishCapturedPerson")
-}
-
-func (stubs) RunPersonResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "RunPersonResearch")
-}
-
-func (stubs) SavePersonResearch(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "SavePersonResearch")
-}
-
-func (stubs) GetPersonStrength(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "GetPersonStrength")
-}
-
-func (stubs) AcknowledgePersonView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "AcknowledgePersonView")
-}
-
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
 	httperr.NotImplemented(w, r, "ListPipelines")
 }
@@ -1951,7 +1951,7 @@ func (stubs) SetProjectStakeholder(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "SetProjectStakeholder")
 }
 
-func (stubs) RemoveProjectStakeholder(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, personId openapi_types.UUID, params crmcontracts.RemoveProjectStakeholderParams) {
+func (stubs) RemoveProjectStakeholder(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, contactId openapi_types.UUID, params crmcontracts.RemoveProjectStakeholderParams) {
 	httperr.NotImplemented(w, r, "RemoveProjectStakeholder")
 }
 

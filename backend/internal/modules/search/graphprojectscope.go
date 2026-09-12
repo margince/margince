@@ -20,7 +20,7 @@ import (
 // projectScope narrows a walk to one body of work. The zero value scopes
 // nothing, which is the ordinary read.
 //
-// It is a CO-FILTER on an anchor that stays a person, a company or a deal —
+// It is a CO-FILTER on an anchor that stays a contact, a company or a deal —
 // not an anchor of its own. "Catch me up on Acme" and "catch me up on Acme,
 // but only the ERP rollout" walk the same neighborhood; the second one just
 // refuses to be told about the other engagement.
@@ -61,7 +61,7 @@ func (s projectScope) require(ctx context.Context, tx pgx.Tx) error {
 //
 // It has to be a subquery over the activity's other links, not a test on the
 // link row already joined: `activity_link_shape` admits exactly ONE target per
-// row, so a person-link row carries `project_id IS NULL` by construction. A
+// row, so a contact-link row carries `project_id IS NULL` by construction. A
 // predicate on that row would be true for every row it saw and would filter
 // nothing at all — a scope that silently does nothing, which reads in a brief
 // exactly like a scope that works.

@@ -32,43 +32,43 @@ import (
 // rest on that one gap, so it is stated once.
 const budgetVolumeRows = 20000
 
-// budgetVolumePlan walks every seeded person and probes the employment edge for
+// budgetVolumePlan walks every seeded contact and probes the employment edge for
 // each of them: the hop's own predicate matches the one seeded company, while
-// the EDGE reaches only one person. A hop that admitted everybody would let the
+// the EDGE reaches only one contact. A hop that admitted everybody would let the
 // outer scan stop at the page limit after a dozen rows and prove nothing about
 // what a plan can cost.
-const budgetVolumePlan = `{"version": "v1", "target": "person",
+const budgetVolumePlan = `{"version": "v1", "target": "contact",
 	"traverse": {"relation": "companies",
 	             "where": [{"field": "address.city", "op": "eq", "value": "Volumeburg"}]}}`
 
-// rankedVolumePlan ranks every seeded person, so the ranking lane has the whole
+// rankedVolumePlan ranks every seeded contact, so the ranking lane has the whole
 // corpus to score before the exact lane sees a candidate.
-const rankedVolumePlan = `{"version": "v1", "target": "person", "similar_to": "Volume"}`
+const rankedVolumePlan = `{"version": "v1", "target": "contact", "similar_to": "Volume"}`
 
 // seedBudgetVolume builds the corpus both tests run the same plan over: one
-// company in one city, many people, and exactly ONE employment edge between
-// them. It answers the person that edge reaches, which is the whole right
+// company in one city, many contacts, and exactly ONE employment edge between
+// them. It answers the contact that edge reaches, which is the whole right
 // answer to the plan.
 func (q *queryEnv) seedBudgetVolume(t *testing.T) ids.UUID {
 	t.Helper()
 	ctx := q.admin()
 	company := q.SeedID(t, `INSERT INTO company (id, display_name, address_city, source, captured_by)
 		VALUES ($1, 'Volume GmbH', 'Volumeburg', 'manual', 'human:x')`)
-	if _, err := q.Owner.Exec(ctx, `INSERT INTO person (full_name, source, captured_by)
-		SELECT 'Volume Person ' || i, 'manual', 'human:x' FROM generate_series(1, $1) AS i`,
+	if _, err := q.Owner.Exec(ctx, `INSERT INTO contact (full_name, source, captured_by)
+		SELECT 'Volume Contact ' || i, 'manual', 'human:x' FROM generate_series(1, $1) AS i`,
 		budgetVolumeRows); err != nil {
-		t.Fatalf("seeding %d people: %v", budgetVolumeRows, err)
+		t.Fatalf("seeding %d contacts: %v", budgetVolumeRows, err)
 	}
 	var employee ids.UUID
-	if err := q.Owner.QueryRow(ctx, `INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-		SELECT 'employment', id, $1, 'manual', 'human:x' FROM person ORDER BY id LIMIT 1
-		RETURNING person_id`, company).Scan(&employee); err != nil {
+	if err := q.Owner.QueryRow(ctx, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		SELECT 'employment', id, $1, 'manual', 'human:x' FROM contact ORDER BY id LIMIT 1
+		RETURNING contact_id`, company).Scan(&employee); err != nil {
 		t.Fatalf("seeding the one employment edge: %v", err)
 	}
 	// Without fresh statistics the planner sizes these tables from whatever the
 	// last analyze saw, which on a just-reset database is nothing — and the plan
 	// it picks is what decides the cost under test.
-	if _, err := q.Owner.Exec(ctx, `ANALYZE person, company, relationship`); err != nil {
+	if _, err := q.Owner.Exec(ctx, `ANALYZE contact, company, relationship`); err != nil {
 		t.Fatalf("analyzing the seeded volume: %v", err)
 	}
 	return employee
@@ -117,7 +117,7 @@ func TestQueryPlanWithinItsBudgetAnswersCompletely(t *testing.T) {
 	result := q.run(q.admin(), t, budgetVolumePlan)
 
 	if len(result.Rows) != 1 || result.Rows[0].ID != employee {
-		t.Fatalf("the plan answered %d rows; the one employed person is the whole answer", len(result.Rows))
+		t.Fatalf("the plan answered %d rows; the one employed contact is the whole answer", len(result.Rows))
 	}
 	if result.Coverage != search.CoverageCompleteExact {
 		t.Fatalf("coverage is %q, so a plan that ran whole is reporting that it did not", result.Coverage)

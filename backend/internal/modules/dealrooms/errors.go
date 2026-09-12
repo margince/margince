@@ -90,7 +90,7 @@ func pausedForBuyer() error {
 }
 
 // errViewerCannotWrite refuses a write from a participant admitted to read
-// only. The capability is the seller's decision about this person, so the
+// only. The capability is the seller's decision about this contact, so the
 // answer names it rather than the room's state.
 var errViewerCannotWrite = &fieldError{
 	field: fieldCapability,
@@ -150,18 +150,18 @@ var errRoomAlreadyOpen = &messageError{
 // errStewardUnknown refuses a steward nobody can be pointed at — an id no seat
 // carries, and one whose seat cannot act.
 //
-// One refusal for both, because they are one answer to the caller: the person
+// One refusal for both, because they are one answer to the caller: the contact
 // they named cannot be contacted for help. Telling them WHICH would say whether
 // a given id belongs to a colleague, on an input a caller supplies freely.
 var errStewardUnknown = &fieldError{
 	field: "steward_user_id",
 	code:  "unknown_user",
-	msg:   "no active user with that id: the steward is the person a buyer contacts for help",
+	msg:   "no active user with that id: the steward is the contact a buyer contacts for help",
 }
 
 // errAlreadyInvited refuses a second live seat for one address. It names
 // revoking as the way out, because the caller's alternative — inviting the same
-// person twice — is exactly what the index prevents.
+// contact twice — is exactly what the index prevents.
 var errAlreadyInvited = &messageError{
 	code: "deal_room_participant_already_invited",
 	msg:  "that address already has access to this room: revoke it first, or resend their invitation",
@@ -172,7 +172,7 @@ var errAlreadyInvited = &messageError{
 // better than a 500 that invites a retry minting yet another.
 var errResendInFlight = &messageError{
 	code: "deal_room_resend_in_flight",
-	msg:  "another invitation for this person was issued a moment ago: re-read the participant before resending",
+	msg:  "another invitation for this contact was issued a moment ago: re-read the participant before resending",
 }
 
 // errRevokedNoResend refuses a resend to somebody whose access was taken away.
@@ -180,22 +180,22 @@ var errResendInFlight = &messageError{
 // different decision and belongs to a fresh invitation.
 var errRevokedNoResend = &messageError{
 	code: "deal_room_participant_revoked",
-	msg:  "this person's access was revoked: invite the address again to admit them",
+	msg:  "this contact's access was revoked: invite the address again to admit them",
 }
 
 // errRevokedNoEdit refuses corrections to a revoked participant. Their row is
 // kept to attribute what they already wrote, not to go on being managed.
 var errRevokedNoEdit = &messageError{
 	code: "deal_room_participant_revoked",
-	msg:  "this person's access was revoked: their record is kept for attribution and is no longer editable",
+	msg:  "this contact's access was revoked: their record is kept for attribution and is no longer editable",
 }
 
 // errAddressSettled refuses moving an address after its credential was used.
 // Redirecting a link somebody has already signed in with would hand their
-// standing access to a different person.
+// standing access to a different contact.
 var errAddressSettled = &messageError{
 	code: "deal_room_address_settled",
-	msg:  "this person has already signed in, so their address is fixed: revoke them and invite the correct address",
+	msg:  "this contact has already signed in, so their address is fixed: revoke them and invite the correct address",
 }
 
 type messageError struct {

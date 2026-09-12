@@ -84,13 +84,13 @@ func setupAccountSend(t *testing.T) *accountSendEnv {
 	// this suite would pass while proving nothing about authority.
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 	company := anchorCompany(t, p.AppEnv, "Northwind")
-	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.personID)}
+	return &accountSendEnv{preflightEnv: p, company: company, deal: openDealWithStakeholder(t, p.AppEnv, company, p.contactID)}
 }
 
 // openDealWithStakeholder plants a live opportunity on company with the recipient
 // staked on it, through the real endpoints — the shape resolveCategory's
 // live-deal arm looks for (backend/internal/modules/consent/authorizeevidence.go).
-func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, personID string) string {
+func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, contactID string) string {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	var deal struct {
@@ -103,7 +103,7 @@ func openDealWithStakeholder(t *testing.T, e *apptest.AppEnv, company, personID 
 		t.Fatalf("create deal → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "deal_stakeholder", "deal_id": deal.ID, "person_id": personID, "source": "manual",
+		"kind": "deal_stakeholder", "deal_id": deal.ID, "contact_id": contactID, "source": "manual",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("stake the recipient on the deal → %d", status)
 	}
@@ -371,7 +371,7 @@ func (a *accountSendEnv) flooredAccountSendInvoker(t *testing.T, agentToken stri
 
 // inboxShows reports whether the acting human's approvals inbox lists the row —
 // the read path targetVisible governs, asked over HTTP rather than in SQL so
-// the answer is the one a person would actually get.
+// the answer is the one a contact would actually get.
 func (a *accountSendEnv) inboxShows(t *testing.T, approvalID string) bool {
 	t.Helper()
 	var page struct {

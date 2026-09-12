@@ -46,25 +46,25 @@ func (r *recordingChannelStager) StageChannelTx(_ context.Context, _ pgx.Tx, in 
 	return r.err
 }
 
-// stubReachability answers the identity seam per person, so a test can compose a
-// conversation that reaches nobody, one person, or two.
+// stubReachability answers the identity seam per contact, so a test can compose a
+// conversation that reaches nobody, one contact, or two.
 type stubReachability struct {
-	byPerson map[ids.UUID][]connector.ChannelIdentity
-	err      error
+	byContact map[ids.UUID][]connector.ChannelIdentity
+	err       error
 }
 
-func (s stubReachability) ReachableChannelIdentities(_ context.Context, _ pgx.Tx, personID ids.UUID, _ string) ([]connector.ChannelIdentity, error) {
-	return s.byPerson[personID], s.err
+func (s stubReachability) ReachableChannelIdentities(_ context.Context, _ pgx.Tx, contactID ids.UUID, _ string) ([]connector.ChannelIdentity, error) {
+	return s.byContact[contactID], s.err
 }
 
-// reaches builds the seam for a conversation that reaches each of these people at
+// reaches builds the seam for a conversation that reaches each of these contacts at
 // one account apiece.
 func reaches(accounts map[ids.UUID]string) stubReachability {
-	byPerson := make(map[ids.UUID][]connector.ChannelIdentity, len(accounts))
-	for person, account := range accounts {
-		byPerson[person] = []connector.ChannelIdentity{{Provider: "telegram", ChannelUserID: account}}
+	byContact := make(map[ids.UUID][]connector.ChannelIdentity, len(accounts))
+	for contact, account := range accounts {
+		byContact[contact] = []connector.ChannelIdentity{{Provider: "telegram", ChannelUserID: account}}
 	}
-	return stubReachability{byPerson: byPerson}
+	return stubReachability{byContact: byContact}
 }
 
 // channelStore is the reply path as compose wires it: the identity seam on the
@@ -104,22 +104,22 @@ func (e *sendEnv) seedAnchorWithTransport(t *testing.T, kind, provider string) i
 	return id
 }
 
-// linkPerson attaches one more person to the conversation and returns them.
-func (e *sendEnv) linkPerson(t *testing.T, anchor ids.ActivityID, name string) ids.UUID {
+// linkContact attaches one more contact to the conversation and returns them.
+func (e *sendEnv) linkContact(t *testing.T, anchor ids.ActivityID, name string) ids.UUID {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	ctx := context.Background()
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		 VALUES ($1, $2, $3, 'manual', 'human:x')`, person, name, e.rep); err != nil {
-		t.Fatalf("seeding the linked person: %v", err)
+		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		 VALUES ($1, $2, $3, 'manual', 'human:x')`, contact, name, e.rep); err != nil {
+		t.Fatalf("seeding the linked contact: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity_link (activity_id, entity_type, person_id)
-		 VALUES ($1, 'person', $2)`, anchor, person); err != nil {
-		t.Fatalf("linking the person: %v", err)
+		`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		 VALUES ($1, 'contact', $2)`, anchor, contact); err != nil {
+		t.Fatalf("linking the contact: %v", err)
 	}
-	return person
+	return contact
 }
 
 // channelInput is the reply every case here sends. The purpose is fixed at the
@@ -137,10 +137,10 @@ func channelInput() SendMessageInput {
 func TestSendMessageRefusesAnAnchorThatIsNotAChannelConversation(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedAnchorWithoutProvider(t, "email")
-	person := e.linkPerson(t, anchor, "Mail Buyer")
+	contact := e.linkContact(t, anchor, "Mail Buyer")
 	stager := &recordingChannelStager{}
 
-	_, err := e.channelStore(reaches(map[ids.UUID]string{person: testChannelAccount})).SendMessage(
+	_, err := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, stager)
 
 	var refusal *NotAChannelConversationError
@@ -193,15 +193,15 @@ func TestTheDatabaseRefusesAKindAndTransportThatDisagree(t *testing.T) {
 	}
 }
 
-// A channel reply addresses one person. When the conversation reaches two, the
+// A channel reply addresses one contact. When the conversation reaches two, the
 // send path refuses rather than picking: the two accounts are two chats, and a
 // reply delivered to the wrong one messages a customer somewhere they never
 // wrote from.
-func TestSendMessageRefusesWhenTheConversationReachesTwoPeople(t *testing.T) {
+func TestSendMessageRefusesWhenTheConversationReachesTwoContacts(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	first := e.linkPerson(t, anchor, "First Buyer")
-	second := e.linkPerson(t, anchor, "Second Buyer")
+	first := e.linkContact(t, anchor, "First Buyer")
+	second := e.linkContact(t, anchor, "Second Buyer")
 	stager := &recordingChannelStager{}
 
 	_, err := e.channelStore(reaches(map[ids.UUID]string{
@@ -210,7 +210,7 @@ func TestSendMessageRefusesWhenTheConversationReachesTwoPeople(t *testing.T) {
 
 	var refusal *ChannelRecipientError
 	if !errors.As(err, &refusal) {
-		t.Fatalf("reply on a two-person conversation → %v, want a ChannelRecipientError", err)
+		t.Fatalf("reply on a two-contact conversation → %v, want a ChannelRecipientError", err)
 	}
 	if refusal.Reachable != 2 || refusal.Code() != "ambiguous_channel_recipient" {
 		t.Fatalf("refusal reports %d reachable as %q, want 2 as ambiguous_channel_recipient", refusal.Reachable, refusal.Code())
@@ -224,20 +224,20 @@ func TestSendMessageRefusesWhenTheConversationReachesTwoPeople(t *testing.T) {
 }
 
 // A conversation that reaches nobody is the ordinary block case, and it is the
-// same refusal with the other code: the person is still on the record, the
+// same refusal with the other code: the contact is still on the record, the
 // conversation is still readable, and the reply must not be accepted.
 func TestSendMessageRefusesWhenTheConversationReachesNobody(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	e.linkPerson(t, anchor, "Blocked Buyer")
+	e.linkContact(t, anchor, "Blocked Buyer")
 	stager := &recordingChannelStager{}
 
 	_, err := e.channelStore(stubReachability{}).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, stager)
 
 	var refusal *ChannelRecipientError
-	if !errors.As(err, &refusal) || refusal.Code() != "person_unreachable" {
-		t.Fatalf("reply to an unreachable person → %v, want person_unreachable", err)
+	if !errors.As(err, &refusal) || refusal.Code() != "contact_unreachable" {
+		t.Fatalf("reply to an unreachable contact → %v, want contact_unreachable", err)
 	}
 	if len(stager.staged) != 0 || e.outboundCount(t) != 0 {
 		t.Fatal("a refused reply still staged a delivery or logged an activity")
@@ -257,11 +257,11 @@ func TestSendMessageRefusesWhenTheConversationReachesNobody(t *testing.T) {
 func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	person := e.linkPerson(t, anchor, "Telegram Buyer")
+	contact := e.linkContact(t, anchor, "Telegram Buyer")
 	stager := &recordingChannelStager{}
 	gate := &recordingConsentGate{}
 
-	sent, err := e.channelStore(reaches(map[ids.UUID]string{person: testChannelAccount})).SendMessage(
+	sent, err := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), gate, stager)
 	if err != nil {
 		t.Fatalf("SendMessage: %v", err)
@@ -276,7 +276,7 @@ func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 	// The authorization request the staging seam carries names the same one
 	// subject, and carries no mail address beside it: Recipient names exactly
 	// one subject, and a channel send that also named an email would put two
-	// people in one decision.
+	// contacts in one decision.
 	authorized := stager.staged[0].Authorization.Recipients
 	if len(authorized) != 1 || authorized[0].Channel == nil {
 		t.Fatalf("the engine is asked about %+v, want exactly one channel recipient", authorized)
@@ -305,11 +305,11 @@ func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 func TestSendMessagePreFlightsTheChannelProviderRatherThanTheMailbox(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	person := e.linkPerson(t, anchor, "Telegram Buyer")
+	contact := e.linkContact(t, anchor, "Telegram Buyer")
 	authority := &stubSendAuthority{capable: true}
 	stager := &recordingChannelStager{}
 
-	store := e.channelStore(reaches(map[ids.UUID]string{person: testChannelAccount})).WithSendAuthority(authority)
+	store := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).WithSendAuthority(authority)
 	if _, err := store.SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, stager); err != nil {
 		t.Fatalf("SendMessage: %v", err)
@@ -325,11 +325,11 @@ func TestSendMessagePreFlightsTheChannelProviderRatherThanTheMailbox(t *testing.
 func TestSendMessageRefusesWhenNoBotIsBound(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	person := e.linkPerson(t, anchor, "Telegram Buyer")
+	contact := e.linkContact(t, anchor, "Telegram Buyer")
 	stager := &recordingChannelStager{}
 	gate := &recordingConsentGate{}
 
-	store := e.channelStore(reaches(map[ids.UUID]string{person: testChannelAccount})).
+	store := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).
 		WithSendAuthority(&stubSendAuthority{capable: false})
 	_, err := store.SendMessage(e.as(principal.RowScopeAll), anchor, channelInput(), gate, stager)
 
@@ -358,7 +358,7 @@ func TestSendMessageRefusesWhenNoBotIsBound(t *testing.T) {
 func TestSendMessageAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	e.linkToPersonOwnedBy(t, anchor, e.other)
+	e.linkToContactOwnedBy(t, anchor, e.other)
 
 	// Composed with NO delivery machinery and no identity seam: either wiring
 	// guard would fire on this call if it ran first.
@@ -378,7 +378,7 @@ func TestSendMessageAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.
 func TestSendMessageRefusesWhenTheIdentitySeamIsUnwired(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	e.linkPerson(t, anchor, "Telegram Buyer")
+	e.linkContact(t, anchor, "Telegram Buyer")
 
 	_, err := e.channelStore(nil).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, &recordingChannelStager{})
@@ -397,10 +397,10 @@ func TestSendMessageRefusesWhenTheIdentitySeamIsUnwired(t *testing.T) {
 func TestSendMessageCommitsNoActivityWhenChannelStagingFails(t *testing.T) {
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
-	person := e.linkPerson(t, anchor, "Telegram Buyer")
+	contact := e.linkContact(t, anchor, "Telegram Buyer")
 	stager := &recordingChannelStager{err: errors.New("delivery table unavailable")}
 
-	_, err := e.channelStore(reaches(map[ids.UUID]string{person: testChannelAccount})).SendMessage(
+	_, err := e.channelStore(reaches(map[ids.UUID]string{contact: testChannelAccount})).SendMessage(
 		e.as(principal.RowScopeAll), anchor, channelInput(), stubConsentGate{}, stager)
 
 	if err == nil {

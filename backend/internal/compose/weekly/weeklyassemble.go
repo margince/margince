@@ -87,7 +87,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		// same shape brief_run.local_day uses, which is right for a date
 		// column and wrong for a range. Comparing timestamptz against it
 		// measures a week offset by the installation's UTC offset, and in a
-		// DST zone a fixed 168 hours rather than the week people lived.
+		// DST zone a fixed 168 hours rather than the week contacts lived.
 		start, end, err := localWeekWindow(ctx, tx, weekStart)
 		if err != nil {
 			return err

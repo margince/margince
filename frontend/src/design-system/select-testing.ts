@@ -19,7 +19,7 @@ import type { UserEvent } from "@testing-library/user-event";
  * ```
  *
  * `optionLabel` is the label the reader sees, not the value: a test should say
- * what a person would click. Matched exactly by accessible name, so "Won" does
+ * what a contact would click. Matched exactly by accessible name, so "Won" does
  * not also match "Won (renewal)" — pass a RegExp when a prefix is what you mean.
  *
  * **The control must be CLOSED when this is called, and one call is one attempt.**

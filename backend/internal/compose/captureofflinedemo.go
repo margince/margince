@@ -6,7 +6,7 @@ package compose
 // What the offline demo connector is allowed to know about the installation.
 //
 // The connector is a pure generator: it turns a mailbox description into
-// correspondence and hands it to the sink. Reading people, deals and contracts
+// correspondence and hands it to the sink. Reading contacts, deals and contracts
 // is not capture's business, so the queries live here — the same split the
 // finance mirror uses, where offline.go generates and jobs_finance.go reads
 // the customer links.
@@ -130,31 +130,31 @@ func (d offlineDemoDirectory) accounts(ctx context.Context, tx pgx.Tx, userID st
 	return out, nil
 }
 
-// fillParties adds the people to write to and the deal to write about.
+// fillParties adds the contacts to write to and the deal to write about.
 func (d offlineDemoDirectory) fillParties(ctx context.Context, tx pgx.Tx, account *offlinedemo.Account) error {
-	people, err := tx.Query(ctx, `
+	contacts, err := tx.Query(ctx, `
 		SELECT coalesce(p.full_name, ''), coalesce(e.email, ''), coalesce(r.role, '')
 		  FROM relationship r
-		  JOIN person p ON p.id = r.person_id
-		  LEFT JOIN person_email e ON e.person_id = p.id AND e.is_primary
+		  JOIN contact p ON p.id = r.contact_id
+		  LEFT JOIN contact_email e ON e.contact_id = p.id AND e.is_primary
 		 WHERE r.kind = 'employment' AND r.company_id = $1::uuid
 		   AND r.archived_at IS NULL AND p.archived_at IS NULL
 		 ORDER BY p.created_at LIMIT 8`, account.CompanyID)
 	if err != nil {
-		return fmt.Errorf("reading the people at %s: %w", account.Domain, err)
+		return fmt.Errorf("reading the contacts at %s: %w", account.Domain, err)
 	}
-	defer people.Close()
-	for people.Next() {
-		var person offlinedemo.Person
-		if err := people.Scan(&person.Name, &person.Email, &person.Role); err != nil {
+	defer contacts.Close()
+	for contacts.Next() {
+		var contact offlinedemo.Contact
+		if err := contacts.Scan(&contact.Name, &contact.Email, &contact.Role); err != nil {
 			return fmt.Errorf("scanning a contact: %w", err)
 		}
 		// A contact with no address is not somebody a mail can be written to.
-		if person.Email != "" && person.Name != "" {
-			account.People = append(account.People, person)
+		if contact.Email != "" && contact.Name != "" {
+			account.Contacts = append(account.Contacts, contact)
 		}
 	}
-	if err := people.Err(); err != nil {
+	if err := contacts.Err(); err != nil {
 		return err
 	}
 

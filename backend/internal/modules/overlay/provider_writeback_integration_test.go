@@ -167,7 +167,7 @@ func TestProviderCreateIsRefusedBeforeReachingTheIncumbent(t *testing.T) {
 	seedActiveConnection(ctx, t, pool)
 
 	inc := &writeBackIncumbent{createRec: Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "555",
 		Fields:          map[string]any{"first_name": "Ada"},
 		ModifiedAt:      time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
@@ -176,7 +176,7 @@ func TestProviderCreateIsRefusedBeforeReachingTheIncumbent(t *testing.T) {
 	p := providerFor(ms, inc)
 
 	_, err := p.Create(ctx, datasource.CreateInput{
-		EntityType: datasource.EntityPerson,
+		EntityType: datasource.EntityContact,
 		Fields:     map[string]any{"first_name": "Ada", "last_name": "Lovelace"},
 	})
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
@@ -198,7 +198,7 @@ func TestProviderWriteOpensEchoLedgerEntries(t *testing.T) {
 	seedActiveConnection(ctx, t, pool)
 
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "555",
 		Fields:          map[string]any{"first_name": "Grace"},
 		ModifiedAt:      time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
@@ -208,7 +208,7 @@ func TestProviderWriteOpensEchoLedgerEntries(t *testing.T) {
 	}
 	inc := &writeBackIncumbent{
 		updateRec: Record{
-			ObjectClass:     "person",
+			ObjectClass:     "contact",
 			ExternalID:      "555",
 			Fields:          map[string]any{"first_name": "Ada"},
 			ModifiedAt:      time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
@@ -228,7 +228,7 @@ func TestProviderWriteOpensEchoLedgerEntries(t *testing.T) {
 		t.Fatalf("resolving the seeded record's ref: %v", err)
 	}
 	if _, err := p.Update(ctx, datasource.UpdateInput{
-		Ref:   datasource.EntityRef{Type: datasource.EntityPerson, ID: id},
+		Ref:   datasource.EntityRef{Type: datasource.EntityContact, ID: id},
 		Patch: map[string]any{"first_name": "Ada"},
 	}); err != nil {
 		t.Fatalf("Update: %v", err)
@@ -254,7 +254,7 @@ func TestProviderUpdateRejectsIncumbentSkewLeavingMirrorUntouched(t *testing.T) 
 	// Seed the mirror row the caller read (baseline captured here).
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "555",
 		Fields:          map[string]any{"first_name": "Ada", "full_name": "Ada"},
 		ModifiedAt:      baseline,
@@ -266,7 +266,7 @@ func TestProviderUpdateRejectsIncumbentSkewLeavingMirrorUntouched(t *testing.T) 
 	inc := &writeBackIncumbent{updateErr: apperrors.ErrVersionSkew}
 	p := providerFor(ms, inc)
 
-	ref := datasource.EntityRef{Type: datasource.EntityPerson}
+	ref := datasource.EntityRef{Type: datasource.EntityContact}
 	id, err := externalIDToUUID("555")
 	if err != nil {
 		t.Fatalf("bridging id: %v", err)
@@ -282,7 +282,7 @@ func TestProviderUpdateRejectsIncumbentSkewLeavingMirrorUntouched(t *testing.T) 
 	}
 
 	// The mirror row must be untouched — still the original first_name.
-	row, err := ms.Get(ctx, "person", "555")
+	row, err := ms.Get(ctx, "contact", "555")
 	if err != nil {
 		t.Fatalf("re-reading mirror row: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestProviderUpdateMirrorsResultOnAck(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "555",
+		ObjectClass: "contact", ExternalID: "555",
 		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada"},
 		ModifiedAt: baseline, OwnerExternalID: writebackOwner,
 	}); err != nil {
@@ -309,18 +309,18 @@ func TestProviderUpdateMirrorsResultOnAck(t *testing.T) {
 	}
 
 	inc := &writeBackIncumbent{updateRec: Record{
-		ObjectClass: "person", ExternalID: "555",
+		ObjectClass: "contact", ExternalID: "555",
 		Fields:     map[string]any{"first_name": "Ada2", "full_name": "Ada2"},
 		ModifiedAt: baseline.Add(time.Hour), OwnerExternalID: writebackOwner,
 	}}
 	p := providerFor(ms, inc)
 
 	id, _ := externalIDToUUID("555")
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 	if _, err := p.Update(ctx, datasource.UpdateInput{Ref: ref, Patch: map[string]any{"first_name": "Ada2"}}); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
-	row, err := ms.Get(ctx, "person", "555")
+	row, err := ms.Get(ctx, "contact", "555")
 	if err != nil {
 		t.Fatalf("re-reading mirror: %v", err)
 	}
@@ -338,7 +338,7 @@ func TestProviderArchivePurgesMirror(t *testing.T) {
 	seedActiveConnection(ctx, t, pool)
 
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "555",
+		ObjectClass: "contact", ExternalID: "555",
 		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada"},
 		ModifiedAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), OwnerExternalID: writebackOwner,
 	}); err != nil {
@@ -349,13 +349,13 @@ func TestProviderArchivePurgesMirror(t *testing.T) {
 	p := providerFor(ms, inc)
 
 	id, _ := externalIDToUUID("555")
-	if _, err := p.Archive(ctx, datasource.EntityRef{Type: datasource.EntityPerson, ID: id}); err != nil {
+	if _, err := p.Archive(ctx, datasource.EntityRef{Type: datasource.EntityContact, ID: id}); err != nil {
 		t.Fatalf("Archive: %v", err)
 	}
 	if !inc.archived {
 		t.Error("Archive must reach the incumbent")
 	}
-	if _, err := ms.Get(ctx, "person", "555"); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := ms.Get(ctx, "contact", "555"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("mirror row after Archive: err = %v, want ErrNotFound (purged)", err)
 	}
 }
@@ -375,7 +375,7 @@ func TestAReadOnlyPatchAuditsNoChange(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	stored := Record{
-		ObjectClass: "person", ExternalID: "556",
+		ObjectClass: "contact", ExternalID: "556",
 		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada Lovelace"},
 		ModifiedAt: baseline, OwnerExternalID: writebackOwner,
 	}
@@ -389,7 +389,7 @@ func TestAReadOnlyPatchAuditsNoChange(t *testing.T) {
 	p := providerFor(ms, inc)
 
 	id, _ := externalIDToUUID("556")
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 	if _, err := p.Update(ctx, datasource.UpdateInput{
 		Ref: ref, Patch: map[string]any{"full_name": "Ada Byron"},
 	}); err != nil {
@@ -417,7 +417,7 @@ func TestAMixedPatchAuditsOnlyWhatLanded(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "557",
+		ObjectClass: "contact", ExternalID: "557",
 		Fields:     map[string]any{"first_name": "Ada", "full_name": "Ada Lovelace"},
 		ModifiedAt: baseline, OwnerExternalID: writebackOwner,
 	}); err != nil {
@@ -426,14 +426,14 @@ func TestAMixedPatchAuditsOnlyWhatLanded(t *testing.T) {
 
 	// first_name moved; full_name is read-only there and came back as it was.
 	inc := &writeBackIncumbent{updateRec: Record{
-		ObjectClass: "person", ExternalID: "557",
+		ObjectClass: "contact", ExternalID: "557",
 		Fields:     map[string]any{"first_name": "Grace", "full_name": "Ada Lovelace"},
 		ModifiedAt: baseline.Add(time.Hour), OwnerExternalID: writebackOwner,
 	}}
 	p := providerFor(ms, inc)
 
 	id, _ := externalIDToUUID("557")
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: id}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: id}
 	if _, err := p.Update(ctx, datasource.UpdateInput{Ref: ref, Patch: map[string]any{
 		"first_name": "Grace", "full_name": "Grace Hopper",
 	}}); err != nil {
@@ -451,13 +451,13 @@ func TestAMixedPatchAuditsOnlyWhatLanded(t *testing.T) {
 	}
 }
 
-// auditRowsFor counts the person-update audit rows for one record.
+// auditRowsFor counts the contact-update audit rows for one record.
 func auditRowsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids.UUID) int {
 	t.Helper()
 	var count int
 	queryRowWS(ctx, t, pool, `
 		SELECT count(*) FROM audit_log
-		 WHERE entity_type = 'person' AND action = 'update' AND entity_id = $1`,
+		 WHERE entity_type = 'contact' AND action = 'update' AND entity_id = $1`,
 		[]any{id}, &count)
 	return count
 }
@@ -473,13 +473,13 @@ func outboxRowsFor(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids
 	return count
 }
 
-// auditAfterImage reads the recorded after image of the one person update.
+// auditAfterImage reads the recorded after image of the one contact update.
 func auditAfterImage(ctx context.Context, t *testing.T, pool *pgxpool.Pool, id ids.UUID) map[string]any {
 	t.Helper()
 	var raw []byte
 	queryRowWS(ctx, t, pool, `
 		SELECT after FROM audit_log
-		 WHERE entity_type = 'person' AND action = 'update' AND entity_id = $1`,
+		 WHERE entity_type = 'contact' AND action = 'update' AND entity_id = $1`,
 		[]any{id}, &raw)
 	var out map[string]any
 	if err := json.Unmarshal(raw, &out); err != nil {

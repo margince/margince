@@ -85,7 +85,7 @@ const (
 // pins each type to its own probe, which is what a collision breaks.
 var targetProbes = func() map[string]targetProbe {
 	probes := map[string]targetProbe{
-		tablePerson:        probeOwnScope,
+		tableContact:       probeOwnScope,
 		tableCompany:       probeOwnScope,
 		tableDeal:          probeOwnScope,
 		tableLead:          probeOwnScope,
@@ -269,7 +269,7 @@ func targetPermitted(ctx context.Context, tx pgx.Tx, targetType *string, targetI
 		// it should not. An unbounded actor's clause renders EMPTY, and a probe
 		// that treats an empty clause as "admitted" never queries at all — so an
 		// all-scope human sees, and decides, a staging whose target id names no
-		// row. And Art. 17 erasure anonymizes a person IN PLACE, stamping
+		// row. And Art. 17 erasure anonymizes a contact IN PLACE, stamping
 		// archived_at while leaving owner_id alone, so a scope-only probe answers
 		// "still yours" for a row every live read path now refuses. Existence is
 		// the floor the workspace-shared arms already take; these tables carry it
@@ -354,7 +354,7 @@ func targetVisibleThroughParent(ctx context.Context, tx pgx.Tx, targetType strin
 		ensure = auth.EnsureActivityContentVisibleLive
 	case targetRelationship:
 		// An edge inherits the CONJUNCTION of its endpoints' scope, which is one
-		// spelling in platform/auth because people's own reads and this probe are
+		// spelling in platform/auth because contacts's own reads and this probe are
 		// two readers of the same rule. It is the one arm with no live variant:
 		// the clause already probes existence for every actor — an unbounded one
 		// included — and the same rule states, for this caller by name, that an

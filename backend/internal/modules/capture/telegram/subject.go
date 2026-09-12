@@ -22,7 +22,7 @@ import (
 )
 
 // AllowedUpdates narrows what the poller asks Telegram for: the messages a
-// person writes, and the membership changes that tell us a person blocked or
+// contact writes, and the membership changes that tell us a contact blocked or
 // unblocked the bot. Anything else (polls, inline queries, edited channel
 // posts) is bandwidth this system has no reader for, and asking for it would
 // mean fetching updates nobody consumes.
@@ -41,7 +41,7 @@ type subjectEnvelope struct {
 }
 
 // InScopeSubjects returns the channel_user_id of every account one verbatim
-// Telegram update is about — the value person_channel_identity is keyed on and
+// Telegram update is about — the value contact_channel_identity is keyed on and
 // the erasure suppression list hashes — and returns NONE for an update this
 // connector does not capture.
 //
@@ -49,7 +49,7 @@ type subjectEnvelope struct {
 // this function answers scope and subject together rather than leaving the scope
 // decision to the worker that normalizes the payload later.
 // A record this connector captures always names a human the erasure and SAR
-// lanes can reach it by: they drive off person_channel_identity, which only a
+// lanes can reach it by: they drive off contact_channel_identity, which only a
 // captured record ever creates. An update outside that scope names nobody
 // those lanes can reach, so a verbatim copy of it would sit in raw_capture —
 // sender id, handle, first and last name, full message text — beyond the reach
@@ -72,7 +72,7 @@ type subjectEnvelope struct {
 // message's subject is its sender (`message.from`), and a my_chat_member
 // update's subject is the private chat, whose id IS the customer's own —
 // `new_chat_member.user` there is the BOT (membership.go), so reading it would
-// return an account no Person ever carries.
+// return an account no Contact ever carries.
 func InScopeSubjects(update []byte) ([]string, error) {
 	var env subjectEnvelope
 	if err := json.Unmarshal(update, &env); err != nil {
@@ -96,7 +96,7 @@ func InScopeSubjects(update []byte) ([]string, error) {
 // The account test is the sign test Normalize's identity mint applies, and the
 // two must stay identical: this function decides what the POLLER persists and
 // Normalize decides what is captured, so an id admitted here and refused there
-// is a verbatim payload in the only-copy store with no person_channel_identity
+// is a verbatim payload in the only-copy store with no contact_channel_identity
 // the erasure or SAR lanes could ever reach it by.
 func subjectOf(chat telegramChat, account int64) []string {
 	if !chat.isPrivate() || account <= 0 {

@@ -27,7 +27,7 @@ import "./search.css";
 type SearchResult = components["schemas"]["SearchResult"];
 
 // RS-1/RS-2: the cross-object search results screen. Hits are grouped by
-// record type so a caller scanning "acme" sees people, companies, deals and the
+// record type so a caller scanning "acme" sees contacts, companies, deals and the
 // rest as separate sections rather than one undifferentiated ranked list.
 //
 // The order and the headings come from app/searchkinds.ts, which the ⌘K palette

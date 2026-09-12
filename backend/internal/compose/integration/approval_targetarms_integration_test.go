@@ -49,7 +49,7 @@ func TestConfirmFirstArchivesAreDecidableForEveryTargetArm(t *testing.T) {
 
 	t.Run("saved_view", func(t *testing.T) {
 		id := createdID(t, e, "/v1/views", AnyMap{
-			"resource": "people", "name": "My people", "query": AnyMap{"columns": []any{"full_name"}},
+			"resource": "contacts", "name": "My contacts", "query": AnyMap{"columns": []any{"full_name"}},
 		})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/views/"+id)
 	})

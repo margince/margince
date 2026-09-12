@@ -32,7 +32,7 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
-	person := e.SeedPerson(t, "Grace Counterparty", &e.Rep1)
+	contact := e.SeedContact(t, "Grace Counterparty", &e.Rep1)
 
 	activity := ids.NewV7()
 	if _, err := owner.Exec(ctx, `
@@ -40,12 +40,12 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 		VALUES ($1, 'email', 'quarterly numbers', now(), 'outbound', 'manual', 'human:x')`, activity); err != nil {
 		t.Fatal(err)
 	}
-	LinkActivity(t, owner, activity, "person", person)
+	LinkActivity(t, owner, activity, "contact", contact)
 	for _, seed := range []struct {
 		column string
 		id     ids.UUID
 		role   string
-	}{{"user_id", e.Rep1, "from"}, {"person_id", person, "to"}} {
+	}{{"user_id", e.Rep1, "from"}, {"contact_id", contact, "to"}} {
 		if _, err := owner.Exec(ctx, `
 			INSERT INTO activity_participant (activity_id, `+seed.column+`, role) VALUES ($1, $2, $3)`,
 			activity, seed.id, seed.role); err != nil {
@@ -65,7 +65,7 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 		t.Helper()
 		var n int
 		if err := owner.QueryRow(ctx, `SELECT count(*) FROM graph_interaction_edge
-			WHERE user_id = $1 AND person_id = $2`, e.Rep1, person).Scan(&n); err != nil {
+			WHERE user_id = $1 AND contact_id = $2`, e.Rep1, contact).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
@@ -164,7 +164,7 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 // message names a passport, not a reader, so its signals ARCHIVE rather than
 // failing the app_user FK; and a signal already private to a DIFFERENT owner
 // that cites a newly limited message archives too — its summary now mixes
-// correspondence two different people limited, and no one reader admits both.
+// correspondence two different contacts limited, and no one reader admits both.
 func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)

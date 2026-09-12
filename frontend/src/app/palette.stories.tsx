@@ -89,7 +89,7 @@ export const WithRecordHits: Story = {
     palette(() =>
       jsonResponse({
         data: [
-          { type: "person", id: "p1", title: "Dana Buyer" },
+          { type: "contact", id: "p1", title: "Dana Buyer" },
           { type: "company", id: "o1", title: "Acme GmbH" },
           { type: "product", id: "pr1", title: "Kärcher floor scrubber" },
           { type: "tag", id: "t1", title: "Key account" },

@@ -67,25 +67,25 @@ func seedMarketingPurpose(t *testing.T, e *channelConsentEnv) {
 }
 
 // seedSubjectAddress gives the subject the live address a confirm link is
-// delivered to. The mint derives it rather than taking it, so a person with no
+// delivered to. The mint derives it rather than taking it, so a contact with no
 // address has no link.
 func seedSubjectAddress(t *testing.T, e *channelConsentEnv) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		`INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		 VALUES ($1, $2, true, 'test', 'human:x')
 		 ON CONFLICT DO NOTHING`,
-		e.person, "subject-"+e.person.String()+"@example.test"); err != nil {
+		e.contact, "subject-"+e.contact.String()+"@example.test"); err != nil {
 		t.Fatalf("seed the subject's address: %v", err)
 	}
 }
 
-// issueLink mints a confirm link for the environment's person, the way the send
+// issueLink mints a confirm link for the environment's contact, the way the send
 // path will.
 func issueLink(t *testing.T, e *channelConsentEnv) IssuedConfirm {
 	t.Helper()
 	seedSubjectAddress(t, e)
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -98,10 +98,10 @@ func marketingStateOf(t *testing.T, e *channelConsentEnv) string {
 	var state string
 	err := e.owner.QueryRow(context.Background(), `
 		SELECT pc.state
-		  FROM person_consent pc
+		  FROM contact_consent pc
 		  JOIN consent_purpose cp ON cp.id = pc.purpose_id
-		 WHERE pc.person_id = $1 AND cp.key = $2`,
-		e.person, PurposeMarketingEmail).Scan(&state)
+		 WHERE pc.contact_id = $1 AND cp.key = $2`,
+		e.contact, PurposeMarketingEmail).Scan(&state)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ""
 	}
@@ -111,8 +111,8 @@ func marketingStateOf(t *testing.T, e *channelConsentEnv) string {
 	return state
 }
 
-// The card a person is shown. Every column it names has to exist, which a store
-// test that reads a person with no employer never proves: the employer subquery
+// The card a contact is shown. Every column it names has to exist, which a store
+// test that reads a contact with no employer never proves: the employer subquery
 // only runs when there is an employment row to find, so the shape of the read
 // went unexercised until it 500'd against a real record.
 func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
@@ -124,18 +124,18 @@ func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
 		t.Fatalf("seed the employer: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-		 VALUES ('employment', $1, $2, 'manual', 'human:x')`, e.person, companyID); err != nil {
+		`INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		 VALUES ('employment', $1, $2, 'manual', 'human:x')`, e.contact, companyID); err != nil {
 		t.Fatalf("seed the employment: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO field_provenance (object_type, object_id, field_name, source, captured_by)
-		 VALUES ('person', $1, 'full_name', 'imprint page', 'connector:siteread')`,
-		e.person); err != nil {
+		 VALUES ('contact', $1, 'full_name', 'imprint page', 'connector:siteread')`,
+		e.contact); err != nil {
 		t.Fatalf("seed the provenance: %v", err)
 	}
 
-	card, err := e.store.confirmCardFor(e.ctx, e.person)
+	card, err := e.store.confirmCardFor(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("read the card: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
 	}
 }
 
-// A person clicks yes on the page. The grant lands, and it lands CONFIRMED —
+// A contact clicks yes on the page. The grant lands, and it lands CONFIRMED —
 // no second mail, because the link they arrived through already proved the
 // mailbox.
 func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
@@ -175,9 +175,9 @@ func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
 		       coalesce(ce.issuance_trigger, ''), ce.policy_text
 		  FROM consent_event ce
 		  JOIN consent_purpose cp ON cp.id = ce.purpose_id
-		 WHERE ce.person_id = $1 AND cp.key = $2
+		 WHERE ce.contact_id = $1 AND cp.key = $2
 		 ORDER BY ce.captured_at DESC, ce.id DESC LIMIT 1`,
-		e.person, PurposeMarketingEmail).Scan(&confirmed, &trigger, &wording); err != nil {
+		e.contact, PurposeMarketingEmail).Scan(&confirmed, &trigger, &wording); err != nil {
 		t.Fatalf("read the proof row: %v", err)
 	}
 	if !confirmed {
@@ -225,18 +225,18 @@ func TestASpentLinkOpensNothing(t *testing.T) {
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAPerson); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Fatalf("resolve a live link: %v", err)
 	}
 	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); err != nil {
 		t.Fatalf("submit: %v", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAPerson); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("resolve a spent link: %v, want not-found", err)
 	}
 }
 
-// A correction is a PROPOSAL. The person record must be untouched, because the
+// A correction is a PROPOSAL. The contact record must be untouched, because the
 // subject holds a bearer token and no principal — a leaked link that could
 // rewrite the CRM is the thing this design exists to prevent.
 func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
@@ -246,7 +246,7 @@ func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
 
 	var before string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT coalesce(full_name, '') FROM person WHERE id = $1`, e.person).Scan(&before); err != nil {
+		`SELECT coalesce(full_name, '') FROM contact WHERE id = $1`, e.contact).Scan(&before); err != nil {
 		t.Fatalf("read the name before: %v", err)
 	}
 
@@ -258,19 +258,19 @@ func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
 
 	var after string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT coalesce(full_name, '') FROM person WHERE id = $1`, e.person).Scan(&after); err != nil {
+		`SELECT coalesce(full_name, '') FROM contact WHERE id = $1`, e.contact).Scan(&after); err != nil {
 		t.Fatalf("read the name after: %v", err)
 	}
 	if after != before {
-		t.Errorf("the person record changed from %q to %q — a bearer-token caller must not write the CRM",
+		t.Errorf("the contact record changed from %q to %q — a bearer-token caller must not write the CRM",
 			before, after)
 	}
 
 	var kind, field, value string
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT kind, coalesce(field, ''), coalesce(proposed_value, '')
-		  FROM person_confirm_submission WHERE person_id = $1`,
-		e.person).Scan(&kind, &field, &value); err != nil {
+		  FROM contact_confirm_submission WHERE contact_id = $1`,
+		e.contact).Scan(&kind, &field, &value); err != nil {
 		t.Fatalf("read the staged proposal: %v", err)
 	}
 	if kind != submissionCorrection || field != ConfirmFieldFullName || value != "Corrected Name" {
@@ -293,17 +293,17 @@ func TestARemovalRequestIsFiledAndTheRecordSurvives(t *testing.T) {
 
 	var alive bool
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT archived_at IS NULL FROM person WHERE id = $1`, e.person).Scan(&alive); err != nil {
-		t.Fatalf("read the person: %v", err)
+		`SELECT archived_at IS NULL FROM contact WHERE id = $1`, e.contact).Scan(&alive); err != nil {
+		t.Fatalf("read the contact: %v", err)
 	}
 	if !alive {
-		t.Error("the person was archived by a bearer-token caller — removal is a REQUEST a human resolves")
+		t.Error("the contact was archived by a bearer-token caller — removal is a REQUEST a human resolves")
 	}
 	var open int
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT count(*) FROM person_confirm_submission
-		 WHERE person_id = $1 AND kind = $2 AND resolved_at IS NULL`,
-		e.person, submissionErasure).Scan(&open); err != nil {
+		SELECT count(*) FROM contact_confirm_submission
+		 WHERE contact_id = $1 AND kind = $2 AND resolved_at IS NULL`,
+		e.contact, submissionErasure).Scan(&open); err != nil {
 		t.Fatalf("count the open requests: %v", err)
 	}
 	if open != 1 {
@@ -311,7 +311,7 @@ func TestARemovalRequestIsFiledAndTheRecordSurvives(t *testing.T) {
 	}
 }
 
-// Answering nothing records nothing. A page view is not consent, and a person
+// Answering nothing records nothing. A page view is not consent, and a contact
 // who corrects their address without answering has not opted in.
 func TestOpeningThePageAndCorrectingGrantsNothing(t *testing.T) {
 	e := setupChannelConsent(t)
@@ -349,15 +349,15 @@ func TestARefusedAnswerLeavesNoStagedCorrections(t *testing.T) {
 
 	var staged int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM person_confirm_submission WHERE person_id = $1`, e.person).Scan(&staged); err != nil {
+		`SELECT count(*) FROM contact_confirm_submission WHERE contact_id = $1`, e.contact).Scan(&staged); err != nil {
 		t.Fatalf("count staged rows: %v", err)
 	}
 	if staged != 0 {
 		t.Errorf("%d correction(s) survived a refused submit — the whole answer is one transaction", staged)
 	}
-	// And the link is unspent, so the person can answer again rather than
+	// And the link is unspent, so the contact can answer again rather than
 	// having burned their one chance on a server-side fault.
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAPerson); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Errorf("the link was spent by a refused submit: %v", err)
 	}
 }
@@ -375,22 +375,22 @@ func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
 	if !errors.As(err, &invalid) {
 		t.Fatalf("err = %v, want a validation error on the field", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAPerson); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); err != nil {
 		t.Errorf("a refused submit spent the link: %v", err)
 	}
 }
 
-// A fresh issuance supersedes the last, so a person who is emailed twice cannot
+// A fresh issuance supersedes the last, so a contact who is emailed twice cannot
 // answer through the older link.
 func TestAFreshLinkRetiresTheOneBeforeIt(t *testing.T) {
 	e := setupChannelConsent(t)
 	first := issueLink(t, e)
 	second := issueLink(t, e)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, first.Token, FetchByAPerson); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, first.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("the superseded link still opens: %v", err)
 	}
-	if _, err := e.store.ResolveConfirmToken(e.ctx, second.Token, FetchByAPerson); err != nil {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, second.Token, FetchByAHuman); err != nil {
 		t.Errorf("the fresh link does not open: %v", err)
 	}
 }
@@ -429,8 +429,8 @@ func TestTwoSubmitsRacingOnOneLinkLeaveOneWinner(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM consent_event ce
 		  JOIN consent_purpose cp ON cp.id = ce.purpose_id
-		 WHERE ce.person_id = $1 AND cp.key = $2`,
-		e.person, PurposeMarketingEmail).Scan(&proofRows); err != nil {
+		 WHERE ce.contact_id = $1 AND cp.key = $2`,
+		e.contact, PurposeMarketingEmail).Scan(&proofRows); err != nil {
 		t.Fatalf("count proof rows: %v", err)
 	}
 	if proofRows != 1 {
@@ -449,9 +449,9 @@ func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
-	archiveConsentSubject(t, e.owner, "person", e.person.UUID)
+	archiveConsentSubject(t, e.owner, "contact", e.contact.UUID)
 
-	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAPerson); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token, FetchByAHuman); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("resolve: %v, want not-found — an archived subject's link reads as absent", err)
 	}
 	if _, err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); !errors.Is(err, apperrors.ErrNotFound) {
@@ -459,8 +459,8 @@ func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
 	}
 	var spent bool
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT consumed_at IS NOT NULL FROM confirm_token WHERE person_id = $1`,
-		e.person).Scan(&spent); err != nil {
+		`SELECT consumed_at IS NOT NULL FROM confirm_token WHERE contact_id = $1`,
+		e.contact).Scan(&spent); err != nil {
 		t.Fatalf("read the token: %v", err)
 	}
 	if spent {
@@ -477,17 +477,17 @@ func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
-	want := "subject-" + e.person.String() + "@example.test"
+	want := "subject-" + e.contact.String() + "@example.test"
 	if issued.DeliveredTo != want {
 		t.Errorf("delivered_to = %q, want the subject's own address %q", issued.DeliveredTo, want)
 	}
 	var stored string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT delivered_to FROM confirm_token WHERE person_id = $1`, e.person).Scan(&stored); err != nil {
+		`SELECT delivered_to FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&stored); err != nil {
 		t.Fatalf("read the token row: %v", err)
 	}
 	if stored != want {
@@ -501,14 +501,14 @@ func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
 func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
 	e := setupChannelConsent(t)
 
-	_, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	_, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	var invalid *ValidationError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("err = %v, want a validation error", err)
 	}
 	var minted int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&minted); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&minted); err != nil {
 		t.Fatalf("count tokens: %v", err)
 	}
 	if minted != 0 {
@@ -533,7 +533,7 @@ func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
 
 	// The env's DOI purpose. A consent link only exists for a purpose that is
 	// confirmed by double opt-in — there is nothing for a mailed link to ask
-	consentLink, err := e.store.IssueConsentLink(e.ctx, e.person, e.doiNews, "")
+	consentLink, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "")
 	if err != nil {
 		t.Fatalf("mint a consent link: %v", err)
 	}
@@ -558,7 +558,7 @@ func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
 	// And the record branch still answers its own shape, with the
 	// discriminator on it. Without this the union could be satisfied by
 	// tagging everything as a subscription.
-	recordLink, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	recordLink, err := e.store.IssueConfirmToken(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("mint a record link: %v", err)
 	}

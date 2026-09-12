@@ -119,7 +119,7 @@ func TestEveryClosedReasonSaysWhatStoppedTheRun(t *testing.T) {
 			t.Error("a degrade with no reason tells the reader only that something went wrong")
 		}
 		if strings.Contains(reason, "%") || strings.Contains(reason, "\n") {
-			t.Errorf("a reason is one plain sentence for a person, got %q", reason)
+			t.Errorf("a reason is one plain sentence for a contact, got %q", reason)
 		}
 	}
 	if got := invalidOutputReason(3); !strings.Contains(got, "3 times") {

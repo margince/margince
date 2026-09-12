@@ -705,7 +705,7 @@ describe("Rail levels (a section's entries as the second level)", () => {
   // The settings card writes a chosen mark straight into this cache entry. The
   // rail has to be OBSERVING the entry rather than peeking at it once: a peek
   // left the old face in the rail until something unrelated re-rendered the
-  // shell, so a person who had just uploaded a mark saw the monogram stay.
+  // shell, so a contact who had just uploaded a mark saw the monogram stay.
   it("re-draws the head when a new mark is written into the company entry", async () => {
     const client = newClient();
     const profile = {

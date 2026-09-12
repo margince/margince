@@ -5,7 +5,7 @@
 
 package gates
 
-// The dev seeder and the boot proof ask "is this person currently employed?" the
+// The dev seeder and the boot proof ask "is this contact currently employed?" the
 // way the PRODUCT asks it, and they ask it in the same words.
 //
 // Neither is a Go client, so neither can call employment.CurrentPrimarySQL:
@@ -58,7 +58,7 @@ func predicateIn(t *testing.T, path string) string {
 	match := currentPrimaryPredicate.FindStringSubmatch(string(body))
 	if match == nil {
 		t.Fatalf("%s spells no CURRENT_PRIMARY_JQ='…' assignment.\n"+
-			"Both scripts ask whether a seeded person is currently employed, and they must ask it in the same words — the copy that drifts is the one that accepts an employment the product does not draw.", path)
+			"Both scripts ask whether a seeded contact is currently employed, and they must ask it in the same words — the copy that drifts is the one that accepts an employment the product does not draw.", path)
 	}
 	return match[1]
 }
@@ -69,7 +69,7 @@ func TestTheSeederAndTheBootProofSpellOneEmploymentRule(t *testing.T) {
 	first := predicateIn(t, currentPrimaryPredicateScripts[0])
 	for _, path := range currentPrimaryPredicateScripts[1:] {
 		if other := predicateIn(t, path); other != first {
-			t.Errorf("%s and %s ask whether a person is currently employed in different words:\n\t%s\n\t%s\n"+
+			t.Errorf("%s and %s ask whether a contact is currently employed in different words:\n\t%s\n\t%s\n"+
 				"One writes the records the other refuses. Land both sides in one change.",
 				currentPrimaryPredicateScripts[0], path, first, other)
 		}

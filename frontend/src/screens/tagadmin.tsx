@@ -198,7 +198,7 @@ function TagVocabularyRow({
   const carried =
     usage === undefined
       ? undefined
-      : usage.people + usage.companies + usage.deals;
+      : usage.contacts + usage.companies + usage.deals;
   const archived = Boolean(tag.archived_at);
 
   return (

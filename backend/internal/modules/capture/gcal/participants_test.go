@@ -10,7 +10,7 @@ import (
 )
 
 // A meeting's parties were folded into body text because there was nowhere
-// structured to put them. These are the same people in a form the interaction
+// structured to put them. These are the same contacts in a form the interaction
 // graph can read.
 func TestParticipantsOfNamesTheOrganizerAndAttendees(t *testing.T) {
 	raw := []byte(`{
@@ -40,8 +40,8 @@ func TestParticipantsOfNamesTheOrganizerAndAttendees(t *testing.T) {
 		t.Error("the mailbox owner was recorded from the header; their own row carries the user id the graph joins on")
 	}
 	// The organizer's address is capitalized in the payload and lowercase in
-	// the attendee list. Those are one human, and person_email stores an
-	// address lowercased — a case difference here would read as two people.
+	// the attendee list. Those are one human, and contact_email stores an
+	// address lowercased — a case difference here would read as two contacts.
 	if roles["bob@target.com"] != connector.ParticipantRoleOrganizer {
 		t.Errorf("organizer role = %q, want %q — organizing outranks attending, and the address folds case",
 			roles["bob@target.com"], connector.ParticipantRoleOrganizer)

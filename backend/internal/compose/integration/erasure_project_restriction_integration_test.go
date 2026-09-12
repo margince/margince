@@ -31,23 +31,23 @@ import (
 // projectErasureFixture is a subject with a 400-day-old email whose only
 // commercial attribution is a project — no deal anywhere near it.
 type projectErasureFixture struct {
-	person, email, project ids.UUID
+	contact, email, project ids.UUID
 }
 
 func seedProjectErasureFixture(t *testing.T, e *Env) projectErasureFixture {
 	t.Helper()
 	company := e.SeedCompany(t, "Acme GmbH", nil)
-	f := projectErasureFixture{person: ids.NewV7(), email: ids.NewV7(), project: ids.NewV7()}
+	f := projectErasureFixture{contact: ids.NewV7(), email: ids.NewV7(), project: ids.NewV7()}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
-			 VALUES ($1, 'Delivery Contact', 'Delivery', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
+			 VALUES ($1, 'Delivery Contact', 'Delivery', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, 'delivery@example.test', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, 'delivery@example.test', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -64,8 +64,8 @@ func seedProjectErasureFixture(t *testing.T, e *Env) projectErasureFixture {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`,
-			f.email, f.person)
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			f.email, f.contact)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestErasureHoldsCorrespondenceHeldOnlyByAProject(t *testing.T) {
 		activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}); err != nil {
 		t.Fatalf("filing the email under its project: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -132,7 +132,7 @@ func TestErasureStampsAPreStampProjectLinkAndHoldsIt(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, f.email, f.project)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject over a pre-stamp project link: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestTheRestrictedListNamesTheHoldingProject(t *testing.T) {
 		activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}); err != nil {
 		t.Fatalf("filing the email under its project: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -212,8 +212,8 @@ func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'Internal jotting', 'Chase them next week.', now() - interval '400 days', 'manual', 'human:x')`,
 		note)
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`,
-		note, f.person)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+		note, f.contact)
 
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.ActivityID{UUID: note},
 		activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}); err != nil {
@@ -231,7 +231,7 @@ func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
 		t.Fatal("fixture drift: the note was not stamped, so this test cannot prove the class is inert on a note")
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 

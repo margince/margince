@@ -83,9 +83,9 @@ func TestLeadSLAEscalationLogsOneTaskOnTheLead(t *testing.T) {
 	}
 
 	// The notify half, which nothing here asked about until it panicked. A
-	// breach the escalation names a target for writes that person a durable
+	// breach the escalation names a target for writes that contact a durable
 	// line, addressed to THEM: a notice on somebody else's Worklist is worse
-	// than none, because the person who has to act never sees it.
+	// than none, because the contact who has to act never sees it.
 	var recipients []ids.UUID
 	rows, err := owner.Query(context.Background(),
 		`SELECT recipient_user_id FROM notice WHERE kind = $1 ORDER BY id`, noticeKindLeadSLA)

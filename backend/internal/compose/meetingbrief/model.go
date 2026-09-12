@@ -18,7 +18,7 @@ package meetingbrief
 //
 // The language is the READER's. A brief about a German conversation, read by a
 // German rep, that answers in English is a translation task handed back to the
-// person who asked for a summary.
+// contact who asked for a summary.
 
 import (
 	"context"
@@ -47,7 +47,7 @@ type Completer interface {
 // one idea per sentence, and never performs enthusiasm. The banned openers are
 // the ones that make a brief read as generated.
 const briefSystem = `You write a pre-meeting brief for a salesperson, from a JSON summary of one meeting in their CRM.
-Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|person","entity_id":"..."}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|contact","entity_id":"..."}]}]}]}.
 Write every sentence from the summary and from nothing else. Never invent a fact, a name, a date or a number. If the summary does not say it, do not write it.
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
 Cite the ids the summary gave you, in evidence only. An id must never appear in the text a reader sees.
@@ -174,7 +174,7 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) 
 // that breaks the original.
 //
 // The summary carries meeting subjects, contact names and quoted commitments —
-// text written by people outside this workspace. It is fenced with a nonce the
+// text written by contacts outside this workspace. It is fenced with a nonce the
 // writer has never seen, so no subject line can close the span and be read as
 // instruction.
 func BriefRequest(in Input, lang string) model.Request {
@@ -316,7 +316,7 @@ func knownRecords(in Input) map[Evidence]string {
 		known[Evidence{EntityType: citeDeal, EntityID: in.Deal.ID}] = claims.Source(in.Deal)
 	}
 	for _, attendee := range in.Attendees {
-		known[Evidence{EntityType: citePerson, EntityID: attendee.PersonID}] = claims.Source(attendee)
+		known[Evidence{EntityType: citeContact, EntityID: attendee.ContactID}] = claims.Source(attendee)
 	}
 	for _, claim := range in.Commitments {
 		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] += claims.Source(claim)

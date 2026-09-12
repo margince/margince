@@ -103,7 +103,7 @@ const TIER_FIELD: VocabularyField = {
 
 function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
   return {
-    resource: "person",
+    resource: "contact",
     match_count: rows.length,
     columns: ["id", "full_name", "cf_loyalty_tier"],
     rows: rows as FilterPreview["rows"],

@@ -117,7 +117,7 @@ export const TheReviewInDark: Story = {
   globals: { theme: "dark" },
 };
 
-// A record type that carries no link count — a person, where nothing hangs off
+// A record type that carries no link count — a contact, where nothing hangs off
 // either side. The reader decides on the names and the distinguishing line
 // alone, and the row must not draw an empty signal in place of the missing one.
 export const WithoutCounts: Story = {

@@ -41,7 +41,7 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 	// Not valid base64url, so every decoder rejects it.
 	const garbage = "cursor=%21%21garbage%21%21"
 	endpoints := []string{
-		"/v1/people?" + garbage,
+		"/v1/contacts?" + garbage,
 		"/v1/companies?" + garbage,
 		"/v1/partners?" + garbage,
 		"/v1/deals?" + garbage,

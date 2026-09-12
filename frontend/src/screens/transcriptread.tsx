@@ -124,7 +124,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   // it promised. Counting it as done would tell a rep the work exists when it
   // does not — the one reading of this card that costs them a commitment.
   const effectFailed = known.filter((one) => one?.effect_failed_at).length;
-  // Only what a PERSON actually decided. An approval that lapsed was reviewed
+  // Only what a CONTACT actually decided. An approval that lapsed was reviewed
   // by nobody, and one whose status could not be read is unknown rather than
   // settled — counting either as reviewed makes the card claim an answer that
   // was never given, next to a line saying the opposite.

@@ -50,7 +50,7 @@ type StepUpStagedError struct {
 
 func (e *StepUpStagedError) Error() string {
 	return fmt.Sprintf(
-		"this agent has spent its %s allowance for this window; the person who connected it has been asked whether it may continue (approval %s)",
+		"this agent has spent its %s allowance for this window; the contact who connected it has been asked whether it may continue (approval %s)",
 		e.Counter, e.ApprovalID)
 }
 

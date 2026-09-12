@@ -24,14 +24,14 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL_ID,
   stakeholders: [
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b1",
-      person_name: "Dana Weiss",
+      contact_id: "01a03000-0000-7000-8000-0000000000b1",
+      contact_name: "Dana Weiss",
       role: "champion",
       engaged: true,
     },
     {
-      person_id: "01a03000-0000-7000-8000-0000000000b3",
-      person_name: "Ines Kraft",
+      contact_id: "01a03000-0000-7000-8000-0000000000b3",
+      contact_name: "Ines Kraft",
       role: "evaluator",
       engaged: false,
     },

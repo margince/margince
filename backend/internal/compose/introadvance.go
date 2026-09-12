@@ -17,7 +17,7 @@ package compose
 //
 // WHAT QUALIFIES, and why each clause is load-bearing:
 //
-//   - The activity was CAPTURED BY A CONNECTOR, not logged by a person. This is
+//   - The activity was CAPTURED BY A CONNECTOR, not logged by a contact. This is
 //     the security clause, and without it the feature is a privilege
 //     escalation: a member holding activity:create can log an "inbound" message
 //     naming any contact they can see, at any occurred_at they choose, and the
@@ -32,13 +32,13 @@ package compose
 //     now, which closes that spelling and no other: any other value a caller
 //     invents still lands in the column.) `captured_by` comes from
 //     the AUTHENTICATED principal through storekit.CapturedBy — a connector's
-//     is `connector:…`, a person's is `human:…` — so it is provenance a caller
+//     is `connector:…`, a colleague's is `human:…` — so it is provenance a caller
 //     cannot assert. capture/sinkprovenance.go states the same rule for the
 //     same reason.
 //   - The activity is INBOUND. An outbound mail is the rep writing to the
 //     contact, which is the opposite of the contact answering.
 //   - The contact is the SENDER, not merely present. Being cc'd on a colleague's
-//     mail puts a person on the participant list without their having written a
+//     mail puts a contact on the participant list without their having written a
 //     word, and counting that would close an ask on somebody else's reply.
 //   - It happened AFTER the handshake. A thread carries months of history, and
 //     capture backfills it. Without this clause the first import of an existing
@@ -78,19 +78,19 @@ import (
 )
 
 // The two outbox entity types this consumer reacts to: the message, and the
-// person a message's sender was promoted into after the fact.
+// contact a message's sender was promoted into after the fact.
 const (
 	introAdvanceEntityActivity = "activity"
-	introAdvancePersonEntity   = "person"
+	introAdvanceContactEntity  = "contact"
 )
 
 // systemIntroAdvanceActor names this consumer in every audit row it causes, so
-// a reply the product recorded is told apart from one a person asserted.
+// a reply the product recorded is told apart from one a contact asserted.
 const systemIntroAdvanceActor = "system:intro-advance"
 
 // connectorCapturedPrefix is how a connector's provenance reads in
 // activity.captured_by: capture stamps `connector:<name>[:<user>]` from the
-// authenticated principal (capture/sinkprovenance.go). A person's row reads
+// authenticated principal (capture/sinkprovenance.go). A contact's row reads
 // `human:<id>` and never matches.
 //
 // Built from principal.PrincipalConnector rather than typed as a literal, so
@@ -122,20 +122,20 @@ func NewIntroAdvance(
 // HandleEvent routes one envelope. Anything else answers nil, so the consumer
 // group keeps flowing rather than wedging on traffic this consumer ignores.
 //
-// TWO arms, because the message and the person who sent it do not arrive
+// TWO arms, because the message and the contact who sent it do not arrive
 // together. Capture commits the activity and its address-only participant, then
-// promotes that address to a person in a SEPARATE transaction afterwards
+// promotes that address to a contact in a SEPARATE transaction afterwards
 // (capture/sinkensure.go says so: "Runs after the capture transaction
-// committed"). So the activity arm can run before the sender is a person, find
+// committed"). So the activity arm can run before the sender is a contact, find
 // nobody, and acknowledge — losing a real reply with nothing scheduled to
-// notice. The person arm is the repair, and it is the same shape
+// notice. The contact arm is the repair, and it is the same shape
 // cg:cohort-promote uses for the same race.
 //
-// The person arm covers a SECOND race for free, which is why it is deliberately
+// The contact arm covers a SECOND race for free, which is why it is deliberately
 // keyed on the entity rather than on one event type. A message can also arrive
 // while the handshake transaction is still open: the ask is not yet introduced,
 // so nothing is awaiting a reply and the activity arm correctly does nothing.
-// intro_request.completed rides on the PERSON entity (public-events.yaml), so
+// intro_request.completed rides on the CONTACT entity (public-events.yaml), so
 // the handshake committing is itself an event this arm consumes — it re-reads
 // the contact's mail and finds the message that arrived early.
 func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) error {
@@ -144,7 +144,7 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 	}
 	captured := env.Entity.Type == introAdvanceEntityActivity &&
 		env.Type == string(crmcontracts.ActivityCaptured)
-	promoted := env.Entity.Type == introAdvancePersonEntity
+	promoted := env.Entity.Type == introAdvanceContactEntity
 	if !captured && !promoted {
 		return nil
 	}
@@ -164,8 +164,8 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 	if err != nil {
 		return err
 	}
-	for _, personID := range senders {
-		if err := a.answerAsksTo(ctx, personID, env.Entity.ID, occurredAt); err != nil {
+	for _, contactID := range senders {
+		if err := a.answerAsksTo(ctx, contactID, env.Entity.ID, occurredAt); err != nil {
 			return err
 		}
 	}
@@ -175,7 +175,7 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 // answerBacklogFor re-checks the mail a contact has ALREADY sent, for the asks
 // still waiting on them.
 //
-// This is the repair arm. A message captured before its sender was a person
+// This is the repair arm. A message captured before its sender was a contact
 // left no trace the activity arm could act on, and nothing else would ever look
 // at it again — the reply would be lost permanently while the ask sat reading
 // unanswered.
@@ -184,8 +184,8 @@ func (a *IntroAdvance) HandleEvent(ctx context.Context, env events.Envelope) err
 // contact is actually awaiting a reply, which is rare, and the query then reads
 // their qualifying mail since the earliest such handshake rather than their
 // whole history.
-func (a *IntroAdvance) answerBacklogFor(ctx context.Context, personID ids.UUID) error {
-	pending, err := a.asks.AwaitingReply(ctx, personID)
+func (a *IntroAdvance) answerBacklogFor(ctx context.Context, contactID ids.UUID) error {
+	pending, err := a.asks.AwaitingReply(ctx, contactID)
 	if err != nil {
 		return err
 	}
@@ -198,11 +198,11 @@ func (a *IntroAdvance) answerBacklogFor(ctx context.Context, personID ids.UUID) 
 			earliest = ask.Since
 		}
 	}
-	activityID, occurredAt, err := a.firstAnswerSince(ctx, personID, earliest)
+	activityID, occurredAt, err := a.firstAnswerSince(ctx, contactID, earliest)
 	if err != nil || activityID == ids.Nil {
 		return err
 	}
-	return a.answerAsksTo(ctx, personID, activityID, occurredAt)
+	return a.answerAsksTo(ctx, contactID, activityID, occurredAt)
 }
 
 // firstAnswerSince finds the EARLIEST qualifying message this contact sent after
@@ -214,7 +214,7 @@ func (a *IntroAdvance) answerBacklogFor(ctx context.Context, personID ids.UUID) 
 // carries, because the repair must admit exactly what the live path admits —
 // a backlog pass with a looser rule would close asks the live one refused.
 func (a *IntroAdvance) firstAnswerSince(
-	ctx context.Context, personID ids.UUID, since time.Time,
+	ctx context.Context, contactID ids.UUID, since time.Time,
 ) (ids.UUID, time.Time, error) {
 	var activityID ids.UUID
 	var occurredAt time.Time
@@ -222,14 +222,14 @@ func (a *IntroAdvance) firstAnswerSince(
 		SELECT a.id, a.occurred_at
 		  FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id
-		 WHERE p.person_id = $1
+		 WHERE p.contact_id = $1
 		   AND a.occurred_at > $2
 		   AND a.archived_at IS NULL
 		   AND a.captured_by LIKE $3
 		   AND a.direction = 'inbound'
 		   AND p.role = 'from'
 		 ORDER BY a.occurred_at
-		 LIMIT 1`, personID, since, connectorCapturedPrefix+"%").Scan(&activityID, &occurredAt)
+		 LIMIT 1`, contactID, since, connectorCapturedPrefix+"%").Scan(&activityID, &occurredAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// They have written nothing since the introduction, which is the
 		// ordinary state of an ask still waiting.
@@ -237,7 +237,7 @@ func (a *IntroAdvance) firstAnswerSince(
 	}
 	if err != nil {
 		return ids.Nil, time.Time{}, fmt.Errorf(
-			"intro-advance: reading what %s has written since %s: %w", personID, since, err)
+			"intro-advance: reading what %s has written since %s: %w", contactID, since, err)
 	}
 	return activityID, occurredAt, nil
 }
@@ -250,14 +250,14 @@ func (a *IntroAdvance) firstAnswerSince(
 // `to` rows. Only their conjunction is "this contact wrote to us".
 //
 // A list rather than one id because a captured message can name more than one
-// person as its sender — a shared mailbox resolving to two contacts, an
+// contact as its sender — a shared mailbox resolving to two contacts, an
 // imported thread whose headers merge. Each is asked about separately, so an
 // ambiguous sender advances the asks it genuinely answers rather than none.
 func (a *IntroAdvance) inboundSenders(
 	ctx context.Context, activityID ids.UUID,
 ) ([]ids.UUID, time.Time, error) {
 	rows, err := a.pool.Query(ctx, `
-		SELECT p.person_id, a.occurred_at
+		SELECT p.contact_id, a.occurred_at
 		  FROM activity a
 		  JOIN activity_participant p ON p.activity_id = a.id
 		 WHERE a.id = $1
@@ -265,7 +265,7 @@ func (a *IntroAdvance) inboundSenders(
 		   AND a.captured_by LIKE $2
 		   AND a.direction = 'inbound'
 		   AND p.role = 'from'
-		   AND p.person_id IS NOT NULL`, activityID, connectorCapturedPrefix+"%")
+		   AND p.contact_id IS NOT NULL`, activityID, connectorCapturedPrefix+"%")
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("intro-advance: reading who sent %s: %w", activityID, err)
 	}
@@ -273,11 +273,11 @@ func (a *IntroAdvance) inboundSenders(
 	var senders []ids.UUID
 	var occurredAt time.Time
 	for rows.Next() {
-		var personID ids.UUID
-		if err := rows.Scan(&personID, &occurredAt); err != nil {
+		var contactID ids.UUID
+		if err := rows.Scan(&contactID, &occurredAt); err != nil {
 			return nil, time.Time{}, fmt.Errorf("intro-advance: reading a sender: %w", err)
 		}
-		senders = append(senders, personID)
+		senders = append(senders, contactID)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, time.Time{}, fmt.Errorf("intro-advance: reading who sent %s: %w", activityID, err)
@@ -292,9 +292,9 @@ func (a *IntroAdvance) inboundSenders(
 // those messages is inbound and from the contact. Only a message that arrived
 // after the handshake can be an answer to it.
 func (a *IntroAdvance) answerAsksTo(
-	ctx context.Context, personID, activityID ids.UUID, occurredAt time.Time,
+	ctx context.Context, contactID, activityID ids.UUID, occurredAt time.Time,
 ) error {
-	pending, err := a.asks.AwaitingReply(ctx, personID)
+	pending, err := a.asks.AwaitingReply(ctx, contactID)
 	if err != nil {
 		return err
 	}

@@ -274,7 +274,7 @@ func (s *Service) revokePassportTx(
 		// Revoking is denial rather than takeover — but a delegated holder who
 		// could cut off every agent acting for an administrator has reach over
 		// that administrator's work, and one grant should not buy both the
-		// widened list and power over the people it lists.
+		// widened list and power over the contacts it lists.
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf); err != nil {
 			return apperrors.ErrNotFound
 		}

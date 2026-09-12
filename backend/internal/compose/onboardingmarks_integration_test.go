@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -43,11 +43,11 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 	blob := blobstore.NewMemory()
 	args := readTheOnboardingSiteDeclaring(t, e, onboardingLogoWorker(e, site, blob), declaringBothMarks())
 
-	wideKey, wideOrigin := parkedMark(t, e, args.SiteReadID, people.LogoWide)
+	wideKey, wideOrigin := parkedMark(t, e, args.SiteReadID, contacts.LogoWide)
 	if wideKey == nil || wideOrigin == nil || *wideOrigin != wordmarkURL {
 		t.Fatalf("the wide slot parked key %v origin %v, want the wordmark at %q", wideKey, wideOrigin, wordmarkURL)
 	}
-	iconKey, iconOrigin := parkedMark(t, e, args.SiteReadID, people.LogoIcon)
+	iconKey, iconOrigin := parkedMark(t, e, args.SiteReadID, contacts.LogoIcon)
 	if iconKey == nil || iconOrigin == nil || *iconOrigin != touchIconURL {
 		t.Fatalf("the icon slot parked key %v origin %v, want the icon at %q", iconKey, iconOrigin, touchIconURL)
 	}
@@ -57,8 +57,8 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 
 	company := confirmTheAnchor(t, e, args)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	for slot, want := range map[people.LogoSlot]string{people.LogoWide: *wideKey, people.LogoIcon: *iconKey} {
-		bound, err := e.People.CompanyLogoKey(ctx, company.CompanyID, slot)
+	for slot, want := range map[contacts.LogoSlot]string{contacts.LogoWide: *wideKey, contacts.LogoIcon: *iconKey} {
+		bound, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, slot)
 		if err != nil {
 			t.Fatalf("the confirmed anchor has no %s: %v", slot, err)
 		}
@@ -67,18 +67,18 @@ func TestTheColdStartParksBothMarksAndTheConfirmationBindsEachToItsSlot(t *testi
 		}
 	}
 	// Handed over, not shared: the dossier's references are gone with the marks.
-	for _, slot := range []people.LogoSlot{people.LogoWide, people.LogoIcon} {
+	for _, slot := range []contacts.LogoSlot{contacts.LogoWide, contacts.LogoIcon} {
 		if left, _ := parkedMark(t, e, args.SiteReadID, slot); left != nil {
 			t.Fatalf("the confirmed dossier still names %q in its %s slot", *left, slot)
 		}
 	}
 	// The profile the shell reads carries both URLs, each on its own path.
-	profile, err := e.People.GetAnchorCompany(ctx)
+	profile, err := e.Contacts.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("read the company profile: %v", err)
 	}
 	wire := toContractCompany(profile)
-	wantIcon := *people.LogoURL(company.CompanyID.UUID, iconKey, people.LogoIcon)
+	wantIcon := *contacts.LogoURL(company.CompanyID.UUID, iconKey, contacts.LogoIcon)
 	if wire.LogoIconUrl == nil || *wire.LogoIconUrl != wantIcon {
 		t.Fatalf("the profile's logo_icon_url = %v, want %q — the badge the collapsed rail draws", wire.LogoIconUrl, wantIcon)
 	}
@@ -103,25 +103,25 @@ func TestAColdStartWithoutALockupLeavesTheBadgeSlotEmpty(t *testing.T) {
 	e := integration.Setup(t)
 	site := &assetSite{assets: map[string][]byte{touchIconURL: logoFixture(t, 512, 512)}}
 	args := readTheOnboardingSite(t, e, onboardingLogoWorker(e, site, blobstore.NewMemory()))
-	if key, _ := parkedMark(t, e, args.SiteReadID, people.LogoIcon); key != nil {
+	if key, _ := parkedMark(t, e, args.SiteReadID, contacts.LogoIcon); key != nil {
 		t.Fatalf("an icon-only site parked a badge at %q beside the wide mark it already serves", *key)
 	}
 	company := confirmTheAnchor(t, e, args)
-	_, err := e.People.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, people.LogoIcon)
+	_, err := e.Contacts.CompanyLogoKey(e.As(e.Rep1, nil, integration.AdminPerms), company.CompanyID, contacts.LogoIcon)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the anchor's badge slot answers %v, want not-found so the rail falls back to the wide mark", err)
 	}
 }
 
-func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testing.T) {
-	// The slots are decided one at a time. A person who uploaded a badge before
+func TestTheConfirmationKeepsTheBadgeAContactChoseAndStillLandsTheLockup(t *testing.T) {
+	// The slots are decided one at a time. A contact who uploaded a badge before
 	// the read ran keeps it, and its bytes; the lockup the read resolved still
 	// lands, because nobody chose a wide mark; and the badge the read parked,
 	// which nothing adopts, is collected by the transport.
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	blob := newRecordingBlobstore()
-	saved, err := e.People.SaveCompany(human, people.SaveCompanyInput{DisplayName: "Acme"})
+	saved, err := e.Contacts.SaveCompany(human, contacts.SaveCompanyInput{DisplayName: "Acme"})
 	if err != nil {
 		t.Fatalf("describe the company by hand: %v", err)
 	}
@@ -130,10 +130,10 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 	chosen := logoFixture(t, 64, 64)
 	if err := blob.Put(context.Background(), uploaded, bytes.NewReader(chosen),
 		int64(len(chosen)), imagenorm.ContentType); err != nil {
-		t.Fatalf("store the person's own badge: %v", err)
+		t.Fatalf("store the contact's own badge: %v", err)
 	}
-	if _, err := e.People.SetAnchorCompanyLogo(human, people.LogoIcon, uploaded, "badge.png"); err != nil {
-		t.Fatalf("record the person's own badge: %v", err)
+	if _, err := e.Contacts.SetAnchorCompanyLogo(human, contacts.LogoIcon, uploaded, "badge.png"); err != nil {
+		t.Fatalf("record the contact's own badge: %v", err)
 	}
 
 	site := &assetSite{assets: map[string][]byte{
@@ -141,23 +141,23 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 		wordmarkURL:  logoFixture(t, 600, 150),
 	}}
 	args := readTheOnboardingSiteDeclaring(t, e, onboardingLogoWorker(e, site, blob), declaringBothMarks())
-	parkedWide, _ := parkedMark(t, e, args.SiteReadID, people.LogoWide)
-	parkedIcon, _ := parkedMark(t, e, args.SiteReadID, people.LogoIcon)
+	parkedWide, _ := parkedMark(t, e, args.SiteReadID, contacts.LogoWide)
+	parkedIcon, _ := parkedMark(t, e, args.SiteReadID, contacts.LogoIcon)
 	if parkedWide == nil || parkedIcon == nil {
 		t.Fatal("the read parked less than both marks; this case has nothing to decide")
 	}
 
-	engine := &deepReadEngine{people: e.People, blob: blob, log: slog.New(slog.DiscardHandler)}
+	engine := &deepReadEngine{contacts: e.Contacts, blob: blob, log: slog.New(slog.DiscardHandler)}
 	companyID := confirmTheAnchorAsTheAPIDoes(t, e, engine, args)
 
-	boundIcon, err := e.People.CompanyLogoKey(human, companyID, people.LogoIcon)
+	boundIcon, err := e.Contacts.CompanyLogoKey(human, companyID, contacts.LogoIcon)
 	if err != nil {
 		t.Fatalf("the anchor lost its badge: %v", err)
 	}
 	if boundIcon != uploaded {
-		t.Fatalf("the anchor's badge is %q, want the one the person chose at %q", boundIcon, uploaded)
+		t.Fatalf("the anchor's badge is %q, want the one the contact chose at %q", boundIcon, uploaded)
 	}
-	boundWide, err := e.People.CompanyLogoKey(human, companyID, people.LogoWide)
+	boundWide, err := e.Contacts.CompanyLogoKey(human, companyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the anchor has no wide mark: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestTheConfirmationKeepsTheBadgeAPersonChoseAndStillLandsTheLockup(t *testi
 	}
 	stored, _, err := blob.Get(context.Background(), uploaded)
 	if err != nil {
-		t.Fatalf("the badge the person chose answers %v, want it kept", err)
+		t.Fatalf("the badge the contact chose answers %v, want it kept", err)
 	}
 	if err := stored.Close(); err != nil {
 		t.Fatalf("closing the stored object: %v", err)

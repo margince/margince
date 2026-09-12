@@ -6,9 +6,9 @@
 package capture
 
 // The auto-create pipeline end to end over a real migrated Postgres
-// (ADR-0063, AC3.1/3.2): a captured thread yields exactly one person, one
-// company, one employment edge and person-linked activities — idempotent
-// across replays; free-mail yields the person but never a company; the
+// (ADR-0063, AC3.1/3.2): a captured thread yields exactly one contact, one
+// company, one employment edge and contact-linked activities — idempotent
+// across replays; free-mail yields the contact but never a company; the
 // workspace's own domain (seeded from the synced mailbox) creates nothing;
 // an erased address stays dead; and an inbound message above a prior
 // outbound emits exactly one engagement.reply.
@@ -27,12 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The ADR-0063 auto-create path: a captured thread yields exactly one person,
+// The ADR-0063 auto-create path: a captured thread yields exactly one contact,
 // one company and one employment, and a replay adds nothing.
 func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
-	t.Run("a thread becomes one person, one company, one employment", func(t *testing.T) {
+	t.Run("a thread becomes one contact, one company, one employment", func(t *testing.T) {
 		// The owner's own reply is what makes alice a counterparty: T1
 		// correspondence-positive ensures immediately, where a first-time
 		// stranger would defer to the verdict engine. The outbound leg is
@@ -44,13 +44,13 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 			email("alice@acme.example", "Alice Example", captureOwner, "m3@acme.example", "m1@acme.example"),
 		)
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'alice@acme.example'`); n != 1 {
-			t.Fatalf("%d persons for alice, want exactly 1", n)
+			t.Fatalf("%d contacts for alice, want exactly 1", n)
 		}
 		// NO company is derived from the domain. Capture withholds one until a
 		// site read says the domain deserves it — inventing "Acme" from
-		// acme.example is exactly what produced junk named after people.
+		// acme.example is exactly what produced junk named after contacts.
 		// NOT is_anchor: the installation's own company is created by cold
 		// start, not derived from a captured domain.
 		if n := countRows(t, e, `SELECT count(*) FROM company WHERE NOT is_anchor`); n != 0 {
@@ -65,18 +65,18 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 		// No company means no employment edge yet; the verdict plants them for
 		// everyone waiting when it lands.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM relationship r JOIN person_email pe ON pe.person_id = r.person_id
+			SELECT count(*) FROM relationship r JOIN contact_email pe ON pe.contact_id = r.contact_id
 			WHERE r.kind = 'employment' AND r.is_current_primary AND pe.email = 'alice@acme.example'`); n != 0 {
 			t.Fatalf("%d employment edges before a company exists, want 0", n)
 		}
-		// Person-only links, and only from the point alice became a
+		// Contact-only links, and only from the point alice became a
 		// counterparty: the FIRST message deferred — she was a stranger when it
 		// arrived — so the owner's reply and the message after it link her, and
 		// the deferred one waits for the verdict that resolves its ledger row.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM activity_link al JOIN person_email pe ON pe.person_id = al.person_id
-			WHERE al.entity_type = 'person' AND pe.email = 'alice@acme.example'`); n != 2 {
-			t.Fatalf("%d person links, want 2 (the reply and what followed it)", n)
+			SELECT count(*) FROM activity_link al JOIN contact_email pe ON pe.contact_id = al.contact_id
+			WHERE al.entity_type = 'contact' AND pe.email = 'alice@acme.example'`); n != 2 {
+			t.Fatalf("%d contact links, want 2 (the reply and what followed it)", n)
 		}
 		// And the first message is not lost — it is deferred, on the ledger.
 		if n := countRows(t, e, `
@@ -95,9 +95,9 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 		// TestAVerdictPromotesTheContactItJudged. Asserted on alice herself, so
 		// an unrelated row can never green this.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'alice@acme.example' AND p.visibility = 'owner'`); n != 1 {
-			t.Fatal("the connector-created person must start visibility='owner'")
+			t.Fatal("the connector-created contact must start visibility='owner'")
 		}
 		// The inbound reply above our outbound emitted exactly one engagement.reply.
 		if n := countRows(t, e, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'engagement.reply'`); n != 1 {
@@ -107,7 +107,7 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 	t.Run("a replay creates nothing new", func(t *testing.T) {
 		sync(t, email("alice@acme.example", "Alice Example", captureOwner, "m1@acme.example", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'alice@acme.example'`); n != 1 {
 			t.Fatalf("replay grew alice to %d rows", n)
 		}
@@ -136,11 +136,11 @@ func TestCaptureAutoCreatesTheCounterpartyBehindAThread(t *testing.T) {
 			email("alice2@acme.example", "Alice Exampel", captureOwner, "f1@acme.example", "fzo2@myco.example"),
 		)
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'alice2@acme.example'`); n != 1 {
 			t.Fatal("fuzzy must create — capture never blocks on a human")
 		}
-		if n := countRows(t, e, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'person' AND disposition = 'open'`); n != 1 {
+		if n := countRows(t, e, `SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'contact' AND disposition = 'open'`); n != 1 {
 			t.Fatalf("%d open dedupe candidates, want exactly 1", n)
 		}
 	})
@@ -197,7 +197,7 @@ func TestCaptureRecordsProvenanceWithoutTheMessageBody(t *testing.T) {
 }
 
 // The refusals: an address the workspace owns, one an erasure killed, and a
-// connector acting for nobody. Each keeps the activity and creates no person.
+// connector acting for nobody. Each keeps the activity and creates no contact.
 func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
@@ -207,9 +207,9 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		// which is readable by the whole workspace (ADR-0082/A127).
 		sync(t, email("carol@myco.example", "Carol Colleague", captureOwner, "c1@myco.example", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'carol@myco.example'`); n != 0 {
-			t.Fatal("a colleague must not become a CRM person")
+			t.Fatal("a colleague must not become a CRM contact")
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name = 'myco.example'`); n != 0 {
 			t.Fatal("the workspace's own domain must not become a CRM company")
@@ -230,7 +230,7 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 			t.Fatal("one external participant makes the message correspondence — it must be captured")
 		}
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'erin@myco.example'`); n != 0 {
 			t.Fatal("the colleague who wrote it is still not a contact")
 		}
@@ -260,17 +260,17 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 		}
 		sync(t, email("dave@dead.example", "Dave Gone", captureOwner, "d1@dead.example", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'dave@dead.example'`); n != 0 {
-			t.Fatal("an erased address must never re-create a person (A13)")
+			t.Fatal("an erased address must never re-create a contact (A13)")
 		}
 		// The activity itself is still captured — suppression stops the
-		// person, not the timeline row.
+		// contact, not the timeline row.
 		if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'd1@dead.example'`); n != 1 {
 			t.Fatal("suppression must not drop the captured activity")
 		}
 	})
-	t.Run("a connector with no granting human records the fault, never a person", func(t *testing.T) {
+	t.Run("a connector with no granting human records the fault, never a human", func(t *testing.T) {
 		// A bare sink with the ensure seam wired but an ownerless connector
 		// principal: the capture itself must land, the ensure must refuse
 		// honestly (RC-8 — created rows need a human owner), and the fault
@@ -300,9 +300,9 @@ func TestCaptureRefusesToDeriveARecord(t *testing.T) {
 			t.Fatalf("%d ensure-fault ledger lines, want exactly 1", n)
 		}
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'ghost@nowhere.example'`); n != 0 {
-			t.Fatal("an ownerless connector must not create a person")
+			t.Fatal("an ownerless connector must not create a contact")
 		}
 	})
 }

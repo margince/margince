@@ -157,7 +157,7 @@ function CopyAgenda({ rows }: Readonly<{ rows: readonly TeamWeeklyRep[] }>) {
  * the top and the quiet week last.
  *
  * Every member gets an item, including the one whose week went well — a meeting
- * that lists only the troubled people reads as a team where only those people
+ * that lists only the troubled contacts reads as a team where only those contacts
  * exist, which is both untrue and demoralising to be named in.
  */
 export function AgendaPanel({

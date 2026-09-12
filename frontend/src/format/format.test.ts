@@ -198,7 +198,7 @@ describe("date/time formatting (B-EP09.17/19)", () => {
 
   it("renders a day and month without a year, in the reader's own locale", () => {
     // Four screens carried a private copy of this rendering, every one of them
-    // passing `undefined` — so the same person record printed its dates in the
+    // passing `undefined` — so the same contact record printed its dates in the
     // browser's guessed locale on four surfaces. The locale is the whole point
     // of the assertion: de and en put the day and the month in different
     // orders, and a copy that took no locale would produce one of them for

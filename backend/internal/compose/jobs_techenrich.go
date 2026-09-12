@@ -22,7 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -149,7 +149,7 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 	// which refuse a context with no principal.
 	wsCtx = technicalActor(wsCtx)
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
 
@@ -175,8 +175,8 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 
 // recordOutcomes writes each lane's verdict to the ledger.
 func (w *technicalEnrichWorker) recordOutcomes(
-	ctx, wsCtx context.Context, store *people.Store, companyID ids.CompanyID,
-	read people.TechnicalEnrichment, outcomes []laneOutcome,
+	ctx, wsCtx context.Context, store *contacts.Store, companyID ids.CompanyID,
+	read contacts.TechnicalEnrichment, outcomes []laneOutcome,
 ) error {
 	now := read.ObservedAt
 	for _, outcome := range outcomes {
@@ -195,21 +195,21 @@ func (w *technicalEnrichWorker) recordOutcomes(
 }
 
 // technicalVerdict reads one lane's outcome in the ledger's vocabulary.
-func technicalVerdict(outcome laneOutcome, read people.TechnicalEnrichment) string {
+func technicalVerdict(outcome laneOutcome, read contacts.TechnicalEnrichment) string {
 	if !outcome.Completed {
-		return people.TechnicalOutcomeFailed
+		return contacts.TechnicalOutcomeFailed
 	}
 	if outcome.Refused {
-		return people.TechnicalOutcomeRefused
+		return contacts.TechnicalOutcomeRefused
 	}
 	for _, observation := range read.Observations {
-		if people.LaneOwningField(observation.Field) == outcome.Lane {
-			return people.TechnicalOutcomeApplied
+		if contacts.LaneOwningField(observation.Field) == outcome.Lane {
+			return contacts.TechnicalOutcomeApplied
 		}
 	}
 	// Completed with nothing: an authoritative empty answer, which is a fact
 	// about the company rather than a gap in what we asked.
-	return people.TechnicalOutcomeEmpty
+	return contacts.TechnicalOutcomeEmpty
 }
 
 // technicalBackfillWorker nominates the companies due a lookup.
@@ -236,21 +236,21 @@ func (w *technicalBackfillWorker) Work(ctx context.Context, _ *river.Job[Technic
 	// services paced in seconds means a batch is minutes of work, and an
 	// operator watching for technical profiles should know that is normal.
 	slog.InfoContext(ctx, "technical lookup queued a batch",
-		"companies", queued, "batch", people.TechnicalBackfillBatch)
+		"companies", queued, "batch", contacts.TechnicalBackfillBatch)
 	return nil
 }
 
 // sweepOneWorkspace nominates one tenant's due companies.
 func (w *technicalBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
-	// Reads under an actor of its own: nothing queued this on a person's
+	// Reads under an actor of its own: nothing queued this on a contact's
 	// behalf — the installation is asking which of its own companies it has
 	// not looked at lately — so it names itself rather than borrowing a
 	// principal, and company:read is gated like any other read.
 	wsCtx := technicalBackfillActor(principal.WithWorkspaceID(ctx, ws))
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](ws), nil
 	}))
-	due, err := store.ListTechnicalDue(wsCtx, people.TechnicalBackfillBatch, time.Now().UTC())
+	due, err := store.ListTechnicalDue(wsCtx, contacts.TechnicalBackfillBatch, time.Now().UTC())
 	if err != nil {
 		return 0, err
 	}

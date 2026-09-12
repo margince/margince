@@ -17,8 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -28,7 +28,7 @@ import (
 
 // attentionNames resolves each subject type through the store that owns it.
 type attentionNames struct {
-	people     *people.Store
+	contacts   *contacts.Store
 	deals      *deals.Store
 	activities *activities.Store
 	projects   *projects.Store
@@ -45,7 +45,7 @@ var _ attention.Names = attentionNames{}
 // surface and withheld on the other for no reason a reader could see.
 func newAttentionNames(db *database.DB) attentionNames {
 	return attentionNames{
-		people:     people.NewStore(db),
+		contacts:   contacts.NewStore(db),
 		deals:      deals.NewStore(db, DealsInstallation()),
 		activities: activities.NewStore(db),
 		projects:   projects.NewStore(db),
@@ -55,12 +55,12 @@ func newAttentionNames(db *database.DB) attentionNames {
 // Labels answers a set of one type's display names under the caller's scope.
 //
 // One store read per TYPE, which is the whole point of the seam's shape: a
-// page carrying a hundred people asks about people once. Each store's read
+// page carrying a hundred contacts asks about contacts once. Each store's read
 // carries that record's own object grant and row-scope clause, so a label is
 // exactly as visible as the record, and this seam holds no authority of its
 // own.
 //
-// A whole-read refusal — this caller may not read PEOPLE at all — costs the
+// A whole-read refusal — this caller may not read CONTACTS at all — costs the
 // type's labels and nothing else, because the contract's "absent when the
 // caller may not read it" is the same answer for one record or a hundred.
 // Any other error propagates: a database that will not answer must not read
@@ -87,12 +87,12 @@ func (n attentionNames) Labels(ctx context.Context, entityType string, want []id
 
 func (n attentionNames) read(ctx context.Context, entityType string, want []ids.UUID) (map[ids.UUID]string, error) {
 	switch entityType {
-	case flipObjectPerson:
-		return n.people.PersonLabels(ctx, want)
+	case flipObjectContact:
+		return n.contacts.ContactLabels(ctx, want)
 	case flipObjectCompany:
-		return n.people.CompanyLabels(ctx, want)
+		return n.contacts.CompanyLabels(ctx, want)
 	case flipObjectLead:
-		return n.people.LeadLabels(ctx, want)
+		return n.contacts.LeadLabels(ctx, want)
 	case string(datasource.RecordDeal):
 		return n.deals.DealLabels(ctx, want)
 	case string(datasource.EntityActivity):

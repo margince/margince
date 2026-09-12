@@ -302,7 +302,7 @@ function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
   return {
     deal: t("cf.obj.deal"),
     company: t("cf.obj.company"),
-    person: t("cf.obj.person"),
+    contact: t("cf.obj.contact"),
     lead: t("cf.obj.lead"),
   };
 }
@@ -598,7 +598,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
 // as the section name and again as the card title. The object is now named by
 // the segmented control alone, and the two surfaces most visits do not want —
 // the builder and the change trail — are Disclosures. What is left open is the
-// answer to the question people actually arrive with: which fields exist.
+// answer to the question contacts actually arrive with: which fields exist.
 export function CustomFieldsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();

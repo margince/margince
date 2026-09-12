@@ -12,7 +12,7 @@ package companybrief
 // fact happened to change. The setting would appear to do nothing.
 //
 // The brief is cached per READER, and that is about permissions rather than
-// preference: it is assembled from records that reader may see, so two people
+// preference: it is assembled from records that reader may see, so two contacts
 // with different access get different facts. Language is not a permission, so
 // it does not follow the reader — it follows the installation, like every other
 // AI surface.

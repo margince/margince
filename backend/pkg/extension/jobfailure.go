@@ -15,7 +15,7 @@ package extension
 //
 // The cost was that a unit's classification did not survive the trip. zalo-oa
 // computes `provider_unavailable` versus `token_rejected` versus
-// `package_too_low` — three failures with three different people to go fix them
+// `package_too_low` — three failures with three different contacts to go fix them
 // — writes the class to its own connection row, and then returned a plain error
 // the job layer could only report as unclassifiable. An operator reading
 // Maintenance was told to go read a log, with no key to find the line by.

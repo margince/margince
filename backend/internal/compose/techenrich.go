@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
@@ -56,12 +56,12 @@ type certHostnameReader interface {
 	Hostnames(ctx context.Context, domain string) ([]string, bool, error)
 }
 
-// technicalLookupCache is the remembered-answer surface. The people store
+// technicalLookupCache is the remembered-answer surface. The contacts store
 // implements it; the engine holds the narrow shape so a test can substitute a
 // cache that forgets everything.
 type technicalLookupCache interface {
-	LookupTechnical(ctx context.Context, query, kind string) (people.CachedLookup, bool, error)
-	RememberTechnical(ctx context.Context, query, kind string, answer people.CachedLookup) error
+	LookupTechnical(ctx context.Context, query, kind string) (contacts.CachedLookup, bool, error)
+	RememberTechnical(ctx context.Context, query, kind string, answer contacts.CachedLookup) error
 }
 
 // TechnicalEnricher reads a company's public technical profile.
@@ -88,7 +88,7 @@ func NewTechnicalEnricher(
 
 // laneOutcome is what one lane did, for the attempt ledger and the log.
 type laneOutcome struct {
-	Lane people.TechnicalLane
+	Lane contacts.TechnicalLane
 	// Completed says the source answered. Only a completed lane reconciles.
 	Completed bool
 	// Refused marks a source that declined rather than failed — a site's
@@ -109,9 +109,9 @@ type laneOutcome struct {
 // outcome, and one the next pass simply retries.
 func (e *TechnicalEnricher) Read(
 	ctx context.Context, companyID ids.CompanyID, domain string,
-) (people.TechnicalEnrichment, []laneOutcome) {
+) (contacts.TechnicalEnrichment, []laneOutcome) {
 	domain = strings.ToLower(strings.TrimSpace(strings.TrimSuffix(domain, ".")))
-	result := people.TechnicalEnrichment{
+	result := contacts.TechnicalEnrichment{
 		CompanyID:  companyID,
 		ObservedAt: e.now().UTC(),
 	}
@@ -141,15 +141,15 @@ func (e *TechnicalEnricher) Read(
 // all — a domain with no MX records still has an answer, and recording "this
 // company receives no mail" is the point of asking.
 func (e *TechnicalEnricher) readDNS(
-	ctx context.Context, domain string, result *people.TechnicalEnrichment,
+	ctx context.Context, domain string, result *contacts.TechnicalEnrichment,
 ) laneOutcome {
-	outcome := laneOutcome{Lane: people.LaneDNS}
+	outcome := laneOutcome{Lane: contacts.LaneDNS}
 	if e.dns == nil {
 		return outcome
 	}
 	sourceURL := "dns:" + domain
 
-	mxHosts, err := e.cachedStrings(ctx, domain, people.CacheKindMX, func() ([]string, bool, error) {
+	mxHosts, err := e.cachedStrings(ctx, domain, contacts.CacheKindMX, func() ([]string, bool, error) {
 		hosts, found, err := e.dns.MX(ctx, domain)
 		names := make([]string, 0, len(hosts))
 		for _, host := range hosts {
@@ -158,7 +158,7 @@ func (e *TechnicalEnricher) readDNS(
 		return names, found, err
 	})
 	if err != nil {
-		return laneOutcome{Lane: people.LaneDNS, Err: err}
+		return laneOutcome{Lane: contacts.LaneDNS, Err: err}
 	}
 	if provider, ok := techprofile.MailProvider(domain, mxHosts); ok {
 		result.Observations = append(result.Observations, observationOf(provider, sourceURL))
@@ -170,10 +170,10 @@ func (e *TechnicalEnricher) readDNS(
 	// because one TXT query timed out, and the next pass writes them back —
 	// so the record flickers with the resolver's mood.
 	if !e.appendEmailSecurity(ctx, domain, sourceURL, result) {
-		return laneOutcome{Lane: people.LaneDNS, Err: errPartialDNS}
+		return laneOutcome{Lane: contacts.LaneDNS, Err: errPartialDNS}
 	}
 	if !e.appendHosting(ctx, domain, sourceURL, result) {
-		return laneOutcome{Lane: people.LaneDNS, Err: errPartialDNS}
+		return laneOutcome{Lane: contacts.LaneDNS, Err: errPartialDNS}
 	}
 
 	outcome.Completed = true
@@ -190,7 +190,7 @@ var errPartialDNS = errors.New("compose: the DNS lane could not read every recor
 // The classifier runs BEFORE the cache, so what is remembered is the posture
 // — `spf`, `dmarc_reject`, `dkim` — and never the records themselves. A DMARC
 // record carries `rua=mailto:someone@example.de` as a matter of course, and a
-// cache holding that would put a person's address in an installation-global
+// cache holding that would put a contact's address in an installation-global
 // table the erasure path does not reach.
 //
 // It returns whether the posture is authoritative. A lookup that did not
@@ -198,9 +198,9 @@ var errPartialDNS = errors.New("compose: the DNS lane could not read every recor
 // — the alternative is deleting a company's whole mail posture because one TXT
 // query timed out.
 func (e *TechnicalEnricher) appendEmailSecurity(
-	ctx context.Context, domain, sourceURL string, result *people.TechnicalEnrichment,
+	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment,
 ) bool {
-	cached, hit, err := e.cache.LookupTechnical(ctx, domain, people.CacheKindTXT)
+	cached, hit, err := e.cache.LookupTechnical(ctx, domain, contacts.CacheKindTXT)
 	if err != nil {
 		return false
 	}
@@ -212,7 +212,7 @@ func (e *TechnicalEnricher) appendEmailSecurity(
 		if err != nil {
 			return false
 		}
-		if err := e.cache.RememberTechnical(ctx, domain, people.CacheKindTXT, people.CachedLookup{
+		if err := e.cache.RememberTechnical(ctx, domain, contacts.CacheKindTXT, contacts.CachedLookup{
 			Answer: keys, Found: len(keys) > 0,
 		}); err != nil {
 			return false
@@ -260,9 +260,9 @@ func (e *TechnicalEnricher) readEmailSecurity(ctx context.Context, domain string
 // hosting provider deleted because one address lookup failed is a fact removed
 // by a network blip rather than by anything the company did.
 func (e *TechnicalEnricher) appendHosting(
-	ctx context.Context, domain, sourceURL string, result *people.TechnicalEnrichment,
+	ctx context.Context, domain, sourceURL string, result *contacts.TechnicalEnrichment,
 ) bool {
-	addrText, err := e.cachedStrings(ctx, domain, people.CacheKindAddress, func() ([]string, bool, error) {
+	addrText, err := e.cachedStrings(ctx, domain, contacts.CacheKindAddress, func() ([]string, bool, error) {
 		addrs, found, err := e.dns.Addresses(ctx, domain)
 		text := make([]string, 0, len(addrs))
 		for _, addr := range addrs {
@@ -281,7 +281,7 @@ func (e *TechnicalEnricher) appendHosting(
 	}
 	var reverseNames []string
 	for _, addr := range techprofile.ReverseLookupTargets(addrs) {
-		names, err := e.cachedStrings(ctx, addr.String(), people.CacheKindReverse, func() ([]string, bool, error) {
+		names, err := e.cachedStrings(ctx, addr.String(), contacts.CacheKindReverse, func() ([]string, bool, error) {
 			return e.dns.Names(ctx, addr)
 		})
 		if err != nil {
@@ -291,7 +291,7 @@ func (e *TechnicalEnricher) appendHosting(
 		}
 		reverseNames = append(reverseNames, names...)
 	}
-	cname, err := e.cachedStrings(ctx, "www."+domain, people.CacheKindCNAME, func() ([]string, bool, error) {
+	cname, err := e.cachedStrings(ctx, "www."+domain, contacts.CacheKindCNAME, func() ([]string, bool, error) {
 		target, found, err := e.dns.CNAME(ctx, "www."+domain)
 		if !found || target == "" {
 			return nil, found, err
@@ -314,19 +314,19 @@ func (e *TechnicalEnricher) appendHosting(
 // readCertLog reads the services the domain's certificate hostnames reveal.
 //
 // The CLASSIFIER runs before the cache write, never after it: a raw certificate
-// hostname can carry a person's name, and a cache holding raw names would put
+// hostname can carry a contact's name, and a cache holding raw names would put
 // personal data in a table the erasure path does not reach. What is remembered
 // is the allowlisted service keys and their proving hostnames.
 func (e *TechnicalEnricher) readCertLog(
-	ctx context.Context, domain string, result *people.TechnicalEnrichment,
+	ctx context.Context, domain string, result *contacts.TechnicalEnrichment,
 ) laneOutcome {
-	outcome := laneOutcome{Lane: people.LaneCertLog}
+	outcome := laneOutcome{Lane: contacts.LaneCertLog}
 	if e.certs == nil {
 		return outcome
 	}
-	cached, hit, err := e.cache.LookupTechnical(ctx, domain, people.CacheKindCertLog)
+	cached, hit, err := e.cache.LookupTechnical(ctx, domain, contacts.CacheKindCertLog)
 	if err != nil {
-		return laneOutcome{Lane: people.LaneCertLog, Err: err}
+		return laneOutcome{Lane: contacts.LaneCertLog, Err: err}
 	}
 	var services []techprofile.Signal
 	if hit {
@@ -336,13 +336,13 @@ func (e *TechnicalEnricher) readCertLog(
 		if err != nil {
 			// The log did not answer. NOT an empty result: recording this as
 			// "no services" is the one wrong answer this lane must not give.
-			return laneOutcome{Lane: people.LaneCertLog, Err: err}
+			return laneOutcome{Lane: contacts.LaneCertLog, Err: err}
 		}
 		services = techprofile.OperatedServices(domain, hostnames)
-		if err := e.cache.RememberTechnical(ctx, domain, people.CacheKindCertLog, people.CachedLookup{
+		if err := e.cache.RememberTechnical(ctx, domain, contacts.CacheKindCertLog, contacts.CachedLookup{
 			Answer: servicesToCache(services), Found: found,
 		}); err != nil {
-			return laneOutcome{Lane: people.LaneCertLog, Err: err}
+			return laneOutcome{Lane: contacts.LaneCertLog, Err: err}
 		}
 	}
 	sourceURL := certlog.PublicBaseURL + "/?q=%25." + domain
@@ -369,7 +369,7 @@ func (e *TechnicalEnricher) cachedStrings(
 	if err != nil {
 		return nil, err
 	}
-	if err := e.cache.RememberTechnical(ctx, query, kind, people.CachedLookup{
+	if err := e.cache.RememberTechnical(ctx, query, kind, contacts.CachedLookup{
 		Answer: answer, Found: found,
 	}); err != nil {
 		return nil, err
@@ -378,8 +378,8 @@ func (e *TechnicalEnricher) cachedStrings(
 }
 
 // observationOf carries a classified signal into the shape the writer stores.
-func observationOf(signal techprofile.Signal, sourceURL string) people.TechnicalObservation {
-	return people.TechnicalObservation{
+func observationOf(signal techprofile.Signal, sourceURL string) contacts.TechnicalObservation {
+	return contacts.TechnicalObservation{
 		Field:     signal.Field,
 		ValueKey:  signal.Key,
 		Value:     signal.Label,
@@ -392,7 +392,7 @@ func observationOf(signal techprofile.Signal, sourceURL string) people.Technical
 // cache as `key|evidence` pairs.
 //
 // Only the allowlisted key and its proving hostname travel — the classifier has
-// already run, so nothing a certificate said about a person is in here.
+// already run, so nothing a certificate said about a contact is in here.
 func servicesToCache(services []techprofile.Signal) []string {
 	encoded := make([]string, 0, len(services))
 	for _, service := range services {

@@ -190,7 +190,7 @@ Consequences:
   reasoning expired when `release.yml` became dispatch-only — right on its own
   terms, to stop ~400 release runs a week competing for the company-wide runner
   ceiling, and it removed the net the earlier trade depended on. Between the two
-  changes the first person to notice a broken image was whoever cut the next
+  changes the first contact to notice a broken image was whoever cut the next
   release, with the offending commit arbitrarily far back.
 
   **The scope is those three paths and not `backend/**` or `frontend/**`**, and
@@ -210,7 +210,7 @@ Consequences:
   re-run to prove they still pass under the new definition. `release.yml` and
   `sbom.yml` are outside the scope — neither runs a backend gate. Note that
   neither proves itself on a schedule either, now that both are dispatch-only: a
-  change that breaks one is discovered by the next person to dispatch it, so a PR
+  change that breaks one is discovered by the next contact to dispatch it, so a PR
   touching either is worth dispatching from its own branch before merging.
 - **Draft PRs run nothing** until marked ready (`draft == false` guards every
   job) — the swarm pushes many WIP commits.

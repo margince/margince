@@ -116,7 +116,7 @@ func (t prepareHandoff) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[PreparedHandoff](),
 		// The view renders the same answer with the gaps beside the facts they
-		// are about, which is the comparison a person makes when deciding
+		// are about, which is the comparison a contact makes when deciding
 		// whether the work is ready to hand over.
 		UI: &mcp.ToolUI{ResourceURI: apps.HandoffURI},
 	}
@@ -142,7 +142,7 @@ func (t prepareHandoff) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 		noteEvidence(ctx, datasource.EntityDeal, d.DealID)
 	}
 	for _, s := range facts.Stakeholders {
-		noteEvidence(ctx, datasource.EntityPerson, s.PersonID)
+		noteEvidence(ctx, datasource.EntityContact, s.ContactID)
 	}
 	commitments := make([]CommitmentItem, 0, len(facts.OpenCommitments))
 	for _, c := range facts.OpenCommitments {

@@ -136,7 +136,7 @@ func TestAPleasantryIsOnlyFillerAtTheOpening(t *testing.T) {
 //
 //	"Follow-up to previous introduction by Romina Medici"
 //
-// Romina did not make that introduction. The product holds no person-to-person
+// Romina did not make that introduction. The product holds no contact-to-contact
 // referral record at all, so any directed introduction fact in a draft was read
 // out of quoted correspondence — which is how the reported defect got the
 // direction backwards in the first place.
@@ -269,7 +269,7 @@ func TestGermanCompoundsCarryingTheStemAreCaught(t *testing.T) {
 
 // A German draft that opens formally and closes familiarly reads as
 // machine-written whichever register it should have picked. The prompt already
-// said to be consistent; three consecutive drafts to one person came back du,
+// said to be consistent; three consecutive drafts to one contact came back du,
 // du, Sie — which is why it is checked rather than merely instructed.
 func TestAMixedRegisterIsCaught(t *testing.T) {
 	mixed := "Hallo Frank,\n\nich würde mich gerne mit dir austauschen. " +
@@ -425,7 +425,7 @@ func TestADayIsRefusedWhenNothingIsBooked(t *testing.T) {
 	}
 
 	// With a meeting on file the same sentence is the drafter doing its job —
-	// the person prompt asks for exactly this phrasing over a timestamp.
+	// the contact prompt asks for exactly this phrasing over a timestamp.
 	if got := draftcheck.Body(body, textlang.German, convstate.BandFresh, draftcheck.Grounds{Booked: true}); refusedAsUnscheduled(got) {
 		t.Errorf("a booked meeting still refused its own day: %+v", got)
 	}

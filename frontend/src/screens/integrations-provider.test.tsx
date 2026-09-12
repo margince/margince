@@ -88,7 +88,7 @@ const ME_OPERATOR = meResponse("full", {
 });
 
 // A rep, exactly as the roster seeds it: read on `integrations` so a dated value
-// on a person record has an explanation, and nothing more.
+// on a contact record has an explanation, and nothing more.
 const ME_READER = meResponse("full", {
   create: false,
   read: true,

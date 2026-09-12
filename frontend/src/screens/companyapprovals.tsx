@@ -14,7 +14,7 @@ import { useTargetApprovals } from "./approvals.queries";
 //
 // The rows come out of the 360 payload the page has already read, so opening
 // the panel costs no second request. Same-kind proposals are grouped, because
-// a deep read of a company website stages one proposal per person it found —
+// a deep read of a company website stages one proposal per contact it found —
 // twenty-five rows that are one decision to the reader making it.
 
 type Company360 = components["schemas"]["Company360"];

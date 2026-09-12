@@ -29,7 +29,7 @@ import (
 // exercises, so this suite carries its own.
 func exportReadGrants() map[string]principal.ObjectGrant {
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"person", "company", "deal", "lead", "activity", "relationship"} {
+	for _, object := range []string{"contact", "company", "deal", "lead", "activity", "relationship"} {
 		grants[object] = principal.ObjectGrant{Read: true}
 	}
 	return grants
@@ -56,7 +56,7 @@ func (e *SearchEnv) exportRep(user, team ids.UUID) context.Context {
 // slice and a rep3 (team2) slice, so a team-scoped caller must see its
 // own and none of the other's.
 type exportFixture struct {
-	rep1Person, rep3Person   ids.UUID
+	rep1Contact, rep3Contact ids.UUID
 	rep1Company, rep3Company ids.UUID
 	rep1Deal, rep3Deal       ids.UUID
 	rep1Lead, rep3Lead       ids.UUID
@@ -72,12 +72,12 @@ func (e *SearchEnv) seedExportFixture(t *testing.T) exportFixture {
 	var f exportFixture
 	// rep1 (team1) carries a social row to prove the child relation
 	// travels with its parent.
-	f.rep1Person = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Rep1 Person', 'manual', 'human:x')`, e.Rep1)
-	e.SeedID(t, `INSERT INTO person_social (id, person_id, platform, handle)
-		VALUES ($1, $2, 'linkedin', 'in/rep1')`, f.rep1Person)
-	f.rep3Person = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
-		VALUES ($1, $2, 'Rep3 Person', 'manual', 'human:x')`, e.Rep3)
+	f.rep1Contact = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Rep1 Contact', 'manual', 'human:x')`, e.Rep1)
+	e.SeedID(t, `INSERT INTO contact_social (id, contact_id, platform, handle)
+		VALUES ($1, $2, 'linkedin', 'in/rep1')`, f.rep1Contact)
+	f.rep3Contact = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
+		VALUES ($1, $2, 'Rep3 Contact', 'manual', 'human:x')`, e.Rep3)
 	f.rep1Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Rep1 Company', 'manual', 'human:x')`, e.Rep1)
 	f.rep3Company = e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
@@ -91,32 +91,32 @@ func (e *SearchEnv) seedExportFixture(t *testing.T) exportFixture {
 	f.rep3Lead = e.SeedID(t, `INSERT INTO lead (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Rep3 Lead', 'manual', 'human:x')`, e.Rep3)
 
-	// Employment edges: each connects a rep's person to that rep's company, so
+	// Employment edges: each connects a rep's contact to that rep's company, so
 	// the whole edge is visible only to that rep (both endpoints owned).
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep1Person, f.rep1Company)
-	e.SeedID(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
-		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep3Person, f.rep3Company)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep1Contact, f.rep1Company)
+	e.SeedID(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
+		VALUES ($1, 'employment', $2, $3, 'manual', 'human:x')`, f.rep3Contact, f.rep3Company)
 
 	// Activities scope through their links.
 	f.rep1Activity = e.SeedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'Rep1 note', now(), 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`, f.rep1Activity, f.rep1Person)
+	e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, f.rep1Activity, f.rep1Contact)
 	f.rep3Activity = e.SeedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'Rep3 note', now(), 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`, f.rep3Activity, f.rep3Person)
+	e.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`, f.rep3Activity, f.rep3Contact)
 
-	// Attachments on each rep's person — the files manifest source.
+	// Attachments on each rep's contact — the files manifest source.
 	e.SeedID(t, `INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
-		VALUES ($1, 'person', $2, 'rep1.pdf', 'blob/rep1', 'manual', 'human:x')`, f.rep1Person)
+		VALUES ($1, 'contact', $2, 'rep1.pdf', 'blob/rep1', 'manual', 'human:x')`, f.rep1Contact)
 	e.SeedID(t, `INSERT INTO attachment (id, entity_type, entity_id, filename, storage_key, source, captured_by)
-		VALUES ($1, 'person', $2, 'rep3.pdf', 'blob/rep3', 'manual', 'human:x')`, f.rep3Person)
+		VALUES ($1, 'contact', $2, 'rep3.pdf', 'blob/rep3', 'manual', 'human:x')`, f.rep3Contact)
 
-	// Audit rows targeting each rep's person (audit_log is record-mutations-only).
+	// Audit rows targeting each rep's contact (audit_log is record-mutations-only).
 	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
-		VALUES ($1, 'human', $2, 'create', 'person', $3)`, "human:"+e.Rep1.String(), f.rep1Person)
+		VALUES ($1, 'human', $2, 'create', 'contact', $3)`, "human:"+e.Rep1.String(), f.rep1Contact)
 	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id)
-		VALUES ($1, 'human', $2, 'create', 'person', $3)`, "human:"+e.Rep3.String(), f.rep3Person)
+		VALUES ($1, 'human', $2, 'create', 'contact', $3)`, "human:"+e.Rep3.String(), f.rep3Contact)
 	return f
 }
 
@@ -134,7 +134,7 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 	// Every member CSV, the relational dump, the files manifest, and the
 	// bundle manifest are present.
 	for _, name := range []string{
-		"person.csv", "company.csv", "deal.csv", "lead.csv", "activity.csv",
+		"contact.csv", "company.csv", "deal.csv", "lead.csv", "activity.csv",
 		"relationship.csv", "pipeline.csv", "stage.csv", "attachment.csv", "audit_log.csv",
 		"data.json", "files-manifest.json", "manifest.json",
 	} {
@@ -144,8 +144,8 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 	}
 
 	// The admin (row_scope=all) sees both reps' rows — completeness.
-	if got := len(CSVColumn(t, entries["person.csv"], "id")); got != 2 {
-		t.Fatalf("person.csv has %d rows, want 2 (both reps)", got)
+	if got := len(CSVColumn(t, entries["contact.csv"], "id")); got != 2 {
+		t.Fatalf("contact.csv has %d rows, want 2 (both reps)", got)
 	}
 	if summary.RowCounts["deal"] != 2 || summary.RowCounts["relationship"] != 2 {
 		t.Fatalf("summary counts wrong: %+v", summary.RowCounts)
@@ -160,17 +160,17 @@ func TestExportBundleCompleteAndValidOpenFormat(t *testing.T) {
 	if err := json.Unmarshal(entries["data.json"], &dump); err != nil {
 		t.Fatalf("data.json is not valid JSON: %v", err)
 	}
-	if dump.Format == "" || len(dump.Objects["person"]) != 2 {
-		t.Fatalf("data.json dump incomplete: format=%q persons=%d", dump.Format, len(dump.Objects["person"]))
+	if dump.Format == "" || len(dump.Objects["contact"]) != 2 {
+		t.Fatalf("data.json dump incomplete: format=%q contacts=%d", dump.Format, len(dump.Objects["contact"]))
 	}
 	var handle any
-	for _, s := range dump.Objects["person_social"] {
+	for _, s := range dump.Objects["contact_social"] {
 		if s["platform"] == "linkedin" {
 			handle = s["handle"]
 		}
 	}
 	if handle != "in/rep1" {
-		t.Fatalf("the person_social child relation did not travel with its parent: handle=%v", handle)
+		t.Fatalf("the contact_social child relation did not travel with its parent: handle=%v", handle)
 	}
 
 	// The files manifest lists both attachments.
@@ -199,7 +199,7 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 		table string
 		id    ids.UUID
 	}{
-		{"person", f.rep3Person}, {"company", f.rep3Company},
+		{"contact", f.rep3Contact}, {"company", f.rep3Company},
 	} {
 		if _, err := e.Owner.Exec(context.Background(),
 			`UPDATE `+private.table+` SET visibility = 'owner' WHERE id = $1`, private.id); err != nil {
@@ -237,7 +237,7 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 			t.Fatalf("%s is missing a row every seat may read (mine %s, theirs %s): got %v", file, mine, theirs, rowIDs)
 		}
 	}
-	assertOnlyID("person.csv", f.rep1Person, f.rep3Person)
+	assertOnlyID("contact.csv", f.rep1Contact, f.rep3Contact)
 	assertOnlyID("company.csv", f.rep1Company, f.rep3Company)
 	assertBothIDs("deal.csv", f.rep1Deal, f.rep3Deal)
 	assertBothIDs("lead.csv", f.rep1Lead, f.rep3Lead)
@@ -250,14 +250,14 @@ func TestExportRowScopeExcludesInvisibleRecords(t *testing.T) {
 	}
 	// The attachment (files manifest) hides the other rep's file.
 	entIDs := CSVColumn(t, entries["attachment.csv"], "entity_id")
-	if len(entIDs) != 1 || entIDs[0] != f.rep1Person.String() {
+	if len(entIDs) != 1 || entIDs[0] != f.rep1Contact.String() {
 		t.Fatalf("row-scope leak in files manifest: attachment entity_ids = %v", entIDs)
 	}
-	// The audit_log excludes the row about the invisible person.
+	// The audit_log excludes the row about the invisible contact.
 	auditEntities := CSVColumn(t, entries["audit_log.csv"], "entity_id")
 	for _, id := range auditEntities {
-		if id == f.rep3Person.String() {
-			t.Fatalf("row-scope leak: audit_log exposed an invisible person's row %s", id)
+		if id == f.rep3Contact.String() {
+			t.Fatalf("row-scope leak: audit_log exposed an invisible contact's row %s", id)
 		}
 	}
 	// Pipeline/stage are workspace-shared reference data — present for
@@ -274,22 +274,22 @@ func TestExportOmitsObjectsWithoutReadGrant(t *testing.T) {
 	e.seedExportFixture(t)
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	personOnly := principal.WithActor(ctx, principal.Principal{
+	contactOnly := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 	var buf bytes.Buffer
-	summary, err := compose.NewExportWriter(e.Pool).WriteBundle(personOnly, &buf)
+	summary, err := compose.NewExportWriter(e.Pool).WriteBundle(contactOnly, &buf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	entries := BundleEntries(t, buf.Bytes())
 
-	if _, ok := entries["person.csv"]; !ok {
-		t.Fatal("granted object person was omitted")
+	if _, ok := entries["contact.csv"]; !ok {
+		t.Fatal("granted object contact was omitted")
 	}
 	for _, denied := range []string{"deal.csv", "company.csv", "lead.csv", "activity.csv", "relationship.csv"} {
 		if _, ok := entries[denied]; ok {
@@ -324,12 +324,12 @@ func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
 
 	const typed = "Sara Typed This"
 	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
-		VALUES ($1, 'human', $2, 'update', 'person', $3, $4::jsonb, $5::jsonb, now() - interval '2 hours')`,
-		"human:"+e.Rep1.String(), f.rep1Person,
+		VALUES ($1, 'human', $2, 'update', 'contact', $3, $4::jsonb, $5::jsonb, now() - interval '2 hours')`,
+		"human:"+e.Rep1.String(), f.rep1Contact,
 		`{"full_name":"`+typed+`"}`, `{"full_name":"Sara Renamed"}`)
 	e.SeedID(t, `INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-		VALUES ($1, 'human', $2, 'erase', 'person', $3, now() - interval '1 hour')`,
-		"human:"+e.Rep1.String(), f.rep1Person)
+		VALUES ($1, 'human', $2, 'erase', 'contact', $3, now() - interval '1 hour')`,
+		"human:"+e.Rep1.String(), f.rep1Contact)
 
 	var buf bytes.Buffer
 	if _, err := compose.NewExportWriter(e.Pool).WriteBundle(e.exportAdmin(), &buf); err != nil {
@@ -345,7 +345,7 @@ func TestTheBundleWithholdsImagesAnErasureCertifiedGone(t *testing.T) {
 	}
 	// The row is still exported: a bundle that dropped it would answer "who
 	// touched this record" with a gap, which an erasure does not create.
-	if !bytes.Contains(entries["audit_log.csv"], []byte(f.rep1Person.String())) {
+	if !bytes.Contains(entries["audit_log.csv"], []byte(f.rep1Contact.String())) {
 		t.Error("the erased record's audit rows vanished from the bundle entirely")
 	}
 }

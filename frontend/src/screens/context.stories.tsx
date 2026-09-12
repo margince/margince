@@ -12,7 +12,7 @@ import {
 
 const populated = () =>
   jsonResponse({
-    anchor: { type: "person", id: "p1" },
+    anchor: { type: "contact", id: "p1" },
     sections: [
       {
         name: "Recent touches",
@@ -25,8 +25,8 @@ const populated = () =>
         ],
       },
       {
-        name: "Related people",
-        items: [{ ref: { type: "person", id: "p2" }, summary: "Dana Buyer" }],
+        name: "Related contacts",
+        items: [{ ref: { type: "contact", id: "p2" }, summary: "Dana Buyer" }],
       },
     ],
   });
@@ -42,11 +42,11 @@ export const Populated: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /records/person/p1/context": populated,
+      "GET /records/contact/p1/context": populated,
     });
     return (
       <StoryProviders>
-        <RecordContextPanel entityType="person" id="p1" />
+        <RecordContextPanel entityType="contact" id="p1" />
       </StoryProviders>
     );
   },
@@ -56,12 +56,12 @@ export const Empty: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /records/person/p1/context": () =>
-        jsonResponse({ anchor: { type: "person", id: "p1" }, sections: [] }),
+      "GET /records/contact/p1/context": () =>
+        jsonResponse({ anchor: { type: "contact", id: "p1" }, sections: [] }),
     });
     return (
       <StoryProviders>
-        <RecordContextPanel entityType="person" id="p1" />
+        <RecordContextPanel entityType="contact" id="p1" />
       </StoryProviders>
     );
   },

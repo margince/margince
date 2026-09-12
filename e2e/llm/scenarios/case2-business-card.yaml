@@ -43,12 +43,12 @@ must_mention:
 # CRITERION 4, THE OTHER DIRECTION, AND WHY IT IS NOT A REGEX.
 #
 # A flat pattern over the whole answer cannot tell WHICH RECORD a denial is
-# about, and this prompt creates two: a PERSON who has a possible duplicate in
+# about, and this prompt creates two: a CONTACT who has a possible duplicate in
 # the queue, and a COMPANY that genuinely has none. "Terralogic, domain
 # terralogic-vn.test (new; no existing record matched)" is grounded —
 # resolve_entities answered `unresolved` with no matches — and it is a sentence
 # the asker wants. The pattern that stood here forbade it, and red two of three
-# runs that had reported the person's duplicate correctly in the paragraph
+# runs that had reported the contact's duplicate correctly in the paragraph
 # above.
 #
 # The subject of a denial is what decides it, and a subject is semantic.

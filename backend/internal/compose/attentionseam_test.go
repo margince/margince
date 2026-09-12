@@ -11,7 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -137,23 +137,23 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	// oldest silence on top.
 	quiet := quietRelationships(
 		[]search.InteractionEdge{
-			{PersonID: oldest, LastAt: oldestSpoke},
-			{PersonID: newer, LastAt: newerSpoke},
-			{PersonID: returned, LastAt: newerSpoke},
+			{ContactID: oldest, LastAt: oldestSpoke},
+			{ContactID: newer, LastAt: newerSpoke},
+			{ContactID: returned, LastAt: newerSpoke},
 		},
-		[]people.PersonChanges{
+		[]contacts.ContactChanges{
 			{
-				PersonID:    ids.From[ids.PersonKind](returned),
+				ContactID:   ids.From[ids.ContactKind](returned),
 				DisplayName: "Tomas Berg",
 				Changes:     []relstrength.Change{{Kind: relstrength.ChangeRepliedAfterGap, Days: 41}},
 			},
 			{
-				PersonID:    ids.From[ids.PersonKind](newer),
+				ContactID:   ids.From[ids.ContactKind](newer),
 				DisplayName: "Ines Sommer",
 				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 41}},
 			},
 			{
-				PersonID:    ids.From[ids.PersonKind](oldest),
+				ContactID:   ids.From[ids.ContactKind](oldest),
 				DisplayName: "Dana Weiss",
 				Changes: []relstrength.Change{
 					{Kind: relstrength.ChangeWentQuiet, At: oldestDerived, Days: 63},
@@ -191,7 +191,7 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	// band including the wrong one, and the failure worth guarding is the lane
 	// scoring the wrong edge — which yields a perfectly well-formed band about
 	// somebody else's relationship.
-	wantBand := search.InteractionEdge{PersonID: oldest, LastAt: oldestSpoke}.
+	wantBand := search.InteractionEdge{ContactID: oldest, LastAt: oldestSpoke}.
 		StrengthOf(readInstantForDecay)
 	if quiet[0].Strength != wantBand {
 		t.Errorf("the lane scored %+v for %q, want §4's own answer for that edge %+v",
@@ -199,7 +199,7 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	}
 	// And the SECOND row is scored from its OWN edge. One score copied across
 	// every row would satisfy the line above on its own.
-	wantSecond := search.InteractionEdge{PersonID: newer, LastAt: newerSpoke}.
+	wantSecond := search.InteractionEdge{ContactID: newer, LastAt: newerSpoke}.
 		StrengthOf(readInstantForDecay)
 	if quiet[1].Strength != wantSecond {
 		t.Errorf("the lane scored %+v for %q, want that contact's own edge %+v",
@@ -225,7 +225,7 @@ var readInstantForDecay = time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC)
 // simply has nothing to say about them — no row, and no empty-handed entry that
 // would disclose the pair exists.
 func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
-	edge := search.InteractionEdge{PersonID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
+	edge := search.InteractionEdge{ContactID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
 	quiet := quietRelationships(
 		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, readInstantForDecay,
 	)
@@ -242,17 +242,17 @@ func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	spoke := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC)
 	var edges []search.InteractionEdge
-	var changed []people.PersonChanges
+	var changed []contacts.ContactChanges
 	// Seven lapses, all alike except for the two facts that rank them.
 	for i := 0; i < 7; i++ {
 		id := ids.NewV7()
-		edges = append(edges, search.InteractionEdge{PersonID: id, LastAt: spoke})
+		edges = append(edges, search.InteractionEdge{ContactID: id, LastAt: spoke})
 		// DESCENDING quiet days, so the funded one below is the NEWEST
 		// silence and every other ordering puts it last. Ascending, it would
 		// have led on age alone and the money arm could be deleted with the
 		// test still green.
-		changed = append(changed, people.PersonChanges{
-			PersonID:    ids.From[ids.PersonKind](id),
+		changed = append(changed, contacts.ContactChanges{
+			ContactID:   ids.From[ids.ContactKind](id),
 			DisplayName: fmt.Sprintf("Contact %d", i),
 			Changes: []relstrength.Change{
 				{Kind: relstrength.ChangeWentQuiet, Days: 60 - i, At: spoke},
@@ -261,7 +261,7 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	}
 	// The LAST one carries money, so a lane ordered by anything else would
 	// leave it out of the five.
-	funded := map[ids.UUID]bool{edges[6].PersonID: true}
+	funded := map[ids.UUID]bool{edges[6].ContactID: true}
 
 	lane := quietRelationships(edges, changed, funded, spoke.AddDate(0, 0, 60))
 

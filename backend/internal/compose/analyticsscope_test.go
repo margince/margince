@@ -165,7 +165,7 @@ func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 	}
 }
 
-// A refusal over a named team or person says "not found", never "denied": the
+// A refusal over a named team or contact says "not found", never "denied": the
 // second sentence confirms the id exists, which is the disclosure the lens was
 // supposed to prevent.
 func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {

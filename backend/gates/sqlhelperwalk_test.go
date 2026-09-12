@@ -163,7 +163,7 @@ func importAliasOf(file *ast.File, path string) string {
 		}
 		// No alias: the local name is the package's own, which for every path
 		// this repo binds is the last segment. Returning a FIXED name here (it
-		// said "people", a leftover from the single-port version) made every
+		// said "contacts", a leftover from the single-port version) made every
 		// unaliased import of any other module read as a lookalike, so the
 		// owning module's helper was never recognised in the one place it is
 		// most used.
@@ -183,7 +183,7 @@ func markSeen(n ast.Node, seen map[ast.Node]bool) {
 	})
 }
 
-// handWrittenGoSources walks the module for source a person maintains.
+// handWrittenGoSources walks the module for source a contact maintains.
 func handWrittenGoSources(t *testing.T) []string {
 	t.Helper()
 	var paths []string

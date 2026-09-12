@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { linkedinUrl, webUrl } from "./weburl";
 
 // The guard three surfaces share: a company link on a reading chip, a
-// provider's source document in the person drawer, and a custom field holding
+// provider's source document in the contact drawer, and a custom field holding
 // whatever an import wrote. Each draws something different for a refused
 // value; none of them may decide the schemes for itself, which is why this
 // file is where the scheme list is proven.

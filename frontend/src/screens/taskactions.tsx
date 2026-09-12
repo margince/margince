@@ -37,7 +37,7 @@ type TaskPatch = {
   id: string;
   // The version the press was decided against. Every verb on a task goes
   // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two people can complete, each told it worked.
+  // an unpinned tick is a task two contacts can complete, each told it worked.
   version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
@@ -609,9 +609,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The person's own card lists the same open claims, so a drawer standing
+      // The contact's own card lists the same open claims, so a drawer standing
       // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["person"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
     },
   });
 }

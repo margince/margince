@@ -188,7 +188,7 @@ func (e *forecastEnv) seedMeeting(t *testing.T, status string, lead ids.UUID, oc
 
 // acceptHandoff writes an accepted handoff for a lead, with the deal it
 // produced. Seeded directly rather than through the store: this test is about
-// the REPORT's join, and reaching for the people module here would drag its
+// the REPORT's join, and reaching for the contacts module here would drag its
 // whole permission context into a compose fixture.
 func (e *forecastEnv) acceptHandoff(t *testing.T, lead ids.UUID, decidedAt string) {
 	t.Helper()

@@ -100,15 +100,15 @@ type ProofEvent struct {
 // config-sized (a handful of rows); the page shape exists for contract
 // symmetry, not because anyone paginates it.
 func (s *Store) ListPurposes(ctx context.Context) ([]Purpose, error) {
-	// READ stays on person, and only the writes moved to consent_config. The
+	// READ stays on contact, and only the writes moved to consent_config. The
 	// catalog is a vocabulary rather than an admin screen: every seat resolves a
-	// purpose_id against it to record consent from the person page, so gating the
-	// read on installation config would 403 the Person 360 for every rep.
+	// purpose_id against it to record consent from the contact page, so gating the
+	// read on installation config would 403 the Contact 360 for every rep.
 	//
-	// The asymmetry is the point. Defining what the workspace may contact people
+	// The asymmetry is the point. Defining what the workspace may contact contacts
 	// for is compliance configuration; knowing what it already defined is part of
 	// working a record.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var out []Purpose
@@ -160,11 +160,11 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 	return p, err
 }
 
-// PersonConsent reads one person's per-purpose state plus the full
-// proof log (Art. 7 demonstrability). The person is the read target —
+// ContactConsent reads one contact's per-purpose state plus the full
+// proof log (Art. 7 demonstrability). The contact is the read target —
 // row scope gates the whole answer.
-func (s *Store) PersonConsent(ctx context.Context, personID ids.PersonID) ([]State, []ProofEvent, error) {
-	return s.subjectConsent(ctx, subject{entityType: "person", column: "person_id", id: personID.UUID})
+func (s *Store) ContactConsent(ctx context.Context, contactID ids.ContactID) ([]State, []ProofEvent, error) {
+	return s.subjectConsent(ctx, subject{entityType: entityContact, column: subjectColumnContact, id: contactID.UUID})
 }
 
 // LeadConsent is the lead arm of the same read (E12.20): the per-purpose
@@ -188,13 +188,13 @@ func (s *Store) subjectConsent(ctx context.Context, sub subject) ([]State, []Pro
 	return states, events, err
 }
 
-// PersonConsentTx is PersonConsent inside a caller-opened transaction — the
+// ContactConsentTx is ContactConsent inside a caller-opened transaction — the
 // composite record read. Same gates in the same order.
-func (s *Store) PersonConsentTx(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]State, []ProofEvent, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+func (s *Store) ContactConsentTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]State, []ProofEvent, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, nil, err
 	}
-	return subjectConsentInTx(ctx, tx, subject{entityType: "person", column: "person_id", id: personID.UUID})
+	return subjectConsentInTx(ctx, tx, subject{entityType: "contact", column: "contact_id", id: contactID.UUID})
 }
 
 // subjectConsentInTx is the shared body of the store-opened and
@@ -210,7 +210,7 @@ func subjectConsentInTx(ctx context.Context, tx pgx.Tx, sub subject) ([]State, [
 	rows, err := tx.Query(ctx, `
 		SELECT cp.id, cp.key, coalesce(pc.state, 'unknown'), pc.lawful_basis, pc.captured_at
 		FROM consent_purpose cp
-		LEFT JOIN person_consent pc ON pc.purpose_id = cp.id AND pc.`+sub.column+` = $1
+		LEFT JOIN contact_consent pc ON pc.purpose_id = cp.id AND pc.`+sub.column+` = $1
 		WHERE cp.archived_at IS NULL
 		ORDER BY cp.key`, sub.id)
 	if err != nil {
@@ -247,11 +247,11 @@ func subjectConsentInTx(ctx context.Context, tx pgx.Tx, sub subject) ([]State, [
 }
 
 type RecordInput struct {
-	// PersonID / LeadID name the consent subject — exactly one is set
+	// ContactID / LeadID name the consent subject — exactly one is set
 	// (data-model §7: a public form or LinkedIn capture obtains consent
 	// from someone who is still a lead). The DB CHECK only rules out
 	// both-null; the XOR is enforced here.
-	PersonID    ids.PersonID
+	ContactID   ids.ContactID
 	LeadID      ids.LeadID
 	PurposeID   ids.PurposeID
 	NewState    string // granted | withdrawn
@@ -301,25 +301,25 @@ type RecordInput struct {
 // subject is the resolved consent subject: which entity the state and
 // proof rows hang on, and which column carries it.
 type subject struct {
-	entityType string // person | lead — the RBAC object and the audit/event entity
-	column     string // person_id | lead_id
+	entityType string // contact | lead — the RBAC object and the audit/event entity
+	column     string // contact_id | lead_id
 	id         ids.UUID
 }
 
 // consentSubject enforces the exactly-one-subject rule (data-model §7):
-// person XOR lead. The DB CHECK only guards both-null, so both-set and
+// contact XOR lead. The DB CHECK only guards both-null, so both-set and
 // neither-set are refused here, before any grant is admitted.
 func consentSubject(in RecordInput) (subject, error) {
-	personSet, leadSet := !in.PersonID.IsZero(), !in.LeadID.IsZero()
+	contactSet, leadSet := !in.ContactID.IsZero(), !in.LeadID.IsZero()
 	switch {
-	case personSet && leadSet:
-		return subject{}, &ValidationError{Field: "subject", Reason: "consent takes exactly one subject — a person or a lead, not both"}
-	case personSet:
-		return subject{entityType: "person", column: "person_id", id: in.PersonID.UUID}, nil
+	case contactSet && leadSet:
+		return subject{}, &ValidationError{Field: fieldSubject, Reason: "consent takes exactly one subject — a contact or a lead, not both"}
+	case contactSet:
+		return subject{entityType: entityContact, column: subjectColumnContact, id: in.ContactID.UUID}, nil
 	case leadSet:
 		return subject{entityType: "lead", column: "lead_id", id: in.LeadID.UUID}, nil
 	}
-	return subject{}, &ValidationError{Field: "subject", Reason: "consent needs a subject — a person or a lead"}
+	return subject{}, &ValidationError{Field: "subject", Reason: "consent needs a subject — a contact or a lead"}
 }
 
 // admitRecord settles everything decidable before the transaction opens: which
@@ -329,7 +329,7 @@ func consentSubject(in RecordInput) (subject, error) {
 //
 // The ORDER is the interesting part, and it is deliberate in two places.
 //
-// The subject comes first because a body naming both a person and a lead is not a
+// The subject comes first because a body naming both a contact and a lead is not a
 // well-formed consent request at all, so "which subject" outranks "which
 // purpose" — and the authority check cannot even run before it, since which
 // object grant applies depends on the answer.
@@ -369,7 +369,7 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, er
 // Record sets one subject×purpose state and appends the proof row —
 // audited (consent_grant/consent_withdraw) and emitted (consent.changed)
 // in the same transaction as every other mutation. The subject is a
-// person or, before promotion, a lead (E12.20). Re-asserting the
+// contact or, before promotion, a lead (E12.20). Re-asserting the
 // current state is idempotent: no second proof row, no second event.
 func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
 	// Admitted before a connection is taken: a malformed subject or a caller

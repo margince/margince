@@ -126,7 +126,7 @@ const extractionReannounceActor = "system:extraction_activity_reannounce"
 // stamps the envelope actor from the context, and the projection derives who an
 // occurrence belongs to from that actor — so a pass that announced under a bare
 // system principal would refile every reading it repaired as workspace work,
-// permanently, and the person whose reading it is would lose it from their own
+// permanently, and the contact whose reading it is would lose it from their own
 // display at exactly the moment the repair fired.
 //
 // The principal is REPLACED rather than amended, so this does not depend on who

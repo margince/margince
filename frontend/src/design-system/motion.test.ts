@@ -81,7 +81,7 @@ describe("useTypeStream", () => {
 // An entry animation belongs to the page load. A React remount is not one, and
 // this is the difference the hook exists to hold: a surface that keys its intro
 // to the mount replays the whole choreography every time a query settles or a
-// parent re-branches, which reads to the person watching as the page reloading
+// parent re-branches, which reads to the contact watching as the page reloading
 // under them.
 describe("useDocumentIntro", () => {
   beforeEach(() => {

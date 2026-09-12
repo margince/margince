@@ -15,8 +15,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -43,17 +43,17 @@ const noticeKindVCardStagingFailed = "vcard_staging_failed"
 // The stager is self-only and takes the ACTING principal as the proposal's
 // subject, which here is the mailbox's granting human. That is the right
 // reviewer: the card arrived in their mailbox.
-func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID, entries []people.VCardEntry, results []people.VCardResult) error {
+func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID, entries []contacts.VCardEntry, results []contacts.VCardResult) error {
 	return stageReviewsWith(ctx, w.log, activity, vcardCreateStager(w.pool), w.recordStagingFailure, entries, results)
 }
 
 // recordStagingFailure is stageReviews' failure-notice port: the same
 // importer a successful proposal would have been staged for gets a durable
 // Worklist notice instead — notices is the product's existing transport for
-// exactly this ("a line addressed to one person that a system flow needed
+// exactly this ("a line addressed to one contact that a system flow needed
 // them to see", notices/doc.go), the same one the lead-SLA escalation and
 // automation's notify action already use. Reusing it rather than inventing a
-// second channel is what makes this reach a screen a person actually opens:
+// second channel is what makes this reach a screen a contact actually opens:
 // an audit row alone would not — /records/{entity_type}/{id}/history admits
 // no `user` entity type, so nothing renders it anywhere.
 //
@@ -62,7 +62,7 @@ func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID,
 // a second copy handed down beside it is a second place for the two to drift,
 // and reading it here rather than trusting a caller-supplied recipient is
 // what keeps this self-only by construction rather than by a caller's promise.
-func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity ids.UUID, entry people.VCardEntry) error {
+func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity ids.UUID, entry contacts.VCardEntry) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
 		return errNoMailboxGrantorBound
@@ -102,8 +102,8 @@ func (w *vcardIngestWorker) recordStagingFailure(ctx context.Context, activity i
 // identity keys on (vcardcreateproposal.go), so two cards that would collide
 // as one proposal also collide as one notice, and a card that merely moved
 // position in a re-read batch does not raise a second line for itself.
-func vcardStagingFailureKey(entry people.VCardEntry) string {
-	sum := sha256.Sum256([]byte(people.NormalizePersonName(entry.FullName) + "\x00" +
+func vcardStagingFailureKey(entry contacts.VCardEntry) string {
+	sum := sha256.Sum256([]byte(contacts.NormalizeContactName(entry.FullName) + "\x00" +
 		loweredCardEmails(entry) + "\x00" + strings.TrimSpace(entry.Company)))
 	return hex.EncodeToString(sum[:8])
 }
@@ -127,8 +127,8 @@ func vcardStagingFailureKey(entry people.VCardEntry) string {
 //
 // recordFailure runs for every card that failed, retry or no: the browser
 // path's own equivalent (the response's per-card Reason) is not something a
-// retry might still deliver, and neither is this — a person checking now
-// deserves the same answer a person checking after the fifth attempt gets.
+// retry might still deliver, and neither is this — a contact checking now
+// deserves the same answer a contact checking after the fifth attempt gets.
 // Its own DedupeKey is what keeps a retried attempt from raising the same
 // notice again.
 //
@@ -144,9 +144,9 @@ func vcardStagingFailureKey(entry people.VCardEntry) string {
 // error already retries regardless, with nothing to demote.
 func stageReviewsWith(
 	ctx context.Context, log *slog.Logger, activity ids.UUID,
-	stage func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error,
-	recordFailure func(ctx context.Context, activity ids.UUID, entry people.VCardEntry) error,
-	entries []people.VCardEntry, results []people.VCardResult,
+	stage func(ctx context.Context, entry contacts.VCardEntry, candidate *ids.ContactID) error,
+	recordFailure func(ctx context.Context, activity ids.UUID, entry contacts.VCardEntry) error,
+	entries []contacts.VCardEntry, results []contacts.VCardResult,
 ) error {
 	var eligible int
 	var failures []error
@@ -154,12 +154,12 @@ func stageReviewsWith(
 		// The index is ImportVCards' own position in the slice it was handed, so
 		// the bound is a belt on a contract that already holds — but a panic in
 		// an unattended writer is worth one comparison.
-		if r.Outcome != people.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
+		if r.Outcome != contacts.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
 			continue
 		}
 		eligible++
 		entry := entries[r.Index]
-		err := stage(ctx, entry, r.PersonID)
+		err := stage(ctx, entry, r.ContactID)
 		if err == nil {
 			continue
 		}

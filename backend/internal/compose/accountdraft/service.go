@@ -38,8 +38,8 @@ type Assembler interface {
 
 // Request is the transport's body, narrowed to what the writer needs.
 type Request struct {
-	PersonID string
-	DealID   string
+	ContactID string
+	DealID    string
 	// ProjectID names the body of work the message is about. When set, the
 	// draft is grounded in the 360 scoped to that project and the project's
 	// own facts are folded in; empty is the account in general.
@@ -52,7 +52,7 @@ type Request struct {
 	// The sender identity is what tells the model who "I" is. It is NOT a
 	// sign-off: the draft still carries none, because the composer knows who is
 	// signed in and a server that guessed would sometimes sign a message with
-	// the wrong person's name.
+	// the wrong contact's name.
 	Envelope draftfloor.Envelope
 }
 
@@ -159,7 +159,7 @@ func (s *Service) Draft(
 	ctx context.Context, companyID ids.CompanyID, req Request,
 ) (crmcontracts.AccountEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
-	// person to send under their own name.
+	// contact to send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
@@ -245,7 +245,7 @@ func wireReasons(reasons []Reason) []crmcontracts.AccountDraftReason {
 }
 
 // fieldError is the one refusal shape this package answers with, so a bad
-// person_id and a bad deal_id read the same way to a client.
+// contact_id and a bad deal_id read the same way to a client.
 func fieldError(field, message string) error {
 	return httperr.Validation(field, "not_found", message)
 }

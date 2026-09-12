@@ -24,20 +24,20 @@ package gates
 //
 // AND IT IS SCOPED, with a cost worth naming precisely. The trees carry other
 // sites with the same arithmetic, and they are not all the same rule:
-// deals/health.go and people/leadscore.go return a FLOAT because they feed
+// deals/health.go and contacts/leadscore.go return a FLOAT because they feed
 // decay curves, where a fractional day is the quantity and rounding it to a
 // calendar boundary would change what the product scores. finance/summary.go
 // counts invoice lateness against a due DATE, and search/graphtrust.go decays
 // a score. Those are duration questions, and converting them blind is a
 // different change with its own risk.
 //
-// So this gate governs the packages whose day count a person READS in a
+// So this gate governs the packages whose day count a contact READS in a
 // sentence, and every one of those has been converted. The first version of
 // the comment here said "nine more sites" when there were twenty-three, and
 // justified the scope by pointing only at the float curves — while
 // meetingbrief/sections.go was printing "Last touch was %d days ago" with the
 // very arithmetic this change exists to remove. Both are fixed: the count is
-// measured rather than remembered, and meetingbrief, person360 and company360 are
+// measured rather than remembered, and meetingbrief, contact360 and company360 are
 // governed here.
 //
 // The cost that remains: a NEW reader-facing count in an ungoverned package
@@ -57,7 +57,7 @@ import (
 // and a check that missed it would have passed the day the bug shipped.
 var durationOverADay = regexp.MustCompile(`\.Hours\(\)\s*/\s*(24|hoursPerDay)\b`)
 
-// governedSurfaces are the files whose day count a person reads on a screen,
+// governedSurfaces are the files whose day count a reader reads on a screen,
 // where two spellings disagreeing is a defect they can SEE. Named rather than
 // derived because "does a reader see this number?" is not a question a
 // syntactic walk can answer, and a gate over every site would have to waive
@@ -66,7 +66,7 @@ var governedSurfaces = []string{
 	"internal/compose/dealstatus",
 	"internal/compose/network",
 	"internal/compose/meetingbrief",
-	"internal/compose/person360",
+	"internal/compose/contact360",
 	"internal/compose/company360",
 }
 

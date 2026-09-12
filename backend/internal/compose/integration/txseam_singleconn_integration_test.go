@@ -43,9 +43,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -64,7 +64,7 @@ var txSeamPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field":          {Create: true, Read: true, Update: true, Delete: true},
-		"person":                {Create: true, Read: true, Update: true, Delete: true},
+		"contact":               {Create: true, Read: true, Update: true, Delete: true},
 		"company":               {Create: true, Read: true, Update: true, Delete: true},
 		"deal":                  {Create: true, Read: true, Update: true, Delete: true},
 		"lead":                  {Create: true, Read: true, Update: true, Delete: true},
@@ -77,12 +77,12 @@ var txSeamPerms = principal.Permissions{
 // txSeamFixture is one Env whose stores run on a single-connection pool with a
 // real field catalog wired to that same pool.
 type txSeamFixture struct {
-	e      *Env
-	pool   *pgxpool.Pool
-	svc    *customfields.Service
-	people *people.Store
-	deals  *deals.Store
-	ctx    context.Context
+	e        *Env
+	pool     *pgxpool.Pool
+	svc      *customfields.Service
+	contacts *contacts.Store
+	deals    *deals.Store
+	ctx      context.Context
 }
 
 func setupTxSeam(t *testing.T) txSeamFixture {
@@ -93,12 +93,12 @@ func setupTxSeam(t *testing.T) txSeamFixture {
 	ctx, cancel := context.WithTimeout(e.As(e.Rep1, nil, txSeamPerms), txSeamBudget)
 	t.Cleanup(cancel)
 	return txSeamFixture{
-		e:      e,
-		pool:   pool,
-		svc:    svc,
-		people: people.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc),
-		deals:  deals.NewStore(harnessDB(pool, e.WS), installseam.Deals()).WithFieldCatalog(svc),
-		ctx:    ctx,
+		e:        e,
+		pool:     pool,
+		svc:      svc,
+		contacts: contacts.NewStore(harnessDB(pool, e.WS)).WithFieldCatalog(svc),
+		deals:    deals.NewStore(harnessDB(pool, e.WS), installseam.Deals()).WithFieldCatalog(svc),
+		ctx:      ctx,
 	}
 }
 
@@ -160,34 +160,34 @@ func (f txSeamFixture) requireCatalogAnswers(t *testing.T, object string) {
 	}
 }
 
-func TestGetPersonTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+func TestGetContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
-	col := f.defineTxSeamField(t, "person", "Tier")
+	col := f.defineTxSeamField(t, "contact", "Tier")
 
-	created, err := f.people.CreatePerson(f.ctx, people.CreatePersonInput{
+	created, err := f.contacts.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Ada Lovelace", Source: "ui",
 		CustomFields: map[string]any{col: "gold"},
 	})
 	if err != nil {
-		t.Fatalf("creating the person: %v", err)
+		t.Fatalf("creating the contact: %v", err)
 	}
 
-	active, err := f.people.ActivePersonColumns(f.ctx)
+	active, err := f.contacts.ActiveContactColumns(f.ctx)
 	if err != nil {
-		t.Fatalf("reading the person's active custom columns: %v", err)
+		t.Fatalf("reading the contact's active custom columns: %v", err)
 	}
-	f.requireCatalogAnswers(t, "person")
+	f.requireCatalogAnswers(t, "contact")
 
 	var got map[string]any
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		person, err := f.people.GetPersonTx(f.ctx, tx, ids.From[ids.PersonKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
+		contact, err := f.contacts.GetContactTx(f.ctx, tx, ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
-		got = person.AdditionalProperties
+		got = contact.AdditionalProperties
 		return nil
 	}); err != nil {
-		t.Fatalf("reading the person inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
+		t.Fatalf("reading the contact inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
 	if got[col] != "gold" {
 		t.Errorf("the custom field the caller fetched did not ride the read: %s = %v, want \"gold\"", col, got[col])
@@ -198,7 +198,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
 	col := f.defineTxSeamField(t, "company", "Segment")
 
-	created, err := f.people.CreateCompany(f.ctx, people.CreateCompanyInput{
+	created, err := f.contacts.CreateCompany(f.ctx, contacts.CreateCompanyInput{
 		DisplayName: "Analytical Engines", Source: "ui",
 		CustomFields: map[string]any{col: "enterprise"},
 	})
@@ -206,7 +206,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 		t.Fatalf("creating the company: %v", err)
 	}
 
-	active, err := f.people.ActiveCompanyColumns(f.ctx)
+	active, err := f.contacts.ActiveCompanyColumns(f.ctx)
 	if err != nil {
 		t.Fatalf("reading the company's active custom columns: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestGetCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 
 	var got map[string]any
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		company, err := f.people.GetCompanyTx(f.ctx, tx, ids.From[ids.CompanyKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
+		company, err := f.contacts.GetCompanyTx(f.ctx, tx, ids.From[ids.CompanyKind](ids.UUID(created.Id)), storekit.LiveOnly, active)
 		if err != nil {
 			return err
 		}
@@ -270,32 +270,32 @@ func TestUpdateDealTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 // block — and each refuses custom-field values rather than dropping them,
 // because the catalog that would match them cannot be read from in here.
 
-func TestCreatePersonTxRunsOnTheCallersOnlyConnection(t *testing.T) {
+func TestCreateContactTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	f := setupTxSeam(t)
-	col := f.defineTxSeamField(t, "person", "Tier")
-	f.requireCatalogAnswers(t, "person")
+	col := f.defineTxSeamField(t, "contact", "Tier")
+	f.requireCatalogAnswers(t, "contact")
 
-	var created crmcontracts.Person
+	var created crmcontracts.Contact
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
-		created, err = f.people.CreatePersonTx(f.ctx, tx, people.CreatePersonInput{
+		created, err = f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
 			FullName: "Ada Lovelace", Source: "ui",
 		})
 		return err
 	}); err != nil {
-		t.Fatalf("creating the person inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
+		t.Fatalf("creating the contact inside the caller's transaction: %v — a timeout here is the seam waiting for a second connection the caller's transaction holds", err)
 	}
 	if created.FullName != "Ada Lovelace" {
-		t.Errorf("created person = %+v, want the one the caller asked for", created)
+		t.Errorf("created contact = %+v, want the one the caller asked for", created)
 	}
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.people.CreatePersonTx(f.ctx, tx, people.CreatePersonInput{
+		_, err := f.contacts.CreateContactTx(f.ctx, tx, contacts.CreateContactInput{
 			FullName: "Grace Hopper", Source: "ui", CustomFields: map[string]any{col: "gold"},
 		})
 		return err
 	})
-	if !errors.Is(err, people.ErrCustomFieldsNeedTheStoresOwnTransaction) {
+	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
 		t.Fatalf("err = %v, want the custom-field refusal — a create that dropped them would report success with the values missing", err)
 	}
 }
@@ -308,7 +308,7 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	var created crmcontracts.Company
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
-		created, err = f.people.CreateCompanyTx(f.ctx, tx, people.CreateCompanyInput{
+		created, err = f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
 			DisplayName: "Analytical Engines", Source: "ui",
 		})
 		return err
@@ -320,12 +320,12 @@ func TestCreateCompanyTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	}
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
-		_, err := f.people.CreateCompanyTx(f.ctx, tx, people.CreateCompanyInput{
+		_, err := f.contacts.CreateCompanyTx(f.ctx, tx, contacts.CreateCompanyInput{
 			DisplayName: "Difference Engines", Source: "ui", CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err
 	})
-	if !errors.Is(err, people.ErrCustomFieldsNeedTheStoresOwnTransaction) {
+	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
 		t.Fatalf("err = %v, want the custom-field refusal", err)
 	}
 }
@@ -340,7 +340,7 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 	var fresh bool
 	if err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		var err error
-		created, fresh, err = f.people.CreateLeadTx(f.ctx, tx, people.CreateLeadInput{
+		created, fresh, err = f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
 			FullName: strPtr("Jean Bartik"), Email: &email, Status: "new", Source: "ui",
 		})
 		return err
@@ -353,13 +353,13 @@ func TestCreateLeadTxRunsOnTheCallersOnlyConnection(t *testing.T) {
 
 	err := database.WithWorkspaceTx(f.ctx, f.pool, func(tx pgx.Tx) error {
 		other := "betty@holberton.test"
-		_, _, err := f.people.CreateLeadTx(f.ctx, tx, people.CreateLeadInput{
+		_, _, err := f.contacts.CreateLeadTx(f.ctx, tx, contacts.CreateLeadInput{
 			FullName: strPtr("Betty Holberton"), Email: &other, Status: "new", Source: "ui",
 			CustomFields: map[string]any{col: "enterprise"},
 		})
 		return err
 	})
-	if !errors.Is(err, people.ErrCustomFieldsNeedTheStoresOwnTransaction) {
+	if !errors.Is(err, contacts.ErrCustomFieldsNeedTheStoresOwnTransaction) {
 		t.Fatalf("err = %v, want the custom-field refusal", err)
 	}
 }

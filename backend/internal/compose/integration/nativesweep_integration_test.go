@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -41,10 +41,10 @@ import (
 func seedSweepable(t *testing.T, e *Env) {
 	t.Helper()
 	for _, name := range []string{"Sweepable One", "Sweepable Two"} {
-		e.SeedPerson(t, name, nil)
+		e.SeedContact(t, name, nil)
 		e.SeedCompany(t, name, nil)
 		lead := name
-		if _, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+		if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 			FullName: &lead, Status: "contacted", Source: "manual",
 		}); err != nil {
 			t.Fatalf("seeding lead %q: %v", name, err)
@@ -115,7 +115,7 @@ func TestTheNativeSweepPagesThroughEveryTypeWithoutRepeating(t *testing.T) {
 	if len(seen) != 6 {
 		t.Fatalf("the sweep reached %d of the 6 seeded records: %v", len(seen), seen)
 	}
-	for _, want := range []datasource.EntityType{datasource.EntityPerson, datasource.EntityCompany, datasource.EntityLead} {
+	for _, want := range []datasource.EntityType{datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead} {
 		found := false
 		for _, got := range seen {
 			found = found || got == want
@@ -162,10 +162,10 @@ func TestTheNativeSweepAnswersTheTypesASeatMayReadRatherThanRefusingAll(t *testi
 	// specifically — any-error would also accept a pool failure or a missing
 	// fixture, which would prove nothing about the path under test.
 	_, err = provider.Search(companyOnly, datasource.SearchQuery{
-		Text: "Sweepable", EntityTypes: []datasource.EntityType{datasource.EntityPerson},
+		Text: "Sweepable", EntityTypes: []datasource.EntityType{datasource.EntityContact},
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("naming a single denied type answered %v, want the denial — a caller who asked about people "+
+		t.Errorf("naming a single denied type answered %v, want the denial — a caller who asked about contacts "+
 			"must not be told there are none", err)
 	}
 }

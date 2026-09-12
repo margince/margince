@@ -50,7 +50,7 @@ import (
 //   - The gate reads ev.Entity, the trigger's subject, never an action's own
 //     Target. Those can differ by design (gate.go's target-scoped arm says so),
 //     and no shipped handler produces an activity target that differs from its
-//     trigger today — people/leadrouting.go passes ev.Entity straight through.
+//     trigger today — contacts/leadrouting.go passes ev.Entity straight through.
 //     Nothing holds that, unlike the sibling below: it is a reading of every
 //     shipped handler at the time of writing, and a handler that diverges
 //     later arrives silently.
@@ -170,7 +170,7 @@ func checkOwnerCanReadSubject(ctx context.Context, db *database.DB, resolver aut
 // Giving these automations a human owner at seed time was the other way to make
 // the existing gate apply. It answers a different question: what the automation
 // may read would become whatever one arbitrarily chosen seat may read, moving
-// as that person's grants move, and the audit would record a human authority
+// as that colleague's grants move, and the audit would record a human authority
 // that never existed.
 func checkOwnerlessSubject(ctx context.Context, db *database.DB, ev workflow.Event) (gateDecision, error) {
 	var audience string

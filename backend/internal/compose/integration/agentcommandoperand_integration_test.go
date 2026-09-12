@@ -17,7 +17,7 @@ package integration
 // concrete request path upstream of the resolver (canonicalRESTCall,
 // restSummary), so it holds whether or not a resolver was consulted at all.
 // It stays because it is the one place production's chi parameter
-// names (factKey, field, person_id) are exercised through the REAL router
+// names (factKey, field, contact_id) are exercised through the REAL router
 // rather than hand-bound in a unit test's route context.
 
 import (

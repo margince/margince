@@ -5,7 +5,7 @@ package companydossier
 
 // Reading a dossier that already exists, and never writing one.
 //
-// Get is the surface a person opens: a cache miss there means assemble it, and
+// Get is the surface a human opens: a cache miss there means assemble it, and
 // assembling costs a model call. A DRAFTER wants the same facts and must never
 // pay that price — a rep pressing "Write email" is not asking for a dossier,
 // and a drafting screen that stalls behind one has spent the workspace's budget
@@ -58,7 +58,7 @@ func (s *Service) CachedSections(ctx context.Context, companyID ids.CompanyID) [
 	if s == nil {
 		return nil
 	}
-	// A dossier is a reading aid for a person, and its cache is keyed per
+	// A dossier is a reading aid for a contact, and its cache is keyed per
 	// reader; an agent has the records themselves.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return nil

@@ -9,7 +9,7 @@ package consent
 // a composer can show the verdict before a word is typed. Two things about it
 // are load-bearing:
 //
-// It is computed by VerdictForPerson — the SAME code the dispatcher runs at
+// It is computed by VerdictForContact — the SAME code the dispatcher runs at
 // transmit — so a preview and the check that fires at send cannot drift.
 //
 // It never grants anything. The transmit-time recheck stays authoritative and
@@ -32,9 +32,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// GetPersonConsentGuard implements GET /people/{id}/consent/guard.
-func (h Handlers) GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	guard, err := h.store.PersonConsentGuard(r.Context(), pathID[ids.PersonKind](id))
+// GetContactConsentGuard implements GET /contacts/{id}/consent/guard.
+func (h Handlers) GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	guard, err := h.store.ContactConsentGuard(r.Context(), pathID[ids.ContactKind](id))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -42,25 +42,25 @@ func (h Handlers) GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, 
 	httperr.WriteJSON(w, http.StatusOK, guard)
 }
 
-// PersonConsentGuard answers, for every configured purpose, whether an outbound
-// message to this person is allowed right now.
+// ContactConsentGuard answers, for every configured purpose, whether an outbound
+// message to this contact is allowed right now.
 //
 // Channel is derived from the class rather than multiplied across it: asking
 // "may I phone them for the newsletter purpose" is not a question anybody has,
 // and a matrix full of combinations nobody sends would bury the two rows a rep
 // actually reads.
-func (s *Store) PersonConsentGuard(ctx context.Context, personID ids.PersonID) (crmcontracts.PersonConsentGuard, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return crmcontracts.PersonConsentGuard{}, err
+func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID) (crmcontracts.ContactConsentGuard, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return crmcontracts.ContactConsentGuard{}, err
 	}
-	out := crmcontracts.PersonConsentGuard{
-		PersonId: openapi_types.UUID(personID.UUID),
-		Entries:  []crmcontracts.PersonConsentGuardEntry{},
+	out := crmcontracts.ContactConsentGuard{
+		ContactId: openapi_types.UUID(contactID.UUID),
+		Entries:   []crmcontracts.ContactConsentGuardEntry{},
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Anything that names a record is gated: answering about a person the
-		// caller cannot read would confirm that person exists.
-		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
+		// Anything that names a record is gated: answering about a contact the
+		// caller cannot read would confirm that contact exists.
+		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		purposes, err := PurposesForGuard(ctx, tx)
@@ -75,13 +75,13 @@ func (s *Store) PersonConsentGuard(ctx context.Context, personID ids.PersonID) (
 			return err
 		}
 		since := s.now().Add(-w.reply)
-		// A guard reads a PERSON, not a message, so it names nothing advertised
+		// A guard reads a CONTACT, not a message, so it names nothing advertised
 		// and an exception requiring similarity answers no here. The guard is
 		// advisory; the send path asks the same question with the message in
 		// hand and is what actually decides.
 		marketing := MarketingContext{Exception: w.marketingException}
 		for _, purpose := range purposes {
-			verdict, err := VerdictForPerson(ctx, tx, personID.String(), purpose, since, marketing)
+			verdict, err := VerdictForContact(ctx, tx, contactID.String(), purpose, since, marketing)
 			if err != nil {
 				return err
 			}
@@ -94,25 +94,25 @@ func (s *Store) PersonConsentGuard(ctx context.Context, personID ids.PersonID) (
 		return nil
 	})
 	if err != nil {
-		return crmcontracts.PersonConsentGuard{}, err
+		return crmcontracts.ContactConsentGuard{}, err
 	}
 	return out, nil
 }
 
-func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.PersonConsentGuardEntry, error) {
+func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.ContactConsentGuardEntry, error) {
 	label := purpose.Label
-	entry := crmcontracts.PersonConsentGuardEntry{
+	entry := crmcontracts.ContactConsentGuardEntry{
 		PurposeKey:   purpose.Key,
 		PurposeLabel: &label,
-		PurposeClass: crmcontracts.PersonConsentGuardEntryPurposeClass(purpose.Class),
+		PurposeClass: crmcontracts.ContactConsentGuardEntryPurposeClass(purpose.Class),
 		Channel:      channelFor(purpose.Class),
-		Verdict:      crmcontracts.PersonConsentGuardEntryVerdict(verdict.State),
+		Verdict:      crmcontracts.ContactConsentGuardEntryVerdict(verdict.State),
 		Reason:       verdict.Reason,
 	}
 	if verdict.Qualifying != nil {
 		qualifying, err := wireQualifying(*verdict.Qualifying)
 		if err != nil {
-			return crmcontracts.PersonConsentGuardEntry{}, err
+			return crmcontracts.ContactConsentGuardEntry{}, err
 		}
 		entry.QualifyingEvent = qualifying
 	}
@@ -121,11 +121,11 @@ func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.PersonCon
 
 // channelFor names the channel a purpose is actually sent on. Only the phone
 // class is not mail, and nothing sends on it yet.
-func channelFor(class Class) crmcontracts.PersonConsentGuardEntryChannel {
+func channelFor(class Class) crmcontracts.ContactConsentGuardEntryChannel {
 	if class == ClassPhoneOutreach {
-		return crmcontracts.PersonConsentGuardEntryChannelPhone
+		return crmcontracts.ContactConsentGuardEntryChannelPhone
 	}
-	return crmcontracts.PersonConsentGuardEntryChannelEmail
+	return crmcontracts.ContactConsentGuardEntryChannelEmail
 }
 
 func wireQualifying(event QualifyingEvent) (*crmcontracts.ConsentQualifyingEvent, error) {

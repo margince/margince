@@ -60,7 +60,7 @@ func TestSuppressionIsCappedAtNinetyDays(t *testing.T) {
 	}
 }
 
-// An answer that hides a finding says why. The next person to see the number is
+// An answer that hides a finding says why. The next contact to see the number is
 // owed the reason it is not flagged.
 func TestASuppressingAnswerNamesItsReason(t *testing.T) {
 	t.Parallel()
@@ -73,7 +73,7 @@ func TestASuppressingAnswerNamesItsReason(t *testing.T) {
 	}
 	// The admitting half: an answer that does NOT hide anything needs no
 	// reason, and requiring one would make the common answers tedious enough
-	// that people stop giving them.
+	// that contacts stop giving them.
 	for _, outcome := range []string{OutcomeFixedRecord, OutcomeAddedEvidence, OutcomeReassign} {
 		if _, err := checkResolution(Resolution{Outcome: outcome}, now); err != nil {
 			t.Errorf("%s was refused with no reason (%v) — it hides nothing", outcome, err)
@@ -100,14 +100,14 @@ func TestADeferralNamesWhenItComesBack(t *testing.T) {
 	}
 }
 
-// The system's own answer is not a person's to give. Claiming it would say the
+// The system's own answer is not a contact's to give. Claiming it would say the
 // condition stopped being true without anything having checked.
-func TestAPersonCannotClaimTheConditionCleared(t *testing.T) {
+func TestAContactCannotClaimTheConditionCleared(t *testing.T) {
 	t.Parallel()
 	now := when()
 
 	if _, err := checkResolution(Resolution{Outcome: OutcomeConditionCleared}, now); err == nil {
-		t.Error("a person claimed condition_cleared — that is recorded by the check itself")
+		t.Error("a contact claimed condition_cleared — that is recorded by the check itself")
 	}
 	if _, err := checkResolution(Resolution{Outcome: "made_it_up"}, now); err == nil {
 		t.Error("an outcome outside the vocabulary was accepted")

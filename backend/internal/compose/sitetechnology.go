@@ -26,7 +26,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -41,7 +41,7 @@ import (
 // A read that resolved no company writes nothing: the domain-triage lane
 // runs before an account exists, and reading a site to decide whether to CREATE
 // a company cannot enrich one.
-func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim people.SiteReadClaim, crawl siteCrawl) {
+func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim contacts.SiteReadClaim, crawl siteCrawl) {
 	if claim.CompanyID == nil {
 		return
 	}
@@ -55,13 +55,13 @@ func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim peopl
 	// The lane COMPLETED even when it found nothing: a site that declares no
 	// recognisable stack is an authoritative empty answer, and saying so is
 	// what lets a technology the company dropped leave the record.
-	apply := people.TechnicalEnrichment{
+	apply := contacts.TechnicalEnrichment{
 		CompanyID:    companyID,
-		Completed:    []people.TechnicalLane{people.LaneHomepage},
+		Completed:    []contacts.TechnicalLane{contacts.LaneHomepage},
 		Observations: found,
 		ObservedAt:   time.Now().UTC(),
 	}
-	if err := w.people.ApplyTechnicalEnrichment(ctx, apply, technicalChangeRecorder()); err != nil {
+	if err := w.contacts.ApplyTechnicalEnrichment(ctx, apply, technicalChangeRecorder()); err != nil {
 		w.log.WarnContext(ctx, "writing what the site runs failed",
 			"company", companyID.String(), "err", err)
 	}
@@ -75,9 +75,9 @@ func (w *siteDeepReadWorker) readSiteTechnology(ctx context.Context, claim peopl
 // "how do you know they run Shopware?" gets /shop, not whichever page sorted
 // last. The crawl's own order is seed-first, so a marker on the homepage still
 // cites the homepage.
-func technologiesAcross(pages []crawlPage) ([]people.TechnicalObservation, error) {
+func technologiesAcross(pages []crawlPage) ([]contacts.TechnicalObservation, error) {
 	seen := map[string]bool{}
-	observations := make([]people.TechnicalObservation, 0, len(pages))
+	observations := make([]contacts.TechnicalObservation, 0, len(pages))
 	for _, page := range pages {
 		fingerprint := page.Fingerprint
 		if fingerprint.URL == "" {

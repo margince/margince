@@ -12,7 +12,7 @@
 //
 // It is the Microsoft twin of the gcal connector, and a SEPARATE connection
 // from the Outlook mailbox for the same reason gcal is separate from Gmail:
-// one consent, one scope, one thing a person can disconnect without losing the
+// one consent, one scope, one thing a contact can disconnect without losing the
 // other.
 //
 // Like the mail connectors a calendar connection is standing: the refresh token

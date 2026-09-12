@@ -125,7 +125,7 @@ func TestWorkspaceOwnedRowsCarryNoMemberAndStillDedupe(t *testing.T) {
 	entry := capture.TraceEntry{
 		Stage:     pipelinetrace.StageTierLadder,
 		Connector: "telegram", SourceSystem: "telegram", SourceID: "chat-1:42",
-		Outcome: capture.TraceCaptured, SourceIDNamesAPerson: true,
+		Outcome: capture.TraceCaptured, SourceIDNamesAContact: true,
 	}
 
 	writeTrace(ctx, t, db, entry, false)
@@ -159,7 +159,7 @@ func TestAChannelAccountIdIsHashedNeverStored(t *testing.T) {
 	writeTrace(ctx, t, db, capture.TraceEntry{
 		Stage:     pipelinetrace.StageTierLadder,
 		Connector: "telegram", SourceSystem: "telegram", SourceID: accountID,
-		Outcome: capture.TraceCaptured, SourceIDNamesAPerson: true,
+		Outcome: capture.TraceCaptured, SourceIDNamesAContact: true,
 	}, false)
 
 	var stored string
@@ -308,7 +308,7 @@ func TestAnErasedAddressIsNeverWrittenEvenWithPayloadsOn(t *testing.T) {
 // A channel connector may have no address for anybody at all — an Official
 // Account is given none — and the trace used to leave the column NULL for every
 // such message, so the capture screen reported "no sender recorded" about a
-// person the pipeline had just resolved and created a contact for. The reader was
+// contact the pipeline had just resolved and created a contact for. The reader was
 // told the pipeline knew less than it did.
 func TestTraceNamesACounterpartyThatHasNoAddress(t *testing.T) {
 	ctx, db := traceWorkspace(t)
@@ -347,7 +347,7 @@ func TestTraceNamesACounterpartyThatHasNoAddress(t *testing.T) {
 // AND THE SUPPRESSION CHECK IS THE CHANNEL ONE. An erased channel identity is on
 // `erasure_suppression` under kind `channel_identity`, which the email list knows
 // nothing about — so an address check run against a display name would answer
-// "not suppressed" for every erased person and write the very name the erasure
+// "not suppressed" for every erased contact and write the very name the erasure
 // existed to remove.
 func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
 	ctx, db := traceWorkspace(t)

@@ -164,13 +164,13 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 
 	// Who on our team knows this contact (ADR-0078). Without this the
 	// projection is invisible to the assistant: a rep can see the answer
-	// on the person page while the model answering "who should introduce
+	// on the contact page while the model answering "who should introduce
 	// me" has no access to it at all, and confidently says nobody.
 	//
-	// Person anchors only. A company's or a deal's colleagues are a
+	// Contact anchors only. A company's or a deal's colleagues are a
 	// join across its contacts, which is a compose read — and a module
 	// never imports a sibling to make one.
-	if anchorType == string(datasource.EntityPerson) {
+	if anchorType == string(datasource.EntityContact) {
 		knows, err := whoKnowsSection(ctx, tx, anchorID, maxItems, now)
 		if err != nil {
 			return nil, err
@@ -190,7 +190,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		graphSection{name: "recent_touches", items: touches},
 		graphSection{name: "open_tasks", items: openTasks})
 
-	// Hop 2: the other ends of those activities' links — the people
+	// Hop 2: the other ends of those activities' links — the contacts
 	// and companies in the same conversations. Each is
 	// visibility-probed: the walk widens context, never authority.
 	related, err := s.relatedViaLinks(ctx, tx, anchorType, anchorID, activityIDs, maxItems)
@@ -270,7 +270,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		}
 		activityIDs = append(activityIDs, id)
 		// graphItem.id is the polymorphic result column (activity here,
-		// person/company/deal on the hop-2 sections), so it carries
+		// contact/company/deal on the hop-2 sections), so it carries
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
@@ -298,12 +298,12 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 // last contact and evict the colleague who has worked the account for a year
 // in favour of whoever sent the most recent one-line reply.
 //
-// The anchor's own visibility was already established above, and EdgesForPerson
-// re-gates on the person grant, so a contact the caller cannot read never
+// The anchor's own visibility was already established above, and EdgesForContact
+// re-gates on the contact grant, so a contact the caller cannot read never
 // reaches this and its colleagues are never named.
-func whoKnowsSection(ctx context.Context, tx pgx.Tx, personID ids.UUID, maxItems int, now time.Time) (graphSection, error) {
+func whoKnowsSection(ctx context.Context, tx pgx.Tx, contactID ids.UUID, maxItems int, now time.Time) (graphSection, error) {
 	section := graphSection{name: "who_knows"}
-	edges, err := EdgesForPerson(ctx, tx, personID, graphExpansionLimit)
+	edges, err := EdgesForContact(ctx, tx, contactID, graphExpansionLimit)
 	if err != nil {
 		return section, err
 	}
@@ -373,7 +373,7 @@ func MemberNames(ctx context.Context, tx pgx.Tx, edges []InteractionEdge) (map[i
 // bodies of work an account's correspondence is filed under are what a
 // catch-up on that account is about.
 var relatedSectionOrder = []string{
-	string(datasource.EntityPerson),
+	string(datasource.EntityContact),
 	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityProject),
@@ -479,8 +479,8 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 }
 
 func plural(entity string) string {
-	if strings.HasSuffix(entity, "person") {
-		return "people"
+	if strings.HasSuffix(entity, "contact") {
+		return "contacts"
 	}
 	return entity + "s"
 }

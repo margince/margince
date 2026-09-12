@@ -25,9 +25,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -36,32 +36,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sharedPersonFixture is one person rep3 captured PRIVATELY — a person who is
+// sharedContactFixture is one contact rep3 captured PRIVATELY — a contact who is
 // merely owned is readable by every seat with the grant, so capture privacy
 // is what makes a share rep1's only path to it, and every outcome below is
 // attributable to the grant rather than to the scope tier.
-type sharedPersonFixture struct {
-	env    *SearchEnv
-	person ids.UUID
-	owner  context.Context // rep3, who may share it
-	holder context.Context // rep1, who holds whatever share is current
+type sharedContactFixture struct {
+	env     *SearchEnv
+	contact ids.UUID
+	owner   context.Context // rep3, who may share it
+	holder  context.Context // rep1, who holds whatever share is current
 }
 
-func seedSharedPerson(t *testing.T, name string) sharedPersonFixture {
+func seedSharedContact(t *testing.T, name string) sharedContactFixture {
 	t.Helper()
 	e := SetupSearch(t)
-	person := e.SeedID(t,
-		`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+	contact := e.SeedID(t,
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		 VALUES ($1, $3, $2, 'owner', 'manual', 'human:x')`, e.Rep3, name)
-	return sharedPersonFixture{
-		env:    e,
-		person: person,
-		owner:  recordActor(e, e.Rep3, principal.RowScopeOwn, nil),
-		holder: recordActor(e, e.Rep1, principal.RowScopeTeam, []ids.UUID{e.Team1}),
+	return sharedContactFixture{
+		env:     e,
+		contact: contact,
+		owner:   recordActor(e, e.Rep3, principal.RowScopeOwn, nil),
+		holder:  recordActor(e, e.Rep1, principal.RowScopeTeam, []ids.UUID{e.Team1}),
 	}
 }
 
-// recordActor mints a human who may read, update and delete people at one row
+// recordActor mints a human who may read, update and delete contacts at one row
 // scope. Delete is included because the archive and erasure arms need it, and
 // leaving it out would make those refusals ambiguous — an object-grant miss and
 // a row-authority miss are both refusals, and only one of them is under test.
@@ -72,7 +72,7 @@ func recordActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		TeamIDs: teams,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true, Delete: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true, Delete: true}},
 			RowScope: scope,
 		},
 	})
@@ -82,11 +82,11 @@ func recordActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []
 // prove the rule against a state production cannot reach, and this one in
 // particular has an upsert behind it: re-asserting a share at a new level is
 // the path an installation actually takes from `read` to `write`.
-func (f sharedPersonFixture) share(t *testing.T, access string) {
+func (f sharedContactFixture) share(t *testing.T, access string) {
 	t.Helper()
 	svc := identity.NewService(f.env.Pool)
 	if _, err := svc.CreateRecordGrant(f.owner, identity.CreateGrantInput{
-		RecordType: "person", RecordID: f.person,
+		RecordType: "contact", RecordID: f.contact,
 		SubjectType: "user", SubjectID: f.env.Rep1, Access: access,
 	}); err != nil {
 		t.Fatalf("owner shares %s → %v", access, err)
@@ -107,9 +107,9 @@ func (f sharedPersonFixture) share(t *testing.T, access string) {
 // The pair is the point: the same row, the same caller, the same grant, and
 // only the seat moves.
 func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
-	f := seedSharedPerson(t, "Downgraded Holder")
-	store := people.NewStore(f.env.DB())
-	id := PersonIDOf(f.person)
+	f := seedSharedContact(t, "Downgraded Holder")
+	store := contacts.NewStore(f.env.DB())
+	id := ContactIDOf(f.contact)
 	f.share(t, "write")
 
 	onSeat := func(seat principal.SeatType) error {
@@ -117,8 +117,8 @@ func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
 		actor, _ := principal.Actor(ctx)
 		actor.SeatType = seat
 		to := "Renamed On A " + string(seat) + " Seat"
-		_, err := store.UpdatePerson(principal.WithActor(ctx, actor), id,
-			people.UpdatePersonInput{FullName: &to, Source: "manual"})
+		_, err := store.UpdateContact(principal.WithActor(ctx, actor), id,
+			contacts.UpdateContactInput{FullName: &to, Source: "manual"})
 		return err
 	}
 
@@ -126,7 +126,7 @@ func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
 		t.Fatalf("a read seat wrote under a standing write share → %v, want permission-denied", err)
 	}
 	if got := f.fullName(t); got != "Downgraded Holder" {
-		t.Fatalf("the person reads %q after a refused edit, want it untouched", got)
+		t.Fatalf("the contact reads %q after a refused edit, want it untouched", got)
 	}
 
 	// The allow arm, on the same grant: the share works, and it is the SEAT
@@ -136,12 +136,12 @@ func TestAWriteShareIsInertOnAReadSeat(t *testing.T) {
 	}
 }
 
-func TestAReadShareOpensAPersonButCannotEditIt(t *testing.T) {
-	f := seedSharedPerson(t, "Read Share Subject")
-	store := people.NewStore(f.env.DB())
-	id := PersonIDOf(f.person)
+func TestAReadShareOpensAContactButCannotEditIt(t *testing.T) {
+	f := seedSharedContact(t, "Read Share Subject")
+	store := contacts.NewStore(f.env.DB())
+	id := ContactIDOf(f.contact)
 	rename := func(to string) error {
-		_, err := store.UpdatePerson(f.holder, id, people.UpdatePersonInput{FullName: &to, Source: "manual"})
+		_, err := store.UpdateContact(f.holder, id, contacts.UpdateContactInput{FullName: &to, Source: "manual"})
 		return err
 	}
 
@@ -150,13 +150,13 @@ func TestAReadShareOpensAPersonButCannotEditIt(t *testing.T) {
 	// a write-authority probe that answered 403 here would tell a stranger the
 	// row exists, trading one disclosure for another.
 	if err := rename("Guessed"); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("editing an unshared person → %v, want not-found (existence-hiding)", err)
+		t.Fatalf("editing an unshared contact → %v, want not-found (existence-hiding)", err)
 	}
 
 	f.share(t, "read")
 
 	// The share widens the READ, which is the feature and must survive.
-	if _, err := store.GetPerson(f.holder, id, storekit.LiveOnly); err != nil {
+	if _, err := store.GetContact(f.holder, id, storekit.LiveOnly); err != nil {
 		t.Fatalf("a read share does not open the record: %v", err)
 	}
 	// …and stops there. Permission-denied rather than not-found, because the
@@ -168,7 +168,7 @@ func TestAReadShareOpensAPersonButCannotEditIt(t *testing.T) {
 	// Not merely refused — unchanged. A 403 raised after the update ran is
 	// indistinguishable from one raised instead of it.
 	if got := f.fullName(t); got != "Read Share Subject" {
-		t.Fatalf("the person reads %q after a refused edit, want it untouched", got)
+		t.Fatalf("the contact reads %q after a refused edit, want it untouched", got)
 	}
 
 	// The allow arm, on the same row and the same caller: only the column moved.
@@ -177,34 +177,34 @@ func TestAReadShareOpensAPersonButCannotEditIt(t *testing.T) {
 		t.Fatalf("editing under a write share → %v, want allowed", err)
 	}
 	if got := f.fullName(t); got != "Rewritten By A Writer" {
-		t.Fatalf("the person reads %q after a permitted edit, want the new name", got)
+		t.Fatalf("the contact reads %q after a permitted edit, want the new name", got)
 	}
 }
 
-func TestAReadShareCannotArchiveOrEraseThePersonItOpens(t *testing.T) {
-	f := seedSharedPerson(t, "Destructible Subject")
-	store := people.NewStore(f.env.DB())
+func TestAReadShareCannotArchiveOrEraseTheContactItOpens(t *testing.T) {
+	f := seedSharedContact(t, "Destructible Subject")
+	store := contacts.NewStore(f.env.DB())
 	eraser := privacy.NewEraser(f.env.DB())
-	id := PersonIDOf(f.person)
+	id := ContactIDOf(f.contact)
 
 	f.share(t, "read")
 
-	// Archive is gated on person:delete, which this caller holds — so the only
+	// Archive is gated on contact:delete, which this caller holds — so the only
 	// thing that can refuse it is the row authority.
-	if _, err := store.ArchivePerson(f.holder, id, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.ArchiveContact(f.holder, id, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("archiving under a read share → %v, want permission-denied", err)
 	}
 	// Erasure rides the subject-rights probe, which lifts capture privacy and
 	// so needed its own write-authority twin rather than inheriting one.
-	if err := eraser.ErasePerson(f.holder, f.person, "dsr"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if err := eraser.EraseContact(f.holder, f.contact, "dsr"); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("erasing under a read share → %v, want permission-denied", err)
 	}
 	if got := f.fullName(t); got != "Destructible Subject" {
-		t.Fatalf("the person reads %q after two refused destructions, want it untouched", got)
+		t.Fatalf("the contact reads %q after two refused destructions, want it untouched", got)
 	}
 
 	f.share(t, "write")
-	if _, err := store.ArchivePerson(f.holder, id, nil); err != nil {
+	if _, err := store.ArchiveContact(f.holder, id, nil); err != nil {
 		t.Fatalf("archiving under a write share → %v, want allowed", err)
 	}
 }
@@ -221,11 +221,11 @@ func TestAReadShareOfALeadCannotScoreIt(t *testing.T) {
 		 VALUES ($1, 'Shared Lead', $2, 'manual', 'human:x')`, e.Rep3)
 	owner := leadActor(e, e.Rep3, principal.RowScopeOwn, nil)
 	holder := leadActor(e, e.Rep1, principal.RowScopeTeam, []ids.UUID{e.Team1})
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
 	score := func() error {
 		_, err := store.SetLeadManualSignal(holder, ids.From[ids.LeadKind](lead),
-			people.SetLeadManualSignalInput{
+			contacts.SetLeadManualSignalInput{
 				Factor: "employees", Band: "51-200",
 				SignalKind: "fact", Reason: "checked their careers page",
 			})
@@ -278,12 +278,12 @@ func leadActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 // The survivor's refusal is a bare conflict rather than a 403: naming it would
 // disclose more than the caller could already read.
 func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
-	f := seedSharedPerson(t, "Merge Source")
+	f := seedSharedContact(t, "Merge Source")
 	e := f.env
 	survivor := e.SeedID(t,
-		`INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		`INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		 VALUES ($1, 'Merge Survivor', $2, 'manual', 'human:x')`, e.Rep3)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
 	// Read on the source, write on the survivor: the caller may change what the
 	// record folds INTO and not the record itself. The source is archived and
@@ -292,7 +292,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// because the source is the record the CALLER named.
 	f.share(t, "read")
 	shareWith(f.owner, t, e, survivor, e.Rep1, "write")
-	if _, err := store.MergePerson(f.holder, PersonIDOf(f.person), PersonIDOf(survivor)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("merging away a source held on a read share → %v, want permission-denied", err)
 	}
 
@@ -300,7 +300,7 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// they are folding away and not what it folds into.
 	f.share(t, "write")
 	revokeShare(t, e, survivor, e.Rep1)
-	_, err := store.MergePerson(f.holder, PersonIDOf(f.person), PersonIDOf(survivor))
+	_, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor))
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("merging into a survivor the caller cannot change → %v, want conflict", err)
 	}
@@ -308,14 +308,14 @@ func TestAMergeNeedsWriteAuthorityOnBothEnds(t *testing.T) {
 	// Read on the survivor is not enough either — it is the arm the visibility
 	// probe used to accept, and the one this change closes.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "read")
-	if _, err := store.MergePerson(f.holder, PersonIDOf(f.person), PersonIDOf(survivor)); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("merging into a survivor held on a read share → %v, want conflict", err)
 	}
 
 	// Write on both: the merge goes through, so the two refusals above are the
 	// rule and not a merge that never worked.
 	shareWith(f.owner, t, e, survivor, e.Rep1, "write")
-	if _, err := store.MergePerson(f.holder, PersonIDOf(f.person), PersonIDOf(survivor)); err != nil {
+	if _, err := store.MergeContact(f.holder, ContactIDOf(f.contact), ContactIDOf(survivor)); err != nil {
 		t.Fatalf("merging with write on both ends → %v, want allowed", err)
 	}
 }
@@ -338,7 +338,7 @@ func revokeShare(t *testing.T, e *SearchEnv, record, subject ids.UUID) {
 func shareWith(owner context.Context, t *testing.T, e *SearchEnv, record, subject ids.UUID, access string) {
 	t.Helper()
 	if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
-		RecordType: "person", RecordID: record,
+		RecordType: "contact", RecordID: record,
 		SubjectType: "user", SubjectID: subject, Access: access,
 	}); err != nil {
 		t.Fatalf("sharing %s → %v", access, err)
@@ -349,20 +349,20 @@ func shareWith(owner context.Context, t *testing.T, e *SearchEnv, record, subjec
 // checked expiry; the write arm has to check it too, or a share that lapsed
 // would keep conferring the wider half of what it once granted.
 func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
-	f := seedSharedPerson(t, "Lapsed Share Subject")
-	store := people.NewStore(f.env.DB())
+	f := seedSharedContact(t, "Lapsed Share Subject")
+	store := contacts.NewStore(f.env.DB())
 	f.share(t, "write")
 
 	if err := database.WithWorkspaceTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE record_grant SET expires_at = now() - interval '1 hour' WHERE record_id = $1`, f.person)
+			`UPDATE record_grant SET expires_at = now() - interval '1 hour' WHERE record_id = $1`, f.contact)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	name := "After The Lapse"
-	_, err := store.UpdatePerson(f.holder, PersonIDOf(f.person), people.UpdatePersonInput{FullName: &name, Source: "manual"})
+	_, err := store.UpdateContact(f.holder, ContactIDOf(f.contact), contacts.UpdateContactInput{FullName: &name, Source: "manual"})
 	// Not-found, not permission-denied: an expired grant leaves the caller
 	// unable to SEE the row at all, so existence-hiding is the right answer
 	// again and the write arm never gets a question to answer.
@@ -373,7 +373,7 @@ func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
 
 // An offer has no owner of its own — it inherits its deal's row scope — so a
 // read share of the DEAL used to carry through to every offer edit hanging off
-// it. This is the arm the person suite above cannot reach: the probe there is
+// it. This is the arm the contact suite above cannot reach: the probe there is
 // not on the record being written but on the record it belongs to.
 func TestAReadShareOfADealCannotEditItsOffer(t *testing.T) {
 	e := SetupSearch(t)
@@ -446,14 +446,14 @@ func dealActor(e *SearchEnv, user ids.UUID, scope principal.RowScope, teams []id
 	})
 }
 
-func (f sharedPersonFixture) fullName(t *testing.T) string {
+func (f sharedContactFixture) fullName(t *testing.T) string {
 	t.Helper()
 	var name string
 	if err := database.WithWorkspaceTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT full_name FROM person WHERE id = $1`, f.person).Scan(&name)
+			`SELECT full_name FROM contact WHERE id = $1`, f.contact).Scan(&name)
 	}); err != nil {
-		t.Fatalf("reading the person back: %v", err)
+		t.Fatalf("reading the contact back: %v", err)
 	}
 	return name
 }

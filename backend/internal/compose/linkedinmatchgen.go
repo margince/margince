@@ -7,12 +7,12 @@ package compose
 // exists (ADR-0078 §8b).
 //
 // A workspace does not learn its contacts all at once. The LinkedIn export is
-// uploaded during onboarding; the people it could match are created over the
+// uploaded during onboarding; the contacts it could match are created over the
 // following hours and weeks — by mail capture, by a site read, by a rep typing
 // a name in. Matching only at upload time meant every one of those arrivals
 // was a match nobody would ever make.
 //
-// The trigger is the event, not the writer. person.created and person.updated
+// The trigger is the event, not the writer. contact.created and contact.updated
 // reach the outbox because the write shape puts them there, so manual entry,
 // capture, site read, merge and import all land here without any of them
 // knowing this consumer exists — and a NEW writer added tomorrow is covered on
@@ -24,7 +24,7 @@ package compose
 // appearing unblocks a batch of them at once.
 //
 // It lives in compose because the call crosses modules — the events are the
-// people module's own, but the seam that reacts to them is nobody's private
+// contacts module's own, but the seam that reacts to them is nobody's private
 // business.
 //
 // Both halves are idempotent, so the at-least-once bus costs nothing — for two
@@ -42,7 +42,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,18 +54,18 @@ import (
 // and borrowing the incumbent-import constants sends a reader to the overlay
 // path looking for why this consumer lives there.
 const (
-	matchEntityPerson  = "person"
+	matchEntityContact = "contact"
 	matchEntityCompany = "company"
 )
 
 // LinkedInMatchGen attaches LinkedIn ghosts as the CRM learns who exists, and
 // asks a human about the ones a string comparison cannot settle.
 type LinkedInMatchGen struct {
-	store *people.Store
+	store *contacts.Store
 	// pool and authority are what lets each pass run under the GHOST OWNER's
 	// authority rather than a system principal's. Nil means the old
 	// system-principal shape, which no wired role uses: the constructor takes
-	// both, and the tests that leave them nil exercise the per-person path,
+	// both, and the tests that leave them nil exercise the per-contact path,
 	// which already runs under its caller.
 	pool      *pgxpool.Pool
 	authority authz.Resolver
@@ -77,8 +77,8 @@ type LinkedInMatchGen struct {
 	log       *slog.Logger
 }
 
-// NewLinkedInMatchGen builds the matcher consumer over the people store.
-func NewLinkedInMatchGen(pool *pgxpool.Pool, store *people.Store, authority authz.Resolver, log *slog.Logger) *LinkedInMatchGen {
+// NewLinkedInMatchGen builds the matcher consumer over the contacts store.
+func NewLinkedInMatchGen(pool *pgxpool.Pool, store *contacts.Store, authority authz.Resolver, log *slog.Logger) *LinkedInMatchGen {
 	return &LinkedInMatchGen{
 		store: store, pool: pool, authority: authority,
 		approvals: approvalsServiceWithEffects(pool), log: log,
@@ -102,15 +102,15 @@ func (g *LinkedInMatchGen) HandleEvent(ctx context.Context, env events.Envelope)
 	ctx = g.matchContext(ctx, env, ws.UUID)
 
 	switch env.Entity.Type {
-	case matchEntityPerson:
+	case matchEntityContact:
 		switch env.Type {
-		// Every event that can make a live person row matchable. An archive needs no
+		// Every event that can make a live contact row matchable. An archive needs no
 		// reaction: both match arms require archived_at IS NULL, so an archived
 		// contact stops being a candidate without anything being recomputed.
 		// both match arms already require archived_at IS NULL, so an archive
 		// needs no reaction, and a merge arrives as an update on the target.
-		case "person.created", "person.updated", "person.merged", "person.restored":
-			return g.matchPerson(ctx, ws.UUID, env.Entity.ID)
+		case "contact.created", "contact.updated", "contact.merged", "contact.restored":
+			return g.matchContact(ctx, ws.UUID, env.Entity.ID)
 		}
 	case matchEntityCompany:
 		switch env.Type {
@@ -125,18 +125,18 @@ func (g *LinkedInMatchGen) HandleEvent(ctx context.Context, env events.Envelope)
 	return nil
 }
 
-// matchPerson re-runs the match for ONE contact, once per member with ghosts,
+// matchContact re-runs the match for ONE contact, once per member with ghosts,
 // each under their OWN authority.
 //
 // Per owner for the same reason the workspace pass is: the system actor is
 // unbounded, so a single pass would match every member's ghosts against a
 // contact none of them may be able to see, and report it back through
-// match_status. Scoping to one person bounds the COST; it does not bound who
+// match_status. Scoping to one contact bounds the COST; it does not bound who
 // is told.
-func (g *LinkedInMatchGen) matchPerson(ctx context.Context, workspace, person ids.UUID) error {
+func (g *LinkedInMatchGen) matchContact(ctx context.Context, workspace, contact ids.UUID) error {
 	return forEachGhostOwner(ctx, g.pool, g.authority, workspace,
 		func(ownerCtx context.Context, owner ids.UUID) error {
-			matched, err := g.store.MatchLinkedInConnectionsForPerson(ownerCtx, owner, person)
+			matched, err := g.store.MatchLinkedInConnectionsForContact(ownerCtx, owner, contact)
 			if err != nil {
 				return err
 			}
@@ -144,13 +144,13 @@ func (g *LinkedInMatchGen) matchPerson(ctx context.Context, workspace, person id
 			// matched. A suggestion the matcher writes and nobody is asked
 			// about is a suggestion that does not exist: the ghost row carries
 			// only the outcome, and the pending question lives in the approval.
-			staged, err := StageLinkedInMatchesForPerson(ownerCtx, g.approvals, g.store, person)
+			staged, err := StageLinkedInMatchesForContact(ownerCtx, g.approvals, g.store, contact)
 			if err != nil {
 				return err
 			}
 			if matched.Confirmed+matched.Suggested+staged > 0 {
 				g.log.InfoContext(ownerCtx, "linkedin match: a contact met their ghost",
-					"person", person.String(), "owner", owner.String(),
+					"contact", contact.String(), "owner", owner.String(),
 					"confirmed", matched.Confirmed, "suggested", matched.Suggested, "staged", staged)
 			}
 			return nil
@@ -170,7 +170,7 @@ func (g *LinkedInMatchGen) matchWorkspace(ctx context.Context, workspace ids.UUI
 			}
 			// The whole network was matched here, so the whole outstanding set
 			// is what this pass owes a proposal over — the same scope rule the
-			// per-person arm above follows in the narrow direction.
+			// per-contact arm above follows in the narrow direction.
 			//
 			// This arm therefore pays the per-event cost the narrow one
 			// refuses: one staging attempt per outstanding suggestion, per
@@ -178,7 +178,7 @@ func (g *LinkedInMatchGen) matchWorkspace(ctx context.Context, workspace ids.UUI
 			// overlooked. A new or renamed account is exactly what unblocks
 			// ghosts belonging to many different contacts at once, so there is
 			// no narrower read that would still be complete — unlike the
-			// person arm, where the arrival names its own scope.
+			// contact arm, where the arrival names its own scope.
 			staged, err := StageLinkedInMatches(ownerCtx, g.approvals, g.store)
 			if err != nil {
 				return err

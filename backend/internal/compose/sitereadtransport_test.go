@@ -8,7 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -17,7 +17,7 @@ func TestDeferredSiteReadMetadataReachesBothWireShapes(t *testing.T) {
 	statusCode := "budget_deferred"
 	statusDetail := "AI budget reached its current limit. This website read will resume automatically."
 	companyID := ids.New[ids.CompanyKind]()
-	read := people.SiteRead{
+	read := contacts.SiteRead{
 		ID:            ids.NewV7(),
 		CompanyID:     &companyID,
 		TargetKind:    "company",

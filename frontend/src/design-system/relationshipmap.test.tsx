@@ -20,7 +20,7 @@ const LABELS: RelationshipMapLabels = {
   clearFocus: "Clear",
   emptyTitle: "No route recorded yet",
   emptyBody: "Assign the buying roles or import interactions",
-  nothingSelected: "Select a person to see the best route",
+  nothingSelected: "Select a contact to see the best route",
 };
 
 function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
@@ -31,7 +31,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
       { id: "d-1", kind: "deal", label: "Retrofit 2026" },
       {
         id: "p-1",
-        kind: "person",
+        kind: "contact",
         label: "Philipp Königs",
         sublabel: "CFO",
         engagement: "untried",
@@ -40,7 +40,7 @@ function model(over: Partial<RelationshipMapModel> = {}): RelationshipMapModel {
       },
       {
         id: "p-2",
-        kind: "person",
+        kind: "contact",
         label: "Ute Sommer",
         engagement: "answered",
         engagementLabel: "Answered",
@@ -131,7 +131,7 @@ test("draws a gap as a node rather than a sentence somewhere else", () => {
   ).not.toBeNull();
 });
 
-test("selecting a person fades what the route does not touch", () => {
+test("selecting a contact fades what the route does not touch", () => {
   draw({ focusId: "p-1" });
   const ute = screen.getByRole("button", { name: /Ute Sommer/ });
   expect(ute.getAttribute("data-faded")).toBe("true");
@@ -156,7 +156,7 @@ test("the panel says in words which route was chosen and what was not", () => {
   expect(screen.getByText(/Lars Meyer · cold/)).not.toBeNull();
 });
 
-test("a person with no route says so rather than showing an empty panel", () => {
+test("a contact with no route says so rather than showing an empty panel", () => {
   render(
     <RelationshipMap
       model={model({ edges: [] })}
@@ -210,7 +210,7 @@ test("holds exactly one tab stop and walks with the arrow keys", async () => {
   // FOCUS moves, not just the tabindex. Moving the attribute alone leaves the
   // ring, the screen reader and Enter all pointing at the node the reader
   // walked away from — the arrows look like they work and act on the wrong
-  // person.
+  // contact.
   expect(document.activeElement?.getAttribute("data-node-id")).not.toBe(first);
   expect(document.activeElement?.getAttribute("tabindex")).toBe("0");
 });
@@ -227,7 +227,7 @@ test("walks away from a node the caller selected", async () => {
   expect(document.activeElement?.getAttribute("data-node-id")).not.toBe(start);
 });
 
-// Expanding a lane replaces the row the reader is standing on with the people
+// Expanding a lane replaces the row the reader is standing on with the contacts
 // it was hiding. Focus has to land on one of them rather than falling out of
 // the map.
 test("keeps the reader inside the map when a lane opens", async () => {
@@ -236,7 +236,7 @@ test("keeps the reader inside the map when a lane opens", async () => {
   render(
     <RelationshipMap
       model={{
-        nodes: many.map((id) => ({ id, kind: "person" as const, label: id })),
+        nodes: many.map((id) => ({ id, kind: "contact" as const, label: id })),
         lanes: [
           {
             id: "influencer",
@@ -269,7 +269,7 @@ test("does not fade the map for a selection that is not there", () => {
 test("reads a colleague's route in the direction they asked", () => {
   draw({ focusId: "u-1" });
   // Not "Sofia Meier → Sofia Meier": the reader selected our side, so the
-  // other end is the person they can reach.
+  // other end is the contact they can reach.
   const line = document.querySelector(".rmap-panel-line")?.textContent ?? "";
   expect(line).toContain("Sofia Meier → Philipp Königs");
   expect(line).not.toContain("Sofia Meier → Sofia Meier");

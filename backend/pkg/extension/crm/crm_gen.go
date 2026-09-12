@@ -163,9 +163,9 @@ func (e ActivityAudience) Valid() bool {
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
+	ActivityLinkEntityTypeContact ActivityLinkEntityType = "contact"
 	ActivityLinkEntityTypeDeal    ActivityLinkEntityType = "deal"
 	ActivityLinkEntityTypeLead    ActivityLinkEntityType = "lead"
-	ActivityLinkEntityTypePerson  ActivityLinkEntityType = "person"
 	ActivityLinkEntityTypeProject ActivityLinkEntityType = "project"
 )
 
@@ -174,11 +174,11 @@ func (e ActivityLinkEntityType) Valid() bool {
 	switch e {
 	case ActivityLinkEntityTypeCompany:
 		return true
+	case ActivityLinkEntityTypeContact:
+		return true
 	case ActivityLinkEntityTypeDeal:
 		return true
 	case ActivityLinkEntityTypeLead:
-		return true
-	case ActivityLinkEntityTypePerson:
 		return true
 	case ActivityLinkEntityTypeProject:
 		return true
@@ -238,9 +238,9 @@ func (e CreateActivityRequestKind) Valid() bool {
 // Defines values for CreateActivityRequestLinksEntityType.
 const (
 	CreateActivityRequestLinksEntityTypeCompany CreateActivityRequestLinksEntityType = "company"
+	CreateActivityRequestLinksEntityTypeContact CreateActivityRequestLinksEntityType = "contact"
 	CreateActivityRequestLinksEntityTypeDeal    CreateActivityRequestLinksEntityType = "deal"
 	CreateActivityRequestLinksEntityTypeLead    CreateActivityRequestLinksEntityType = "lead"
-	CreateActivityRequestLinksEntityTypePerson  CreateActivityRequestLinksEntityType = "person"
 	CreateActivityRequestLinksEntityTypeProject CreateActivityRequestLinksEntityType = "project"
 )
 
@@ -249,11 +249,11 @@ func (e CreateActivityRequestLinksEntityType) Valid() bool {
 	switch e {
 	case CreateActivityRequestLinksEntityTypeCompany:
 		return true
+	case CreateActivityRequestLinksEntityTypeContact:
+		return true
 	case CreateActivityRequestLinksEntityTypeDeal:
 		return true
 	case CreateActivityRequestLinksEntityTypeLead:
-		return true
-	case CreateActivityRequestLinksEntityTypePerson:
 		return true
 	case CreateActivityRequestLinksEntityTypeProject:
 		return true
@@ -435,11 +435,11 @@ type Activity struct {
 	Kind   ActivityKind `json:"kind"`
 
 	// Language What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-	// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+	// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 	// Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 	Language *ActivityLanguage `json:"language,omitempty"`
 
-	// Links One activity may link to >1 entity (person + deal).
+	// Links One activity may link to >1 entity (contact + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
@@ -486,7 +486,7 @@ type ActivityDirection string
 type ActivityKind string
 
 // ActivityLanguage What language this message is written in, read from its own text when it was captured. Null on a message whose text was too short to tell, on anything hand-logged, and on every row captured before this was recorded — all of which mean "not known", never "not any of these".
-// A detector's observation, not a declaration by its author, and it describes the message rather than the person: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
+// A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
 

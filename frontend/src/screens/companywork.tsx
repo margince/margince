@@ -54,7 +54,7 @@ type Attention = components["schemas"]["Company360WorkAttention"];
 
 /**
  * CompanyWorkCard is the overview's lead: what is moving on this account, and
- * for each piece of it, the one reason it wants a person today.
+ * for each piece of it, the one reason it wants a contact today.
  *
  * A withheld deals section says so where its rows would have been — never a
  * count over rows this reader may not see, and never the fit panel in this

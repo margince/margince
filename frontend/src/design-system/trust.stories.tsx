@@ -136,7 +136,7 @@ export const Provenance: Story = {
           wording and the ground say which is which. */}
       <div style={row}>
         <ProvenanceTag
-          provenance={{ kind: "system", job: "person_auto_enrich" }}
+          provenance={{ kind: "system", job: "contact_auto_enrich" }}
         />
         <ProvenanceTag provenance={{ kind: "system" }} />
       </div>
@@ -149,12 +149,12 @@ export const Provenance: Story = {
           )}
         />
         {/* No renderUser: the design system has no record lookups, so the tag
-            says a person entered it without claiming which one. */}
+            says a contact entered it without claiming which one. */}
         <ProvenanceTag
           provenance={{ kind: "human", self: false, userId: "usr_7f2" }}
         />
       </div>
-      {/* A person from outside the company, beside the unattributed row
+      {/* A contact from outside the company, beside the unattributed row
           on purpose: reading a buyer as "source not recorded" was the defect,
           and only the wording and the ink tell the two apart. */}
       <div style={row}>

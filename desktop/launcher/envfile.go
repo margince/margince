@@ -146,7 +146,7 @@ const envTemplate = `# Margince settings.
 # Licence and posture
 #
 # This installation runs in the "dev" posture, which is what lets it start
-# without a licence token. That is the honest description of one person running
+# without a licence token. That is the honest description of one colleague running
 # their own copy, and it does NOT arm the destructive admin endpoints — those
 # need allow_data_reset in margince.yaml, which is absent.
 #

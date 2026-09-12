@@ -40,12 +40,12 @@ import (
 )
 
 type auditBoundaryEnv struct {
-	ctx    context.Context
-	db     *database.DB
-	person ids.PersonID
-	owner  *pgx.Conn
-	ws     ids.UUID
-	user   ids.UUID
+	ctx     context.Context
+	db      *database.DB
+	contact ids.ContactID
+	owner   *pgx.Conn
+	ws      ids.UUID
+	user    ids.UUID
 	// other is a SECOND seat, the one who captured the held mail in the
 	// audience tests next door. The audience arm admits a row's own capturer
 	// (`captured_by LIKE '%:<uuid>'`), so a fixture where the reader captured
@@ -73,7 +73,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		t.Fatal(err)
 	}
 
-	ws, user, person := ids.NewV7(), ids.NewV7(), ids.New[ids.PersonKind]()
+	ws, user, contact := ids.NewV7(), ids.NewV7(), ids.New[ids.ContactKind]()
 	other := ids.NewV7()
 	for _, seed := range []struct {
 		statement string
@@ -88,8 +88,8 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`,
 			[]any{other, "other-" + other.String() + "@boundary.test"},
 		},
-		{`INSERT INTO person (id, full_name, source, captured_by)
-		  VALUES ($1, 'Sara Subject', 'manual', 'user:'||$2::text)`, []any{person, user}},
+		{`INSERT INTO contact (id, full_name, source, captured_by)
+		  VALUES ($1, 'Sara Subject', 'manual', 'user:'||$2::text)`, []any{contact, user}},
 	} {
 		if _, err := owner.Exec(ctx, seed.statement, seed.args...); err != nil {
 			t.Fatal(err)
@@ -103,13 +103,13 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
 
 	return &auditBoundaryEnv{
-		ctx:    exportContext(ws, user),
-		db:     database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)),
-		person: person,
-		owner:  owner,
-		ws:     ws,
-		user:   user,
-		other:  other,
+		ctx:     exportContext(ws, user),
+		db:      database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)),
+		contact: contact,
+		owner:   owner,
+		ws:      ws,
+		user:    user,
+		other:   other,
 	}
 }
 
@@ -121,8 +121,8 @@ func (e *auditBoundaryEnv) auditRow(t *testing.T, action string, at time.Time, b
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, before, after, occurred_at)
-		 VALUES ($1, 'human', 'user:'||$2::text, $3, 'person', $4, $5::jsonb, $6::jsonb, $7)`,
-		id, e.user, action, e.person, nullableJSON(before), nullableJSON(after), at); err != nil {
+		 VALUES ($1, 'human', 'user:'||$2::text, $3, 'contact', $4, $5::jsonb, $6::jsonb, $7)`,
+		id, e.user, action, e.contact, nullableJSON(before), nullableJSON(after), at); err != nil {
 		t.Fatalf("seeding a %s row: %v", action, err)
 	}
 	return id
@@ -132,7 +132,7 @@ func (e *auditBoundaryEnv) auditRow(t *testing.T, action string, at time.Time, b
 // carries no images at all, and writing "" would make it an empty one — a
 // different answer, and the one this boundary is about telling apart.
 // agentRow is one line written by an agent acting for a human: the passport it
-// carried and the person behind it are separate columns, and both widen from a
+// carried and the contact behind it are separate columns, and both widen from a
 // nullable scan into their own id kind.
 func (e *auditBoundaryEnv) agentRow(t *testing.T, at time.Time) (id, passport, onBehalfOf ids.UUID) {
 	t.Helper()
@@ -140,9 +140,9 @@ func (e *auditBoundaryEnv) agentRow(t *testing.T, at time.Time) (id, passport, o
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO audit_log (id, actor_type, actor_id, passport_id, on_behalf_of,
 		                        action, entity_type, entity_id, before, after, occurred_at)
-		 VALUES ($1, 'agent', 'agent:enrich', $2, $3, 'update', 'person', $4,
+		 VALUES ($1, 'agent', 'agent:enrich', $2, $3, 'update', 'contact', $4,
 		         '{"title":"Engineer"}'::jsonb, '{"title":"Architect"}'::jsonb, $5)`,
-		id, passport, onBehalfOf, e.person, at); err != nil {
+		id, passport, onBehalfOf, e.contact, at); err != nil {
 		t.Fatalf("seeding an agent row: %v", err)
 	}
 	return id, passport, onBehalfOf
@@ -172,7 +172,7 @@ func (e *auditBoundaryEnv) filtered(t *testing.T, f AuditFilter) []AuditEntry {
 
 func (e *auditBoundaryEnv) entries(t *testing.T) []AuditEntry {
 	t.Helper()
-	entityType, entityID, limit := "person", e.person.UUID, 50
+	entityType, entityID, limit := "contact", e.contact.UUID, 50
 	page, err := ListAuditLog(e.ctx, e.db, AuditFilter{
 		EntityType: &entityType, EntityID: &entityID, Limit: &limit,
 	})
@@ -289,7 +289,7 @@ func TestEveryScrubVerbMovesTheBoundary(t *testing.T) {
 // typed in the entry, and a row that named them must come back naming them —
 // otherwise "which passport did this" is unanswerable for exactly the writes
 // that most need to be answerable.
-func TestAnAgentsRowKeepsThePassportAndThePersonBehindIt(t *testing.T) {
+func TestAnAgentsRowKeepsThePassportAndTheContactBehindIt(t *testing.T) {
 	e := setupAuditBoundary(t)
 	id, passport, onBehalfOf := e.agentRow(t, boundaryEarlier)
 
@@ -343,7 +343,7 @@ func TestTheBoundaryHoldsOnEveryNarrowedPage(t *testing.T) {
 	e.auditRow(t, "erase", boundaryErasure, "", "")
 
 	actor := "user:" + e.user.String()
-	action, entityType, entityID := "update", "person", e.person.UUID
+	action, entityType, entityID := "update", "contact", e.contact.UUID
 	window := boundaryEarlier.Add(-time.Hour)
 	until := boundaryErasure.Add(time.Hour)
 
@@ -379,7 +379,7 @@ func TestTheBoundaryHoldsOnThePageAfterTheFirst(t *testing.T) {
 	}
 	e.auditRow(t, "erase", boundaryErasure, "", "")
 
-	entityType, entityID, limit := "person", e.person.UUID, 2
+	entityType, entityID, limit := "contact", e.contact.UUID, 2
 	first, err := ListAuditLog(e.ctx, e.db, AuditFilter{
 		EntityType: &entityType, EntityID: &entityID, Limit: &limit,
 	})
@@ -486,7 +486,7 @@ func (e *auditBoundaryEnv) collateralImage(t *testing.T, entityType string, id i
 //
 // The whole image, not one string in it. The fixture carries a filename as well
 // as a subject, and an image that dropped the subject while keeping
-// sara-subject-passport.pdf has disclosed the same person — a boundary asserted
+// sara-subject-passport.pdf has disclosed the same contact — a boundary asserted
 // one substring at a time is one that holds until somebody adds a second field.
 //
 // It fails the test when there is no create row to judge: absence would

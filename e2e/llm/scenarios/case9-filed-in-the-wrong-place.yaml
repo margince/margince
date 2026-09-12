@@ -16,15 +16,15 @@
 #
 # WHY BOTH VERBS ARE REQUIRED rather than one of them twice. relink_activity
 # moves one message; relink_activities moves up to 500 named ones ALL OR
-# NOTHING, and the prompt asks for that atomicity in the person's own words
+# NOTHING, and the prompt asks for that atomicity in the contact's own words
 # ("all three or none"). Three separate single moves are three transactions, of
 # which the second can fail with the first already applied — which is the thing
-# the person said they did not want.
+# the contact said they did not want.
 #
 # THE KNOWN SOFT SPOT, stated because a scenario that hides one is worse than
 # one that has none: relink_activities carries replace_existing_of_type too, so
 # a run that moves the single mail with relink_activities has achieved the
-# person's outcome and will be scored a failure here. If that shape turns up in
+# contact's outcome and will be scored a failure here. If that shape turns up in
 # a sweep, the honest fix is to say so in the report, not to widen must_call
 # until the case tests nothing.
 name: case9_filed_in_the_wrong_place
@@ -63,7 +63,7 @@ may_call:
   - catch_me_up_on
 
 # THE PLAN, NOT JUST THE VERB. Both verbs default to ADDING the new link beside
-# the existing one, and the person asked for none of the mails to stay
+# the existing one, and the contact asked for none of the mails to stay
 # where they are — "get it off Rheinufer", "move all three across". A run that
 # associates rather than moves leaves the wrong company still showing the
 # history, which is half the defect being fixed and reads as a pass on the tool
@@ -88,7 +88,7 @@ must_mention:
   - "Dom Digital"
   - "Aachener"
   # The batch is reported as a batch. relink_activities answers with the count it
-  # moved, and a person who asked for all-or-nothing is owed the number.
+  # moved, and a contact who asked for all-or-nothing is owed the number.
   #
   # THE NUMBER HAS TO BE COUNTING SOMETHING. A bare "3|three|drei" is satisfied
   # by "on 3 March", by a record id and by any other digit the prose happens to
@@ -125,7 +125,7 @@ must_not_mention:
   # follows the pronoun directly, so an intervening "not" breaks the run.
   - "(?:I|I've|I have|we|we've) (?:logged|created|added|re-?created|re-?logged) (?:a |the )?(?:new|fresh|duplicate|second|copy of)[^\n]{0,20}(?:activity|note|e-?mail|call|entry|record)|(?:I|I've|I have|we|we've) re-?(?:created|logged|entered|added)[^\n]{0,20}(?:activit|note|e-?mail|call|entr|record)"
   # And the false limitation. Re-association is exactly what these verbs are for,
-  # so an answer that reports the CRM cannot do it — or sends the person to the
+  # so an answer that reports the CRM cannot do it — or sends the contact to the
   # app for it — is a confident wrong answer about the product, which is worse
   # than no answer. Anchored to an object of the verb, because "cannot move" on
   # its own is a sentence about a deal stage or a meeting.

@@ -122,7 +122,7 @@ const leadCreateFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "email", label: "create.email", type: "email" },
   { key: "linkedin_url", label: "create.linkedinUrl" },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   { key: "company_name", label: "create.companyName" },
 ];
 
@@ -374,7 +374,7 @@ function LeadsWorkbench({
         columns={[
           {
             key: "name",
-            header: t("people.name"),
+            header: t("contacts.name"),
             cell: (lead: Lead) => {
               const terminal = terminalBadge(lead);
               return (

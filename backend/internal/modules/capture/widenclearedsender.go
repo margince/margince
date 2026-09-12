@@ -7,7 +7,7 @@ package capture
 //
 // A `classified` mailbox asks one question of every message: who is this from?
 // Until something answers, the message is held on the posture. When the verdict
-// answers "a real person", the question the hold was waiting for is settled, and
+// answers "a real contact", the question the hold was waiting for is settled, and
 // the mail it held has no remaining reason to stay limited.
 //
 // widenhistory.go re-opens what a SEAT's counterparty hold caught; this re-opens
@@ -37,18 +37,18 @@ import (
 // clearedSenderBatch bounds the statement, matching widenBatch.
 const clearedSenderBatch = 500
 
-// clearedSenderWidenDue is which import rows a settled real/person verdict may
+// clearedSenderWidenDue is which import rows a settled real/contact verdict may
 // re-open, and it is the whole safety property of this file.
 //
 // The ledger clause is FIRST and is not optional. A caller cannot establish
-// real/person by having just written it: createCounterparty answers nil after
+// real/contact by having just written it: createCounterparty answers nil after
 // correcting its own resolution to `suppressed`, and a review acceptance can
 // update no row at all. So the entitlement is re-read here, inside the same
 // statement that claims the rows, and every caller inherits it.
 //
-//   - a settled ledger row, status 'real' AND kind 'person' — never status
+//   - a settled ledger row, status 'real' AND kind 'contact' — never status
 //     alone. advisor, role_mailbox and company_sender are all 'real' and
-//     none of them is a person whose mail a posture should stop holding.
+//     none of them is a contact whose mail a posture should stop holding.
 //   - posture_at_import = 'classified' — never 'held'. A held mailbox promises
 //     to hold whatever any classifier concludes, so a verdict is not an answer
 //     to it; 'classified' is the posture that was waiting for exactly this.
@@ -78,7 +78,7 @@ const clearedSenderBatch = 500
 // instead would release mail on the strength of somebody else's clearance.
 const clearedSenderWidenDue = `EXISTS (
 			SELECT 1 FROM capture_pending_counterparty p
-			 WHERE p.email = $1 AND p.status = 'real' AND p.kind = 'person'
+			 WHERE p.email = $1 AND p.status = 'real' AND p.kind = 'contact'
 			   AND NOT p.withheld_from_workspace)
 	   AND i.posture_at_import = 'classified'
 	   AND i.verdict_status IS NULL
@@ -244,15 +244,15 @@ func WidenClearedSenderAll(
 	return total, nil
 }
 
-// senderClearedPersonTx answers whether this address already has a settled
-// verdict saying it is a real person.
+// senderClearedContactTx answers whether this address already has a settled
+// verdict saying it is a real contact.
 //
 // Deliberately narrower than the disposition lookup the sink makes when it
-// decides whether to CREATE a contact: that one also counts an existing person
-// record as evidence, and a person record can exist for reasons that never
+// decides whether to CREATE a contact: that one also counts an existing contact
+// record as evidence, and a contact record can exist for reasons that never
 // judged the sender. Opening a mailbox's held mail is a disclosure, so it asks
 // only for the verdict itself.
-func senderClearedPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+func senderClearedContactTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
 	folded := normalizeEmail(email)
 	if folded == "" {
 		return false, nil
@@ -261,11 +261,11 @@ func senderClearedPersonTx(ctx context.Context, tx pgx.Tx, email string) (bool, 
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM capture_pending_counterparty
-			 WHERE email = $1 AND status = 'real' AND kind = 'person'
+			 WHERE email = $1 AND status = 'real' AND kind = 'contact'
 			   AND NOT withheld_from_workspace)`,
 		folded).Scan(&cleared)
 	if err != nil {
-		return false, fmt.Errorf("capture: reading whether this sender is already judged a person: %w", err)
+		return false, fmt.Errorf("capture: reading whether this sender is already judged a contact: %w", err)
 	}
 	return cleared, nil
 }

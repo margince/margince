@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
 import { installFetchStub, jsonResponse, StoryProviders } from "../story-utils";
-import { PersonMeetingBrief } from "./drawer";
+import { ContactMeetingBrief } from "./drawer";
 import {
   briefEmpty,
   briefManager,
@@ -39,9 +39,9 @@ const PROJECTS = [
 // dialog it is. Stated once here because it is true of every state the drawer
 // can be in — assembling, failed, empty and prepared alike — and a per-story
 // copy would be the same two lines eighteen times.
-const meta: Meta<typeof PersonMeetingBrief> = {
-  title: "Records/Person record/Meeting brief",
-  component: PersonMeetingBrief,
+const meta: Meta<typeof ContactMeetingBrief> = {
+  title: "Records/Contact record/Meeting brief",
+  component: ContactMeetingBrief,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
     await drawer.findByRole("heading", { name: "Meeting brief" });
@@ -49,7 +49,7 @@ const meta: Meta<typeof PersonMeetingBrief> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof PersonMeetingBrief>;
+type Story = StoryObj<typeof ContactMeetingBrief>;
 
 // One helper rather than a stub literal per story: what varies between these
 // stories is the ANSWER, and spelling the route out nine times invites the
@@ -61,7 +61,7 @@ function drawer(
   installFetchStub({ [ROUTE]: answer });
   return (
     <StoryProviders>
-      <PersonMeetingBrief
+      <ContactMeetingBrief
         activityId="a-1"
         open
         onClose={() => {}}

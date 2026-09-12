@@ -64,14 +64,14 @@ describe("what a lead should do about the board", () => {
     expect(first.textContent).toContain("Ben");
   });
 
-  it("names a person once, however many thresholds they cross", () => {
+  it("names a contact once, however many thresholds they cross", () => {
     const moves = movesFor([
       member("Ana", { promises_due: 3, waiting: 20, overdue: 12 }),
       member("Ben", { waiting: 9 }),
     ]);
 
     expect(moves.filter((m) => m.name === "Ana")).toHaveLength(1);
-    // And the second person still gets their line, which is what one-per-person
+    // And the second contact still gets their line, which is what one-per-contact
     // is FOR: three lines about Ana would push Ben off a list of three.
     expect(moves.map((m) => m.name)).toContain("Ben");
   });
@@ -79,7 +79,7 @@ describe("what a lead should do about the board", () => {
   // A zero is a real answer, not a silence. Claims have a writer on every
   // installation, so a rep at zero owes nothing — and a threshold of one keeps
   // them off the list without the count having to be missing.
-  it("says nothing about a person who owes no promises", () => {
+  it("says nothing about a contact who owes no promises", () => {
     const moves = movesFor([member("Ana", { waiting: 2, overdue: 1 })]);
     expect(moves).toHaveLength(0);
   });
@@ -96,7 +96,7 @@ describe("what a lead should do about the board", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("routes a move to that person's own queue", async () => {
+  it("routes a move to that contact's own queue", async () => {
     const user = userEvent.setup();
     const onOwner = draw([member("Ana", { promises_due: 2 })]);
 

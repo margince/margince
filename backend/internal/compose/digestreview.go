@@ -27,7 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -37,7 +37,7 @@ import (
 // principal, so both counts resolve through their live grants and row scope
 // without either seam needing to know it is serving a digest.
 func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.DigestReviewSource {
-	duplicates := attentionDuplicates{store: people.NewStore(InstallationDB(pool))}
+	duplicates := attentionDuplicates{store: contacts.NewStore(InstallationDB(pool))}
 	pending := attentionApprovals{svc: svc}
 	return func(ctx context.Context) (capture.DigestReviewCounts, error) {
 		open, err := countOrNoneVisible(duplicates.CountOpen(ctx))
@@ -58,7 +58,7 @@ func newDigestReviewSource(pool *pgxpool.Pool, svc *approvals.Service) capture.D
 // is the right answer to "show me these" and the wrong one to "how many are
 // waiting for you". None are: the queue that surfaces them would be empty for
 // this reader too. Propagating the refusal would fail the whole nightly build
-// for that reader — one seat without a person grant would cost a colleague
+// for that reader — one seat without a contact grant would cost a colleague
 // their digest — which is the same reasoning the projects section states for
 // answering no section instead of an error.
 func countOrNoneVisible(count int, err error) (int, error) {

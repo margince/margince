@@ -3,7 +3,7 @@
 
 package compose
 
-// The cross-module edge behind resolve_entities: the people module owns the
+// The cross-module edge behind resolve_entities: the contacts module owns the
 // match ladder, the agents module owns the tool. Neither imports the other
 // (ADR-0054 §3), so the edge is composed here.
 //
@@ -21,17 +21,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
-// entityResolver adapts the people store's batch resolve to the tool seam.
+// entityResolver adapts the contacts store's batch resolve to the tool seam.
 func entityResolver(pool *pgxpool.Pool) agents.EntityResolver {
-	store := people.NewStore(InstallationDB(pool))
+	store := contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, in []agents.ResolveCandidate) ([]agents.ResolveOutcome, error) {
-		candidates := make([]people.ResolveCandidate, 0, len(in))
+		candidates := make([]contacts.ResolveCandidate, 0, len(in))
 		for _, c := range in {
-			candidates = append(candidates, people.ResolveCandidate{
-				Kind:      people.ResolveKind(c.Kind),
+			candidates = append(candidates, contacts.ResolveCandidate{
+				Kind:      contacts.ResolveKind(c.Kind),
 				Name:      c.Name,
 				LegalName: c.LegalName,
 				Emails:    c.Emails,
@@ -53,7 +53,7 @@ func entityResolver(pool *pgxpool.Pool) agents.EntityResolver {
 // whole workspace, so a decision derived from it is a decision a record the
 // caller cannot read helped make — see agents.decisionFor. What crosses is the
 // refs, each carrying whether a KEY or a similarity named it.
-func resolveOutcomesFor(resolved []people.ResolveOutcome) []agents.ResolveOutcome {
+func resolveOutcomesFor(resolved []contacts.ResolveOutcome) []agents.ResolveOutcome {
 	out := make([]agents.ResolveOutcome, 0, len(resolved))
 	for _, outcome := range resolved {
 		answer := agents.ResolveOutcome{Refs: make([]agents.ResolveRef, 0, len(outcome.Refs))}

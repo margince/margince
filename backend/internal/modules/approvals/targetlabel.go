@@ -25,14 +25,14 @@ import (
 //
 // A SUBSET of versionTables on purpose, and not derived from it: being
 // version-pinnable says the row bumps a counter on write, which is a different
-// fact from having something a person calls it by. A relationship is an edge, a
+// fact from having something a contact calls it by. A relationship is an edge, a
 // saved view is a per-user filter — a caption drawn from either would be
 // labelling the proposal with a word its reader never uses.
 //
 // Absent from this map means "no name to record", which the column stores as
 // NULL and the card reads as "say nothing" rather than "say unknown".
 //
-// The column is a person's own name where the proposal is about a person, so the
+// The column is a contact's own name where the proposal is about a contact, so the
 // Art. 17 redaction clears it with the summary and the payload —
 // privacy.blankStagedProposal, held by gates/piicolumncoverage_test.go, which
 // refuses a text column on a PII table that the redaction neither clears nor
@@ -45,7 +45,7 @@ import (
 const columnName = "name"
 
 var targetLabelColumns = map[string]string{
-	tablePerson:   "full_name",
+	tableContact:  "full_name",
 	tableCompany:  "display_name",
 	tableDeal:     columnName,
 	tableLead:     "full_name",

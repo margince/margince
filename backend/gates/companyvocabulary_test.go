@@ -125,7 +125,7 @@ var exempt = gatekit.Waive(map[string]string{
 		"every licence already issued from decoding",
 	"backend/internal/platform/licensecheck/licensecheck_test.go": "the licence payload's `company` key",
 
-	"backend/internal/modules/people/companynamegate.go": "the .org TLD, in the stopword list that " +
+	"backend/internal/modules/contacts/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
 
 	"backend/internal/modules/agents/tools_vocabulary.go": "a deliberately WRONG argument: " +
@@ -137,11 +137,11 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/platform/webread/schemaorg_test.go":  "schema.org's Company type",
 	"backend/internal/platform/webread/logoimages_test.go": "schema.org's Company type",
 
-	"backend/internal/modules/people/vcard.go":                                "vCard's ORG property (RFC 6350)",
-	"backend/internal/modules/people/vcard_test.go":                           "vCard's ORG property (RFC 6350)",
-	"backend/internal/modules/people/vcardimport.go":                          "vCard's ORG property (RFC 6350)",
-	"backend/internal/modules/people/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
-	"backend/internal/compose/vcardproposal_integration_test.go":              "vCard's ORG property (RFC 6350)",
+	"backend/internal/modules/contacts/vcard.go":                                "vCard's ORG property (RFC 6350)",
+	"backend/internal/modules/contacts/vcard_test.go":                           "vCard's ORG property (RFC 6350)",
+	"backend/internal/modules/contacts/vcardimport.go":                          "vCard's ORG property (RFC 6350)",
+	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
+	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
 	"extensions/vn/vn.go": "an organisation in the ordinary sense — the party holding data and " +
 		"the party advertising need not be the same one",
 	"extensions/vn/README.md": "the same sentence as vn.go",
@@ -158,6 +158,9 @@ var exempt = gatekit.Waive(map[string]string{
 		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
 
 	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the\n		rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows\n		keep it forever and the two reads that filter the trail by record type have to match it —\n		the file exists to say so once instead of twice",
+
+	"docs/reference/record-vocabulary.md": "it states the rule both record nouns hold, which it " +
+		"cannot do without naming the word each one retires",
 
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
 })
@@ -221,7 +224,7 @@ func TestTheWordIsSeenAfterADot(t *testing.T) {
 		`    const notMine = { ...org, owner_id: "u-2" };`,
 		`		 WHERE c.org_count = 1`,
 		`	return sprintf("SELECT DISTINCT l.activity_id, o.org_id AS company_id")`,
-		`  "person.enriched.field.org_name": "Company",`,
+		`  "contact.enriched.field.org_name": "Company",`,
 		`  const options = opts.orgs.map((company) => ({`,
 	} {
 		if !namesTheOtherWord(line) {
@@ -286,7 +289,7 @@ func TestThePathCheckSeesAConcatenatedName(t *testing.T) {
 	for _, named := range []string{
 		"backend/internal/compose/csvorgwriter.go",
 		"backend/internal/modules/search/graphorgreach.go",
-		"backend/internal/modules/people/linkedinorgplace.go",
+		"backend/internal/modules/contacts/linkedinorgplace.go",
 		"backend/internal/orgs/doc.go",
 		"backend/internal/modules/organization/doc.go",
 	} {
@@ -296,12 +299,12 @@ func TestThePathCheckSeesAConcatenatedName(t *testing.T) {
 	}
 
 	for _, innocent := range []string{
-		"backend/internal/modules/people/anchorguard.go",
-		"backend/internal/modules/people/projectanchorgate_test.go",
+		"backend/internal/modules/contacts/anchorguard.go",
+		"backend/internal/modules/contacts/projectanchorgate_test.go",
 		"backend/internal/compose/aicert/corpus/capture_counterparty_verdict/forged_fence_01.yaml",
 		"backend/internal/modules/ai/structured_forget_test.go",
 		"backend/internal/platform/webread/schemaorg.go",
-		"backend/internal/modules/people/company.go",
+		"backend/internal/modules/contacts/company.go",
 	} {
 		if pathNamesTheOtherWord(innocent) {
 			t.Errorf("%s is ordinary English and the path check reads it as the old word", innocent)

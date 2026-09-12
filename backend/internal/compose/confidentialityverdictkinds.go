@@ -23,7 +23,7 @@ import (
 // Exactly one kind OPENS. Every other kind holds, and the asymmetry is the
 // design: a wrong `ordinary` publishes a founder's shareholder negotiation to
 // the workspace, while a wrong `legal` costs somebody a click to share a thread
-// that was never confidential. Only one of those is recoverable by the person
+// that was never confidential. Only one of those is recoverable by the contact
 // it happened to.
 var confidentialityKinds = map[string]string{
 	confidentialityOrdinary:      capture.VerdictCleared,
@@ -44,7 +44,7 @@ const (
 	// confidentialityFinancial is the company's own corporate and financial
 	// affairs: shareholders, funding, tax, an audit.
 	confidentialityFinancial = "financial_corporate"
-	// confidentialityPersonnel is about a named person as an employee:
+	// confidentialityPersonnel is about a named contact as an employee:
 	// a salary, a termination, a grievance, a candidate.
 	confidentialityPersonnel = "personnel"
 	// confidentialityPersonal is the mailbox owner's private life, including
@@ -111,22 +111,22 @@ Emit exactly one kind for the thread you are given:
     small circle. The ASK is what decides, never the subject matter.
     Mentioning an NDA is not asking. "I have the NDA", "the NDA is signed", "we need an NDA
     before we share the numbers" are ordinary commercial status: an NDA is a routine agreement
-    between two COMPANIES, it is signed by the company rather than by one person, and that one
+    between two COMPANIES, it is signed by the company rather than by one contact, and that one
     exists is not itself a secret. Answer "ordinary" for those. Only the material a signed NDA
     covers, sent together with a request to keep it close, is this kind.
 Only "ordinary" makes a thread readable by colleagues, so answer "ordinary" only when you are
 confident the conversation is routine company business. When a thread is about ordinary trade
 AND something sensitive, the sensitive kind wins.
-Who the bill is FOR decides. An invoice or receipt for a PERSON's own household or consumer
+Who the bill is FOR decides. An invoice or receipt for a HUMAN's own household or consumer
 service — their home, their phone, their rent, their own bank or card — is "personal" even
 when it arrives in a work mailbox, is addressed at a work address, or is forwarded for
 reimbursement. An invoice for the COMPANY's own trade is ordinary trade, which is evidence
 for "ordinary" and never on its own a reason to open a thread: the sensitive kinds above
-still win over it. An expense a person pays personally FOR the company's activity — a
+still win over it. An expense a contact pays personally FOR the company's activity — a
 business trip, a work tool, a business subscription — is the company's trade and is
 "ordinary", whoever the receipt names. Ask what was BOUGHT, not why the mail was sent:
 a trade fair, a work laptop and a client dinner are the company's activity, while a
-home phone line, a flat and a private card are the person's own however the mail is
+home phone line, a flat and a private card are the contact's own however the mail is
 labelled. Being sent on for an expense claim is not what makes something the company's
 — a private bill forwarded for reimbursement is still "personal".
 State your genuine confidence. A low confidence is a useful answer here: below the floor the

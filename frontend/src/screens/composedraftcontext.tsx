@@ -44,7 +44,7 @@ export function AccountDraftContext({
   // An overlay workspace has no native 360 to ground from; the endpoint
   // refuses there too, so the pickers simply have nothing to offer.
   const view = query.data?.state === "ready" ? query.data.view : undefined;
-  const contacts = view?.people?.data ?? [];
+  const contacts = view?.contacts?.data ?? [];
   const deals = view?.deals?.data ?? [];
 
   // No contact on the account is an honest dead end for the DRAFT — the model
@@ -71,7 +71,7 @@ export function AccountDraftContext({
           options={[
             { value: "", label: t("compose.draftToUnset") },
             ...contacts.map((contact) => ({
-              value: contact.person_id,
+              value: contact.contact_id,
               label: contact.full_name,
             })),
           ]}
@@ -107,7 +107,7 @@ export function openCited(entityType: string, entityId: string) {
   if (entityType === "deal") {
     navigate({ screen: "deals", id: entityId });
   }
-  if (entityType === "person") {
+  if (entityType === "contact") {
     navigate({ screen: "contacts", id: entityId });
   }
 }

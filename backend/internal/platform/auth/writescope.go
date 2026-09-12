@@ -153,7 +153,7 @@ func HoldWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 // a write by that module and writeauthorityreach_test.go counts it as a mutation
 // owing a row probe. Both are right for the 58 sites where a module locks its
 // own row before patching it. Every call here locks somebody ELSE'S subject —
-// consent locking person, activities locking a polymorphic parent — purely to
+// consent locking contact, activities locking a polymorphic parent — purely to
 // refuse a race, writing nothing. Routed through LockRow, five reads that mutate
 // nothing would each need a cross-store write ratification and a probe waiver.
 // Row-level authority over another module's subject is what this package is for,
@@ -161,7 +161,7 @@ func HoldWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 //
 // The lock is taken at the WRITE rather than inside EnsureWritableLive, where
 // every live-probed path would take it. That probe runs at the top of two dozen
-// transactions, several in `people`, where a documented order already exists and
+// transactions, several in `contacts`, where a documented order already exists and
 // renamerecheck.go records a deadlock found only by review when a row lock was
 // taken out of turn. Locking in the primitive adds an edge to every one of those
 // orders at once; locking at the write adds it only where the residue is
@@ -175,7 +175,7 @@ func HoldWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID)
 //
 // Held by: TestALockedSubjectMakesTheEraserWait and
 // TestLockSubjectLiveRefusesWhatItCannotHold
-// (backend/internal/modules/people/subjectlock_integration_test.go) for what the
+// (backend/internal/modules/contacts/subjectlock_integration_test.go) for what the
 // lock does, and TestALiveProbedWriteOfAHeldRowLocksItsSubject
 // (backend/liveprobelock_test.go) for which writers owe it.
 func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
@@ -205,7 +205,7 @@ func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) 
 // erasure. The capture-privacy arm stays lifted for the reason that function
 // gives — an unpromoted captured record is still held, and an erasure that
 // silently spared it would be the defect — and the write arm is added on top,
-// because a colleague handed a `read` share of a person is not thereby handed
+// because a colleague handed a `read` share of a contact is not thereby handed
 // the authority to erase them.
 //
 // Its sibling, SAR assembly, deliberately does NOT use this: an export is a

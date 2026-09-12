@@ -25,7 +25,7 @@ import (
 // seedSharedThread seeds one activity carrying BOTH contacts (and our
 // colleague) as participants, then folds the projections the way the
 // cg:graph-edge consumer does.
-func seedSharedThread(t *testing.T, e *Env, colleague, personA, personB ids.UUID, subject, audience string) {
+func seedSharedThread(t *testing.T, e *Env, colleague, contactA, contactB ids.UUID, subject, audience string) {
 	t.Helper()
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -36,16 +36,16 @@ func seedSharedThread(t *testing.T, e *Env, colleague, personA, personB ids.UUID
 		id, subject, audience); err != nil {
 		t.Fatalf("seeding the shared thread: %v", err)
 	}
-	LinkActivity(t, owner, id, "person", personA)
+	LinkActivity(t, owner, id, "contact", contactA)
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`,
 		id, colleague); err != nil {
 		t.Fatalf("seeding our side: %v", err)
 	}
-	for _, person := range []ids.UUID{personA, personB} {
+	for _, contact := range []ids.UUID{contactA, contactB} {
 		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'to')`,
-			id, person); err != nil {
+			INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'to')`,
+			id, contact); err != nil {
 			t.Fatalf("seeding a contact participant: %v", err)
 		}
 	}
@@ -65,7 +65,7 @@ func contactEdgeCount(t *testing.T, a, b ids.UUID) int {
 	}
 	var n int
 	err := OwnerConn(t).QueryRow(context.Background(), `
-		SELECT count(*) FROM graph_contact_edge WHERE person_a = $1 AND person_b = $2`,
+		SELECT count(*) FROM graph_contact_edge WHERE contact_a = $1 AND contact_b = $2`,
 		first, second).Scan(&n)
 	if err != nil {
 		t.Fatalf("counting contact edges: %v", err)
@@ -78,14 +78,14 @@ func contactEdgeCount(t *testing.T, a, b ids.UUID) int {
 // nothing, because who talked to whom on it is content.
 func TestASharedThreadFoldsToOneContactEdgeAndALimitedOneToNone(t *testing.T) {
 	e := Setup(t)
-	anna := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	birgit := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	seedSharedThread(t, e, e.Rep1, anna, birgit, "the workspace thread", "workspace")
 	if n := contactEdgeCount(t, anna, birgit); n != 1 {
 		t.Errorf("workspace thread → %d contact edges, want exactly 1 canonical row", n)
 	}
 
-	carla := e.SeedPerson(t, "Carla Nguyen", &e.Rep1)
+	carla := e.SeedContact(t, "Carla Nguyen", &e.Rep1)
 	seedSharedThread(t, e, e.Rep1, anna, carla, "the limited thread", "participants")
 	if n := contactEdgeCount(t, anna, carla); n != 0 {
 		t.Errorf("limited-audience thread → %d contact edges, want 0", n)
@@ -94,21 +94,21 @@ func TestASharedThreadFoldsToOneContactEdgeAndALimitedOneToNone(t *testing.T) {
 
 // The erasure drop reaches BOTH endpoint columns: whichever side of the pair
 // the subject stands on, the row is gone.
-func TestDroppingAPersonRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
+func TestDroppingAContactRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
 	e := Setup(t)
-	anna := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	birgit := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	seedSharedThread(t, e, e.Rep1, anna, birgit, "the shared thread", "workspace")
 
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	// The subject on the LEXICALLY GREATER side, so a person_a-only delete —
+	// The subject on the LEXICALLY GREATER side, so a contact_a-only delete —
 	// the copy-paste this test exists to refuse — would leave the row.
 	subject := anna
 	if birgit.String() > anna.String() {
 		subject = birgit
 	}
 	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
-		return search.DropEdgesForPerson(wsCtx, tx, subject)
+		return search.DropEdgesForContact(wsCtx, tx, subject)
 	}); err != nil {
 		t.Fatalf("dropping the subject's edges: %v", err)
 	}
@@ -122,10 +122,10 @@ func TestDroppingAPersonRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
 // works, so the admission rides the same call.
 func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
 	e := Setup(t)
-	anchor := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	visible := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
-	hidden := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", hidden, e.Rep3)
+	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	visible := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
+	hidden := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
 	seedSharedThread(t, e, e.Rep1, anchor, visible, "the open thread", "workspace")
 	seedSharedThread(t, e, e.Rep1, anchor, hidden, "the private contact's thread", "workspace")
 
@@ -133,7 +133,7 @@ func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
 	var peers []search.PeerEdge
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		peers, err = search.ContactEdgesForPerson(rep, tx, anchor, 10)
+		peers, err = search.ContactEdgesForContact(rep, tx, anchor, 10)
 		return err
 	})
 	if err != nil {
@@ -146,17 +146,17 @@ func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
 		t.Errorf("peer is %s, want %s", peers[0].Peer, visible)
 	}
 	if peers[0].FullName != "Birgit Sommer" {
-		t.Errorf("peer named %q, want the person record's own name", peers[0].FullName)
+		t.Errorf("peer named %q, want the contact record's own name", peers[0].FullName)
 	}
 }
 
 // The graph endpoint carries the peer arm: the anchor's observed acquaintance
 // arrives as a `peer` node with an anchor↔peer edge, and one human stays one
 // node when the peer is already drawn by another arm.
-func TestPersonGraphDrawsThePeerArm(t *testing.T) {
+func TestContactGraphDrawsThePeerArm(t *testing.T) {
 	e := Setup(t)
-	anchor := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	peer := e.SeedPerson(t, "Birgit Sommer", &e.Rep1)
+	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
 	seedSharedThread(t, e, e.Rep1, anchor, peer, "the shared thread", "workspace")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
@@ -173,8 +173,8 @@ func TestPersonGraphDrawsThePeerArm(t *testing.T) {
 	if peerNodes != 1 {
 		t.Fatalf("peer nodes = %d, want the one observed acquaintance", peerNodes)
 	}
-	anchorID := "person:" + anchor.String()
-	peerID := "person:" + peer.String()
+	anchorID := "contact:" + anchor.String()
+	peerID := "contact:" + peer.String()
 	found := false
 	for _, edge := range graph.Edges {
 		if (edge.From == anchorID && edge.To == peerID) || (edge.From == peerID && edge.To == anchorID) {

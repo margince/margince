@@ -10,7 +10,7 @@ package agents
 // margince://schema/reports: a resource is reachable by a client that reads
 // resources and by nobody else, and most callers on this surface list TOOLS
 // only. Without a door they reach the field names by refusal alone — correct,
-// and measured: a tools-only run writing a company, a person and a
+// and measured: a tools-only run writing a company, a contact and a
 // relationship from one business card spent three turns being told the names it
 // had guessed, one per record type, before it wrote anything.
 //
@@ -76,7 +76,7 @@ func (t describeRecordFields) Spec() mcp.ToolSpec {
 func (t describeRecordFields) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
 	// Decoded even with nothing to read, because decodeNoArguments is what
 	// enforces the declared additionalProperties: false — without it a call
-	// carrying `{"record_type":"person"}` is accepted silently and the caller
+	// carrying `{"record_type":"contact"}` is accepted silently and the caller
 	// then reads every record type believing it asked about one. An ABSENT
 	// payload skips it, because for THIS tool that is the normal call.
 	if err := decodeNoArguments(in); err != nil {

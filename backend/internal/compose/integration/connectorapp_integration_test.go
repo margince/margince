@@ -332,7 +332,7 @@ func assertVaultRefGone(ctx context.Context, t *testing.T, e *SearchEnv, ref, wh
 
 // Credentials is the resolve-for-USE path — what the connect transport calls to
 // exchange an authorization code. Separate from Read because the two answer
-// different questions: Read tells a person what is configured, this unseals the
+// different questions: Read tells a contact what is configured, this unseals the
 // secret and hands the server what it needs to talk to Google.
 func TestGoogleAppCredentialsResolveTheSealedSecret(t *testing.T) {
 	e := SetupSearch(t)

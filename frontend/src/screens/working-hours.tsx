@@ -137,7 +137,7 @@ function WorkingHoursForm({
   const [end, setEnd] = useState(hours.end_time);
   const [days, setDays] = useState<readonly number[]>(hours.days);
   // The zone this browser is in, offered when the reader has chosen none. A
-  // person confirming where they are is a better first write than a person
+  // contact confirming where they are is a better first write than a contact
   // typing an IANA name, and the server stores whatever is confirmed.
   const [zone, setZone] = useState(chosen ? hours.timezone : viewerZone());
   const [narrowed, setNarrowed] = useState(false);

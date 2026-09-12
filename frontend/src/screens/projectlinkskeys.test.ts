@@ -22,10 +22,10 @@ const KEY_OWNERS = [
     invalidates: '["company360", companyId]',
   },
   {
-    page: "src/screens/person360.tsx",
-    key: '["person360", id]',
-    writers: ["src/screens/personprojects.tsx"],
-    invalidates: '["person360", personId]',
+    page: "src/screens/contact360.tsx",
+    key: '["contact360", id]',
+    writers: ["src/screens/contactprojects.tsx"],
+    invalidates: '["contact360", contactId]',
   },
 ];
 

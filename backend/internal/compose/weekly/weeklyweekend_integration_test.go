@@ -214,7 +214,7 @@ func TestADealBehindAnErasureIsReportedRatherThanCountedAtTodaysValues(t *testin
 	// not the boundary works.
 	winDeal(t, e, id, wonStage)
 	// The tombstone is written directly because NO WRITER IN THE TREE PRODUCES
-	// ONE FOR A DEAL. privacy tombstones person, lead, activity, attachment,
+	// ONE FOR A DEAL. privacy tombstones contact, lead, activity, attachment,
 	// deal_room_participant, scheduled_send and the AI records — never a deal —
 	// so this row cannot be seeded through production, and the boundary excludes
 	// nothing today.

@@ -47,7 +47,7 @@ func (extJobDispatcherArgs) FleetWide() {}
 
 // extJobWorkspaceArgs is one workspace's tick of one composed job.
 //
-// The row carries NO principal. What acts is the job, not a person: the tick's
+// The row carries NO principal. What acts is the job, not a contact: the tick's
 // authority is a pure function of the declaration (extensionJobPrincipal), so
 // there is nothing about it a queued row could carry stale.
 //
@@ -120,7 +120,7 @@ func (w *extJobDispatcherWorker) Work(ctx context.Context, _ *river.Job[extJobDi
 // named by its dispatcher kind, and no user at all.
 //
 // WHAT IS ABSENT IS THE POINT. A tick is work nobody requested, so there is no
-// person to name — and naming one anyway is what this used to do, by resolving a
+// contact to name — and naming one anyway is what this used to do, by resolving a
 // seeded `is_agent` row that authorized nothing and cost a licence seat. The
 // units that ship scheduled work do not act on this authority: each lands its
 // records through Runtime.Ingest, which resolves the MEMBER's live grants and

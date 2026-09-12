@@ -143,7 +143,7 @@ func purgeCtx(e *integration.Env, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Update: true, Delete: true},
-				"person":   {Read: true, Create: true, Update: true, Delete: true},
+				"contact":  {Read: true, Create: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -165,7 +165,7 @@ func runPurge(t *testing.T, e *integration.Env, user, rule ids.UUID, preview boo
 }
 
 // seedOwnExclusion writes the rule through the store that writes it in
-// production, so what the purge reads back is the row a person's own click
+// production, so what the purge reads back is the row a contact's own click
 // would have made.
 func seedOwnExclusion(t *testing.T, e *integration.Env, user ids.UUID, kind, value string) ids.UUID {
 	t.Helper()

@@ -146,7 +146,7 @@ func TestEveryApprovalTargetTakesItsOwningStoresRule(t *testing.T) {
 		want       approvalTargetRule
 		because    string
 	}{
-		{"person", targetRuleRowScoped, "person rows carry owner_id and the read path scopes them own/team/all"},
+		{"contact", targetRuleRowScoped, "contact rows carry owner_id and the read path scopes them own/team/all"},
 		{"project", targetRuleRowScoped, "project rows carry owner_id, exactly like their deal and lead neighbours"},
 		{"list", targetRuleRowScoped, "collections' list reads ARE auth.EnsureVisible over `list`"},
 		{"offer", targetRuleInheritedScope, "an offer carries no owner_id — its sensitivity is its parent deal's"},

@@ -78,7 +78,7 @@ var statedReasons = gatekit.Waive(map[string]string{
 		"(draftfloor.SplitGreetingLine over the recipient's name) before anything can ask whether the body is " +
 		"empty. What counts as the body differs, so the refusal cannot be shared until the helper can express " +
 		"that transform — a candidate for adoption, not a difference of taste. " +
-		"This was TWO waivers, on accountdraft/write.go and persondraft/write.go, and the second one said " +
+		"This was TWO waivers, on accountdraft/write.go and contactdraft/write.go, and the second one said " +
 		"of the pair: these two are also each other's copy, which is its own finding and its own change. " +
 		"That change landed — the reader is one file now, and so is this waiver.",
 })

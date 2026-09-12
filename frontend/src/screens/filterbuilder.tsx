@@ -260,7 +260,7 @@ function firstClause(fields: readonly VocabularyField[]): Node {
 }
 
 // Deliberately NOT NodeProps: a clause has no children, so depth would be a
-// prop it accepts and ignores — and a prop nothing reads is one the next person
+// prop it accepts and ignores — and a prop nothing reads is one the next contact
 // has to check before trusting.
 type ClauseRowProps = Readonly<{
   leafID: string;

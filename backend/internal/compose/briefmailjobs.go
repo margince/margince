@@ -147,7 +147,7 @@ const briefMailBudget = 45 * time.Second
 // Whether they want it on a QUIET morning is `quiet_day_notice`, and that one
 // fails CLOSED, because the two defaults answer different questions. "Send me my
 // brief" is the installation's default and a rep who never chose gets it. "Tell
-// me even when there is nothing" is a thing a person asks for; sending it to
+// me even when there is nothing" is a thing a contact asks for; sending it to
 // everyone who never chose would mail the whole company "nothing is waiting on
 // you" every quiet morning, and that message teaches its own readers to filter
 // the ones that matter.

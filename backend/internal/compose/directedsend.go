@@ -59,7 +59,7 @@ func (s directedSendService) DirectAndSend(
 ) (crmcontracts.Activity, error) {
 	// READ UNSCOPED, gated on the same grant directing needs. The initiator's
 	// own read would refuse a designated reviewer acting on somebody else's
-	// refusal, which is exactly the person this path exists for.
+	// refusal, which is exactly the human this path exists for.
 	intent, err := s.consent.HeldMessageForReview(ctx, reviewID)
 	if err != nil {
 		return crmcontracts.Activity{}, err
@@ -80,7 +80,7 @@ func (s directedSendService) DirectAndSend(
 	// trapped by their own retry.
 	//
 	// A standing decision on this review is THIS decision: it names the same
-	// review, it was made by a person who acknowledged the same warning, and it
+	// review, it was made by a human who acknowledged the same warning, and it
 	// has not been spent. So the retry goes on to the send rather than trying
 	// to record it again.
 	if _, err := s.consent.DirectSend(ctx, reviewID, in); err != nil &&

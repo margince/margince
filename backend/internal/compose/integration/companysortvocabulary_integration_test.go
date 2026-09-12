@@ -23,14 +23,14 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // companiesIn lists the accounts this caller sees under one sort spec, in order.
 func companiesIn(ctx context.Context, t *testing.T, e *Env, spec string) []crmcontracts.Company {
 	t.Helper()
-	rows, _, err := e.People.ListCompanies(ctx, people.ListCompaniesInput{Sort: &spec})
+	rows, _, err := e.Contacts.ListCompanies(ctx, contacts.ListCompaniesInput{Sort: &spec})
 	if err != nil {
 		t.Fatalf("ListCompanies(sort=%s): %v", spec, err)
 	}
@@ -54,10 +54,10 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 
 	// Seeded so that neither answer can come from insertion order or from the
 	// name, which is the sort the list already had.
-	zeta := seedAccount(t, e, people.CreateCompanyInput{
+	zeta := seedAccount(t, e, contacts.CreateCompanyInput{
 		DisplayName: "Zeta Holding", Description: strPtr("An early note"),
 	})
-	alma := seedAccount(t, e, people.CreateCompanyInput{
+	alma := seedAccount(t, e, contacts.CreateCompanyInput{
 		DisplayName: "Alma Werke", Description: strPtr("Zero interest so far"),
 	})
 	setLifecycle(t, e, zeta, "customer")
@@ -81,16 +81,16 @@ func TestTheAccountsListSortsByTheWebsiteItDraws(t *testing.T) {
 	// column prints the PRIMARY host, so a sort that read any live domain —
 	// or read them oldest-first — would key this account on "zzz.example" and
 	// put it the other side of the account below.
-	zeta := seedAccount(t, e, people.CreateCompanyInput{
+	zeta := seedAccount(t, e, contacts.CreateCompanyInput{
 		DisplayName: "Zeta Holding",
-		Domains: []people.CompanyDomainInput{
+		Domains: []contacts.CompanyDomainInput{
 			{Domain: "zzz.example"},
 			{Domain: "alma.example", IsPrimary: true},
 		},
 	})
-	alma := seedAccount(t, e, people.CreateCompanyInput{
+	alma := seedAccount(t, e, contacts.CreateCompanyInput{
 		DisplayName: "Alma Werke",
-		Domains:     []people.CompanyDomainInput{{Domain: "zeta.example", IsPrimary: true}},
+		Domains:     []contacts.CompanyDomainInput{{Domain: "zeta.example", IsPrimary: true}},
 	})
 	// No domain at all: nothing to print and nothing to order by, so it sits in
 	// the tail rather than ahead of every named host.
@@ -116,9 +116,9 @@ func TestOrderingAccountsByContactsAgreesWithTheCountTheyShow(t *testing.T) {
 	busy := e.SeedCompany(t, "Alma Werke", &e.Rep1)
 	quiet := e.SeedCompany(t, "Zeta Holding", &e.Rep1)
 	for _, name := range []string{"One", "Two", "Three"} {
-		employPerson(t, e, e.SeedPerson(t, name+" at Alma", &e.Rep1), busy, nil)
+		employContact(t, e, e.SeedContact(t, name+" at Alma", &e.Rep1), busy, nil)
 	}
-	employPerson(t, e, e.SeedPerson(t, "Only at Zeta", &e.Rep1), quiet, nil)
+	employContact(t, e, e.SeedContact(t, "Only at Zeta", &e.Rep1), quiet, nil)
 
 	// Ascending puts the quieter account first, which is the reverse of the
 	// name order the list already had.
@@ -180,10 +180,10 @@ func TestAWithheldCountOrdersTheAccountsListByNothing(t *testing.T) {
 }
 
 // seedAccount creates one account through the real writer, owned by Rep1.
-func seedAccount(t *testing.T, e *Env, in people.CreateCompanyInput) ids.UUID {
+func seedAccount(t *testing.T, e *Env, in contacts.CreateCompanyInput) ids.UUID {
 	t.Helper()
 	in.OwnerID, in.Source = userIDPtr(&e.Rep1), "manual"
-	company, err := e.People.CreateCompany(e.Admin(), in)
+	company, err := e.Contacts.CreateCompany(e.Admin(), in)
 	if err != nil {
 		t.Fatalf("seeding %q: %v", in.DisplayName, err)
 	}
@@ -194,8 +194,8 @@ func seedAccount(t *testing.T, e *Env, in people.CreateCompanyInput) ids.UUID {
 // column the sort reads holds a value a writer really put there.
 func setLifecycle(t *testing.T, e *Env, company ids.UUID, to string) {
 	t.Helper()
-	if _, err := e.People.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company),
-		people.UpdateCompanyInput{Lifecycle: &to}); err != nil {
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company),
+		contacts.UpdateCompanyInput{Lifecycle: &to}); err != nil {
 		t.Fatalf("setting the lifecycle to %q: %v", to, err)
 	}
 }

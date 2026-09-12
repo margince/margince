@@ -8,7 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -19,7 +19,7 @@ func TestACommitmentCardCitesTheSameConversationItLinksTo(t *testing.T) {
 	t.Parallel()
 	source := ids.NewV7()
 
-	card := commitmentAttention(people.ProjectCommitment{
+	card := commitmentAttention(contacts.ProjectCommitment{
 		Body:       "We will send the fallback matrix by Friday.",
 		ActivityID: source,
 	})
@@ -45,7 +45,7 @@ func TestACommitmentCardCitesTheSameConversationItLinksTo(t *testing.T) {
 // the citation above is not simply written unconditionally.
 func TestACommitmentWithNoBodyProducesNoCard(t *testing.T) {
 	t.Parallel()
-	if card := commitmentAttention(people.ProjectCommitment{ActivityID: ids.NewV7()}); card != nil {
+	if card := commitmentAttention(contacts.ProjectCommitment{ActivityID: ids.NewV7()}); card != nil {
 		t.Errorf("got a card for a commitment that said nothing: %+v", card)
 	}
 }

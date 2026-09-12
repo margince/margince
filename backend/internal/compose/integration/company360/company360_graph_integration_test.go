@@ -137,12 +137,12 @@ func seedOneHop(t *testing.T, e *integration.Env) oneHopFixture {
 	e.WsExec(t, `INSERT INTO relationship (kind, company_id, counterparty_company_id, source, captured_by)
 		VALUES ('partner_of', $1, $2, 'manual', 'human:x')`, f.company, f.reseller)
 
-	f.employee = e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	f.employee = e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, f.employee, f.company, "cto")
 	f.deal = e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, f.deal, f.company)
-	f.stakeholder = e.SeedPerson(t, "Outside Counsel", &e.Rep1)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	f.stakeholder = e.SeedContact(t, "Outside Counsel", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, f.stakeholder, f.deal)
 
 	// Two hops out: the parent's OWN parent, and a company that employs our

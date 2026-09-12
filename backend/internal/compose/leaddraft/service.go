@@ -7,15 +7,15 @@ package leaddraft
 //
 // There is no pool here and no store with a write method, which is the
 // zero-write guarantee stated as a dependency rather than as a rule — the same
-// shape persondraft uses, for the same reason. A contributor who wanted this
+// shape contactdraft uses, for the same reason. A contributor who wanted this
 // endpoint to persist something would have to add a field to this struct.
 
 import (
 	"context"
 	"log/slog"
 
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -46,7 +46,7 @@ type ActivityLister interface {
 // Request is the transport's body, narrowed to what the writer needs.
 //
 // One field, and no recipient among them: the lead in the path IS the
-// recipient, which is what makes this the same shape persondraft writes for and
+// recipient, which is what makes this the same shape contactdraft writes for and
 // not a second kind of request.
 type Request struct {
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
@@ -58,7 +58,7 @@ type Request struct {
 type Service struct {
 	leads    LeadReader
 	acts     ActivityLister
-	lane     persondraft.Completer
+	lane     contactdraft.Completer
 	envelope *draftfloor.Resolver
 	// voice reads the sender's own Voice DNA. The READ seam, not the voice
 	// store: this package promises to write nothing, and a store handed in
@@ -69,8 +69,8 @@ type Service struct {
 
 // NewService binds the draft to the reads it is grounded in and the model lane
 // that writes it. lane may be nil: that is a deployment running no model, and
-// persondraft's deterministic floor is the answer.
-func NewService(leads LeadReader, acts ActivityLister, lane persondraft.Completer) *Service {
+// contactdraft's deterministic floor is the answer.
+func NewService(leads LeadReader, acts ActivityLister, lane contactdraft.Completer) *Service {
 	return &Service{leads: leads, acts: acts, lane: lane, envelope: draftfloor.NewResolver()}
 }
 
@@ -96,7 +96,7 @@ func (s *Service) Draft(
 	ctx context.Context, leadID ids.LeadID, req Request,
 ) (crmcontracts.AccountEmailDraft, error) {
 	// Human-only: drafting spends the workspace's model budget on prose for a
-	// person to send under their own name.
+	// contact to send under their own name.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
@@ -106,7 +106,7 @@ func (s *Service) Draft(
 	// LiveOnly, so a terminal lead is a 404 rather than a draft. Both closures
 	// archive the row — disqualified, and promoted to a contact — and neither
 	// is a record to open a new conversation from: the promoted one's
-	// correspondence belongs to the person it became.
+	// correspondence belongs to the contact it became.
 	lead, err := s.leads.GetLead(ctx, leadID, storekit.LiveOnly)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
@@ -122,15 +122,15 @@ func (s *Service) Draft(
 		return crmcontracts.AccountEmailDraft{}, err
 	}
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: persondraft.CorrespondenceTextOf(activities)},
+		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities)},
 		ConversationState(activities, s.envelope.Now()))
 	in := FromLead(lead, activities, req.Intent, envelope)
 	// Loaded after the lead read, so a caller who may not see this lead is
 	// refused before their voice profile is touched at all.
 	voice := draftvoice.Load(ctx, s.voice, s.log)
-	draft, by, err := persondraft.Write(ctx, s.lane, in, voice)
+	draft, by, err := contactdraft.Write(ctx, s.lane, in, voice)
 	if err != nil {
 		return crmcontracts.AccountEmailDraft{}, err
 	}
-	return persondraft.Wire(draft, by, voice.Degraded, envelope.Language), nil
+	return contactdraft.Wire(draft, by, voice.Degraded, envelope.Language), nil
 }

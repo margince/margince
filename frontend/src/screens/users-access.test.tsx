@@ -201,7 +201,7 @@ describe("AccessPreviewPanel", () => {
         row_scope: "team",
         teams: [{ id: "t-1", name: "Nord" }],
         objects: {
-          person: { read: true },
+          contact: { read: true },
           deal: { read: true, update: true, delete: true },
         },
         field_masks: [
@@ -227,7 +227,7 @@ describe("AccessPreviewPanel", () => {
     // Read alone, and read·write·delete — the verbs are derived from the grant
     // the server returned rather than from the role's name.
     expect(
-      screen.getByText(`${en["users.access.object.person"]}: read`),
+      screen.getByText(`${en["users.access.object.contact"]}: read`),
     ).toBeTruthy();
     expect(
       screen.getByText(

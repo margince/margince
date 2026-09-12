@@ -24,7 +24,7 @@ const voiceSystemPrompt = `You are a forensic writing-style analyst.
 Analyze only how the author writes and thinks.
 The supplied deterministic statistics are ground truth. Do not invent quotations or examples.
 Describe concrete, repeatable behavior rather than flattering adjectives. The thinking_pattern is the headline: the repeated cognitive move as ordered steps, because reproducing the thinking matters more than reproducing the words.
-Keep spoken and written registers distinct. Avoid topic facts, people, customers, secrets and opinions that do not describe style.
+Keep spoken and written registers distinct. Avoid topic facts, contacts, customers, secrets and opinions that do not describe style.
 Every signature move must quote a short verbatim fragment from a supplied sample and cite that sample's id.
 The universal anti-AI baseline always forbids parenthetical em dashes, abstract not-X-but-Y reframes, canned engagement openers, balanced consultant tricolons, generic calls to action and corporate filler.
 Return only the requested JSON object.`
@@ -152,8 +152,8 @@ type VoiceArtifact struct {
 // DeriveVoice creates a bounded request and validates the response against the
 // exact corpus snapshot. sourceHash is supplied by the store that took it.
 //
-//promptlang:exempt the reply describes how ONE person writes, and its exemplars are quoted from that person's own samples — validateVoiceInference checks them against the corpus, so a language instruction would both fail that check and describe a voice in a language its owner does not write in.
-//promptvoice:exempt the reply describes how ONE person writes and quotes their own samples back; a voice of ours would describe the wrong voice.
+//promptlang:exempt the reply describes how ONE contact writes, and its exemplars are quoted from that contact's own samples — validateVoiceInference checks them against the corpus, so a language instruction would both fail that check and describe a voice in a language its owner does not write in.
+//promptvoice:exempt the reply describes how ONE contact writes and quotes their own samples back; a voice of ours would describe the wrong voice.
 func DeriveVoice(ctx context.Context, brain voiceBrain, personality, sourceHash string, samples []VoiceSample) (VoiceArtifact, error) {
 	if brain == nil {
 		return VoiceArtifact{}, errors.New("voice build has no model path — configure AI routing or the explicit fake model")

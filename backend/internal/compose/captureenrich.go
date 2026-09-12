@@ -3,7 +3,7 @@
 
 package compose
 
-// The signature-enrich pass (ai-operational-spec §2.9, ADR-0063): a person whose
+// The signature-enrich pass (ai-operational-spec §2.9, ADR-0063): a contact whose
 // latest inbound mail this pass has not read yet gets ONE model read of its
 // signature block — evidence-or-omit (the gateEvidence discipline: a field whose
 // snippet is not verbatim in the supplied lines is dropped in code, not
@@ -32,7 +32,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -46,7 +46,7 @@ const companyNameField = "company_name"
 
 const (
 	// signatureLineCount is the §2.9 input pin: the trailing non-quoted
-	// lines of the person's most recent inbound mail.
+	// lines of the contact's most recent inbound mail.
 	signatureLineCount = 15
 	// enrichConfidenceFloor is the §2.9 acceptance floor.
 	enrichConfidenceFloor = 0.6
@@ -57,7 +57,7 @@ const (
 )
 
 // enrichFieldNames is the §2.9 closed vocabulary, shared with the card reader:
-// a signature and a business card state the same things about a person, and two
+// a signature and a business card state the same things about a contact, and two
 // vocabularies would let which one arrived decide what could be recorded.
 var enrichFieldNames = map[string]bool{
 	fieldTitle: true, "phone": true, "role": true, "linkedin": true, companyNameField: true,
@@ -70,7 +70,7 @@ must appear character-for-character in the supplied text. Ignore quoted replies,
 disclaimers, and marketing taglines. Phone numbers verbatim, never normalized.
 Emit address as the single line the signature prints it on. Emit website only for the
 company's own site; a social profile is never a website, and linkedin carries that one.
-The signature must be THE NAMED PERSON'S OWN. A block naming somebody else — a colleague,
+The signature must be THE NAMED CONTACT'S OWN. A block naming somebody else — a colleague,
 a forwarded sender, a correspondent quoted underneath — states nothing about them, so emit
 no fields at all rather than the ones it happens to contain.`
 
@@ -82,13 +82,13 @@ func signatureEnrichSystemFor(fence promptfence.Fence) string {
 // CaptureEnricher drives the signature pass for every workspace.
 type CaptureEnricher struct {
 	pool  *pgxpool.Pool
-	store *people.Store
+	store *contacts.Store
 	brain completer
 	log   *slog.Logger
 	// limit is how many candidates one pass takes, and therefore the count at
 	// which it reports a continuation is due. enrichPassLimit in production; a
 	// test sets it small so it can drive that boundary with a handful of
-	// people rather than a hundred.
+	// contacts rather than a hundred.
 	limit int
 }
 
@@ -96,7 +96,7 @@ type CaptureEnricher struct {
 func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureEnricher {
 	return &CaptureEnricher{
 		pool:  pool,
-		store: people.NewStore(InstallationDB(pool)),
+		store: contacts.NewStore(InstallationDB(pool)),
 		brain: brain,
 		log:   log,
 		limit: enrichPassLimit,
@@ -104,12 +104,12 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 }
 
 // RunWorkspace enriches up to enrichPassLimit candidates in the workspace
-// already bound in ctx. A budget stop ends the pass cleanly; per-person model
-// trouble is logged and the person is retried next cycle (their evidence rows
+// already bound in ctx. A budget stop ends the pass cleanly; per-contact model
+// trouble is logged and the contact is retried next cycle (their evidence rows
 // are still absent).
 //
-// It reports whether the pass filled its limit AND moved at least one person,
-// which is the caller's signal that more people are due right now. Two things
+// It reports whether the pass filled its limit AND moved at least one contact,
+// which is the caller's signal that more contacts are due right now. Two things
 // make that worth acting on rather than leaving to the nightly pass. A mailbox
 // sync lands hundreds of messages at once, so the 101st contact would wait
 // until tonight for details a rep is about to read. And the trigger's own
@@ -126,7 +126,7 @@ func NewCaptureEnricher(pool *pgxpool.Pool, brain completer, log *slog.Logger) *
 func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err error) {
 	// ONE PASS AT A TIME, or two of them pay for the same page.
 	//
-	// The candidate list is a plain read, so two passes select the same people,
+	// The candidate list is a plain read, so two passes select the same contacts,
 	// make the same model calls and each spend for them. Three doors can put a
 	// pass in flight — the nightly tick, the arrival trigger and a pass's own
 	// continuation — and the first two dedupe against each other on the queue's
@@ -169,7 +169,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	if removed, err := e.store.RetractMisattributedSignatureFields(wsCtx); err != nil {
 		return false, err
 	} else if removed > 0 {
-		e.log.InfoContext(wsCtx, "signature enrich: took back fields read off a message the person did not send",
+		e.log.InfoContext(wsCtx, "signature enrich: took back fields read off a message the contact did not send",
 			"fields", removed)
 	}
 	candidates, err := e.store.SignatureCandidates(wsCtx, e.limit, defaultEnrich)
@@ -178,10 +178,10 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	}
 	// A candidate that fails is logged, not returned, and that survives the
 	// fan-out deliberately: the retry is durable in the DATA rather than in
-	// River. A person whose verdict could not be parsed wrote no evidence
+	// River. A contact whose verdict could not be parsed wrote no evidence
 	// rows, so SignatureCandidates re-selects them on the next pass. Failing
 	// the workspace row for one unparseable reply would retry the whole
-	// candidate set to re-reach the same person.
+	// candidate set to re-reach the same contact.
 	var advanced int
 	for _, cand := range candidates {
 		if err := e.enrichOne(wsCtx, cand); err != nil {
@@ -193,7 +193,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 				return false, nil
 			}
 			e.log.WarnContext(wsCtx, "signature enrich: candidate failed",
-				"person", cand.PersonID.String(), "err", err)
+				"contact", cand.ContactID.String(), "err", err)
 			continue
 		}
 		advanced++
@@ -206,7 +206,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// a hundred candidates whose model call keeps failing would re-select
 	// themselves, enqueue another job, and do it again: an unbroken chain of
 	// jobs that each succeed, spend the model budget, and starve every older
-	// person behind them. River's attempt cap cannot stop it, because no job
+	// contact behind them. River's attempt cap cannot stop it, because no job
 	// in the chain ever fails.
 	//
 	// Requiring progress bounds the chain by the work actually done. A pass
@@ -232,22 +232,22 @@ func unparseableReply(dropped []droppedFinding) bool {
 
 // enrichOne reads one candidate's signature block, gates the model's fields
 // against it, and applies the survivors by recency.
-func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCandidate) error {
+func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.SignatureCandidate) error {
 	lines := signatureBlock(cand.Body)
 	if lines == "" {
 		// Nothing to read in this mail. The read still counts: without the
-		// cursor a person whose latest mail has no signature block would be
+		// cursor a contact whose latest mail has no signature block would be
 		// selected again every night for the same empty window.
-		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
+		return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID)
 	}
-	if !signatureNamesPerson(lines, cand) {
+	if !signatureNamesContact(lines, cand) {
 		// Their message, somebody else's signature at the foot of it. Reading
 		// it would repeat the defect the sender predicate closed, one step
 		// further along: grounded text, wrong owner. The read is recorded, so
 		// this mail is not re-offered until they write again.
 		e.log.DebugContext(ctx, "signature enrich: the block names somebody else, so nothing is read from it",
-			"person", cand.PersonID.String(), "reason", dropSignatureNotThisPerson)
-		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
+			"contact", cand.ContactID.String(), "reason", dropSignatureNotThisContact)
+		return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID)
 	}
 	req := signatureEnrichRequest(cand, lines)
 	resp, err := ai.Ask(ctx, e.brain, req, signatureShapeValid)
@@ -262,19 +262,19 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 	if unparseableReply(dropped) {
 		// A reply no reader can parse is a fault in the ANSWER, not evidence
 		// that the signature states nothing — so the read goes unrecorded and
-		// this person is asked again next pass.
-		return fmt.Errorf("compose: unparseable signature reply for person %s", cand.PersonID)
+		// this contact is asked again next pass.
+		return fmt.Errorf("compose: unparseable signature reply for contact %s", cand.ContactID)
 	}
 	if len(dropped) > 0 {
 		e.log.DebugContext(ctx, "signature enrich: fields dropped by the evidence gate",
-			"person", cand.PersonID.String(), "dropped", len(dropped))
+			"contact", cand.ContactID.String(), "dropped", len(dropped))
 	}
-	fields := make([]people.SignatureField, 0, len(gated))
+	fields := make([]contacts.SignatureField, 0, len(gated))
 	for _, f := range gated {
 		if float64(f.Confidence) < enrichConfidenceFloor {
 			continue
 		}
-		fields = append(fields, people.SignatureField{
+		fields = append(fields, contacts.SignatureField{
 			Name: f.Field, Value: f.Value, Evidence: f.EvidenceSnippet, Confidence: float64(f.Confidence),
 			// The claim key the correction ledger stores for this field. The
 			// apply re-reads the ledger under its own lock and defers to any
@@ -285,15 +285,15 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 	}
 	if len(fields) == 0 {
 		// The model answered and nothing survived the gate — an answer, and
-		// the same answer next time unless this person writes again.
-		return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
+		// the same answer next time unless this contact writes again.
+		return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID)
 	}
-	if _, err := e.store.ApplySignatureFields(ctx, cand.PersonID, cand.ActivityID, fields); err != nil {
+	if _, err := e.store.ApplySignatureFields(ctx, cand.ContactID, cand.ActivityID, fields); err != nil {
 		return err
 	}
 	// A model error above returns before this point on purpose: an
-	// unanswered call is a call still owed, so the person stays a candidate.
-	return e.store.MarkSignatureRead(ctx, cand.PersonID, cand.ActivityID)
+	// unanswered call is a call still owed, so the contact stays a candidate.
+	return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID)
 }
 
 // signatureEnrichRequest builds the ONE model call that reads one candidate's
@@ -310,15 +310,15 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand people.SignatureCa
 // previous sender has already been shown, and every field of this prompt is
 // their own writing.
 //
-//promptlang:exempt the fields are a title and a phone number copied out of the person's own signature block, each carrying an evidence_snippet checked against those lines — a job title is written the way its holder writes it, and translating one would both change the fact and fail the snippet check.
+//promptlang:exempt the fields are a title and a phone number copied out of the contact's own signature block, each carrying an evidence_snippet checked against those lines — a job title is written the way its holder writes it, and translating one would both change the fact and fail the snippet check.
 //promptvoice:exempt the fields are a title and a phone number copied out of a signature block, each checked against those lines; there is no sentence of ours here to have a voice.
-func signatureEnrichRequest(cand people.SignatureCandidate, lines string) model.Request {
+func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	// The person's own name and address are theirs to write, so they go INSIDE
+	// The contact's own name and address are theirs to write, so they go INSIDE
 	// the boundary like the signature does. Interpolated into a header line they
 	// would be reading in the prompt's own voice, which is the whole attack.
-	prompt.WriteString("Person (untrusted):\n")
+	prompt.WriteString("Contact (untrusted):\n")
 	prompt.WriteString(fence.Wrap(fmt.Sprintf("Name: %s\nEmail: %s", cand.FullName, cand.Email)) + "\n")
 	// Everything the vocabulary admits, and no statement about what the record
 	// already holds. The pass reads a signature to find out whether what it
@@ -406,7 +406,7 @@ const enrichPassLock = "capture_signature_enrich_pass"
 // holdThePass takes the pass's advisory lock, and answers a release for it.
 //
 // SESSION-scoped, on a connection held for the pass, because the pass is many
-// transactions — the candidate read, one apply per person, the watermark — and
+// transactions — the candidate read, one apply per contact, the watermark — and
 // a transaction lock would be gone before the first model call. That also makes
 // the release crash-safe in the way a lease row is not: a worker that dies
 // drops its connection, and Postgres drops the lock with it, where a `held_until`
@@ -449,10 +449,10 @@ func (e *CaptureEnricher) holdThePass(ctx context.Context) (bool, func(), error)
 // must not become the reason a worker hangs.
 const enrichUnlockTimeout = 5 * time.Second
 
-// signatureNamesPerson asks whether the block a field was read from names the
-// person it is about to be written to.
+// signatureNamesContact asks whether the block a field was read from names the
+// contact it is about to be written to.
 //
-// The candidate query already requires this person to have SENT the message, so
+// The candidate query already requires this contact to have SENT the message, so
 // this is the second shape: their own mail whose foot carries somebody else's
 // signature — a forwarded footer, a colleague's block under theirs, a
 // correspondent's details quoted without the ">" that would have excluded them.
@@ -472,7 +472,7 @@ const enrichUnlockTimeout = 5 * time.Second
 // whole-word test a particle only matches a particle, and skipping short ones
 // permanently locked out anybody whose name is short in the first place ("Li
 // Bo" signing "Li Bo\nCEO" is a signature nobody could ever read).
-func signatureNamesPerson(block string, cand people.SignatureCandidate) bool {
+func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool {
 	folded := strings.ToLower(block)
 	if cand.Email != "" && strings.Contains(folded, strings.ToLower(cand.Email)) {
 		return true

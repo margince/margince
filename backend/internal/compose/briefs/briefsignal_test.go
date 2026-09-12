@@ -34,7 +34,7 @@ func TestTheSignalNamesWhyTheNightPickedTheDeal(t *testing.T) {
 		// WITHHELD IS NOT COLD. A run that could not read the relationship
 		// scores every deal's warmth zero, so reading that zero as coldness
 		// turns "we could not see this" into an asserted problem — on every
-		// quiet deal, for a reader whose only fault is lacking the person grant.
+		// quiet deal, for a reader whose only fault is lacking the contact grant.
 		{"quiet, with warmth withheld rather than measured", BriefFeatureVector{
 			Momentum: briefMomentumUnchanged, Warmth: 0, Winnability: 0.8,
 		}, false, SignalOpportunity},

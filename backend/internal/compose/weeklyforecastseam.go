@@ -369,7 +369,7 @@ func (w *WeeklyForecast) freezeClosing(
 		return ids.Nil, closingReadings{}, "", err
 	}
 	// No manager call is consulted for a frozen weekly landing. A call is an
-	// assertion about a period a person is still working; a retrospective
+	// assertion about a period a contact is still working; a retrospective
 	// reports what the PIPELINE said, and substituting somebody's number would
 	// freeze an opinion as a measurement.
 	landing, err := forecasting.ProjectLanding(readings, measure, nil)

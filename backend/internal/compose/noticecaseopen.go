@@ -5,19 +5,19 @@ package compose
 
 // The consumer that records what the installation owes a new contact.
 //
-// people writes WHY a contact exists; consent decides what that obliges and
+// contacts writes WHY a contact exists; consent decides what that obliges and
 // holds the queue of duties owed. Neither imports the other, so the edge is
 // injected here.
 //
 // It reads the acquisition rather than taking it from the event payload.
-// person.created carries only full_name — widening a shipped public event to
+// contact.created carries only full_name — widening a shipped public event to
 // carry an acquisition id would change a contract no external consumer asked
-// for. The acquisition row is written in the SAME transaction as the person and
-// the event (people/resolvecreate.go), so by the time this runs it is there.
+// for. The acquisition row is written in the SAME transaction as the contact and
+// the event (contacts/resolvecreate.go), so by the time this runs it is there.
 //
 // IDEMPOTENCY IS THE UNIQUE INDEX, not this handler and not the dedupe cache.
 // privacy_notice_case carries one row per acquisition_id and the writer says
-// ON CONFLICT DO NOTHING, so a redelivered person.created finds the duty
+// ON CONFLICT DO NOTHING, so a redelivered contact.created finds the duty
 // already recorded and does nothing. events.Dedupe sits in front of that as a
 // cache, never as the guarantee — it marks AFTER the effect, so a crash in that
 // window replays, and replay has to be free.
@@ -38,8 +38,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// noticeCasePersonEntity is the entity a person.created envelope rides on.
-const noticeCasePersonEntity = "person"
+// noticeCaseContactEntity is the entity a contact.created envelope rides on.
+const noticeCaseContactEntity = "contact"
 
 // systemNoticeCaseActor names this consumer in the audit trail. A duty recorded
 // against the workspace itself must say what recorded it: "who opened this
@@ -60,18 +60,18 @@ func NewNoticeCaseOpen(pool *pgxpool.Pool, now func() time.Time, log *slog.Logge
 	return &NoticeCaseOpen{pool: pool, now: now, log: log}
 }
 
-// HandleEvent records the duty for one created person.
+// HandleEvent records the duty for one created contact.
 //
 // Anything else answers nil so the consumer group keeps flowing rather than
 // wedging on traffic this consumer ignores.
 func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != noticeCasePersonEntity {
+	if env.Entity.ID == ids.Nil || env.Entity.Type != noticeCaseContactEntity {
 		return nil
 	}
 	// The generated constant, not a typed literal: a hand-written event name
 	// that drifts from the contract makes this consumer silently never fire,
 	// and nothing fails when a consumer does nothing.
-	if env.Type != string(crmcontracts.PersonCreated) {
+	if env.Type != string(crmcontracts.ContactCreated) {
 		return nil
 	}
 	db := InstallationDB(n.pool)
@@ -81,7 +81,7 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 	}
 	// A subscriber carries no workspace, no actor and no trace. Without the
 	// actor the audited write below has nobody to name; without the correlation
-	// id the audit row has no link back to the person.created that caused it,
+	// id the audit row has no link back to the contact.created that caused it,
 	// so a redelivery cannot be told from a second real event.
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
@@ -99,28 +99,28 @@ func (n *NoticeCaseOpen) HandleEvent(ctx context.Context, env events.Envelope) e
 //
 // EVERY acquisition, not the first. The table is keyed per acquisition because a
 // contact obtained twice owes the duty twice, and a merge MOVES evidence onto
-// the survivor — so by the time this runs a person may hold several rows, and
+// the survivor — so by the time this runs a contact may hold several rows, and
 // picking one would leave the rest owed and unrecorded forever. Nothing else
-// ever looks at them again: person.created fires once.
+// ever looks at them again: contact.created fires once.
 //
-// That also repairs the merge race. A person merged away between the event and
+// That also repairs the merge race. A contact merged away between the event and
 // this handler has had their evidence moved to the survivor, so a lookup by the
 // retired id finds nothing and acknowledges — but the survivor's own pass, or
-// any later person.created for them, sweeps up the moved row because it is
+// any later contact.created for them, sweeps up the moved row because it is
 // still an acquisition with no case.
 //
-// A person with no acquisition row is not an error: the row is written by the
-// creation doors, and a person created by a path predating them has none.
+// A contact with no acquisition row is not an error: the row is written by the
+// creation doors, and a contact created by a path predating them has none.
 // Recording a duty from no evidence would be inventing one.
-func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, personID ids.UUID) error {
+func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, contactID ids.UUID) error {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, coalesce(a.occurred_at, a.captured_at)
-		  FROM person_acquisition_evidence a
-		 WHERE a.person_id = $1
+		  FROM contact_acquisition_evidence a
+		 WHERE a.contact_id = $1
 		   AND NOT EXISTS (
 		         SELECT 1 FROM privacy_notice_case c
 		          WHERE c.acquisition_id = a.id)
-		 ORDER BY a.captured_at, a.id`, personID)
+		 ORDER BY a.captured_at, a.id`, contactID)
 	if err != nil {
 		return fmt.Errorf("read the acquisitions this contact arrived by: %w", err)
 	}
@@ -144,7 +144,7 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, personID ids.UU
 	}
 	if len(pending) == 0 {
 		n.log.DebugContext(ctx, "no acquisition owes a notice case",
-			slog.String("person_id", personID.String()))
+			slog.String("contact_id", contactID.String()))
 		return nil
 	}
 
@@ -167,7 +167,7 @@ func (n *NoticeCaseOpen) openFor(ctx context.Context, tx pgx.Tx, personID ids.UU
 			from = *o.occurred
 		}
 		if err := consent.OpenNoticeCaseTx(ctx, tx, consent.NoticeCaseInput{
-			PersonID:      ids.From[ids.PersonKind](personID),
+			ContactID:     ids.From[ids.ContactKind](contactID),
 			AcquisitionID: o.id,
 			Rule:          duty.Rule,
 			DueAt:         consent.AddMonths(from, duty.Months),

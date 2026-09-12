@@ -16,21 +16,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	now := time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
-	person := SeedIDRow(t, owner, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Warm Contact', 'manual', 'human:x')`)
+	contact := SeedIDRow(t, owner, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Warm Contact', 'manual', 'human:x')`)
 	company := SeedIDRow(t, owner, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Warm GmbH', 'manual', 'human:x')`)
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, company_id, source, captured_by) VALUES ('employment', $1, $2, 'manual', 'human:x')`, person, company); err != nil {
+		`INSERT INTO relationship (kind, contact_id, company_id, source, captured_by) VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company); err != nil {
 		t.Fatal(err)
 	}
 
@@ -48,8 +48,8 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 			occurred.Format(time.RFC3339), direction,
 		))
 		if _, err := owner.Exec(context.Background(),
-			`INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`,
-			activity, person); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			activity, contact); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -63,7 +63,7 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := store.PersonStrength(ctx, PersonIDOf(person), now)
+	got, err := store.ContactStrength(ctx, ContactIDOf(contact), now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,12 +78,12 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 	}
 	for _, id := range got.ContributingIDs {
 		if id.UUID == leadTouch {
-			t.Fatal("a lead-linked activity leaked into the person computation (ADR-0008)")
+			t.Fatal("a lead-linked activity leaked into the contact computation (ADR-0008)")
 		}
 	}
 
 	// Determinism: the same seed + clock reproduces the same value.
-	again, err := store.PersonStrength(ctx, PersonIDOf(person), now)
+	again, err := store.ContactStrength(ctx, ContactIDOf(contact), now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestRelationshipStrengthOverSeededRows(t *testing.T) {
 		t.Fatalf("same seed + clock → %d then %d", got.Strength, again.Strength)
 	}
 
-	// Company roll-up: max over current employees — here, the one person.
+	// Company roll-up: max over current employees — here, the one contact.
 	companyStrength, err := store.CompanyStrength(ctx, companyIDOf(company), now)
 	if err != nil {
 		t.Fatal(err)

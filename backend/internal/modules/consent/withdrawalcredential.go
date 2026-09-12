@@ -10,7 +10,7 @@ package consent
 // is also what the RFC 8058 one-click POST carries. Those two want opposite
 // lifetimes. Read authority over somebody's consent record should be short,
 // because the link sits in a mailbox forever. A withdrawal should last as long
-// as the mail does, because a person unsubscribing from a two-year-old
+// as the mail does, because a contact unsubscribing from a two-year-old
 // newsletter is exercising a right that does not expire.
 //
 // Today the short lifetime wins for both — 30 days, sliding, revoked on
@@ -50,7 +50,7 @@ import (
 // The link is meant to outlive the mail that carried it, and 24 months is what
 // this installation retains the mail itself for. A credential outliving every
 // copy of the message protects nobody: there is no longer a link anywhere for
-// a person to press, only a working credential for anyone who finds one.
+// a contact to press, only a working credential for anyone who finds one.
 const withdrawalCredentialLife = 24 * 30 * 24 * time.Hour
 
 // The two things a withdrawal link may be for. Neither reaches business
@@ -91,13 +91,13 @@ const withdrawalTokenPrefix = "wd_"
 // WithdrawalRef is what a withdrawal link speaks for: an address, the record
 // holding it if one still does, and the scope the link may not exceed.
 //
-// The ADDRESS is the identity here, not the person. A subject may be merged,
+// The ADDRESS is the identity here, not the contact. A subject may be merged,
 // archived or erased between the send and the press, and the opt-out is about
 // where the mail went.
 type WithdrawalRef struct {
 	CredentialID ids.UUID
 	Address      string
-	PersonID     ids.PersonID
+	ContactID    ids.ContactID
 	LeadID       ids.LeadID
 	Scope        string
 	PurposeID    ids.UUID
@@ -120,25 +120,25 @@ func newWithdrawalToken() (string, error) {
 // EnsureWithdrawalCredentialTx mints a credential for a subject the CALLER
 // NAMES, and takes write authority over that subject for doing so.
 //
-// person:update and the WRITABLE probe, because naming somebody's id and asking
+// contact:update and the WRITABLE probe, because naming somebody's id and asking
 // for a bearer token over their mail IS a claim of authority over that record.
-// `person` is shareable, so a manual `read` grant widens who can SEE a contact
+// `contact` is shareable, so a manual `read` grant widens who can SEE a contact
 // without widening who may act on them, and a read-share holder must not mint
 // one. The send door below is the one that asks a different question.
 func (s *Store) EnsureWithdrawalCredentialTx(
 	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
 ) (token string, err error) {
-	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return "", err
 	}
 	if err := validWithdrawalMint(in); err != nil {
 		return "", err
 	}
-	if !in.PersonID.IsZero() {
-		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+	if !in.ContactID.IsZero() {
+		if err := auth.EnsureWritableLive(ctx, tx, entityContact, in.ContactID.UUID); err != nil {
 			return "", err
 		}
-		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+		if err := auth.LockSubjectLive(ctx, tx, entityContact, in.ContactID.UUID); err != nil {
 			return "", err
 		}
 	}
@@ -148,18 +148,18 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 // ensureWithdrawalCredentialForSendTx mints the credential a MESSAGE carries,
 // for a subject resolved from the address that message is going to.
 //
-// person:READ and the VISIBLE probe, and the difference from the door above is
+// contact:READ and the VISIBLE probe, and the difference from the door above is
 // the question rather than the row. This caller names nobody: bindWithdrawalSubject
 // resolves the subject from the address, the send is already authorized against
 // that recipient by the consent gate and by the activity it creates, and the
 // mail is going there whether or not this succeeds. So the strict probe protects
-// nobody — it refused every sender without person:update, an agent holding
-// `activity:create` + `person:read` among them, and the message then shipped
+// nobody — it refused every sender without contact:update, an agent holding
+// `activity:create` + `contact:read` among them, and the message then shipped
 // with no working List-Unsubscribe URL, which is the failure this table exists
 // to end.
 //
 // The authority is also strictly less than the SIBLING mint on the same path
-// needs: PreferenceTokenForEmail takes person:read plus this same visible probe
+// needs: PreferenceTokenForEmail takes contact:read plus this same visible probe
 // and yields a credential that reads a consent state, withdraws AND grants,
 // where this one can only stop mail.
 //
@@ -168,17 +168,17 @@ func (s *Store) EnsureWithdrawalCredentialTx(
 func (s *Store) ensureWithdrawalCredentialForSendTx(
 	ctx context.Context, tx pgx.Tx, in WithdrawalMintInput,
 ) (token string, err error) {
-	if err := auth.Require(ctx, entityPerson, principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, entityContact, principal.ActionRead); err != nil {
 		return "", err
 	}
 	if err := validWithdrawalMint(in); err != nil {
 		return "", err
 	}
-	if !in.PersonID.IsZero() {
-		if err := auth.EnsureVisibleLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+	if !in.ContactID.IsZero() {
+		if err := auth.EnsureVisibleLive(ctx, tx, entityContact, in.ContactID.UUID); err != nil {
 			return "", err
 		}
-		if err := auth.LockSubjectLive(ctx, tx, entityPerson, in.PersonID.UUID); err != nil {
+		if err := auth.LockSubjectLive(ctx, tx, entityContact, in.ContactID.UUID); err != nil {
 			return "", err
 		}
 	}
@@ -226,10 +226,10 @@ func insertWithdrawalCredential(ctx context.Context, tx pgx.Tx, in WithdrawalMin
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO withdrawal_credential
-		    (token_hash, address, person_id, lead_id, scope, purpose_id, expires_at)
+		    (token_hash, address, contact_id, lead_id, scope, purpose_id, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
 		hashPublicToken(minted), normalizeAddress(in.Address),
-		zeroAsNull(in.PersonID.UUID), zeroAsNull(in.LeadID.UUID),
+		zeroAsNull(in.ContactID.UUID), zeroAsNull(in.LeadID.UUID),
 		in.Scope, zeroAsNull(in.PurposeID),
 		withdrawalCredentialLife.String()); err != nil {
 		return "", fmt.Errorf("consent: minting the withdrawal credential: %w", err)
@@ -240,7 +240,7 @@ func insertWithdrawalCredential(ctx context.Context, tx pgx.Tx, in WithdrawalMin
 // WithdrawalMintInput names what a link is for.
 type WithdrawalMintInput struct {
 	Address   string
-	PersonID  ids.PersonID
+	ContactID ids.ContactID
 	LeadID    ids.LeadID
 	Scope     string
 	PurposeID ids.UUID
@@ -272,24 +272,24 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 	}
 	var (
 		ref       WithdrawalRef
-		personID  *ids.UUID
+		contactID *ids.UUID
 		leadID    *ids.UUID
 		purposeID *ids.UUID
 	)
 	err := tx.QueryRow(ctx, `
-		SELECT id, address, person_id, lead_id, scope, purpose_id
+		SELECT id, address, contact_id, lead_id, scope, purpose_id
 		  FROM withdrawal_credential
 		 WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()`,
 		hashPublicToken(token)).Scan(
-		&ref.CredentialID, &ref.Address, &personID, &leadID, &ref.Scope, &purposeID)
+		&ref.CredentialID, &ref.Address, &contactID, &leadID, &ref.Scope, &purposeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return WithdrawalRef{}, fmt.Errorf("consent: resolving the withdrawal link: %w", err)
 	}
-	if personID != nil {
-		ref.PersonID = ids.From[ids.PersonKind](*personID)
+	if contactID != nil {
+		ref.ContactID = ids.From[ids.ContactKind](*contactID)
 	}
 	if leadID != nil {
 		ref.LeadID = ids.From[ids.LeadKind](*leadID)
@@ -320,16 +320,16 @@ func resolveWithdrawalTokenTx(ctx context.Context, tx pgx.Tx, token string) (Wit
 // all-marketing scope, and the caller cannot read a consent state with it.
 func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token string) (WithdrawalRef, error) {
 	var (
-		personID ids.UUID
-		address  *string
+		contactID ids.UUID
+		address   *string
 	)
 	err := tx.QueryRow(ctx, `
-		SELECT pt.person_id, pe.email
+		SELECT pt.contact_id, pe.email
 		  FROM preference_token pt
-		  LEFT JOIN person_email pe ON pe.id = pt.person_email_id
+		  LEFT JOIN contact_email pe ON pe.id = pt.contact_email_id
 		 WHERE pt.token = $1
 		   AND (pt.revoked_reason IS NULL OR pt.revoked_reason IN ('rotated', 'expired'))`,
-		token).Scan(&personID, &address)
+		token).Scan(&contactID, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}
@@ -337,7 +337,7 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		return WithdrawalRef{}, fmt.Errorf("consent: resolving the legacy withdrawal link: %w", err)
 	}
 	ref := WithdrawalRef{
-		PersonID: ids.From[ids.PersonKind](personID),
+		ContactID: ids.From[ids.ContactKind](contactID),
 		// ALL MARKETING, never a named purpose. A preference token names no
 		// subscription — it opened a page listing all of them — so the only
 		// honest reading of a press on one is "stop the marketing".
@@ -357,12 +357,12 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 // longer receives mail) and from the admin compromise route. Each writes a
 // different reason because the public page answers each differently.
 func (s *Store) RevokeSubjectCredentialsTx(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, reason string,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, reason string,
 ) error {
 	// GATED for the mint's reason inverted: revoking a credential takes away a
-	// person's working opt-out link, which is a change to what they can do
+	// contact's working opt-out link, which is a change to what they can do
 	// about their own mail.
-	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return err
 	}
 	switch reason {
@@ -377,7 +377,7 @@ func (s *Store) RevokeSubjectCredentialsTx(
 	if _, err := tx.Exec(ctx, `
 		UPDATE withdrawal_credential
 		   SET revoked_at = now(), revoked_reason = $2
-		 WHERE person_id = $1 AND revoked_at IS NULL`, personID, reason); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, contactID, reason); err != nil {
 		return fmt.Errorf("consent: revoking the subject's withdrawal links: %w", err)
 	}
 	return nil

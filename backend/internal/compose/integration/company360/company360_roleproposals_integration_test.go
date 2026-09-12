@@ -21,7 +21,7 @@ import (
 
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -49,23 +49,23 @@ func seedRoleDeal(t *testing.T, e *integration.Env) (company, deal ids.UUID) {
 	return company, deal
 }
 
-// wrote records that a person AUTHORED a message to this account.
+// wrote records that a contact AUTHORED a message to this account.
 //
 // Three facts, and the endpoint needs all three. The activity_link to the
-// PERSON is what the roster reads; the link to the COMPANY is what makes
+// CONTACT is what the roster reads; the link to the COMPANY is what makes
 // it this account's correspondence rather than any message the contact
 // happened to send; and activity_participant role='from' is what says they
 // wrote it rather than merely being named in it.
-func wrote(t *testing.T, e *integration.Env, person, company ids.UUID, subject, body string, daysAgo int) ids.UUID {
+func wrote(t *testing.T, e *integration.Env, contact, company ids.UUID, subject, body string, daysAgo int) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	mail := integration.AccountMailDirectedAt(t, owner, e.WS, subject, "inbound",
 		company360Clock.AddDate(0, 0, -daysAgo))
 	e.WsExec(t, `UPDATE activity SET body = $1 WHERE id = $2`, body, mail)
-	integration.LinkActivity(t, owner, mail, "person", person)
+	integration.LinkActivity(t, owner, mail, "contact", contact)
 	integration.LinkToCompany(t, e, mail, company)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
-		VALUES ($1, $2, 'from')`, mail, person)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
+		VALUES ($1, $2, 'from')`, mail, contact)
 	return mail
 }
 
@@ -77,13 +77,13 @@ func TestAReadRoleBecomesASeatTheCommitteeMarks(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Chief Financial Officer")
 	source := wrote(t, e, buyer, company, "Re: Angebot",
 		"I sign off the budget for this, so send the figures to me directly.", 3)
 
 	lane := &scriptedLane{reply: `{"proposals":[{
-		"person_id":"` + buyer.String() + `","role":"economic_buyer",
+		"contact_id":"` + buyer.String() + `","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send",
 		"source_id":"` + source.String() + `","confidence":0.9}]}`}
 
@@ -134,24 +134,24 @@ func TestOneContactCannotAssignARoleToAnother(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	attacker := e.SeedPerson(t, "Mallory Vance", nil)
-	victim := e.SeedPerson(t, "Jan Roth", nil)
+	attacker := e.SeedContact(t, "Mallory Vance", nil)
+	victim := e.SeedContact(t, "Jan Roth", nil)
 	employ(t, e, attacker, company, "Consultant")
 	employ(t, e, victim, company, "Head of Fleet")
 
 	// The attacker writes the sentence. The victim is on the same thread as a
-	// RECIPIENT — the ordinary shape of a message with two people on it, and
+	// RECIPIENT — the ordinary shape of a message with two contacts on it, and
 	// the shape an author check has to see through: they are a participant and
 	// they are linked, they simply did not write it.
 	source := wrote(t, e, attacker, company, "Re: Retrofit",
 		"I sign off the budget for this, so send it to me directly.", 2)
-	integration.LinkActivity(t, integration.OwnerConn(t), source, "person", victim)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
+	integration.LinkActivity(t, integration.OwnerConn(t), source, "contact", victim)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 		VALUES ($1, $2, 'to')`, source, victim)
 	wrote(t, e, victim, company, "Re: Termin", "Thursday afternoon works for me.", 1)
 
 	lane := &scriptedLane{reply: `{"proposals":[{
-		"person_id":"` + victim.String() + `","role":"economic_buyer",
+		"contact_id":"` + victim.String() + `","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send",
 		"source_id":"` + source.String() + `","confidence":1}]}`}
 
@@ -169,21 +169,21 @@ func TestOneContactCannotAssignARoleToAnother(t *testing.T) {
 
 // A seat somebody typed is a human's answer to this question, and the reading
 // may only fill a hole.
-func TestAReadRoleNeverOverwritesASeatAPersonTyped(t *testing.T) {
+func TestAReadRoleNeverOverwritesASeatAContactTyped(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	held := e.SeedPerson(t, "Ute Sommer", nil)
+	held := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, held, company, "Chief Financial Officer")
 	source := wrote(t, e, held, company, "Re: Angebot",
 		"I sign off the budget for this, so send the figures to me directly.", 3)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, held, deal)
 
 	lane := &scriptedLane{reply: `{"proposals":[{
-		"person_id":"` + held.String() + `","role":"economic_buyer",
+		"contact_id":"` + held.String() + `","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send",
 		"source_id":"` + source.String() + `","confidence":0.95}]}`}
 
@@ -192,7 +192,7 @@ func TestAReadRoleNeverOverwritesASeatAPersonTyped(t *testing.T) {
 		t.Fatalf("proposing roles: %v", err)
 	}
 	if len(got.Written) != 0 {
-		t.Fatalf("overwrote a role a person recorded: %+v", got.Written)
+		t.Fatalf("overwrote a role a contact recorded: %+v", got.Written)
 	}
 	// The typed seat is untouched and still reads as a human's.
 	coverage, err := svc.Coverage(ctx, ids.CompanyID{UUID: company})
@@ -204,7 +204,7 @@ func TestAReadRoleNeverOverwritesASeatAPersonTyped(t *testing.T) {
 		t.Fatalf("the typed seat now reads %q", seat.Role)
 	}
 	if seat.AiSuggested != nil && *seat.AiSuggested {
-		t.Fatal("a seat a person typed is marked as the product's reading")
+		t.Fatal("a seat a human typed is marked as the product's reading")
 	}
 }
 
@@ -217,8 +217,8 @@ func TestAContactWithNoWordsNeverReachesThePrompt(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	silent := e.SeedPerson(t, "Dietmar Rietsch", nil)
-	spoke := e.SeedPerson(t, "Ute Sommer", nil)
+	silent := e.SeedContact(t, "Dietmar Rietsch", nil)
+	spoke := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, silent, company, "Managing Director")
 	employ(t, e, spoke, company, "Procurement")
 	wrote(t, e, spoke, company, "Re: Angebot", "We will review the scope this week.", 2)
@@ -272,7 +272,7 @@ func TestAReaderOfSomebodyElsesDealCannotSeatThroughTheReading(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Chief Financial Officer")
 	source := wrote(t, e, buyer, company, "Re: Angebot",
 		"I sign off the budget for this, so send the figures to me directly.", 3)
@@ -283,7 +283,7 @@ func TestAReaderOfSomebodyElsesDealCannotSeatThroughTheReading(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roleProposalReadOnlyPerms)
 
 	lane := &scriptedLane{reply: `{"proposals":[{
-		"person_id":"` + buyer.String() + `","role":"economic_buyer",
+		"contact_id":"` + buyer.String() + `","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send",
 		"source_id":"` + source.String() + `","confidence":0.9}]}`}
 
@@ -306,7 +306,7 @@ func TestEvidenceFromAnotherDealDoesNotReachThePrompt(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Chief Financial Officer")
 
 	// The sentence, written about an account this deal has nothing to do with.
@@ -338,7 +338,7 @@ func TestWithoutTheActivityGrantTheReadingIsRefusedNotEmptied(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Chief Financial Officer")
 	wrote(t, e, buyer, company, "Re: Angebot", "I sign off the budget for this one.", 3)
 
@@ -362,7 +362,7 @@ var roleProposalReadOnlyPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"deal":                  {Read: true, Update: true},
 		"relationship":          {Read: true, Create: true},
 		"activity":              {Read: true},
@@ -397,16 +397,16 @@ func TestOnlyWhatAContactWroteIsOfferedAsTheirEvidence(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	author := e.SeedPerson(t, "Mallory Vance", nil)
-	recipient := e.SeedPerson(t, "Jan Roth", nil)
+	author := e.SeedContact(t, "Mallory Vance", nil)
+	recipient := e.SeedContact(t, "Jan Roth", nil)
 	employ(t, e, author, company, "Consultant")
 	employ(t, e, recipient, company, "Head of Fleet")
 
-	// One message, two people on it: one wrote it, one received it.
+	// One message, two contacts on it: one wrote it, one received it.
 	source := wrote(t, e, author, company, "Re: Retrofit",
 		"I sign off the budget for this, so send it to me directly.", 2)
-	integration.LinkActivity(t, integration.OwnerConn(t), source, "person", recipient)
-	e.WsExec(t, `INSERT INTO activity_participant (activity_id, person_id, role)
+	integration.LinkActivity(t, integration.OwnerConn(t), source, "contact", recipient)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 		VALUES ($1, $2, 'to')`, source, recipient)
 	wrote(t, e, recipient, company, "Re: Termin", "Thursday afternoon works for me.", 1)
 
@@ -422,7 +422,7 @@ func TestOnlyWhatAContactWroteIsOfferedAsTheirEvidence(t *testing.T) {
 	if got := strings.Count(prompt, "I sign off the budget"); got != 1 {
 		t.Fatalf("the sentence is offered %d times, want once (under its author only)", got)
 	}
-	// And it sits in the AUTHOR's block: the block boundary is their person id,
+	// And it sits in the AUTHOR's block: the block boundary is their contact id,
 	// and the recipient's own message is what follows theirs.
 	authored := blockFor(t, prompt, author.String(), recipient.String())
 	if !strings.Contains(authored, "I sign off the budget") {
@@ -437,7 +437,7 @@ func TestOnlyWhatAContactWroteIsOfferedAsTheirEvidence(t *testing.T) {
 	}
 }
 
-// blockFor returns one candidate's slice of the prompt: from their person id
+// blockFor returns one candidate's slice of the prompt: from their contact id
 // up to the next candidate's, whichever order the ranking put them in.
 func blockFor(t *testing.T, prompt, mine, theirs string) string {
 	t.Helper()
@@ -465,13 +465,13 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	buyer := e.SeedPerson(t, "Ute Sommer", nil)
+	buyer := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, buyer, company, "Chief Financial Officer")
 	source := wrote(t, e, buyer, company, "Re: Angebot",
 		"I sign off the budget for this, so send the figures to me directly.", 3)
 
 	lane := &scriptedLane{reply: `{"proposals":[{
-		"person_id":"` + buyer.String() + `","role":"economic_buyer",
+		"contact_id":"` + buyer.String() + `","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send",
 		"source_id":"` + source.String() + `","confidence":0.9}]}`}
 	if _, err := svc.ProposeRoles(ctx, lane, ids.DealID{UUID: deal}); err != nil {
@@ -492,8 +492,8 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 
 	// Exactly what the card sends: the same role, nothing else.
 	role := seat.Role
-	if _, err := e.People.UpdateRelationship(ctx, ids.UUID(*seat.RelationshipId),
-		people.UpdateRelationshipInput{Role: &role}); err != nil {
+	if _, err := e.Contacts.UpdateRelationship(ctx, ids.UUID(*seat.RelationshipId),
+		contacts.UpdateRelationshipInput{Role: &role}); err != nil {
 		t.Fatalf("confirming the seat: %v", err)
 	}
 
@@ -510,24 +510,24 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 	}
 }
 
-// A PERSON CAN HOLD TWO ROLES ON ONE DEAL, and each card must address its own
+// A CONTACT CAN HOLD TWO ROLES ON ONE DEAL, and each card must address its own
 // row.
 //
-// The table's uniqueness key is (deal_id, person_id, role), so this is a shape
-// the database permits. Keyed by person alone, both cards carried whichever
+// The table's uniqueness key is (deal_id, contact_id, role), so this is a shape
+// the database permits. Keyed by contact alone, both cards carried whichever
 // row the scan returned last — so Confirm on one patched the other, changing a
 // role the reader was not looking at or colliding with the uniqueness index.
-func TestASeatCardAddressesItsOwnRowWhenAPersonHoldsTwoRoles(t *testing.T) {
+func TestASeatCardAddressesItsOwnRowWhenAContactHoldsTwoRoles(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	both := e.SeedPerson(t, "Ute Sommer", nil)
+	both := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, both, company, "Chief Financial Officer")
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:x')`, both, deal)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'ai_proposal', 'agent:propose_roles')`,
 		both, deal)
 
@@ -545,20 +545,20 @@ func TestASeatCardAddressesItsOwnRowWhenAPersonHoldsTwoRoles(t *testing.T) {
 		marked[seat.Role] = seat.AiSuggested != nil && *seat.AiSuggested
 	}
 	if len(rows) != 2 {
-		t.Fatalf("read %d seats for a person holding two roles: %+v", len(rows), rows)
+		t.Fatalf("read %d seats for a contact holding two roles: %+v", len(rows), rows)
 	}
 	if rows["champion"] == rows["economic_buyer"] {
 		t.Fatalf("both cards address the same row (%s) — confirming one patches the other",
 			rows["champion"])
 	}
-	// And the provenance follows the ROW, not the person: one seat was typed
+	// And the provenance follows the ROW, not the contact: one seat was typed
 	// and one was read, and a mark shared between them would offer to confirm
 	// a colleague's own answer.
 	if !marked["champion"] {
 		t.Fatal("the read seat is not marked")
 	}
 	if marked["economic_buyer"] {
-		t.Fatal("a seat a person typed is marked as the product's reading")
+		t.Fatal("a seat a human typed is marked as the product's reading")
 	}
 }
 
@@ -573,7 +573,7 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	svc := company360Service(e)
 
 	company, deal := seedRoleDeal(t, e)
-	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	contact := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, contact, company, "Chief Financial Officer")
 	wrote(t, e, contact, company, "Re: Angebot", "We will review the scope this week.", 2)
 	// A REAL route, so the refusal below is about the deal rather than about a
@@ -582,16 +582,16 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	// rep's: an introduction is asked of somebody else, so a route belonging to
 	// the caller would be refused before the deal was ever read.
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
-			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+			(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
 		e.Rep2, contact, company360Clock.AddDate(0, 0, -2))
 
-	// A reader who may see the account, its people and their routes — and no
+	// A reader who may see the account, its contacts and their routes — and no
 	// deals at all.
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	_, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			PersonID:  ids.From[ids.PersonKind](contact),
+			ContactID: ids.From[ids.ContactKind](contact),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 			DealID:    ptrDeal(deal),
 		})
@@ -612,18 +612,18 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 	svc := company360Service(e)
 
 	company, _ := seedRoleDeal(t, e)
-	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	contact := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, contact, company, "Chief Financial Officer")
 	wrote(t, e, contact, company, "Re: Angebot", "We will review the scope this week.", 2)
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
-			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+			(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
 		e.Rep2, contact, company360Clock.AddDate(0, 0, -2))
 
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	draft, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			PersonID:  ids.From[ids.PersonKind](contact),
+			ContactID: ids.From[ids.ContactKind](contact),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
 		})
 	if err != nil {
@@ -650,20 +650,20 @@ func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 	svc := company360Service(e)
 
 	company, _ := seedRoleDeal(t, e)
-	contact := e.SeedPerson(t, "Ute Sommer", nil)
+	contact := e.SeedContact(t, "Ute Sommer", nil)
 	employ(t, e, contact, company, "Chief Financial Officer")
 	wrote(t, e, contact, company, "Re: Angebot", "We will review the scope this week.", 2)
 	// The caller's OWN route, which is the shape the page offers when the
 	// warmest relationship with this contact is the reader's.
 	e.WsExec(t, `INSERT INTO graph_interaction_edge
-			(user_id, person_id, last_at, count_90d, in_count_90d, out_count_90d)
+			(user_id, contact_id, last_at, count_90d, in_count_90d, out_count_90d)
 		VALUES ($1, $2, $3, 20, 10, 10)`,
 		e.Rep1, contact, company360Clock.AddDate(0, 0, -2))
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
 	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
-			PersonID:  ids.From[ids.PersonKind](contact),
+			ContactID: ids.From[ids.ContactKind](contact),
 			ViaUserID: ids.From[ids.UserKind](e.Rep1),
 		})
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {

@@ -163,7 +163,7 @@ describe("ResetDataCard (danger zone)", () => {
       resetDataBackend({
         roles: ["ops"],
         dataResetAvailable: true,
-        allow: { person: ["read"] },
+        allow: { contact: ["read"] },
       }),
     );
     render(<SettingsScreen route={settingsHref("reset")} />);

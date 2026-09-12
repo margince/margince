@@ -67,7 +67,7 @@ func MailBody(review Review, homeURL string, words mailcopy.Copy) string {
 	fmt.Fprintf(&b, "%s%s\n\n", words.WeeklyHeading, review.LocalWeekStart.Format(mailcopy.DateLayout))
 
 	// The sentence first, when a pass wrote one. It is the only part of the
-	// message that reads as a person talking, so it goes above the numbers it
+	// message that reads as a contact talking, so it goes above the numbers it
 	// is about rather than under them.
 	//
 	// FLATTENED like every other rendered string, and this is the one that most
@@ -198,7 +198,7 @@ type MailAttempt struct {
 // claim loses the mail. A crash before the relay is contacted, a refused
 // envelope, a connection dropped mid-body — all of them leave a claimed row
 // and no message. That is deliberate. A weekly retrospective delivered twice
-// is a person told their own week twice on the one morning the mail exists to
+// is a contact told their own week twice on the one morning the mail exists to
 // make calm, and this installation cannot tell a failed send from a delivered
 // one, so it cannot retry without risking exactly that.
 //

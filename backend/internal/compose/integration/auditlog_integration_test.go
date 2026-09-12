@@ -28,7 +28,7 @@ import (
 func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 	e := Setup(t)
 
-	e.SeedPerson(t, "Audit Subject", nil)
+	e.SeedContact(t, "Audit Subject", nil)
 
 	// A bounded rep is refused — 403, not a narrowed page.
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -81,17 +81,17 @@ func TestAuditLogReadRequiresAdminHuman(t *testing.T) {
 func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 	e := Setup(t)
 
-	var personIDs []ids.UUID
+	var contactIDs []ids.UUID
 	for _, name := range []string{"One", "Two", "Three", "Four", "Five"} {
-		personIDs = append(personIDs, e.SeedPerson(t, name, nil))
+		contactIDs = append(contactIDs, e.SeedContact(t, name, nil))
 	}
 	admin := e.Admin()
 
-	// Filter: only person creates, and only the one entity.
+	// Filter: only contact creates, and only the one entity.
 	action := "create"
-	entityType := "person"
+	entityType := "contact"
 	page, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{
-		Action: &action, EntityType: &entityType, EntityID: &personIDs[2],
+		Action: &action, EntityType: &entityType, EntityID: &contactIDs[2],
 	})
 	if err != nil {
 		t.Fatalf("filtered list: %v", err)
@@ -99,7 +99,7 @@ func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 	if len(page.Entries) != 1 {
 		t.Fatalf("entity filter returned %d rows, want 1", len(page.Entries))
 	}
-	if page.Entries[0].EntityID == nil || *page.Entries[0].EntityID != personIDs[2] {
+	if page.Entries[0].EntityID == nil || *page.Entries[0].EntityID != contactIDs[2] {
 		t.Fatalf("entity filter returned the wrong row: %+v", page.Entries[0])
 	}
 
@@ -132,8 +132,8 @@ func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 		}
 		cursor = &page.NextCursor
 	}
-	if len(seen) < len(personIDs) {
-		t.Fatalf("walk saw %d person audit rows, want at least %d", len(seen), len(personIDs))
+	if len(seen) < len(contactIDs) {
+		t.Fatalf("walk saw %d contact audit rows, want at least %d", len(seen), len(contactIDs))
 	}
 
 	// A malformed cursor is a client fault, not a 500.
@@ -154,16 +154,16 @@ func TestAuditLogFiltersAndKeysetWalk(t *testing.T) {
 // Only a real row on a real clock separates the two.
 func TestAuditLogNarrowsByActorAndByWindow(t *testing.T) {
 	e := Setup(t)
-	subject := e.SeedPerson(t, "Window Subject", nil)
+	subject := e.SeedContact(t, "Window Subject", nil)
 	admin := e.Admin()
 
-	entityType := "person"
+	entityType := "contact"
 	all, err := privacy.ListAuditLog(admin, e.DB(), privacy.AuditFilter{EntityType: &entityType, EntityID: &subject})
 	if err != nil {
 		t.Fatalf("unfiltered: %v", err)
 	}
 	if len(all.Entries) == 0 {
-		t.Fatal("the seeded person wrote no audit row, so nothing below is being narrowed")
+		t.Fatal("the seeded contact wrote no audit row, so nothing below is being narrowed")
 	}
 	stamped := all.Entries[0].OccurredAt
 
@@ -246,8 +246,8 @@ func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
 }
 
 // TestAuditLogResolvesTheHumanBehindEveryRow pins PD-002 on the compliance
-// read: attribution names the PERSON, and an identifier is what a reader falls
-// back to only when no person resolves. The screen this feeds is the one an
+// read: attribution names the CONTACT, and an identifier is what a reader falls
+// back to only when no contact resolves. The screen this feeds is the one an
 // auditor opens first, and "agent:01a01740-…" is not somebody who can be asked
 // about a change.
 //
@@ -258,18 +258,18 @@ func carriesRow(entries []privacy.AuditEntry, id ids.UUID) bool {
 func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 	e := Setup(t)
 
-	// Seeded through the real writer: SeedPerson goes via people.CreatePerson,
+	// Seeded through the real writer: SeedContact goes via contacts.CreateContact,
 	// so the create row's actor_id is whatever storekit actually stamps for the
 	// harness admin. A hand-inserted row would prove nothing about production —
 	// the spelling of actor_id IS what this read has to match on.
-	personID := e.SeedPerson(t, "Attribution Subject", nil)
+	contactID := e.SeedContact(t, "Attribution Subject", nil)
 
-	page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &personID})
+	page, err := privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &contactID})
 	if err != nil {
 		t.Fatalf("admin list: %v", err)
 	}
 	if len(page.Entries) == 0 {
-		t.Fatal("no audit row for a person the real writer just created")
+		t.Fatal("no audit row for a contact the real writer just created")
 	}
 
 	var create *privacy.AuditEntry
@@ -298,7 +298,7 @@ func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 
 	// An agent row: no actor name (a machine has none), and the granting human
 	// named. This is the inversion the issue is about — the passport uuid is
-	// the qualifier, the person is the answer.
+	// the qualifier, the contact is the answer.
 	// ONE clock reading for the whole fixture, and every seeded row offset from
 	// it. Read per row, the rows' order would depend on when each call happened
 	// rather than on what the fixture says. It cannot be a fixed literal: the
@@ -307,17 +307,17 @@ func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 	base := time.Now().UTC().Truncate(time.Microsecond)
 
 	ada := seedWorkspaceUser(t, e, "Ada Authority")
-	seedRecordAuditRow(t, e, "update", personID, "agent",
+	seedRecordAuditRow(t, e, "update", contactID, "agent",
 		"agent:"+ids.NewV7().String(), &ada, nil, map[string]any{"title": "CTO"},
 		base.Add(time.Hour))
 
 	// An actor_id no app_user can match: the honest-fallback arm. A read that
 	// invented a name here would be worse than one that returns none.
-	seedRecordAuditRow(t, e, "update", personID, "human", "human:"+ids.NewV7().String(), nil,
+	seedRecordAuditRow(t, e, "update", contactID, "human", "human:"+ids.NewV7().String(), nil,
 		nil, map[string]any{"title": "VP"},
 		base.Add(2*time.Hour))
 
-	page, err = privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &personID})
+	page, err = privacy.ListAuditLog(e.Admin(), e.DB(), privacy.AuditFilter{EntityID: &contactID})
 	if err != nil {
 		t.Fatalf("admin re-list: %v", err)
 	}
@@ -331,7 +331,7 @@ func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 					entry.ActorName)
 			}
 			if entry.OnBehalfOfName == nil || *entry.OnBehalfOfName != "Ada Authority" {
-				t.Errorf("agent row on_behalf_of_name = %v, want Ada Authority — the person answerable for it",
+				t.Errorf("agent row on_behalf_of_name = %v, want Ada Authority — the contact answerable for it",
 					entry.OnBehalfOfName)
 			}
 		case entry.ActorType == "human" && entry.ActorName == nil:
@@ -360,13 +360,13 @@ func TestAuditLogResolvesTheHumanBehindEveryRow(t *testing.T) {
 func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject := "Q3 renewal terms"
 	body := "confidential pricing"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -413,12 +413,12 @@ func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience(t *testin
 func TestAuditLogKeepsTheImageForAReaderInsideTheAudience(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject := "Q3 renewal terms"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -447,21 +447,21 @@ func TestAuditLogKeepsTheImageForAReaderInsideTheAudience(t *testing.T) {
 // decorative.
 func TestAuditLogLeavesANonActivityImageAlone(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
-	entries := auditEntriesFor(t, e, "person", person)
+	entries := auditEntriesFor(t, e, "contact", contact)
 	if len(entries) == 0 {
-		t.Fatal("seeding a person wrote no audit row; this test would assert nothing")
+		t.Fatal("seeding a contact wrote no audit row; this test would assert nothing")
 	}
 	for _, entry := range entries {
-		if entry.EntityType != "person" {
+		if entry.EntityType != "contact" {
 			continue
 		}
 		if len(entry.After) == 0 {
 			continue
 		}
 		if strings.Contains(string(entry.After), "content_state") {
-			t.Errorf("a person's audit image came back withheld: %s", entry.After)
+			t.Errorf("a contact's audit image came back withheld: %s", entry.After)
 		}
 	}
 }

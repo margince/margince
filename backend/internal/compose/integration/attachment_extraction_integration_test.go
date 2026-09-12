@@ -37,8 +37,8 @@ func TestGetAttachmentExtractionOfAnUnreadDocumentIs404(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Extraction NoOp", &e.Rep1)
-	att := uploadTestAttachment(ctx, t, h, person, "report.pdf", []byte("PDF-BYTES"))
+	contact := e.SeedContact(t, "Extraction NoOp", &e.Rep1)
+	att := uploadTestAttachment(ctx, t, h, contact, "report.pdf", []byte("PDF-BYTES"))
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(ctx)
@@ -145,10 +145,10 @@ func TestGetAttachmentExtractionHidesAnInvisibleParent(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()
-	person := e.SeedPerson(t, "Rep1's Extraction Target", &e.Rep1)
-	att := uploadTestAttachment(adminCtx, t, h, person, "secret.pdf", []byte("secret"))
+	contact := e.SeedContact(t, "Rep1's Extraction Target", &e.Rep1)
+	att := uploadTestAttachment(adminCtx, t, h, contact, "secret.pdf", []byte("secret"))
 
-	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownPersonPerms())
+	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/attachments/"+att.Id.String()+"/extraction", nil).WithContext(repCtx)
 	h.GetAttachmentExtraction(rec, req, att.Id)
@@ -206,16 +206,16 @@ func TestRequestAttachmentAccessAuditsANoteAndReturnsRequested(t *testing.T) {
 // carries the same existence-hiding gate: poc-v1 has no restricted-but-
 // disclosed row, so a caller who cannot see the parent gets 404, not a
 // locked-row placeholder. The parent is a capture-private contact — the one
-// state that hides a person from another seat.
+// state that hides a contact from another seat.
 func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	adminCtx := e.Admin()
-	person := e.SeedPerson(t, "Rep1's Access Target", &e.Rep1)
-	att := uploadTestAttachment(adminCtx, t, h, person, "hidden.pdf", []byte("hidden"))
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
+	contact := e.SeedContact(t, "Rep1's Access Target", &e.Rep1)
+	att := uploadTestAttachment(adminCtx, t, h, contact, "hidden.pdf", []byte("hidden"))
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 
-	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownPersonPerms())
+	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments/"+att.Id.String()+"/request-access", nil).WithContext(repCtx)
 	h.RequestAttachmentAccess(rec, req, att.Id)
@@ -230,7 +230,7 @@ func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 }
 
 // uploadAttachmentAs drives the real multipart handler for an arbitrary
-// entity_type — uploadTestAttachment only ever targets "person", so the
+// entity_type — uploadTestAttachment only ever targets "contact", so the
 // non-deal/deal-scoped extraction tests need their own parent kind.
 func uploadAttachmentAs(ctx context.Context, t *testing.T, h activities.Handlers, entityType string, entityID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
 	t.Helper()
@@ -257,10 +257,10 @@ func uploadDealAttachment(ctx context.Context, t *testing.T, h activities.Handle
 }
 
 // uploadTestAttachment mirrors uploadAttachmentAs for the common
-// person-scoped case.
-func uploadTestAttachment(ctx context.Context, t *testing.T, h activities.Handlers, personID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
+// contact-scoped case.
+func uploadTestAttachment(ctx context.Context, t *testing.T, h activities.Handlers, contactID ids.UUID, filename string, data []byte) crmcontracts.Attachment {
 	t.Helper()
-	return uploadAttachmentAs(ctx, t, h, "person", personID, filename, data)
+	return uploadAttachmentAs(ctx, t, h, "contact", contactID, filename, data)
 }
 
 // uploadTestAttachmentForCompany mirrors uploadTestAttachment for an

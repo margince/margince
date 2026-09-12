@@ -44,7 +44,7 @@ import (
 )
 
 // stageEvidenceReadActor is what the audit trail names as the writer of these
-// rows. A model produced them and no human asked, so binding the last person to
+// rows. A model produced them and no human asked, so binding the last contact to
 // touch the deal would put their name on a reading they never made.
 const stageEvidenceReadActor = "system:stage-evidence-read"
 
@@ -383,7 +383,7 @@ func stageEvidenceReadCtx(ctx context.Context) context.Context {
 // that exist to require the buyer's own word. textlang.CurrentMessage is the
 // cut the correspondence gate already makes against the same hazard, and its
 // own doc comment states the rule: a forwarded original stays in the activity
-// and is not presented as the forwarding person's statement.
+// and is not presented as the forwarding contact's statement.
 //
 // The line numbers a claim cites are the numbers of THIS text, which is what
 // reaches the model — so a citation still resolves against exactly what was

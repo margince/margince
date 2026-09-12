@@ -8,7 +8,7 @@ package compose
 //
 // Split from the request half of the wire because the two answer opposite
 // questions — one takes a caller's mapping apart and refuses what the estate
-// cannot receive, the other puts a finished run's outcome into a shape a person
+// cannot receive, the other puts a finished run's outcome into a shape a contact
 // reads. They shared a file until it passed the length cap, and nothing but
 // history held them together.
 
@@ -70,7 +70,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 	}
 
 	// Reported even when zero: "0 duplicates" is the answer to the question a
-	// person is asking before they approve, and an omitted field reads as "not
+	// contact is asking before they approve, and an omitted field reads as "not
 	// checked" rather than "none found".
 	out.Disposition.Duplicates = &duplicates
 	out.Links = linksOf(run.Report, committed)

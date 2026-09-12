@@ -65,7 +65,7 @@ func WithAccountDraft(brain completer) Option {
 // leaving text attributed to a model that no longer writes it.
 func WithAccountBrief(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.peopleStore, brain, routingVersion, time.Now).
+		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
 		s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
 	}
@@ -77,7 +77,7 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 //
 // Unlike the growth fit's, this lane is an improvement rather than a
 // precondition: the floor already describes the company from the same fields,
-// one restated value per sentence. What the model adds is prose a person reads
+// one restated value per sentence. What the model adds is prose a reader reads
 // before a call instead of a list they skim.
 //
 // It rebuilds the shared handler set from BOTH services for the reason
@@ -86,7 +86,7 @@ func WithAccountBrief(brain completer, routingVersion string) Option {
 // holds. Either option may run first.
 func WithCompanyDossier(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
-		s.companyDossierSvc = companydossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now).
+		s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
 		s.companyDossierHandlers = companydossier.NewHandlers(
 			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)
@@ -110,7 +110,7 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 func WithGrowthFit(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
-			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now).
+			pool, s.contactsStore, offeringConfirmed(s.contactsStore), brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
 		s.companyDossierHandlers = companydossier.NewHandlers(
 			s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay)

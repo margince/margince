@@ -31,7 +31,7 @@ func NewEmbedGen(store *Store, embedder Embedder) *EmbedGen {
 // pendingSources (the per-id and set-form views of the same source columns)
 // key off the same identifiers rather than each repeating the literal.
 const (
-	entityPerson   = "person"
+	entityContact  = "contact"
 	entityCompany  = "company"
 	entityDeal     = "deal"
 	entityLead     = "lead"
@@ -54,7 +54,7 @@ const (
 // vector lane and the lexical lane index the same content, so a hybrid
 // hit means agreement about one text, not two.
 var embedText = map[string]string{
-	entityPerson:  `SELECT full_name FROM person WHERE id = $1 AND archived_at IS NULL`,
+	entityContact: `SELECT full_name FROM contact WHERE id = $1 AND archived_at IS NULL`,
 	entityCompany: `SELECT concat_ws(' ', display_name, legal_name, industry) FROM company WHERE id = $1 AND archived_at IS NULL`,
 	entityDeal:    `SELECT name FROM deal WHERE id = $1 AND archived_at IS NULL`,
 	entityLead:    `SELECT concat_ws(' ', full_name, company_name, title) FROM lead WHERE id = $1 AND archived_at IS NULL`,

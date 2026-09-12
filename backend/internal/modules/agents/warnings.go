@@ -25,7 +25,7 @@ package agents
 //
 // The cost of leaving it unsaid is measured. A post-mortem note dated December
 // says the customer raised a complaint "im Oktober"; the only complaint the
-// record carries is dated 18 September. Two of three runs told the person about
+// record carries is dated 18 September. Two of three runs told the contact about
 // to walk into that meeting that the customer escalated again in October — the
 // note's prose repeated back as a fact, to somebody who could not see it was a
 // human's recollection. The third reported the disagreement, which is the whole
@@ -40,7 +40,7 @@ const untrustedContentMessage = "Part of this answer is captured or external con
 	"than choosing between them or reconciling them."
 
 // The warning codes this surface raises. They are a closed set here because a
-// caller branches on them; the message beside each is what a person reads.
+// caller branches on them; the message beside each is what a reader reads.
 const (
 	// warningRowScopeFiltered is BYO-RES-2 on the wire. It says the QUERY was
 	// bounded, never how many rows the bound removed — a count would be exactly

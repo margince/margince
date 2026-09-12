@@ -21,7 +21,7 @@ expect:
   rubric: >
     Two tools answer questions about one account and they are not the same tool.
     catch_me_up_on narrates what has happened; prep_for_meeting assembles what a
-    person needs before they walk in — open commitments, stakeholders, the state
+    contact needs before they walk in — open commitments, stakeholders, the state
     of the deal. The goal names an imminent meeting, so score high only if the
     turn calls prep_for_meeting on the account the grounding identifies.
   near_misses:

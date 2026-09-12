@@ -12,7 +12,7 @@ package gates
 // The class this closes is the reference held across time. A read model, a link
 // row and a graph edge all store somebody else's record id, and the scope was
 // checked when the id was WRITTEN — by which point the deal can be reassigned,
-// the person merged, the company's owner moved teams. The read that hands the id
+// the contact merged, the company's owner moved teams. The read that hands the id
 // back inherits nothing from that write, and the failure is quiet: the caller
 // gets a well-formed answer naming a record whose own read path refuses them.
 //
@@ -148,11 +148,11 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// seat would SECOND an answer somebody has already given, and a seat the
 	// caller cannot see is still an answer — so scoping it would let the
 	// reading overwrite exactly the seats its author was not allowed to know
-	// about. Nothing leaves the function: no person id, no role, only the
+	// about. Nothing leaves the function: no contact id, no role, only the
 	// decision not to write.
 	"internal/compose/company360:seatedNow": "the pre-write committee re-read: an unseen seat is still a human's answer, so scoping this would let a reading overwrite the seats it may not see; no id or role escapes the function, only the decision not to write",
 
-	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
+	"internal/compose:employerOf": "the contact auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/contactautoenrich.go): it answers which company's published site may describe this contact, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by
 	// referenceScopeClauses (reportsql.go), which renders
@@ -179,7 +179,7 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// Nothing escapes: the id chooses which asks to test and never leaves the
 	// consumer. Who may READ the resulting ask is decided on the read side, by
 	// introductions' own requester-or-introducer predicate.
-	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the person id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForPerson on its own terms",
+	"internal/compose:inboundSenders": "the reply consumer's sender lookup, under the PrincipalSystem actor advanceContext binds before the pass: the contact id selects which asks a message could answer and never reaches a caller, and who may read the ask is gated in introductions.ForContact on its own terms",
 })
 
 // rowScopeSpellings are the platform/auth entry points that APPLY a row scope.
@@ -784,7 +784,7 @@ func namedColumn(column string) *regexp.Regexp {
 // wrap ids and hand every one of them back, so they must stay visible here.
 //
 // It exists because an account's stakeholder TOTAL is deliberately counted past
-// the caller's person scope — the difference between that total and the visible
+// the caller's contact scope — the difference between that total and the visible
 // set is what "contacts you cannot see" means on the coverage card, and a scope
 // clause there would collapse it to zero and report every account complete.
 func countedBytes(sql string) []bool {
@@ -824,7 +824,7 @@ func countedBytes(sql string) []bool {
 // It is a two-pass mask because the two are not the same set. A subquery inside
 // a projection is projected — a scalar subselect hands its column back through
 // the outer row — but only up to its OWN from: everything after that is the
-// subquery's own reading, and a correlated `WHERE e.person_id = p.id` there is
+// subquery's own reading, and a correlated `WHERE e.contact_id = p.id` there is
 // a join condition wearing the outer projection's clothes. So: unmask every
 // projection, then re-mask every select's from-onwards region.
 func projectedBytes(sql string) []bool {
@@ -844,7 +844,7 @@ func projectedBytes(sql string) []bool {
 }
 
 // boundToCallerArgument reports whether the statement also FILTERS on the same
-// id column against a query argument — `person_id = ANY($1)`, `deal_id = $2`.
+// id column against a query argument — `contact_id = ANY($1)`, `deal_id = $2`.
 //
 // Such a read answers a subset of the ids it was handed, so it discloses no
 // reference the caller did not already hold; the row scope belongs on the read

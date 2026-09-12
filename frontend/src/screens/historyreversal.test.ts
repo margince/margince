@@ -164,7 +164,7 @@ describe("historyRows", () => {
 
   // R8: somebody correcting their own change is the common case, and the pair
   // must be able to say so rather than assuming two parties.
-  it("reports whether the actor and the undoer are the same person", () => {
+  it("reports whether the actor and the undoer are the same contact", () => {
     const same = { ...undoOfC, actor_id: changeC.actor_id };
     const rows = historyRows([same, changeC]);
     const [row] = rows;

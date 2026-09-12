@@ -489,7 +489,7 @@ func importPath(t *testing.T, file string, imported *ast.ImportSpec) string {
 // directives. Go treats any comment matching //<word>:<word> as a directive and
 // CommentGroup.Text() drops directives, so a marker read through Text() is
 // invisible to the census that requires it — the space after the slashes keeps
-// the marker readable to a person, not findable to this walk.
+// the marker readable to a contact, not findable to this walk.
 func fixtureMarkers(pf parsedFile, fset *token.FileSet) (markers map[int]string, commented map[int]bool) {
 	markers = map[int]string{}
 	commented = map[int]bool{}

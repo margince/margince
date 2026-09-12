@@ -5,7 +5,7 @@ package accountdraft
 
 // The wire mapping's own obligations: refuse an id the caller did not send,
 // rather than letting the zero UUID reach a lookup and come back as "that
-// person is not a contact on this account" — a refusal about a record the
+// contact is not a contact on this account" — a refusal about a record the
 // caller never named and cannot connect to anything they did.
 
 import (
@@ -22,27 +22,27 @@ import (
 func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 	_, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{})
 	if err == nil {
-		t.Fatal("an omitted person_id was accepted; the zero UUID would reach the contact lookup")
+		t.Fatal("an omitted contact_id was accepted; the zero UUID would reach the contact lookup")
 	}
-	assertNamesField(t, err, "person_id")
+	assertNamesField(t, err, "contact_id")
 }
 
 // A null deal_id means "the account in general" and is an ordinary case. A
 // present-but-zero one is a client bug, and answering "that deal is not open"
 // about the nil UUID would hide it behind a plausible-sounding refusal.
 func TestAPresentButZeroDealIDIsRefusedWhileAnAbsentOneIsFine(t *testing.T) {
-	person := openapi_types.UUID(ids.NewV7())
+	contact := openapi_types.UUID(ids.NewV7())
 	zero := openapi_types.UUID(ids.UUID{})
 
 	_, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{
-		PersonId: person, DealId: &zero,
+		ContactId: contact, DealId: &zero,
 	})
 	if err == nil {
 		t.Fatal("a zero deal_id was accepted")
 	}
 	assertNamesField(t, err, "deal_id")
 
-	req, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{PersonId: person})
+	req, err := requestFrom(crmcontracts.DraftAccountEmailJSONRequestBody{ContactId: contact})
 	if err != nil {
 		t.Fatalf("an absent deal_id must be accepted as the whole account: %v", err)
 	}

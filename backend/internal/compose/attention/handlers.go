@@ -174,7 +174,7 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		// direction available. Refused, so the caller says which they meant.
 		if scope != "" && scope != scopeMine {
 			httperr.Write(w, r, httperr.Validation("owner", "conflicts_with_scope",
-				"asking for one person's queue and for a wider scope are different questions; send one"))
+				"asking for one contact's queue and for a wider scope are different questions; send one"))
 			return
 		}
 		owner = ids.UUID(*params.Owner)

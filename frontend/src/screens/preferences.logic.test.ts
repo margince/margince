@@ -173,7 +173,7 @@ describe("choice building", () => {
 });
 
 describe("a purpose needing a confirmation round-trip", () => {
-  // The defect this holds: the page offered the switch, the person turned it
+  // The defect this holds: the page offered the switch, the contact turned it
   // on, and the save came back 422 with nothing recorded.
   it("never submits a grant the server refuses", () => {
     const draft = { doi_newsletter: true, doi_granted: true };

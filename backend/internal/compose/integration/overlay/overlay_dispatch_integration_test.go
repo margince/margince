@@ -37,11 +37,11 @@ import (
 // composite Provider, whose Freshness is trivially authoritative.
 func TestDispatcherRoutesNativeWorkspaceReadsToTheNativeProvider(t *testing.T) {
 	e := integration.Setup(t)
-	personID := e.SeedPerson(t, "Ada Native", nil)
+	contactID := e.SeedContact(t, "Ada Native", nil)
 
 	d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DB(), overlaybudget.New(nil, nil), nil), e.Pool)
 
-	rec, err := d.Read(e.Admin(), datasource.EntityRef{Type: datasource.EntityPerson, ID: personID})
+	rec, err := d.Read(e.Admin(), datasource.EntityRef{Type: datasource.EntityContact, ID: contactID})
 	if err != nil {
 		t.Fatalf("dispatched Read for a native-mode workspace: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider(t *testing.T)
 		t.Fatalf("mapping the acting user to owner-1: %v", err)
 	}
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      "100214862042",
 		Fields:          map[string]any{"firstname": "Ada Overlay"},
 		ModifiedAt:      time.Now().UTC(),
@@ -78,7 +78,7 @@ func TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider(t *testing.T)
 	d := compose.NewDispatcher(compose.NewProvider(e.Pool), compose.NewOverlayProviderFor(e.DBFor(overlayWS), overlaybudget.New(nil, nil), nil), e.Pool)
 
 	searchRes, err := d.Search(ctx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson},
+		EntityTypes: []datasource.EntityType{datasource.EntityContact},
 		Limit:       10,
 	})
 	if err != nil {
@@ -164,7 +164,7 @@ func seedOverlayModeWorkspace(t *testing.T) (ws, user ids.UUID) {
 var overlayReaderPerms = principal.Permissions{
 	RoleKeys: []string{"read_only"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"company":               {Read: true},
 		"deal":                  {Read: true},
 		"lead":                  {Read: true},

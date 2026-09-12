@@ -5,7 +5,7 @@ package notices
 
 // The coaching mapping's own obligation: refuse an id the caller did not send,
 // rather than letting the zero UUID reach the membership question and come back
-// as "not your teammate" — a refusal about a person the caller never named, and
+// as "not your teammate" — a refusal about a colleague the caller never named, and
 // one that reads exactly like the real permission failure beside it.
 
 import (
@@ -49,8 +49,8 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 		t.Fatalf("the refusal named %q, wanted recipient_user_id", parse.Field)
 	}
 	// A permission sentinel here would be the wrong answer even though it also
-	// refuses: it says "you may not coach that person" about nobody.
+	// refuses: it says "you may not coach that contact" about nobody.
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatal("an omitted recipient was refused as a permission failure, which describes a person the caller never named")
+		t.Fatal("an omitted recipient was refused as a permission failure, which describes a contact the caller never named")
 	}
 }

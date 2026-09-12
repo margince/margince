@@ -23,23 +23,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// The suppressing tiers, each on its own: a free-mail domain is a person and
+// The suppressing tiers, each on its own: a free-mail domain is a contact and
 // never a company, mail infrastructure is neither while its activity stands,
 // and a lookalike sender no rule corroborates is an ordinary counterparty.
 func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
-	t.Run("free-mail defers the person and never names a company", func(t *testing.T) {
-		sync(t, email("bob@gmail.com", "Bob Person", captureOwner, "b1@gmail.com", ""))
+	t.Run("free-mail defers the contact and never names a company", func(t *testing.T) {
+		sync(t, email("bob@gmail.com", "Bob Contact", captureOwner, "b1@gmail.com", ""))
 		// A consumer mailbox settles the COMPANY question by itself and
-		// settles nothing about the person. A customer writing from their
+		// settles nothing about the contact. A customer writing from their
 		// private address and a founder's sister arrive in exactly this shape,
 		// so minting on sight put nineteen private correspondents of one
 		// mailbox into a shared CRM.
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'bob@gmail.com'`); n != 0 {
-			t.Fatalf("%d persons for a free-mail sender, want 0 — the verdict decides who they are", n)
+			t.Fatalf("%d contacts for a free-mail sender, want 0 — the verdict decides who they are", n)
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name = 'gmail.com'`); n != 0 {
 			t.Fatal("gmail.com must never become a company")
@@ -57,7 +57,7 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 	t.Run("transactional infrastructure keeps the activity, derives no counterparty", func(t *testing.T) {
 		// A DocuSign envelope (exact infra eSLD, no corroboration needed) and a
 		// conference blast on a prefix subdomain WITH a List-Unsubscribe header
-		// (corroborated) both suppress person+company while the timeline row stands
+		// (corroborated) both suppress contact+company while the timeline row stands
 		// (ADR-0072/A118, CAP-PARAM-6).
 		sync(
 			t,
@@ -68,9 +68,9 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 			t.Fatalf("%d transactional activities captured, want 2 — the timeline row must stand", n)
 		}
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email IN ('dse@eu.docusign.net', 'hello@event.gitex.com')`); n != 0 {
-			t.Fatal("transactional infrastructure must derive no person")
+			t.Fatal("transactional infrastructure must derive no contact")
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name IN ('Docusign', 'Gitex')`); n != 0 {
 			t.Fatal("transactional infrastructure must derive no company")
@@ -104,9 +104,9 @@ func TestCaptureTierGateSuppressesWhatIsNotACounterparty(t *testing.T) {
 			t.Fatalf("%d pending ledger rows, want 1 — an unknown sender defers rather than creating", n)
 		}
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'ada@event.realco.example'`); n != 0 {
-			t.Fatal("a first-time sender minted a person — ADR-0063's create-on-sight is what this amends")
+			t.Fatal("a first-time sender minted a contact — ADR-0063's create-on-sight is what this amends")
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM activity WHERE source_id = 'rc1@event.realco.example'`); n != 1 {
 			t.Fatal("the activity must stand — deferring the record never drops the message")
@@ -151,9 +151,9 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 			"ev1r@event.expo.example", "ev1@myco.example"))
 		sync(t, emailWithListUnsub("team@event.expo.example", "Expo", "ev2@event.expo.example"))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'team@event.expo.example'`); n != 1 {
-			t.Fatalf("%d persons for a corresponded-with sender, want 1 — T1 must spare it from T2", n)
+			t.Fatalf("%d contacts for a corresponded-with sender, want 1 — T1 must spare it from T2", n)
 		}
 		if n := countRows(t, e, `
 			SELECT count(*) FROM system_log
@@ -167,8 +167,8 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		// contact the workspace writes to overrules the guess. An exact
 		// infrastructure domain is not a guess: nobody is reachable behind
 		// `receipts@` at an expense tool, so a founder replying to their own
-		// receipts is a person answering a robot. Reading that as correspondence
-		// is what put an expense tool's "Receipts" in a real CRM as a person.
+		// receipts is a contact answering a robot. Reading that as correspondence
+		// is what put an expense tool's "Receipts" in a real CRM as a contact.
 		syncSent(t, map[string]bool{"exp1@myco.example": true},
 			email(captureOwner, "", "receipts@expensify.com", "exp1@myco.example", ""))
 		if n := countRows(t, e, `
@@ -179,9 +179,9 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 
 		sync(t, email("receipts@expensify.com", "Expensify", captureOwner, "exp2@expensify.com", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'receipts@expensify.com'`); n != 0 {
-			t.Fatalf("%d persons for an expense tool's robot, want 0 — correspondence must not spare an infrastructure domain", n)
+			t.Fatalf("%d contacts for an expense tool's robot, want 0 — correspondence must not spare an infrastructure domain", n)
 		}
 		// And the message itself still lands: suppression withholds the contact,
 		// never the timeline row.
@@ -191,15 +191,15 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		}
 	})
 	t.Run("a machine local part on a mixed domain is not spared either", func(t *testing.T) {
-		// The domain carries both a robot and the people who work there, so the
+		// The domain carries both a robot and the contacts who work there, so the
 		// rule keys on the LOCAL PART. Writing to the robot must not admit it.
 		syncSent(t, map[string]bool{"gh1@myco.example": true},
 			email(captureOwner, "", "notifications@github.com", "gh1@myco.example", ""))
 		sync(t, email("notifications@github.com", "GitHub", captureOwner, "gh2@github.com", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'notifications@github.com'`); n != 0 {
-			t.Fatalf("%d persons for a notification robot, want 0", n)
+			t.Fatalf("%d contacts for a notification robot, want 0", n)
 		}
 	})
 	t.Run("a forged From:owner does not whitelist the address it names", func(t *testing.T) {
@@ -215,7 +215,7 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		}
 		sync(t, emailWithListUnsub("blast@sendgrid.net", "Blast", "forge2@sendgrid.net"))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'blast@sendgrid.net'`); n != 0 {
 			t.Fatal("a forged From:owner whitelisted an ESP address past T2 suppression")
 		}
@@ -223,7 +223,7 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 	t.Run("a corresponded-with free-mail address is still never a company", func(t *testing.T) {
 		// T1 overrides T2 suppression ONLY. Free-mail's company rule is about what a
 		// domain can honestly name, not about whether its sender is trusted, so
-		// writing to a gmail.com address buys its owner a person and never an
+		// writing to a gmail.com address buys its owner a contact and never an
 		// company called "Gmail" — the junk this ADR exists to prevent.
 		syncSent(t, map[string]bool{"fm1@myco.example": true},
 			email(captureOwner, "", "carol@gmail.com", "fm1@myco.example", ""))
@@ -232,9 +232,9 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 		// fixture rather than finding.
 		sync(t, email("carol@gmail.com", "Carol", captureOwner, "fm1r@gmail.com", "fm1@myco.example"))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'carol@gmail.com'`); n != 1 {
-			t.Fatalf("%d persons for carol, want 1", n)
+			t.Fatalf("%d contacts for carol, want 1", n)
 		}
 		if n := countRows(t, e, `SELECT count(*) FROM company WHERE display_name IN ('Gmail', 'gmail.com')`); n != 0 {
 			t.Fatal("a corresponded-with free-mail address minted a company")
@@ -249,12 +249,12 @@ func TestCaptureTierGateLetsCorrespondencePrecedeSuppression(t *testing.T) {
 // timeline, which is the whole reason a DocuSign envelope is worth capturing.
 // A role mailbox is correspondence-positive exactly like a customer — a mailbox
 // owner writes to `billing@` and `support@` all the time — so T1's evidence is
-// true and its conclusion was still wrong: real correspondence, and no person to
+// true and its conclusion was still wrong: real correspondence, and no contact to
 // name. This is the tier that put contacts called "Billing" and "support" in a
 // founder's CRM, each one a department with a human's shape.
 //
 // The message is kept and stays visible. What is refused is the record.
-func TestCaptureTierGateMintsNoPersonForARoleMailbox(t *testing.T) {
+func TestCaptureTierGateMintsNoContactForARoleMailbox(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	for _, tc := range []struct {
@@ -277,9 +277,9 @@ func TestCaptureTierGateMintsNoPersonForARoleMailbox(t *testing.T) {
 			sync(t, email(tc.address, tc.display, captureOwner, tc.replyID, ""))
 
 			if n := countRows(t, e, `
-				SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+				SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 				WHERE pe.email = '`+tc.address+`'`); n != 0 {
-				t.Fatalf("%d persons for a role mailbox, want 0 — a department is not a contact", n)
+				t.Fatalf("%d contacts for a role mailbox, want 0 — a department is not a contact", n)
 			}
 			// The correspondence itself is not the thing being refused: somebody
 			// answers that queue, and losing their mail would cost the owner a
@@ -335,9 +335,9 @@ func TestCaptureTierGateAsksAboutARoleMailboxOnlyOnce(t *testing.T) {
 		t.Fatalf("%d re-opened questions for a settled role mailbox, want 0 — decided means decided", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'billing@recur.example'`); n != 0 {
-		t.Fatalf("%d persons for a settled role mailbox, want 0", n)
+		t.Fatalf("%d contacts for a settled role mailbox, want 0", n)
 	}
 }
 
@@ -362,9 +362,9 @@ func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
 		calendarInvite("attendee@partner.example", "cal1@myco.example"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'attendee@partner.example'`); n != 0 {
-		t.Fatalf("%d persons for a meeting attendee, want 0 — an invitation is not correspondence", n)
+		t.Fatalf("%d contacts for a meeting attendee, want 0 — an invitation is not correspondence", n)
 	}
 	// The evidence itself must not be stamped: an invitation vouches for
 	// nobody, so a LATER message from that address cannot inherit T1's spare.
@@ -399,7 +399,7 @@ func TestCaptureTierGateMintsNoContactForACalendarInvite(t *testing.T) {
 //
 // The tier that creates on the strength of an outbound message read "we wrote
 // here" as "this is a contact", and intent is often unreturned: a founder mails
-// forty people about a conference and hears from six. The other thirty-four
+// forty contacts about a conference and hears from six. The other thirty-four
 // became contacts anyway, along with the test addresses and the one-off
 // errands.
 //
@@ -416,9 +416,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 			email(captureOwner, "", "quiet@prospect.example", "ex1@myco.example", ""))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'quiet@prospect.example'`); n != 0 {
-			t.Fatalf("%d persons after one send, want 0 — writing once is intent, not a correspondence", n)
+			t.Fatalf("%d contacts after one send, want 0 — writing once is intent, not a correspondence", n)
 		}
 		// Deferred, not dismissed: the verdict still gets to answer, and a real
 		// prospect becomes a contact that way.
@@ -436,9 +436,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 			"ex2r@prospect.example", "ex2@myco.example"))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'answers@prospect.example'`); n != 1 {
-			t.Fatalf("%d persons after they wrote back, want 1 — somebody read our mail and answered", n)
+			t.Fatalf("%d contacts after they wrote back, want 1 — somebody read our mail and answered", n)
 		}
 	})
 
@@ -448,17 +448,17 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 		syncSent(t, map[string]bool{"ex3@myco.example": true},
 			email(captureOwner, "", "twice@prospect.example", "ex3@myco.example", ""))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'twice@prospect.example'`); n != 0 {
-			t.Fatalf("%d persons after the first send, want 0 — the fixture never reaches the case under test", n)
+			t.Fatalf("%d contacts after the first send, want 0 — the fixture never reaches the case under test", n)
 		}
 		syncSent(t, map[string]bool{"ex4@myco.example": true},
 			email(captureOwner, "", "twice@prospect.example", "ex4@myco.example", ""))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'twice@prospect.example'`); n != 1 {
-			t.Fatalf("%d persons after two threads, want 1 — writing twice is not an accident", n)
+			t.Fatalf("%d contacts after two threads, want 1 — writing twice is not an accident", n)
 		}
 	})
 
@@ -473,9 +473,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 			"ex6f@spam.example", "ex6@myco.example"))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'forger@spam.example'`); n != 0 {
-			t.Fatalf("%d persons for a forged thread root, want 0 — that thread was somebody else's", n)
+			t.Fatalf("%d contacts for a forged thread root, want 0 — that thread was somebody else's", n)
 		}
 
 		// And still nothing after the workspace writes to them once, which is
@@ -484,9 +484,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 			email(captureOwner, "", "forger@spam.example", "ex6b@myco.example", ""))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'forger@spam.example'`); n != 0 {
-			t.Fatalf("%d persons for a forger the workspace wrote to once, want 0 — "+
+			t.Fatalf("%d contacts for a forger the workspace wrote to once, want 0 — "+
 				"a thread they forged into is not a reply they sent", n)
 		}
 		// THREE guards refuse this sender and this test cannot tell them apart:
@@ -512,9 +512,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 			email(captureOwner, "", "nudged@prospect.example", "ex7b@myco.example", "ex7@myco.example"))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'nudged@prospect.example'`); n != 0 {
-			t.Fatalf("%d persons after two sends on one thread, want 0 — following up is not a second conversation", n)
+			t.Fatalf("%d contacts after two sends on one thread, want 0 — following up is not a second conversation", n)
 		}
 	})
 
@@ -528,9 +528,9 @@ func TestCaptureTierGateNeedsAnExchangeRatherThanASend(t *testing.T) {
 		sync(t, emailWithListUnsub("list@prospect.example", "List", "ex5r@prospect.example"))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'list@prospect.example'`); n != 0 {
-			t.Fatalf("%d persons for a list that mailed back, want 0 — a list answers nobody", n)
+			t.Fatalf("%d contacts for a list that mailed back, want 0 — a list answers nobody", n)
 		}
 	})
 }
@@ -545,9 +545,9 @@ func TestCaptureTierGateSuppressesAMachineLocalpartWithoutLosingTheMessage(t *te
 		t.Fatalf("%d activities for the vendor envelope, want 1 — the timeline row must stand", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'no-reply@em.vendor.example'`); n != 0 {
-		t.Fatal("a machine localpart on a prefix subdomain must derive no person")
+		t.Fatal("a machine localpart on a prefix subdomain must derive no contact")
 	}
 	if n := countRows(t, e, `
 		SELECT count(*) FROM system_log
@@ -689,7 +689,7 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 	if crmThread == "" {
 		t.Fatal("the CRM send joined no thread — the reply below could not answer it")
 	}
-	// A person at that address answers the CRM's mail. This is the exchange the
+	// A contact at that address answers the CRM's mail. This is the exchange the
 	// create tier now needs, and it is deliberately NOT the bulk-headered
 	// message below: a List-Unsubscribe says a list sent this, and a list has
 	// not written back to anybody.
@@ -701,14 +701,14 @@ func TestCaptureTierGateHonorsCorrespondenceFromACRMOriginatedSend(t *testing.T)
 	// it.
 	sync(t, emailWithListUnsub("team@news.prospect.example", "Prospect", "pr1@news.prospect.example"))
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'team@news.prospect.example'`); n != 1 {
-		t.Fatalf("%d persons for a sender the CRM had written to, want 1 — a CRM send must count as correspondence", n)
+		t.Fatalf("%d contacts for a sender the CRM had written to, want 1 — a CRM send must count as correspondence", n)
 	}
 	// A ledger row here is expected, and it is not a deferral. #3719 made both
 	// create tiers open the same question the deferred tier opens, because a
 	// sender created on sight and never judged stayed the mailbox owner's
-	// permanently. T1 still decides STORAGE — the person above exists, which is
+	// permanently. T1 still decides STORAGE — the contact above exists, which is
 	// what "nothing defers" was ever about. What the row asks is whose record it
 	// is, and `advisor` is a legitimate answer that keeps it private, so the
 	// question cannot be skipped for a corresponded-with sender either.
@@ -743,7 +743,7 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 		email(captureOwner, "", "cto@newco.example", "out1@myco.example", ""))
 	sync(t, email("cto@newco.example", "CTO", captureOwner, "in1@newco.example", "out1@myco.example"))
 
-	// The corresponded-with sender becomes a PERSON, and their domain becomes
+	// The corresponded-with sender becomes a CONTACT, and their domain becomes
 	// one open company question — not a company invented from the domain label.
 	// NOT is_anchor: the installation's own company is created by cold start,
 	// not derived from a captured domain.
@@ -770,7 +770,7 @@ func TestCaptureDoesNotReEnrichACompanyItAlreadyHas(t *testing.T) {
 }
 
 // Declining is not a relationship. The T1 gate reads what the one outbound
-// message SAYS, because "not interested" is the reply a person writes to end a
+// message SAYS, because "not interested" is the reply a contact writes to end a
 // conversation they never wanted — and admitting the sender on the strength of
 // it is how a real import ended up with a customer-grade record for a firm that
 // had cold-mailed the founder.
@@ -792,9 +792,9 @@ func TestCaptureTierGateRefusesToAdmitASenderTheOwnerDeclined(t *testing.T) {
 			t.Fatalf("%d attested outbound activities, want 1 — the scenario needs the evidence present", n)
 		}
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'deals@peinsights.example'`); n != 0 {
-			t.Fatalf("%d persons for a sender the owner declined, want 0", n)
+			t.Fatalf("%d contacts for a sender the owner declined, want 0", n)
 		}
 		// Not dropped — deferred. The verdict engine reads the thread and has
 		// the final say; refusing T1 only means the question stays open.
@@ -815,9 +815,9 @@ func TestCaptureTierGateRefusesToAdmitASenderTheOwnerDeclined(t *testing.T) {
 				"Happy to help — can you do a call on Thursday to talk through pricing?"))
 
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'buyer@northwind.example'`); n != 1 {
-			t.Fatalf("%d persons for a prospect the owner engaged, want exactly 1", n)
+			t.Fatalf("%d contacts for a prospect the owner engaged, want exactly 1", n)
 		}
 	})
 
@@ -829,18 +829,18 @@ func TestCaptureTierGateRefusesToAdmitASenderTheOwnerDeclined(t *testing.T) {
 			emailSaying("sales@laterdeal.example", "ld2@myco.example", "ld1@laterdeal.example",
 				"Not interested right now."))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'sales@laterdeal.example'`); n != 0 {
-			t.Fatalf("%d persons after the decline alone, want 0", n)
+			t.Fatalf("%d contacts after the decline alone, want 0", n)
 		}
 
 		syncSent(t, map[string]bool{"ld3@myco.example": true},
 			emailSaying("sales@laterdeal.example", "ld3@myco.example", "ld1@laterdeal.example",
 				"Actually, let us revisit this in Q3."))
 		if n := countRows(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = 'sales@laterdeal.example'`); n != 1 {
-			t.Fatalf("%d persons after a second outbound, want exactly 1", n)
+			t.Fatalf("%d contacts after a second outbound, want exactly 1", n)
 		}
 	})
 }
@@ -865,9 +865,9 @@ func TestCaptureTierGateReadsOnlyWhatTheOwnerActuallyWrote(t *testing.T) {
 				"> and unsubscribe here.\r\n"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'rep@planted.example'`); n != 1 {
-		t.Fatalf("%d persons, want 1 — the decline was quoted from the SENDER, not written by the owner", n)
+		t.Fatalf("%d contacts, want 1 — the decline was quoted from the SENDER, not written by the owner", n)
 	}
 }
 
@@ -877,9 +877,9 @@ func TestCaptureTierGateReadsOnlyWhatTheOwnerActuallyWrote(t *testing.T) {
 // genuine correspondence and hiding it would be wrong — while creating no
 // contact, because a shared mailbox has no human to name. The tier ladder then
 // asks what the workspace already decided, and reading the status alone says
-// "known counterparty, create the person": the contact the verdict declined
+// "known counterparty, create the contact": the contact the verdict declined
 // would appear the moment support@ wrote again. The kind is what stops that.
-func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
+func TestCaptureTierGateNeverMintsAContactForADecidedRoleMailbox(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	const addr = "support@respacio.example"
@@ -895,7 +895,7 @@ func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
 	}
 
 	// The ledger as the verdict engine leaves it: real lifecycle, kind
-	// role_mailbox, no person created.
+	// role_mailbox, no contact created.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_pending_counterparty
@@ -911,9 +911,9 @@ func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
 	sync(t, email(addr, "Respacio Support", captureOwner, "rs2@respacio.example", ""))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'support@respacio.example'`); n != 0 {
-		t.Fatalf("%d persons for a decided role mailbox, want 0 — the kind must outlive the verdict pass", n)
+		t.Fatalf("%d contacts for a decided role mailbox, want 0 — the kind must outlive the verdict pass", n)
 	}
 	// Decided means decided: the question is not re-opened and re-billed.
 	if n := countRows(t, e, `
@@ -938,23 +938,23 @@ func TestCaptureTierGateNeverMintsAPersonForADecidedRoleMailbox(t *testing.T) {
 // create path reaches deferCompanyToTriage, which asks the same consumer-mail
 // question at the chokepoint every writer passes. This is the test that says so
 // — without it the two writers are one comment apart from disagreeing.
-func TestAVerdictOnAFreeMailSenderMintsThePersonAndNoCompany(t *testing.T) {
+func TestAVerdictOnAFreeMailSenderMintsTheContactAndNoCompany(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
-	sync(t, email("carla@gmail.com", "Carla Person", captureOwner, "c1@gmail.com", ""))
+	sync(t, email("carla@gmail.com", "Carla Contact", captureOwner, "c1@gmail.com", ""))
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'carla@gmail.com'`); n != 0 {
-		t.Fatalf("%d persons before the verdict, want 0", n)
+		t.Fatalf("%d contacts before the verdict, want 0", n)
 	}
 
 	promoteByVerdict(t, e, "carla@gmail.com", activityIDOf(t, e, "c1@gmail.com"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'carla@gmail.com'`); n != 1 {
-		t.Fatalf("%d persons after the verdict, want 1", n)
+		t.Fatalf("%d contacts after the verdict, want 1", n)
 	}
 	// No company, in either spelling: the name the ladder would have invented,
 	// and the domain row an attach would have written.

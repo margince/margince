@@ -21,7 +21,7 @@
 #   update_tag  — the description. Nothing else writes one, and it is what stops
 #                 a third spelling being coined next quarter.
 #
-# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a person releases it.
+# merge_tags is CONFIRM-FIRST (🟡): it stages the fold and a human releases it.
 # So the honest report of this errand is "waiting", not "done" — the same
 # distinction case 1's criterion 14 exists for, in the one place where the tool
 # is irreversible once released. An answer that describes the vocabulary as
@@ -90,7 +90,7 @@ must_mention:
 # space of phrasings.
 #
 # WHAT IS STAGED AND WHAT IS NOT. merge_tags is confirm-first and update_tag is
-# auto-execute, so one half of this errand waits on a person and the other half
+# auto-execute, so one half of this errand waits on a human and the other half
 # has already landed by the time the answer is written. Criterion 2 is about the
 # FOLD, and it says so: an accurate report of the description that did land must
 # not read as the claim that the vocabulary is already tidy.

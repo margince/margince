@@ -273,7 +273,7 @@ func (s *Service) operationalLanes(
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				// The bounce lane's week, for the same reason: a message
 				// nobody sent is not less urgent for being a day older, and
-				// the sender is the only person who can decide to send it
+				// the sender is the only contact who can decide to send it
 				// again.
 				parked, err := s.undelivered.ParkedSends(ctx, asOf.Add(-7*24*time.Hour), doneCap)
 				return renderEach(parked, parkedItem), err

@@ -22,8 +22,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 )
 
@@ -53,8 +53,8 @@ func queryRunner(pool *pgxpool.Pool, embedder search.Embedder) agents.QueryRunne
 		search.NewColumnCatalog(InstallationDB(pool))).
 		// The place cache a radius predicate resolves its centre against.
 		// Injected here rather than imported, like every other cross-module
-		// edge (ADR-0054): search owns the port, people owns the table.
-		WithPlaces(placeCache{people: people.NewStore(InstallationDB(pool))})
+		// edge (ADR-0054): search owns the port, contacts owns the table.
+		WithPlaces(placeCache{contacts: contacts.NewStore(InstallationDB(pool))})
 	return func(ctx context.Context, raw json.RawMessage) (agents.QueryAnswer, error) {
 		plan, err := search.DecodePlan(raw)
 		if err != nil {
@@ -110,7 +110,7 @@ func queryAnswerOf(result search.QueryResult) agents.QueryAnswer {
 	return answer
 }
 
-// placeCache adapts the people store's place cache to search's PlaceResolver.
+// placeCache adapts the contacts store's place cache to search's PlaceResolver.
 //
 // LOOKUP ONLY, and the port has no other method by design: query_workspace is
 // declared workspace-local, Scope.Egresses() is derived from that declaration,
@@ -121,7 +121,7 @@ func queryAnswerOf(result search.QueryResult) agents.QueryAnswer {
 //
 // The cache is installation-wide, not per workspace — see PlaceResolver for
 // why that is safe here and what would have to change if it stopped being.
-type placeCache struct{ people *people.Store }
+type placeCache struct{ contacts *contacts.Store }
 
 func (p placeCache) LookupPlace(ctx context.Context, query string) (search.Point, bool, error) {
 	// THE SCOPED LOOKUP IS ASKED FIRST, and the order is the security property
@@ -146,7 +146,7 @@ func (p placeCache) LookupPlace(ctx context.Context, query string) (search.Point
 	// to the cache and may still hit a bare-city key. That is the pre-existing
 	// behaviour of a table that predates this lane; what this ordering
 	// guarantees is that the NEW lane never widens it.
-	city, ok, err := p.people.LookupCity(ctx, query)
+	city, ok, err := p.contacts.LookupCity(ctx, query)
 	if err != nil {
 		return search.Point{}, false, err
 	}
@@ -157,7 +157,7 @@ func (p placeCache) LookupPlace(ctx context.Context, query string) (search.Point
 	// installation resolved for its own reasons. It answers the street-level
 	// centres the city lane cannot, which is what a caller sending a company's
 	// own address is asking about.
-	found, ok, err := p.people.LookupPlace(ctx, query)
+	found, ok, err := p.contacts.LookupPlace(ctx, query)
 	if err != nil || !ok {
 		return search.Point{}, false, err
 	}

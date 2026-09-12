@@ -144,7 +144,7 @@ func TestCustomFieldsHTTP(t *testing.T) {
 		assertStructuralChangeRefused(t, e)
 	})
 
-	t.Run("injection label sanitized, catalog label preserved, person table survives", func(t *testing.T) {
+	t.Run("injection label sanitized, catalog label preserved, contact table survives", func(t *testing.T) {
 		assertInjectionLabel(t, e)
 	})
 

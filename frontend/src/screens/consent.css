@@ -30,7 +30,7 @@
   margin-left: 4px;
 }
 
-/* The per-person ask, under the per-purpose rows. It is a body of its own so
+/* The per-contact ask, under the per-purpose rows. It is a body of its own so
    the panel rules it off with its own seam: a different question, asked once
    about the whole record rather than about a purpose. */
 .consent-confirm-ask p {

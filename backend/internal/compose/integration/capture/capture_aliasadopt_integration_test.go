@@ -27,7 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -161,7 +161,7 @@ func TestTheSweepAdoptsMailStrandedBeforeTheAddressWasKnown(t *testing.T) {
 	}
 	declareOwnAddress(t, env, env.e.Rep1, late)
 
-	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(env.e.Pool, people.NewStore(compose.InstallationDB(env.e.Pool)))
+	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(env.e.Pool, contacts.NewStore(compose.InstallationDB(env.e.Pool)))
 	if err := worker.ReconcileWorkspaceForTest(context.Background(), env.e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestTheSweepAdoptsMailStrandedBeforeTheAddressWasKnown(t *testing.T) {
 }
 
 // declareOwnAddress adds the address through the real identity writer, which is
-// the door a person uses when they tell the product about their own alias.
+// the door a contact uses when they tell the product about their own alias.
 func declareOwnAddress(t *testing.T, env captureEnv, seat ids.UUID, address string) {
 	t.Helper()
 	store := capturemod.NewOwnerIdentityStore(compose.InstallationDB(env.e.Pool))

@@ -416,7 +416,7 @@ export function ApprovalRow({
         <>
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
-              person, recorded against their own name. */}
+              contact, recorded against their own name. */}
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

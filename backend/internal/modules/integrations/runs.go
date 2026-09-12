@@ -33,23 +33,23 @@ type FenceVerdict struct {
 
 // The callbacks the owning domain supplies, declared here rather than in
 // shared/ports/provider because each needs a transaction and that package is
-// stdlib-only. Compose wires them from modules/people.
+// stdlib-only. Compose wires them from modules/contacts.
 type (
 	// FenceSubjectFunc answers consent, suppression, objection and erasure for
 	// one subject, inside the queueing transaction. It runs again immediately
 	// before any claim is written, because a subject can be suppressed while a
 	// paid run is in flight (PI-AC-7).
-	FenceSubjectFunc func(ctx context.Context, tx pgx.Tx, personID string) (FenceVerdict, error)
+	FenceSubjectFunc func(ctx context.Context, tx pgx.Tx, contactID string) (FenceVerdict, error)
 
 	// DuplicateClusterFunc returns the other records the domain believes may
 	// be the same human. Empty is a legitimate answer — a domain with no
 	// duplicate signal degrades the fence to the single-record rule rather
 	// than blocking work.
-	DuplicateClusterFunc func(ctx context.Context, tx pgx.Tx, personID string) ([]string, error)
+	DuplicateClusterFunc func(ctx context.Context, tx pgx.Tx, contactID string) ([]string, error)
 
 	// SubjectIdentifiersFunc resolves the minimum set of facts that may leave
 	// the installation for this subject.
-	SubjectIdentifiersFunc func(ctx context.Context, tx pgx.Tx, personID string) (provider.PersonIdentifiers, error)
+	SubjectIdentifiersFunc func(ctx context.Context, tx pgx.Tx, contactID string) (provider.ContactIdentifiers, error)
 
 	// EnqueueSubmitFunc commits the submit job in the SAME transaction as the
 	// run row, so a crash can never leave a run nobody will ever submit. The
@@ -92,18 +92,18 @@ func (s *Store) WithSubmitEnqueue(fn EnqueueSubmitFunc) *Store {
 // the step that costs money, and the fingerprint is computed before the
 // duplicate check because the check is defined over it.
 func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.Run, error) {
-	// A run does not read a person: it BUYS facts about them and writes those
-	// facts onto their record (people.WriteProviderClaims, audited as
-	// update/person), spending the installation's credits on the way. So the
-	// grant it asks for is the one that authorizes that write. `person` rather
+	// A run does not read a contact: it BUYS facts about them and writes those
+	// facts onto their record (contacts.WriteProviderClaims, audited as
+	// update/contact), spending the installation's credits on the way. So the
+	// grant it asks for is the one that authorizes that write. `contact` rather
 	// than `integrations` deliberately: `integrations` governs the CONNECTION
 	// (admin/ops configuration), while enriching someone is a thing a rep does
 	// in the course of their own work, on records they may already change.
 	//
 	// Read was the wrong half of the pair, and read_only is what made that
 	// visible — a seat whose entire purpose is that it changes nothing passed
-	// this gate and left provider claims on a person.
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	// this gate and left provider claims on a contact.
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return provider.Run{}, err
 	}
 	if s.fence == nil || s.identifiers == nil {
@@ -131,11 +131,11 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 	var out provider.Run
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The ROW gate, not just the object gate. auth.Require above answers
-		// "may this role change people at all"; this answers "may this caller
-		// change THIS person". Visibility is not enough and on this table it is
-		// nothing at all: person is an identity table, read by every seat, so
+		// "may this role change contacts at all"; this answers "may this caller
+		// change THIS contact". Visibility is not enough and on this table it is
+		// nothing at all: contact is an identity table, read by every seat, so
 		// the visibility arm renders TRUE for everyone and a rep could name any
-		// colleague's person id, spend the installation's credits, and land
+		// colleague's contact id, spend the installation's credits, and land
 		// provider claims on a record outside their write scope.
 		//
 		// Live, because the run's claims are new rows on the subject and
@@ -143,7 +143,7 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 		// just cleared, which a run in flight would otherwise refill.
 		// Existence-hiding survives: an invisible subject still answers 404,
 		// and only a visible-but-not-writable one answers 403.
-		if err := auth.EnsureWritableLive(ctx, tx, "person", uuidOf(&in.PersonID)); err != nil {
+		if err := auth.EnsureWritableLive(ctx, tx, "contact", uuidOf(&in.ContactID)); err != nil {
 			return err
 		}
 		conn, err := s.admit(ctx, tx, name, in.Trigger)
@@ -174,7 +174,7 @@ func (s *Store) QueueRun(ctx context.Context, in provider.QueueInput) (provider.
 // keeps the consumer from needing to know what is registered at all.
 //
 // More than one connected provider is not an error to guess at: it would mean
-// buying the same person's data twice, so it refuses until the platform
+// buying the same contact's data twice, so it refuses until the platform
 // declares which one an automatic trigger uses.
 func (s *Store) resolveProvider(ctx context.Context, named string) (string, error) {
 	if named != "" {
@@ -218,7 +218,7 @@ func (s *Store) resolveProvider(ctx context.Context, named string) (string, erro
 
 // refuseBeforeSpending answers every reason not to spend on this subject, in
 // the order that reads cheapest: the standing and wallet checks first, which
-// need nothing about the person, then the two that need their identifiers.
+// need nothing about the contact, then the two that need their identifiers.
 //
 // It returns the skip reason to record, or "" to carry on. On the carry-on
 // path it also returns the input fingerprint, computed here because the
@@ -237,13 +237,13 @@ func (s *Store) refuseBeforeSpending(ctx context.Context, tx pgx.Tx, desc provid
 	return s.refuseOnWhatTheRecordCarries(ctx, tx, desc, in, cats)
 }
 
-// refuseOnStanding answers the refusals that need nothing about the person:
+// refuseOnStanding answers the refusals that need nothing about the contact:
 // whether we may contact them at all, and whether the installation should
 // spend right now.
 func (s *Store) refuseOnStanding(ctx context.Context, tx pgx.Tx, conn admittedConnection, in provider.QueueInput) (provider.SkipReason, error) {
 	// Consent, suppression, objection, erasure. Before anything else, because
 	// a subject we may not contact must not even be looked up.
-	verdict, err := s.fence(ctx, tx, in.PersonID)
+	verdict, err := s.fence(ctx, tx, in.ContactID)
 	if err != nil {
 		return "", err
 	}
@@ -262,7 +262,7 @@ func (s *Store) refuseOnStanding(ctx context.Context, tx pgx.Tx, conn admittedCo
 		}
 	}
 	if conn.refreshAge != nil && in.Trigger.Automatic() {
-		fresh, err := s.hasFreshRun(ctx, tx, in.PersonID, in.Provider, *conn.refreshAge)
+		fresh, err := s.hasFreshRun(ctx, tx, in.ContactID, in.Provider, *conn.refreshAge)
 		if err != nil {
 			return "", err
 		}
@@ -277,7 +277,7 @@ func (s *Store) refuseOnStanding(ctx context.Context, tx pgx.Tx, conn admittedCo
 // subject's identifiers, and returns the fingerprint over them.
 func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, in provider.QueueInput, cats []provider.Category) (string, provider.SkipReason, error) {
 	const none = ""
-	idents, err := s.identifiers(ctx, tx, in.PersonID)
+	idents, err := s.identifiers(ctx, tx, in.ContactID)
 	if err != nil {
 		return none, "", err
 	}
@@ -290,7 +290,7 @@ func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, des
 	// every other lookup look unavailable.
 	//
 	// It applies to a human's request as well as the sweep's: the button
-	// cannot conjure an identifier, and a person who presses it deserves "there
+	// cannot conjure an identifier, and a contact who presses it deserves "there
 	// is nothing to look up" rather than a vendor error.
 	if !idents.Matchable(desc.MatchRules) {
 		return none, provider.SkipNoIdentifiers, nil
@@ -313,7 +313,7 @@ func (s *Store) refuseOnWhatTheRecordCarries(ctx context.Context, tx pgx.Tx, des
 
 // queueOne is the admission pipeline for one subject. Each refusal writes a
 // skipped run rather than nothing at all: a customer asking "why was this
-// person not enriched" deserves a row that answers, and a silent no-op cannot.
+// contact not enriched" deserves a row that answers, and a silent no-op cannot.
 func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) (provider.Run, error) {
 	snapshot := freezeSnapshot(conn)
 	cats, err := runCategories(desc, conn, in)
@@ -395,14 +395,14 @@ func (s *Store) runsSubmittedToday(ctx context.Context, tx pgx.Tx, name string) 
 
 // hasFreshRun reports whether this subject's newest completed run is still
 // inside the refresh window.
-func (s *Store) hasFreshRun(ctx context.Context, tx pgx.Tx, personID, name string, days int) (bool, error) {
+func (s *Store) hasFreshRun(ctx context.Context, tx pgx.Tx, contactID, name string, days int) (bool, error) {
 	var fresh bool
 	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM provider_run
-		   WHERE person_id = $1 AND provider = $2 AND state = 'completed'
+		   WHERE contact_id = $1 AND provider = $2 AND state = 'completed'
 		     AND completed_at > now() - make_interval(days => $3))`,
-		personID, name, days).Scan(&fresh)
+		contactID, name, days).Scan(&fresh)
 	if err != nil {
 		return false, fmt.Errorf("integrations: checking result freshness: %w", err)
 	}
@@ -417,14 +417,14 @@ func (s *Store) hasFreshRun(ctx context.Context, tx pgx.Tx, personID, name strin
 // buy. It is keyed on the cluster's stable minimum id so both racers hash to
 // the same lock whichever side they started from.
 func (s *Store) duplicateAlreadyBought(ctx context.Context, tx pgx.Tx, in provider.QueueInput, fingerprint string) (bool, error) {
-	cluster, err := s.cluster(ctx, tx, in.PersonID)
+	cluster, err := s.cluster(ctx, tx, in.ContactID)
 	if err != nil {
 		return false, err
 	}
 	if len(cluster) == 0 {
 		return false, nil
 	}
-	key := append([]string{in.PersonID}, cluster...)
+	key := append([]string{in.ContactID}, cluster...)
 	sort.Strings(key)
 	if err := storekit.LockWriteIdentity(ctx, tx, "provider_run_cluster", key[0]); err != nil {
 		return false, err
@@ -434,7 +434,7 @@ func (s *Store) duplicateAlreadyBought(ctx context.Context, tx pgx.Tx, in provid
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM provider_run
-		   WHERE person_id = ANY($1) AND provider = $2 AND input_fingerprint = $3
+		   WHERE contact_id = ANY($1) AND provider = $2 AND input_fingerprint = $3
 		     AND state IN ('completed','queued','submitting','in_progress','submission_unknown'))`,
 		cluster, in.Provider, fingerprint).Scan(&bought)
 	if err != nil {
@@ -472,15 +472,15 @@ func freezeSnapshot(c admittedConnection) provider.Snapshot {
 // whole-set hash, which is a schema change — tracked as its own work, and said
 // here rather than left for the next reader to discover from a duplicate
 // charge.
-func fingerprintOf(id provider.PersonIdentifiers, cats []provider.Category) string {
+func fingerprintOf(id provider.ContactIdentifiers, cats []provider.Category) string {
 	names := make([]string, 0, len(cats))
 	for _, c := range cats {
 		names = append(names, string(c))
 	}
 	sort.Strings(names)
 	payload := struct {
-		ID   provider.PersonIdentifiers `json:"identifiers"`
-		Cats []string                   `json:"categories"`
+		ID   provider.ContactIdentifiers `json:"identifiers"`
+		Cats []string                    `json:"categories"`
 	}{ID: id, Cats: names}
 	raw, err := json.Marshal(payload)
 	if err != nil {

@@ -20,9 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -101,7 +101,7 @@ type accountScanWorker struct {
 // by wire, on the reader's side, out of the reader's own grants. A reader here
 // would be wired to a code path that never asks it anything.
 func newAccountScanWorker(pool *pgxpool.Pool, brain completer, routingVersion func() string, log *slog.Logger) *accountScanWorker {
-	view := company360.NewService(pool, people.NewStore(InstallationDB(pool)),
+	view := company360.NewService(pool, contacts.NewStore(InstallationDB(pool)),
 		deals.NewStore(InstallationDB(pool), DealsInstallation()), ProjectsStore(pool),
 		approvals.NewService(InstallationDB(pool)), time.Now)
 	return &accountScanWorker{

@@ -64,7 +64,7 @@ type stalledDeal struct {
 // reads only the first, so the count is the half a fingerprint built from
 // IsStalled's own inputs would miss.
 //
-// They are not everything a person can do to a deal, and that is the RULE rather
+// They are not everything a contact can do to a deal, and that is the RULE rather
 // than a gap in it: worked means a new activity or a stage move, and nothing
 // else re-arms a dismissal.
 //
@@ -77,10 +77,10 @@ type stalledDeal struct {
 // Changing the OWNER needs no term either, and the reason is one level up: a
 // dismissal is per-user. The new owner has dismissed nothing, so the advice is
 // already live for them; adding an owner term would only re-arm it for the
-// person who handed the deal on.
+// contact who handed the deal on.
 //
 // deal.version would catch all of it and is monotone, and it is still the wrong
-// key: it bumps on writes no person made — CloseDateCorrector patches
+// key: it bumps on writes no contact made — CloseDateCorrector patches
 // expected_close_date from a sweep — so keying on it hands a rep back advice
 // they dismissed because a nightly job touched the row. That is why the
 // fingerprint names its two inputs rather than counting every write.

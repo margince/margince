@@ -11,7 +11,7 @@ import (
 )
 
 // Email is a normalized address: parsed once, stored lowercased — the
-// same convention the schema enforces (person_email_norm/lead_email_norm
+// same convention the schema enforces (contact_email_norm/lead_email_norm
 // CHECKs), so dedupe by address can never miss on case.
 type Email struct{ s string }
 

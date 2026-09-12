@@ -66,7 +66,7 @@ import "./shell.css";
 // above the content (app/topbar.tsx) carries everything else that is true of the
 // whole session — where you are, how you search, and who you are signed in as.
 // The sidebar holds destinations and nothing else, because a panel that also
-// held the search, the settings door and the person had four different kinds of
+// held the search, the settings door and the contact had four different kinds of
 // row in one column and read as a list of everything.
 //
 // The content column carries only what is true of THIS screen: its heading,
@@ -1018,7 +1018,7 @@ export function Shell({
         </main>
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
-          person is working in, and a contour that stopped at the sidebar would
+          contact is working in, and a contour that stopped at the sidebar would
           read as a panel border. Last in the tree, because it is an overlay and
           not a column. */}
         <AgentEdge />

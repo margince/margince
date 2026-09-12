@@ -72,7 +72,7 @@ func TestEveryTechnicalLeafPinsTheSignalCategory(t *testing.T) {
 	}
 }
 
-// A person correcting a machine-read value rewrites the row's source to
+// A contact correcting a machine-read value rewrites the row's source to
 // `human`. A leaf constrained by source would drop exactly the accounts
 // somebody cared enough to fix, which is the opposite of what naming that
 // value means.

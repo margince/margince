@@ -15,7 +15,7 @@ import {
  * who assumes it widens visibility will assign a colleague instead of granting
  * them the record — and then wonder why they still cannot open it.
  *
- * A retired role and a deactivated person both keep rendering their label. The
+ * A retired role and a deactivated colleague both keep rendering their label. The
  * row is history by then, and a name that vanished would read as a bug rather
  * than as a responsibility waiting for a successor.
  */
@@ -55,9 +55,9 @@ export function RecordTeam({
 }
 
 /**
- * One responsibility. The role is the eyebrow and the person or team is the
+ * One responsibility. The role is the eyebrow and the colleague or team is the
  * value, because a reader scans this list asking "who has this job", not "what
- * jobs does this person have".
+ * jobs does this colleague have".
  */
 function AssignmentRow({ row }: Readonly<{ row: RecordAssignment }>) {
   const t = useT();
@@ -69,7 +69,7 @@ function AssignmentRow({ row }: Readonly<{ row: RecordAssignment }>) {
       </span>
       <span>
         {row.subject_name}
-        {/* A team and a person read identically otherwise, and which one holds
+        {/* A team and a colleague read identically otherwise, and which one holds
             a responsibility changes who to ask. */}
         {row.subject_kind === "team" && ` ${t("assignments.teamSuffix")}`}
         {row.subject_inactive && ` ${t("assignments.subjectInactive")}`}

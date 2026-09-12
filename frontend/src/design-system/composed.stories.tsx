@@ -102,7 +102,7 @@ export const MailWithSignatureAndQuote: Story = {
 };
 
 // The same shape on a note, which must NOT be folded: "Viele Grüße" opens this
-// one as ordinary prose, and a quoted line is something a person typed.
+// one as ordinary prose, and a quoted line is something a human typed.
 export const NoteThatReadsLikeASignOff: Story = {
   args: {
     name: "Acme GmbH",

@@ -33,7 +33,7 @@ func TestParseRejectsDishonestDocuments(t *testing.T) {
 	// pair that genuinely has no safe reading: bytes that are not a document,
 	// and a row_scope that decides how far every grant reaches.
 	cases := map[string]string{
-		"invalid row_scope": `{"objects":{"person":{"read":true}},"row_scope":"everything"}`,
+		"invalid row_scope": `{"objects":{"contact":{"read":true}},"row_scope":"everything"}`,
 		"malformed json":    `{"objects":`,
 	}
 	for name, raw := range cases {
@@ -59,7 +59,7 @@ func TestParseRejectsDishonestDocuments(t *testing.T) {
 func TestParseDropsAnObjectThisInstallationDoesNotKnow(t *testing.T) {
 	// `ext_departed_note` is exactly the shape a removed unit leaves behind: a
 	// well-formed extension object name that no installation composes.
-	doc, err := Parse([]byte(`{"objects":{"person":{"read":true,"update":true},` +
+	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true,"update":true},` +
 		`"ext_departed_note":{"create":true,"read":true,"update":true,"delete":true}},` +
 		`"row_scope":"team"}`))
 	if err != nil {
@@ -71,8 +71,8 @@ func TestParseDropsAnObjectThisInstallationDoesNotKnow(t *testing.T) {
 	}
 	// The rest of the document is untouched: a leftover grant must degrade
 	// exactly itself and nothing else.
-	if got := doc.Objects["person"]; !got.Read || !got.Update {
-		t.Errorf("person grant = %+v, want the document's own read+update — the drop took more than it should", got)
+	if got := doc.Objects["contact"]; !got.Read || !got.Update {
+		t.Errorf("contact grant = %+v, want the document's own read+update — the drop took more than it should", got)
 	}
 	if doc.RowScope != principal.RowScopeTeam {
 		t.Errorf("row_scope = %q, want team", doc.RowScope)
@@ -99,7 +99,7 @@ func TestParseDropsAnUnknownCoreLikeObjectToo(t *testing.T) {
 }
 
 func TestParseDefaultsAnUnsetScopeToNarrowest(t *testing.T) {
-	doc, err := Parse([]byte(`{"objects":{"person":{"read":true}}}`))
+	doc, err := Parse([]byte(`{"objects":{"contact":{"read":true}}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,12 +114,12 @@ func TestMergeUnionsGrantsAndWidensScope(t *testing.T) {
 	merged := Merge(map[string]Document{"rep": rep, "read_only": readonly})
 
 	// Union: rep's writes survive the read-only role being added.
-	if !merged.Allows("person", principal.ActionCreate) {
-		t.Error("merge lost rep's person.create")
+	if !merged.Allows("contact", principal.ActionCreate) {
+		t.Error("merge lost rep's contact.create")
 	}
-	// Neither role deletes people; the union must not invent it.
-	if merged.Allows("person", principal.ActionDelete) {
-		t.Error("merge invented person.delete that no role grants")
+	// Neither role deletes contacts; the union must not invent it.
+	if merged.Allows("contact", principal.ActionDelete) {
+		t.Error("merge invented contact.delete that no role grants")
 	}
 	// Widest scope wins: read_only's `all` over rep's `own`.
 	if merged.RowScope != principal.RowScopeAll {
@@ -298,8 +298,8 @@ func TestGridAppliesAnOverrideAndLeavesTheRestAtBase(t *testing.T) {
 	if got["deal"] != crud {
 		t.Errorf("the overridden object holds %+v, want crud", got["deal"])
 	}
-	if got["person"] != readOnly {
-		t.Errorf("an object with no override holds %+v, want the base readOnly", got["person"])
+	if got["contact"] != readOnly {
+		t.Errorf("an object with no override holds %+v, want the base readOnly", got["contact"])
 	}
 	if len(got) != len(coreObjects) {
 		t.Errorf("the grid covers %d objects, want all %d", len(got), len(coreObjects))

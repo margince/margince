@@ -183,7 +183,7 @@ func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
 	_, _, err = svc.IssuePasswordLink(wsCtx, admin, ids.From[ids.UserKind](seat.id))
 	if !errors.Is(err, errAgentSeatHasNoPassword) {
 		t.Fatalf("issuing a set-password link for an agent identity returned %v, want the agent-seat "+
-			"refusal. Redeeming that link would give an identity with no person behind it a working "+
+			"refusal. Redeeming that link would give an identity with no contact behind it a working "+
 			"credential, and every session opened with it would read as the agent", err)
 	}
 

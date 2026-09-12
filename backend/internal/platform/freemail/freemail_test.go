@@ -43,7 +43,7 @@ func TestIsConsumerCoversTheDefectsAHandPinnedListLeft(t *testing.T) {
 	}
 
 	// A company domain must never be one, least of all the personal domains
-	// that started this: they are a person's own domain, not a mailbox vendor.
+	// that started this: they are a contact's own domain, not a mailbox vendor.
 	company := []string{
 		"kestner.example", "rowanmarsh.example", "acme.example", "gradion.com",
 		"gmail.com.example", // suffix trickery is not a match

@@ -78,7 +78,7 @@ func aGoodRecord(t *testing.T, e *configEnv, dealID ids.DealID, ref TransitionRe
 		}
 		if i == 0 {
 			// One decision pushed back, so the observation SPAN is real rather
-			// than a burst: the bar asks how long people have had to notice a
+			// than a burst: the bar asks how long contacts have had to notice a
 			// problem, not how many they answered in an afternoon.
 			backdateDecision(t, e, id, passingSpanDays*24*time.Hour)
 		}
@@ -141,7 +141,7 @@ func TestNothingAutoAppliesWhileTheKillSwitchIsOff(t *testing.T) {
 // Volume and time are separate bars, and each withholds alone.
 //
 // They answer different questions: enough proposals says the rate is measured
-// rather than a coincidence; enough days says people have had a chance to
+// rather than a coincidence; enough days says contacts have had a chance to
 // notice a problem. A transition that cleared one and not the other has not
 // earned anything.
 func TestAutoApplyNeedsTwoHundredReviewsAndTwentyEightObservationDays(t *testing.T) {
@@ -366,7 +366,7 @@ func TestAProposeRuleCarriesNoEnabler(t *testing.T) {
 	// And the SQL says so on its own terms, not because the caller happened to
 	// pass nil. Written straight to the statement with a real actor and
 	// mode=propose: without the mode condition on enabled_by this inserts a
-	// person with no instant and the enabling_is_timed CHECK refuses it, which
+	// contact with no instant and the enabling_is_timed CHECK refuses it, which
 	// is the failure a caller refactor would otherwise discover in production.
 	_, direct := e.owner.Exec(t.Context(), `
 		INSERT INTO stage_progression_policy (
@@ -395,14 +395,14 @@ func TestAProposeRuleCarriesNoEnabler(t *testing.T) {
 	}
 }
 
-// Deleting the person who enabled a rule must not fail on a CHECK.
+// Deleting the contact who enabled a rule must not fail on a CHECK.
 //
 // enabled_by is ON DELETE SET NULL, and a paired-nullability CHECK would turn
 // that declared SET NULL into a constraint violation that refuses the delete —
 // which is exactly the bug an earlier table in this feature shipped. The
 // constraint here is one-directional (enabled_by IS NULL OR enabled_at IS NOT
 // NULL) so the erasure satisfies it, and the instant survives as the fact the
-// audit trail still names a person for.
+// audit trail still names a contact for.
 func TestErasingTheEnablerDoesNotFightTheCheck(t *testing.T) {
 	e := setupConfigEnv(t)
 	_, fromID, toID := twoStagePipeline(t, e)
@@ -425,7 +425,7 @@ func TestErasingTheEnablerDoesNotFightTheCheck(t *testing.T) {
 		t.Fatalf("reading the rule back: %v", err)
 	}
 	if by != nil {
-		t.Error("the erased person is still named on the rule")
+		t.Error("the erased contact is still named on the rule")
 	}
 	if at == nil {
 		t.Error("the enabling instant went with them — when it happened is still " +

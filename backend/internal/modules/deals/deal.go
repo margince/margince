@@ -171,7 +171,7 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		// A human setting the date IS the §11 confirmation — the machine's
 		// provisional guess stops excluding the deal from Commit. This one turns
 		// on the request, not on the date moving: re-sending the provisional date
-		// unchanged is exactly how a person confirms it.
+		// unchanged is exactly how a human confirms it.
 		if current.CloseDateProvisional != nil && *current.CloseDateProvisional {
 			p.Set("close_date_provisional", true, false)
 		}

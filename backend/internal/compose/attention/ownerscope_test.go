@@ -11,12 +11,12 @@ package attention
 // `unassigned` would read a confident claim nobody owes it — and only `owner`
 // decides whose Mine queue a row lands on.
 //
-// So a producer that names a person in `ownerRef` and leaves `owner` zero puts
-// a row on nobody's queue while the card beside it prints that person's name.
+// So a producer that names a contact in `ownerRef` and leaves `owner` zero puts
+// a row on nobody's queue while the card beside it prints that contact's name.
 // The existing census (TestEveryProducerStatesAnOwner) cannot see that: it reads
 // `ownerRef` alone, which is the half that would still be right.
 //
-// Today the three producers that name a person set both. This test is what
+// Today the three producers that name a contact set both. This test is what
 // makes that stay true.
 
 import (
@@ -58,12 +58,12 @@ func TestANamedOwnerIsOneTheScopeFiltersCanRead(t *testing.T) {
 	// `unassigned` or `whoever is reading` — every arm above skipped, nothing
 	// compared, and PASS. The fixture must actually reach the paired answer.
 	if named < 3 {
-		t.Fatalf("only %d row named a person, so this census compared almost nothing: "+
+		t.Fatalf("only %d row named a contact, so this census compared almost nothing: "+
 			"give dayWhoseRowsNameAnOwner a row for each producer that calls ownedBy", named)
 	}
 }
 
-// dayWhoseRowsNameAnOwner is dayOfEveryLane with a person on the rows that can
+// dayWhoseRowsNameAnOwner is dayOfEveryLane with a contact on the rows that can
 // carry one, so the pairing above is exercised rather than skipped.
 func dayWhoseRowsNameAnOwner(holder ids.UUID) crmcontracts.Attention {
 	day := dayOfEveryLane()
@@ -74,11 +74,11 @@ func dayWhoseRowsNameAnOwner(holder ids.UUID) crmcontracts.Attention {
 	return day
 }
 
-// A folded row can name a person the scope filters will never see.
+// A folded row can name a contact the scope filters will never see.
 //
 // ownerOfTheGroup speaks where the members agree, and a synthesized row has no
 // record of its own to take `owner` from — so a group whose members all name
-// one person carries ownerNamed with a zero `owner`. That is the mis-scoping
+// one contact carries ownerNamed with a zero `owner`. That is the mis-scoping
 // the census above describes, reached directly because no producer that folds
 // can currently produce it: classifyDecision, the only classifier the fold
 // consumes, answers unassigned() for every row and ignores AssigneeId, by a
@@ -88,7 +88,7 @@ func dayWhoseRowsNameAnOwner(holder ids.UUID) crmcontracts.Attention {
 // rather than through a fixture keeps the claim honest: the census above cannot
 // reach this, and pretending otherwise with a hand-forced pile would assert a
 // path through classifyDecision that does not exist.
-func TestAFoldedRowNamingAPersonWouldNotBeScopedToThem(t *testing.T) {
+func TestAFoldedRowNamingAContactWouldNotBeScopedToThem(t *testing.T) {
 	t.Parallel()
 	holder := ids.NewV7()
 	members := []ranked{{ownerRef: ownedBy(holder)}, {ownerRef: ownedBy(holder)}}
@@ -97,7 +97,7 @@ func TestAFoldedRowNamingAPersonWouldNotBeScopedToThem(t *testing.T) {
 		t.Fatalf("a pile agreeing on one owner says %v, so this test no longer reaches "+
 			"the shape it was written for", group)
 	}
-	// The gap itself: the group names a person and carries no `owner` for
+	// The gap itself: the group names a contact and carries no `owner` for
 	// answersTo to read. If a foldable producer ever names one, this is the line
 	// that has to change with it.
 	folded := ranked{ownerRef: group}

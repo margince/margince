@@ -128,9 +128,9 @@ describe("history field labels", () => {
     expect([...byType.keys()].sort()).toEqual([
       "activity",
       "company",
+      "contact",
       "deal",
       "lead",
-      "person",
       "project",
     ]);
     expect(byType.get("deal")).toContain("amount_minor");

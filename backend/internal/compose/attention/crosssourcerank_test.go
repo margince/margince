@@ -70,7 +70,7 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 			ActivityID: waitActivity,
 			Subject:    "Can you confirm the retrofit price?",
 			Since:      rankInstant.Add(-72 * time.Hour),
-			PersonID:   waitPerson,
+			ContactID:  waitContact,
 			// A thread the workspace has written on before. Without it the row
 			// is an UNPROVEN wait, which classifyWaiting demotes to routine on
 			// purpose — a correct answer to a different question, and one that
@@ -121,7 +121,7 @@ func TestSystemNewsNeverLeadsACustomerWaiting(t *testing.T) {
 			ActivityID: waitActivity,
 			Subject:    "Still waiting on that quote",
 			Since:      rankInstant.Add(-2 * time.Hour),
-			PersonID:   waitPerson,
+			ContactID:  waitContact,
 			// See the sibling above: an unproven wait is routine by design, and
 			// the claim under test is that hygiene never outranks a customer we
 			// are actually in conversation with.
@@ -154,7 +154,7 @@ func TestAStaleWaitDoesNotOutrankAMeetingAboutToStart(t *testing.T) {
 			ActivityID: waitActivity,
 			Subject:    "Asked a month ago",
 			Since:      rankInstant.Add(-time.Duration(waitingStaleDays+16) * 24 * time.Hour),
-			PersonID:   waitPerson,
+			ContactID:  waitContact,
 		}},
 		crmcontracts.Attention{
 			AsOf:     rankInstant,
@@ -180,7 +180,7 @@ func TestAStaleWaitWithAnOpenDealKeepsItsPlace(t *testing.T) {
 			ActivityID:  waitActivity,
 			Subject:     "Asked a month ago, deal still open",
 			Since:       rankInstant.Add(-time.Duration(waitingStaleDays+16) * 24 * time.Hour),
-			PersonID:    waitPerson,
+			ContactID:   waitContact,
 			HasOpenDeal: true,
 		}},
 		crmcontracts.Attention{
@@ -197,7 +197,7 @@ func TestAStaleWaitWithAnOpenDealKeepsItsPlace(t *testing.T) {
 // Fixed ids, so a failure names the row rather than a fresh uuid.
 var (
 	waitActivity = ids.MustParse("00000000-0000-7000-8000-00000000a001")
-	waitPerson   = ids.MustParse("00000000-0000-7000-8000-00000000b001")
+	waitContact  = ids.MustParse("00000000-0000-7000-8000-00000000b001")
 	leadOwed     = ids.MustParse("00000000-0000-7000-8000-00000000c001")
 )
 
@@ -223,7 +223,7 @@ func TestSixKindsOfWorkAreOrderedAgainstEachOther(t *testing.T) {
 			ActivityID: waitActivity,
 			Subject:    "Can you confirm the retrofit price?",
 			Since:      rankInstant.Add(-72 * time.Hour),
-			PersonID:   waitPerson,
+			ContactID:  waitContact,
 			Engaged:    true,
 		}},
 		[]OwedLead{{

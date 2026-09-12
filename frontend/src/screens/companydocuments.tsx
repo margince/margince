@@ -309,7 +309,7 @@ function DocumentRow({
   // the filenames the reader came for.
   const [reading, setReading] = useState(false);
   // Only a deal-scoped file is offered one, because a deal is the only record
-  // the accept can write to — offering it on a person's CV would be offering
+  // the accept can write to — offering it on a contact's CV would be offering
   // an act that can only be refused.
   const offersReading = doc.entity_type === "deal";
 

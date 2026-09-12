@@ -46,7 +46,7 @@ type Tag struct {
 // the question an agent asks before proposing a cleanup.
 type TagDetail struct {
 	Tag
-	People    int `json:"people"`
+	Contacts  int `json:"contacts"`
 	Companies int `json:"companies"`
 	Deals     int `json:"deals"`
 }
@@ -68,7 +68,7 @@ type RecordTagOnRecord struct {
 	TagID    ids.UUID `json:"tag_id"`
 	Name     string   `json:"name"`
 	Archived bool     `json:"archived,omitempty"`
-	// AssignedBy names the person behind the assignment where the row records
+	// AssignedBy names the contact behind the assignment where the row records
 	// one; AssignedByKind says whether the hand was a human's, an agent's or
 	// an import's.
 	AssignedBy     string `json:"assigned_by,omitempty"`
@@ -325,7 +325,7 @@ func (t applyTag) Handle(ctx context.Context, in json.RawMessage) (json.RawMessa
 		return nil, err
 	}
 	// A name rather than an id is the capture flow's shape: "add tag: K5
-	// Conference 2026" is one act to the person asking, and making them call a
+	// Conference 2026" is one act to the contact asking, and making them call a
 	// create verb first only to pass its answer back is a second call that
 	// exists for the surface's convenience rather than theirs. Reuse first —
 	// an existing word wins over a new one, so tagging twice does not leave

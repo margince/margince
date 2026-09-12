@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -38,17 +38,17 @@ func edgeRow(action, before, after string) AuditRow {
 }
 
 // employmentEdge is the live employment every case below starts from: the kind
-// whose anchor is the PERSON, which is what makes the two ends asymmetric.
-func employmentEdge() people.EdgeFacts {
-	return people.EdgeFacts{Kind: "employment", Version: 3, Anchor: "person", AnchorID: ids.NewV7()}
+// whose anchor is the CONTACT, which is what makes the two ends asymmetric.
+func employmentEdge() contacts.EdgeFacts {
+	return contacts.EdgeFacts{Kind: "employment", Version: 3, Anchor: "contact", AnchorID: ids.NewV7()}
 }
 
 // edgeEvaluator wires the edge reader to a fixed reading, which is what the
 // binding path does too: the version the write pins has to be the version the
 // decision judged.
-func edgeEvaluator(facts people.EdgeFacts) Evaluator {
+func edgeEvaluator(facts contacts.EdgeFacts) Evaluator {
 	return Evaluator{
-		EdgeFacts: func(context.Context, pgx.Tx, ids.UUID) (people.EdgeFacts, error) {
+		EdgeFacts: func(context.Context, pgx.Tx, ids.UUID) (contacts.EdgeFacts, error) {
 			return facts, nil
 		},
 	}
@@ -82,10 +82,10 @@ func TestReversingAnUnlinkRefusesByName(t *testing.T) {
 // one company — so a generic reverse of one is a side door around both.
 func TestReversingAProjectCompanyRefusesByNamingTheKind(t *testing.T) {
 	facts := employmentEdge()
-	facts.Kind = people.ProjectCompanyKind
+	facts.Kind = contacts.ProjectCompanyKind
 	for _, action := range []string{"create", "update", edgeActionArchive} {
 		answer := judgeEdge(t, edgeEvaluator(facts), edgeRow(action, `null`, `{"kind":"project_company"}`))
-		if answer.Reason != ReasonNotRestorableByThisPath || answer.Detail != people.ProjectCompanyKind {
+		if answer.Reason != ReasonNotRestorableByThisPath || answer.Detail != contacts.ProjectCompanyKind {
 			t.Errorf("%s on a project's company: %q/%q, want %q naming the kind",
 				action, answer.Reason, answer.Detail, ReasonNotRestorableByThisPath)
 		}
@@ -118,15 +118,15 @@ func TestReversingTheCreationOfARemovedLinkSaysTheLinkIsGone(t *testing.T) {
 }
 
 // An edge's write authority is its ANCHOR's, and the two ends are NOT
-// symmetric: an employment anchors the person, so a seat holding
-// company-write and not person-write is refused the button on the COMPANY's
+// symmetric: an employment anchors the contact, so a seat holding
+// company-write and not contact-write is refused the button on the COMPANY's
 // page — where the record they are reading is one they may change.
 //
 // The refusal itself is not surfaced. It separates "not yours" from "does not
 // exist", which is the distinction the row-scope gate keeps hidden.
 func TestAnEdgeIsRefusedWhenItsAnchorIsNotTheCallersToWrite(t *testing.T) {
 	e := edgeEvaluator(employmentEdge())
-	e.EdgeWritable = func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
+	e.EdgeWritable = func(context.Context, pgx.Tx, contacts.EdgeFacts, string) error {
 		return apperrors.ErrPermissionDenied
 	}
 	answer := judgeEdge(t, e, edgeRow("create", `null`, `{"kind":"employment","role":"cto"}`))
@@ -143,8 +143,8 @@ func TestAnEdgeIsRefusedWhenItsAnchorIsNotTheCallersToWrite(t *testing.T) {
 // never with a fault. The row reached them through the history read's own gates,
 // so its existence is not what is hidden here.
 func TestAnEdgeTheCallerCannotReadIsAnswered(t *testing.T) {
-	e := Evaluator{EdgeFacts: func(context.Context, pgx.Tx, ids.UUID) (people.EdgeFacts, error) {
-		return people.EdgeFacts{}, apperrors.ErrNotFound
+	e := Evaluator{EdgeFacts: func(context.Context, pgx.Tx, ids.UUID) (contacts.EdgeFacts, error) {
+		return contacts.EdgeFacts{}, apperrors.ErrNotFound
 	}}
 	answer := judgeEdge(t, e, edgeRow("create", `null`, `{"kind":"employment"}`))
 	if answer.Reason != ReasonNotWritableByCaller {

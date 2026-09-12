@@ -12,10 +12,10 @@ package knowledge
 // nothing and reports `not_ready`.
 //
 // Without this sweep that state is permanent. Nothing else re-embeds an
-// existing document: an ingest runs once per upload, and a person who
+// existing document: an ingest runs once per upload, and a contact who
 // re-uploaded the same file to "fix" it would get a SECOND document rather than
 // a repaired one — every passage twice, competing with itself for the eight
-// retrieval slots. So the repair is not something a person should have to know
+// retrieval slots. So the repair is not something a contact should have to know
 // to ask for, and it is not something they could ask for correctly if they did.
 
 import (
@@ -104,7 +104,7 @@ type staleDocument struct {
 //
 // ORDERED, because a sweep whose order is whatever the planner chose is a sweep
 // whose behaviour on a document it cannot repair cannot be reasoned about or
-// tested. Oldest first is also the order a person would expect: the document
+// tested. Oldest first is also the order a contact would expect: the document
 // that has been wrong longest is repaired first.
 //
 // A NULL identity counts as stale: those are passages an ingest wrote but never

@@ -56,7 +56,7 @@ describe("grouping the account's chronology", () => {
     expect(groups).toHaveLength(1);
   });
 
-  it("folds a bulk send addressed to several people into one event", () => {
+  it("folds a bulk send addressed to several contacts into one event", () => {
     const groups = groupChronology([
       mail("1", "Update zu Margince", "2026-07-17T09:00:00Z"),
       mail("2", "Update zu Margince", "2026-07-17T09:00:01Z"),

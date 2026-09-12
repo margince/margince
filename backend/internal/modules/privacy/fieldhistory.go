@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// personObject is the record type a field-history row is filed under.
-const personObject = "person"
+// contactObject is the record type a field-history row is filed under.
+const contactObject = "contact"
 
 // FieldHistoryFilter carries the validated query surface of
 // (GET /field-history). EntityType and EntityID are required; the rest
@@ -81,7 +81,7 @@ const entityTypeActivity = "activity"
 // The record kinds whose field history is readable — the audit spine's
 // entity_type is free text, so the surface pins the vocabulary.
 var fieldHistoryEntityTypes = map[string]bool{
-	personObject: true, "company": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
+	contactObject: true, "company": true, "deal": true, "lead": true, "project": true, entityTypeActivity: true,
 }
 
 // fieldHistoryEntityTypeList is fieldHistoryEntityTypes spelled for a

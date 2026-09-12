@@ -18,7 +18,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -42,7 +42,7 @@ func newGraph(t *testing.T) (*graphAssembly, ids.CompanyID) {
 		now:       graphNow,
 		out:       out,
 		nodeIndex: map[ids.UUID]int{},
-		strengths: map[ids.PersonID]people.RelationshipStrength{},
+		strengths: map[ids.ContactID]contacts.RelationshipStrength{},
 	}
 	g.addNode(crmcontracts.CompanyGraphNode{
 		Id:    openapi_types.UUID(companyID.UUID),
@@ -57,21 +57,21 @@ func newGraph(t *testing.T) (*graphAssembly, ids.CompanyID) {
 // strength it is ordering by rather than seeding activities to produce one. It
 // bumps employeeTotal with it, because the account's true headcount is what
 // dropped_count is counted against.
-func (g *graphAssembly) employee(t *testing.T, name string, score int) ids.PersonID {
+func (g *graphAssembly) employee(t *testing.T, name string, score int) ids.ContactID {
 	t.Helper()
-	personID := g.unmeasuredEmployee(t, name)
-	g.strengths[personID] = people.RelationshipStrength{Strength: score, Bucket: "strong"}
-	return personID
+	contactID := g.unmeasuredEmployee(t, name)
+	g.strengths[contactID] = contacts.RelationshipStrength{Strength: score, Bucket: "strong"}
+	return contactID
 }
 
 // unmeasuredEmployee registers a contact the read could not score — the state
 // a missing strengths entry means, kept distinct from a stored zero.
-func (g *graphAssembly) unmeasuredEmployee(t *testing.T, name string) ids.PersonID {
+func (g *graphAssembly) unmeasuredEmployee(t *testing.T, name string) ids.ContactID {
 	t.Helper()
-	personID := ids.From[ids.PersonKind](ids.NewV7())
-	g.employees = append(g.employees, graphPersonEdge{personID: personID, fullName: name})
+	contactID := ids.From[ids.ContactKind](ids.NewV7())
+	g.employees = append(g.employees, graphContactEdge{contactID: contactID, fullName: name})
 	g.employeeTotal++
-	return personID
+	return contactID
 }
 
 // openDeal registers one open deal on the account, total included.
@@ -222,10 +222,10 @@ func TestASeatOnADroppedDealDrawsNoEdge(t *testing.T) {
 		g.openDeal("Kept", &amount)
 	}
 	droppedDeal := g.openDeal("Dropped", nil)
-	seated := ids.From[ids.PersonKind](ids.NewV7())
+	seated := ids.From[ids.ContactKind](ids.NewV7())
 	g.seats = append(g.seats, graphSeat{
-		dealID: droppedDeal,
-		person: graphPersonEdge{personID: seated, fullName: "Stakeholder"},
+		dealID:  droppedDeal,
+		contact: graphContactEdge{contactID: seated, fullName: "Stakeholder"},
 	})
 
 	g.placeDeals()
@@ -243,19 +243,19 @@ func TestASeatOnADroppedDealDrawsNoEdge(t *testing.T) {
 	}
 }
 
-// TestAStakeholderWhoAlsoWorksHereIsOneNode: a person holding both edges is
+// TestAStakeholderWhoAlsoWorksHereIsOneNode: a contact holding both edges is
 // one record, and the employment title is the description that survives.
 func TestAStakeholderWhoAlsoWorksHereIsOneNode(t *testing.T) {
 	g, _ := newGraph(t)
 	title := "CTO"
-	personID := g.employee(t, "Both", 60)
+	contactID := g.employee(t, "Both", 60)
 	g.employees[0].title = &title
 	dealID := g.openDeal("Renewal", nil)
 	role := "champion"
 	g.seats = append(g.seats, graphSeat{
-		dealID: dealID,
-		person: graphPersonEdge{personID: personID, fullName: "Both"},
-		role:   &role,
+		dealID:  dealID,
+		contact: graphContactEdge{contactID: contactID, fullName: "Both"},
+		role:    &role,
 	})
 
 	g.placeContacts()
@@ -263,15 +263,15 @@ func TestAStakeholderWhoAlsoWorksHereIsOneNode(t *testing.T) {
 
 	contacts := 0
 	for _, node := range g.out.Nodes {
-		if node.Kind == crmcontracts.CompanyGraphNodeKindPerson {
+		if node.Kind == crmcontracts.CompanyGraphNodeKindContact {
 			contacts++
 			if node.Detail == nil || *node.Detail != title {
-				t.Errorf("person node detail is %v, want the employment title %q", node.Detail, title)
+				t.Errorf("contact node detail is %v, want the employment title %q", node.Detail, title)
 			}
 		}
 	}
 	if contacts != 1 {
-		t.Errorf("placed %d person nodes, want 1 for a contact holding two edges", contacts)
+		t.Errorf("placed %d contact nodes, want 1 for a contact holding two edges", contacts)
 	}
 	edges := map[crmcontracts.CompanyGraphEdgeKind]int{}
 	for _, edge := range g.out.Edges {
@@ -387,7 +387,7 @@ func TestTheIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 	strong := g.employee(t, "Strong", 80)
 	signalID := ids.NewV7()
 	g.signalID = &signalID
-	g.routeIn = []signals.RouteInEdge{{PersonID: weak}, {PersonID: strong}}
+	g.routeIn = []signals.RouteInEdge{{ContactID: weak}, {ContactID: strong}}
 
 	g.placeContacts()
 	g.markIntroPath()
@@ -421,7 +421,7 @@ func TestTheIntroPathNamesTheWarmRoomsContact(t *testing.T) {
 func TestNoIntroPathWithoutAnActiveSignal(t *testing.T) {
 	g, _ := newGraph(t)
 	only := g.employee(t, "Only", 70)
-	g.routeIn = []signals.RouteInEdge{{PersonID: only}}
+	g.routeIn = []signals.RouteInEdge{{ContactID: only}}
 
 	g.placeContacts()
 	g.markIntroPath()
@@ -432,17 +432,17 @@ func TestNoIntroPathWithoutAnActiveSignal(t *testing.T) {
 }
 
 // TestNoIntroPathWhenTheRouteInIsNotDrawn is the rule that keeps the card and
-// the warm room from naming different people: the route-in contact's only seat
+// the warm room from naming different contacts: the route-in contact's only seat
 // is on a deal this card did not draw, so the card says nothing rather than
 // promoting the next contact it happens to have.
 func TestNoIntroPathWhenTheRouteInIsNotDrawn(t *testing.T) {
 	g, _ := newGraph(t)
 	drawn := g.employee(t, "Drawn", 20)
-	elsewhere := ids.From[ids.PersonKind](ids.NewV7())
-	g.strengths[elsewhere] = people.RelationshipStrength{Strength: 95, Bucket: "strong"}
+	elsewhere := ids.From[ids.ContactKind](ids.NewV7())
+	g.strengths[elsewhere] = contacts.RelationshipStrength{Strength: 95, Bucket: "strong"}
 	signalID := ids.NewV7()
 	g.signalID = &signalID
-	g.routeIn = []signals.RouteInEdge{{PersonID: drawn}, {PersonID: elsewhere}}
+	g.routeIn = []signals.RouteInEdge{{ContactID: drawn}, {ContactID: elsewhere}}
 
 	g.placeContacts()
 	g.markIntroPath()
@@ -463,11 +463,11 @@ func TestNoIntroPathWhenTheRouteInIsNotDrawn(t *testing.T) {
 // rather than sorting in as a zero.
 func TestAnUnmeasuredRouteInIsNotAWarmPath(t *testing.T) {
 	g, _ := newGraph(t)
-	unmeasured := ids.From[ids.PersonKind](ids.NewV7())
-	g.employees = append(g.employees, graphPersonEdge{personID: unmeasured, fullName: "Unmeasured"})
+	unmeasured := ids.From[ids.ContactKind](ids.NewV7())
+	g.employees = append(g.employees, graphContactEdge{contactID: unmeasured, fullName: "Unmeasured"})
 	signalID := ids.NewV7()
 	g.signalID = &signalID
-	g.routeIn = []signals.RouteInEdge{{PersonID: unmeasured}}
+	g.routeIn = []signals.RouteInEdge{{ContactID: unmeasured}}
 
 	g.placeContacts()
 	g.markIntroPath()
@@ -481,20 +481,20 @@ func TestAnUnmeasuredRouteInIsNotAWarmPath(t *testing.T) {
 // and counts them among the colleagues the cap chose from.
 func (g *graphAssembly) colleague(name string, contact ids.UUID) graphUser {
 	user := graphUser{userID: ids.NewV7(), displayName: name}
-	g.ourSide = append(g.ourSide, ourSideEdge{user: user, personID: contact})
+	g.ourSide = append(g.ourSide, ourSideEdge{user: user, contactID: contact})
 	g.ourSideTotal++
 	return user
 }
 
 // TestTheAccountOwnerWhoAlsoWroteIsOneNode: owning the account and having
-// emailed one of its people are two connections held by one colleague, so the
-// card must draw them as one node with two edges rather than as two people.
+// emailed one of its contacts are two connections held by one colleague, so the
+// card must draw them as one node with two edges rather than as two contacts.
 func TestTheAccountOwnerWhoAlsoWroteIsOneNode(t *testing.T) {
 	g, companyID := newGraph(t)
 	contact := g.employee(t, "Dana Buyer", 60)
 	owner := graphUser{userID: ids.NewV7(), displayName: "Ada Rep"}
 	g.accountOwner = &owner
-	g.ourSide = []ourSideEdge{{user: owner, personID: contact.UUID}}
+	g.ourSide = []ourSideEdge{{user: owner, contactID: contact.UUID}}
 	g.ourSideTotal = 1
 
 	g.placeContacts()
@@ -542,24 +542,24 @@ func TestTheAccountOwnerWhoAlsoWroteIsOneNode(t *testing.T) {
 // so contact with them is a real way in.
 func TestTheInteractionReadCorrelatesOnlyAgainstDrawnContacts(t *testing.T) {
 	g, _ := newGraph(t)
-	kept := make([]ids.PersonID, 0, graphContactCap)
+	kept := make([]ids.ContactID, 0, graphContactCap)
 	for i := range graphContactCap {
 		kept = append(kept, g.employee(t, "Kept", 100-i))
 	}
 	droppedContact := g.employee(t, "Dropped", 1)
 	deal := g.openDeal("Renewal", nil)
-	stakeholder := ids.From[ids.PersonKind](ids.NewV7())
+	stakeholder := ids.From[ids.ContactKind](ids.NewV7())
 	g.seats = append(g.seats, graphSeat{
-		dealID: deal,
-		person: graphPersonEdge{personID: stakeholder, fullName: "Sam Sponsor"},
+		dealID:  deal,
+		contact: graphContactEdge{contactID: stakeholder, fullName: "Sam Sponsor"},
 	})
 
 	g.placeContacts()
 	g.placeDeals()
 
 	correlated := map[ids.UUID]bool{}
-	for _, personID := range g.drawnContactIDs() {
-		correlated[personID] = true
+	for _, contactID := range g.drawnContactIDs() {
+		correlated[contactID] = true
 	}
 	if correlated[droppedContact.UUID] {
 		t.Error("a contact the cap dropped is still correlated against; its colleagues would spend the user cap")

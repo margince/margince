@@ -185,12 +185,12 @@ func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 
 // The confirm edge, across every state its token can be in.
 //
-// Its GET discloses the person's stored record rather than a list of switches,
+// Its GET discloses the contact's stored record rather than a list of switches,
 // so a cached answer here is a larger disclosure than on the preference edge.
 func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 	c := setupConsent(t)
 
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
@@ -315,7 +315,7 @@ func revokePreferenceTokens(t *testing.T, c *consentEnv) {
 // token itself is real and server-issued; only its clock is moved.
 func freshExpiredConfirmToken(t *testing.T, c *consentEnv) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("minting a link to expire → %d", status)
 	}

@@ -50,7 +50,7 @@ func seedRollupStages(t *testing.T, e *Env) rollupStages {
 }
 
 // seedRollupCompany inserts one hierarchy node directly: the rollup is a
-// read, so the audit/outbox write shape the people store would add is
+// read, so the audit/outbox write shape the contacts store would add is
 // noise here, and parent_company_id wiring has no store-level entry point.
 func seedRollupCompany(t *testing.T, e *Env, name string, owner, parent *ids.UUID) ids.UUID {
 	t.Helper()
@@ -129,25 +129,25 @@ func seedRollupDealLinkedActivity(t *testing.T, e *Env, st rollupStages, company
 		VALUES ($1, 'deal', $2)`, activityID, dealID)
 }
 
-// seedRollupPersonLinkedActivity files one activity against a PERSON
+// seedRollupContactLinkedActivity files one activity against a CONTACT
 // currently employed by the given company and never against the
 // company itself — the third arm, and the one that carries most of a
-// real account's mail, because capture files a message against the person
+// real account's mail, because capture files a message against the contact
 // it was with.
-func seedRollupPersonLinkedActivity(t *testing.T, e *Env, company ids.UUID, occurredAt time.Time) {
+func seedRollupContactLinkedActivity(t *testing.T, e *Env, company ids.UUID, occurredAt time.Time) {
 	t.Helper()
-	personID := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Rollup Contact', 'manual', 'human:test')`, personID)
-	e.WsExec(t, `INSERT INTO relationship (id, kind, person_id, company_id, source, captured_by)
+	contactID := ids.NewV7()
+	e.WsExec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Rollup Contact', 'manual', 'human:test')`, contactID)
+	e.WsExec(t, `INSERT INTO relationship (id, kind, contact_id, company_id, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, 'manual', 'human:test')`,
-		ids.NewV7(), personID, company)
+		ids.NewV7(), contactID, company)
 	activityID := ids.NewV7()
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'contact thread', $2, 'connector:gmail', 'connector:gmail')`,
 		activityID, occurredAt)
-	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activityID, personID)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activityID, contactID)
 }
 
 // rollupCompanyReadPerms is the minimal caller the rollup admits: read on
@@ -162,8 +162,8 @@ func rollupCompanyReadPerms(scope principal.RowScope) principal.Permissions {
 			"deal":     {Read: true},
 			"activity": {Read: true},
 			// The contact count is a count over employment PAIRS, so it needs
-			// the edge grant alongside person:read. Every seeded role holds it;
-			// the cases built on this fixture add or withhold `person` and
+			// the edge grant alongside contact:read. Every seeded role holds it;
+			// the cases built on this fixture add or withhold `contact` and
 			// `computed_field` deliberately, and the edge grant must not be the
 			// accidental reason a count is absent.
 			"relationship":          {Read: true},
@@ -416,7 +416,7 @@ func TestCompanyRollupRootGates(t *testing.T) {
 		t.Errorf("out-of-scope root: err = %v, want not found", err)
 	}
 
-	// RepPerms grants person/deal/pipeline but not company: 403.
+	// RepPerms grants contact/deal/pipeline but not company: 403.
 	noPerm := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	if _, err := compose.CompanyHierarchyRollup(noPerm, e.Pool, foreign, "tree", time.Now); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("no company:read: err = %v, want permission denied", err)
@@ -493,7 +493,7 @@ func TestCompanyRollupSelfScopeSkipsPruning(t *testing.T) {
 // count to the same reachability the timeline uses. The number sits above
 // a list the reader can scroll: when it counted only activities carrying a
 // direct company link, an account whose mail is filed against its
-// people — which is what capture does — reported a fraction of what the
+// contacts — which is what capture does — reported a fraction of what the
 // page below it displayed, and the busier the account the wider the gap.
 func TestCompanyRollupCounts30dActivityThroughEveryLinkTheTimelineWalks(t *testing.T) {
 	e := Setup(t)
@@ -503,11 +503,11 @@ func TestCompanyRollupCounts30dActivityThroughEveryLinkTheTimelineWalks(t *testi
 
 	seedRollupCompanyActivity(t, e, company, now.Add(-24*time.Hour))
 	seedRollupDealLinkedActivity(t, e, st, company, now.Add(-48*time.Hour))
-	seedRollupPersonLinkedActivity(t, e, company, now.Add(-72*time.Hour))
+	seedRollupContactLinkedActivity(t, e, company, now.Add(-72*time.Hour))
 	// Out of window through the same two indirect arms: reachability
 	// widening must not smuggle past the 30-day bound.
 	seedRollupDealLinkedActivity(t, e, st, company, now.AddDate(0, 0, -40))
-	seedRollupPersonLinkedActivity(t, e, company, now.Add(24*time.Hour))
+	seedRollupContactLinkedActivity(t, e, company, now.Add(24*time.Hour))
 
 	res, err := compose.CompanyHierarchyRollup(e.Admin(), e.Pool, company, "self", fixedClock(now))
 	if err != nil {

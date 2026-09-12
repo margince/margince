@@ -99,7 +99,7 @@ func (b *Brave) Search(ctx context.Context, q websearch.Query) ([]websearch.Resu
 		return nil, fmt.Errorf("websearch: a search needs terms")
 	}
 	// Every error path below names the provider and the failure and NOTHING
-	// about the query: these searches are for named people, so the query
+	// about the query: these searches are for named contacts, so the query
 	// string is personal data and an error message is an observability
 	// surface that outlives the request.
 	if q.Site != "" {
@@ -132,7 +132,7 @@ func (b *Brave) Search(ctx context.Context, q websearch.Query) ([]websearch.Resu
 	if err != nil {
 		// The transport error is NOT wrapped. net/http returns a *url.Error
 		// carrying the request URL, and this request's URL carries the query
-		// — which, for the searches this product runs, is a named person and
+		// — which, for the searches this product runs, is a named contact and
 		// their employer. Wrapping it would put that in every log line a
 		// failed search produces. The failure is reported as what it is.
 		return nil, fmt.Errorf("websearch: the %s request did not complete", b.Provider())
@@ -141,7 +141,7 @@ func (b *Brave) Search(ctx context.Context, q websearch.Query) ([]websearch.Resu
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		// The status alone. A provider error page echoes the query back, and
-		// the query names a person.
+		// the query names a contact.
 		return nil, fmt.Errorf("websearch: %s answered %d", b.Provider(), resp.StatusCode)
 	}
 
@@ -157,7 +157,7 @@ func (b *Brave) Search(ctx context.Context, q websearch.Query) ([]websearch.Resu
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
 		// Same reasoning as the transport error above: a decode failure can
-		// echo the payload, and the payload is about a person.
+		// echo the payload, and the payload is about a contact.
 		return nil, fmt.Errorf("websearch: the %s answer could not be read", b.Provider())
 	}
 

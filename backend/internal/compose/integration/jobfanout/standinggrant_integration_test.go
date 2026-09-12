@@ -72,7 +72,7 @@ func (re *runnerEnv) sessionUser(t *testing.T) ids.UserID {
 // the session user.
 //
 // It inserts directly, which is deliberate and is the ONLY place this suite
-// does so: there is no product path that mints a passport for another person —
+// does so: there is no product path that mints a passport for another contact —
 // that is the invariant — so a test needing one has to write the row the
 // product refuses to write, in order to prove what happens if it existed.
 func (re *runnerEnv) mintPassportForColleague(t *testing.T, colleague ids.UserID) ids.PassportID {
@@ -275,7 +275,7 @@ func TestAGrantCannotNameACredentialBelongingToSomebodyElse(t *testing.T) {
 	}
 
 	// The pairing that must not exist, either way round: a grant whose user and
-	// whose passport are different people. The fan-out reads (user, passport)
+	// whose passport are different contacts. The fan-out reads (user, passport)
 	// and authenticates the passport, so the run does what the PASSPORT's owner
 	// may do while the grant says whose it is.
 	if err := e.recordDecision(t, colleague, runner.GrantStateGranted, &mine); err == nil {

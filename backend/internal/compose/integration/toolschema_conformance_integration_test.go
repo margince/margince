@@ -37,8 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -68,8 +68,8 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// which holds create_record's own answer to its schema on the way — a
 	// write's read-back is a result like any other, and it is the one every
 	// write tool shares.
-	person := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"person","fields":{"full_name":"Schema Conformance"}}`)
+	contact := createThroughTheToolSurface(ctx, t, registry,
+		`{"record_type":"contact","fields":{"full_name":"Schema Conformance"}}`)
 	company := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
@@ -86,9 +86,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	promotable := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"promote@conformance.example","full_name":"Promo Table"}}`)
 	spare := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"person","fields":{"full_name":"To Be Archived"}}`)
+		`{"record_type":"contact","fields":{"full_name":"To Be Archived"}}`)
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"person","fields":{"full_name":"Schema Conformance (dup)"}}`)
+		`{"record_type":"contact","fields":{"full_name":"Schema Conformance (dup)"}}`)
 	project := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"project","fields":{"name":"Conformance project","company_id":"`+
 			company.String()+`"}}`)
@@ -139,7 +139,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// answer worth holding to the shape: a filter that reached no SQL still
 		// returns a well-formed page, of the wrong rows.
 		{"list_records", `{"record_type":"deal","filters":{"pipeline_id":"` + pipeline.String() + `"}}`},
-		{"list_records", `{"record_type":"person","limit":5}`},
+		{"list_records", `{"record_type":"contact","limit":5}`},
 		{"run_report", `{"report":"deals-by-stage"}`},
 		// The typed engine's own door, over the same pipeline the fixture above
 		// already holds a deal in — so the count answers 1 rather than an
@@ -157,11 +157,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// one would show here first.
 		{"check_location_support", `{}`},
 		{"search_records", `{"q":"Conformance"}`},
-		{"search_records", `{"q":"Conformance","record_type":"person","limit":5}`},
+		{"search_records", `{"q":"Conformance","record_type":"contact","limit":5}`},
 		// A query that matches nothing: the empty answer has to keep the shape
 		// too, and it is the one a caller is most likely to mis-read.
 		{"search_records", `{"q":"nothing here matches this"}`},
-		{"read_record", `{"record_type":"person","id":"` + person.String() + `"}`},
+		{"read_record", `{"record_type":"contact","id":"` + contact.String() + `"}`},
 		// A plan that matches rows and one that matches none. The empty answer
 		// is the one worth holding to the shape: `coverage` is the field a
 		// caller reads before believing a short result, and it is not omitempty
@@ -189,12 +189,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// is the one worth pinning: it still carries `coverage` and `notes`, and
 		// `notes` is not omitempty precisely so `null` cannot read as "nothing to
 		// report" on a page that was in fact degraded.
-		{"search_context", `{"query":"Conformance","record_types":["person"]}`},
+		{"search_context", `{"query":"Conformance","record_types":["contact"]}`},
 		{"search_context", `{"query":"nothing here matches this"}`},
 		// A payload that resolves and one that resolves to nothing. The second is
 		// the answer a caller acts on by CREATING a record, so its shape is the
 		// one a mis-read costs the most.
-		{"resolve_entities", `{"candidates":[{"kind":"person","ref":"a","name":"Conformance"}]}`},
+		{"resolve_entities", `{"candidates":[{"kind":"contact","ref":"a","name":"Conformance"}]}`},
 		{"resolve_entities", `{"candidates":[{"kind":"company","emails":["nobody@nowhere.example"]}]}`},
 		{"catch_me_up_on", `{"record_type":"deal","record_id":"` + deal.String() + `"}`},
 		{"prep_for_meeting", `{"record_type":"deal","record_id":"` + deal.String() + `"}`},
@@ -221,7 +221,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// shape where a null list would read as "unknown".
 		{"read_project_360", `{"project_id":"` + project.String() + `"}`},
 		{"at_risk_relationships", `{}`},
-		{"who_knows", `{"person_id":"` + person.String() + `"}`},
+		{"who_knows", `{"contact_id":"` + contact.String() + `"}`},
 		{"account_coverage", `{"deal_id":"` + deal.String() + `"}`},
 		{"intro_path_to", `{"company_id":"` + company.String() + `"}`},
 		{"qualify_lead", `{"lead_id":"` + lead.String() + `"}`},
@@ -230,13 +230,13 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// cannot check at all: nothing here builds the document, so the only way
 		// to know the subset is true is to ask the real handler.
 		{"check_availability", `{"from":"2026-01-05T09:00:00Z","to":"2026-01-05T17:00:00Z"}`},
-		{"relink_activity", `{"activity_id":"` + activity.String() + `","entity_type":"person","entity_id":"` +
-			person.String() + `"}`},
+		{"relink_activity", `{"activity_id":"` + activity.String() + `","entity_type":"contact","entity_id":"` +
+			contact.String() + `"}`},
 		// The batch forms answer a count-and-ids shape of their own. The thread
 		// one names a key no activity carries, which is a well-formed empty
 		// answer; the set one names the activity above, onto a company.
-		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"person","entity_id":"` +
-			person.String() + `"}`},
+		{"relink_thread", `{"thread_key":"thread:conformance","entity_type":"contact","entity_id":"` +
+			contact.String() + `"}`},
 		{"relink_activities", `{"activity_ids":["` + activity.String() + `"],"entity_type":"company","entity_id":"` +
 			company.String() + `"}`},
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
@@ -244,7 +244,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 			deal.String() + `"}]}`},
 		{"create_task", `{"subject":"conformance","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
-		{"update_record", `{"record_type":"person","id":"` + person.String() +
+		{"update_record", `{"record_type":"contact","id":"` + contact.String() +
 			`","fields":{"title":"Head of Conformance"}}`},
 		{"progress_deal", `{"deal_id":"` + deal.String() + `","to_stage_id":"` + open.String() +
 			`","note":"still open"}`},
@@ -256,9 +256,9 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// the table. Its declared shape is another guaranteed subset, so the
 		// real handler is the only thing that can say whether it holds.
 		{"demote_lead", `{"lead_id":"` + promotable.String() + `","reason":"promoted by mistake"}`},
-		{"archive_record", `{"record_type":"person","id":"` + spare.String() + `"}`},
-		{"merge_records", `{"record_type":"person","source_id":"` + duplicate.String() +
-			`","target_id":"` + person.String() + `"}`},
+		{"archive_record", `{"record_type":"contact","id":"` + spare.String() + `"}`},
+		{"merge_records", `{"record_type":"contact","source_id":"` + duplicate.String() +
+			`","target_id":"` + contact.String() + `"}`},
 		{"advance_project_phase", `{"project_id":"` + project.String() + `","to_phase":"pursuing"}`},
 		// Renaming the word coined above. Both tag-vocabulary writes are reachable
 		// here: AdminPerms carries tag create/read/update/delete.
@@ -272,10 +272,10 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"list_tags", `{}`},
 		{"get_tag", `{"tag_id":"` + tag.String() + `"}`},
 		{"apply_tag", `{"tag_id":"` + tag.String() +
-			`","record_type":"person","record_id":"` + person.String() + `"}`},
-		{"get_record_tags", `{"record_type":"person","record_id":"` + person.String() + `"}`},
+			`","record_type":"contact","record_id":"` + contact.String() + `"}`},
+		{"get_record_tags", `{"record_type":"contact","record_id":"` + contact.String() + `"}`},
 		{"remove_tag", `{"tag_id":"` + tag.String() +
-			`","record_type":"person","record_id":"` + person.String() + `"}`},
+			`","record_type":"contact","record_id":"` + contact.String() + `"}`},
 		// The one vocabulary verb that reaches a human first, invoked as one:
 		// this lane runs as a human, so it returns the merge itself rather than
 		// an approval reference — which is the document the schema describes.
@@ -611,7 +611,7 @@ func annotatable(t *testing.T, run briefs.BriefRun) (item, evidence ids.UUID) {
 // certifying a not-found instead of an answer.
 func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) briefs.BriefRun {
 	t.Helper()
-	engine := briefs.NewBriefEngine(e.Pool, people.NewStore(e.DB()))
+	engine := briefs.NewBriefEngine(e.Pool, contacts.NewStore(e.DB()))
 	// The reader's own instant, because brief_run is keyed by LOCAL DAY and
 	// read_brief asks for today's: briefseam.go reads `LatestRun(ctx,
 	// time.Now().UTC())`, which resolves a calendar day and matches

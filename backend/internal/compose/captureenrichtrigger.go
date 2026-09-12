@@ -23,11 +23,11 @@ package compose
 // second spelling of that decision and a burst of mail collapses onto one job.
 //
 // THREE DOORS, because mail arriving is not the only way somebody becomes
-// readable. The pass selects a person joined to their own open inbound mail, so
+// readable. The pass selects a contact joined to their own open inbound mail, so
 // either half of that pair can be the thing that was missing:
 //
 //   - the mail arrives (activity.captured), the ordinary case;
-//   - the PERSON arrives (person.created). A sender nobody had classified yet
+//   - the CONTACT arrives (contact.created). A sender nobody had classified yet
 //     has no contact while their mail lands, so the capture door queues a pass
 //     that cannot see them. The counterparty verdict mints them ten minutes
 //     later and that mail becomes readable at exactly that moment — which is
@@ -40,7 +40,7 @@ package compose
 //     writes that event through the derivation.
 //
 // All three queue the same deduplicated pass, so a verdict that both mints a
-// person and opens their mail costs one job rather than two.
+// contact and opens their mail costs one job rather than two.
 
 import (
 	"context"
@@ -102,9 +102,9 @@ func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) 
 		// a word hand-typed here would not move when the contract does. The
 		// same comparison the vCard trigger makes on the same field.
 		return payload.Kind == string(crmcontracts.ActivityKindEmail)
-	case personCreatedEvent:
+	case contactCreatedEvent:
 		// Every new contact, not only the ones a verdict minted. The event does
-		// not say who created the person, and asking would be this consumer
+		// not say who created the contact, and asking would be this consumer
 		// guessing at the pass's own selection: a hand-typed contact with no
 		// mail simply is not a candidate, which costs one query that returns
 		// nobody. Narrowing here to the capture-created case would instead mean

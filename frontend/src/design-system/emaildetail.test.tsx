@@ -205,11 +205,11 @@ describe("the email drawer's attachments", () => {
   });
 });
 
-// Who a message was with, as people a reader can go and look at.
+// Who a message was with, as contacts a reader can go and look at.
 //
 // The header printed names as text, so a rep who wanted the contact behind an
 // address had to close the message, remember the name and search for it. The
-// address is already resolved on the server — `person_id` is set only for a
+// address is already resolved on the server — `contact_id` is set only for a
 // contact this caller may see — and the header simply threw that away.
 describe("the drawer's participants", () => {
   it("links a party the server resolved to a contact", async () => {
@@ -219,7 +219,7 @@ describe("the drawer's participants", () => {
           {
             address: "ana@brandt.example",
             display_name: "Ana Sommer",
-            person_id: ANA,
+            contact_id: ANA,
           },
         ],
       }),

@@ -11,7 +11,7 @@
 // is asking and what the review is in a state to accept.
 //
 // WE DO NOT INFER THE ACTION. A surface that decided for itself that a rep may
-// ask for a decision would offer the button to people the server will refuse —
+// ask for a decision would offer the button to colleagues the server will refuse —
 // and a button that fails when pressed is worse than one that is absent,
 // because the rep has been told they may do something they may not.
 
@@ -22,7 +22,7 @@ export type SendReview = Readonly<{
   reviewId: string;
   // What this caller may do about it. Empty is a real answer: an agent, or a
   // refusal with no message to decide about. The reference still travels so a
-  // person can pick the review up.
+  // human can pick the review up.
   actions: readonly SendReviewAction[];
 }>;
 

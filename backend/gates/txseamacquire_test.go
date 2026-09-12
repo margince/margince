@@ -70,7 +70,7 @@ var connectionAcquirers = map[string]string{
 	// exist precisely so the answer can be fetched above a transaction, so
 	// calling one from inside a borrowed transaction reinstates the defect
 	// they were introduced to remove.
-	"ActivePersonColumns":  "reads the person custom-field catalog, which opens a transaction of its own",
+	"ActiveContactColumns": "reads the contact custom-field catalog, which opens a transaction of its own",
 	"ActiveCompanyColumns": "reads the company custom-field catalog, which opens a transaction of its own",
 	"ActiveDealColumns":    "reads the deal custom-field catalog, which opens a transaction of its own",
 	// The drill-through's display names, resolved through each module's own
@@ -114,7 +114,7 @@ func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
 		for _, body := range txBorrowingBodies(parsed.File, holders[dir], declared[dir]) {
 			for _, found := range body.acquires() {
 				t.Errorf("%s: %s runs on a caller's pgx.Tx and then %s (%s) — fetch it before the "+
-					"transaction opens and thread the result in, as mergePersonTx and createDealTx do; "+
+					"transaction opens and thread the result in, as mergeContactTx and createDealTx do; "+
 					"a second connection inside someone else's transaction commits separately and "+
 					"deadlocks undetectably against a lock that transaction holds",
 					parsed.Path, body.name, connectionAcquirers[found], found)
@@ -551,28 +551,28 @@ func (b txBorrowing) isHeldTxField(sel *ast.SelectorExpr) bool {
 func TestTheGateSeesASeamThatReachesForTheCatalogInsideTheCallersTransaction(t *testing.T) {
 	t.Parallel()
 	const seam = fixtureImports + `
-func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID) (Person, error) {
-	active, err := s.activeColumns(ctx, "person")
+func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (Contact, error) {
+	active, err := s.activeColumns(ctx, "contact")
 	if err != nil {
-		return Person{}, err
+		return Contact{}, err
 	}
-	return readPerson(ctx, tx, id, active)
+	return readContact(ctx, tx, id, active)
 }
 `
-	assertGateReads(t, seam, "GetPersonTx", "activeColumns")
+	assertGateReads(t, seam, "GetContactTx", "activeColumns")
 
 	const repaired = fixtureImports + `
-func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID, active []fieldcatalog.Column) (Person, error) {
+func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, active []fieldcatalog.Column) (Contact, error) {
 	if _, err := tx.Begin(ctx); err != nil {
-		return Person{}, err
+		return Contact{}, err
 	}
-	return readPerson(ctx, tx, id, active)
+	return readContact(ctx, tx, id, active)
 }
 `
 	// Nothing, and one of the two reasons is the borrowed transaction: Begin
 	// IS an acquirer on a pool, so this arm is what proves the exemption for a
 	// savepoint on the connection the seam was handed.
-	assertGateReads(t, repaired, "GetPersonTx")
+	assertGateReads(t, repaired, "GetContactTx")
 }
 
 // The shape the gate exists to catch most: not a named seam at all, but the
@@ -580,30 +580,30 @@ func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID, act
 func TestTheGateSeesAnAcquireInsideATransactionCallback(t *testing.T) {
 	t.Parallel()
 	const assembler = fixtureImports + `
-func (s *Service) Assemble(ctx context.Context, id ids.PersonID) (Person, error) {
-	var out Person
+func (s *Service) Assemble(ctx context.Context, id ids.ContactID) (Contact, error) {
+	var out Contact
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		active, err := s.people.ActivePersonColumns(ctx)
+		active, err := s.contacts.ActiveContactColumns(ctx)
 		if err != nil {
 			return err
 		}
-		out, err = s.people.GetPersonTx(ctx, tx, id, active)
+		out, err = s.contacts.GetContactTx(ctx, tx, id, active)
 		return err
 	})
 	return out, err
 }
 `
-	assertGateReads(t, assembler, "Assemble's transaction callback", "ActivePersonColumns")
+	assertGateReads(t, assembler, "Assemble's transaction callback", "ActiveContactColumns")
 
 	const repaired = fixtureImports + `
-func (s *Service) Assemble(ctx context.Context, id ids.PersonID) (Person, error) {
-	active, err := s.people.ActivePersonColumns(ctx)
+func (s *Service) Assemble(ctx context.Context, id ids.ContactID) (Contact, error) {
+	active, err := s.contacts.ActiveContactColumns(ctx)
 	if err != nil {
-		return Person{}, err
+		return Contact{}, err
 	}
-	var out Person
+	var out Contact
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		out, err = s.people.GetPersonTx(ctx, tx, id, active)
+		out, err = s.contacts.GetContactTx(ctx, tx, id, active)
 		return err
 	})
 	return out, err
@@ -618,25 +618,25 @@ func (s *Service) Assemble(ctx context.Context, id ids.PersonID) (Person, error)
 // A file that spells the import under another name is judged, not skipped.
 func TestTheGateFollowsAnAliasedPgxImport(t *testing.T) {
 	t.Parallel()
-	const aliased = `package people
+	const aliased = `package contacts
 
 import pg "github.com/jackc/pgx/v5"
 
-func (s *Store) GetPersonTx(ctx context.Context, tx pg.Tx, id ids.PersonID) (Person, error) {
-	active, err := s.activeColumns(ctx, "person")
+func (s *Store) GetContactTx(ctx context.Context, tx pg.Tx, id ids.ContactID) (Contact, error) {
+	active, err := s.activeColumns(ctx, "contact")
 	if err != nil {
-		return Person{}, err
+		return Contact{}, err
 	}
-	return readPerson(ctx, tx, id, active)
+	return readContact(ctx, tx, id, active)
 }
 `
-	assertGateReads(t, aliased, "GetPersonTx", "activeColumns")
+	assertGateReads(t, aliased, "GetContactTx", "activeColumns")
 }
 
 // fixtureImports is the header every fixture above shares: the gate reads the
 // import table to learn what "pgx" means in a file, so a fixture without it is
 // not the code the gate judges.
-const fixtureImports = `package people
+const fixtureImports = `package contacts
 
 import "github.com/jackc/pgx/v5"
 `
@@ -941,7 +941,7 @@ type core struct {
 }
 
 func (c core) Read(ctx context.Context) error {
-	_, err := c.activeColumns(ctx, "person")
+	_, err := c.activeColumns(ctx, "contact")
 	return err
 }
 `

@@ -133,10 +133,10 @@ const company360 = {
   as_of: "2026-07-13T09:00:00Z",
   company: company,
   sections_omitted: [],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -176,7 +176,7 @@ const company360 = {
     score: 71,
     bucket: "strong",
     contact_count: 1,
-    contributor_person_id: "p-1",
+    contributor_contact_id: "p-1",
     factors: { recency: 0.9, frequency: 0.6, reciprocity: 0.8, direction: 0.8 },
     last_interaction: "2026-07-10T09:00:00Z",
   },

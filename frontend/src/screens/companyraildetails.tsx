@@ -258,7 +258,7 @@ function DomainRow({
 // row whose label is not the create form's own — the form's carries the
 // ISO-3166 hint inline ("Country (ISO-3166, e.g. DE)"), which is guidance for
 // someone typing, not the name of the field; here the hint sits in the
-// placeholder, where the person about to type is the only one who reads it.
+// placeholder, where the contact about to type is the only one who reads it.
 // `normalize` is likewise only non-trivial for country: ISO-3166 alpha-2,
 // canonicalized the same way the full editor's own `addressPatch` does — the
 // server compares on the uppercase spelling, so "de" typed here and "DE"
@@ -530,7 +530,7 @@ export function SidecarFieldRow({
           path: { id: companyId, field },
           // A field nobody has stated yet has no row and so no version to pin:
           // the write CREATES it, and there is no earlier state to lose. Once
-          // one exists the precondition is what stops two people correcting the
+          // one exists the precondition is what stops two contacts correcting the
           // same claim and the second silently replacing the first.
           ...(current ? ifMatch(requireVersion(current.version)) : {}),
         },
@@ -551,7 +551,7 @@ export function SidecarFieldRow({
   // A value a machine read keeps its dotted underline and its receipt. The mark
   // wraps the RESTING value only — while the reader is typing, the claim under
   // edit is theirs, and an underline saying "a crawl found this" over their own
-  // draft would be false. Absent for a value a person typed: derivedSource
+  // draft would be false. Absent for a value a human typed: derivedSource
   // returns nothing for a human row, and a mark with nothing behind it teaches
   // the reader to stop opening them.
   const source = current

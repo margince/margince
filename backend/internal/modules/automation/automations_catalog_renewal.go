@@ -29,7 +29,7 @@ import (
 // here because more than one automation surface... references the same
 // string" — this validator is that surface for the object vocabulary.
 var renewalReminderObjects = []string{
-	string(datasource.EntityPerson),
+	string(datasource.EntityContact),
 	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),

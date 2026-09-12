@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // An expectation the gate can never satisfy would measure nothing for as long as
@@ -33,11 +33,11 @@ func TestSitePageFactsCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			name:       "a field this page kind's menu never offers",
 			kind:       crmcontracts.SiteReadPageKindServices,
 			text:       sitePageFactsText,
-			want:       map[string]string{people.FactFoundedYear: "1998"},
+			want:       map[string]string{contacts.FactFoundedYear: "1998"},
 			wantReason: "never offers",
 		},
 		{
-			// A team page is called for its people and told its facts must be empty,
+			// A team page is called for its contacts and told its facts must be empty,
 			// so a fact expectation over one could never be answered.
 			name:       "any fact at all on a page whose menu carries none",
 			kind:       crmcontracts.SiteReadPageKindTeam,
@@ -49,7 +49,7 @@ func TestSitePageFactsCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			name:       "an empty value, which the gate drops from every reply",
 			kind:       crmcontracts.SiteReadPageKindServices,
 			text:       sitePageFactsText,
-			want:       map[string]string{people.FactService: "   "},
+			want:       map[string]string{contacts.FactService: "   "},
 			wantReason: "empty value",
 		},
 		{
@@ -59,14 +59,14 @@ func TestSitePageFactsCaseRefusesAnUnreachableExpectation(t *testing.T) {
 			name:       "a measured zero, which the gate drops as a pre-animation figure",
 			kind:       crmcontracts.SiteReadPageKindHome,
 			text:       sitePageFactsText,
-			want:       map[string]string{people.FactQuantifiedOutcome: "0 B + GMV enabled"},
+			want:       map[string]string{contacts.FactQuantifiedOutcome: "0 B + GMV enabled"},
 			wantReason: "animated up from zero",
 		},
 		{
 			name:       "a value whose name no passage of this page carries",
 			kind:       crmcontracts.SiteReadPageKindServices,
 			text:       sitePageFactsText,
-			want:       map[string]string{people.FactService: "Phishing Simulation"},
+			want:       map[string]string{contacts.FactService: "Phishing Simulation"},
 			wantReason: "no passage of this fixture",
 		},
 		{

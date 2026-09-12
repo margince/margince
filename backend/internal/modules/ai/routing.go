@@ -236,7 +236,7 @@ func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error)
 // encoding is deterministic across processes — the property this digest has to
 // have to be compared at all.
 //
-// The distinction is not academic. This value reaches personbrief.Fingerprint
+// The distinction is not academic. This value reaches contactbrief.Fingerprint
 // and its siblings, where it decides whether a stored brief may be reused; a
 // digest of raw bytes meant that ADDING A COMMENT to the routing file
 // invalidated every cached brief, dossier and growth-fit in the installation

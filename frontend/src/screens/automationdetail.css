@@ -18,7 +18,7 @@
   gap: var(--gapActions);
 }
 
-/* One run's headline — outcome, when, autonomy, whether it waited on a person
+/* One run's headline — outcome, when, autonomy, whether it waited on a contact
    — as a single line, with the labelled detail lines stacked under it. */
 .auto-run-head {
   display: flex;

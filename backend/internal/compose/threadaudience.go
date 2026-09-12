@@ -38,7 +38,7 @@ type ThreadAudienceOutcome struct {
 	// False after a share means somebody else still holds them.
 	Shared bool `json:"shared"`
 	// HeldByOthers names how many OTHER seats still ask for the thread to be
-	// held. Reported by count and never by name or reason: whose mail a person
+	// held. Reported by count and never by name or reason: whose mail a contact
 	// keeps private is itself private, and "your colleague is holding this"
 	// already says more than a held message should.
 	HeldByOthers int `json:"held_by_others"`
@@ -84,7 +84,7 @@ func (s *ThreadAudienceSetter) Decide(ctx context.Context, threadKey string, sha
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied
 	}
 	// A read seat is licensed to look, not to change what colleagues can read.
-	// The same pair the purge takes, and for the same reason: being a person is
+	// The same pair the purge takes, and for the same reason: being a contact is
 	// not a grant, and RequireHuman inside the store reads none.
 	if !actor.SeatType.CanMutate() {
 		return ThreadAudienceOutcome{}, apperrors.ErrPermissionDenied

@@ -57,10 +57,10 @@ const (
 	// be a query per captured message to learn what one function just decided.
 	StageTierLadder Stage = "tier_ladder"
 
-	// StagePersonCreate is the post-commit contact write and the nightly repair
-	// that re-runs it. Derived BY ELIMINATION from the person link and the
+	// StageContactCreate is the post-commit contact write and the nightly repair
+	// that re-runs it. Derived BY ELIMINATION from the contact link and the
 	// ladder's answer; there is no stored "the ladder decided to create".
-	StagePersonCreate Stage = "person_create"
+	StageContactCreate Stage = "contact_create"
 
 	// StageVerdict is the per-SENDER disposition. Derived: the ledger already
 	// records it with an owner, a status and its timestamps, and a copy would

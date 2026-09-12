@@ -37,7 +37,7 @@ func TestRecordLabelUsesKindOnlyForAnEdge(t *testing.T) {
 			datasource.EntityDeal, ids.NewV7(), `{"name":"Acme renewal","kind":"whatever"}`, `"Acme renewal"`,
 		},
 		"nothing to read falls back to the id": {
-			datasource.EntityPerson, edgeID, `{}`, edgeID.String(),
+			datasource.EntityContact, edgeID, `{}`, edgeID.String(),
 		},
 		// An activity's kind classifies; its subject identifies. "Archive
 		// activity 0195c3…" names nothing an approver can weigh.

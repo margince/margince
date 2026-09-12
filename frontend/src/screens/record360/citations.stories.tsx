@@ -6,7 +6,7 @@ import { StoryProviders } from "../story-utils";
 import { type Cited, SentenceList } from "./citations";
 
 // The receipts under grounded prose, in the four readings a sentence can
-// produce. Deal360, Company360 and Person360 all render this same component, so
+// produce. Deal360, Company360 and Contact360 all render this same component, so
 // what this page shows is what all three show.
 //
 // The distinction worth checking here is what a chip SAYS. A chip standing for

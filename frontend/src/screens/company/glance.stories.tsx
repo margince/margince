@@ -4,15 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../story-utils";
-import { PeopleChips } from "./glance";
+import { ContactsChips } from "./glance";
 
-// The glance's key people. The card is what a reader decides from — who they
+// The glance's key contacts. The card is what a reader decides from — who they
 // are to the account and how to write to them — so the states worth seeing
 // side by side are the ones where that answer is partial: a contact with no
 // title, one with no address, and a roster longer than the glance draws.
-const meta: Meta<typeof PeopleChips> = {
-  title: "Records/Company 360/Key people",
-  component: PeopleChips,
+const meta: Meta<typeof ContactsChips> = {
+  title: "Records/Company 360/Key contacts",
+  component: ContactsChips,
   parameters: { layout: "padded" },
   decorators: [
     (Story) => (
@@ -26,7 +26,7 @@ const meta: Meta<typeof PeopleChips> = {
 };
 export default meta;
 
-type Story = StoryObj<typeof PeopleChips>;
+type Story = StoryObj<typeof ContactsChips>;
 type View = components["schemas"]["Company360"];
 
 const strength = {
@@ -35,7 +35,7 @@ const strength = {
   factors: { recency: 0.9, frequency: 0.6, reciprocity: 0.8, direction: 0.8 },
 };
 
-function view(people: View["people"], omitted: string[] = []): View {
+function view(contacts: View["contacts"], omitted: string[] = []): View {
   return {
     as_of: "2026-07-13T09:00:00Z",
     company: {
@@ -47,25 +47,25 @@ function view(people: View["people"], omitted: string[] = []): View {
       updated_at: "2026-06-01T08:00:00Z",
     },
     sections_omitted: omitted,
-    people,
+    contacts,
   } as View;
 }
 
 const page = { has_more: false, next_cursor: null };
 
 /**
- * What the card is for: each person's standing on the account and the address
+ * What the card is for: each contact's standing on the account and the address
  * that reaches them, so which of the three to write to is decided here rather
  * than after three round trips.
  */
 export const Populated: Story = {
   render: () => (
-    <PeopleChips
+    <ContactsChips
       loading={false}
       view={view({
         data: [
           {
-            person_id: "p-1",
+            contact_id: "p-1",
             full_name: "Dana Buyer",
             title: "Head of Fleet",
             primary_email: "dana@brandt.example",
@@ -74,7 +74,7 @@ export const Populated: Story = {
             strength,
           },
           {
-            person_id: "p-2",
+            contact_id: "p-2",
             full_name: "Kim Ops",
             title: "Operations",
             deal_roles: [],
@@ -82,7 +82,7 @@ export const Populated: Story = {
             strength,
           },
           {
-            person_id: "p-3",
+            contact_id: "p-3",
             full_name: "Maximilian von Hohenlohe-Schillingsfürst",
             title: "Geschäftsführer Einkauf und Logistik",
             primary_email: "maximilian.von.hohenlohe@brandt-automotive.example",
@@ -106,12 +106,12 @@ export const Populated: Story = {
  */
 export const ProvidedTitle: Story = {
   render: () => (
-    <PeopleChips
+    <ContactsChips
       loading={false}
       view={view({
         data: [
           {
-            person_id: "p-1",
+            contact_id: "p-1",
             full_name: "Dana Buyer",
             title: null,
             provider_title: "Vice President, Fleet Operations and Aftersales",
@@ -130,13 +130,13 @@ export const ProvidedTitle: Story = {
 };
 
 /**
- * More people than the glance draws. The remainder is a line and not a card:
+ * More contacts than the glance draws. The remainder is a line and not a card:
  * it names no record, and a card with nothing to open in it reads as one that
  * failed to load.
  */
 export const MoreThanShown: Story = {
   render: () => (
-    <PeopleChips
+    <ContactsChips
       loading={false}
       view={view({
         data: [
@@ -146,7 +146,7 @@ export const MoreThanShown: Story = {
           "Ines Weber",
           "Tomas Halle",
         ].map((full_name, i) => ({
-          person_id: `p-${i}`,
+          contact_id: `p-${i}`,
           full_name,
           deal_roles: [],
           consent: {},
@@ -165,6 +165,6 @@ export const MoreThanShown: Story = {
  */
 export const Withheld: Story = {
   render: () => (
-    <PeopleChips loading={false} view={view(undefined, ["people"])} />
+    <ContactsChips loading={false} view={view(undefined, ["contacts"])} />
   ),
 };

@@ -87,10 +87,10 @@ func ChampionCoverFor(
 	if err != nil {
 		return nil, err
 	}
-	for deal, people := range seats {
+	for deal, contacts := range seats {
 		cover := out[deal]
-		for _, person := range people {
-			if engaged[dealPerson{deal: deal, person: person}] {
+		for _, contact := range contacts {
+			if engaged[dealContact{deal: deal, contact: contact}] {
 				cover.Covered = true
 				break
 			}
@@ -100,8 +100,8 @@ func ChampionCoverFor(
 	return out, nil
 }
 
-// livePersonSeat is what both statements in this file mean by a seat: an edge
-// whose person is still live. championSeats needs the row, so it joins; the
+// liveContactSeat is what both statements in this file mean by a seat: an edge
+// whose contact is still live. championSeats needs the row, so it joins; the
 // withheld probe needs only the fact, so it asks EXISTS on the same condition.
 // Two statements that disagree about what a seat is answer one question two
 // ways: a deal would carry a withheld seat the visible read does not count, and
@@ -109,19 +109,19 @@ func ChampionCoverFor(
 //
 // Held by TestOneSpellingOfALiveChampionSeat (championseat_test.go), which
 // fails when either statement writes the condition out instead of naming this.
-const livePersonSeat = "p.id = r.person_id AND p.archived_at IS NULL"
+const liveContactSeat = "p.id = r.contact_id AND p.archived_at IS NULL"
 
-// dealPerson keys one seat: engagement is a fact about a person ON a deal, and
-// a person can sit on two of them with a different answer on each.
-type dealPerson struct {
-	deal, person ids.UUID
+// dealContact keys one seat: engagement is a fact about a contact ON a deal, and
+// a contact can sit on two of them with a different answer on each.
+type dealContact struct {
+	deal, contact ids.UUID
 }
 
 // championSeats lists the champion-role seats this reader may see on each deal.
 //
 // The edge bound is a conjunction over every endpoint an edge carries, so a
 // seat this reader may not see is already gone from these rows — refused by
-// whichever arm refuses it, which is not always the person one. That is why the
+// whichever arm refuses it, which is not always the contact one. That is why the
 // withheld question cannot be answered here, and why withheldSeats asks it in a
 // statement of its own, as the complement of this same conjunction.
 func championSeats(
@@ -137,12 +137,12 @@ func championSeats(
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.deal_id,
-		       array_remove(array_agg(r.person_id) FILTER (WHERE r.role = $%[2]d), NULL)
+		       array_remove(array_agg(r.contact_id) FILTER (WHERE r.role = $%[2]d), NULL)
 		  FROM relationship r
-		  JOIN person p ON %[4]s
+		  JOIN contact p ON %[4]s
 		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
 		   AND (%[3]s)
-		 GROUP BY r.deal_id`, dealsPos, rolePos, bound, livePersonSeat), args...)
+		 GROUP BY r.deal_id`, dealsPos, rolePos, bound, liveContactSeat), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the champion seats on a set of deals: %w", err)
 	}
@@ -150,11 +150,11 @@ func championSeats(
 	seats := make(map[ids.UUID][]ids.UUID, len(dealIDs))
 	for rows.Next() {
 		var deal ids.UUID
-		var people []ids.UUID
-		if err := rows.Scan(&deal, &people); err != nil {
+		var contacts []ids.UUID
+		if err := rows.Scan(&deal, &contacts); err != nil {
 			return nil, fmt.Errorf("deals: reading a deal's champion seats: %w", err)
 		}
-		seats[deal] = people
+		seats[deal] = contacts
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("deals: reading the champion seats on a set of deals: %w", err)
@@ -166,8 +166,8 @@ func championSeats(
 // not read.
 //
 // THE COMPLEMENT OF THE VISIBLE READ, not a reading of one of its arms. An edge
-// is admitted by a conjunction over EVERY endpoint it carries — person_id,
-// counterparty_person_id, company_id, counterparty_company_id, deal_id,
+// is admitted by a conjunction over EVERY endpoint it carries — contact_id,
+// counterparty_contact_id, company_id, counterparty_company_id, deal_id,
 // project_id (auth.RelationshipEndpointScope) — so "a seat this reader may not
 // read" is exactly `NOT (that conjunction)`. A single arm answers a narrower
 // question that looks the same until a seat is refused by one of the other five,
@@ -175,7 +175,7 @@ func championSeats(
 //
 // A seat refused through `counterparty_company_id` is the reachable case rather than
 // the theoretical one: `rel_stakeholder_shape` pins company_id, project_id
-// and counterparty_person_id to NULL on a deal_stakeholder and says nothing
+// and counterparty_contact_id to NULL on a deal_stakeholder and says nothing
 // about counterparty_company_id, and CreateRelationshipInput accepts it.
 //
 // Negating the whole clause is also what keeps this true as the edge grows: a
@@ -193,7 +193,7 @@ func championSeats(
 // deals its own sweep already selected.
 //
 // ONE BIT per deal, and a boolean rather than a count: how many seats a reader
-// may not see is a fact about people they may not read, and a number would leak
+// may not see is a fact about contacts they may not read, and a number would leak
 // the size of a committee that a boolean does not.
 //
 // A deal absent from the result had no unreadable seat. A deal absent from BOTH
@@ -212,15 +212,15 @@ func withheldSeats(
 	}
 	// An empty clause cannot be negated: `NOT ()` is a syntax error, not a
 	// permissive read. RelationshipEndpointScope answers "" only for the system
-	// principal — UnboundedFor refuses every other actor at `person` and
+	// principal — UnboundedFor refuses every other actor at `contact` and
 	// `company`, which carry capture privacy — and the system principal is
 	// refused no row, so nothing is withheld from it.
 	if admitted == "" {
 		return map[ids.UUID]bool{}, nil
 	}
-	// livePersonSeat is what championSeats counts as a seat, asked here so the
+	// liveContactSeat is what championSeats counts as a seat, asked here so the
 	// two statements share one definition rather than two spellings that agree
-	// by inspection. An edge admitted by neither — archived person, refused
+	// by inspection. An edge admitted by neither — archived contact, refused
 	// endpoint — would otherwise be a withheld seat to this statement and no
 	// seat at all to that one, and the deal would report a committee it does
 	// not have.
@@ -233,8 +233,8 @@ func withheldSeats(
 		SELECT DISTINCT r.deal_id
 		  FROM relationship r
 		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
-		   AND EXISTS (SELECT 1 FROM person p WHERE %[3]s)
-		   AND NOT (%[2]s)`, dealsPos, admitted, livePersonSeat), args...)
+		   AND EXISTS (SELECT 1 FROM contact p WHERE %[3]s)
+		   AND NOT (%[2]s)`, dealsPos, admitted, liveContactSeat), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading which deals carry a seat this reader may not see: %w", err)
 	}
@@ -253,7 +253,7 @@ func withheldSeats(
 	return withheld, nil
 }
 
-// engagedAmong answers which (deal, person) pairs had a two-way exchange in
+// engagedAmong answers which (deal, contact) pairs had a two-way exchange in
 // the window.
 //
 // The engagement test is EngagedStakeholders' — both directions required
@@ -265,7 +265,7 @@ func withheldSeats(
 // healthActivityKinds, so a change to either moves both readers at once.
 func engagedAmong(
 	ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.Time,
-) (map[dealPerson]bool, error) {
+) (map[dealContact]bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	dealsPos := arg(dealIDs)
@@ -278,17 +278,17 @@ func engagedAmong(
 	// its format string, for the reason EngagedStakeholders gives: a `%` in a
 	// kind would be read as a verb and corrupt the statement at runtime.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT r.deal_id, r.person_id FROM relationship r
+		SELECT DISTINCT r.deal_id, r.contact_id FROM relationship r
 		WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
 		  AND (%[3]s)
 		  AND EXISTS (
 			SELECT 1 FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
+			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.person_id = r.person_id
+			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE a.kind IN %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
 			  AND a.occurred_at >= $%[2]d AND a.direction = 'outbound')`,
 		dealsPos, windowPos, bound, healthActivityKinds), args...)
@@ -296,10 +296,10 @@ func engagedAmong(
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}
 	defer rows.Close()
-	engaged := make(map[dealPerson]bool)
+	engaged := make(map[dealContact]bool)
 	for rows.Next() {
-		var pair dealPerson
-		if err := rows.Scan(&pair.deal, &pair.person); err != nil {
+		var pair dealContact
+		if err := rows.Scan(&pair.deal, &pair.contact); err != nil {
 			return nil, fmt.Errorf("deals: reading one deal's engaged seat: %w", err)
 		}
 		engaged[pair] = true

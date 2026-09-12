@@ -169,7 +169,7 @@ the app role's own grants, the auth gate) is in
 [authorization.md](authorization.md); the **write backbone** (the `audit_log` DDL, the outbox envelope,
 the relay, dedupe) is in [write-backbone.md](write-backbone.md).
 
-Notes that trip people up:
+Notes that trip contacts up:
 
 - **`captured_by` / the actor is server-stamped** from the authenticated principal, never the request body.
 - **`Emit` requires a `correlation_id`** on the context (the HTTP middleware binds one per request; a
@@ -200,7 +200,7 @@ exist tells you what will fail your PR and why:
 | `rbacgate_test.go` | an exported `*Store`/`*Service` method doesn't reference the auth gate |
 | `updateguard_test.go` | a single-row-by-id UPDATE of a versioned table has no concurrency guard |
 | `enumsync_test.go` | a Go enum drifts from its schema `CHECK (col IN (...))` set |
-| `consentproof_test.go` | a `person_consent` state write skips its append-only proof row |
+| `consentproof_test.go` | a `contact_consent` state write skips its append-only proof row |
 | `piicoverage_test.go` | a PII table isn't reached by erasure + SAR |
 | `errmatch_test.go` | code classifies an error by its `Error()` string instead of SQLSTATE |
 | `license_test.go` | a hand-written `.go` file lacks the BUSL-1.1 SPDX header |

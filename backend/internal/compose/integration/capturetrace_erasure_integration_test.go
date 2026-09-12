@@ -21,7 +21,7 @@ import (
 
 func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
+	contactID := seedSubject(t, e)
 
 	// Two traced messages under the operator's payload posture: one from the
 	// subject, one from somebody else. A purge that took both would be as wrong
@@ -33,7 +33,7 @@ func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
 		       (NULL, 'gmail', 'gmail', 'erasure-control', 'tier_ladder', 'captured', 'someone@else.test', 'Unrelated')`,
 		subjectEmail)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -58,25 +58,25 @@ func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
 // dormant gap a live one, which is why the test arrives with the flip.
 func TestErasureReachesAChannelCounterpartysTracePayloads(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
+	contactID := seedSubject(t, e)
 
 	// The subject's Telegram account, which is what makes this an identity the
 	// erasure walks. Seeded through the same table the eraser reads.
 	e.WsExec(t, `
-		INSERT INTO person_channel_identity (person_id, provider, channel_user_id, source, captured_by)
-		VALUES ($1, 'telegram', '99001', 'manual', 'human:x')`, personID)
+		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, source, captured_by)
+		VALUES ($1, 'telegram', '99001', 'manual', 'human:x')`, contactID)
 
 	// Three rows. The subject's, by name on the provider they are known on; a
 	// row naming somebody else on that provider; and the SAME name on a
-	// different transport, which belongs to a different person and must stay.
+	// different transport, which belongs to a different contact and must stay.
 	e.WsExec(t, `
 		INSERT INTO capture_trace (user_id, connector, source_system, source_id,
 		                           stage, outcome, counterparty, subject)
 		VALUES (NULL, 'telegram', 'telegram', 'chan-subject', 'tier_ladder', 'captured', 'Selma Subject', 'Ping'),
-		       (NULL, 'telegram', 'telegram', 'chan-control', 'tier_ladder', 'captured', 'Other Person', 'Unrelated'),
+		       (NULL, 'telegram', 'telegram', 'chan-control', 'tier_ladder', 'captured', 'Other Contact', 'Unrelated'),
 		       (NULL, 'zalo', 'zalo', 'chan-other-transport', 'tier_ladder', 'captured', 'Selma Subject', 'Unrelated')`)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +87,7 @@ func TestErasureReachesAChannelCounterpartysTracePayloads(t *testing.T) {
 		t.Errorf("another sender's channel trace row = %d, want 1 kept", n)
 	}
 	// The provider scope, which is the whole reason the DELETE names
-	// source_system: a same-named person on a transport this subject was never
+	// source_system: a same-named contact on a transport this subject was never
 	// on is not this subject.
 	if n := e.WsCount(t, `SELECT count(*) FROM capture_trace WHERE source_id = 'chan-other-transport'`); n != 1 {
 		t.Errorf("a same-named counterparty on another transport = %d, want 1 kept", n)

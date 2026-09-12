@@ -6,7 +6,7 @@ package privacy
 // What an Art. 17 erasure does to the subject's TIMELINE and to everything
 // derived from it. Kept apart from the subject's own rows (erasure.go) because
 // the questions differ: those rows are the subject's record, while these are
-// other people's records that happen to contain them, plus the machine
+// other contacts's records that happen to contain them, plus the machine
 // artifacts built on top — a raw capture, an embedding, an interaction edge.
 // Nothing here can simply be deleted without asking what else it holds.
 
@@ -70,31 +70,31 @@ var subjectTimelineLockSQL = `
 //
 // The same three id sets the destroy and the hold select from, so a row cannot
 // be judged by one spelling and locked by another.
-func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string) error {
+func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string) error {
 	// ORDER BY id is BEST EFFORT against a deadlock between two erasures whose
 	// subjects share activities, and is written down as best effort because it
 	// is not a guarantee: Postgres does not promise that `FOR UPDATE` acquires
 	// in the sort's order, only that the rows come back in it. The plan it
 	// usually chooses locks after sorting, which is why this helps at all.
 	//
-	// When it does not hold, the loser gets 40P01 and ErasePerson returns it —
+	// When it does not hold, the loser gets 40P01 and EraseContact returns it —
 	// the whole transaction rolls back, so no half-erasure commits and the
 	// request is safe to re-issue. That is the honest cost, and it is small
 	// because the collision needs two erasures overlapping on the same
 	// activities at the same moment. Retrying inside the eraser was considered
 	// and left alone: a retry loop around a transaction this long belongs to
 	// whoever decides the policy for every such write, not to this one.
-	_, err := tx.Exec(ctx, subjectTimelineLockSQL, personID, emails, channelKeys)
+	_, err := tx.Exec(ctx, subjectTimelineLockSQL, contactID, emails, channelKeys)
 	return err
 }
 
-func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
+func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
 	// Redact the subject's own timeline rows, the unlinked mail about them — in
 	// both directions, captured and sent (unlinkedSubjectMail) — and the
 	// unlinked CHANNEL messages from them (unlinkedSubjectChannel), but shield
 	// commercial correspondence younger than the
 	// statutory floor: the floor filters the row being updated (aliased `a`),
-	// so it covers all three id sets in one pass. $1 person, $2 addresses, $3/$4
+	// so it covers all three id sets in one pass. $1 contact, $2 addresses, $3/$4
 	// the floor interval + anchor, $5 the tombstone name, $6 the subject's
 	// `provider:account` channel keys.
 	//
@@ -131,7 +131,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, personID, emails, floorInterval, floorAnchor, erasedName, channelKeys)
+		RETURNING a.id`, contactID, emails, floorInterval, floorAnchor, erasedName, channelKeys)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM field_provenance
 		WHERE object_type = 'activity' AND object_id IN (`+subjectOnlyDestroyable+`)`,
-		personID, floorInterval, floorAnchor); err != nil {
+		contactID, floorInterval, floorAnchor); err != nil {
 		return nil, err
 	}
 	// And how the reply verdict came to be what it was. DELETED rather than
@@ -155,17 +155,17 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// table's own ON DELETE CASCADE does not reach it — this erasure UPDATES
 	// the activity in place and never removes the row.
 	//
-	// Through the shared helper, which scopes by PERSON rather than by the
+	// Through the shared helper, which scopes by CONTACT rather than by the
 	// floor-bounded activity set this function redacts. The wider scope is
 	// deliberate: the floor holds back a message's TEXT for a statutory period,
 	// and a conclusion about what that message meant is not the message. Keeping
 	// the verdict to satisfy a correspondence floor would preserve our reading
 	// of the subject's words on the ground that we must preserve the words.
-	if err := deleteReplyVerdictHistoryFor(ctx, tx, personID); err != nil {
+	if err := deleteReplyVerdictHistoryFor(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
 	// And the handoffs naming them, for the same reason and on the same act.
-	if err := deleteSubjectHandoffs(ctx, tx, personID); err != nil {
+	if err := deleteSubjectHandoffs(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
 	return redacted, nil
@@ -177,7 +177,7 @@ func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 // the text stands would be a partial spoliation with nothing to show for it.
 var subjectActivityEmbeddingsDelete = `
 		DELETE FROM embedding e USING activity_link l
-		WHERE e.entity_type = 'activity' AND l.person_id = $1 AND e.entity_id = l.activity_id` +
+		WHERE e.entity_type = 'activity' AND l.contact_id = $1 AND e.entity_id = l.activity_id` +
 	notTransitivelyHeld("l.activity_id")
 
 // purgeDerivedTraces removes what the system DERIVED from the subject and
@@ -187,7 +187,7 @@ var subjectActivityEmbeddingsDelete = `
 // (erasure_channels.go, kept apart for file length). Embeddings of
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
-func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
+func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity) (rawPurged, aiPayloadsPurged int64, err error) {
 	for _, email := range emails {
 		tag, execErr := tx.Exec(ctx,
 			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
@@ -235,7 +235,7 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, d
 	if _, err := purgeChannelCaptureTrace(ctx, tx, displayName, identities); err != nil {
 		return 0, 0, err
 	}
-	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, personID); err != nil {
+	if _, err := tx.Exec(ctx, subjectActivityEmbeddingsDelete, contactID); err != nil {
 		return 0, 0, err
 	}
 	// Captured AI payloads (Layer 3) are purged by the same identifier
@@ -278,16 +278,16 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, personID ids.PersonID, d
 // the transitions that cascade from each one.
 //
 // A handoff carries the subject's id, a free-text note one seat wrote about
-// them, and a judgement — accepted, or refused for this reason — that people
-// made about this person. Erasure UPDATEs the person in place and never removes
-// the row, so the ON DELETE CASCADE on lead_id and person_id never fires for an
+// them, and a judgement — accepted, or refused for this reason — that contacts
+// made about this contact. Erasure UPDATEs the contact in place and never removes
+// the row, so the ON DELETE CASCADE on lead_id and contact_id never fires for an
 // Art. 17 request: this statement is what actually reaches them.
 //
 // DELETED rather than nulled, on the ground ai_feedback records: a decision
 // about somebody nobody may now assert anything about has nothing left to say.
 // sdr_handoff_event goes with it through its own cascade, which DOES fire here
 // because this is a real delete.
-func deleteSubjectHandoffs[ID ids.UUID | ids.PersonID](ctx context.Context, tx pgx.Tx, personID ID) error {
+func deleteSubjectHandoffs[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID) error {
 	// The transitions first, by name. sdr_handoff_event cascades from the delete
 	// below and would go anyway — but a cascade is invisible to the census that
 	// asks whether Art. 17 reaches a table, and invisible to the next reader
@@ -297,44 +297,44 @@ func deleteSubjectHandoffs[ID ids.UUID | ids.PersonID](ctx context.Context, tx p
 		DELETE FROM sdr_handoff_event
 		WHERE handoff_id IN (
 		      SELECT id FROM sdr_handoff
-		       WHERE person_id = $1
-		          OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1))`,
-		personID); err != nil {
+		       WHERE contact_id = $1
+		          OR lead_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1))`,
+		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's handoff transitions: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM sdr_handoff
-		WHERE person_id = $1
-		   OR lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`,
-		personID); err != nil {
+		WHERE contact_id = $1
+		   OR lead_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1)`,
+		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's handoffs: %w", err)
 	}
 	return nil
 }
 
 // deleteReplyVerdictHistoryFor drops every judgement this installation recorded
-// about what one person's replies meant — the classifier's own and every human
+// about what one contact's replies meant — the classifier's own and every human
 // correction after it.
 //
 // ONE spelling, called by both acts. The Art. 17 timeline redaction reaches
 // these rows through the activities it empties; the anonymize reaches them
-// through the person, because it empties no activity at all. Two statements
+// through the contact, because it empties no activity at all. Two statements
 // would be two answers to "which rows belong to this subject", and the anonymize
 // parity gate exists precisely because those two answers drift.
 //
 // Scoped through activity_link, the same join the SAR export uses to decide
-// which activities are this person's.
+// which activities are this contact's.
 //
 // The type parameter is there because the two callers hold the subject id in
-// different types — the erasure spine in ids.PersonID, the retention sweep in
+// different types — the erasure spine in ids.ContactID, the retention sweep in
 // ids.UUID — and a second function per type would be a second answer to "which
 // rows belong to this subject". The constraint keeps it to those two rather
 // than admitting any id at all.
-func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.PersonID](ctx context.Context, tx pgx.Tx, personID ID) error {
+func deleteReplyVerdictHistoryFor[ID ids.UUID | ids.ContactID](ctx context.Context, tx pgx.Tx, contactID ID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_reply_verdict_history
-		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`,
-		personID); err != nil {
+		WHERE activity_id IN (SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`,
+		contactID); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's reply verdicts: %w", err)
 	}
 	return nil

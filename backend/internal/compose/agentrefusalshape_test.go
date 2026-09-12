@@ -116,11 +116,11 @@ func TestAReplacementRuneNamesTheMemberItCameFrom(t *testing.T) {
 		body  []byte
 		field string
 	}{
-		{"in the body", "/v1/people/x", []byte(`{"note":` + surrogate + `}`), "body"},
-		{"in the path", "/v1/people/�", []byte(`{}`), "path"},
+		{"in the body", "/v1/contacts/x", []byte(`{"note":` + surrogate + `}`), "body"},
+		{"in the path", "/v1/contacts/�", []byte(`{}`), "path"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, err := canonicalRESTCall("updatePerson", tc.path, http.Header{}, tc.body, keySettledByThisCall)
+			_, _, err := canonicalRESTCall("updateContact", tc.path, http.Header{}, tc.body, keySettledByThisCall)
 			if err == nil {
 				t.Fatal("a call carrying the replacement character was accepted — two different calls hash alike")
 			}

@@ -124,7 +124,7 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 
 	// Native data and the audit spine survive retirement.
 	counts := f.nativeEstateRows(t)
-	for object, n := range map[string]int{"person": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
+	for object, n := range map[string]int{"contact": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
 		if counts[object] != n {
 			t.Errorf("native %s rows after retirement = %d, want %d", object, counts[object], n)
 		}
@@ -179,7 +179,7 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 			t.Errorf("%s = %d, want %d", name, n, want)
 		}
 	}
-	assertCount("reconstructed persons", `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`, 3)
+	assertCount("reconstructed contacts", `SELECT count(*) FROM contact WHERE source LIKE 'mirror:hubspot:%'`, 3)
 	assertCount("reconstructed companies", `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`, 2)
 	assertCount("reconstructed deals", `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`, 2)
 	assertCount("reconstructed leads", `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`, 1)
@@ -188,8 +188,8 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 		SELECT count(*) FROM deal d JOIN company o ON o.id = d.company_id
 		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:company:company-1'`, 1)
 	assertCount("reconstructed employment", `
-		SELECT count(*) FROM relationship r JOIN person p ON p.id = r.person_id
-		WHERE r.kind = 'employment' AND p.source = 'mirror:hubspot:person:p-1'`, 1)
+		SELECT count(*) FROM relationship r JOIN contact p ON p.id = r.contact_id
+		WHERE r.kind = 'employment' AND p.source = 'mirror:hubspot:contact:p-1'`, 1)
 	// The bundle's owner map named the SOURCE workspace's admin, who does
 	// not exist in this clean instance — so ownership falls to the
 	// rebuild's own operator rather than landing ownerless (an ownerless
@@ -201,12 +201,12 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 	var ownedByOperator int
 	if err := database.WithWorkspaceTx(cleanCtx, f.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(cleanCtx,
-			`SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%' AND owner_id = $1`, rebuildOperator.UserID).Scan(&ownedByOperator)
+			`SELECT count(*) FROM contact WHERE source LIKE 'mirror:hubspot:%' AND owner_id = $1`, rebuildOperator.UserID).Scan(&ownedByOperator)
 	}); err != nil {
-		t.Fatalf("counting rebuilt persons by owner: %v", err)
+		t.Fatalf("counting rebuilt contacts by owner: %v", err)
 	}
 	if ownedByOperator != 3 {
-		t.Errorf("rebuilt persons owned by the operator = %d, want 3 — an unmapped owner must not leave the row workspace-visible", ownedByOperator)
+		t.Errorf("rebuilt contacts owned by the operator = %d, want 3 — an unmapped owner must not leave the row workspace-visible", ownedByOperator)
 	}
 
 	// The incumbent still untouched after reconstruction — the rebuild
@@ -247,7 +247,7 @@ func seedCleanInstance(t *testing.T, f flipEstate) context.Context {
 	// phase D has now taken the column off all seven, so the estate IS every
 	// row of these tables.
 	for _, table := range []string{
-		"deal", "stage", "pipeline", "company", "person", "lead", "activity",
+		"deal", "stage", "pipeline", "company", "contact", "lead", "activity",
 	} {
 		if _, err := f.e.Owner.Exec(ctx, "DELETE FROM "+table); err != nil {
 			t.Fatalf("retiring the source estate's %s rows before the rebuild: %v", table, err)

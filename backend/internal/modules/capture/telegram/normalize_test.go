@@ -106,8 +106,8 @@ func TestNormalizeBuildsTheChatScopedNaturalKey(t *testing.T) {
 	// because the default is right for the message id a natural key usually is
 	// and wrong here — and a producer that quietly stopped declaring would put
 	// an account id in a diagnostic table with nothing failing.
-	if !rec.NaturalKey.SourceIDNamesAPerson {
-		t.Errorf("the key %q does not declare that it names a person, so the trace would store "+
+	if !rec.NaturalKey.SourceIDNamesAContact {
+		t.Errorf("the key %q does not declare that it names a contact, so the trace would store "+
 			"the account id in it verbatim", rec.NaturalKey.SourceID)
 	}
 }
@@ -145,7 +145,7 @@ func TestNormalizeSkipsAnUpdateWithNoMessage(t *testing.T) {
 
 // Group chats are out of scope (design §1) and `allowed_updates` cannot say so:
 // Telegram delivers a group message under the same bare `message` update a
-// private one arrives on. Capturing one would mint a Person per member the
+// private one arrives on. Capturing one would mint a Contact per member the
 // bot's privacy mode happens to show, file the activity under the group's
 // thread, and then route the rep's reply to the sender's PRIVATE chat — a
 // message answered somewhere other than where it was read.
@@ -192,7 +192,7 @@ func TestNormalizeSkipsAChatWhoseIDIsNotAPrivateOne(t *testing.T) {
 }
 
 // The same rule for the sender: an account id is positive, so a negative one
-// names no Telegram account. Minted as an identity it would bind a Person to a
+// names no Telegram account. Minted as an identity it would bind a Contact to a
 // channel_user_id no human owns and no reply can reach.
 func TestNormalizeSkipsAMessageFromANonAccountSender(t *testing.T) {
 	assertSkipped(t, `{
@@ -209,7 +209,7 @@ func TestNormalizeSkipsAMessageFromANonAccountSender(t *testing.T) {
 
 // A sender id of 0 — Telegram's rendering of a message with no `from` — is a
 // valid, non-empty key that EVERY anonymous sender shares. Captured, it merges
-// distinct humans onto one Person and one identity row, which then reads as
+// distinct humans onto one Contact and one identity row, which then reads as
 // reachable at chat id 0. The private-chat gate excludes the shape this
 // arrives in today, so the refusal is stated here, where the identity is
 // minted, rather than left resting on a gate that exists for another reason.

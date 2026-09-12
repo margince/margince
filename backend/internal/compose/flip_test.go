@@ -121,7 +121,7 @@ func TestFlipImportableIsTheClosedEstateSet(t *testing.T) {
 			t.Errorf("%q is imported but not importable — the identity map's allowlist and the import order disagree", object)
 		}
 	}
-	for _, object := range []string{"relationship", "pipeline", "workspace", "", "person; DROP TABLE person"} {
+	for _, object := range []string{"relationship", "pipeline", "workspace", "", "contact; DROP TABLE contact"} {
 		if flipImportable(object) {
 			t.Errorf("%q must not reach a lookup: the allowlist is what keeps the table name out of a format string", object)
 		}

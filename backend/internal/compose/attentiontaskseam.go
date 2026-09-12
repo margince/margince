@@ -54,7 +54,7 @@ func openTasksDueBy(
 	case attention.TasksUnassigned:
 		in.UnassignedQueue = true
 	case attention.TasksOwnedBy:
-		// One named person's open work. The scope resolver already refused a
+		// One named contact's open work. The scope resolver already refused a
 		// reader whose tier does not reach past themselves, and the store's own
 		// row-scope gate still applies underneath — this narrows, never widens.
 		named := ids.From[ids.UserKind](owner)

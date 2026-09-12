@@ -73,7 +73,7 @@ function card(over: Partial<Parameters<typeof DecisionCard>[0]> = {}) {
 
 describe("DecisionCard — what the reader is being asked", () => {
   // The defect this pins is the one the whole primitive exists to fix: the row
-  // it replaces named the addressee and stopped, so the one thing a person needs
+  // it replaces named the addressee and stopped, so the one thing a contact needs
   // in order to decide was the one thing not on screen.
   it("shows the drafted subject as the headline and the drafted body under it", () => {
     render(card());
@@ -195,7 +195,7 @@ describe("DecisionCard — a kind that says what it shows", () => {
   ];
 
   // The reason is the first thing in the body and carries no caption. It is a
-  // sentence the server wrote for a person, and labelling it would frame an
+  // sentence the server wrote for a contact, and labelling it would frame an
   // explanation as one more data point.
   it("leads the body with the reason, unlabelled", () => {
     const { container } = render(
@@ -209,7 +209,7 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(screen.queryByText("Why")).not.toBeInTheDocument();
   });
 
-  // The identifiers are the point of the whole exercise: a person asked to
+  // The identifiers are the point of the whole exercise: a contact asked to
   // decide something must not be shown the row it is stored in.
   it("shows the declared fields under their names and drops the rest", () => {
     render(card({ approval: CLOSE_DATE, display: CLOSE_DATE_DISPLAY }));

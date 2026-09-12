@@ -73,7 +73,7 @@ var decisionCountFields = []string{"Verdict", "Category", "Mode"}
 // forbiddenLabelSubstrings name what a label must never carry. Matched on the
 // field name because a field is what becomes a label.
 var forbiddenLabelSubstrings = []string{
-	"recipient", "address", "email", "subject", "person", "lead", "actor", "reason",
+	"recipient", "address", "email", "subject", "contact", "lead", "actor", "reason",
 }
 
 func TestTheDecisionCounterLabelsOnlyClosedVocabularies(t *testing.T) {
@@ -92,13 +92,13 @@ func TestTheDecisionCounterLabelsOnlyClosedVocabularies(t *testing.T) {
 		t.Errorf("%s.%s is a new counter label.\n\n"+
 			"Every field here becomes a /metrics label, on an endpoint that binds no workspace "+
 			"and authenticates nobody. A label must be a CLOSED vocabulary and must not name a "+
-			"person: add it to decisionCountFields only once it is both.",
+			"contact: add it to decisionCountFields only once it is both.",
 			decisionCountType, field)
 		for _, forbidden := range forbiddenLabelSubstrings {
 			if strings.Contains(strings.ToLower(field), forbidden) {
 				t.Errorf("%s.%s names %q. A recipient's address as a label publishes who this "+
 					"installation writes to, to an unauthenticated scraper, and mints one time "+
-					"series per person.", decisionCountType, field, forbidden)
+					"series per contact.", decisionCountType, field, forbidden)
 			}
 		}
 	}
@@ -129,7 +129,7 @@ func TestTheRenderedLabelsAreOnlyTheDeclaredOnes(t *testing.T) {
 		}
 		t.Errorf("%s renders a %q label.\n\n"+
 			"Every label reaches an endpoint that binds no workspace and authenticates nobody. "+
-			"A label naming a person publishes who this installation writes to and mints one "+
+			"A label naming a contact publishes who this installation writes to and mints one "+
 			"time series each. Add it to renderedLabels only once it is a closed vocabulary "+
 			"that names nobody.", metricsRendererFile, label)
 	}

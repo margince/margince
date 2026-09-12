@@ -21,7 +21,7 @@ import (
 //
 // That line is load-bearing, not tidiness. This file is the identity-mint site
 // backend/gates/dedupespine_test.go sanctions BY PATH, so a direct
-// `INSERT INTO person|company|lead` belongs here and nowhere else in the
+// `INSERT INTO contact|company|lead` belongs here and nowhere else in the
 // package — put one in harness.go and the gate fails, which is the point.
 
 // DealFixture provisions the workspace with the seeded default pipeline
@@ -53,16 +53,16 @@ func DealFixture(t *testing.T, e *Env) (pipeline ids.PipelineID, open, won ids.S
 // days before the 2026-06-04T12:00Z clock the consuming suites pin.
 var stakeholderTouchedAt = time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 
-// SeedStakeholder creates a person, ties them to the deal as a
+// SeedStakeholder creates a contact, ties them to the deal as a
 // deal_stakeholder, and gives them one email in each named direction at
 // stakeholderTouchedAt.
 func SeedStakeholder(t *testing.T, e *Env, owner *pgx.Conn, deal ids.UUID, directions ...string) ids.UUID {
 	t.Helper()
-	person := SeedIDRow(t, owner, `INSERT INTO person (id, full_name, source, captured_by)
+	contact := SeedIDRow(t, owner, `INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Stakeholder', 'manual', 'human:x')`)
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO relationship (kind, person_id, deal_id, source, captured_by)
-		 VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, person, deal); err != nil {
+		`INSERT INTO relationship (kind, contact_id, deal_id, source, captured_by)
+		 VALUES ('deal_stakeholder', $1, $2, 'manual', 'human:x')`, contact, deal); err != nil {
 		t.Fatal(err)
 	}
 	for _, direction := range directions {
@@ -78,19 +78,19 @@ func SeedStakeholder(t *testing.T, e *Env, owner *pgx.Conn, deal ids.UUID, direc
 			touch, stakeholderTouchedAt, direction); err != nil {
 			t.Fatalf("seeding %q touch: %v", direction, err)
 		}
-		LinkActivity(t, owner, touch, "person", person)
+		LinkActivity(t, owner, touch, "contact", contact)
 	}
-	return person
+	return contact
 }
 
-// LinkActivity attaches an activity to a person or deal through the
+// LinkActivity attaches an activity to a contact or deal through the
 // polymorphic link table.
 func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType string, entity ids.UUID) {
 	t.Helper()
 	column := "deal_id"
 	switch entityType {
-	case "person":
-		column = "person_id"
+	case "contact":
+		column = "contact_id"
 	case "company":
 		column = "company_id"
 	}
@@ -103,14 +103,14 @@ func LinkActivity(t *testing.T, owner *pgx.Conn, activity ids.UUID, entityType s
 
 // LinkActivitySender names WHO sent an activity — distinct from LinkActivity,
 // which only says the activity CONCERNS somebody. sender.go's SenderPredicate
-// (backend/internal/modules/people/sender.go) reads this row for "they wrote
+// (backend/internal/modules/contacts/sender.go) reads this row for "they wrote
 // last" answers, and a thread linked to everybody it concerns says nothing
 // about which of them is its author.
-func LinkActivitySender(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+func LinkActivitySender(t *testing.T, owner *pgx.Conn, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO activity_participant (activity_id, person_id, role) VALUES ($1, $2, 'from')`,
-		activity, person); err != nil {
+		`INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`,
+		activity, contact); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -172,7 +172,7 @@ func SeedIDRow(t *testing.T, owner *pgx.Conn, sql string, args ...any) ids.UUID 
 }
 
 // LinkToCompany attaches an activity directly to an account (LinkActivity above
-// covers only the person and deal columns).
+// covers only the contact and deal columns).
 func LinkToCompany(t *testing.T, e *Env, activity, company ids.UUID) {
 	t.Helper()
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)

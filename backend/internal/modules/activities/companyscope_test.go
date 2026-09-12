@@ -26,7 +26,7 @@ import (
 // unscopedCtx binds the one principal for whom auth.ActivityContentClause
 // contributes nothing, so the assertions below are about the entity filter
 // alone. That principal is SYSTEM, not an admin: an activity's links reach
-// person and company rows, which carry capture privacy
+// contact and company rows, which carry capture privacy
 // (visibility='owner'), and capture privacy is a property of the row that
 // row_scope=all does not clear — so a human admin does get a clause.
 func unscopedCtx() context.Context {
@@ -110,7 +110,7 @@ func TestCompanyFilterWalksTheAccountsFourArms(t *testing.T) {
 // The reader's fourth arm is NOT the producer's. CompanyReachSet is what a signal
 // is filed through, and somebody merely Cc'd on a message is weaker evidence
 // than somebody the message was filed against — filing against every Cc'd
-// person's employer would put claims on accounts that were never in the
+// contact's employer would put claims on accounts that were never in the
 // conversation. The split is a ruling, so it is held rather than remembered.
 func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 	set := CompanyReachSet()
@@ -128,7 +128,7 @@ func TestTheReachSetDoesNotFileThroughParticipants(t *testing.T) {
 
 func TestEveryOtherEntityTypeKeepsItsFlatLinkJoin(t *testing.T) {
 	for entityType, column := range map[string]string{
-		"person":  "al.person_id",
+		"contact": "al.contact_id",
 		"deal":    "al.deal_id",
 		"lead":    "al.lead_id",
 		"project": "al.project_id",
@@ -254,7 +254,7 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 }
 
 // One message is ONE row however many records it is filed under. An activity
-// linked to a person, a company and a deal is three activity_link rows, and a
+// linked to a contact, a company and a deal is three activity_link rows, and a
 // plain join would ask the reader to answer the same customer three times.
 func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "GROUP BY a.id") {

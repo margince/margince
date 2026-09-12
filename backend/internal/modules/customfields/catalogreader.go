@@ -5,7 +5,7 @@ package customfields
 
 // ActiveColumns is this module's half of the fieldcatalog cross-module
 // seam (shared/ports/fieldcatalog): the catalog READ a record store
-// (people, deals, …) needs to drive its cf_* columns, exposed through a
+// (contacts, deals, …) needs to drive its cf_* columns, exposed through a
 // port those stores can depend on without importing this module
 // directly (ADR-0054 §3). Compose wires the concrete *Service in; the
 // stores themselves see only fieldcatalog.Reader.

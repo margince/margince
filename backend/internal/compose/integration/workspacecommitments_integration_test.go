@@ -22,17 +22,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 var sweepClock = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 
-func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]people.CompanyCommitment, bool) {
+func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]contacts.CompanyCommitment, bool) {
 	t.Helper()
-	var rows []people.CompanyCommitment
+	var rows []contacts.CompanyCommitment
 	var more bool
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		rows, more, err = store.OpenCommitmentsAcrossWorkspace(e.Admin(), tx, limit)
@@ -50,14 +50,14 @@ func workspacePromises(t *testing.T, e *integration.Env, limit int) ([]people.Co
 // the record as the thing to do.
 func TestABoundedSweepKeepsThePromiseThatSlippedLast(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Carol Wagner", nil)
+	contact := e.SeedContact(t, "Carol Wagner", nil)
 
 	for days := 30; days >= 10; days -= 10 {
 		due := sweepClock.AddDate(0, 0, -days)
-		seedPromise(t, e, person, "Ancient promise", &due)
+		seedPromise(t, e, contact, "Ancient promise", &due)
 	}
 	yesterday := sweepClock.AddDate(0, 0, -1)
-	seedPromise(t, e, person, "Send yesterday's file", &yesterday)
+	seedPromise(t, e, contact, "Send yesterday's file", &yesterday)
 
 	rows, more := workspacePromises(t, e, 1)
 
@@ -78,9 +78,9 @@ func TestABoundedSweepKeepsThePromiseThatSlippedLast(t *testing.T) {
 // contested would state as true the very thing it doubted.
 func TestASettledPromiseLeavesTheSweep(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Carol Wagner", nil)
+	contact := e.SeedContact(t, "Carol Wagner", nil)
 	due := sweepClock.AddDate(0, 0, -2)
-	claim := seedPromise(t, e, person, "Send the quote", &due)
+	claim := seedPromise(t, e, contact, "Send the quote", &due)
 
 	if rows, _ := workspacePromises(t, e, 20); len(rows) != 1 {
 		t.Fatalf("the promise is not in the sweep to begin with: %d rows", len(rows))
@@ -104,13 +104,13 @@ func TestASettledPromiseLeavesTheSweep(t *testing.T) {
 // recoverable promise on the record and the read looks like it worked.
 func TestABoundedTaskSweepKeepsTheTaskThatSlippedLast(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Carol Wagner", nil)
+	contact := e.SeedContact(t, "Carol Wagner", nil)
 	seedTask := func(subject string, dueDaysAgo int) {
 		t.Helper()
 		due := sweepClock.AddDate(0, 0, -dueDaysAgo)
 		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		}); err != nil {
 			t.Fatalf("logging %q: %v", subject, err)
 		}
@@ -142,7 +142,7 @@ func TestABoundedTaskSweepKeepsTheTaskThatSlippedLast(t *testing.T) {
 // two questions rather than one order being made to serve both.
 func TestTheDisplayQueueStillLeadsWithTheEarliestDeadline(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Carol Wagner", nil)
+	contact := e.SeedContact(t, "Carol Wagner", nil)
 	for _, row := range []struct {
 		subject    string
 		dueDaysAgo int
@@ -151,7 +151,7 @@ func TestTheDisplayQueueStillLeadsWithTheEarliestDeadline(t *testing.T) {
 		subject := row.subject
 		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "task", Subject: &subject, DueAt: &due, Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		}); err != nil {
 			t.Fatalf("logging %q: %v", subject, err)
 		}

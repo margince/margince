@@ -44,7 +44,7 @@ type publishedBudget struct {
 // it from the records would let a budget disappear from the page simply by
 // nobody measuring it — which is the failure this whole page exists to prevent.
 var published = []publishedBudget{
-	{"PERF-1", "Record open (person/company/deal)", "< 100 ms server", "bench-record"},
+	{"PERF-1", "Record open (contact/company/deal)", "< 100 ms server", "bench-record"},
 	{"PERF-2", "List/table view (50 rows, filtered)", "< 150 ms server", ""},
 	{"PERF-3", "Search (full-text)", "< 200 ms", "bench-perf"},
 	{"PERF-4", "Save/mutation", "< 150 ms server", "bench-record"},

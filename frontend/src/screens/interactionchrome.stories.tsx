@@ -9,7 +9,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * How a captured interaction is drawn and named.
  *
  * The KIND and the TRANSPORT are separate axes (ADR-0107/A158), and reading one
- * off the other is what drew an envelope beside every chat message on the person
+ * off the other is what drew an envelope beside every chat message on the contact
  * page — on contacts who have no email address at all. So the icon comes from
  * the kind, the name comes from the installation's transport directory, and
  * neither is inferred from the other.
@@ -19,7 +19,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * transport the record never carried.
  */
 const meta: Meta = {
-  title: "Records/Person record/Interaction chrome",
+  title: "Records/Contact record/Interaction chrome",
   parameters: { layout: "padded" },
 };
 export default meta;

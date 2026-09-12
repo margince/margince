@@ -10,8 +10,8 @@ import { leadWriteKeys } from "./leadkeys";
 //
 // It exists because no record kind is read under a single key, and prefix
 // invalidation does not walk sideways: a contact's own fields are served to
-// the detail page as `["person", id]`, to the page shell as `["person360",
-// id]` and to the brief as `["personBrief", id]`, three siblings under no
+// the detail page as `["contact", id]`, to the page shell as `["contact360",
+// id]` and to the brief as `["contactBrief", id]`, three siblings under no
 // common prefix. A writer naming one of them leaves the other two painting
 // the state the reader just changed — which is exactly what every restore
 // callback did, each naming a DIFFERENT one of the three.
@@ -25,10 +25,10 @@ export function recordWriteKeys(kind: EntityKind, id: string): QueryKey[] {
 }
 
 const RECORD_WRITE_KEYS: Record<EntityKind, (id: string) => QueryKey[]> = {
-  person: (id) => [
-    ["person", id],
-    ["person360", id],
-    ["personBrief", id],
+  contact: (id) => [
+    ["contact", id],
+    ["contact360", id],
+    ["contactBrief", id],
   ],
   company: (id) => [
     ["company", id],

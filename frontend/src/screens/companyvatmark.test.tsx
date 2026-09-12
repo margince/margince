@@ -170,7 +170,7 @@ describe("the VAT mark beside the number", () => {
     expect(screen.getByText("Muster Handels GmbH")).toBeVisible();
   });
 
-  it("asks the register when a person presses the button", async () => {
+  it("asks the register when a contact presses the button", async () => {
     const user = userEvent.setup();
     const calls = answerWith(CHECKED);
     render(mark());

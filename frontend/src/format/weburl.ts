@@ -4,7 +4,7 @@
 // The one place that decides whether a string may become a link.
 //
 // Every href a record carries is untrusted input: a crawler wrote it, a
-// connector wrote it, or a person pasted it into a field whose type set has no
+// connector wrote it, or a contact pasted it into a field whose type set has no
 // `url` member. `javascript:` and `data:` in an href are script execution on
 // click, and a value that is not an absolute URL at all — a bare
 // `example.com`, a relative path — resolves against OUR origin, which is never

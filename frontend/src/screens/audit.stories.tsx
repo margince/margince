@@ -9,7 +9,7 @@ import { StoryProviders } from "./story-utils";
 // ActorTag / AuditEntryLine: the shared audit attribution line, rendered by
 // every audit surface (the settings compliance log, the custom-fields change
 // rail). What these stories exist to show is WHO a row is attributed to —
-// the person first, the machine as a qualifier on them (PD-002). A change here
+// the contact first, the machine as a qualifier on them (PD-002). A change here
 // is a change to what an auditor reads before anything else, so every
 // attribution state gets a row rather than only the happy one.
 const meta: Meta = {
@@ -46,7 +46,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
     entry: row({ action: "create" }),
   },
   {
-    caption: "Another person — NAMED, where this used to read “A teammate”",
+    caption: "Another colleague — NAMED, where this used to read “A teammate”",
     entry: row({ actor_id: "human:u-lars", actor_name: "Lars Vogt" }),
   },
   {
@@ -56,7 +56,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
   },
   {
     caption:
-      "An agent under a human's authority — the PERSON is the label, the tool the qualifier",
+      "An agent under a human's authority — the COLLEAGUE is the label, the tool the qualifier",
     entry: row({
       actor_type: "agent",
       actor_id: "agent:01a01740-c9c2-736d-a0b6-d3e3dcb13333",
@@ -96,7 +96,7 @@ const STATES: ReadonlyArray<{ caption: string; entry: AuditLogEntry }> = [
   },
   {
     caption:
-      "A connector a person authorised — the same rule as an agent, keyed on the grant",
+      "A connector a contact authorised — the same rule as an agent, keyed on the grant",
     entry: row({
       actor_type: "connector",
       actor_id: "connector:gmail",

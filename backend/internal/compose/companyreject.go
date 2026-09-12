@@ -29,11 +29,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// RejectCompany shadows the people transport so the mode guard runs
+// RejectCompany shadows the contacts transport so the mode guard runs
 // before the native store sees the request.
 func (s Server) RejectCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.RejectCompanyParams) {
 	if refuseInOverlayMode(w, r, s.sorDispatch) {
 		return
 	}
-	s.peopleHandlers.RejectCompany(w, r, id, params)
+	s.contactsHandlers.RejectCompany(w, r, id, params)
 }

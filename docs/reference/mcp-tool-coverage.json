@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 1,
     "never_driven": 39,
     "permitted_but_never_required": 19,
-    "tokens_served_but_never_driven": 12673,
+    "tokens_served_but_never_driven": 12685,
     "use_case_cases": 21,
     "acceptance_criteria_named": 49,
     "tools_added_by_shipped_units": 7,
@@ -885,7 +885,7 @@
       "case": "case10_finish_the_import",
       "number": 1,
       "name": "A pre-authorized import is actually committed",
-      "statement": "The person says they have been through the file and asks for it to go in, so stopping at the dry run to ask for permission already given is the work handed back."
+      "statement": "The contact says they have been through the file and asks for it to go in, so stopping at the dry run to ask for permission already given is the work handed back."
     },
     {
       "case": "case10_finish_the_import",
@@ -945,13 +945,13 @@
       "case": "case23_find_us_a_slot",
       "number": 1,
       "name": "Real openings, from the host's own calendar",
-      "statement": "Times a person can actually offer come back, worked out from the host's calendar rather than described in general terms."
+      "statement": "Times a contact can actually offer come back, worked out from the host's calendar rather than described in general terms."
     },
     {
       "case": "case23_find_us_a_slot",
       "number": 2,
       "name": "The other side's calendar is not claimed to be known",
-      "statement": "Availability answers for one host and not for the invitee, and the assistant must not report the slots as times both people are free."
+      "statement": "Availability answers for one host and not for the invitee, and the assistant must not report the slots as times both humans are free."
     },
     {
       "case": "case2_business_card",
@@ -993,7 +993,7 @@
       "case": "case32_two_words_for_one_thing",
       "number": 2,
       "name": "A fold nobody has released is reported as waiting",
-      "statement": "Folding one word into another is a person's decision, and the answer names that decision rather than describing the vocabulary as already tidied up."
+      "statement": "Folding one word into another is a contact's decision, and the answer names that decision rather than describing the vocabulary as already tidied up."
     },
     {
       "case": "case32_two_words_for_one_thing",
@@ -1089,13 +1089,13 @@
       "case": "case5_before_the_meeting",
       "number": 1,
       "name": "A briefing arrives without naming a record",
-      "statement": "The request names the account the way a person says it out loud, \"Vietnam partner\", and not the way the record carries it — so an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened."
+      "statement": "The request names the account the way a contact says it out loud, \"Vietnam partner\", and not the way the record carries it — so an answer that only repeats the question has found nothing, and what the record holds beyond it is the evidence that it was opened."
     },
     {
       "case": "case5_before_the_meeting",
       "number": 2,
-      "name": "The people are named, not their seats",
-      "statement": "The briefing names the people on the other side of the meeting rather than describing the roles they hold."
+      "name": "The contacts are named, not their seats",
+      "statement": "The briefing names the contacts on the other side of the meeting rather than describing the roles they hold."
     },
     {
       "case": "case5_before_the_meeting",
@@ -1155,13 +1155,13 @@
       "case": "case8_whats_waiting",
       "number": 3,
       "name": "The decision is taken, not handed back",
-      "statement": "The person gave an explicit approve and an explicit reject, and an assistant that returns the queue and sends them to the web app has reported a limitation this surface does not have."
+      "statement": "The colleague gave an explicit approve and an explicit reject, and an assistant that returns the queue and sends them to the web app has reported a limitation this surface does not have."
     },
     {
       "case": "case9_filed_in_the_wrong_place",
       "number": 1,
       "name": "A misfiled message is moved, not also-linked",
-      "statement": "The default is to add the new link beside the old one, and the person asked for the mail to be off the wrong company — an association leaves the wrong timeline still showing it."
+      "statement": "The default is to add the new link beside the old one, and the contact asked for the mail to be off the wrong company — an association leaves the wrong timeline still showing it."
     },
     {
       "case": "case9_filed_in_the_wrong_place",
@@ -1217,7 +1217,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 540,
+      "tokens": 541,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1257,7 +1257,7 @@
     },
     {
       "name": "resolve_entities",
-      "tokens": 491,
+      "tokens": 493,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1290,7 +1290,7 @@
     },
     {
       "name": "advance_deal",
-      "tokens": 447,
+      "tokens": 446,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1422,7 +1422,7 @@
     },
     {
       "name": "demote_lead",
-      "tokens": 316,
+      "tokens": 317,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1448,7 +1448,7 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 278,
+      "tokens": 279,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -1488,7 +1488,7 @@
     },
     {
       "name": "draft_follow_ups_for",
-      "tokens": 273,
+      "tokens": 274,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1530,7 +1530,7 @@
     },
     {
       "name": "account_coverage",
-      "tokens": 245,
+      "tokens": 246,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1560,7 +1560,7 @@
     },
     {
       "name": "decide_approval_bundle",
-      "tokens": 235,
+      "tokens": 236,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1572,7 +1572,7 @@
     },
     {
       "name": "create_task",
-      "tokens": 220,
+      "tokens": 221,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1639,6 +1639,22 @@
       "measured_by_model": {}
     },
     {
+      "name": "at_risk_relationships",
+      "tokens": 209,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
+      "measured_by_model": {}
+    },
+    {
       "name": "list_input_checks",
       "tokens": 209,
       "agents": [],
@@ -1651,22 +1667,6 @@
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "at_risk_relationships",
-      "tokens": 208,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
       "measured_by_model": {}
     },
     {
@@ -1697,7 +1697,7 @@
     },
     {
       "name": "who_knows",
-      "tokens": 194,
+      "tokens": 196,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1757,7 +1757,7 @@
     },
     {
       "name": "whoami",
-      "tokens": 128,
+      "tokens": 129,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -1811,7 +1811,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 723,
+      "tokens": 726,
       "agents": [],
       "required_by_cases": [
         "case10_finish_the_import",
@@ -1851,7 +1851,7 @@
     },
     {
       "name": "log_activity",
-      "tokens": 676,
+      "tokens": 677,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -2024,7 +2024,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 480,
+      "tokens": 481,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2136,7 +2136,7 @@
     },
     {
       "name": "search_records",
-      "tokens": 382,
+      "tokens": 383,
       "agents": [],
       "required_by_cases": [
         "case5_before_the_meeting"
@@ -2194,7 +2194,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 365,
+      "tokens": 366,
       "agents": [],
       "required_by_cases": [
         "case23_find_us_a_slot"
@@ -2227,7 +2227,7 @@
     },
     {
       "name": "search_context",
-      "tokens": 343,
+      "tokens": 344,
       "agents": [],
       "required_by_cases": [
         "case6_ask_the_company"
@@ -2309,7 +2309,7 @@
     },
     {
       "name": "promote_lead",
-      "tokens": 303,
+      "tokens": 304,
       "agents": [],
       "required_by_cases": [
         "case40_sort_the_queue"
@@ -2342,7 +2342,7 @@
     },
     {
       "name": "merge_records",
-      "tokens": 291,
+      "tokens": 293,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2441,7 +2441,7 @@
     },
     {
       "name": "decide_approval",
-      "tokens": 272,
+      "tokens": 273,
       "agents": [],
       "required_by_cases": [
         "case8_whats_waiting"
@@ -2474,7 +2474,7 @@
     },
     {
       "name": "list_approvals",
-      "tokens": 267,
+      "tokens": 268,
       "agents": [],
       "required_by_cases": [
         "case8_whats_waiting"
@@ -2610,6 +2610,39 @@
       }
     },
     {
+      "name": "relink_activities",
+      "tokens": 205,
+      "agents": [],
+      "required_by_cases": [
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "update_tag",
       "tokens": 205,
       "agents": [],
@@ -2682,39 +2715,6 @@
       }
     },
     {
-      "name": "relink_activities",
-      "tokens": 204,
-      "agents": [],
-      "required_by_cases": [
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "merge_tags",
       "tokens": 198,
       "agents": [],
@@ -2750,43 +2750,8 @@
       }
     },
     {
-      "name": "data_coverage",
-      "tokens": 195,
-      "agents": [],
-      "required_by_cases": [
-        "case22_can_i_trust_the_numbers"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case21_what_are_we_closing"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-haiku-4-5-20251001": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-opus-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "claude-sonnet-5": {
-          "runs": 3,
-          "passed": 3,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "list_colleagues",
-      "tokens": 195,
+      "tokens": 196,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -2805,6 +2770,41 @@
           "runs": 3,
           "passed": 2,
           "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "claude-opus-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "claude-sonnet-5": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "data_coverage",
+      "tokens": 195,
+      "agents": [],
+      "required_by_cases": [
+        "case22_can_i_trust_the_numbers"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case21_what_are_we_closing"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-haiku-4-5-20251001": {
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "claude-opus-5": {
@@ -2963,7 +2963,7 @@
     },
     {
       "name": "read_approval",
-      "tokens": 153,
+      "tokens": 154,
       "agents": [],
       "required_by_cases": [
         "case8_whats_waiting"
@@ -3074,7 +3074,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 86,
+      "tokens": 87,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"

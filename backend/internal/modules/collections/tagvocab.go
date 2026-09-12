@@ -25,7 +25,7 @@ import (
 // TagUsage counts how much of the workspace carries one tag, per advertised
 // record type.
 type TagUsage struct {
-	People    int
+	Contacts  int
 	Companies int
 	Deals     int
 }
@@ -55,7 +55,7 @@ const intoTagIDField = "into_tag_id"
 const nameField = "name"
 
 const (
-	typePerson  = "person"
+	typeContact = "contact"
 	typeCompany = "company"
 	typeDeal    = "deal"
 	typeLead    = "lead"
@@ -91,7 +91,7 @@ func (s *Store) GetTag(ctx context.Context, id ids.TagID) (tagRow, TagUsage, err
 //
 // One query per type rather than one grouped pass over `taggable`, because the
 // visibility rule is per table: a rep may see every company and only their own
-// people. Counting the link rows alone would be cheaper and would report how
+// contacts. Counting the link rows alone would be cheaper and would report how
 // many records carry the word regardless of who is asking — which discloses
 // the existence of rows the caller cannot open, and would make the number on
 // screen one they cannot reconcile with the list behind it.
@@ -103,7 +103,7 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 		entityType string
 		into       *int
 	}{
-		{typePerson, &out.People},
+		{typeContact, &out.Contacts},
 		{typeCompany, &out.Companies},
 		{typeDeal, &out.Deals},
 	} {
@@ -127,8 +127,8 @@ func tagUsage(ctx context.Context, tx pgx.Tx, id ids.TagID) (TagUsage, error) {
 // row-scope predicate.
 func countVisibleTagged(ctx context.Context, tx pgx.Tx, id ids.TagID, entityType string) (int, error) {
 	// The OBJECT grant first. ScopeClauseFor renders a row predicate and is not
-	// a gate: a seat holding tag.read and no person.read would otherwise be
-	// counted the people it may not list, and a count of rows a caller cannot
+	// a gate: a seat holding tag.read and no contact.read would otherwise be
+	// counted the contacts it may not list, and a count of rows a caller cannot
 	// open discloses that they exist.
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
 		return 0, err
@@ -177,7 +177,7 @@ func CountTagReachBatch(ctx context.Context, tx pgx.Tx, tagIDs []ids.TagID) (map
 	if len(tagIDs) == 0 {
 		return out, nil
 	}
-	for _, entityType := range []string{typePerson, typeCompany, typeDeal} {
+	for _, entityType := range []string{typeContact, typeCompany, typeDeal} {
 		counts, err := countVisibleTaggedBatch(ctx, tx, tagIDs, entityType)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Same rule as tagUsage: a type this caller may not read

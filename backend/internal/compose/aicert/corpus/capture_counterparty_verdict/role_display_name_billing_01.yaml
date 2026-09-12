@@ -29,12 +29,12 @@ expect:
     contradicting it — two doors disagreeing about one sender is the defect the
     shared vocabulary was introduced to end.
     "role_mailbox" scores highest: a function nobody owns, whose mail is real
-    and whose contact would be a department with a person's shape.
+    and whose contact would be a department with a contact's shape.
     "company_sender" is a near miss and scores nearly as high — the effect
     is identical.
     "transactional" is defensible and scores partially: this is close to a
     notice a system emits, and hiding it costs little.
-    "person" scores zero above the floor. It files a contact called "APAC
+    "contact" scores zero above the floor. It files a contact called "APAC
     Billing", which is precisely what was found in a real CRM, and it is worse
     than the transactional answer because it creates a record rather than
     merely hiding a message.

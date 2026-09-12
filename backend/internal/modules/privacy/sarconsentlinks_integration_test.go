@@ -41,7 +41,7 @@ import (
 // are set because the writer sets them and both are NOT NULL — this fixture
 // carries the columns the export must NOT return, so a test asserting their
 // absence is asking a real question rather than reading an empty row.
-func seedConfirmLink(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID,
+func seedConfirmLink(ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID,
 	kind string, issued, expires time.Time, opened, consumed *time.Time,
 ) {
 	t.Helper()
@@ -55,10 +55,10 @@ func seedConfirmLink(ctx context.Context, t *testing.T, owner *pgx.Conn, person 
 	}
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO confirm_token
-		    (person_id, token_hash, delivered_to, issued_at, expires_at, opened_at, consumed_at,
+		    (contact_id, token_hash, delivered_to, issued_at, expires_at, opened_at, consumed_at,
 		     kind, purpose_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		person, "hash-"+kind+"-"+issued.Format(time.RFC3339Nano),
+		contact, "hash-"+kind+"-"+issued.Format(time.RFC3339Nano),
 		"sara@sar.test", issued, expires, opened, consumed, kind, purpose); err != nil {
 		t.Fatalf("seeding a %s confirm link: %v", kind, err)
 	}
@@ -87,23 +87,23 @@ func TestTheExportSaysWhatBecameOfEveryLinkItMailed(t *testing.T) {
 	// One link per outcome, each in its own supersession scope.
 	//
 	// The writer supersedes per kind and per purpose, and so does the export, so
-	// two links of one kind for one person would make the older one superseded
+	// two links of one kind for one contact would make the older one superseded
 	// rather than whatever this fixture meant it to be. Each row below therefore
 	// gets its own kind, or its own purpose within a kind — which is also how
 	// production produces four live links for one subject at once.
 	//
 	// The answered link is deliberately ALSO opened: a projection that tested
 	// opened_at before consumed_at would call it merely opened, and this notices.
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "record_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "record_confirmation",
 		now.Add(-4*time.Hour), now.Add(24*time.Hour), &opened, &answered)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "consent_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "consent_confirmation",
 		now.Add(-30*24*time.Hour), now.Add(-20*24*time.Hour), nil, nil)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "consent_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "consent_confirmation",
 		now.Add(-5*time.Hour), now.Add(48*time.Hour), &opened, nil)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "consent_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "consent_confirmation",
 		now.Add(-time.Hour), now.Add(72*time.Hour), nil, nil)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -161,19 +161,19 @@ func TestASupersededLinkIsNotReportedAsIgnored(t *testing.T) {
 	// the newer row's issued_at, which is what makes the two cases identical
 	// on the row and the reason this test exists.
 	superseded := now.Add(-2 * time.Hour)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "record_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "record_confirmation",
 		now.Add(-4*time.Hour), superseded, nil, nil)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "record_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "record_confirmation",
 		superseded, now.Add(48*time.Hour), nil, nil)
 
 	// A link of a DIFFERENT kind, expired on its own, is the control: the
 	// writer supersedes per kind and per purpose, so this one must still read
 	// as a genuine lapse. Without it a query that called everything superseded
 	// would pass.
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "consent_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "consent_confirmation",
 		now.Add(-30*24*time.Hour), now.Add(-20*24*time.Hour), nil, nil)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestASupersededLinkIsNotReportedAsIgnored(t *testing.T) {
 func TestASubjectNeverAskedCarriesAnEmptyLinkSection(t *testing.T) {
 	e := setupSARIdentifiers(t)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -235,19 +235,19 @@ func TestTheLinkSectionNeverCarriesAnotherSubjectsRoundTrip(t *testing.T) {
 	e := setupSARIdentifiers(t)
 	now := time.Now()
 
-	stranger := ids.New[ids.PersonKind]()
+	stranger := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(e.ctx,
-		`INSERT INTO person (id, full_name, source, captured_by)
-		 VALUES ($1, 'Other Person', 'manual', 'user:'||$2::text)`,
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, 'Other Contact', 'manual', 'user:'||$2::text)`,
 		stranger, ids.NewV7()); err != nil {
 		t.Fatalf("seeding the stranger: %v", err)
 	}
 	seedConfirmLink(e.ctx, t, e.owner, stranger, "consent_confirmation",
 		now.Add(-time.Hour), now.Add(72*time.Hour), nil, nil)
-	seedConfirmLink(e.ctx, t, e.owner, e.person, "record_confirmation",
+	seedConfirmLink(e.ctx, t, e.owner, e.contact, "record_confirmation",
 		now.Add(-time.Hour), now.Add(72*time.Hour), nil, nil)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

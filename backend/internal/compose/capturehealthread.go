@@ -47,7 +47,7 @@ func readCaptureHealth(ctx context.Context, tx pgx.Tx, now time.Time) (crmcontra
 // stuck as one with both, and an inner join would hide it.
 //
 // Contacts are counted as owner-private rows with no settled answer in the
-// sender ledger. That is the same pair of facts the promotion reads — a person
+// sender ledger. That is the same pair of facts the promotion reads — a contact
 // stays `owner` until a verdict widens it — rather than a second definition of
 // "waiting" that could disagree with the thing doing the waiting.
 func captureMailboxHealth(
@@ -56,13 +56,13 @@ func captureMailboxHealth(
 	rows, err := tx.Query(ctx, `
 		WITH waiting_contacts AS (
 		  SELECT p.owner_id AS user_id, count(*) AS n, min(p.created_at) AS oldest
-		    FROM person p
+		    FROM contact p
 		   WHERE p.archived_at IS NULL
 		     AND p.visibility = 'owner'
 		     AND p.captured_by LIKE 'connector:%'
 		     AND NOT EXISTS (
 		           SELECT 1 FROM capture_pending_counterparty q
-		            JOIN person_email pe ON pe.person_id = p.id AND pe.archived_at IS NULL
+		            JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 		           WHERE q.email = pe.email
 		             AND q.status IN ('real', 'noise', 'suppressed', 'rejected'))
 		   GROUP BY p.owner_id),

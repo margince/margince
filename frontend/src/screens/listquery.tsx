@@ -65,7 +65,7 @@ export const LIST_PAGE_SIZES = [25, 50, 100] as const;
 /**
  * The page size `value` names, or undefined for anything else.
  *
- * An address is text a person can edit, so `per=7` and `per=banana` are both
+ * An address is text a contact can edit, so `per=7` and `per=banana` are both
  * ordinary. Neither is an error worth showing anybody — the list simply opens
  * at the size it would have opened at — but neither may become a request
  * either, because `listFetchLimit` divides by it.
@@ -86,7 +86,7 @@ function pageSizeOf(value: string | undefined): number | undefined {
  * the two lists on one route hold two parameter spaces.
  *
  * Undefined, and the dials keep their bare names. That is not laziness: a bare
- * `#/companies?q=acme` is a link people paste, and prefixing every list in the
+ * `#/companies?q=acme` is a link contacts paste, and prefixing every list in the
  * product would break every one of them for no reader's benefit. A scope is for
  * the lists that genuinely share an address, and only those.
  *
@@ -506,7 +506,7 @@ export function useListQuery<Row>({
    * THAN ONE list — the settings Data-model tab draws the products table and
    * the offer-template table together, and one flat parameter space described
    * both at once. Omit it everywhere else: a scope on a list that owns its
-   * address alone only makes the link people paste uglier. See `scoped`.
+   * address alone only makes the link contacts paste uglier. See `scoped`.
    */
   paramScope?: string;
 }>) {
@@ -1246,7 +1246,7 @@ function matchesView(
  * rather than to tags. Offering an any/all/none dial over a filter that can
  * only ever hold one word would be a control that cannot do what it says.
  *
- * By ID, never by name. A name is what a person types and an admin can rename,
+ * By ID, never by name. A name is what a human types and an admin can rename,
  * so a saved view holding one would quietly start selecting a different slice
  * the day somebody corrects a spelling.
  */

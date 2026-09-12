@@ -91,7 +91,7 @@ function draw(node: ReactNode) {
       const url = input instanceof Request ? input.url : String(input);
       const path = new URL(url, "https://test.local").pathname;
       const named: Record<string, unknown> = {
-        [`/v1/people/${ANA}`]: { id: ANA, full_name: "Ana Sommer" },
+        [`/v1/contacts/${ANA}`]: { id: ANA, full_name: "Ana Sommer" },
         [`/v1/companies/${BRANDT}`]: {
           id: BRANDT,
           display_name: "Brandt Automotive",
@@ -122,7 +122,7 @@ describe("the records a message is filed against", () => {
     draw(
       <EmailRecordLinks
         presentation={presentation([
-          { entity_type: "person", entity_id: ANA },
+          { entity_type: "contact", entity_id: ANA },
           { entity_type: "company", entity_id: BRANDT },
         ])}
       />,
@@ -137,7 +137,9 @@ describe("the records a message is filed against", () => {
   it("opens beside the message rather than over it", async () => {
     draw(
       <EmailRecordLinks
-        presentation={presentation([{ entity_type: "person", entity_id: ANA }])}
+        presentation={presentation([
+          { entity_type: "contact", entity_id: ANA },
+        ])}
       />,
     );
 

@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,7 +42,7 @@ func siteReadWorkerCtx(e *integration.Env) context.Context {
 
 func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
 
@@ -81,7 +81,7 @@ func TestSiteReadStartCreatesAQueuedDossierAndAReClickJoinsIt(t *testing.T) {
 
 func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
@@ -115,13 +115,13 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	// Finish records the whole crawl report in one terminal write.
 	stopped := "page_cap"
 	proposal := ids.NewV7()
-	err = store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	err = store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial",
-		Pages: []people.SiteReadPage{
+		Pages: []contacts.SiteReadPage{
 			{URL: "https://acme.example/", Kind: "home"},
 			{URL: "https://acme.example/impressum", Kind: "impressum"},
 		},
-		Skipped:       []people.SiteReadSkip{{URL: "https://acme.example/blog", Reason: "robots"}},
+		Skipped:       []contacts.SiteReadSkip{{URL: "https://acme.example/blog", Reason: "robots"}},
 		StoppedReason: &stopped,
 		FactCount:     7,
 		ProposalIDs:   []ids.UUID{proposal},
@@ -148,7 +148,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	}
 
 	// The terminal write is a CAS too: a finished read cannot finish again.
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{Status: "done"}); !errors.Is(err, apperrors.ErrNotFound) {
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{Status: "done"}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("second FinishSiteRead → %v, want ErrNotFound (the read is no longer running)", err)
 	}
 
@@ -165,7 +165,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 
 func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
@@ -176,7 +176,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); err != nil {
 		t.Fatal(err)
 	}
-	progressPages := []people.SiteReadPage{{URL: "https://acme.example", Kind: "home"}, {URL: "https://acme.example/imprint", Kind: "impressum"}}
+	progressPages := []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}, {URL: "https://acme.example/imprint", Kind: "impressum"}}
 	if err := store.UpdateSiteReadProgress(worker, read.ID, "extracting", progressPages); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +226,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 
 func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
@@ -265,7 +265,7 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 
 func TestSiteReadIsScopedToTheCompanyTheCallerCanSee(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	admin := e.As(e.Rep1, nil, integration.AdminPerms)
 	companyA := siteReadCompany(e.SeedCompany(t, "Company A", &e.Rep1))
 	companyB := siteReadCompany(e.SeedCompany(t, "Company B", &e.Rep1))
@@ -308,7 +308,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 	// time would be state nothing reads, and one bad minute would settle a live
 	// company's site for ever.
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Surfe", &e.Rep1))
@@ -320,7 +320,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 		t.Fatal(err)
 	}
 	next := time.Now().UTC().Add(6 * time.Hour).Truncate(time.Second)
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status:        "failed",
 		StatusCode:    "bot_blocked",
 		StatusDetail:  "The site answered 403 — bot protection refused the read.",
@@ -368,7 +368,7 @@ func TestAPermanentlyFailedReadIsNeverClaimedAgain(t *testing.T) {
 	// no retry time, and nothing may re-claim it — re-crawling those is the
 	// noise the retry arm must not create.
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Nowhere", &e.Rep1))
@@ -379,7 +379,7 @@ func TestAPermanentlyFailedReadIsNeverClaimedAgain(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status:       "failed",
 		StatusCode:   "dns",
 		StatusDetail: "The domain name does not resolve to a server.",
@@ -395,7 +395,7 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 	// The columns say what went wrong. A read that worked has nothing to say
 	// there, and the store refuses the contradiction rather than storing it.
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Fine", &e.Rep1))
@@ -406,13 +406,13 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); err != nil {
 		t.Fatal(err)
 	}
-	err = store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	err = store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "done", StatusCode: "tls", StatusDetail: "not a failure",
 	})
 	if err == nil {
 		t.Fatal("a done read accepted a failure diagnosis")
 	}
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "failed", StatusCode: "bot_blocked",
 	}); err == nil {
 		t.Fatal("a failure was accepted with no sentence a human can act on")
@@ -426,7 +426,7 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 // puts a running row back into running.
 func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	human := e.As(e.Rep1, nil, integration.AdminPerms)
 	worker := siteReadWorkerCtx(e)
 	company := siteReadCompany(e.SeedCompany(t, "Acme", &e.Rep1))
@@ -455,7 +455,7 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	}
 
 	// The abandoned attempt comes back with a full report. It is refused.
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "done", FactCount: 99, ClaimedAt: &stale.ClaimedAt,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the abandoned attempt finished the read → %v, want ErrNotFound", err)
@@ -469,7 +469,7 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 	}
 
 	// The attempt that holds it still finishes.
-	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+	if err := store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "done", FactCount: 3, ClaimedAt: &live.ClaimedAt,
 	}); err != nil {
 		t.Fatalf("the holding attempt finished → %v, want it recorded", err)

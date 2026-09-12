@@ -24,7 +24,7 @@ import (
 func TestCountingATagsReachNeedsTheVocabularyRead(t *testing.T) {
 	t.Parallel()
 	ctx := taggerWith(map[string]principal.ObjectGrant{
-		"person":  {Read: true},
+		"contact": {Read: true},
 		"company": {Read: true},
 		"deal":    {Read: true},
 	})
@@ -38,7 +38,7 @@ func TestCountingATagsReachNeedsTheVocabularyRead(t *testing.T) {
 
 // The disclosure case Codex named, and the reason the object grant is asked
 // per counted type: ScopeClauseFor renders a ROW predicate and is not a gate,
-// so a seat holding tag.read and no person.read would be counted the people it
+// so a seat holding tag.read and no contact.read would be counted the contacts it
 // may not list — and a count of rows a caller cannot open tells them those rows
 // exist. The refusal lands before any query here too, so a nil transaction is
 // the proof: reaching the database would panic instead.
@@ -48,7 +48,7 @@ func TestATypeTheCallerMayNotReadIsNotCounted(t *testing.T) {
 		"tag": {Read: true},
 	})
 
-	if _, err := countVisibleTaggedBatch(ctx, nil, []ids.TagID{ids.New[ids.TagKind]()}, "person"); !errors.Is(
+	if _, err := countVisibleTaggedBatch(ctx, nil, []ids.TagID{ids.New[ids.TagKind]()}, "contact"); !errors.Is(
 		err, apperrors.ErrPermissionDenied,
 	) {
 		t.Fatalf("counted a type the seat may not read: %v", err)
@@ -63,7 +63,7 @@ func TestTheVocabularyReadGetsPastTheDoor(t *testing.T) {
 	t.Parallel()
 	ctx := taggerWith(map[string]principal.ObjectGrant{
 		"tag":     {Read: true},
-		"person":  {Read: true},
+		"contact": {Read: true},
 		"company": {Read: true},
 		"deal":    {Read: true},
 	})

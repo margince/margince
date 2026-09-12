@@ -66,7 +66,7 @@ func (m attentionMeetings) Today(
 		needsPrep, known := meetingPrep(row)
 		ahead = append(ahead, attention.Meeting{
 			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
-			NeedsPrep: needsPrep, PrepKnown: known, PersonID: personOnMeeting(row),
+			NeedsPrep: needsPrep, PrepKnown: known, ContactID: contactOnMeeting(row),
 			HostUserID: hostOfMeeting(row),
 		})
 	}
@@ -84,7 +84,7 @@ func (m attentionMeetings) Today(
 //
 // It follows openTasksDueBy exactly, including where each answer comes FROM:
 // "mine" is the acting reader, read off the context, while "owned by" is the
-// named person the caller passed. A false answer means there is no reader to
+// named contact the caller passed. A false answer means there is no reader to
 // answer for, which is a page of nothing rather than a refusal — reading every
 // meeting and calling the result theirs is the widening this narrowing exists to
 // prevent.
@@ -176,24 +176,24 @@ func subjectOfMeeting(row crmcontracts.Activity) string {
 	return ""
 }
 
-// personOnMeeting is whose page this meeting's brief is read on.
+// contactOnMeeting is whose page this meeting's brief is read on.
 //
-// The FIRST person link in the row's own order, which is the store's, so two
+// The FIRST contact link in the row's own order, which is the store's, so two
 // reads of an unchanged meeting choose the same page. A meeting with several
 // attendees has several honest answers and the row shows one link; picking by
 // anything cleverer here would be a ranking this lane has no basis for, and
 // picking a different one each read would move a control under the reader.
 //
-// Zero where the meeting links no person at all — an internal meeting, or one
+// Zero where the meeting links no contact at all — an internal meeting, or one
 // whose attendees this reader may not see, since the links come back already
 // scoped. The row then offers no brief rather than a link to somebody's page
 // chosen at random.
-func personOnMeeting(row crmcontracts.Activity) ids.UUID {
+func contactOnMeeting(row crmcontracts.Activity) ids.UUID {
 	if row.Links == nil {
 		return ids.UUID{}
 	}
 	for _, link := range *row.Links {
-		if link.EntityType == crmcontracts.ActivityLinkEntityTypePerson {
+		if link.EntityType == crmcontracts.ActivityLinkEntityTypeContact {
 			return ids.UUID(link.EntityId)
 		}
 	}

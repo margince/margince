@@ -124,7 +124,7 @@ func TestALeadDoesNotCoachSomebodyOnAnotherTeam(t *testing.T) {
 }
 
 // A system flow raises its own kinds through the notifier seam. One arriving
-// here would be a background pass writing in a person's voice.
+// here would be a background pass writing in a contact's voice.
 func TestASystemPassDoesNotCoach(t *testing.T) {
 	e := setupNotices(t)
 
@@ -132,7 +132,7 @@ func TestASystemPassDoesNotCoach(t *testing.T) {
 		e.engineCtx(), teammatesSaying(true), e.recipient,
 		crmcontracts.NoticeKindCoachGeneral, "a word")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("the automation engine coaching a person got %v, wanted a refusal", err)
+		t.Fatalf("the automation engine coaching a contact got %v, wanted a refusal", err)
 	}
 }
 

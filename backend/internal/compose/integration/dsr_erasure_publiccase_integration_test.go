@@ -36,32 +36,32 @@ import (
 // Written here rather than driven through SubmitConfirmation because that path
 // needs a live confirm token, and what this test turns on is the reference
 // between the two rows, not how they came to exist.
-func seedSubmissionBackedErasureCase(t *testing.T, e *Env, personID ids.UUID) ids.UUID {
+func seedSubmissionBackedErasureCase(t *testing.T, e *Env, contactID ids.UUID) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	var tokenID, submissionID, caseID ids.UUID
 	pool := e.Pool
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO confirm_token (person_id, token_hash, delivered_to, expires_at)
+		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
 		VALUES ($1, $2, $3, now() + interval '30 days')
-		RETURNING id`, personID, "erasure-case-"+personID.String(),
-		"subject-"+personID.String()+"@erasure.test").Scan(&tokenID); err != nil {
+		RETURNING id`, contactID, "erasure-case-"+contactID.String(),
+		"subject-"+contactID.String()+"@erasure.test").Scan(&tokenID); err != nil {
 		t.Fatalf("seeding the confirm token: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO person_confirm_submission (person_id, token_id, kind)
+		INSERT INTO contact_confirm_submission (contact_id, token_id, kind)
 		VALUES ($1, $2, 'erasure_request')
-		RETURNING id`, personID, tokenID).Scan(&submissionID); err != nil {
+		RETURNING id`, contactID, tokenID).Scan(&submissionID); err != nil {
 		t.Fatalf("seeding the subject's removal request: %v", err)
 	}
 	if err := pool.QueryRow(ctx, `
 		INSERT INTO data_subject_request
-		  (kind, subject_ref, person_id, received_at, channel, due_at,
+		  (kind, subject_ref, contact_id, received_at, channel, due_at,
 		   source_submission_id, receipt_reference)
 		VALUES ('erasure', $1, $2, now(), 'confirm_link', now() + interval '1 month',
 		        $3, $4)
-		RETURNING id`, personID.String(), personID, submissionID,
-		"DSR-"+personID.String()[:10]).Scan(&caseID); err != nil {
+		RETURNING id`, contactID.String(), contactID, submissionID,
+		"DSR-"+contactID.String()[:10]).Scan(&caseID); err != nil {
 		t.Fatalf("seeding the rights case: %v", err)
 	}
 	return caseID
@@ -76,8 +76,8 @@ func seedSubmissionBackedErasureCase(t *testing.T, e *Env, personID ids.UUID) id
 // a bound this test would hang the suite instead of reporting anything.
 func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Self-Requesting Subject", nil)
-	caseID := seedSubmissionBackedErasureCase(t, e, personID)
+	contactID := e.SeedContact(t, "Self-Requesting Subject", nil)
+	caseID := seedSubmissionBackedErasureCase(t, e, contactID)
 
 	h := consent.NewHandlers(e.DB()).WithEraser(privacy.NewEraser(e.DB()))
 

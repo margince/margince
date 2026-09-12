@@ -93,7 +93,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 	svc := NewService(db, keyvault.NewMemory(), store).
 		WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
 			switch canonical {
-			case "person":
+			case "contact":
 				return []string{IncumbentClassContacts}, true
 			case "company":
 				return []string{IncumbentClassCompanies}, true
@@ -105,7 +105,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 	for _, row := range []struct{ objectClass, ext, fingerprint string }{
-		{"person", "p-legacy", "contacts-declaration-superseded"},
+		{"contact", "p-legacy", "contacts-declaration-superseded"},
 		// companies has no current declaration injected, and widget has no
 		// mapping at all — neither class can be judged, so neither is stale.
 		{"company", "company-1", "companies-declaration-retired"},
@@ -130,7 +130,7 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		states[s.Object] = s.State
 	}
 	want := map[string]string{
-		"person":  syncStateStale,
+		"contact": syncStateStale,
 		"company": syncStateFresh,
 		"widget":  syncStateFresh,
 	}
@@ -158,7 +158,7 @@ func TestSyncStatusCountsTheRowsNoDeclarationCanProject(t *testing.T) {
 	svc := NewService(db, keyvault.NewMemory(), store).
 		WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
 			switch canonical {
-			case "person":
+			case "contact":
 				return []string{IncumbentClassContacts}, true
 			case "company":
 				return []string{IncumbentClassCompanies}, true
@@ -170,10 +170,10 @@ func TestSyncStatusCountsTheRowsNoDeclarationCanProject(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 	for _, row := range []struct{ objectClass, ext, fingerprint string }{
-		// Two people the current declaration cannot project, and one it can.
-		{"person", "p-legacy-1", "contacts-declaration-superseded"},
-		{"person", "p-legacy-2", "contacts-declaration-superseded"},
-		{"person", "p-current", "contacts-declaration-current"},
+		// Two contacts the current declaration cannot project, and one it can.
+		{"contact", "p-legacy-1", "contacts-declaration-superseded"},
+		{"contact", "p-legacy-2", "contacts-declaration-superseded"},
+		{"contact", "p-current", "contacts-declaration-current"},
 		// No current declaration for companies, so the class cannot be judged.
 		{"company", "company-1", "companies-declaration-retired"},
 	} {
@@ -195,9 +195,9 @@ func TestSyncStatusCountsTheRowsNoDeclarationCanProject(t *testing.T) {
 	for _, s := range statuses {
 		stuck[s.Object] = s.Unprojectable
 	}
-	if stuck["person"] != 2 {
-		t.Errorf("person reports %d un-projectable rows, want 2 — an operator reading a stale class "+
-			"cannot tell whether waiting will fix it (all counts: %v)", stuck["person"], stuck)
+	if stuck["contact"] != 2 {
+		t.Errorf("contact reports %d un-projectable rows, want 2 — an operator reading a stale class "+
+			"cannot tell whether waiting will fix it (all counts: %v)", stuck["contact"], stuck)
 	}
 	if stuck["company"] != 0 {
 		t.Errorf("company reports %d un-projectable rows, want 0: this deployment has no declaration "+

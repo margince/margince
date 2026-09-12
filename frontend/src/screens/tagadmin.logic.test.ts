@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { nearMatches } from "./tagadmin.logic";
 
 // A vocabulary drifts one near-miss at a time. The server refuses only an
-// exact collision, which catches none of the ways a person actually creates a
+// exact collision, which catches none of the ways a contact actually creates a
 // duplicate.
 
 const vocabulary = [
@@ -24,7 +24,7 @@ describe("warning about a near-duplicate word", () => {
     expect(names("  k5   conference ")).toEqual(["K5 Conference"]);
   });
 
-  it("sees the separators a person reaches for instead of a space", () => {
+  it("sees the separators a contact reaches for instead of a space", () => {
     expect(names("k5-conference")).toEqual(["K5 Conference"]);
     expect(names("EV_programme")).toEqual(["EV programme"]);
   });

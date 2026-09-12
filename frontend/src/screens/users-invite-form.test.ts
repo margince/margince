@@ -7,7 +7,7 @@ import { nameFromEmail } from "./users-invite-form";
 // The name a member starts under when only an address was asked for: it has
 // to read as a name in the roster, not as the left half of an address.
 describe("nameFromEmail", () => {
-  it("reads the separators people write between their names as spaces", () => {
+  it("reads the separators contacts write between their names as spaces", () => {
     expect(nameFromEmail("ada.byron@example.com")).toBe("Ada Byron");
     expect(nameFromEmail("ada_byron@example.com")).toBe("Ada Byron");
     expect(nameFromEmail("ada-byron@example.com")).toBe("Ada Byron");

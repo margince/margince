@@ -60,7 +60,7 @@ var promptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 })
 
 // Input is what one brief is written from: the account's identity, its
-// pipeline, its people, and what has moved recently — each already pruned
+// pipeline, its contacts, and what has moved recently — each already pruned
 // to the reader's row scope by the read that produced it.
 type Input struct {
 	Name         string    `json:"name"`
@@ -111,7 +111,7 @@ type ProjectIn struct {
 
 // NamedIn is a record the brief may write about and must be able to cite:
 // contacts carry their ids for the same reason deals and activities do. Names
-// alone invited the prompt to make a claim about a person that no citation
+// alone invited the prompt to make a claim about a contact that no citation
 // could ground, so the sentence was dropped and the reader lost a true
 // statement.
 type NamedIn struct {
@@ -192,7 +192,7 @@ type ActIn struct {
 	Status string `json:"status,omitempty"`
 }
 
-// MarshalJSON writes the amount as the figure a person would say — "180000.00"
+// MarshalJSON writes the amount as the figure a contact would say — "180000.00"
 // for 18000000 EUR, "18000000" for the same integer in JPY — rather than the
 // minor-unit integer the column holds.
 //
@@ -263,10 +263,10 @@ func FromView(view crmcontracts.Company360) Input {
 		in.Strength = view.Strength.Score
 		in.ContactCount = view.Strength.ContactCount
 	}
-	if view.People != nil {
-		for _, contact := range view.People.Data {
+	if view.Contacts != nil {
+		for _, contact := range view.Contacts.Data {
 			in.Contacts = append(in.Contacts, NamedIn{
-				ID: contact.PersonId.String(), Name: contact.FullName,
+				ID: contact.ContactId.String(), Name: contact.FullName,
 			})
 		}
 	}
@@ -386,7 +386,7 @@ type ProfileIn struct {
 }
 
 // briefProfileFields is the subset worth putting in front of a salesperson,
-// in the order a person would ask. The store holds sixteen fields; the rest
+// in the order a contact would ask. The store holds sixteen fields; the rest
 // are registry and address detail that describe a legal entity rather than a
 // business, and a brief that recited them would read like a company register.
 var briefProfileFields = []string{

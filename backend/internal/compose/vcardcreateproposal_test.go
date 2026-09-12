@@ -12,10 +12,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
-func stagedCard(t *testing.T, entry people.VCardEntry) json.RawMessage {
+func stagedCard(t *testing.T, entry contacts.VCardEntry) json.RawMessage {
 	t.Helper()
 	payload, err := json.Marshal(vcardCreateProposal{Entry: entry, FullName: entry.FullName})
 	if err != nil {
@@ -31,20 +31,20 @@ func stagedCard(t *testing.T, entry people.VCardEntry) json.RawMessage {
 func TestACardCarryingAnUnstorableContactIsRefusedWhileItIsStillDecidable(t *testing.T) {
 	cases := []struct {
 		name  string
-		entry people.VCardEntry
+		entry contacts.VCardEntry
 	}{
 		{
 			name: "a number that is not one",
-			entry: people.VCardEntry{
+			entry: contacts.VCardEntry{
 				FullName: "Ana Ionescu",
-				Phones:   []people.VCardChannel{{Value: "not a phone number", Kind: "work"}},
+				Phones:   []contacts.VCardChannel{{Value: "not a phone number", Kind: "work"}},
 			},
 		},
 		{
 			name: "an address that is not one",
-			entry: people.VCardEntry{
+			entry: contacts.VCardEntry{
 				FullName: "Ana Ionescu",
-				Emails:   []people.VCardChannel{{Value: "ana at example dot com", Kind: "work"}},
+				Emails:   []contacts.VCardChannel{{Value: "ana at example dot com", Kind: "work"}},
 			},
 		},
 	}
@@ -71,10 +71,10 @@ func TestACardCarryingAnUnstorableContactIsRefusedWhileItIsStillDecidable(t *tes
 // is handed serialized JSON and never the caller's struct, so an assertion
 // about the entry value would be checking a copy nothing under test can reach.
 func TestTheCheckLeavesTheStagedCardExactlyAsItWas(t *testing.T) {
-	entry := people.VCardEntry{
+	entry := contacts.VCardEntry{
 		FullName: "Ana Ionescu",
-		Emails:   []people.VCardChannel{{Value: "  Ana.Ionescu@Example.COM  ", Kind: "work"}},
-		Phones:   []people.VCardChannel{{Value: "+40 21 555 0100", Kind: "work"}},
+		Emails:   []contacts.VCardChannel{{Value: "  Ana.Ionescu@Example.COM  ", Kind: "work"}},
+		Phones:   []contacts.VCardChannel{{Value: "+40 21 555 0100", Kind: "work"}},
 	}
 	staged := stagedCard(t, entry)
 	before := append(json.RawMessage(nil), staged...)
@@ -91,10 +91,10 @@ func TestTheCheckLeavesTheStagedCardExactlyAsItWas(t *testing.T) {
 // The edited payload is the one checked, because the modify-then-approve arm
 // is exactly where a decider can introduce a value the create refuses.
 func TestAnEditedCardIsTheOneChecked(t *testing.T) {
-	good := stagedCard(t, people.VCardEntry{FullName: "Ana Ionescu"})
-	edited := stagedCard(t, people.VCardEntry{
+	good := stagedCard(t, contacts.VCardEntry{FullName: "Ana Ionescu"})
+	edited := stagedCard(t, contacts.VCardEntry{
 		FullName: "Ana Ionescu",
-		Phones:   []people.VCardChannel{{Value: "not a phone number", Kind: "work"}},
+		Phones:   []contacts.VCardChannel{{Value: "not a phone number", Kind: "work"}},
 	})
 
 	if err := vcardCreatePrecheck()(context.Background(), good, edited); err == nil {

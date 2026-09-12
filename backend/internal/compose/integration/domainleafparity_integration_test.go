@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,7 +42,7 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 		"ACME.Example",
 	} {
 		t.Run(asked, func(t *testing.T) {
-			listed, _, err := e.People.ListCompanies(admin, people.ListCompaniesInput{Domain: &asked})
+			listed, _, err := e.Contacts.ListCompanies(admin, contacts.ListCompaniesInput{Domain: &asked})
 			if err != nil {
 				t.Fatalf("the list parameter refused %q: %v", asked, err)
 			}
@@ -93,9 +93,9 @@ func TestASegmentRefusesAValueThatIsNotADomain(t *testing.T) {
 // the form that path stores.
 func seedCompanyWithDomain(t *testing.T, e *Env, name, domain string) ids.UUID {
 	t.Helper()
-	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: name,
-		Domains:     []people.CompanyDomainInput{{Domain: domain, IsPrimary: true}},
+		Domains:     []contacts.CompanyDomainInput{{Domain: domain, IsPrimary: true}},
 		Source:      "manual",
 	})
 	if err != nil {

@@ -16,8 +16,8 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -31,11 +31,11 @@ const onboardingProposalConfidenceFloor = 0.55
 
 // onboardingProposalEngine assembles the proposal from the two seams the
 // conversation already reads through: identity's per-user wizard state
-// and people's onboarding dossier.
+// and contacts's onboarding dossier.
 type onboardingProposalEngine struct {
-	state   onboardingStateReader
-	people  onboardingSiteReadReader
-	rollout string
+	state    onboardingStateReader
+	contacts onboardingSiteReadReader
+	rollout  string
 }
 
 func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, params crmcontracts.GetOnboardingCompanyProposalParams) {
@@ -64,7 +64,7 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 		httperr.Write(w, r, apperrors.ErrNotFound)
 		return
 	}
-	read, comparisons, err := e.people.GetCompanySiteRead(r.Context(), *state.SiteReadID)
+	read, comparisons, err := e.contacts.GetCompanySiteRead(r.Context(), *state.SiteReadID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -76,7 +76,7 @@ func (e *onboardingProposalEngine) get(w http.ResponseWriter, r *http.Request, p
 // It serves whatever the read has already grounded — a running read's
 // progressive draft included — with ready reporting whether the read
 // reached a terminal answer.
-func onboardingCompanyProposal(read people.SiteRead, comparisons []people.SiteReadComparison, draft identity.OnboardingCompanyDraft, locale string) crmcontracts.OnboardingCompanyProposal {
+func onboardingCompanyProposal(read contacts.SiteRead, comparisons []contacts.SiteReadComparison, draft identity.OnboardingCompanyDraft, locale string) crmcontracts.OnboardingCompanyProposal {
 	fields := make([]crmcontracts.OnboardingCompanyProposalField, 0, len(read.ProfileFields))
 	for _, field := range read.ProfileFields {
 		if field.Confidence < onboardingProposalConfidenceFloor || strings.TrimSpace(field.EvidenceSnippet) == "" {
@@ -92,7 +92,7 @@ func onboardingCompanyProposal(read people.SiteRead, comparisons []people.SiteRe
 		facts = append(facts, crmcontracts.CompanySiteReadFact{
 			Category: crmcontracts.CompanySiteReadFactCategory(fact.Category),
 			Field:    crmcontracts.CompanySiteReadFactField(fact.Field),
-			Value:    fact.Value, ValueKey: people.SiteReadFactKey(fact),
+			Value:    fact.Value, ValueKey: contacts.SiteReadFactKey(fact),
 			EvidenceSnippet: fact.EvidenceSnippet, EvidenceUrl: fact.SourceURL,
 			Confidence: fact.Confidence,
 		})

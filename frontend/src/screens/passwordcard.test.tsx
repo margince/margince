@@ -87,7 +87,7 @@ describe("ChangePasswordCard", () => {
       },
     });
     client.setQueryData(["me"], { email: "a@b.test" });
-    client.setQueryData(["people"], []);
+    client.setQueryData(["contacts"], []);
     const onChanged = vi.fn();
     await openForm(user, client, onChanged);
 
@@ -100,7 +100,7 @@ describe("ChangePasswordCard", () => {
     expect(me?.state.data).toEqual({ email: "a@b.test" });
     expect(me?.state.isInvalidated).toBe(true);
     // Nothing else cached belonged to a session that ended: this one did not.
-    expect(client.getQueryData(["people"])).toEqual([]);
+    expect(client.getQueryData(["contacts"])).toEqual([]);
   });
 
   it("will not submit until the confirmation matches", async () => {

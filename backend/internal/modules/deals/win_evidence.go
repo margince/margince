@@ -133,7 +133,7 @@ func saysSomething(detail *string) bool {
 // ensureWinEvidence admits a transition to a won stage, or refuses it.
 //
 // The order matters. A stated reason is checked FIRST and, when present and
-// valid, is accepted without looking for a contract: a person who has told the
+// valid, is accepted without looking for a contract: a contact who has told the
 // product there is no paper should not then be told there is none. Only a win
 // that claims nothing goes looking for evidence.
 func ensureWinEvidence(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in AdvanceDealInput) error {

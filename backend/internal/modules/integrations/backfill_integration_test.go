@@ -10,7 +10,7 @@ package integrations
 // The failure this lane exists to catch is the one that costs money quietly: a
 // selection predicate that keeps re-choosing the same contact. It reads as a
 // working sweep — runs are queued, the log says so — while the same twenty-five
-// people are bought over and over and the backlog never moves. A unit test
+// contacts are bought over and over and the backlog never moves. A unit test
 // cannot see it, because the predicate IS SQL and the defect is in what the
 // rows say rather than in what the Go does.
 
@@ -39,11 +39,11 @@ func TestTheSweepNeverAsksTwiceAboutTheSameAnswer(t *testing.T) {
 	ctx := context.Background()
 
 	// A contact per state, plus one nobody has asked about at all.
-	answered := map[string]ids.PersonID{}
+	answered := map[string]ids.ContactID{}
 	for _, state := range []string{"completed", "no_match", "queued", "in_progress"} {
 		answered[state] = e.plantSubjectWithRun(t, state)
 	}
-	refused := map[string]ids.PersonID{}
+	refused := map[string]ids.ContactID{}
 	for _, state := range []string{"skipped", "failed", "cancelled", "submission_unknown"} {
 		refused[state] = e.plantSubjectWithRun(t, state)
 	}
@@ -138,18 +138,18 @@ func TestTheSweepSpendsNoMoreThanTheDayAllows(t *testing.T) {
 
 // sweepSelects runs the coverage predicate and returns who it chose.
 //
-// The ceiling it passes is the whole person table and not sweepTickBudget,
+// The ceiling it passes is the whole contact table and not sweepTickBudget,
 // which is the difference between asking what the predicate covers and asking
 // what one tick can afford. Every test in this package plants into ONE
-// database and nothing truncates `person`, so the uncovered set only grows as
+// database and nothing truncates `contact`, so the uncovered set only grows as
 // the package runs; under a tick-sized ceiling `ORDER BY p.created_at` answers
 // "is this contact among the 25 longest-waiting", and a test's own freshly
 // planted subject is the last one that could be. What a tick may afford is
 // TestTheSweepSpendsNoMoreThanTheDayAllows' subject.
-func (e *runsEnv) sweepSelects(t *testing.T) map[ids.PersonID]bool {
+func (e *runsEnv) sweepSelects(t *testing.T) map[ids.ContactID]bool {
 	t.Helper()
 	var everyone int
-	if err := e.owner.QueryRow(e.ctx, `SELECT count(*) FROM person`).Scan(&everyone); err != nil {
+	if err := e.owner.QueryRow(e.ctx, `SELECT count(*) FROM contact`).Scan(&everyone); err != nil {
 		t.Fatal(err)
 	}
 	var chosen []string
@@ -160,13 +160,13 @@ func (e *runsEnv) sweepSelects(t *testing.T) map[ids.PersonID]bool {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	out := map[ids.PersonID]bool{}
+	out := map[ids.ContactID]bool{}
 	for _, id := range chosen {
 		parsed, err := ids.Parse(id)
 		if err != nil {
 			t.Fatal(err)
 		}
-		out[ids.PersonID{UUID: parsed}] = true
+		out[ids.ContactID{UUID: parsed}] = true
 	}
 	return out
 }
@@ -184,11 +184,11 @@ func (e *runsEnv) sweepBudgetNow(t *testing.T) (int, error) {
 }
 
 // plantSubject adds a contact nobody has asked the provider about.
-func (e *runsEnv) plantSubject(t *testing.T) ids.PersonID {
+func (e *runsEnv) plantSubject(t *testing.T) ids.ContactID {
 	t.Helper()
-	var id ids.PersonID
+	var id ids.ContactID
 	if err := e.owner.QueryRow(context.Background(), `
-		INSERT INTO person (full_name, first_name, source, captured_by)
+		INSERT INTO contact (full_name, first_name, source, captured_by)
 		VALUES ('Sweep Subject', 'Sweep', 'test', 'test:sweep')
 		RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
@@ -197,7 +197,7 @@ func (e *runsEnv) plantSubject(t *testing.T) ids.PersonID {
 }
 
 // plantSubjectWithRun adds a contact whose one run is in the given state.
-func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.PersonID {
+func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.ContactID {
 	t.Helper()
 	id := e.plantSubject(t)
 	var skipReason *string
@@ -207,10 +207,10 @@ func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.PersonID {
 	}
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO provider_run
-		       (person_id, subject_kind, provider, trigger, state, skip_reason,
+		       (contact_id, subject_kind, provider, trigger, state, skip_reason,
 		        connection_version, connection_epoch, configuration_snapshot,
 		        requested_categories, input_fingerprint, external_correlation_id)
-		VALUES ($1, 'person', $2, 'automatic_create', $3, $4, 1, 1, '{}'::jsonb,
+		VALUES ($1, 'contact', $2, 'automatic_create', $3, $4, 1, 1, '{}'::jsonb,
 		        ARRAY['linkedin_profile'], $5, gen_random_uuid())`,
 		id, e.provider, state, skipReason, "fp-"+state+"-"+id.String()); err != nil {
 		t.Fatal(err)
@@ -227,7 +227,7 @@ func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.PersonID {
 // connection refusing every lookup, and the only way out was a human noticing
 // and re-entering a key that was never at fault.
 //
-// A person pressing the button is the deliberate probe. A sweep is not: nobody
+// A contact pressing the button is the deliberate probe. A sweep is not: nobody
 // is watching it, and retrying a rate limit every minute is how a transient
 // limit becomes a sustained one.
 func TestAHumanCanProbeADegradedConnection(t *testing.T) {
@@ -242,7 +242,7 @@ func TestAHumanCanProbeADegradedConnection(t *testing.T) {
 		}
 
 		if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-			PersonID: e.mine.String(), Provider: e.provider, Trigger: provider.TriggerManual,
+			ContactID: e.mine.String(), Provider: e.provider, Trigger: provider.TriggerManual,
 		}); err != nil {
 			t.Errorf("a human's run was refused on a %s connection: %v — the only path back to "+
 				"connected is a run that succeeds, so refusing them all makes the state permanent",
@@ -250,7 +250,7 @@ func TestAHumanCanProbeADegradedConnection(t *testing.T) {
 		}
 
 		_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-			PersonID: e.theirsInBook.String(), Provider: e.provider,
+			ContactID: e.theirsInBook.String(), Provider: e.provider,
 			Trigger: provider.TriggerAutomaticBackfill,
 		})
 		if err == nil {
@@ -309,10 +309,10 @@ func seedCompletedRunWithoutClaims(t *testing.T, e *runsEnv) string {
 	var runID string
 	if err := e.owner.QueryRow(context.Background(), `
 		INSERT INTO provider_run
-		  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+		  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 		   external_correlation_id, connection_version, connection_epoch,
 		   configuration_snapshot, requested_categories, completed_at)
-		VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+		VALUES ('contact', $1, 'surfe', 'manual', 'completed', $2,
 		        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['linkedin_profile'], now())
 		RETURNING id::text`, e.mine, "fp-unstored-"+e.mine.String()).Scan(&runID); err != nil {
 		t.Fatal(err)
@@ -344,16 +344,16 @@ func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 	}
 
 	// One record is edited — somebody adds the profile link the page asked
-	// for. person.updated_at moves; the run's created_at does not.
+	// for. contact.updated_at moves; the run's created_at does not.
 	if _, err := e.owner.Exec(ctx,
-		`UPDATE person SET updated_at = now() + interval '1 second' WHERE id = $1`, fixed); err != nil {
+		`UPDATE contact SET updated_at = now() + interval '1 second' WHERE id = $1`, fixed); err != nil {
 		t.Fatal(err)
 	}
 	// And one contact declined for a reason that has nothing to do with the
 	// record is edited too, to prove the rule reads the REASON and not merely
 	// the edit.
 	if _, err := e.owner.Exec(ctx,
-		`UPDATE person SET updated_at = now() + interval '1 second' WHERE id = $1`, rateLimited); err != nil {
+		`UPDATE contact SET updated_at = now() + interval '1 second' WHERE id = $1`, rateLimited); err != nil {
 		t.Fatal(err)
 	}
 
@@ -373,8 +373,8 @@ func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 }
 
 // The employer half of the same advice. Linking a company writes a
-// relationship row and moves nothing on person, so a rule reading only
-// person.updated_at would tell the reader to add the company and then not
+// relationship row and moves nothing on contact, so a rule reading only
+// contact.updated_at would tell the reader to add the company and then not
 // look until tomorrow — the exact failure the arm above exists to lift.
 func TestAnEmployerLinkedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 	e := setupRuns(t, runsConfig{})
@@ -400,7 +400,7 @@ func TestAnEmployerLinkedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 
 // linkEmployer plants an employment edge dated after the contact's runs,
 // archived or live.
-func (e *runsEnv) linkEmployer(t *testing.T, personID ids.PersonID, archived bool) {
+func (e *runsEnv) linkEmployer(t *testing.T, contactID ids.ContactID, archived bool) {
 	t.Helper()
 	ctx := context.Background()
 	var companyID ids.UUID
@@ -412,26 +412,26 @@ func (e *runsEnv) linkEmployer(t *testing.T, personID ids.PersonID, archived boo
 	}
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO relationship
-		       (kind, person_id, company_id, is_current_primary, source, captured_by,
+		       (kind, contact_id, company_id, is_current_primary, source, captured_by,
 		        updated_at, archived_at)
 		VALUES ('employment', $1, $2, NOT $3, 'test', 'test:sweep',
 		        now() + interval '1 second', CASE WHEN $3 THEN now() END)`,
-		personID, companyID, archived); err != nil {
+		contactID, companyID, archived); err != nil {
 		t.Fatal(err)
 	}
 }
 
 // plantSubjectSkippedFor adds a contact whose one run was skipped for the
 // given reason, created now.
-func (e *runsEnv) plantSubjectSkippedFor(t *testing.T, reason provider.SkipReason) ids.PersonID {
+func (e *runsEnv) plantSubjectSkippedFor(t *testing.T, reason provider.SkipReason) ids.ContactID {
 	t.Helper()
 	id := e.plantSubject(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO provider_run
-		       (person_id, subject_kind, provider, trigger, state, skip_reason,
+		       (contact_id, subject_kind, provider, trigger, state, skip_reason,
 		        connection_version, connection_epoch, configuration_snapshot,
 		        requested_categories, input_fingerprint, external_correlation_id)
-		VALUES ($1, 'person', $2, 'automatic_backfill', 'skipped', $3, 1, 1, '{}'::jsonb,
+		VALUES ($1, 'contact', $2, 'automatic_backfill', 'skipped', $3, 1, 1, '{}'::jsonb,
 		        ARRAY['linkedin_profile'], $4, gen_random_uuid())`,
 		id, e.provider, string(reason), "fp-"+string(reason)+"-"+id.String()); err != nil {
 		t.Fatal(err)

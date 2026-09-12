@@ -15,7 +15,7 @@ package gates
 // (`x-waits-on-model`). The table was a hand-kept list of path suffixes for a
 // long time, and it drifted in both directions without anything failing: it
 // named a route that calls a data provider and no model, and it missed the
-// meeting brief — a GET that runs two model calls on every open — so a person
+// meeting brief — a GET that runs two model calls on every open — so a contact
 // waited on the agent for the whole of it with the chrome reporting rest. That
 // is the one failure this surface cannot show: an agent at rest looks exactly
 // like an agent nobody is counting.
@@ -67,7 +67,7 @@ func TestTheClientsModelRouteTableIsTheContracts(t *testing.T) {
 		got, present := inClient[route]
 		switch {
 		case !present:
-			t.Errorf("%s is %s: %s in the contract and absent from %s, so a person waiting on it sees the rail report an agent at rest", route, modelRouteMarker, want, modelRouteClient)
+			t.Errorf("%s is %s: %s in the contract and absent from %s, so a contact waiting on it sees the rail report an agent at rest", route, modelRouteMarker, want, modelRouteClient)
 		case got != want:
 			t.Errorf("%s: the contract says %s, the client says %s — the two disagree about when the reader is waiting on the agent", route, want, got)
 		}

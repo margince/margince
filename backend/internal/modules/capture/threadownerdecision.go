@@ -5,7 +5,7 @@ package capture
 
 // What the MAILBOX OWNER concluded about a thread, which outranks the
 // classifier: the seat whose correspondence it is decides, and their answer is
-// recorded as its own status so a later reader can tell a person's decision
+// recorded as its own status so a later reader can tell a contact's decision
 // from a model's.
 
 import (
@@ -26,7 +26,7 @@ import (
 // A human decision is not a verdict with a different author: it is the end of
 // the question. The row resolves, its attempts stop mattering, and no later
 // pass re-asks — a classifier that could overturn an owner would make the
-// owner's click advisory, which is not what a person clicking "keep this
+// owner's click advisory, which is not what a contact clicking "keep this
 // private" is told they are doing.
 //
 // Own thread only. The ledger is per seat, so the row this writes is the
@@ -96,7 +96,7 @@ func (s *ThreadVerdictStore) DecideAsOwner(
 	return nil
 }
 
-// ownerDecisionReason marks a ledger row a person settled, so a reader can tell
+// ownerDecisionReason marks a ledger row a contact settled, so a reader can tell
 // it from one a classifier reached.
 const ownerDecisionReason = "owner_decision"
 

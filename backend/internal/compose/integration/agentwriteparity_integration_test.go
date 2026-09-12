@@ -27,9 +27,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -90,12 +90,12 @@ func parityCases(t *testing.T, e *Env) []parityCase {
 
 	return []parityCase{
 		{
-			table: "person",
+			table: "contact",
 			perms: AccountRepPerms,
-			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedPerson(t, "Parity person", owner) },
+			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedContact(t, "Parity contact", owner) },
 			write: func(ctx context.Context, e *Env, id ids.UUID) error {
-				_, err := e.People.UpdatePerson(ctx, ids.From[ids.PersonKind](id),
-					people.UpdatePersonInput{Title: &title})
+				_, err := e.Contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id),
+					contacts.UpdateContactInput{Title: &title})
 				return err
 			},
 		},
@@ -104,8 +104,8 @@ func parityCases(t *testing.T, e *Env) []parityCase {
 			perms: companyWriterPerms,
 			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedCompany(t, "Parity company", owner) },
 			write: func(ctx context.Context, e *Env, id ids.UUID) error {
-				_, err := e.People.UpdateCompany(ctx, ids.From[ids.CompanyKind](id),
-					people.UpdateCompanyInput{Description: &title})
+				_, err := e.Contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id),
+					contacts.UpdateCompanyInput{Description: &title})
 				return err
 			},
 		},

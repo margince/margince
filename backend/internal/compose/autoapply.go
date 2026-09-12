@@ -89,7 +89,7 @@ type autoApplier struct {
 // It reports whether it applied. Not applying is the ordinary outcome and never
 // an error: an unowned record, a departed owner, a rep who has not opted in and
 // a kind that is not eligible all mean the same thing to the product — the
-// proposal stays in the queue for a person to answer.
+// proposal stays in the queue for a contact to answer.
 //
 // The owner is resolved at APPLY time rather than carried on the staged row, so
 // a handover moves who an automatic apply acts for. That also means a proposal
@@ -116,7 +116,7 @@ func (a autoApplier) Apply(ctx context.Context, approvalID ids.ApprovalID) (bool
 	if err != nil {
 		// A refusal to establish the owner's authority is a refusal to apply,
 		// not a failure of the caller that offered the proposal. The row keeps
-		// waiting for a person, which is the safe direction.
+		// waiting for a contact, which is the safe direction.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return false, nil
 		}
@@ -245,10 +245,10 @@ func (a autoApplier) ownerOf(ctx context.Context, entityType string, entityID id
 // a company rename and a lifecycle move stamp their own machine provenance — so
 // the honest statement is that the DECISION is gated by the owner's authority
 // and the effect then runs exactly as it does after a human's click. That is
-// the same bound a person gets, which is the point: this path is not a wider
+// the same bound a contact gets, which is the point: this path is not a wider
 // authority than the button, only an unattended one.
 //
-// actingForAHuman admits this shape already: an agent naming the person it acts
+// actingForAHuman admits this shape already: an agent naming the contact it acts
 // for is somebody's agent, and a credential nobody lent is what it refuses.
 //
 // dealOwnerAuthority.asOwner (dealownerseam.go) binds an owner the same way and
@@ -360,7 +360,7 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 		case refusesThisRow(err):
 			// The row itself cannot apply and says why on its own record: the
 			// decision path marks a failed effect on the approval, so the
-			// proposal is visible as needing a person rather than silently
+			// proposal is visible as needing a contact rather than silently
 			// skipped here.
 			continue
 		default:
@@ -380,7 +380,7 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 //
 // The others are the same shape. A decision already taken, a target the owner
 // may no longer reach, a redemption whose token no longer fits — each is a fact
-// about that proposal, and each leaves it pending for a person.
+// about that proposal, and each leaves it pending for a contact.
 func refusesThisRow(err error) bool {
 	var decided *approvals.AlreadyDecidedError
 	return errors.As(err, &decided) ||

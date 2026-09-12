@@ -6,14 +6,14 @@
   "catalog": {
     "tools": 76,
     "system_frame_tokens": 353,
-    "tokens": 24304,
-    "median_tool_tokens": 272,
+    "tokens": 24331,
+    "median_tool_tokens": 273,
     "mean_tool_tokens": 319
   },
   "agents": [
     {
       "name": "morning_brief",
-      "goal": "Prepare the acting person's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this person; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
+      "goal": "Prepare the acting contact's existing Morning Brief. First call read_brief. Its items are the queue already ranked for this contact; do not assemble a workspace-wide list. Read the evidence for those items, then call annotate_brief with one concise narrative and grounded findings: why each item matters, what changed and the next move. An item with a previous_rank was already on this queue on the run's previous_local_day: say what has changed since then rather than reporting it as new. An item without one may simply not have ranked that day, so do not call it new either. Use each returned item_id unchanged, never its deal_id, and cite only that item's evidence_ids. Keep the existing order. If there are no items, finish without inventing a brief. A tool refusal means the findings were not saved: correct it before claiming completion.",
       "tools": [
         "annotate_brief",
         "catch_me_up_on",
@@ -21,9 +21,9 @@
         "read_brief",
         "read_record"
       ],
-      "tokens": 1663,
+      "tokens": 1666,
       "percent_of_ceiling": 5,
-      "headroom_tokens": 21547,
+      "headroom_tokens": 21544,
       "dangling_cross_references": [
         "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
@@ -46,9 +46,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2536,
+      "tokens": 2540,
       "percent_of_ceiling": 7,
-      "headroom_tokens": 20674,
+      "headroom_tokens": 20670,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -84,11 +84,11 @@
     },
     {
       "name": "preview_import",
-      "tokens": 723
+      "tokens": 726
     },
     {
       "name": "log_activity",
-      "tokens": 676
+      "tokens": 677
     },
     {
       "name": "send_message",
@@ -100,7 +100,7 @@
     },
     {
       "name": "list_records",
-      "tokens": 540
+      "tokens": 541
     },
     {
       "name": "forecast_readings",
@@ -112,7 +112,7 @@
     },
     {
       "name": "resolve_entities",
-      "tokens": 491
+      "tokens": 493
     },
     {
       "name": "query_workspace",
@@ -120,7 +120,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 480
+      "tokens": 481
     },
     {
       "name": "run_analytics_query",
@@ -132,7 +132,7 @@
     },
     {
       "name": "advance_deal",
-      "tokens": 447
+      "tokens": 446
     },
     {
       "name": "compose_analytics_report",
@@ -156,11 +156,11 @@
     },
     {
       "name": "search_records",
-      "tokens": 382
+      "tokens": 383
     },
     {
       "name": "check_availability",
-      "tokens": 365
+      "tokens": 366
     },
     {
       "name": "describe_report_vocabulary",
@@ -172,7 +172,7 @@
     },
     {
       "name": "search_context",
-      "tokens": 343
+      "tokens": 344
     },
     {
       "name": "advance_project_phase",
@@ -188,15 +188,15 @@
     },
     {
       "name": "demote_lead",
-      "tokens": 316
+      "tokens": 317
     },
     {
       "name": "promote_lead",
-      "tokens": 303
+      "tokens": 304
     },
     {
       "name": "merge_records",
-      "tokens": 291
+      "tokens": 293
     },
     {
       "name": "archive_record",
@@ -208,7 +208,7 @@
     },
     {
       "name": "catch_me_up_on",
-      "tokens": 278
+      "tokens": 279
     },
     {
       "name": "draft_email",
@@ -220,15 +220,15 @@
     },
     {
       "name": "draft_follow_ups_for",
-      "tokens": 273
+      "tokens": 274
     },
     {
       "name": "decide_approval",
-      "tokens": 272
+      "tokens": 273
     },
     {
       "name": "list_approvals",
-      "tokens": 267
+      "tokens": 268
     },
     {
       "name": "prepare_handoff",
@@ -240,7 +240,7 @@
     },
     {
       "name": "account_coverage",
-      "tokens": 245
+      "tokens": 246
     },
     {
       "name": "describe_report_blocks",
@@ -248,7 +248,7 @@
     },
     {
       "name": "decide_approval_bundle",
-      "tokens": 235
+      "tokens": 236
     },
     {
       "name": "qualify_lead",
@@ -260,7 +260,7 @@
     },
     {
       "name": "create_task",
-      "tokens": 220
+      "tokens": 221
     },
     {
       "name": "read_record",
@@ -271,6 +271,10 @@
       "tokens": 211
     },
     {
+      "name": "at_risk_relationships",
+      "tokens": 209
+    },
+    {
       "name": "disqualify_lead",
       "tokens": 209
     },
@@ -279,12 +283,12 @@
       "tokens": 209
     },
     {
-      "name": "at_risk_relationships",
-      "tokens": 208
-    },
-    {
       "name": "read_brief",
       "tokens": 206
+    },
+    {
+      "name": "relink_activities",
+      "tokens": 205
     },
     {
       "name": "update_tag",
@@ -295,28 +299,24 @@
       "tokens": 204
     },
     {
-      "name": "relink_activities",
-      "tokens": 204
-    },
-    {
       "name": "merge_tags",
       "tokens": 198
+    },
+    {
+      "name": "list_colleagues",
+      "tokens": 196
     },
     {
       "name": "relink_thread",
       "tokens": 196
     },
     {
+      "name": "who_knows",
+      "tokens": 196
+    },
+    {
       "name": "data_coverage",
       "tokens": 195
-    },
-    {
-      "name": "list_colleagues",
-      "tokens": 195
-    },
-    {
-      "name": "who_knows",
-      "tokens": 194
     },
     {
       "name": "list_pipelines",
@@ -348,7 +348,7 @@
     },
     {
       "name": "read_approval",
-      "tokens": 153
+      "tokens": 154
     },
     {
       "name": "get_record_tags",
@@ -356,7 +356,7 @@
     },
     {
       "name": "whoami",
-      "tokens": 128
+      "tokens": 129
     },
     {
       "name": "list_tags",
@@ -364,7 +364,7 @@
     },
     {
       "name": "get_tag",
-      "tokens": 86
+      "tokens": 87
     },
     {
       "name": "read_import_report",

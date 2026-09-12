@@ -7,13 +7,13 @@ package gates
 
 // The confirm page shows a data subject their own record, and only that.
 //
-// It is the one surface in this tree that discloses a person's record to
+// It is the one surface in this tree that discloses a contact's record to
 // somebody holding no principal at all — the authority is a token in a mailbox.
 // So the question "which fields may cross it" has a different answer here than
 // anywhere else, and the answer has to be a decision somebody made rather than
 // whatever the read model happened to carry.
 //
-// The failure this prevents is quiet. Person360 grows a field, somebody widens
+// The failure this prevents is quiet. Contact360 grows a field, somebody widens
 // the confirm projection to reuse it, and the workspace's own working notes —
 // who owns this contact, what the model scored them, what the research lane
 // wrote about them — arrive in the subject's inbox. Nothing would fail; the
@@ -36,7 +36,7 @@ import (
 // theConfirmProjection is the read this gate judges.
 const theConfirmProjection = "internal/modules/consent/confirmcard.go"
 
-// disclosableToTheSubject is what the confirm card may name: the person's own
+// disclosableToTheSubject is what the confirm card may name: the contact's own
 // contact details, the employer they already know they work for, and the
 // provenance that answers Art. 14. Each is something the subject either
 // supplied or is entitled to be told.
@@ -55,7 +55,7 @@ var disclosableToTheSubject = map[string]bool{
 	// The employer, and the columns the employment read needs to find it.
 	"display_name": true,
 	"company_id":   true,
-	"person_id":    true,
+	"contact_id":   true,
 	"kind":         true,
 	"ended_at":     true,
 	"archived_at":  true,
@@ -119,7 +119,7 @@ func TestTheConfirmCardDisclosesOnlyWhatItsSubjectMaySee(t *testing.T) {
 		sort.Strings(undeclared)
 		t.Errorf("the confirm card reads %s, which nobody has declared disclosable to the subject.\n"+
 			"  This surface answers a caller holding no principal — the authority is a token in a mailbox.\n"+
-			"  A field that reaches it reaches the person it is about, so add it to disclosableToTheSubject\n"+
+			"  A field that reaches it reaches the contact it is about, so add it to disclosableToTheSubject\n"+
 			"  with the reason they may see it, or take it out of the read.",
 			strings.Join(undeclared, ", "))
 	}

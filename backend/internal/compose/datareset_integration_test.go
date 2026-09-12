@@ -35,7 +35,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	e.SeedPerson(t, "Alice", nil)
+	e.SeedContact(t, "Alice", nil)
 	e.SeedCompany(t, "Acme", nil)
 
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -49,8 +49,8 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatalf("sweep: %v", err)
 	}
 
-	if got := e.WsCount(t, "SELECT count(*) FROM person"); got != 0 {
-		t.Errorf("person count after sweep = %d, want 0", got)
+	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 0 {
+		t.Errorf("contact count after sweep = %d, want 0", got)
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM company"); got != 0 {
 		t.Errorf("company count after sweep = %d, want 0", got)
@@ -60,7 +60,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	if got := e.WsCount(t, "SELECT count(*) FROM app_user"); got != 4 {
 		t.Errorf("app_user count after sweep = %d, want 4 (identity preserved)", got)
 	}
-	// SeedPerson/SeedCompany each wrote an audit_log row as a side effect of the
+	// SeedContact/SeedCompany each wrote an audit_log row as a side effect of the
 	// store write shape; the ledger is append-only and must survive the sweep.
 	if got := e.WsCount(t, "SELECT count(*) FROM audit_log"); got < 1 {
 		t.Errorf("audit_log count after sweep = %d, want >= 1 (ledger preserved)", got)
@@ -154,7 +154,7 @@ func TestClearWorkspaceOutboxEmptiesTheStagedEvents(t *testing.T) {
 func TestResetRunRestoresBootstrapState(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	e.SeedPerson(t, "Alice", nil)
+	e.SeedContact(t, "Alice", nil)
 	// A pre-reset staged event, marked by its stream so the seeders' own outbox
 	// writes cannot be mistaken for it: the run must leave nothing for the relay
 	// to ship into the streams it purges.
@@ -172,8 +172,8 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 		t.Fatalf("bad confirmation: want errResetConfirmationMismatch, got %v", err)
 	}
 	// The rejected attempt must not have touched anything.
-	if got := e.WsCount(t, "SELECT count(*) FROM person"); got != 1 {
-		t.Fatalf("person count after rejected reset = %d, want 1 (untouched)", got)
+	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 1 {
+		t.Fatalf("contact count after rejected reset = %d, want 1 (untouched)", got)
 	}
 
 	sum, err := h.run(ctx, "Authz")
@@ -183,8 +183,8 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	if sum.TablesCleared == 0 {
 		t.Fatal("expected some tables cleared")
 	}
-	if got := e.WsCount(t, "SELECT count(*) FROM person"); got != 0 {
-		t.Errorf("person count after reset = %d, want 0", got)
+	if got := e.WsCount(t, "SELECT count(*) FROM contact"); got != 0 {
+		t.Errorf("contact count after reset = %d, want 0", got)
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM stage"); got < 1 {
 		t.Errorf("stage count after reset = %d, want >= 1 (pipeline re-seeded)", got)
@@ -254,7 +254,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 	sp := integration.SchemaPool(t)
 	ctx := context.Background()
 
-	if _, err := sp.Exec(ctx, `ALTER TABLE person ADD COLUMN cf_zzz text`); err != nil {
+	if _, err := sp.Exec(ctx, `ALTER TABLE contact ADD COLUMN cf_zzz text`); err != nil {
 		t.Fatalf("seeding fake cf_ column: %v", err)
 	}
 	// cf_zzz is real schema on a database sibling tests in this package share;
@@ -263,7 +263,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 	// which both introspect the live schema. IF NOT EXISTS: the assertion below
 	// proves the reset drop already removed it on the success path.
 	t.Cleanup(func() {
-		if _, err := sp.Exec(context.Background(), `ALTER TABLE person DROP COLUMN IF EXISTS cf_zzz`); err != nil {
+		if _, err := sp.Exec(context.Background(), `ALTER TABLE contact DROP COLUMN IF EXISTS cf_zzz`); err != nil {
 			t.Errorf("cleaning up cf_zzz: %v", err)
 		}
 	})
@@ -320,7 +320,7 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not guards at all (migration 1787032690).
 	"activity_link activity_link_last_activity": "a clock-maintenance trigger, not a guard: it recomputes the last_activity_at of the records the deleted link reached and refuses no delete; the sweep deletes those records too, so the recompute is discarded with them",
 	// The same shape one column over (migration 1787320000): the project clock
-	// rather than the person/company one. Recorded on its own line and not
+	// rather than the contact/company one. Recorded on its own line and not
 	// folded into the entry above, because this map is keyed on the PAIR for the
 	// reason its own comment gives — a table-keyed entry would ratify the next
 	// DELETE trigger on activity_link sight unseen, including one that blocks.
@@ -502,7 +502,7 @@ func TestResetPurgesTheSealedCredentialsItsSweepOrphans(t *testing.T) {
 	e.WsExec(t, `INSERT INTO extension_secret (id, extension_name, key, vault_ref)
 		VALUES ($1, 'openchannel', 'inbound', $2)`, ids.NewV7(), extension)
 	e.WsExec(t, `INSERT INTO webhook_subscription (id, owner_id, target_url, event_types, signing_secret_ref)
-		VALUES ($1, $2, 'https://example.test/hook', ARRAY['person.created'], $3)`,
+		VALUES ($1, $2, 'https://example.test/hook', ARRAY['contact.created'], $3)`,
 		ids.NewV7(), e.AdminUser, signing)
 
 	h := dataResetHandlers{

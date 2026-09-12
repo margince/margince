@@ -242,7 +242,7 @@ components:
             $ref: "#/components/schemas/InboundParty"
           description: >-
             Who ELSE was in the conversation — the roster of a group, the
-            people who are neither end of the exchange. Omit it for a
+            contacts who are neither end of the exchange. Omit it for a
             two-party message; `from` and `to` already name both ends and
             repeating them here changes nothing.
 
@@ -260,7 +260,7 @@ components:
             conversation, and the whole REQUEST is refused rather than
             trimmed — half a broadcast list reads exactly like a small
             group, so a sender is told rather than left believing a
-            sixty-person conversation landed whole.
+            sixty-contact conversation landed whole.
 
             Addresses named here do NOT join the message's address set. That
             set is what decides whether a message was purely internal, and
@@ -310,7 +310,7 @@ components:
           description: >-
             The sending system's own id for this human. AN ACCOUNT OUTRANKS
             AN EMAIL: naming one on `from` is what makes the captured message
-            REPLIABLE — the core binds the account to a person and resolves a
+            REPLIABLE — the core binds the account to a contact and resolves a
             reply's recipient from that binding. With only an email, it is
             not repliable.
         email:

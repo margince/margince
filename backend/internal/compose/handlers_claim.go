@@ -9,19 +9,19 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // claimHandlers is the one HTTP door for claiming a customer record. The
-// write lands in the module that owns the table — people for person,
+// write lands in the module that owns the table — contacts for contact,
 // company and lead; deals for deal — so the route dispatches on the
 // record type rather than either module reaching into the other's table.
 type claimHandlers struct {
-	people *people.Store
-	deals  *deals.Store
+	contacts *contacts.Store
+	deals    *deals.Store
 }
 
 func (h claimHandlers) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id, _ crmcontracts.ClaimRecordParams) {
@@ -42,7 +42,7 @@ func (h claimHandlers) ClaimRecord(w http.ResponseWriter, r *http.Request, recor
 		httperr.WriteJSON(w, http.StatusOK, out)
 		return
 	}
-	claim, err := h.people.ClaimRecord(ctx, recordType, ids.UUID(id), ifVersion)
+	claim, err := h.contacts.ClaimRecord(ctx, recordType, ids.UUID(id), ifVersion)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

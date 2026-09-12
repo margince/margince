@@ -9,7 +9,7 @@ package gates
 // anywhere.
 //
 // The tree once held five independent renderings of one message — the
-// timeline's, the account page's recent list, the person memory's fold, the
+// timeline's, the account page's recent list, the contact memory's fold, the
 // relationship spine's and search's — each deciding for itself which parts of
 // an email to show and whether it could be opened. They drifted, because
 // nothing failed when they did: a surface that grew a sixth reading looked
@@ -35,7 +35,7 @@ package gates
 // other, and it names no type at all. An earlier version of this gate looked
 // only for the type name and argued in a comment that there was no other way
 // in. Three surfaces were drawing their own email rows while it reported PASS:
-// the person page's memory card, the account page's recent list and the held
+// the contact page's memory card, the account page's recent list and the held
 // threads table. Under-recognition is the one way a census must not break,
 // because a smaller corpus fails silently and reads exactly like a clean tree.
 //
@@ -365,7 +365,7 @@ func rendersCanonically(t *testing.T, consumer string) bool {
 //
 // The tag must OPEN a line, or follow `(` or `return`. A bare `<Name` also
 // matches TypeScript generics — `PipelineBoard<Record extends BoardRecord>`,
-// `Person360["conversation_memory"]` — and reading those as markup put three
+// `Contact360["conversation_memory"]` — and reading those as markup put three
 // mappers in front of a rule about rendering.
 var jsxTag = regexp.MustCompile(`(?m)(^\s*|\(\s*|return\s+)<[A-Za-z][A-Za-z0-9.]*[\s/>]`)
 

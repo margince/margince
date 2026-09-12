@@ -31,7 +31,7 @@ const (
 	// CalendarBackingUnknown means the host is somebody else, and whether their
 	// calendar is connected is not this seat's to read. The window is still
 	// only what this CRM holds — that much is true of every host — but nothing
-	// here says anything about that person's account.
+	// here says anything about that contact's account.
 	CalendarBackingUnknown CalendarBacking = "unknown"
 )
 

@@ -22,11 +22,11 @@ import (
 // rests on and quotes it; without a way to open the file the reader cannot see
 // the quote in place, and a citation nobody can follow is a citation in name
 // only. The RBAC migration already says as much — the document read grant is
-// there so "the person who received a cited answer can open what it cited" —
+// there so "the contact who received a cited answer can open what it cited" —
 // and this is the code that makes the sentence true.
 //
 // Gated on knowledge_document:read, which every seeded role holds, because the
-// person who received the answer is the person who needs to check it.
+// contact who received the answer is the contact who needs to check it.
 func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmcontracts.KnowledgeDocument, io.ReadCloser, error) {
 	if err := auth.Require(ctx, "knowledge_document", principal.ActionRead); err != nil {
 		return crmcontracts.KnowledgeDocument{}, nil, err

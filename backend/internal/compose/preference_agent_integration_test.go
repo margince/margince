@@ -46,8 +46,8 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	})
 
 	admin := e.Admin()
-	personID := e.SeedPerson(t, "Opt Out Target", &e.Rep1)
-	addPersonEmail(t, e, personID, "target@buyer.test")
+	contactID := e.SeedContact(t, "Opt Out Target", &e.Rep1)
+	addContactEmail(t, e, contactID, "target@buyer.test")
 
 	// A non-DOI marketing purpose, granted — so the agent send is initially
 	// allowed and we prove the block is the opt-out, not a missing grant.
@@ -56,7 +56,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 		t.Fatalf("create purpose: %v", err)
 	}
 	if _, err := consentStore.Record(admin, consent.RecordInput{
-		PersonID: ids.From[ids.PersonKind](personID), PurposeID: purpose.ID, NewState: "granted",
+		ContactID: ids.From[ids.ContactKind](contactID), PurposeID: purpose.ID, NewState: "granted",
 		PolicyText: &grantedWording,
 	}); err != nil {
 		t.Fatalf("grant: %v", err)
@@ -79,7 +79,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -105,7 +105,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 	publicCtx = principal.WithActor(publicCtx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:public_preferences",
 	})
-	if _, err := consentStore.PublicSetConsent(publicCtx, ids.From[ids.PersonKind](personID), "newsletter", "withdrawn", nil); err != nil {
+	if _, err := consentStore.PublicSetConsent(publicCtx, ids.From[ids.ContactKind](contactID), "newsletter", "withdrawn", nil); err != nil {
 		t.Fatalf("one-click withdrawal: %v", err)
 	}
 
@@ -133,15 +133,15 @@ func seedReplyAnchor(t *testing.T, e *integration.Env) ids.UUID {
 	return id
 }
 
-// addPersonEmail attaches an email channel to a person as admin, so the
+// addContactEmail attaches an email channel to a contact as admin, so the
 // consent gate can resolve a recipient address to the subject.
-func addPersonEmail(t *testing.T, e *integration.Env, personID ids.UUID, email string) {
+func addContactEmail(t *testing.T, e *integration.Env, contactID ids.UUID, email string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, email_type, is_primary, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by)
 			VALUES ($1, $2, 'work', true, 'manual', 'human:x')`,
-			personID, email)
+			contactID, email)
 		return err
 	}); err != nil {
 		t.Fatalf("add email: %v", err)

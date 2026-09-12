@@ -8,7 +8,7 @@ package activities
 // The reconcile itself is a two-transaction claim and lives in the integration
 // suite; what a unit test can hold is the filter in front of it, and that filter
 // is the one place this handler can fail SILENTLY — an owner change it declines
-// leaves a message hidden from the person who now owns it, with nothing on any
+// leaves a message hidden from the contact who now owns it, with nothing on any
 // screen to say why.
 
 import (
@@ -63,7 +63,7 @@ func TestAnUpdateMatchesOnlyWhenItNamesTheOwner(t *testing.T) {
 			payload: `{"changed_fields":{"delta":{"owner_id":"01930000-0000-7000-8000-0000000000a1"}}}`,
 			want:    true,
 		}, {
-			// The case this filter exists for: a person's row is written by
+			// The case this filter exists for: a contact's row is written by
 			// every enrichment pass, and running a delete over that contact's
 			// whole timeline behind each one is work nobody asked for.
 			name:    "a patch that moved something else",
@@ -92,7 +92,7 @@ func TestAnUpdateMatchesOnlyWhenItNamesTheOwner(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			handler := notMineRearm{trigger: "person.updated"}
+			handler := notMineRearm{trigger: "contact.updated"}
 			matched, err := handler.Match(context.Background(),
 				workflow.Event{Payload: json.RawMessage(c.payload)})
 			if err != nil {
@@ -184,7 +184,7 @@ func TestASecondHandOffOnOneRecordIsNotAReplayOfTheFirst(t *testing.T) {
 
 // The reconcile is the SYSTEM's, and says so rather than answering for a human.
 //
-// It clears dispositions other people recorded. A human reaching it would be
+// It clears dispositions other contacts recorded. A human reaching it would be
 // re-arming a colleague's set-aside messages under their own name — and the
 // refusal has to be a denial rather than a quiet zero, or a caller that lost
 // its system principal would report success over work it never did.

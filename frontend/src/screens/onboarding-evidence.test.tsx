@@ -92,7 +92,7 @@ const READ = {
     ...surplusFacts(FACT_PREVIEW_LIMIT + 1),
   ],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [LEGAL_ENTITY],
   warnings: [],
   draft_version: 2,

@@ -14,9 +14,9 @@ package installseam
 
 import (
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 )
 
@@ -29,9 +29,9 @@ func Deals() deals.Installation {
 		// activities owns `activity`, so the stamp's write lives there and the
 		// edge is injected here (ADR-0054).
 		StampCorrespondence: activities.StampCorrespondenceForDeal,
-		// people owns `partner`, so the "is this company a partner" read lives
+		// contacts owns `partner`, so the "is this company a partner" read lives
 		// there and the edge is injected here for the same reason.
-		EnsurePartner: people.EnsureCompanyIsPartner,
+		EnsurePartner: contacts.EnsureCompanyIsPartner,
 		// projects owns `project`, so the attach check and the delivery advance
 		// live there and the edges are injected here for the same reason.
 		EnsureProjectAttachable: projects.EnsureAttachable,

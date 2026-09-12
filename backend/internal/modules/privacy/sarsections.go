@@ -18,10 +18,10 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(pkg *SARPackage, personID ids.PersonID, emails []string, leads, identities []ids.UUID) []sarSection {
+func sarSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities []ids.UUID) []sarSection {
 	sections := sarIdentitySections(pkg)
 	sections = append(sections, sarRecordSections(pkg)...)
-	sections = append(sections, sarMessagingSections(pkg, personID, emails, leads)...)
+	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarConsentSections(pkg)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, leads, identities)...)
@@ -40,7 +40,7 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		// Without it every identifier in the export reads as current, so the
 		// subject cannot tell a retirement that happened from one that did not —
 		// in the very package they would check it in.
-		{&pkg.Emails, `SELECT email, email_type, is_primary, archived_at FROM person_email WHERE person_id = $1`, nil},
+		{&pkg.Emails, `SELECT email, email_type, is_primary, archived_at FROM contact_email WHERE contact_id = $1`, nil},
 		// The number this row replaced is exported as the NUMBER, not as the
 		// superseded_phone_id the column holds: a bare row id tells the subject
 		// nothing, and the point of the export is what is known about them.
@@ -51,23 +51,23 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		// it. A plain JOIN would also drop every number that replaced nothing,
 		// which is most of them.
 		//
-		// prev.person_id = p.person_id is the tenant predicate this join cannot
+		// prev.contact_id = p.contact_id is the tenant predicate this join cannot
 		// do without. A merge re-homes only LIVE phone rows, so the survivor
-		// can carry a live row still pointing at the merged-away person's
+		// can carry a live row still pointing at the merged-away contact's
 		// ARCHIVED one — and without this clause the survivor's export hands
 		// out a number belonging to somebody else. The pointer is left
 		// unresolved in that case rather than followed.
 		{&pkg.Phones, `SELECT p.phone, p.phone_type, p.archived_at, p.observed_at,
 		          p.source, p.captured_by,
 		          prev.phone AS replaced_phone, prev.observed_at AS replaced_observed_at
-		   FROM person_phone p
-		   LEFT JOIN person_phone prev
-		          ON prev.id = p.superseded_phone_id AND prev.person_id = p.person_id
-		  WHERE p.person_id = $1`, nil},
+		   FROM contact_phone p
+		   LEFT JOIN contact_phone prev
+		          ON prev.id = p.superseded_phone_id AND prev.contact_id = p.contact_id
+		  WHERE p.contact_id = $1`, nil},
 		{&pkg.ChannelIdentities, `SELECT provider, channel_user_id, username, blocked_at, source, created_at, archived_at
-		   FROM person_channel_identity WHERE person_id = $1`, nil},
+		   FROM contact_channel_identity WHERE contact_id = $1`, nil},
 		// THREE identities, because a participant row holds the subject three
-		// ways and Art. 15 owes what is HELD: by person_id, by the address a
+		// ways and Art. 15 owes what is HELD: by contact_id, by the address a
 		// message carried, and by the ACCOUNT a chat roster named them with —
 		// the third human in a group, who has a provider account and no
 		// address anywhere. Two arms where the erasure has three would say the
@@ -82,11 +82,11 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		       ap.display_name, ap.created_at, a.kind, a.occurred_at, a.direction
 		   FROM activity_participant ap
 		   JOIN activity a ON a.id = ap.activity_id
-		  WHERE ap.person_id = $1
+		  WHERE ap.contact_id = $1
 		     OR (ap.address IS NOT NULL AND ap.address IN (
-		         SELECT lower(email) FROM person_email WHERE person_id = $1))
+		         SELECT lower(email) FROM contact_email WHERE contact_id = $1))
 		     OR (ap.channel_user_id IS NOT NULL AND (a.channel_provider, ap.channel_user_id) IN (
-		         SELECT provider, channel_user_id FROM person_channel_identity WHERE person_id = $1))`, nil},
+		         SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = $1))`, nil},
 		// The same reach erasure uses: matched, or carrying their address, or
 		// bearing their name at an employer they actually work for. Art. 15
 		// owes what is HELD, and an unmatched ghost holds their name and
@@ -94,25 +94,25 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 		{&pkg.LinkedInConnections, `SELECT full_name, position, company_name, connected_on,
 		       email, profile_url, match_status, source, synced_at
 		   FROM linkedin_connection g
-		  WHERE g.matched_person_id = $1
-		     -- lower() on BOTH sides. person_email stores the address folded,
+		  WHERE g.matched_contact_id = $1
+		     -- lower() on BOTH sides. contact_email stores the address folded,
 		     -- an imported LinkedIn export does not, and comparing the two raw
 		     -- silently drops every connection whose address carries a capital
 		     -- — from the one package that is meant to say what is held.
 		     OR (g.email IS NOT NULL AND lower(g.email) IN (
-		         SELECT lower(email) FROM person_email WHERE person_id = $1))
+		         SELECT lower(email) FROM contact_email WHERE contact_id = $1))
 		     -- The profile URL is an identifier the subject is reachable by,
 		     -- and it is held about them whether or not the matcher ever
 		     -- linked the row. A package that omitted it would answer "what do
 		     -- you hold about me" with less than is held.
 		     OR (g.profile_url IS NOT NULL AND g.profile_url IN (
-		         SELECT handle FROM person_social
-		          WHERE person_id = $1 AND platform = 'linkedin'))
+		         SELECT handle FROM contact_social
+		          WHERE contact_id = $1 AND platform = 'linkedin'))
 		     OR (g.normalized_company IS NOT NULL
-		         AND g.normalized_name = (SELECT lower(f_unaccent(full_name)) FROM person WHERE id = $1)
+		         AND g.normalized_name = (SELECT lower(f_unaccent(full_name)) FROM contact WHERE id = $1)
 		         AND EXISTS (
 		             SELECT 1 FROM relationship r
-		              WHERE r.person_id = $1 AND r.kind = 'employment'
+		              WHERE r.contact_id = $1 AND r.kind = 'employment'
 		                AND r.archived_at IS NULL
 		                AND r.company_id = g.matched_company_id))`, nil},
 	}
@@ -124,16 +124,16 @@ func sarIdentitySections(pkg *SARPackage) []sarSection {
 func sarRecordSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
-		   FROM relationship WHERE person_id = $1 AND archived_at IS NULL`, nil},
+		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
 		   FROM deal d JOIN relationship r ON r.deal_id = d.id
-		   WHERE r.kind = 'deal_stakeholder' AND r.person_id = $1 AND r.archived_at IS NULL`, nil},
+		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
 		{&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l
-		   WHERE l.promoted_person_id = $1
-		      OR l.id IN (SELECT converted_from_lead_id FROM person WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
+		   WHERE l.promoted_contact_id = $1
+		      OR l.id IN (SELECT converted_from_lead_id FROM contact WHERE id = $1 AND converted_from_lead_id IS NOT NULL)
 		      OR (l.email IS NOT NULL AND EXISTS (
-		            SELECT 1 FROM person_email pe WHERE pe.person_id = $1 AND pe.email = lower(l.email)))`, nil},
+		            SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1 AND pe.email = lower(l.email)))`, nil},
 		// Art. 15 reaches a record the statutory floor is HOLDING about this
 		// subject, and does so deliberately: the restriction bars further
 		// PROCESSING of the record, not the subject's own access to what is
@@ -150,7 +150,7 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		// that captured it and to the humans on it — the mailbox owner's own
 		// correspondence, quoted third parties included. Handing that text to
 		// whoever operates the SAR would disclose a colleague's private mail to
-		// a person the message's audience excludes, in a package the subject
+		// a contact the message's audience excludes, in a package the subject
 		// then holds a copy of. So a limited message is DISCLOSED, with the
 		// fields that prove it exists — id, kind, when, where it came from, and
 		// which mailboxes hold it — and its subject and body are withheld
@@ -163,7 +163,7 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		            ELSE substring(a.captured_by from '([0-9a-f-]{36})$')
 		       END AS withheld_from_mailbox_of
 		   FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		   WHERE l.person_id = $1`, nil},
+		   WHERE l.contact_id = $1`, nil},
 		// A filename is content: `Aufhebungsvertrag_Mueller.pdf` states what the
 		// message is about. An attachment of a limited message is therefore
 		// listed by id and size with its name withheld, under the same rule as
@@ -176,9 +176,9 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 		           THEN at.filename
 		      END AS filename
 		   FROM attachment at
-		   WHERE (at.entity_type = 'person' AND at.entity_id = $1)
+		   WHERE (at.entity_type = 'contact' AND at.entity_id = $1)
 		      OR (at.entity_type = 'activity' AND at.entity_id IN (
-		            SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1))`, nil},
+		            SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1))`, nil},
 	}
 }
 
@@ -187,8 +187,8 @@ func sarRecordSections(pkg *SARPackage) []sarSection {
 func sarConsentSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
-		   FROM person_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
-		   WHERE pc.person_id = $1`, nil},
+		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
+		   WHERE pc.contact_id = $1`, nil},
 		// The proof row in full, not a summary of it.
 		//
 		// Four of these columns ARE the Art. 7(1) demonstrability: the exact
@@ -198,7 +198,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// answers "what did you decide" and not "what did I agree to", which is
 		// the question a subject access request is actually asking.
 		//
-		// captured_by names who recorded it — a person, an agent, or the
+		// captured_by names who recorded it — a contact, an agent, or the
 		// system. confirm_ip and confirm_user_agent are deliberately absent:
 		// they are the subject's own network fingerprint, held to defend the
 		// grant, and handing them back in an export widens where they exist
@@ -207,7 +207,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		          ce.lawful_basis, ce.policy_text, ce.policy_version,
 		          ce.double_opt_in_confirmed_at, ce.issuance_trigger, ce.captured_by
 		   FROM consent_event ce JOIN consent_purpose cp ON cp.id = ce.purpose_id
-		   WHERE ce.person_id = $1`, nil},
+		   WHERE ce.contact_id = $1`, nil},
 		// What made business correspondence lawful: the inbound message, the
 		// inquiry, the open deal or the exchange somebody recorded by hand.
 		// Absent from the export until now, which meant a subject could be told
@@ -221,7 +221,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// `note` is withheld for a different reason, and it is a judgement
 		// rather than a rule. It is free text a rep types to describe an
 		// in-person exchange, and nothing tells them it will be shown to the
-		// person it is about — so it can name a third party or repeat what
+		// contact it is about — so it can name a third party or repeat what
 		// somebody said. The kind and the date answer "an in-person exchange on
 		// this date was the basis", which is what Art. 15 asks. Export the note
 		// only alongside telling reps, at the surface where they type it, that
@@ -235,10 +235,10 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// the export is read by the subject, not by us.
 		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
 		   FROM consent_qualifying_event
-		   WHERE person_id = $1`, nil},
+		   WHERE contact_id = $1`, nil},
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
-		   FROM person_confirm_submission
-		   WHERE person_id = $1`, nil},
+		   FROM contact_confirm_submission
+		   WHERE contact_id = $1`, nil},
 	}
 }
 
@@ -247,7 +247,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 // captured what from where.
 func sarProvenanceSections(pkg *SARPackage) []sarSection {
 	return []sarSection{
-		// Why the installation holds this person at all: what they did, or
+		// Why the installation holds this contact at all: what they did, or
 		// what was done to obtain them. Art. 15(1)(g) asks for the source of
 		// the data, and this is the record that answers it in the subject's
 		// own terms rather than as an internal surface name.
@@ -257,9 +257,9 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// in the record sections, and a bare id would route around it.
 		{&pkg.AcquisitionEvidence, `SELECT kind, source_entity_type, purpose_claimed,
 		          occurred_at, captured_at
-		   FROM person_acquisition_evidence
-		   WHERE person_id = $1`, nil},
-		// What the installation owed this person for that acquisition, and
+		   FROM contact_acquisition_evidence
+		   WHERE contact_id = $1`, nil},
+		// What the installation owed this contact for that acquisition, and
 		// whether it discharged it. Art. 15 asks what we hold about them; a
 		// record saying we were obliged to write to them and did not is
 		// squarely that.
@@ -270,7 +270,7 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		{&pkg.NoticeCases, `SELECT rule, state, due_at, allowed_routes,
 		          attempts, completed_at, blocked_reason, created_at
 		   FROM privacy_notice_case
-		   WHERE person_id = $1`, nil},
+		   WHERE contact_id = $1`, nil},
 		// Reached two ways, like the erasure purge this mirrors (erasure.go's
 		// purgeDerivedTraces): by email, ILIKE against the stored address, and
 		// by channel identity, a typed JSONB path equality rather than a
@@ -278,7 +278,7 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		// so the email arm alone would silently omit their entire channel
 		// history from the export, and their sender id is a bare digit run
 		// that a substring match would also match against other rows' message
-		// ids, timestamps and other people's ids. The two payload shapes
+		// ids, timestamps and other contacts's ids. The two payload shapes
 		// matched (message.from.id, my_chat_member.chat.id) are the same two
 		// capture/telegram's Normalize and ParseMembership read the customer's
 		// id from — both update kinds land in raw_capture. The membership arm
@@ -332,17 +332,17 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		                            AND a.audience = 'workspace')
 		            THEN rc.payload END AS payload
 		   FROM raw_capture rc
-		   WHERE EXISTS (SELECT 1 FROM person_email pe WHERE pe.person_id = $1
+		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
 		                 AND rc.payload::text ILIKE
 		                     '%' || replace(replace(replace(pe.email, '\', '\\'), '%', '\%'), '_', '\_') || '%' ESCAPE '\')
-		      OR EXISTS (SELECT 1 FROM person_channel_identity pci WHERE pci.person_id = $1
+		      OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
 		                 AND rc.source_system = pci.provider
 		                 AND (rc.payload->'message'->'from'->>'id' = pci.channel_user_id
 		                      OR rc.payload->'my_chat_member'->'chat'->>'id' = pci.channel_user_id))`, nil},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
-		   WHERE fp.object_type = 'person' AND fp.object_id = $1`, nil},
-		// The STORED value, not the one the 360 renders. person360's
+		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},
+		// The STORED value, not the one the 360 renders. contact360's
 		// readProfileFields overlays whatever verdict a human recorded, because
 		// a page showing the machine's claim as fact would be showing a claim
 		// its reader already overrode. An export is the other obligation: it
@@ -362,15 +362,15 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
 		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
 		          ppf.superseded_observed_at
-		   FROM person_profile_field ppf
-		   WHERE ppf.person_id = $1`, nil},
+		   FROM contact_profile_field ppf
+		   WHERE ppf.contact_id = $1`, nil},
 		// claim_key is exported as it stands: it is a hash of the claim's
 		// path, so it names WHICH claim was decided without carrying the
 		// asserted value, which the ledger never stores in the first place.
 		{&pkg.Corrections, `SELECT af.claim_kind, af.claim_key, af.verdict, af.corrected_value, af.note,
 		          af.captured_by, af.created_at, af.updated_at
 		   FROM ai_feedback af
-		   WHERE af.subject_type = 'person' AND af.subject_id = $1`, nil},
+		   WHERE af.subject_type = 'contact' AND af.subject_id = $1`, nil},
 		// validation_status is deliberately absent: no writer populates that
 		// column, and the per-value validation the provider reports lives
 		// INSIDE value_json, which this exports whole. A column exported as
@@ -394,8 +394,8 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   FROM activity_reply_verdict_history h
 		   JOIN activity a ON a.id = h.activity_id
 		   WHERE h.activity_id IN (
-		         SELECT l.activity_id FROM activity_link l WHERE l.person_id = $1)`, nil},
-		// Every time this person was handed on as a prospect, and what was
+		         SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1)`, nil},
+		// Every time this contact was handed on as a prospect, and what was
 		// decided. The reason's LABEL travels rather than its id, because an
 		// export naming a uuid tells the subject nothing about why they were
 		// refused — which is the whole of what this section is for.
@@ -403,8 +403,8 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		          r.label AS reason, h.deal_id IS NOT NULL AS became_a_deal
 		   FROM sdr_handoff h
 		   LEFT JOIN sdr_handoff_reason r ON r.id = h.reason_id
-		   WHERE h.person_id = $1
-		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
+		   WHERE h.contact_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1)`, nil},
 		// And how each handoff got there. The actor is exported as recorded: it
 		// names the SEAT that decided, which is a fact about this installation's
 		// handling of the subject rather than about a third party.
@@ -413,22 +413,22 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   FROM sdr_handoff_event e
 		   JOIN sdr_handoff h ON h.id = e.handoff_id
 		   LEFT JOIN sdr_handoff_reason r ON r.id = e.reason_id
-		   WHERE h.person_id = $1
-		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_person_id = $1)`, nil},
+		   WHERE h.contact_id = $1
+		      OR h.lead_id IN (SELECT id FROM lead WHERE promoted_contact_id = $1)`, nil},
 		{&pkg.ProviderClaims, `SELECT ppc.provider, ppc.claim_key, ppc.value_json, ppc.confidence,
 		          ppc.source, ppc.captured_by, ppc.retrieved_at
-		   FROM person_provider_claim ppc
-		   WHERE ppc.person_id = $1`, nil},
+		   FROM contact_provider_claim ppc
+		   WHERE ppc.contact_id = $1`, nil},
 		{&pkg.ProviderAppliedFields, `SELECT paf.provider, paf.target_table, paf.target_field,
 		          paf.applied_value, paf.captured_by, paf.applied_at
 		   FROM provider_applied_field paf
-		   WHERE paf.person_id = $1`, nil},
+		   WHERE paf.contact_id = $1`, nil},
 		// The run history carries no credential and no vault reference: the
 		// closed safe status code is a product reason, never a provider body.
 		{&pkg.ProviderRuns, `SELECT pr.provider, pr.trigger, pr.state, pr.skip_reason,
 		          pr.requested_categories, pr.claims_unwritten, pr.last_safe_status_code,
 		          pr.submitted_at, pr.completed_at, pr.created_at
 		   FROM provider_run pr
-		   WHERE pr.person_id = $1`, nil},
+		   WHERE pr.contact_id = $1`, nil},
 	}
 }

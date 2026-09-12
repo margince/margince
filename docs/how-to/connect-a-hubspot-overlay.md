@@ -7,7 +7,7 @@ first.
 
 **Read, continuous sync, and write-back.** HubSpot stays canonical; records flow into Margince's
 mirror, and a write to an overlay-mode record is applied to HubSpot **first**, then re-mirrored
-(incumbent-first, with a stored-baseline drift check). Update and archive on person, company, and
+(incumbent-first, with a stored-baseline drift check). Update and archive on contact, company, and
 deal are live, plus update on lead and activity; the 360 screens show Edit and Archive whenever the type
 supports them, and Settings → Integrations manages the connection itself. `create`, `merge`,
 `advance-deal`, `promote-lead`, and `disqualify-lead` still answer `422 unsupported_by_sor`: `create`
@@ -146,11 +146,11 @@ rather than just present:
    directly with the same credential:
    ```sh
    PID=$(curl -s --cookie 'crm_session=<session>' \
-     http://localhost:8080/v1/people?limit=1 | jq -r '.data[0].id')
+     http://localhost:8080/v1/contacts?limit=1 | jq -r '.data[0].id')
    curl -s --cookie 'crm_session=<session>' \
-     http://localhost:8080/v1/people/$PID | jq '{full_name, title, owner_id, updated_at}'
+     http://localhost:8080/v1/contacts/$PID | jq '{full_name, title, owner_id, updated_at}'
    ```
-   `Person` carries neither `freshness` nor `trust_tier` — a record read has no per-record provenance
+   `Contact` carries neither `freshness` nor `trust_tier` — a record read has no per-record provenance
    field to check. Check trust per-record through search instead, which does emit it:
    ```sh
    curl -s --cookie 'crm_session=<session>' \
@@ -158,8 +158,8 @@ rather than just present:
    ```
    Expect `"external"` (never `"authoritative"`) for a hit that came from the mirror.
 2. **Fail-closed visibility.** A user whose email matched no HubSpot owner (so auto-seeding wrote no
-   `mirror_user_map` row) must see **zero** mirrored rows (`GET /people` returns an empty list,
-   `GET /people/{id}` answers 404, not 403 — existence-hiding). A user whose email *did* match an owner
+   `mirror_user_map` row) must see **zero** mirrored rows (`GET /contacts` returns an empty list,
+   `GET /contacts/{id}` answers 404, not 403 — existence-hiding). A user whose email *did* match an owner
    sees exactly their owned rows without any manual step; the admin `manual` map covers anyone the
    email match can't reach.
 3. **Reconcile is incumbent-wins.** Edit a field in the HubSpot UI, `POST /overlay/reconcile`, and

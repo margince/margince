@@ -13,7 +13,7 @@ package privacy
 import "fmt"
 
 // machineQualifier names the tool a delegated change was typed through, as
-// the phrase that qualifies the PERSON who authorized it — "via an agent",
+// the phrase that qualifies the CONTACT who authorized it — "via an agent",
 // not "an agent".
 //
 // It is the FALLBACK now. When the passport came from an OAuth grant the line
@@ -40,10 +40,10 @@ var machineQualifier = map[string]string{
 // weaving); an empty string is treated the same as nil — a resolved-but-
 // blank name is not authority to report.
 //
-// The sentence NAMES THE PERSON FIRST and says a machine did the typing
+// The sentence NAMES THE CONTACT FIRST and says a machine did the typing
 // second (PD-002). A rep working through a passport is the rep: the line
 // reads "Devin, via an agent, archived the record", never "an agent archived
-// the record" with the person demoted to a trailing phrase. Attribution
+// the record" with the contact demoted to a trailing phrase. Attribution
 // exists so somebody can be asked about a change, and a machine is not a
 // party to anything — a line whose subject is the tool lets every human in
 // the chain disclaim it.
@@ -62,7 +62,7 @@ func composeRecordSummary(actorType, actorDisplayName string, onBehalfOfName *st
 // Separated because an edge line needs the same subject in front of a different
 // predicate ("Uma, via Claude, linked Acme as cto"), and attribution that read
 // one way on a record line and another on an edge line, on the same page, would
-// be the defect: the whole point of the phrasing is that a person can be asked
+// be the defect: the whole point of the phrasing is that a contact can be asked
 // about a change.
 func recordSummarySubject(actorType, actorDisplayName string, onBehalfOfName *string,
 	passportBacked bool, agentClientName *string,

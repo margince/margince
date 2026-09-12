@@ -11,7 +11,7 @@ type Deal = components["schemas"]["Deal"];
 
 /**
  * The deal's commercial context in the record's side pane: why it exists, how
- * much a person says it matters, and which channel brought it.
+ * much a colleague says it matters, and which channel brought it.
  *
  * Renders nothing when all three are unset. An empty panel would say the deal
  * has no commercial context when what is true is that nobody has recorded one,

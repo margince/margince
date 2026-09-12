@@ -9,7 +9,7 @@ package compose
 // drives from the Log activity composer: the contract request (kind meeting,
 // meeting_status held) through the real activities writer, then the ladder
 // workflow reading the activity it captured. Proven here because the edge is
-// cross-module; the people-side tests seed touches, never the writer.
+// cross-module; the contacts-side tests seed touches, never the writer.
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -69,7 +69,7 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 	}
 
 	var ladder workflow.Handler
-	for _, h := range people.LeadSLAWorkflows(people.NewStore(e.DB())) {
+	for _, h := range contacts.LeadSLAWorkflows(contacts.NewStore(e.DB())) {
 		if h.Spec().Name == "lead_status_ladder" {
 			ladder = h
 		}
@@ -151,7 +151,7 @@ func TestManualNoteMarksTheLeadContacted(t *testing.T) {
 	}
 
 	var ladder workflow.Handler
-	for _, h := range people.LeadSLAWorkflows(people.NewStore(e.DB())) {
+	for _, h := range contacts.LeadSLAWorkflows(contacts.NewStore(e.DB())) {
 		if h.Spec().Name == "lead_status_ladder" {
 			ladder = h
 		}

@@ -73,7 +73,7 @@ describe("VCardImport", () => {
               index: 2,
               full_name: "Alan Turing",
               outcome: "needs_review",
-              person_id: "01a04fdf-7a3c-75f6-bdf6-5f868ea3a705",
+              contact_id: "01a04fdf-7a3c-75f6-bdf6-5f868ea3a705",
             },
             {
               index: 3,
@@ -118,7 +118,7 @@ describe("VCardImport", () => {
 
     expect(await screen.findByText("That file held no cards.")).toBeVisible();
     const [url, init] = fetchSpy.mock.calls[0];
-    expect(url).toBe("/v1/people/vcard-import");
+    expect(url).toBe("/v1/contacts/vcard-import");
     expect(init.method).toBe("POST");
     // The endpoint takes a multipart part named `file`; a JSON body or a
     // differently named part reaches a handler that refuses it.

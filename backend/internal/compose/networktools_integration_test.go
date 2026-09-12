@@ -22,7 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -33,12 +33,12 @@ import (
 
 // employAt records one contact's live employment at an account, the edge an
 // intro route walks its second hop over.
-func employAt(t *testing.T, e *integration.Env, person, company ids.UUID) {
+func employAt(t *testing.T, e *integration.Env, contact, company ids.UUID) {
 	t.Helper()
 	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, company_id, source, captured_by)
-			VALUES ('employment', $1, $2, 'manual', 'human:test')`, person, company)
+			INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'manual', 'human:test')`, contact, company)
 		return err
 	}, "recording employment")
 }
@@ -64,15 +64,15 @@ func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
 			INSERT INTO company (display_name, source, captured_by)
 			VALUES ('Acme GmbH', 'manual', 'human:test') RETURNING id`).Scan(&companyID)
 	}, "seeding the account")
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Jonas Bach", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
-	employAt(t, e, ids.UUID(person.Id), companyID)
+	employAt(t, e, ids.UUID(contact.Id), companyID)
 	// One recorded interaction, which is what makes a route rather than a name.
-	seedInteractionEdge(t, e, e.Rep1, ids.UUID(person.Id))
+	seedInteractionEdge(t, e, e.Rep1, ids.UUID(contact.Id))
 
 	routes, truncated, err := introPathLister(e.Pool)(ctx, companyID)
 	if err != nil {
@@ -83,10 +83,10 @@ func TestIntroPathNamesBothEndsOfTheRouteAndSaysWhenItWasCapped(t *testing.T) {
 	}
 	// Both ends: a route naming only the colleague leaves a rep asking "an
 	// intro to whom".
-	if routes[0].UserID != e.Rep1 || routes[0].PersonID != ids.UUID(person.Id) {
+	if routes[0].UserID != e.Rep1 || routes[0].ContactID != ids.UUID(contact.Id) {
 		t.Errorf("the route is %+v, want Rep1 → Jonas Bach", routes[0])
 	}
-	if routes[0].PersonName == "" || routes[0].DisplayName == "" {
+	if routes[0].ContactName == "" || routes[0].DisplayName == "" {
 		t.Error("the route carries a bare uuid on one end; a rep cannot act on it")
 	}
 	// An account well under the fetch bound was not cut, and says so.
@@ -111,7 +111,7 @@ func TestTheAtRiskSweepReportsItsOwnReach(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seedOpenDeal(t, e)
 
-	report, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(ctx)
+	report, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(ctx)
 	if err != nil {
 		t.Fatalf("at-risk sweep: %v", err)
 	}
@@ -166,14 +166,14 @@ func (s stubContext) AssembleContext(context.Context, datasource.EntityRef, retr
 // seedInteractionEdge writes one row of the projection directly: the fold is
 // tested elsewhere, and these tests are about what the seams do with an edge
 // that exists.
-func seedInteractionEdge(t *testing.T, e *integration.Env, user, person ids.UUID) {
+func seedInteractionEdge(t *testing.T, e *integration.Env, user, contact ids.UUID) {
 	t.Helper()
 	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO graph_interaction_edge
-			    (user_id, person_id, last_at, count_90d, in_count_90d,
+			    (user_id, contact_id, last_at, count_90d, in_count_90d,
 			     out_count_90d, count_total, computed_at)
-			VALUES ($1, $2, now(), 6, 3, 3, 6, now())`, user, person)
+			VALUES ($1, $2, now(), 6, 3, 3, 6, now())`, user, contact)
 		return err
 	}, "seeding the interaction edge")
 }
@@ -229,13 +229,13 @@ func seedOpenDeal(t *testing.T, e *integration.Env) ids.UUID {
 // coverageDeniedPerms is a caller with everything the sweep and the retriever
 // ask for EXCEPT the edge grant. Row scope is unbounded so nothing else can
 // account for what comes back: the only thing missing is permission to read
-// which people sit on a deal.
+// which contacts sit on a deal.
 func coverageDeniedPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"deal":     {Read: true},
-			"person":   {Read: true},
+			"contact":  {Read: true},
 			"company":  {Read: true},
 			"activity": {Read: true},
 		},
@@ -256,7 +256,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 	e := integration.Setup(t)
 	seedOpenDeal(t, e)
 
-	granted, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms))
+	granted, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms))
 	if err != nil {
 		t.Fatalf("the granted sweep: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 			"nothing about the denied caller", len(granted.Deals), granted.CoverageWithheld)
 	}
 
-	denied, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()))
+	denied, err := atRiskLister(e.Pool, contacts.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()))
 	if err != nil {
 		t.Fatalf("the denied sweep failed instead of reporting what it could not assess: %v", err)
 	}
@@ -318,9 +318,9 @@ func sectionNamed(ctx retrieval.Context, name string) *retrieval.Section {
 	return nil
 }
 
-// personDeniedPerms reads deals and their relationships but no people: the
+// contactDeniedPerms reads deals and their relationships but no contacts: the
 // caller who may see that a deal has an economic buyer and not who it is.
-func personDeniedPerms() principal.Permissions {
+func contactDeniedPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
@@ -333,12 +333,12 @@ func personDeniedPerms() principal.Permissions {
 	}
 }
 
-// A caller who may read the deal but NOT people gets NO seats — not seats with
+// A caller who may read the deal but NOT contacts gets NO seats — not seats with
 // the names blanked.
 //
 // This is the boundary the naming touches, and asserting it is what stopped a
 // wrong claim shipping in the contract. The first version of CoverageSeat's
-// comment said an unreadable person's seat still ships and only its name is
+// comment said an unreadable contact's seat still ships and only its name is
 // withheld. It cannot: deals.Stakeholders carries the edge's own admission and
 // refuses before any row is read — "knowing a deal does not license learning
 // who sits on it" — so the seat, the uuid and the risks all go together, and
@@ -347,25 +347,25 @@ func personDeniedPerms() principal.Permissions {
 // The test therefore pins the REFUSAL, not a degraded payload. A future change
 // that started returning half-populated seats here would be a disclosure
 // regression wearing the shape of an improvement.
-func TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed(t *testing.T) {
+func TestCoverageWithoutContactReadIsRefusedRatherThanUnnamed(t *testing.T) {
 	e := integration.Setup(t)
 	dealID := seedOpenDeal(t, e)
-	ppl := people.NewStore(InstallationDB(e.Pool))
+	ppl := contacts.NewStore(InstallationDB(e.Pool))
 
 	// seedOpenDeal seats nobody — it exists to test a THREADLESS deal — so this
 	// test seats its own stakeholder. Without one there is no name to lose and
 	// the granted assertion below would pass over an empty list.
 	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
-		var personID ids.UUID
+		var contactID ids.UUID
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO person (full_name, source, captured_by)
-			VALUES ('Athina Kanioura', 'manual', 'human:test') RETURNING id`).Scan(&personID); err != nil {
+			INSERT INTO contact (full_name, source, captured_by)
+			VALUES ('Athina Kanioura', 'manual', 'human:test') RETURNING id`).Scan(&contactID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+			INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 			VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:test')`,
-			personID, dealID)
+			contactID, dealID)
 		return err
 	}, "seating an economic buyer")
 
@@ -378,14 +378,14 @@ func TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed(t *testing.T) {
 	if len(named.Stakeholders) == 0 {
 		t.Fatal("the fixture seats no stakeholder, so it proves nothing about the denied caller")
 	}
-	if named.Stakeholders[0].PersonName != "Athina Kanioura" {
+	if named.Stakeholders[0].ContactName != "Athina Kanioura" {
 		t.Fatalf("the granted caller sees %q rather than the seated name — this is the naming "+
-			"the whole change is for", named.Stakeholders[0].PersonName)
+			"the whole change is for", named.Stakeholders[0].ContactName)
 	}
 
-	_, err = coverageReader(e.Pool, ppl)(e.As(e.Rep1, []ids.UUID{e.Team1}, personDeniedPerms()), dealID)
+	_, err = coverageReader(e.Pool, ppl)(e.As(e.Rep1, []ids.UUID{e.Team1}, contactDeniedPerms()), dealID)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a caller without person:read got %v — the seats are an EDGE and the read is "+
+		t.Fatalf("a caller without contact:read got %v — the seats are an EDGE and the read is "+
 			"refused whole, so anything else here is a disclosure", err)
 	}
 }

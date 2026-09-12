@@ -209,7 +209,7 @@ func fillCommercialStrip(out *struct {
 // claim about the ACCOUNT, and "nobody has written" and "you may not read the
 // mail" are different answers.
 func (a *assembly) readHealth() error {
-	if err := auth.Require(a.ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(a.ctx, "contact", principal.ActionRead); err != nil {
 		return err
 	}
 	strengths, err := a.contactStrengths()
@@ -302,12 +302,12 @@ func rateHealthDimensions(
 		case health.SingleThreaded != nil && *health.SingleThreaded:
 			health.Relationship = &crmcontracts.HealthDimension{
 				Rating: crmcontracts.HealthDimensionRatingGood,
-				Reason: "In contact, but one person carries the whole account.",
+				Reason: "In contact, but one contact carries the whole account.",
 			}
 		default:
 			health.Relationship = &crmcontracts.HealthDimension{
 				Rating: crmcontracts.HealthDimensionRatingStrong,
-				Reason: fmt.Sprintf("%d people here are in contact with us.", *health.ActiveContacts),
+				Reason: fmt.Sprintf("%d contacts here are in contact with us.", *health.ActiveContacts),
 			}
 		}
 	}

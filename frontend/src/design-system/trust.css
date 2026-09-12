@@ -127,7 +127,7 @@ button.evidence-chip:hover {
      arm of the five. */
   color: var(--tealText);
 }
-/* The installation's own housekeeping: neither a person nor a model, so it
+/* The installation's own housekeeping: neither a contact nor a model, so it
    borrows neither the human teal nor the AI tint. Plain ink on the neutral chip
    fill is the quietest thing that is still a claim — a scheduled sweep drawn in
    the AI colour would tell a reader a model decided something here. */
@@ -136,15 +136,15 @@ button.evidence-chip:hover {
   color: var(--textPrimary);
 }
 /* A buyer typed it, so the tag keeps the human arm's neutral chip fill and
-   never the AI tint — a person did this. The ink is the accent rather than the
-   colleague teal because a buyer is a person from OUTSIDE the company, and
+   never the AI tint — a contact did this. The ink is the accent rather than the
+   colleague teal because a buyer is a contact from OUTSIDE the company, and
    the accent is already how the product marks a buyer's own contribution (the
    stripe on their Deal Room comment). */
 .provenance-buyer {
   background: var(--bgChip);
   color: var(--accentText);
 }
-/* An unrecorded source claims neither a person nor a machine, and reads as
+/* An unrecorded source claims neither a contact nor a machine, and reads as
    the absence it is rather than borrowing either one's colour. */
 .provenance-unknown {
   background: var(--bgChip);

@@ -35,7 +35,7 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Merge-target search (P-2): mirrors searchPeopleTargets (contacts.tsx) — the
+// Merge-target search (P-2): mirrors searchContactsTargets (contacts.tsx) — the
 // caller filters out the source row.
 export async function searchCompanyTargets(
   q: string,
@@ -325,7 +325,7 @@ export function companyEditFields(
     },
     // The company's own LinkedIn page. A canonical column since ADR-0085,
     // not a custom field, because it carries identity semantics — matching,
-    // dedupe, enrichment — and the person side already treats it that way. The
+    // dedupe, enrichment — and the contact side already treats it that way. The
     // server normalizes what is pasted, so a URL copied from any tab of the
     // company page resolves to the one spelling.
     { key: "linkedin_url", label: "create.linkedinUrl" },

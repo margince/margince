@@ -53,7 +53,7 @@ func (e *introEnv) contactFor(t *testing.T, label string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, source, captured_by, owner_id)
+		`INSERT INTO contact (id, full_name, source, captured_by, owner_id)
 		 VALUES ($1, $2, 'manual', 'test', $3)`,
 		id, "Contact "+label, e.requester); err != nil {
 		t.Fatal(err)
@@ -146,7 +146,7 @@ func TestAnExpiryLandsInTheWriteShapeUnderTheClocksName(t *testing.T) {
 		t.Errorf("the trail says the expiry followed %q; want accepted — an ask "+
 			"nobody answered and one a colleague dropped are different stories", before)
 	}
-	// The clock's name, not a person's. A human's id here would put their name
+	// The clock's name, not a human's. A human's id here would put their name
 	// on a refusal they never made — and the TYPE matters as much as the id,
 	// because that is what a reader scans to tell an automated close from a
 	// colleague's decision.
@@ -178,7 +178,7 @@ func TestExpiryReachesAnAcceptedAskAndALentName(t *testing.T) {
 	for _, answer := range []Status{StatusAccepted, StatusNameDropApproved} {
 		ask := e.ask()
 		// A contact of its own, so the duplicate guard admits both asks.
-		ask.PersonID = e.contactFor(t, string(answer))
+		ask.ContactID = e.contactFor(t, string(answer))
 		id, err := e.store.Create(e.asUser(e.requester), ask)
 		if err != nil {
 			t.Fatalf("Create for %s: %v", answer, err)

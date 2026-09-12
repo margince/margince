@@ -33,11 +33,11 @@ import (
 
 // ourSideUsers reads the colleagues the projection would put on the account
 // card for one contact set, through the same read the card performs.
-func ourSideUsers(t *testing.T, e *integration.Env, people []ids.UUID) map[ids.UUID]bool {
+func ourSideUsers(t *testing.T, e *integration.Env, contacts []ids.UUID) map[ids.UUID]bool {
 	t.Helper()
 	out := map[ids.UUID]bool{}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		edges, err := search.EdgesForPeople(e.Admin(), tx, people)
+		edges, err := search.EdgesForContacts(e.Admin(), tx, contacts)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 	var contact ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES (
 			        'Pat Counterparty', $1, 'gmail:seed', 'connector:gmail', 'workspace')
 			RETURNING id`, owner).Scan(&contact)
@@ -86,7 +86,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'from')`, activityID, contact)
 		return err
 	}); err != nil {
@@ -114,7 +114,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 	var contact ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES (
 			        'Known Contact', $1, 'manual', 'human:test', 'workspace')
 			RETURNING id`, e.Rep1).Scan(&contact)
@@ -137,7 +137,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, role)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'to')`, activityID, contact)
 		return err
 	}); err != nil {

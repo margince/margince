@@ -73,7 +73,7 @@ const READ: CompanySiteRead = {
   profile_fields: REQUIRED_TRIO,
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

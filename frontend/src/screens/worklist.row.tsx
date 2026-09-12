@@ -89,7 +89,7 @@ export function WorklistRow({
   item: WorklistItem;
   position: number;
   // Whose queue this row is on, empty for the reader's own. It names the
-  // person a reassignment moves work AWAY from, which on the reader's own
+  // contact a reassignment moves work AWAY from, which on the reader's own
   // queue is the reader — ReassignControl resolves that rather than this
   // prop carrying it, so an empty value is a real state and not a missing one.
   owner: string;
@@ -378,13 +378,13 @@ const ANSWER_BY_SOURCE: Partial<
       primary: <TaskComplete id={item.id} version={item.version} />,
     }),
   },
-  // The row's id IS the person's here, which is what the dismissal endpoint
+  // The row's id IS the contact's here, which is what the dismissal endpoint
   // takes — the pairing is why this verb is offered on this lane and nowhere
   // else. `dismiss` also belongs to brief_item, where it means something else
   // and posts somewhere else, which is why this table is keyed by SOURCE.
   relationship_decay: {
     verb: "dismiss",
-    draw: (item) => ({ primary: <NudgeDismiss personId={item.id} /> }),
+    draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
   },
 };
 
@@ -456,12 +456,12 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
 //
 // Nobody is waiting on a quiet contact, which is exactly why the row kept
 // coming back: there was no way to say "not this one, not now", so a rep who
-// had already decided met the same person every morning.
+// had already decided met the same contact every morning.
 //
 // UNDOABLE from the confirmation, like every disposition beside it. The row
 // leaves the lane on success, so a misclick otherwise costs the reader the only
 // address they had for a contact they were not done with.
-function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
+function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
   const t = useT();
   const toast = useToast();
   const { dismiss, restore } = useNudgeDismissal();
@@ -471,7 +471,7 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
-          { personId },
+          { contactId },
           {
             onSuccess: () =>
               toast.show(t("worklist.verb.dismissed"), {
@@ -489,7 +489,7 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
                   // all — the reader presses the one control that undoes
                   // their misclick, it fails, and the screen is silent.
                   onAct: () => {
-                    restore.mutateAsync({ personId }).catch(() =>
+                    restore.mutateAsync({ contactId }).catch(() =>
                       toast.show(t("worklist.verb.dismissUndoFailed"), {
                         mark: false,
                       }),
@@ -513,7 +513,7 @@ function NudgeDismiss({ personId }: Readonly<{ personId: string }>) {
  *
  * A COUNT, because the ceiling has to survive the vocabulary growing. Saying
  * only what a row contains today puts it back over the limit the next time
- * somebody adds a reason, and that person has no way to know they did.
+ * somebody adds a reason, and that contact has no way to know they did.
  *
  * Three because three still fit on ONE line at 390px. Measured 2026-09-05:
  * two reasons and three are both 19px; the fourth wraps to 37px and the sixth
@@ -582,7 +582,7 @@ function RowWhyHere({
             <span className="worklist-row-because-more">
               {translatePlural(locale, "worklist.because.more", behind, {
                 // The reader's own notation, not String(): a count drawn for a
-                // person goes through the formatter like every other magnitude,
+                // contact goes through the formatter like every other magnitude,
                 // and jsx-magnitude.test.ts holds that for the whole tree.
                 count: formatNumber(behind, locale),
               })}
@@ -619,7 +619,7 @@ function RowWhyHere({
  *
  * Together in one component because they are one idea — the row's own account
  * of itself — and because the row's function had reached the complexity the
- * linter allows, which is a fair reading of how much a person can hold at once.
+ * linter allows, which is a fair reading of how much a contact can hold at once.
  */
 function RowCaptions({
   when,
@@ -709,7 +709,7 @@ function Rank({
   );
 }
 
-// Whether this row is a decision a person answers HERE.
+// Whether this row is a decision a contact answers HERE.
 //
 // The queue holds no authority of its own — the card below is the same one the
 // record page draws, posting to the same endpoint. What the queue adds is that
@@ -1050,7 +1050,7 @@ function WaitingReply({
 // `dismissed`, and they are genuinely different — kept, versus never really
 // promised — but only one of them is a thing a rep does on their morning queue.
 // Dismissing an extraction is a judgement about the extractor, made on the
-// person's own card beside the words it was read from, where the reader can see
+// contact's own card beside the words it was read from, where the reader can see
 // what it got wrong.
 function PromiseKept({ id }: Readonly<{ id: string }>) {
   const t = useT();

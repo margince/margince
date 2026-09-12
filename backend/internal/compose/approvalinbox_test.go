@@ -17,10 +17,10 @@ import (
 )
 
 func stagedFixture() crmcontracts.Approval {
-	summary := "Archive person \"Queue Subject\""
-	target := "person"
+	summary := "Archive contact \"Queue Subject\""
+	target := "contact"
 	targetID := openapi_types.UUID(ids.NewV7())
-	change := map[string]any{"record_type": "person"}
+	change := map[string]any{"record_type": "contact"}
 	snippet := crmcontracts.ApprovalEvidence{EvidenceSnippet: "as the transcript reads"}
 	return crmcontracts.Approval{
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "archive_record", Status: "pending",
@@ -36,7 +36,7 @@ func stagedFixture() crmcontracts.Approval {
 func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 	listed := stagedActionFrom(stagedFixture(), false)
 	if listed.Summary == "" {
-		t.Error("the listed item carries no sentence a person could answer from")
+		t.Error("the listed item carries no sentence a contact could answer from")
 	}
 	if len(listed.ProposedChange) != 0 {
 		t.Errorf("the listing carries the staged change: %s", listed.ProposedChange)
@@ -114,7 +114,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 // so a new kind whose accept effect puts a message on the wire would be
 // releasable by a passport whose human deliberately withheld `send`, with every
 // test still green. This is the direction that cannot be derived: the effects
-// are opaque functions, and only the person wiring one knows whether it sends.
+// are opaque functions, and only the contact wiring one knows whether it sends.
 //
 // So the census fails closed. A kind registered below and named in neither list
 // stops the build until somebody classifies it, and the classification is a

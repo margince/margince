@@ -55,18 +55,18 @@ func advisoryAnswer(ctx context.Context, t *testing.T, e *integration.Env,
 // cascade whether the boundary was asked or not.
 func TestThePageRefusesALinkBehindAnEndsErasureBoundaryByName(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Selma Subject", nil)
+	contact := e.SeedContact(t, "Selma Subject", nil)
 	company := e.SeedCompany(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
-	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "contact", contact, time.Now().Add(time.Hour).UTC())
 	if !edgeIsLive(t, e, edge) {
 		t.Fatal("the link is already archived, so the refusal below could come from that " +
 			"and say nothing about the erasure boundary")
 	}
 
-	answer := advisoryAnswer(e.Admin(), t, e, "person", person, auditID)
+	answer := advisoryAnswer(e.Admin(), t, e, "contact", contact, auditID)
 	if answer.Undoable || answer.Reason != string(ReasonBehindErasureBoundary) {
 		t.Errorf("the page answered %+v for a link behind its subject's erasure, want a refusal "+
 			"naming %q — the write refuses it on press", answer, ReasonBehindErasureBoundary)
@@ -81,15 +81,15 @@ func TestThePageRefusesALinkBehindAnEndsErasureBoundaryByName(t *testing.T) {
 // over a 403 for the commonest seat in the product.
 func TestThePageRefusesACreateEntryToASeatThatMayNotRemoveALink(t *testing.T) {
 	e := integration.Setup(t)
-	// Owned by the rep, whose seeded row scope is their own records: a person
+	// Owned by the rep, whose seeded row scope is their own records: a contact
 	// they cannot write would be refused for a reason this case is not about.
-	person := e.SeedPerson(t, "Ada Employed", &e.Rep1)
+	contact := e.SeedContact(t, "Ada Employed", &e.Rep1)
 	company := e.SeedCompany(t, "Employer GmbH", &e.Rep1)
-	edge := seedEmploymentEdge(t, e, person, company)
+	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	answer := advisoryAnswer(rep, t, e, "person", person, auditID)
+	answer := advisoryAnswer(rep, t, e, "contact", contact, auditID)
 	if answer.Undoable || answer.Reason != string(ReasonNotWritableByCaller) {
 		t.Errorf("the page answered %+v to a seat holding relationship update and not delete, "+
 			"want a refusal naming %q", answer, ReasonNotWritableByCaller)
@@ -98,8 +98,8 @@ func TestThePageRefusesACreateEntryToASeatThatMayNotRemoveALink(t *testing.T) {
 	// The control on the premise: this seat really cannot remove the link, so the
 	// refusal above is the page agreeing with the write rather than a stricter
 	// answer of its own.
-	if _, err := restoreSeamFor(e).Restore(rep, "person", person, auditID,
-		currentVersion(t, e, "person", person)); err == nil {
+	if _, err := restoreSeamFor(e).Restore(rep, "contact", contact, auditID,
+		currentVersion(t, e, "contact", contact)); err == nil {
 		t.Error("the reverse committed for a seat that holds no delete grant on a link")
 	}
 	if !edgeIsLive(t, e, edge) {

@@ -28,7 +28,7 @@ package gates
 //
 // What it deliberately does NOT judge: a statement that reads app_user with no
 // liveness constraint at all. Plenty legitimately do — resolving a row by id to
-// render a name does not care whether the person still works here, and a gate
+// render a name does not care whether the contact still works here, and a gate
 // that demanded they all filter would be asserting an answer nobody gave. It
 // also does not judge another table that happens to carry the same two column
 // names: `voice_profile_version` is filtered by `status = 'active' AND
@@ -81,9 +81,9 @@ var cannotReachIdentity = gatekit.Waive(map[string]string{
 	"internal/modules/dealrooms/store_public.go":     "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/dealrooms/room_write.go":       "dealrooms cannot import identity (ADR-0054 §3); the predicate must move tier first. It arrived here from namesTheSeatRatherThanOffersIt, where it did NOT belong: a steward is somebody a buyer is pointed at for help, so the seat is being offered rather than named, and the entry was recording the defect (a deactivated colleague could be one) instead of a reason. Fixed in issue 2596",
 	"internal/modules/capture/owneridentitystore.go": "capture cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/counterpartyname.go":    "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/leadrouting.go":         "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
-	"internal/modules/people/linkedinmatch.go":       "people cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/counterpartyname.go":  "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/leadrouting.go":       "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/contacts/linkedinmatch.go":     "contacts cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/projects/surface.go":           "projects cannot import identity (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/search/graphedge.go":           "search cannot import identity (ADR-0054 §3); the predicate must move tier first",
 })
@@ -427,7 +427,7 @@ var onlyTheActivatablePair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
 // A looser reading — "spells both halves and names no table" — reported a test
 // whose FAILURE MESSAGE quotes the predicate back to the reader. Prose that
 // mentions the pair is not a second implementation of it, and a gate that says
-// so teaches people to stop reading its output.
+// so teaches contacts to stop reading its output.
 var onlyTheLivenessPair = regexp.MustCompile(`(?is)^\(?\s*(?:` +
 	`(?:[a-z]\w*\.)?status\s*=\s*'active'\s+AND\s+(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL` + `|` +
 	`(?:[a-z]\w*\.)?archived_at\s+IS\s+NULL\s+AND\s+(?:[a-z]\w*\.)?status\s*=\s*'active'` +

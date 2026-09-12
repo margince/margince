@@ -118,7 +118,7 @@ func isHardCodedScale(expr ast.Expr) bool {
 // builds five fields in one assignment, and one of them divides a percentage by
 // 100 while another names a minor-unit base; a rule reading the whole statement
 // calls that money. Stopping at the literal's own element is the difference
-// between a census people read and one whose escape hatch they use routinely.
+// between a census contacts read and one whose escape hatch they use routinely.
 //
 // The statement is still the unit everywhere else, and it has to be: a
 // formatter breaks `amountMinor := int64(major * 100)` across three lines, and

@@ -29,7 +29,7 @@ import (
 // The partner fields are absent because their clear writes TWO columns — see
 // dealClearPairs, which owns the pair.
 //
-//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns
 func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
 		"expected_close_date": {Column: "expected_close_date", Current: current.ExpectedCloseDate},

@@ -98,7 +98,7 @@ const SITE_READ: SiteRead = {
   profile_fields: [],
   facts: [],
   comparisons: [...COMPARISONS],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 3,
   proposal_hash: "sha256:acme",
@@ -517,7 +517,7 @@ describe("CompanyContextCard write posture", () => {
 });
 
 // Two failures reach the same paragraph and only one of them was written for
-// the person reading it: the start POST answers the URL they just typed, while
+// the reader reading it: the start POST answers the URL they just typed, while
 // a status poll answers a read id they never saw.
 describe("CompanyContextCard refresh failures", () => {
   // The site-read routes split by method here: starting a read and polling it

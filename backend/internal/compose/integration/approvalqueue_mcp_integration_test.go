@@ -8,13 +8,13 @@ package integration
 // The 🟡 loop closed from ONE conversation, against real Postgres.
 //
 // Until the queue tools existed the loop had a hole where its other half should
-// be: a refused call staged a proposal, told the agent to wait for a person, and
+// be: a refused call staged a proposal, told the agent to wait for a contact, and
 // then neither of them could reach the queue without opening the web app. The
 // agent could not even see that its own proposal was already waiting.
 //
 // What is proven here is the whole round trip on one credential — stage, see,
 // read, answer, redeem — plus the two bounds that make it safe to admit at all:
-// the answer is recorded as the PERSON's, not the credential's, and a passport
+// the answer is recorded as the HUMAN's, not the credential's, and a passport
 // its human lent for reading cannot answer anything.
 
 import (
@@ -161,7 +161,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 			t.Errorf("the item points at %s/%s, want company/%s", item.TargetType, item.TargetID, companyID)
 		}
 		if item.Summary == "" {
-			t.Error("the item carries no sentence a person could answer from")
+			t.Error("the item carries no sentence a contact could answer from")
 		}
 		// The listing is scanned to choose; the staged document is what
 		// read_approval is for. A queue that carried every payload would spend a
@@ -201,7 +201,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 	}
 
 	// ANSWER IT on another of the same human's credentials, and the answer is
-	// the PERSON's: decided_by is the human who lent it, never the credential.
+	// the HUMAN's: decided_by is the human who lent it, never the credential.
 	decider := q.invoker(t, q.mintPassport(t, "deciding agent", "read", "write", "enrich"))
 	if _, err = decider("decide_approval", answer); err != nil {
 		t.Fatalf("decide_approval → %v", err)
@@ -218,7 +218,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 		t.Fatalf("the approval reads %q after its decision", status)
 	}
 	if !decidedIsTheLender {
-		t.Error("the decision was recorded against somebody other than the person who lent the passport")
+		t.Error("the decision was recorded against somebody other than the contact who lent the passport")
 	}
 
 	// REDEEM IT, on the credential that staged it: approving does not perform an
@@ -262,7 +262,7 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 }
 
 // A passport does what its holder could do unaided. Relinking an activity onto
-// a person, a company or a deal is an association a member undoes in the app
+// a contact, a company or a deal is an association a member undoes in the app
 // with no ceremony, so it must not cost a human decision here either — while a
 // PROJECT destination stays confirm-first, because filing under a project
 // classifies the activity as commercial correspondence, which is write-once.
@@ -274,17 +274,17 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 // agent relink was raised, whatever its destination.
 //
 // Driven from claude.ai on 2026-08-25 that showed up as three approvals for one
-// logged meeting: the model attached the person, the company and the deal after
+// logged meeting: the model attached the contact, the company and the deal after
 // the fact, and each attach staged a card the app would never have asked for.
-func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T) {
+func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "relinking agent", "read", "write"))
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Relink Subject"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {
 		ID string `json:"id"`
@@ -325,7 +325,7 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 		entityType string
 		entityID   string
 	}{
-		{"person", person.ID},
+		{"contact", contact.ID},
 		{"company", company.ID},
 	} {
 		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
@@ -355,7 +355,7 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 // already reads.
 //
 // The defect this closes was not a missing guard — the guard fired. Asked to
-// create a person who already existed, the ladder filed the pair at confidence
+// create a contact who already existed, the ladder filed the pair at confidence
 // 1.000 on a shared phone, and create_record answered with the record and
 // nothing else. The assistant driving it therefore told its user "the guard is
 // email-only", which was false, and argued for building a safeguard that was
@@ -372,14 +372,14 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 	first := answered[struct {
 		ID string `json:"id"`
 	}](t, mustInvoke(t, invoke, "create_record",
-		`{"record_type":"person","fields":{"full_name":"Rosa Lindqvist",`+
+		`{"record_type":"contact","fields":{"full_name":"Rosa Lindqvist",`+
 			`"phones":[{"phone":"`+shared+`","phone_type":"mobile","is_primary":true}]}}`))
 
 	// The same human's second business card: one number in common, a different
-	// address, and no reason for the server to refuse — two people really can
+	// address, and no reason for the server to refuse — two contacts really can
 	// share a switchboard.
 	out := mustInvoke(t, invoke, "create_record",
-		`{"record_type":"person","fields":{"full_name":"Rosa Lindqvist",`+
+		`{"record_type":"contact","fields":{"full_name":"Rosa Lindqvist",`+
 			`"emails":[{"email":"rosa@privat.test","email_type":"personal","is_primary":true}],`+
 			`"phones":[{"phone":"`+shared+`","phone_type":"work","is_primary":true}]}}`)
 
@@ -425,7 +425,7 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 	// The evidence is what a caller reads out before offering a merge, so it has
 	// to name the axis and carry the values the matcher actually compared.
 	if len(dup.Evidence) == 0 {
-		t.Fatal("the candidate carries no evidence, so a caller has nothing to show a person")
+		t.Fatal("the candidate carries no evidence, so a caller has nothing to show a contact")
 	}
 	if dup.Evidence[0].Field != "phone" || dup.Evidence[0].Left != shared {
 		t.Errorf("evidence = %+v, want the shared number %s on the phone axis", dup.Evidence[0], shared)
@@ -475,7 +475,7 @@ func TestACleanCreateCarriesNoDuplicateReport(t *testing.T) {
 	invoke := q.invoker(t, q.mintPassport(t, "clean creator", "read", "write"))
 
 	out := mustInvoke(t, invoke, "create_record",
-		`{"record_type":"person","fields":{"full_name":"Ingeborg Sandvik",`+
+		`{"record_type":"contact","fields":{"full_name":"Ingeborg Sandvik",`+
 			`"emails":[{"email":"ingeborg@sandvik.test","email_type":"work","is_primary":true}]}}`)
 
 	var envelope struct {

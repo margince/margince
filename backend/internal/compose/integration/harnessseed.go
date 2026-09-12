@@ -18,23 +18,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The id wideners assert a harness-seeded untyped id as the entity a people-store
+// The id wideners assert a harness-seeded untyped id as the entity a contacts-store
 // call targets — the suites' spelling of the contracts-edge ids.From widening. The
 // harness keeps its fixture ids untyped so every module's suite can share them,
 // and each suite widens at the call it makes.
 //
-// Only PersonIDOf is exported, because integration/channels widens person ids from
+// Only ContactIDOf is exported, because integration/channels widens contact ids from
 // outside this package. The other three have no caller beyond it, and a suite
 // package that later needs one exports it then.
 
-// PersonIDOf widens a harness fixture id to a person id.
-func PersonIDOf(u ids.UUID) ids.PersonID { return ids.From[ids.PersonKind](u) }
+// ContactIDOf widens a harness fixture id to a contact id.
+func ContactIDOf(u ids.UUID) ids.ContactID { return ids.From[ids.ContactKind](u) }
 
 // companyIDOf widens a harness fixture id to a company id.
 func companyIDOf(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
@@ -44,7 +44,7 @@ func leadIDOf(u ids.UUID) ids.LeadID       { return ids.From[ids.LeadKind](u) }
 func projectIDOf(u ids.UUID) ids.ProjectID { return ids.From[ids.ProjectKind](u) }
 
 // userIDPtr types an optional harness user id (Env keeps its fixture ids
-// untyped so every module's suite can use them) for people's typed inputs.
+// untyped so every module's suite can use them) for contacts's typed inputs.
 func userIDPtr(owner *ids.UUID) *ids.UserID {
 	if owner == nil {
 		return nil
@@ -53,11 +53,11 @@ func userIDPtr(owner *ids.UUID) *ids.UserID {
 	return &id
 }
 
-// SeedPerson creates a person owned by the given user (nil = ownerless),
+// SeedContact creates a contact owned by the given user (nil = ownerless),
 // acting as admin.
-func (e *Env) SeedPerson(t *testing.T, name string, owner *ids.UUID) ids.UUID {
+func (e *Env) SeedContact(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	p, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: name, OwnerID: userIDPtr(owner), Source: "manual"})
+	p, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name, OwnerID: userIDPtr(owner), Source: "manual"})
 	if err != nil {
 		t.Fatalf("seeding %s: %v", name, err)
 	}
@@ -67,7 +67,7 @@ func (e *Env) SeedPerson(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 // SeedCompany creates a company owned by the given user, acting as admin.
 func (e *Env) SeedCompany(t *testing.T, name string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	company, err := e.People.CreateCompany(e.Admin(), people.CreateCompanyInput{
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: name, OwnerID: userIDPtr(owner),
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func (e *Env) SeedPartnerCompany(t *testing.T, name string, tier *string, owner 
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	if _, err := e.People.UpsertPartner(seeder, people.UpsertPartnerInput{
+	if _, err := e.Contacts.UpsertPartner(seeder, contacts.UpsertPartnerInput{
 		CompanyID:   ids.From[ids.CompanyKind](company),
 		PartnerRole: "consulting",
 		MarginTier:  tier,
@@ -122,7 +122,7 @@ func (e *Env) SeedPartnerCompany(t *testing.T, name string, tier *string, owner 
 // into the first tenant's transaction, which RLS refuses.
 func (e *Env) SeedCompanyAs(ctx context.Context, t *testing.T, ws ids.UUID, name string) ids.UUID {
 	t.Helper()
-	company, err := e.PeopleFor(ws).CreateCompany(ctx, people.CreateCompanyInput{DisplayName: name})
+	company, err := e.ContactsFor(ws).CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: name})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,16 +141,16 @@ func (e *Env) SeedDeal(t *testing.T, name string, pipeline ids.PipelineID, stage
 	return ids.UUID(d.Id)
 }
 
-// MakeCapturePrivate turns a seeded person or company into a
+// MakeCapturePrivate turns a seeded contact or company into a
 // capture-private row — `visibility='owner'`, owned by the given user — the
-// state a connector leaves an unpromoted contact in. Person, company,
+// state a connector leaves an unpromoted contact in. Contact, company,
 // lead and deal are otherwise readable by every seat of the workspace, so
 // this is the ONE way a test still has to put an identity row out of a
 // caller's read scope; a test about row scope on a commercial table seeds a
 // project instead.
 func (e *Env) MakeCapturePrivate(t *testing.T, table string, id, owner ids.UUID) {
 	t.Helper()
-	if table != objPerson && table != objCompany {
+	if table != objContact && table != objCompany {
 		t.Fatalf("MakeCapturePrivate: %s carries no visibility column", table)
 	}
 	e.WsExec(t, `UPDATE `+table+` SET visibility = 'owner', owner_id = $2 WHERE id = $1`, id, owner)

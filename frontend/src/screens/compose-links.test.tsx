@@ -52,10 +52,10 @@ const PURPOSES = {
 // than the only option — and the sole-project default stays out of the way.
 const COMPANY_VIEW = {
   company: { id: "company-1", name: "Acme" },
-  people: {
+  contacts: {
     data: [
-      { person_id: "per-1", full_name: "Dieter Klein" },
-      { person_id: "per-2", full_name: "Sara Vogel" },
+      { contact_id: "per-1", full_name: "Dieter Klein" },
+      { contact_id: "per-2", full_name: "Sara Vogel" },
     ],
   },
   deals: {
@@ -178,7 +178,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -196,7 +196,7 @@ describe("what a sent message files under", () => {
     // the message the rep wrote about it.
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "deal-1" },
     ]);
   });
@@ -209,7 +209,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -229,7 +229,7 @@ describe("what a sent message files under", () => {
     // files the sent message, so the project's timeline sees it.
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "deal-1" },
       { entity_type: "project", entity_id: "proj-1" },
     ]);
@@ -249,7 +249,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -269,7 +269,10 @@ describe("what a sent message files under", () => {
     const request = sent.find(
       (r) => r.key === "POST /companies/company-1/draft-email",
     );
-    expect(request?.body).toEqual({ person_id: "per-1", project_id: "proj-1" });
+    expect(request?.body).toEqual({
+      contact_id: "per-1",
+      project_id: "proj-1",
+    });
   });
 
   it("defaults to the account's only live project, visibly", async () => {
@@ -301,7 +304,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -315,7 +318,7 @@ describe("what a sent message files under", () => {
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
       { entity_type: "project", entity_id: "proj-1" },
     ]);
   });
@@ -328,7 +331,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -344,7 +347,7 @@ describe("what a sent message files under", () => {
     // answer and must not file the message under a blank id.
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "company-1" },
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
     ]);
   });
 
@@ -359,7 +362,9 @@ describe("what a sent message files under", () => {
       "GET /companies/shared-id/360": () =>
         jsonResponse({
           company: { id: "shared-id", name: "Acme" },
-          people: { data: [{ person_id: "per-1", full_name: "Dieter Klein" }] },
+          contacts: {
+            data: [{ contact_id: "per-1", full_name: "Dieter Klein" }],
+          },
           deals: { data: [{ deal_id: "shared-id", name: "Acme Renewal" }] },
         }),
     });
@@ -367,7 +372,7 @@ describe("what a sent message files under", () => {
       <ComposeModal
         entityType="company"
         entityId="shared-id"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -382,7 +387,7 @@ describe("what a sent message files under", () => {
     await waitFor(() => expect(linksOf(sent)).toBeDefined());
     expect(linksOf(sent)).toEqual([
       { entity_type: "company", entity_id: "shared-id" },
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
       { entity_type: "deal", entity_id: "shared-id" },
     ]);
   });
@@ -399,9 +404,9 @@ describe("what a sent message files under", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="per-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,
@@ -433,7 +438,7 @@ describe("what a channel reply says it will be filed under", () => {
     kind: "message",
     channel_provider: "telegram",
     links: [
-      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "contact", entity_id: "per-1" },
       { entity_type: "project", entity_id: "proj-1" },
     ],
   };
@@ -442,9 +447,9 @@ describe("what a channel reply says it will be filed under", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="per-1"
-        personId="per-1"
+        contactId="per-1"
         kind="message"
         open
         onClose={vi.fn()}
@@ -508,7 +513,7 @@ describe("what a channel reply says it will be filed under", () => {
         activityId="act-1"
         entityType="company"
         entityId="company-1"
-        personId="per-1"
+        contactId="per-1"
         open
         onClose={vi.fn()}
       />,

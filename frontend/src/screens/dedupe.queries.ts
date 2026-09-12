@@ -13,7 +13,7 @@ export const dedupeQueueKey = ["dedupe-candidates"];
  * The open duplicate queue, in one spelling.
  *
  * Exported because the screen is no longer the only reader: chrome that reports
- * what is waiting on a person reads the same queue, and two queries against one
+ * what is waiting on a reader reads the same queue, and two queries against one
  * path are two answers that can disagree on screen.
  */
 export function useDedupeQueue() {

@@ -456,7 +456,7 @@ func TestApplyAssignOwnerAtScaleStagesInsteadOfWriting(t *testing.T) {
 // nobody can decide.
 //
 // Releasing a held draft SENDS it from the approving human's own mailbox, so
-// approvals narrows the card to the person it goes out as. A firing with no
+// approvals narrows the card to the contact it goes out as. A firing with no
 // owner names nobody, and the three things it could do are: stage a card
 // decidable by nobody, which rots in the inbox; stage one decidable by anyone,
 // which is the defect that narrowing removes; or refuse where an operator can

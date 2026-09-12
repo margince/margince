@@ -4,7 +4,7 @@
 // WHETHER THIS MESSAGE CAN GO, said once, in the place the send is decided.
 //
 // The surfaces that write to a contact each answered this their own way, and
-// mostly by refusing: the person page greyed out its Email verb when consent
+// mostly by refusing: the contact page greyed out its Email verb when consent
 // was missing, the composer showed nothing at all when the answer had not come
 // back, and the company header asked a different question entirely. A rep
 // learned what the product thought by finding out what they could not press.
@@ -14,7 +14,7 @@
 // what the message would meet, and the reader decides.
 //
 // SIX STATES, and the split that matters is between two SCOPES, not six
-// colours. `contact_preferences` is what is true about a person however you
+// colours. `contact_preferences` is what is true about a contact however you
 // reach them — they asked us to stop, their address bounced. `current_message`
 // is what is true about the message being written, which is a different
 // question with a different answer: a customer who stopped the newsletter can
@@ -39,7 +39,7 @@ import { Popover } from "./popover";
 import "./communicationstatus.css";
 
 /**
- * What this surface is able to say about the message or the person.
+ * What this surface is able to say about the message or the contact.
  *
  * `context_only` is the honest default and the commonest state: nothing is
  * wrong and nothing has been asked. A contact surface with no message in hand

@@ -8,7 +8,7 @@ package activities
 //
 // A model call takes seconds and can fail, so it cannot run inside the request
 // that asks for it: the POST answers 202 with a read id and the client polls
-// this row until it is terminal. Deep read (people/siteread.go) is the same
+// this row until it is terminal. Deep read (contacts/siteread.go) is the same
 // shape for the same reason, and this mirrors it deliberately rather than
 // inventing a second vocabulary for the same idea.
 //

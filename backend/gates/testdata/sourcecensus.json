@@ -596,7 +596,7 @@
     "arm": "one-spelling",
     "want": "silent",
     "name": "a comment on the line closing a raw string",
-    "body": "const query = `SELECT 1\nFROM person` // the store maps \"23505\" via storekit, never here"
+    "body": "const query = `SELECT 1\nFROM contact` // the store maps \"23505\" via storekit, never here"
   },
   {
     "gate": "one-spelling",
@@ -604,7 +604,7 @@
     "arm": "one-spelling",
     "want": "fires",
     "name": "the raw-string state closes, so a later defect is still seen",
-    "body": "const query = `SELECT 1\nFROM person` // the store maps \"23503\" via storekit, never here\n\nfunc probe(c string) bool { return c == \"23505\" }",
+    "body": "const query = `SELECT 1\nFROM contact` // the store maps \"23503\" via storekit, never here\n\nfunc probe(c string) bool { return c == \"23505\" }",
     "must": "23505",
     "must_not": "23503"
   },
@@ -614,7 +614,7 @@
     "arm": "one-spelling",
     "want": "silent",
     "name": "a waiver on the line closing a raw string",
-    "body": "const query = `SELECT 1\nFROM person` + probe(\"23505\") // one-spelling-exempt: seeding the dedupe fixture"
+    "body": "const query = `SELECT 1\nFROM contact` + probe(\"23505\") // one-spelling-exempt: seeding the dedupe fixture"
   },
   {
     "gate": "one-spelling",
@@ -622,7 +622,7 @@
     "arm": "one-spelling",
     "want": "fires",
     "name": "a defect after a multi-line raw string",
-    "body": "const query = `SELECT 1\nFROM person`\nfunc probe(c string) bool { return c == \"23505\" }",
+    "body": "const query = `SELECT 1\nFROM contact`\nfunc probe(c string) bool { return c == \"23505\" }",
     "must": "23505"
   },
   {
@@ -640,7 +640,7 @@
     "arm": "one-spelling",
     "want": "silent",
     "name": "a SQLSTATE in SQL text inside a raw string",
-    "body": "const query = `SELECT 1\nWHERE sqlstate = '23505'\nFROM person`"
+    "body": "const query = `SELECT 1\nWHERE sqlstate = '23505'\nFROM contact`"
   },
   {
     "gate": "one-spelling",
@@ -726,6 +726,6 @@
     "arm": "one-spelling",
     "want": "unclosed",
     "name": "a file that ends inside an unclosed raw string",
-    "body": "var query = `SELECT 1 FROM person"
+    "body": "var query = `SELECT 1 FROM contact"
   }
 ]

@@ -40,19 +40,19 @@ import (
 // and the engine going to look.
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityPerson && category != commsauthz.CategoryReplyToInbound &&
+	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
 		category != commsauthz.CategoryRequestedFollowup {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
 		// The correspondence arm asks who wrote to us, and both of its readers
 		// answer about a lead on their own: wroteToUsWithin shares the
 		// authorIsTheSubject spelling, which matches a lead through its bare
-		// address, and askedToBeContacted returns false for a non-person rather
-		// than querying a person-keyed table.
+		// address, and askedToBeContacted returns false for a non-contact rather
+		// than querying a contact-keyed table.
 		//
 		// Every other arm reads a record a lead cannot hold — an invoice or
 		// contract hangs off a company reached through employment, and a
-		// confirmation link is minted against a person. Those stay unsupported
+		// confirmation link is minted against a contact. Those stay unsupported
 		// and fall through to the lead's own grant.
 		return unsupported, nil
 	}
@@ -107,11 +107,11 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 }
 
 // validateRequestedFollowup answers an unprompted follow-up: is there something
-// on file, inside the window, that says this person asked to hear from us.
+// on file, inside the window, that says this contact asked to hear from us.
 //
 // TWO SOURCES, and the second is why a first mail to somebody who phoned is not
 // refused. An inbound message is the obvious one. The other is the acquisition
-// evidence a contact was created with (person_acquisition_evidence, written by
+// evidence a contact was created with (contact_acquisition_evidence, written by
 // every creation door): a rep who logged "they asked me for a quote at the
 // trade fair" has recorded the request, and asking them to record it a second
 // time in a different table would be asking them to restate what the CRM
@@ -119,7 +119,7 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	// AUTHORSHIP, through the shared reader. An earlier version asked
 	// activity_link — a FILING link with no author concept — which read "some
-	// inbound activity is filed under this person". A caller may post an
+	// inbound activity is filed under this contact". A caller may post an
 	// activity with direction=inbound and a link to any contact they can read,
 	// so that let anybody manufacture their own evidence.
 	found, err := wroteToUsWithin(ctx, tx, subject, time.Now().Add(-w.reply))
@@ -148,7 +148,7 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 
 // validateInvoice answers a message about a named financial event.
 //
-// An invoice belongs to an COMPANY, so reaching a person means going
+// An invoice belongs to an COMPANY, so reaching a contact means going
 // through employment. That is a real gap in ordinary CRM data — a finance
 // contact who was never linked to the customer record — and it is a data gap
 // rather than a legal one. So a missing link is unsupported with a reason a
@@ -168,7 +168,7 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 			   AND i.archived_at IS NULL
 			   AND i.void_at IS NULL
 			   AND r.kind = 'employment'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.InvoiceID)
@@ -176,7 +176,7 @@ func validateInvoice(ctx context.Context, tx pgx.Tx, req commsauthz.Request, sub
 
 // validateContract answers a notice a live contract requires. Same shape and
 // same reasoning as the invoice: the document names a company, and the
-// person is reached through employment.
+// contact is reached through employment.
 func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryContractNotice,
 		commsauthz.BasisContract, `
@@ -186,16 +186,16 @@ func validateContract(ctx context.Context, tx pgx.Tx, req commsauthz.Request, su
 			 WHERE c.id = $1::uuid
 			   AND c.archived_at IS NULL
 			   AND r.kind = 'employment'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND `+employment.IsCurrentSQL("r.ended_at")+`
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.ContractID)
 }
 
 // validateQuote answers a requested quote or offer. The offer hangs off a deal,
-// and the person is reached as a stakeholder on that deal — the same edge the
+// and the contact is reached as a stakeholder on that deal — the same edge the
 // follow-up arm reads, because being on the opportunity is what makes somebody
-// the person a quote goes to.
+// the contact a quote goes to.
 func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	return validateCompanyDocument(ctx, tx, subject, commsauthz.CategoryPrecontractQuote,
 		commsauthz.BasisPrecontractRequest, `
@@ -216,7 +216,7 @@ func validateQuote(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subje
 			   AND d.status = 'open'
 			   AND d.archived_at IS NULL
 			   AND r.kind = 'deal_stakeholder'
-			   AND r.person_id = $2::uuid
+			   AND r.contact_id = $2::uuid
 			   AND r.ended_at IS NULL
 			   AND r.archived_at IS NULL
 		)`, req.Evidence.DealID)

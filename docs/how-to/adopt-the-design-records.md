@@ -13,7 +13,7 @@ and the tightest e2e. Every later page copies its decisions. Files:
 `companies.tsx` (over the cap: new zones go in new files under
 `screens/company/`), `company360.tsx`, `companyheader.tsx`, `companyrail*.tsx`,
 `companytoday.tsx`, `companywork.tsx`, `companyrecent.tsx`,
-`companycommercial.tsx`, `companydossier.tsx`, `companypeople/`.
+`companycommercial.tsx`, `companydossier.tsx`, `companycontacts/`.
 
 ### 3.1 Head
 
@@ -43,8 +43,8 @@ and the tightest e2e. Every later page copies its decisions. Files:
 | Commercial (the money) | One pane, the `DESIGN.md` zone: `CompanyContractState` and won/lost on one line, then `CompanyWorkCard`'s open deals with their status clause (`workVerbs`), then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel repeats the contract line | `view.deals`, `view.projects` | `contracts.state.none`; `co.commercial.truncated`; `co.work.noDeals` + detail; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a truncated page or mixed currencies |
 | Ask (prepared questions) | `AssistantPanel` as full-width rows, no free field; the three questions are the ones the server answers (`CompanyQuestion`), so no new keys — a fourth is a server change first | | `co.ask.nothing`; disabled in overlay (`enabled={!overlay}`) |
 | About | `DossierPanel` lead + paragraph + sources, `SignalsSection` rows, `GrowthFitPanel` verdict row (only when `!hasWorkInFlight`), "Profile" link | own reads | `co.dossier.empty` (write it), `co.dossier.stale` "Read over a month ago", `co.dossier.unavailable`; `co.factSuspect.*` shown with evidence |
-| People (chips) | `PeopleSection` (`RAIL_ROW_LIMIT`) as chips with "+N" | 360 | withheld → absent with the sentence |
-| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the five-subject anatomy inside the pane): Details grid with inline edit, Deals top 3, People top 3, Hold, Tags | | every rail state as today; absent while a composer is open |
+| Contacts (chips) | `ContactsSection` (`RAIL_ROW_LIMIT`) as chips with "+N" | 360 | withheld → absent with the sentence |
+| Details (right, closed) | `CompanyRail` as one pane with five titled sections (keep the five-subject anatomy inside the pane): Details grid with inline edit, Deals top 3, Contacts top 3, Hold, Tags | | every rail state as today; absent while a composer is open |
 | Chronology zone | stays the RecordView timeline slot, drawn on the History tab only (the 360 carries the fold) | | `timelineNotice`, `chronologyNotice` |
 
 Header-level states: overlay replaces the **whole page** with
@@ -54,8 +54,8 @@ the one shared sentence; version skew banners unchanged.
 ### 3.3 Features to carry (checklist)
 
 Present in the mock: 360 with sources, spine, folded thread, needs list with
-suggestions and tasks, deals, about with sources and staleness, people,
-details, tags, history rail, People map, Profile, Finance, Documents,
+suggestions and tasks, deals, about with sources and staleness, contacts,
+details, tags, history rail, Contacts map, Profile, Finance, Documents,
 Partner, ⌘K, compose. **Not in the mock, must be built in this step:**
 evidence receipts (`EvidenceModal` with steps) behind every source chip; fact
 contradictions (`co.factSuspect`); the deep-read card and site-read panel;
@@ -78,9 +78,9 @@ state row in §3.2 (this is where "empty", "withheld", "never read", "stale",
 
 ## 4. Contact
 
-Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`,
-`persontoday.tsx`, `personcards.tsx`, `personmemory.tsx`,
-`personcorrections.tsx`, `personnetwork/`.
+Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
+`contacttoday.tsx`, `contactcards.tsx`, `contactmemory.tsx`,
+`contactcorrections.tsx`, `contactnetwork/`.
 
 - **Head.** Verbs: **Write email · Call · Add task · more**, all outlined.
   Write email keeps `primaryTransportAction`'s routing and refusal
@@ -90,33 +90,33 @@ Files: `personpage.tsx`, `person360.tsx`, `personrail.tsx`,
   **Add to `more` what is missing today**: Edit (inline stays), Archive,
   Share, Research, Full history. Facts: title · employer · email · phone ·
   the way in (from the network's lead route).
-- **Readings.** `PersonStrip`: whose move, open promises (`person.loops`),
+- **Readings.** `ContactStrip`: whose move, open promises (`contact.loops`),
   the deal she decides, next meeting, answers in. `record.notShown` with no
   tone on a withheld slot; `noOpenDeal`/`noMeeting` are answers, not
   withholdings.
-- **The 360.** `PersonToday` (the moment, with `readiness()` reasons and
+- **The 360.** `ContactToday` (the moment, with `readiness()` reasons and
   freshness) as the word and sentence, `RecordSpine` from the 360's
   activities, the thread folded from the timeline tab's chronology. A quiet
   moment renders through the same pane (`isQuiet`).
 - **What needs you.** The moment's actions (readiness on the button, blocked
-  reason rendered), `PersonCommitmentsCard` rows, open loops, the next task.
-  `runPersonMomentAction` still opens nothing for an unroutable action.
-- **The deal she decides.** `PersonCommercialCard` + the room as chips.
-- **Ask.** Prepared questions (`person.ask.q.*`).
-- **Understanding her.** `PersonBriefCard` + `PersonMattersCard` as the
+  reason rendered), `ContactCommitmentsCard` rows, open loops, the next task.
+  `runContactMomentAction` still opens nothing for an unroutable action.
+- **The deal she decides.** `ContactCommercialCard` + the room as chips.
+- **Ask.** Prepared questions (`contact.ask.q.*`).
+- **Understanding her.** `ContactBriefCard` + `ContactMattersCard` as the
   Priorities / Objections / Success rows with `Absent()` kept, sources,
   "Correct something" → `EnrichedFields`.
 - **Around her.** `WhoKnows`, `Employers`, the lead route.
-- **Details (right, closed).** `PersonRail` stays **one pane with hairline
-  slices** (its documented anatomy), plus `PersonEmailPanel` under it.
-- **States to keep:** `person.page.loading` becomes a skeleton (the one page
-  without one); `person.page.notOpened`; `ThinState`; `withheldSections`
+- **Details (right, closed).** `ContactRail` stays **one pane with hairline
+  slices** (its documented anatomy), plus `ContactEmailPanel` under it.
+- **States to keep:** `contact.page.loading` becomes a skeleton (the one page
+  without one); `contact.page.notOpened`; `ThinState`; `withheldSections`
   read once; consent verdict from the server key; `provider.profile.neverRun`
   mark on the Research tab (and a cancelled run reads as never run);
-  `person.graph.*` incompleteness on the map; archived and overlay verb
+  `contact.graph.*` incompleteness on the map; archived and overlay verb
   removal.
-- **Tabs.** Unchanged (`persontab.ts`). Network keeps its order: decision
-  strip, lead panel, routes, then the map (`person-network.spec.ts` asserts
+- **Tabs.** Unchanged (`contacttab.ts`). Network keeps its order: decision
+  strip, lead panel, routes, then the map (`contact-network.spec.ts` asserts
   it).
 - **Carry:** consent & channels (both places), hold section, relink,
   research drawer, meeting brief with its four refusals, intro requests and
@@ -134,7 +134,7 @@ Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
   `dealPulse` becomes the live dot ("Your move"). Edit keeps
   `overlay.partialWriteBack`.
 - **Readings.** `DealStrip` (money with the newest offer, close with
-  provisional/waiting, people with the withheld flag, momentum) plus stage
+  provisional/waiting, contacts with the withheld flag, momentum) plus stage
   with days here.
 - **The 360.** `DealStatusCardPanel` (Deal360) is the word, sentence and
   citations; the stepper (`fieldset.stepper`, a group not a nav) inside the
@@ -143,7 +143,7 @@ Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
   saying why.
 - **What needs you.** Deal360's next move as the lead row, `DealApprovals`
   as staged rows (dashed), the reply owed from `useWaitingReply`.
-- **The buying committee.** `DealPeoplePanels` rows beside `DealCommitteeMap`
+- **The buying committee.** `DealContactsPanels` rows beside `DealCommitteeMap`
   (ghost seats stay).
 - **Ask.** Prepared questions (`deal.ask.q.*`).
 - **What this deal is.** Deal360's story with "What is holding this up" and

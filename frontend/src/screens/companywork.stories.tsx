@@ -7,7 +7,7 @@ import { CompanyWorkCard } from "./companywork";
 import { StoryProviders } from "./story-utils";
 
 // What is moving on the account, and for each piece the one reason it wants a
-// person today.
+// contact today.
 //
 // Deals only — the account's projects have their one home in the ProjectLinks
 // section. Two rules run through every story here and neither is visible in a

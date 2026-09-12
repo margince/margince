@@ -13,17 +13,17 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAccountStrengthToWireCarriesTheContributorAndCount(t *testing.T) {
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
-	contributor := ids.From[ids.PersonKind](ids.NewV7())
-	wire := accountStrengthToWire(people.AccountStrength{
-		RelationshipStrength: people.RelationshipStrength{Strength: 62, Bucket: "strong", Inbound90d: 2, Outbound90d: 2},
-		ContributorPersonID:  &contributor,
+	contributor := ids.From[ids.ContactKind](ids.NewV7())
+	wire := accountStrengthToWire(contacts.AccountStrength{
+		RelationshipStrength: contacts.RelationshipStrength{Strength: 62, Bucket: "strong", Inbound90d: 2, Outbound90d: 2},
+		ContributorContactID: &contributor,
 		ContactCount:         4,
 	}, now)
 
@@ -33,8 +33,8 @@ func TestAccountStrengthToWireCarriesTheContributorAndCount(t *testing.T) {
 	if wire.ContactCount != 4 {
 		t.Errorf("contact_count = %d, want 4", wire.ContactCount)
 	}
-	if wire.ContributorPersonId == nil || ids.UUID(*wire.ContributorPersonId) != contributor.UUID {
-		t.Errorf("contributor_person_id = %v, want %v", wire.ContributorPersonId, contributor)
+	if wire.ContributorContactId == nil || ids.UUID(*wire.ContributorContactId) != contributor.UUID {
+		t.Errorf("contributor_contact_id = %v, want %v", wire.ContributorContactId, contributor)
 	}
 	if wire.Bucket != crmcontracts.CompanyStrengthBucket(crmcontracts.RelationshipStrengthBucketStrong) {
 		t.Errorf("bucket = %q, want strong", wire.Bucket)
@@ -45,11 +45,11 @@ func TestAccountStrengthToWireCarriesTheContributorAndCount(t *testing.T) {
 // the contributor is null rather than a zero uuid pointing at no one.
 func TestAccountStrengthToWireLeavesTheContributorNullWithoutContacts(t *testing.T) {
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
-	wire := accountStrengthToWire(people.AccountStrength{
-		RelationshipStrength: people.RelationshipStrength{Bucket: "none"},
+	wire := accountStrengthToWire(contacts.AccountStrength{
+		RelationshipStrength: contacts.RelationshipStrength{Bucket: "none"},
 	}, now)
-	if wire.ContributorPersonId != nil {
-		t.Errorf("contributor_person_id = %v for an account with no visible contact, want null", wire.ContributorPersonId)
+	if wire.ContributorContactId != nil {
+		t.Errorf("contributor_contact_id = %v for an account with no visible contact, want null", wire.ContributorContactId)
 	}
 	if wire.ContactCount != 0 {
 		t.Errorf("contact_count = %d, want 0", wire.ContactCount)

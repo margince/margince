@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// WHAT NEEDS A PERSON TODAY — the one part of a record page that answers
+// WHAT NEEDS A CONTACT TODAY — the one part of a record page that answers
 // "what do I do now", and the rows it is made of.
 //
 // Two kinds of row, at two weights, and the difference is who is asking. A
@@ -114,7 +114,7 @@ export function TodayPanel({
       {state === "ready" &&
         (rows.length === 0 ? (
           // Not "nothing to do": the brief read everything it can read and
-          // found nothing that needs a person today. That is a real answer and
+          // found nothing that needs a contact today. That is a real answer and
           // it is different from the record being empty.
           <PanelBody>
             <EmptyState>{t("today.quiet")}</EmptyState>

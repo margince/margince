@@ -31,9 +31,9 @@ func TestAnOmittedMemberOrTagTargetIsNamed(t *testing.T) {
 	store := NewStore(nil)
 	ctx := context.Background()
 
-	_, err := store.AddMember(ctx, ids.New[ids.ListKind](), "person", ids.UUID{})
+	_, err := store.AddMember(ctx, ids.New[ids.ListKind](), "contact", ids.UUID{})
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 
-	_, err = store.ApplyTag(ctx, ids.New[ids.TagKind](), "person", ids.UUID{})
+	_, err = store.ApplyTag(ctx, ids.New[ids.TagKind](), "contact", ids.UUID{})
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 }

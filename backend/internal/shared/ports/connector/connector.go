@@ -215,7 +215,7 @@ type NormalizedRecord struct {
 	// connector that has no such notion leaves this empty.
 	//
 	// Qualified rather than bare because a label id means nothing without the
-	// provider it came from, and one person may have connected two mailboxes on
+	// provider it came from, and one contact may have connected two mailboxes on
 	// different providers — an unqualified "inbox" would then be one rule
 	// matching two unrelated places.
 	//
@@ -334,7 +334,7 @@ type NaturalKey struct {
 	SourceSystem string
 	SourceID     string
 
-	// SourceIDNamesAPerson reports that SourceID embeds the provider's
+	// SourceIDNamesAContact reports that SourceID embeds the provider's
 	// identifier for a HUMAN — a chat id that is the customer's own account id,
 	// say — rather than naming a message, an event or a notification.
 	//
@@ -349,9 +349,9 @@ type NaturalKey struct {
 	//
 	// False is the ordinary case and the zero value on purpose: a message id is
 	// what a natural key almost always is, and it is what ADR-0082 §1 permits a
-	// trace to record — it identifies a message rather than a person, and it is
+	// trace to record — it identifies a message rather than a contact, and it is
 	// what makes a support question answerable.
-	SourceIDNamesAPerson bool
+	SourceIDNamesAContact bool
 }
 
 // EmailSourceSystem is the natural-key SOURCE SYSTEM every transport that

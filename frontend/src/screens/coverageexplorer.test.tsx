@@ -25,11 +25,11 @@ function stubGraph(dropped = 0) {
           JSON.stringify({
             nodes: [
               { id: "u-1", kind: "user", label: "Mira", root: false },
-              { id: "p-1", kind: "person", label: "Dana Buyer", root: false },
+              { id: "p-1", kind: "contact", label: "Dana Buyer", root: false },
               // No edge names Sam: an account contact nobody has written to is
               // the case the grid exists to show, and the graph is where the
               // account's contacts come from now.
-              { id: "p-2", kind: "person", label: "Sam Silent", root: false },
+              { id: "p-2", kind: "contact", label: "Sam Silent", root: false },
             ],
             edges: [
               {

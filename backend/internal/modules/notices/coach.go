@@ -3,14 +3,14 @@
 
 package notices
 
-// A notice one PERSON raises for another, as against the ones a system flow
+// A notice one CONTACT raises for another, as against the ones a system flow
 // raises under the system principal.
 //
 // The difference is the whole of this file. Create takes no gate because only
 // compose-wired workflows reach it and their authority is the engine's; a
 // human-raised notice is words placed in a colleague's queue, so it carries
 // both halves of an authority question: may this seat coach at all, and may it
-// coach THIS person.
+// coach THIS contact.
 
 import (
 	"context"
@@ -35,7 +35,7 @@ const noteBound = 500
 // tell a typo from a different field.
 const fieldRecipient = "recipient_user_id"
 
-// Teammates answers whether the recipient is on a team with the calling person.
+// Teammates answers whether the recipient is on a team with the calling colleague.
 //
 // The caller is not a parameter: the module behind this reads it from the
 // principal, so a coach cannot ask about an edge they are not an end of. Bound
@@ -45,7 +45,7 @@ type Teammates interface {
 	SharesLiveTeamWithCaller(ctx context.Context, other ids.UUID) (bool, error)
 }
 
-// coachSubjects is what each kind says to the person who receives it.
+// coachSubjects is what each kind says to the contact who receives it.
 //
 // Derived from the contract's enum rather than kept as a parallel list: a kind
 // the contract admits and this map does not would reach a recipient with a
@@ -58,7 +58,7 @@ var coachSubjects = map[crmcontracts.NoticeKind]string{
 	crmcontracts.NoticeKindCoachGeneral:           "Your lead left you a note",
 }
 
-// RaiseCoachNotice records one person's nudge to a teammate.
+// RaiseCoachNotice records one colleague's nudge to a teammate.
 //
 // AUTHORIZATION FIRST, then the request's own shape. A caller who may not coach
 // learns nothing about what a well-formed coaching request looks like — every
@@ -71,7 +71,7 @@ func (s *Store) RaiseCoachNotice(
 ) (Notice, error) {
 	// May this seat coach at all. Refuses an agent, a system pass and a buyer
 	// as well as a rep: coaching is a thing a lead does, and a background flow
-	// raising one would be writing in a person's voice.
+	// raising one would be writing in a contact's voice.
 	if err := auth.RequireCoach(ctx); err != nil {
 		return Notice{}, err
 	}
@@ -98,7 +98,7 @@ func (s *Store) RaiseCoachNotice(
 	if recipient.IsZero() {
 		// An absent recipient_user_id decodes to the zero UUID with no error,
 		// so without this it reaches the membership question, comes back "not a
-		// teammate", and answers 403 — a refusal about a person the caller
+		// teammate", and answers 403 — a refusal about a colleague the caller
 		// never named and cannot connect to anything they did.
 		return Notice{}, &values.ParseError{
 			Field: fieldRecipient, Code: "missing_recipient",

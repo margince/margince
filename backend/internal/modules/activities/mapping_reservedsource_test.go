@@ -3,7 +3,7 @@
 
 package activities
 
-// See people/mapping_reservedsource_test.go: the activity store keys the
+// See contacts/mapping_reservedsource_test.go: the activity store keys the
 // same idempotent replay on (source_system, source_id), so the same
 // boundary is enforced here and asserted the same way.
 

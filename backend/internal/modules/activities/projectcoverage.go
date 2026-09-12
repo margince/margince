@@ -30,7 +30,7 @@ type ProjectActivityFacts struct {
 	// lifecycle, not a page of it.
 	Attributed int
 	// UnattributedNearby is every live activity linked to one of the
-	// project's deals or to one of its stakeholder people that carries NO
+	// project's deals or to one of its stakeholder contacts that carries NO
 	// project link — not this project's, not another's. An activity filed
 	// under a sibling engagement is somebody's, and is not debt here.
 	UnattributedNearby int
@@ -91,7 +91,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			SELECT DISTINCT l.activity_id
 			FROM activity_link l
 			LEFT JOIN deal d ON d.id = l.deal_id AND d.archived_at IS NULL AND %[3]s
-			LEFT JOIN relationship r ON r.person_id = l.person_id
+			LEFT JOIN relationship r ON r.contact_id = l.contact_id
 			     AND r.kind = 'project_stakeholder' AND r.archived_at IS NULL AND %[4]s
 			WHERE l.project_id = $%[1]d OR d.project_id = $%[1]d OR r.project_id = $%[1]d
 		)

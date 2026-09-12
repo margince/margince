@@ -15,7 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -28,7 +28,7 @@ import (
 // Two conditions make these their own words rather than merely messages about
 // them, and both matter to the gate downstream. `direction = 'inbound'` says
 // the message came from outside; `activity_participant.role = 'from'` says
-// this person is the one it came from. Linked-to alone would admit a message
+// this contact is the one it came from. Linked-to alone would admit a message
 // somebody else wrote that merely mentions them, and the gate — which binds
 // evidence to its author — would then be checking a claim against a source the
 // claimed author never typed.
@@ -46,10 +46,10 @@ import (
 // have it summarised for them.
 func ownWords(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	personIDs []ids.PersonID, now time.Time,
+	contactIDs []ids.ContactID, now time.Time,
 ) (map[ids.UUID][]proposeroles.Message, error) {
 	out := map[ids.UUID][]proposeroles.Message{}
-	if len(personIDs) == 0 {
+	if len(contactIDs) == 0 {
 		return out, nil
 	}
 	// The activity grant is REFUSED, not softened. Reading what the contacts
@@ -63,7 +63,7 @@ func ownWords(
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	peoplePos := arg(personIDs)
+	contactsPos := arg(contactIDs)
 	companyPos := arg(companyID)
 	sincePos := arg(now.AddDate(0, 0, -proposalWindowDays))
 	capPos := arg(proposalMessages)
@@ -74,7 +74,7 @@ func ownWords(
 	if scope == "" {
 		scope = scopeAll
 	}
-	// One lateral per person rather than one query per person: the cap is
+	// One lateral per contact rather than one query per contact: the cap is
 	// per-contact, so a single ORDER BY over the union would spend the whole
 	// budget on the busiest correspondent and read nothing from the others.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -84,7 +84,7 @@ func ownWords(
 		       SELECT a.id, a.subject, a.body
 		         FROM activity a
 		         JOIN activity_participant ap
-		           ON ap.activity_id = a.id AND ap.role = 'from' AND ap.person_id = who.id
+		           ON ap.activity_id = a.id AND ap.role = 'from' AND ap.contact_id = who.id
 		        WHERE a.direction = 'inbound' AND a.archived_at IS NULL
 		          AND a.occurred_at >= $%d AND (%s)
 		          AND EXISTS (
@@ -95,18 +95,18 @@ func ownWords(
 		                                          WHERE company_id = $%d)))
 		        ORDER BY a.occurred_at DESC, a.id DESC
 		        LIMIT $%d) AS said ON TRUE`,
-		peoplePos, sincePos, scope, companyPos, companyPos, capPos), args...)
+		contactsPos, sincePos, scope, companyPos, companyPos, capPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading what the contacts wrote: %w", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var person, activity ids.UUID
+		var contact, activity ids.UUID
 		var subject, body string
-		if err := rows.Scan(&person, &activity, &subject, &body); err != nil {
+		if err := rows.Scan(&contact, &activity, &subject, &body); err != nil {
 			return nil, err
 		}
-		out[person] = append(out[person], proposeroles.Message{
+		out[contact] = append(out[contact], proposeroles.Message{
 			ActivityID: activity.String(), Subject: subject, Body: body,
 		})
 	}
@@ -128,8 +128,8 @@ const proposalWindowDays = 365
 // written, and the caller — told only "error" — would retry into a committee
 // that has silently half-changed under them.
 //
-// Each seat is written as the reading AGENT rather than the person who pressed
-// the button, on that person's behalf: the human's own audit row records the
+// Each seat is written as the reading AGENT rather than the human who pressed
+// the button, on that human's behalf: their own audit row records the
 // decision to ask, and this one carries the machine provenance the committee
 // card renders as "read from what they wrote". That captured_by is the whole of
 // the marking — the coverage read already looks for exactly this string.
@@ -157,7 +157,7 @@ func (s *Service) writeProposedSeats(
 	})
 	named := map[string]string{}
 	for _, candidate := range candidates {
-		named[candidate.PersonID] = candidate.FullName
+		named[candidate.ContactID] = candidate.FullName
 	}
 	err := database.WithWorkspaceTx(execCtx, s.pool, func(tx pgx.Tx) error {
 		// Re-read who holds a seat, INSIDE the writing transaction. The check
@@ -171,7 +171,7 @@ func (s *Service) writeProposedSeats(
 		}
 		written = written[:0]
 		for _, proposal := range kept {
-			if taken[proposal.PersonID] {
+			if taken[proposal.ContactID] {
 				continue
 			}
 			row, err := s.seatFrom(execCtx, tx, dealID, proposal, named)
@@ -196,32 +196,32 @@ func (s *Service) seatFrom(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID,
 	proposal proposeroles.Proposal, named map[string]string,
 ) (crmcontracts.DealRoleProposalWritten, error) {
-	raw, err := ids.Parse(proposal.PersonID)
+	raw, err := ids.Parse(proposal.ContactID)
 	if err != nil {
-		// The gate already refused any person this call did not offer, so an
+		// The gate already refused any contact this call did not offer, so an
 		// unparseable id here means the candidate set itself was built with
 		// one — a programming error, not a model one.
 		return crmcontracts.DealRoleProposalWritten{},
-			fmt.Errorf("company360: proposed role for an unreadable person id: %w", err)
+			fmt.Errorf("company360: proposed role for an unreadable contact id: %w", err)
 	}
-	personID := ids.From[ids.PersonKind](raw)
+	contactID := ids.From[ids.ContactKind](raw)
 	role := proposal.Role
 	// The module's own writer, not a statement of ours: it is what spells the
 	// write shape for this table — the domain row, its audit entry and its
 	// outbox event in one transaction — and a second spelling here would be a
 	// second answer to how a seat is recorded.
-	if _, err := s.people.CreateRelationshipTx(ctx, tx, people.CreateRelationshipInput{
-		Kind:     "deal_stakeholder",
-		PersonID: &personID,
-		DealID:   &dealID,
-		Role:     &role,
-		Source:   proposeroles.Source,
+	if _, err := s.contacts.CreateRelationshipTx(ctx, tx, contacts.CreateRelationshipInput{
+		Kind:      "deal_stakeholder",
+		ContactID: &contactID,
+		DealID:    &dealID,
+		Role:      &role,
+		Source:    proposeroles.Source,
 	}); err != nil {
 		return crmcontracts.DealRoleProposalWritten{}, err
 	}
 	return crmcontracts.DealRoleProposalWritten{
-		PersonId:         openapi_types.UUID(personID.UUID),
-		FullName:         named[proposal.PersonID],
+		ContactId:        openapi_types.UUID(contactID.UUID),
+		FullName:         named[proposal.ContactID],
 		Role:             proposal.Role,
 		EvidenceSnippet:  proposal.EvidenceSnippet,
 		SourceActivityId: openapi_types.UUID(mustParseActivity(proposal.SourceID)),
@@ -243,7 +243,7 @@ func recordEvidence(
 	seats := make([]map[string]any, 0, len(written))
 	for _, seat := range written {
 		seats = append(seats, map[string]any{
-			"person_id":          seat.PersonId.String(),
+			"contact_id":         seat.ContactId.String(),
 			"role":               seat.Role,
 			"evidence_snippet":   seat.EvidenceSnippet,
 			"source_activity_id": seat.SourceActivityId.String(),
@@ -289,7 +289,7 @@ func mustParseActivity(raw string) ids.UUID {
 // no role leaves this function, only the decision not to write.
 func seatedNow(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (map[string]bool, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT person_id FROM relationship
+		SELECT contact_id FROM relationship
 		 WHERE kind = 'deal_stakeholder' AND deal_id = $1
 		   AND archived_at IS NULL AND ended_at IS NULL
 		   AND coalesce(role, '') <> ''`, dealID)
@@ -299,11 +299,11 @@ func seatedNow(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (map[string]bo
 	defer rows.Close()
 	out := map[string]bool{}
 	for rows.Next() {
-		var person ids.UUID
-		if err := rows.Scan(&person); err != nil {
+		var contact ids.UUID
+		if err := rows.Scan(&contact); err != nil {
 			return nil, err
 		}
-		out[person.String()] = true
+		out[contact.String()] = true
 	}
 	return out, rows.Err()
 }

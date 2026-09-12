@@ -20,9 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -117,7 +117,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// same door — mirror included — that a live read of them would take.
 	// The contract's per-record-type tier floor, on EVERY role that composes this
 	// surface. A verb's own tier cannot express "confirm-first for a project and
-	// auto-execute for a person", so without this the tool door admits at a tier
+	// auto-execute for a contact", so without this the tool door admits at a tier
 	// the contract tightened and the REST door refuses (#982) — one credential,
 	// two answers, which is what ADR-0055 exists to prevent.
 	opts = append(opts, withContractTierFloor(),
@@ -168,7 +168,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// needs the overlay guard the record verbs get from the Dispatcher for free.
 	agents.RegisterPipelineTool(registry, nativeOnlyPipelines(sorMode, pipelineLister(pool)))
 	// The confirm-first queue, read and answered from the same conversation a
-	// call was staged in. Nothing here decides anything the person behind the
+	// call was staged in. Nothing here decides anything the human behind the
 	// passport could not decide in the app.
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
 	agents.RegisterReportTool(registry,
@@ -190,7 +190,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// the two transports cannot disagree about what a quarter contains.
 	// A report whose every figure came from a saved run, rendered through the
 	// SAME validator and renderer POST /analytics/reports/render calls. The
-	// floor is DefaultFloor on both paths: a figure a person may not see is one
+	// floor is DefaultFloor on both paths: a figure a contact may not see is one
 	// a model asking on their behalf may not see either.
 	agents.RegisterAnalyticsReportTool(registry,
 		analyticsReportComposer(pool, analyticsquery.DefaultFloor))
@@ -334,11 +334,11 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterProject360Tool(registry, nativeOnlyProject360(sorMode, project360Reader(pool)))
 	// The relationship-graph reads (ADR-0078): who here knows this contact,
 	// how a deal is covered, who can get us into an account, and which of the
-	// caller's deals the coverage rules flag. All 🟢 — they name people, they
+	// caller's deals the coverage rules flag. All 🟢 — they name contacts, they
 	// change nothing.
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, people.NewStore(InstallationDB(pool))),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, contacts.NewStore(InstallationDB(pool))),
 		nativeOnlyIntroPath(sorMode, introPathLister(pool)),
-		nativeOnlyAtRisk(sorMode, atRiskLister(pool, people.NewStore(InstallationDB(pool)))))
+		nativeOnlyAtRisk(sorMode, atRiskLister(pool, contacts.NewStore(InstallationDB(pool)))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The location check (🟢), and the verb the probe card hangs off. It reads
 	// no record and takes no seam, so it registers unconditionally.

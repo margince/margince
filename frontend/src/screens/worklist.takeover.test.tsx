@@ -62,7 +62,7 @@ describe("taking an exception on", () => {
 
   // CONFIRMED, because it moves a record out of somebody's day without them
   // pressing anything. A single press that handed the work over would cost two
-  // people their sense of what they are carrying on one misplaced click.
+  // contacts their sense of what they are carrying on one misplaced click.
   it("asks before it moves anything", async () => {
     const fetched = stubTeam({ type: "deal", id: "d1", label: "Fleet" });
     const user = userEvent.setup();

@@ -121,7 +121,7 @@ var registrations = []Registration{{
 		ReasonNoGrantingHuman, ReasonDerivationFailed, ReasonRecordNotAvailable,
 	},
 }, {
-	Stage:       StagePersonCreate,
+	Stage:       StageContactCreate,
 	Order:       70,
 	SubjectKind: SubjectSender,
 	Sources:     []Source{SourceDerived},

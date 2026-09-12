@@ -200,7 +200,7 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 
 // relationshipNote says what a relationship needs, because an edge's
 // requirements are per-KIND and invisible from a flat field list: `kind`,
-// `person_id`, `company_id`, `deal_id` and `project_id` all read as equal
+// `contact_id`, `company_id`, `deal_id` and `project_id` all read as equal
 // optional siblings, and they are not. Which pair is required is decided by the
 // kind and enforced by a database CHECK, so a caller working from names alone
 // sends a plausible pair and gets a shape refusal it could not have predicted.
@@ -211,9 +211,9 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 // name an endpoint at all", which is what the pairing rule is about.
 func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	if !describesField(shapes, "counterparty_company_id") {
-		// The patch half still owes the reader the pointer, because a person's
+		// The patch half still owes the reader the pointer, because a contact's
 		// employer is the field they will look for first and not find.
-		return "A person's employer is NOT a field here: employment is a relationship, created and " +
+		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
 			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched."
 	}
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
@@ -227,10 +227,10 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	// not advertise one (the contract has no single-relationship GET), and a
 	// document a caller can disprove in one call costs more than the silence it
 	// replaced.
-	return "A person's employer is a relationship, not a field on the person: record_type=relationship " +
-		"with kind=employment, person_id and company_id. Each kind REQUIRES its own endpoint pair, " +
-		"and a wrong pair is refused by name — employment: person + company; deal_stakeholder: " +
-		"deal + person; project_stakeholder: project + person; partner_of, referred_by and co_sell_with: " +
+	return "A contact's employer is a relationship, not a field on the contact: record_type=relationship " +
+		"with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, " +
+		"and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: " +
+		"deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: " +
 		"company + counterparty_company_id. An edge is not searchable, so keep the id a relationship " +
 		"write returns."
 }
@@ -338,7 +338,7 @@ func typesWithoutCustomFieldCarriage(shapes map[datasource.EntityType]reflect.Ty
 //
 // The field has always been accepted and inserted, and a task created over
 // this surface still arrived unassigned — because the only ids a caller could
-// obtain were person ids, and a person is a CONTACT. An assistant asked to
+// obtain were contact ids, and a contact is a CONTACT. An assistant asked to
 // give someone work searched the contacts, found a customer with a similar
 // name, and offered that. list_colleagues is what answers the other kind, and
 // this is where a caller filling the field finds out which kind it wants.
@@ -347,7 +347,7 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 		return nil
 	}
 	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — list_colleagues " +
-		"answers those, whoami answers your own. A person id is a contact and is refused."}
+		"answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 
 // transcriptNote says the one value that turns a body into a transcript.

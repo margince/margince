@@ -104,14 +104,14 @@ func TestAReceiptNamesTheFieldsItsKindOwesAndCannotFill(t *testing.T) {
 	}
 }
 
-// DOSS-AC-16: a person's assertion and an imported row carry no model
+// DOSS-AC-16: a contact's assertion and an imported row carry no model
 // confidence, and printing one would fabricate a number nobody computed.
 func TestOnlyAMachineReadValueCarriesAModelConfidence(t *testing.T) {
 	for name, tc := range map[string]struct {
 		source   crmcontracts.CompanyProfileFieldSource
 		wantKind crmcontracts.ClaimEvidenceSourceKind
 	}{
-		"a person's own answer": {
+		"a contact's own answer": {
 			crmcontracts.CompanyProfileFieldSourceHuman, crmcontracts.ClaimEvidenceSourceKindHuman,
 		},
 		"a connector record": {
@@ -140,8 +140,8 @@ func TestOnlyAMachineReadValueCarriesAModelConfidence(t *testing.T) {
 }
 
 // Read and confirmed are different claims, and a receipt that collapsed them
-// would let a machine re-read pass for a person's approval.
-func TestAReceiptKeepsWhenItWasReadApartFromWhenAPersonConfirmedIt(t *testing.T) {
+// would let a machine re-read pass for a contact's approval.
+func TestAReceiptKeepsWhenItWasReadApartFromWhenAContactConfirmedIt(t *testing.T) {
 	confirmed := assessedAt.Add(-time.Hour)
 	field := siteReadField()
 	field.RetrievedAt = ptr(assessedAt.Add(-48 * time.Hour))
@@ -168,7 +168,7 @@ func TestAHumanValueNobodyConfirmedNamesThatGap(t *testing.T) {
 	got := receiptFor(t, field)
 
 	if got.Identity == nil || (*got.Identity)["actor"] != "human:ada" {
-		t.Errorf("identity = %v, want the person who said so", got.Identity)
+		t.Errorf("identity = %v, want the contact who said so", got.Identity)
 	}
 	if got.Gaps == nil {
 		t.Fatal("no gaps: an unconfirmed human value claimed to be confirmed")

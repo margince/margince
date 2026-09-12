@@ -67,21 +67,21 @@ func TestTheLimiterStillHoldsAMeetingThatNamesAJudgedSender(t *testing.T) {
 	if audience != "participants" || reason != activities.ReasonNoRecord {
 		t.Fatalf("a meeting-kind record naming a judged sender was born audience=%q reason=%q, "+
 			"want participants/%s — the kind is a word the caller chose, and the ladder judged "+
-			"the person who sent it", audience, reason, activities.ReasonNoRecord)
+			"the contact who sent it", audience, reason, activities.ReasonNoRecord)
 	}
 }
 
 // fileUnder plants an activity_link the way a repair pass does, so a test can
 // ask what the recompute makes of a row that has since been filed.
-func fileUnder(t *testing.T, e *integration.SearchEnv, activity ids.UUID, person ids.UUID) {
+func fileUnder(t *testing.T, e *integration.SearchEnv, activity ids.UUID, contact ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2) ON CONFLICT DO NOTHING`, activity, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2) ON CONFLICT DO NOTHING`, activity, contact)
 		return err
 	}); err != nil {
-		t.Fatalf("filing the activity under a person: %v", err)
+		t.Fatalf("filing the activity under a contact: %v", err)
 	}
 }
 
@@ -98,7 +98,7 @@ func TestASuppressedSendersHoldSurvivesBeingFiled(t *testing.T) {
 	}
 
 	// Somebody files it — a project attribution, a hand relink, a cohort pass.
-	filedUnder := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by)
+	filedUnder := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Someone', 'manual', 'human:x')`)
 	fileUnder(t, e, activityID, filedUnder)
 
@@ -117,7 +117,7 @@ func TestASuppressedSendersHoldSurvivesBeingFiled(t *testing.T) {
 // (capture.Sink.Upsert), so a meeting-shaped record arriving with a mail
 // counterparty reaches the same ladder mail does — the private-thread branch
 // and the suppression registry included. Such a meeting is held for a real
-// reason about a real person, and telling it apart from a structurally
+// reason about a real contact, and telling it apart from a structurally
 // counterparty-less one by KIND would open exactly that message the moment
 // anything filed it.
 //
@@ -140,7 +140,7 @@ func TestAJudgedHoldSurvivesBeingFiledWhateverTheKind(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("restating the activity as a meeting: %v", err)
 	}
-	filedUnder := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by)
+	filedUnder := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Someone', 'manual', 'human:x')`)
 	fileUnder(t, e, activityID, filedUnder)
 

@@ -8,7 +8,7 @@ package compose
 //
 // Split by concept rather than by size. Reading the lane — which scenarios
 // exist, which tools they require, what each model's runs came to — is a
-// different subject from deciding what a person needs to be told first, and the
+// different subject from deciding what a contact needs to be told first, and the
 // two together carried the one file past its ceiling.
 
 import (

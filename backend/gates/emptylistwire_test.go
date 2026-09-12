@@ -16,7 +16,7 @@ package gates
 // `append` works on it, `len` and `range` work, and the only place it behaves
 // differently is encoding/json.
 //
-// The cost falls on the client. Generated TypeScript reads `data: Person[]`,
+// The cost falls on the client. Generated TypeScript reads `data: Contact[]`,
 // because the contract says so, and gives a caller no reason to guard — 36
 // reads across 18 files call `.map` on it directly, and each takes down the
 // screen rendering it (issue #1606). No compiler on either side can see it: the
@@ -175,7 +175,7 @@ func TestTheEnvelopeCensusJudgesTheRightStructs(t *testing.T) {
 		"a list envelope": {
 			source: `package p
 type PageInfo struct{ HasMore bool }
-type PersonListResponse struct {
+type ContactListResponse struct {
 	Data []int
 	Page PageInfo
 }`,
@@ -187,7 +187,7 @@ type PersonListResponse struct {
 		"an envelope whose rows are named something else": {
 			source: `package p
 type PageInfo struct{ HasMore bool }
-type PersonListResponse struct {
+type ContactListResponse struct {
 	Rows []int
 	Page PageInfo
 }`,
@@ -197,7 +197,7 @@ type PersonListResponse struct {
 		"an envelope whose rows are not a slice": {
 			source: `package p
 type PageInfo struct{ HasMore bool }
-type PersonListResponse struct {
+type ContactListResponse struct {
 	Data *[]int
 	Page PageInfo
 }`,
@@ -229,7 +229,7 @@ type Leaflet struct {
 		},
 		"a record with no page at all": {
 			source: `package p
-type Person struct{ Name string }`,
+type Contact struct{ Name string }`,
 			envelopes: 0,
 		},
 	} {

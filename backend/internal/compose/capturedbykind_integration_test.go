@@ -18,20 +18,20 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seatPersonCapturedBy plants one person with an explicit creator, which is the
+// seatContactCapturedBy plants one contact with an explicit creator, which is the
 // only thing this filter reads.
-func seatPersonCapturedBy(t *testing.T, e *integration.Env, fullName, capturedBy string) {
+func seatContactCapturedBy(t *testing.T, e *integration.Env, fullName, capturedBy string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, owner_id, full_name, source, captured_by)
+			INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 			VALUES ($1, $2, $3, 'test', $4)`, ids.NewV7(), e.Rep1, fullName, capturedBy)
 		return err
 	}); err != nil {
@@ -42,22 +42,22 @@ func seatPersonCapturedBy(t *testing.T, e *integration.Env, fullName, capturedBy
 func TestCapturedByKindSelectsWhoCreatedTheRecord(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
 	// One of each creator the write paths stamp, plus one whose prefix is in no
 	// enum value at all — the case that decides whether a filter can quietly
 	// become the only view.
-	seatPersonCapturedBy(t, e, "Agent Made", "agent:capture_counterparty_verdict")
-	seatPersonCapturedBy(t, e, "Human Made", "human:"+e.Rep1.String())
-	seatPersonCapturedBy(t, e, "Connector Made", "connector:gmail")
-	seatPersonCapturedBy(t, e, "System Made", "system:migration-0105")
-	seatPersonCapturedBy(t, e, "Unclassified", "legacy-import")
+	seatContactCapturedBy(t, e, "Agent Made", "agent:capture_counterparty_verdict")
+	seatContactCapturedBy(t, e, "Human Made", "human:"+e.Rep1.String())
+	seatContactCapturedBy(t, e, "Connector Made", "connector:gmail")
+	seatContactCapturedBy(t, e, "System Made", "system:migration-0105")
+	seatContactCapturedBy(t, e, "Unclassified", "legacy-import")
 
 	names := func(kind *string) []string {
 		t.Helper()
-		got, _, err := store.ListPeople(ctx, people.ListPeopleInput{CapturedByKind: kind})
+		got, _, err := store.ListContacts(ctx, contacts.ListContactsInput{CapturedByKind: kind})
 		if err != nil {
-			t.Fatalf("ListPeople: %v", err)
+			t.Fatalf("ListContacts: %v", err)
 		}
 		out := make([]string, 0, len(got))
 		for _, p := range got {
@@ -95,20 +95,20 @@ func TestCapturedByKindSelectsWhoCreatedTheRecord(t *testing.T) {
 // values it accepts, and confirm the object exists while doing it.
 func TestCapturedByKindIsRefusedOnlyAfterAuthorization(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
-	// A rep may read people but NOT companies, so the company list is
+	// A rep may read contacts but NOT companies, so the company list is
 	// the natural unauthorized caller here.
 	bogus := "not-a-kind"
 	_, _, err := store.ListCompanies(e.As(e.Rep1, nil, integration.RepPerms),
-		people.ListCompaniesInput{CapturedByKind: &bogus})
+		contacts.ListCompaniesInput{CapturedByKind: &bogus})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("ListCompanies err = %v, want the permission denial — the enum check must not answer before authorization", err)
 	}
 
 	// With the read granted, the same value is refused on its own merits.
 	_, _, err = store.ListCompanies(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.ListCompaniesInput{CapturedByKind: &bogus})
+		contacts.ListCompaniesInput{CapturedByKind: &bogus})
 	if err == nil {
 		t.Fatal("an unknown provenance kind was accepted once the caller could read")
 	}
@@ -119,14 +119,14 @@ func TestCapturedByKindIsRefusedOnlyAfterAuthorization(t *testing.T) {
 
 func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
-	// An AI-created person capture-private to Rep3, who sits in the other team.
-	// Ownership alone hides no person from another seat; visibility='owner' is
+	// An AI-created contact capture-private to Rep3, who sits in the other team.
+	// Ownership alone hides no contact from another seat; visibility='owner' is
 	// the state that still keeps the row out of Rep1's read scope.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, owner_id, full_name, source, captured_by, visibility)
+			INSERT INTO contact (id, owner_id, full_name, source, captured_by, visibility)
 			VALUES ($1, $2, 'Other Team AI Record', 'test', 'agent:capture_counterparty_verdict', 'owner')`, ids.NewV7(), e.Rep3)
 		return err
 	}); err != nil {
@@ -136,10 +136,10 @@ func TestCapturedByKindNarrowsRowScopeAndNeverWidensIt(t *testing.T) {
 	// Rep1 asks for the review list on his own scope. The filter selects WHICH
 	// rows of what he may already see; it is not a way to see more.
 	agent := "agent"
-	got, _, err := store.ListPeople(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms),
-		people.ListPeopleInput{CapturedByKind: &agent})
+	got, _, err := store.ListContacts(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms),
+		contacts.ListContactsInput{CapturedByKind: &agent})
 	if err != nil {
-		t.Fatalf("ListPeople: %v", err)
+		t.Fatalf("ListContacts: %v", err)
 	}
 	for _, p := range got {
 		if p.FullName == "Other Team AI Record" {
@@ -184,12 +184,12 @@ func agentCtx(e *integration.Env) context.Context {
 func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 	e := integration.Setup(t)
 	adminCtx := e.As(e.Rep1, nil, integration.AdminPerms)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
 	filled := seatConnectorCompany(t, e, "Acme Filled", "domain")
 	industry := "Robotics"
 	if _, err := store.UpdateCompany(agentCtx(e), ids.From[ids.CompanyKind](filled),
-		people.UpdateCompanyInput{Industry: &industry}); err != nil {
+		contacts.UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatalf("agent enrichment write: %v", err)
 	}
 	// Connector-made, connector-named, no AI ever near it.
@@ -197,7 +197,7 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 
 	names := func(ai *bool) []string {
 		t.Helper()
-		got, _, err := store.ListCompanies(adminCtx, people.ListCompaniesInput{AiWritten: ai})
+		got, _, err := store.ListCompanies(adminCtx, contacts.ListCompaniesInput{AiWritten: ai})
 		if err != nil {
 			t.Fatalf("ListCompanies: %v", err)
 		}
@@ -229,7 +229,7 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 	// neither of these was CREATED by an AI.
 	agent := "agent"
 	if got, _, err := store.ListCompanies(adminCtx,
-		people.ListCompaniesInput{CapturedByKind: &agent}); err != nil || len(got) != 0 {
+		contacts.ListCompaniesInput{CapturedByKind: &agent}); err != nil || len(got) != 0 {
 		t.Fatalf("captured_by_kind=agent returned %d companies (err %v), want 0 — the connector created both", len(got), err)
 	}
 }
@@ -242,18 +242,18 @@ func TestAiWrittenFindsRecordsTheConnectorMadeAndTheAiFilled(t *testing.T) {
 // nothing about whether the system writes one.
 func TestAiWrittenCatchesAnAgentUpdatingAnOrdinaryColumn(t *testing.T) {
 	e := integration.Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	company := seatConnectorCompany(t, e, "Delta Industries", "domain")
 
 	industry := "Robotics"
 	if _, err := store.UpdateCompany(agentCtx(e), ids.From[ids.CompanyKind](company),
-		people.UpdateCompanyInput{Industry: &industry}); err != nil {
+		contacts.UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatalf("agent update: %v", err)
 	}
 
 	yes := true
 	got, _, err := store.ListCompanies(e.As(e.Rep1, nil, integration.AdminPerms),
-		people.ListCompaniesInput{AiWritten: &yes})
+		contacts.ListCompaniesInput{AiWritten: &yes})
 	if err != nil {
 		t.Fatalf("ListCompanies: %v", err)
 	}

@@ -60,7 +60,7 @@ func asRep(ctx context.Context, userID ids.UUID) context.Context {
 				"deal":     {Read: true, Update: true},
 				"activity": {Read: true},
 				"company":  {Read: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

@@ -51,7 +51,7 @@ func (s *Store) GetProject(ctx context.Context, id ids.ProjectID, archived store
 // opens the transaction itself reads the catalog BEFORE opening it, then
 // threads the answer in — the same order every store-opened entry point keeps,
 // because the catalog read takes a connection of its own. It takes
-// project:read, as people's ActiveCompanyColumns takes company:read:
+// project:read, as contacts's ActiveCompanyColumns takes company:read:
 // which columns a record type carries is a fact about that record type.
 func (s *Store) ActiveProjectColumns(ctx context.Context) (CustomColumns, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {

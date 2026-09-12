@@ -10,7 +10,7 @@ import { jsonResponse, PIPELINE_ADMIN, render } from "./settings.testkit";
 // The screen decides nothing — it is the evidence somebody weighs before
 // trusting a transition to move deals on its own. So what is under test is
 // whether the numbers arrive intact and whether the two cases that look alike
-// on screen stay told apart: a transition people reject, and one nobody has
+// on screen stay told apart: a transition contacts reject, and one nobody has
 // answered.
 
 beforeEach(() => {
@@ -129,7 +129,7 @@ describe("stage automation report", () => {
     expect(row?.textContent).toContain("document_signed 12/12");
   });
 
-  it("tells a transition nobody answered from one people reject", async () => {
+  it("tells a transition nobody answered from one contacts reject", async () => {
     vi.stubGlobal("fetch", reportStub());
     render(<StageAutomationCard />);
 
@@ -137,7 +137,7 @@ describe("stage automation report", () => {
       await screen.findByText(/Negotiation → Contract/)
     ).closest("tr");
     expect(unanswered).toBeTruthy();
-    // NOT "0%". A rate of zero says people refuse it every time; this
+    // NOT "0%". A rate of zero says contacts refuse it every time; this
     // transition has been proposed four times and answered never, and the two
     // ask for opposite fixes — a better proposal, or somebody to look.
     expect(unanswered?.textContent).not.toContain("0%");

@@ -86,11 +86,11 @@ func TestAShortModelListIsToppedUpFromTheFloor(t *testing.T) {
 	in.Company = "Northwind"
 	in.Commitments = append(in.Commitments,
 		ClaimIn{
-			PersonName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
+			ContactName: "Ana Roth", Kind: kindPriority, Body: "cut onboarding time",
 			Status: statusOpen, SourceID: activityID,
 		},
 		ClaimIn{
-			PersonName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
+			ContactName: "Ana Roth", Kind: kindSuccessCriterion, Body: "one dashboard for ops",
 			Status: statusOpen, SourceID: activityID,
 		})
 	floor := floorFor(in)

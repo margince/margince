@@ -84,7 +84,7 @@ const PROJECT_LIMIT = 200;
  *
  * Reading them here with a page size of this module's own is what let the filter
  * builder offer 200 seats and 50 teams while the bulk bar beside it offered
- * 2 000 of the same people from the same endpoint — one list, one purpose, two
+ * 2 000 of the same contacts from the same endpoint — one list, one purpose, two
  * answers. Off the shared walk they are the same list everywhere, at no extra
  * request: every consumer observes one cache entry per kind.
  */

@@ -650,7 +650,7 @@ func TestASameDayCloseTakesZeroDaysRatherThanNothing(t *testing.T) {
 	}
 }
 
-// A deal is aged in DAYS a person would count, not in elapsed clock time.
+// A deal is aged in DAYS a contact would count, not in elapsed clock time.
 //
 // Created at 23:50 and closed at 00:10 the next night, a deal has run over two
 // calendar days and for 24 hours and 20 minutes. Counting the clock calls that

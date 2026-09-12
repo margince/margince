@@ -174,7 +174,7 @@ func aiTaskRunCheckValues(t *testing.T, column string) []string {
 	if err != nil {
 		t.Fatalf("reading %s: %v", matches[0], err)
 	}
-	body := string(raw)
+	body := withCurrentNames(string(raw))
 	start := strings.Index(body, "CREATE TABLE ai_task_run")
 	end := strings.Index(body, "CREATE INDEX")
 	if start < 0 || end <= start {

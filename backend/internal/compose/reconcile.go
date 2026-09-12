@@ -57,7 +57,7 @@ type followUpStager struct {
 	draft followUpReplySeam
 	// owner resolves the authority the DRAFT is read under. The reply carries a
 	// counterparty's address and the message it answers, both of which end up
-	// stored on the card — so they are read as the person the card is for, never
+	// stored on the card — so they are read as the contact the card is for, never
 	// under the sweep's own unbounded principal.
 	owner dealOwnerAuthority
 }
@@ -194,12 +194,12 @@ func (s followUpStager) stageDraftedReply(
 ) (bool, error) {
 	// The draft is composed under the DEAL OWNER's authority, not the sweep's.
 	//
-	// ReplyAddress resolves the counterparty's email off the person record,
+	// ReplyAddress resolves the counterparty's email off the contact record,
 	// behind an object grant AND a row scope that a system principal walks
 	// straight past — auth.Require and auth.ScopeClauseFor both pass it
 	// unconditionally. That address is then stored in proposed_change, where
 	// the card's own decide grant (activity:create plus deal visibility) is
-	// what governs reading it back, and person:read is not in that set.
+	// what governs reading it back, and contact:read is not in that set.
 	//
 	// The message the draft answers is NOT the same question: the reconciler
 	// only ever picks evidence with audience = 'workspace', so its subject and
@@ -248,7 +248,7 @@ func (s followUpStager) stageDraftedReply(
 	// acting principal stays the sweep's, which is what keeps the row a server
 	// proposal (a NULL passport) the release executor may run, and what keeps
 	// its provenance honest — no rep asked for this card. on_behalf_of names
-	// the person the card is FOR, and approvals narrows a held draft to them:
+	// the contact the card is FOR, and approvals narrows a held draft to them:
 	// releasing one sends it from the approver's own mailbox, so a colleague
 	// who released it would be answering a customer under their own name.
 	//
@@ -265,7 +265,7 @@ func (s followUpStager) stageDraftedReply(
 // resolved as the human this staging acts for.
 //
 // The owner is taken from the context the draft was composed under rather than
-// re-read, so the card is filed for exactly the person whose authority wrote it.
+// re-read, so the card is filed for exactly the contact whose authority wrote it.
 // A context carrying no human leaves the principal untouched: the staging then
 // records nobody, which is what an ownerless deal honestly is.
 func onBehalfOfOwner(sweepCtx, ownerCtx context.Context) context.Context {

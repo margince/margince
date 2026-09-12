@@ -25,9 +25,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -100,7 +100,7 @@ func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, owner ids.UU
 // under it would be any name in the workspace, frozen into a record no
 // read-side gate can re-filter. Resolving the owner's real grants — their
 // permissions, their teams, their seat, in ONE snapshot — makes the read no
-// wider than the person the card is for.
+// wider than the contact the card is for.
 //
 // Every failure here is the same answer: no facts, so the review falls back to
 // a reason with no name in it. That covers a deal with no owner (owner_id is
@@ -133,9 +133,9 @@ func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) 
 			return readErr
 		}
 		names, readErr = r.nameCounterparties(ownerCtx, tx, facts)
-		// An owner who may not read people still gets the dates. The two
+		// An owner who may not read contacts still gets the dates. The two
 		// answers are different sizes — WHEN the silence started is on the
-		// deal's own correspondence, WHO it was with belongs to the person
+		// deal's own correspondence, WHO it was with belongs to the contact
 		// record — and collapsing the first into the second's refusal throws
 		// away a fact the reader is entitled to.
 		if errors.Is(readErr, apperrors.ErrPermissionDenied) {
@@ -150,21 +150,21 @@ func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) 
 	return facts, names, nil
 }
 
-// nameCounterparties resolves both sides' people in ONE call, so a deal whose
+// nameCounterparties resolves both sides' contacts in ONE call, so a deal whose
 // two directions share a contact costs one read rather than two. It runs inside
-// the owner's transaction, so a person the owner may not see simply has no
+// the owner's transaction, so a contact the owner may not see simply has no
 // entry and the reason says "the contact".
 func (r quietReviewReader) nameCounterparties(ctx context.Context, tx pgx.Tx, facts deals.QuietFacts) (deals.QuietNames, error) {
-	var persons []ids.PersonID
+	var contactIDs []ids.ContactID
 	for _, side := range []*deals.QuietSide{facts.LastInbound, facts.LastOutbound} {
-		if side != nil && !side.PersonID.IsZero() {
-			persons = append(persons, ids.From[ids.PersonKind](side.PersonID))
+		if side != nil && !side.ContactID.IsZero() {
+			contactIDs = append(contactIDs, ids.From[ids.ContactKind](side.ContactID))
 		}
 	}
-	if len(persons) == 0 {
+	if len(contactIDs) == 0 {
 		return deals.QuietNames{}, nil
 	}
-	found, err := people.NewStore(r.db).PersonNamesTx(ctx, tx, persons)
+	found, err := contacts.NewStore(r.db).ContactNamesTx(ctx, tx, contactIDs)
 	if err != nil {
 		return nil, err
 	}

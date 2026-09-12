@@ -21,7 +21,7 @@ import (
 func TestASavedViewFilterNamingAnUnknownFieldIsRefused(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{})
 
-	err := store.validateViewFilter(context.Background(), "people", map[string]any{
+	err := store.validateViewFilter(context.Background(), "contacts", map[string]any{
 		"filter": map[string]any{"field": "favourite_colour", "op": "eq", "value": "blue"},
 	})
 
@@ -40,10 +40,10 @@ func TestASavedViewFilterNamingAnUnknownFieldIsRefused(t *testing.T) {
 // worse failure than the one it was added to prevent.
 func TestASavedViewFilterOnACustomColumnIsAccepted(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{cols: map[string][]fieldcatalog.Column{
-		"person": {{Name: "cf_tier", Type: fieldcatalog.TypeText}},
+		"contact": {{Name: "cf_tier", Type: fieldcatalog.TypeText}},
 	}})
 
-	err := store.validateViewFilter(context.Background(), "people", map[string]any{
+	err := store.validateViewFilter(context.Background(), "contacts", map[string]any{
 		"filter": map[string]any{"field": "cf_tier", "op": "eq", "value": "gold"},
 	})
 	if err != nil {
@@ -62,8 +62,8 @@ func TestASavedViewWithNothingToValidateIsAccepted(t *testing.T) {
 		resource string
 		query    map[string]any
 	}{
-		{"no filter state at all", "people", map[string]any{"columns": []any{"full_name"}}},
-		{"a cleared filter", "people", map[string]any{"filter": nil}},
+		{"no filter state at all", "contacts", map[string]any{"columns": []any{"full_name"}}},
+		{"a cleared filter", "contacts", map[string]any{"filter": nil}},
 		{"a resource with no segment engine", "activities", map[string]any{"filter": unknownField}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestASavedViewWithNothingToValidateIsAccepted(t *testing.T) {
 func TestASavedViewFilterThatIsNotATreeIsRefused(t *testing.T) {
 	store := (&Store{}).WithFieldCatalog(stubFilterable{})
 
-	err := store.validateViewFilter(context.Background(), "people", map[string]any{
+	err := store.validateViewFilter(context.Background(), "contacts", map[string]any{
 		"filter": "owner_id eq me",
 	})
 
@@ -112,7 +112,7 @@ var contractViewResources = []crmcontracts.SavedViewResource{
 	crmcontracts.SavedViewResourceSavedViewResourceLeads,
 	crmcontracts.SavedViewResourceSavedViewResourceCompanies,
 	crmcontracts.SavedViewResourceSavedViewResourcePartners,
-	crmcontracts.SavedViewResourceSavedViewResourcePeople,
+	crmcontracts.SavedViewResourceSavedViewResourceContacts,
 	crmcontracts.SavedViewResourceSavedViewResourceProjects,
 }
 
@@ -189,13 +189,13 @@ func TestAnUndecodableTreeIsNamedForTheSurfaceThatCarriedIt(t *testing.T) {
 	}{
 		{
 			surface: "a dynamic list, which sends the tree as `definition`",
-			refuse:  func() error { return store.validateSegmentDefinition(context.Background(), "person", tree) },
+			refuse:  func() error { return store.validateSegmentDefinition(context.Background(), "contact", tree) },
 			field:   definitionField,
 		},
 		{
 			surface: "a saved view, which sends it inside `query`",
 			refuse: func() error {
-				return store.validateViewFilter(context.Background(), "people", map[string]any{"filter": tree})
+				return store.validateViewFilter(context.Background(), "contacts", map[string]any{"filter": tree})
 			},
 			field: viewQueryField,
 		},
@@ -221,7 +221,7 @@ func TestACatalogueFailureIsNotDressedAsAFieldFault(t *testing.T) {
 	boom := errors.New("catalog unreachable")
 	store := (&Store{}).WithFieldCatalog(stubFilterable{err: boom})
 
-	err := store.validateViewFilter(context.Background(), "people", map[string]any{
+	err := store.validateViewFilter(context.Background(), "contacts", map[string]any{
 		"filter": map[string]any{"field": "owner_id", "op": "eq", "value": "x"},
 	})
 

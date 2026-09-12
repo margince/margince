@@ -186,7 +186,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
       return (
         <>
           <AccountCard />
-          {/* When this person is bookable. Under the identity because it is a
+          {/* When this contact is bookable. Under the identity because it is a
               statement about this reader rather than about the workspace: their
               own week is theirs to set, and an admin setting it for them is the
               shape the design refuses. */}
@@ -233,7 +233,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
         </>
       );
 
-    // ---- people ----
+    // ---- contacts ----
     case "members":
       return <UsersAdminCard />;
     case "teams":
@@ -291,7 +291,7 @@ export function tabContent(id: SettingsPageId): ReactNode {
           <ConsumerMailDomainsCard />
           {/* Last, because it is the OUTCOME of the three above rather than a
               fourth rule: which domains ended up refused a company, and whether
-              a machine or a person decided it. */}
+              a machine or a human decided it. */}
           <BlockedDomainsCard />
         </>
       );
@@ -410,7 +410,7 @@ function ConnectionsTab() {
       <ConnectorsCard />
       {/* Directly under the mailboxes and before what they brought in, because
           it changes what COUNTS as correspondence: an address declared here is
-          the same person, so mail among them is not a conversation with anybody
+          the same contact, so mail among them is not a conversation with anybody
           and never becomes one. Per-seat rather than per-connection, which is
           why it is a card of its own and not a row inside connectors.tsx —
           those rows render once per mailbox and a seat's own addresses are one
@@ -513,7 +513,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   // sender would open it and find it worked.
   //
   // The URL is left EXACTLY as typed. That is the whole affordance: the reader
-  // can read what they asked for, copy it, and ask the person who has it.
+  // can read what they asked for, copy it, and ask the colleague who has it.
   const boundary =
     target.kind === "unknown"
       ? "unknown"
@@ -596,7 +596,7 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
   );
 }
 
-// This person's own agent authority: what an agent may do unattended, the
+// This contact's own agent authority: what an agent may do unattended, the
 // credentials they have minted, the clients holding one, and the governed tools
 // those credentials reach. Every seat gets it, ungated — a connection's
 // authority comes from the human's own consent, so an admin-only surface here
@@ -993,7 +993,7 @@ function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
-  // The choice is written to the seat so it follows this person to their next
+  // The choice is written to the seat so it follows this colleague to their next
   // browser; `setLocale` still keeps its local copy, which is what renders
   // before the request lands and what a signed-out reader is left with.
   //
@@ -1050,7 +1050,7 @@ function LanguageSettingRow() {
 
 const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
 
-// The scope's wire token is what the server reads; a person choosing what
+// The scope's wire token is what the server reads; a contact choosing what
 // authority to hand their agent needs the sentence. Composed rather than
 // switched, and annotated so an added scope is a missing-key compile error
 // rather than a checkbox that quietly labels itself `enrich` in every
@@ -2379,7 +2379,7 @@ function AutonomyCard() {
             runs at — the dot, and on the locked row the badge saying the answer
             cannot move — sits at the same x as every answer on this page. A
             reader coming from the tool inventory above is matching dots, which
-            is why sending carries the green one: a person's grant of the `send`
+            is why sending carries the green one: a contact's grant of the `send`
             scope IS the approval, so a funded send does not stage a second. */}
         <SettingList>
           <SettingRow

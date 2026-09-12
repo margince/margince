@@ -3,13 +3,13 @@
 
 package company360
 
-// The account's people, paged.
+// The account's contacts, paged.
 //
-// The 360 carries a people SECTION: the top 25 by the same ranking, with a flag
+// The 360 carries a contacts SECTION: the top 25 by the same ranking, with a flag
 // saying more exist. This is the surface behind that flag — every contact on the
 // account, searchable and filterable, in the order the section already used.
 //
-// ONE ranking, not two. people.RankContacts decides the order in both places, so
+// ONE ranking, not two. contacts.RankContacts decides the order in both places, so
 // the twenty-sixth contact a reader pages to is the twenty-sixth the section
 // would have shown had it been longer. A second spelling here would let the
 // summary and the list disagree about who matters, on the one screen that shows
@@ -26,7 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -36,7 +36,7 @@ import (
 
 // ContactListQuery is one page request over an account's contacts.
 type ContactListQuery struct {
-	Status *people.Engagement
+	Status *contacts.Engagement
 	Query  *string
 	Sort   string
 	Cursor *string
@@ -48,7 +48,7 @@ type ContactListQuery struct {
 // It carries the SORT it was minted under, because every order here is derived
 // in Go from values the database cannot sort by — a token replayed against a
 // different order would resume from a position that order never had, silently
-// skipping or repeating contacts. It carries the person id rather than an
+// skipping or repeating contacts. It carries the contact id rather than an
 // offset so a contact added between pages cannot shift the window.
 type contactCursor struct {
 	Sort string    `json:"s"`
@@ -56,7 +56,7 @@ type contactCursor struct {
 	AsOf time.Time `json:"a"`
 }
 
-// ContactPage lists the account's contacts for one page of the People tab.
+// ContactPage lists the account's contacts for one page of the Contacts tab.
 //
 // The whole visible roster is read and ranked, then sliced: the ranking is a
 // function of values folded per contact (engagement, strength) that SQL does not
@@ -67,7 +67,7 @@ func (s *Service) ContactPage(
 	ctx context.Context, companyID ids.CompanyID, q ContactListQuery,
 ) (crmcontracts.CompanyContactListResponse, error) {
 	// The same admission AssembleScoped states, for the same reason: this is
-	// the paging surface behind that page's people section and must not be
+	// the paging surface behind that page's contacts section and must not be
 	// readable on weaker terms than the section it pages.
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return crmcontracts.CompanyContactListResponse{}, err
@@ -76,7 +76,7 @@ func (s *Service) ContactPage(
 	now := s.now().UTC()
 	// The custom-field catalog opens a transaction of its own, so it is read
 	// before this one takes the connection — the same order Graph uses.
-	active, err := s.people.ActiveCompanyColumns(ctx)
+	active, err := s.contacts.ActiveCompanyColumns(ctx)
 	if err != nil {
 		return crmcontracts.CompanyContactListResponse{}, err
 	}
@@ -84,13 +84,13 @@ func (s *Service) ContactPage(
 		// The company gate first, and the same one the 360 opens with: an
 		// account the caller cannot see must answer not-found here too, or this
 		// endpoint becomes the way to discover it.
-		if _, err := s.people.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
+		if _, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active); err != nil {
 			return err
 		}
 		// nil: this endpoint takes no project. It is the account's whole
 		// contact list, and narrowing it to a body of work would answer a
 		// question nobody asked here.
-		all, err := people.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
+		all, err := contacts.StrengthForCompanyContacts(ctx, tx, companyID, now, nil)
 		if err != nil {
 			return err
 		}
@@ -112,7 +112,7 @@ func (s *Service) ContactPage(
 // read for the page rather than for the account.
 func (s *Service) rankedContactRows(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	all []people.ContactStrength, q ContactListQuery, now time.Time,
+	all []contacts.ContactStrength, q ContactListQuery, now time.Time,
 ) (crmcontracts.CompanyContactListResponse, error) {
 	// An omitted sort and an explicit `recommended` are the same order, so they
 	// must mint the same cursor: two spellings of one order would make a token
@@ -143,11 +143,11 @@ func (s *Service) rankedContactRows(
 		Page: crmcontracts.PageInfo{HasMore: hasMore},
 	}
 	for _, c := range page {
-		out.Data = append(out.Data, contactRow(c, identity[c.PersonID], now))
+		out.Data = append(out.Data, contactRow(c, identity[c.ContactID], now))
 	}
 	if hasMore && len(page) > 0 {
 		token, err := storekit.EncodeOpaque(contactCursor{
-			Sort: q.Sort, ID: page[len(page)-1].PersonID.UUID, AsOf: now,
+			Sort: q.Sort, ID: page[len(page)-1].ContactID.UUID, AsOf: now,
 		})
 		if err != nil {
 			return crmcontracts.CompanyContactListResponse{}, err
@@ -157,26 +157,26 @@ func (s *Service) rankedContactRows(
 	return out, nil
 }
 
-func contactRow(c people.ContactStrength, who contactCard, now time.Time) crmcontracts.CompanyContact {
+func contactRow(c contacts.ContactStrength, who contactCard, now time.Time) crmcontracts.CompanyContact {
 	row := crmcontracts.CompanyContact{
-		PersonId:       openapi_types.UUID(c.PersonID.UUID),
+		ContactId:      openapi_types.UUID(c.ContactID.UUID),
 		FullName:       who.fullName,
 		Title:          who.title,
-		Engagement:     crmcontracts.ContactEngagement(people.EngagementOf(c.Strength)),
-		Strength:       people.StrengthToWire(c.Strength, now),
+		Engagement:     crmcontracts.ContactEngagement(contacts.EngagementOf(c.Strength)),
+		Strength:       contacts.StrengthToWire(c.Strength, now),
 		LastInboundAt:  c.Strength.LastInbound,
 		LastOutboundAt: c.Strength.LastOutbound,
 	}
 	return row
 }
 
-func filterByStatus(all []people.ContactStrength, want *people.Engagement) []people.ContactStrength {
+func filterByStatus(all []contacts.ContactStrength, want *contacts.Engagement) []contacts.ContactStrength {
 	if want == nil {
 		return all
 	}
-	kept := make([]people.ContactStrength, 0, len(all))
+	kept := make([]contacts.ContactStrength, 0, len(all))
 	for _, c := range all {
-		if people.EngagementOf(c.Strength) == *want {
+		if contacts.EngagementOf(c.Strength) == *want {
 			kept = append(kept, c)
 		}
 	}
@@ -185,10 +185,10 @@ func filterByStatus(all []people.ContactStrength, want *people.Engagement) []peo
 
 // keepNamed drops the contacts the name search did not match. Identity is only
 // read for candidates, so a contact absent from the map did not match.
-func keepNamed(all []people.ContactStrength, identity map[ids.PersonID]contactCard) []people.ContactStrength {
-	kept := make([]people.ContactStrength, 0, len(all))
+func keepNamed(all []contacts.ContactStrength, identity map[ids.ContactID]contactCard) []contacts.ContactStrength {
+	kept := make([]contacts.ContactStrength, 0, len(all))
 	for _, c := range all {
-		if _, ok := identity[c.PersonID]; ok {
+		if _, ok := identity[c.ContactID]; ok {
 			kept = append(kept, c)
 		}
 	}
@@ -197,11 +197,11 @@ func keepNamed(all []people.ContactStrength, identity map[ids.PersonID]contactCa
 
 // sortContacts orders the page.
 //
-// `recommended` delegates to people.RankContacts — the same call the 360's
+// `recommended` delegates to contacts.RankContacts — the same call the 360's
 // section makes, which is what keeps the summary and this list agreeing. The
-// other three are plain column orders, each ending in the person id so a page
+// other three are plain column orders, each ending in the contact id so a page
 // boundary falls in the same place every time.
-func sortContacts(all []people.ContactStrength, order string, identity map[ids.PersonID]contactCard) {
+func sortContacts(all []contacts.ContactStrength, order string, identity map[ids.ContactID]contactCard) {
 	// Each field in both directions, because a table header is a toggle: the
 	// reader who presses "Last exchange" twice is asking for the reverse, and
 	// the design system spells that by prefixing a minus onto the column's own
@@ -220,25 +220,25 @@ func sortContacts(all []people.ContactStrength, order string, identity map[ids.P
 			if a != nil && !a.Equal(*b) {
 				return a.After(*b) == !ascending
 			}
-			return all[i].PersonID.String() < all[j].PersonID.String()
+			return all[i].ContactID.String() < all[j].ContactID.String()
 		})
 	case "strength":
 		sort.SliceStable(all, func(i, j int) bool {
 			if all[i].Strength.Strength != all[j].Strength.Strength {
 				return (all[i].Strength.Strength > all[j].Strength.Strength) == !ascending
 			}
-			return all[i].PersonID.String() < all[j].PersonID.String()
+			return all[i].ContactID.String() < all[j].ContactID.String()
 		})
 	case "name":
 		sort.SliceStable(all, func(i, j int) bool {
-			ai, bi := identity[all[i].PersonID].fullName, identity[all[j].PersonID].fullName
+			ai, bi := identity[all[i].ContactID].fullName, identity[all[j].ContactID].fullName
 			if !strings.EqualFold(ai, bi) {
 				return (strings.ToLower(ai) < strings.ToLower(bi)) == ascending
 			}
-			return all[i].PersonID.String() < all[j].PersonID.String()
+			return all[i].ContactID.String() < all[j].ContactID.String()
 		})
 	default:
-		people.RankContacts(all)
+		contacts.RankContacts(all)
 	}
 }
 
@@ -247,8 +247,8 @@ func sortContacts(all []people.ContactStrength, order string, identity map[ids.P
 // The token names the last contact of the previous page, so the next one starts
 // after it. A contact that has since left the account is not in the slice any
 // more: rather than guess a position, the read refuses, because resuming from a
-// position that no longer exists is how a page silently skips people.
-func cursorOffset(all []people.ContactStrength, token *string, order string) (int, error) {
+// position that no longer exists is how a page silently skips contacts.
+func cursorOffset(all []contacts.ContactStrength, token *string, order string) (int, error) {
 	if token == nil || *token == "" {
 		return 0, nil
 	}
@@ -260,7 +260,7 @@ func cursorOffset(all []people.ContactStrength, token *string, order string) (in
 		return 0, &storekit.CursorSortMismatchError{}
 	}
 	for i, c := range all {
-		if c.PersonID.UUID == pos.ID {
+		if c.ContactID.UUID == pos.ID {
 			return i + 1, nil
 		}
 	}
@@ -276,19 +276,19 @@ func cursorOffset(all []people.ContactStrength, token *string, order string) (in
 // already loaded — pushing the filter down would mean a second pass over the
 // same table to remove rows we are holding. Case-insensitive substring, which is
 // what a reader typing three letters of a surname expects; the account roster is
-// hundreds of rows, not the tsvector-sized corpus GET /people searches.
+// hundreds of rows, not the tsvector-sized corpus GET /contacts searches.
 func (s *Service) matchingIdentity(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-	candidates []people.ContactStrength, search *string,
-) (map[ids.PersonID]contactCard, error) {
+	candidates []contacts.ContactStrength, search *string,
+) (map[ids.ContactID]contactCard, error) {
 	if len(candidates) == 0 {
-		return map[ids.PersonID]contactCard{}, nil
+		return map[ids.ContactID]contactCard{}, nil
 	}
-	personIDs := make([]ids.PersonID, len(candidates))
+	contactIDs := make([]ids.ContactID, len(candidates))
 	for i, c := range candidates {
-		personIDs[i] = c.PersonID
+		contactIDs[i] = c.ContactID
 	}
-	identity, err := contactIdentity(ctx, tx, companyID, personIDs)
+	identity, err := contactIdentity(ctx, tx, companyID, contactIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (s *Service) matchingIdentity(
 		return identity, nil
 	}
 	needle := strings.ToLower(strings.TrimSpace(*search))
-	matched := make(map[ids.PersonID]contactCard, len(identity))
+	matched := make(map[ids.ContactID]contactCard, len(identity))
 	for id, who := range identity {
 		title := ""
 		if who.title != nil {

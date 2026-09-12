@@ -126,7 +126,7 @@ func TestOwnCredentialChangeIsOutsideTheSeatCeiling(t *testing.T) {
 	if !isOwnCredentialRequest(r) {
 		t.Error("the change-password route is inside the seat ceiling; a read seat cannot rotate its own password")
 	}
-	other := httptest.NewRequest(http.MethodPost, "/v1/people", nil)
+	other := httptest.NewRequest(http.MethodPost, "/v1/contacts", nil)
 	if isOwnCredentialRequest(other) {
 		t.Error("the exemption is wider than one route — it must not admit business writes")
 	}

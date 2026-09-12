@@ -8,10 +8,10 @@ import { AgendaPanel } from "./brief.teamweeklyagenda";
 import { StoryProviders } from "./story-utils";
 
 // The Monday agenda: one item per member, in the order the review already
-// ranks — the person who asked for help first, the week that went well last.
+// ranks — the contact who asked for help first, the week that went well last.
 //
 // Every member gets an item, including the one with nothing to fix: a meeting
-// that lists only the troubled people reads as a team where only those people
+// that lists only the troubled contacts reads as a team where only those contacts
 // exist. The frames are the ordinary panel, a team with nothing measured, and
 // the one failure this surface has — a browser that will not hand over its
 // clipboard, which the reader has to be told about because the alternative is

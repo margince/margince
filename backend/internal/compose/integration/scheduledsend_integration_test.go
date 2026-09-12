@@ -50,18 +50,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedConsentedRecipient creates a person with one address and a granted
+// seedConsentedRecipient creates a contact with one address and a granted
 // transactional purpose — the minimum a send's consent gate demands of an
 // addressee, spelled once because a multi-recipient fixture needs it per head.
 func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/people", AnyMap{
+	if status := p.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": name,
 		"emails":    []AnyMap{{"email": email}},
-	}, nil, &person); status != http.StatusCreated {
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", email, status)
 	}
 	var purposes struct {
@@ -82,7 +82,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
+	if status := p.Call(t, "POST", "/v1/contacts/"+contact.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "contract",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, nil); status != http.StatusOK {
@@ -91,7 +91,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 }
 
 // privacyAdmin binds the context both privileged privacy paths demand: a HUMAN
-// holding person.delete. Erasure and the subject-access export ask the same
+// holding contact.delete. Erasure and the subject-access export ask the same
 // trust level on purpose — one destroys the data and the other discloses all of
 // it — so the two tests share one spelling of it rather than each inventing a
 // principal that walks past the gates they are supposed to exercise.
@@ -110,7 +110,7 @@ func (p *preflightEnv) privacyAdmin(t *testing.T) context.Context {
 			// so a bounded caller is refused outright.
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				"person":   {Create: true, Read: true, Update: true, Delete: true},
+				"contact":  {Create: true, Read: true, Update: true, Delete: true},
 				"activity": {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
@@ -285,7 +285,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if state == "granted" {
 		body["wording"] = "Yes, you may contact me about this."
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", body, nil, nil); status != http.StatusOK {
+	if status := p.Call(t, "POST", "/v1/contacts/"+p.contactID+"/consent", body, nil, nil); status != http.StatusOK {
 		t.Fatalf("setting consent to %s → %d", state, status)
 	}
 }

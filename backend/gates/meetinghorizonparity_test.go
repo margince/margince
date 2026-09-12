@@ -13,7 +13,7 @@ package gates
 // guest on a meeting BECOMES a contact, and consent's decides whether writing
 // to that contact is lawful. Drift is silent and lands in the worst possible
 // shape — widen capture's alone and the product creates a record it will then
-// refuse to mail, widen consent's alone and the lawful window covers people no
+// refuse to mail, widen consent's alone and the lawful window covers contacts no
 // record exists for. Neither fails anything.
 //
 // Two writers of one invariant either share a helper or say why they do not
@@ -49,7 +49,7 @@ func TestOneSpellingOfTheMeetingHorizon(t *testing.T) {
 		t.Fatalf("the meeting horizon is %q in capture and %q in consent — one decides whether a "+
 			"meeting's guest becomes a contact and the other whether writing to them is lawful, so "+
 			"a difference either creates records the product then refuses to mail, or opens a "+
-			"lawful window over people no record exists for",
+			"lawful window over contacts no record exists for",
 			capture, consent)
 	}
 	// A horizon nobody can read is not a horizon. Postgres would reject an

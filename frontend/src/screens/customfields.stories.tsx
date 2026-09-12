@@ -223,7 +223,7 @@ export const EmptyObject: Story = {
   render: () => (
     <StoryProviders>
       <FieldTable
-        object="person"
+        object="contact"
         fields={[]}
         canEdit
         meUserId="u1"

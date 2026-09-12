@@ -26,7 +26,7 @@ func TestGeneratedMeetingsFileThroughTheirAttendees(t *testing.T) {
 		}
 		found := false
 		for _, party := range record.Participants {
-			if party.Email == box.Accounts[0].People[0].Email && party.Role == connector.ParticipantRoleAttendee {
+			if party.Email == box.Accounts[0].Contacts[0].Email && party.Role == connector.ParticipantRoleAttendee {
 				found = true
 			}
 		}

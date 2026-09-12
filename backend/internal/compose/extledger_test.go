@@ -101,7 +101,7 @@ var _ pgx.Tx = refusingTx{}
 func TestTheLedgerRefusesATableTheUnitDoesNotOwn(t *testing.T) {
 	ledger := notesLedger()
 	for name, entity := range map[string]string{
-		"a core record":            "person",
+		"a core record":            "contact",
 		"the audit log itself":     "audit_log",
 		"another unit's table":     "ext_de_retention",
 		"a near-miss on the name":  "ext_notes2_note",
@@ -210,7 +210,7 @@ func TestDetailWithNoAttributionIsRefused(t *testing.T) {
 // it so. The derivation itself is asserted over a real transaction in the
 // database lane, where the type reaches the outbox.
 func TestAVerbCannotSmuggleANamespace(t *testing.T) {
-	for _, verb := range []string{"ext_de.note_added", "person.created", "Note_Added", ""} {
+	for _, verb := range []string{"ext_de.note_added", "contact.created", "Note_Added", ""} {
 		if err := (extension.Event{Verb: verb}).Validate(); err == nil {
 			t.Errorf("the event grammar accepted %q as a verb", verb)
 		}
@@ -335,7 +335,7 @@ func TestAnExtensionUpdateCarryingAnImageKeepsTheFieldDoor(t *testing.T) {
 
 // A failed ledger write tells a unit that the write failed and nothing about
 // how: the text of one is a relation, a constraint and a SQL state, written for
-// the people who operate the installation.
+// the contacts who operate the installation.
 func TestALedgerFailureLeaksNoCoreDetail(t *testing.T) {
 	internal := errors.New(`insert into "audit_log" violates constraint audit_log_action_check`)
 	got := ledgerFailure(context.Background(), "probing", internal)

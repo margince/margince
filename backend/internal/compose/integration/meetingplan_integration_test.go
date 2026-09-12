@@ -19,18 +19,18 @@ import (
 )
 
 // seedMail writes one captured email the way the capture sink writes it: the
-// activity, then the link that files it under a person. `created_at` is pinned
+// activity, then the link that files it under a contact. `created_at` is pinned
 // alongside `occurred_at` rather than left to the column default, so an
 // assertion cannot depend on when the suite ran.
 func seedMail(
-	t *testing.T, owner *pgx.Conn, person ids.UUID, at time.Time, subject, body, direction string,
+	t *testing.T, owner *pgx.Conn, contact ids.UUID, at time.Time, subject, body, direction string,
 ) ids.UUID {
 	t.Helper()
 	id := SeedIDRow(t, owner, `INSERT INTO activity
 		(id, kind, subject, body, occurred_at, created_at, direction, source, captured_by)
 		VALUES ($1, 'email', $2, $3, $4, $4, $5, 'manual', 'human:x')`,
 		subject, body, at, direction)
-	LinkActivity(t, owner, id, "person", person)
+	LinkActivity(t, owner, id, "contact", contact)
 	return id
 }
 
@@ -65,7 +65,7 @@ func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	// Three weeks of one argument, in one thread.
 	wishList := seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -2, 0),
@@ -91,7 +91,7 @@ func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Coffee', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	plan := planFor(t, ctx, e, meeting)
@@ -131,7 +131,7 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	old := seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -6, 0),
 		"The decision we made", "Agreed: we start with the depot rollout.", "inbound")
@@ -142,7 +142,7 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	plan := planFor(t, ctx, e, meeting)
@@ -162,7 +162,7 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	secret := seedMail(t, owner, attendee, roomFixedNow.AddDate(0, -1, 0),
 		"Private negotiation", "The number we will not go below is in here.", "inbound")
@@ -175,7 +175,7 @@ func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	// Rep2 shares no seat on the narrowed conversation.
@@ -220,10 +220,10 @@ func TestThePlanNamesTheAbsenceOfADeal(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, created_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Review', $2, $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	plan := planFor(t, ctx, e, meeting)

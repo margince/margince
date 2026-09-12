@@ -55,7 +55,7 @@ function render(ui: ReactNode) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {/* The composer host is the shell's in the running app (`App.tsx`);
-            the people cards' addresses are buttons into it. */}
+            the contacts cards' addresses are buttons into it. */}
         <WriteToHost>
           <RecordShell>{ui}</RecordShell>
         </WriteToHost>
@@ -257,7 +257,7 @@ describe("company-360 deep read", () => {
       expect(screen.getByText("Stopped early: page cap")).toBeTruthy(),
     );
     expect(screen.getByText("6 evidenced facts staged")).toBeTruthy();
-    // The crawl's own URL lists are debug output, not something a person
+    // The crawl's own URL lists are debug output, not something a contact
     // reading a company record has any use for.
     expect(screen.queryByText("Pages skipped")).toBeNull();
     expect(screen.queryByText("brandt.example/careers")).toBeNull();
@@ -1192,7 +1192,7 @@ describe("CompanyScreen — merge into target (P-2)", () => {
 const employmentRel = {
   id: "rel-1",
   kind: "employment",
-  person_id: "p-1",
+  contact_id: "p-1",
   company_id: "o-1",
   role: "cto",
   is_current_primary: true,
@@ -1227,7 +1227,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
     expect(screen.getByText("p-1")).toBeTruthy();
   });
 
-  it("adding a relationship from the company side POSTs company_id + the picked person_id", async () => {
+  it("adding a relationship from the company side POSTs company_id + the picked contact_id", async () => {
     let posted: unknown = null;
     stubFetch(async (url, method, request) => {
       if (method === "POST" && url.includes("/relationships")) {
@@ -1237,7 +1237,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
       if (url.includes("/relationships") && url.includes("company_id=o-1")) {
         return emptyPage();
       }
-      if (url.includes("/people?") && url.includes("q=anna")) {
+      if (url.includes("/contacts?") && url.includes("q=anna")) {
         return jsonResponse({
           data: [{ id: "p-1", full_name: "Anna Weber" }],
           page: { next_cursor: null, has_more: false },
@@ -1271,7 +1271,7 @@ describe("CompanyScreen — Relationships tab (P-5)", () => {
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toMatchObject({
       company_id: "o-1",
-      person_id: "p-1",
+      contact_id: "p-1",
       kind: "employment",
       source: "manual",
     });
@@ -1372,7 +1372,7 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
         if (url.includes("/activities")) {
           return jsonResponse({ data: [] });
         }
-        if (url.includes("/people/p-1")) {
+        if (url.includes("/contacts/p-1")) {
           return jsonResponse({
             ...company,
             id: "p-1",
@@ -1388,7 +1388,7 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
             score: 41,
             bucket: "weak",
             contact_count: 3,
-            contributor_person_id: "p-1",
+            contributor_contact_id: "p-1",
             factors: {
               recency: 0.3,
               frequency: 0.2,
@@ -1482,7 +1482,7 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
     await user.click(screen.getByTestId("add-relationship"));
 
     // A company anchors employment + the company↔company kinds; deal_stakeholder needs a
-    // person endpoint and must not be offered here. The kinds only exist in the
+    // contact endpoint and must not be offered here. The kinds only exist in the
     // DOM while the popup is open, so the absence is asserted on an open list.
     const kind = screen.getByLabelText("Kind");
     await user.click(kind);
@@ -1510,7 +1510,7 @@ describe("CompanyScreen — relationship kinds by scope (P-5)", () => {
       kind: "partner_of",
       source: "manual",
     });
-    expect(posted).not.toHaveProperty("person_id");
+    expect(posted).not.toHaveProperty("contact_id");
   });
 });
 
@@ -2149,7 +2149,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
   });
 
   // A name and a link say somebody exists. A reader choosing which of the
-  // account's people to call had to open all three to find out which one buys,
+  // account's contacts to call had to open all three to find out which one buys,
   // which is three round trips spent on a decision the list could have carried.
   it("carries what a listed contact does and how to write to them", async () => {
     stubFetch(companyBackstop, {
@@ -2162,10 +2162,10 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
       },
       company360: {
         ...company360,
-        people: {
+        contacts: {
           data: [
             {
-              person_id: "p-1",
+              contact_id: "p-1",
               full_name: "Anna Brandt",
               title: "Head of Procurement",
               primary_email: "anna.brandt@brandt-automotive.de",
@@ -2191,7 +2191,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
 
     // The name opens the record, and it is the LINK's whole name: the mark
     // beside it draws initials as text, which would otherwise be announced
-    // ahead of the person they stand for.
+    // ahead of the contact they stand for.
     //
     // The page names this contact in more than one place — the roster card and
     // the references beside it — so every one of them is asserted rather than

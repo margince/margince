@@ -34,7 +34,7 @@ func TestCompanyAutoEnrichTriggerIgnoresWhatItCannotActOn(t *testing.T) {
 	for name, env := range map[string]events.Envelope{
 		"an archive can only make companies less due":              companyEvent("company.archived", ids.NewV7()),
 		"a verb outside the set that can make a company newly due": companyEvent("company.geocoded", ids.NewV7()),
-		"an unrelated entity type":                                 {Type: "company.created", OccurredAt: time.Now().UTC(), Entity: events.EntityRef{Type: "person", ID: ids.NewV7()}},
+		"an unrelated entity type":                                 {Type: "company.created", OccurredAt: time.Now().UTC(), Entity: events.EntityRef{Type: "contact", ID: ids.NewV7()}},
 		// A stale event is a replayed backlog (a new consumer group starts at
 		// stream position 0) or a delivery held for hours; queueing one job
 		// per historical event would flood the queue on the first boot after

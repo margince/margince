@@ -4,14 +4,14 @@
 // What the selected row is ABOUT, beside the queue.
 //
 // A row says why it is on the page. It cannot say what else is true of the
-// person or deal behind it — whether they have other open work, when anybody
+// contact or deal behind it — whether they have other open work, when anybody
 // last spoke to them, what the account is worth — and a rep deciding how to
 // answer needs that. Today the only way to see it is to leave the queue, which
 // costs the reader their place in it.
 //
 // So the record's own 360 read is drawn beside the list. It is the SAME read
 // the record page makes, not a second assembly of the same facts: a pane that
-// composed its own view of a person would be a second answer to "what do we
+// composed its own view of a contact would be a second answer to "what do we
 // know about them", and the two would drift.
 
 import { Avatar } from "../design-system/atoms";
@@ -21,23 +21,23 @@ import { SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { useContact360 } from "./contact360";
 import { EntityRef } from "./entityref";
-import { usePerson360 } from "./person360";
 import type { WorklistItem } from "./worklist.queries";
 
 // The pane, for whichever record the selected row is about.
 //
-// Only a PERSON is drawn today. A deal-bearing row already carries its own
+// Only a CONTACT is drawn today. A deal-bearing row already carries its own
 // figures — amount, close date, owner, risk evidence — on the row itself, so a
 // pane repeating them would be the second spelling this file exists to avoid;
 // what a deal row lacks is its timeline, and that is its own change. A row
 // about neither draws nothing rather than an empty frame.
 export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
   const subject = item.subject;
-  if (subject?.type !== "person") {
+  if (subject?.type !== "contact") {
     return null;
   }
-  return <PersonContext id={subject.id} label={subject.label} />;
+  return <ContactContext id={subject.id} label={subject.label} />;
 }
 
 // Whether this row HAS a pane, asked before one is rendered.
@@ -47,23 +47,23 @@ export function WorklistPane({ item }: Readonly<{ item: WorklistItem }>) {
 // able to ask the question without rendering the answer, so the rule lives
 // here — beside the component that obeys it — rather than in the screen.
 export function hasPane(item: WorklistItem | undefined): boolean {
-  return item?.subject?.type === "person";
+  return item?.subject?.type === "contact";
 }
 
-// One person's context: who they are, and what else is open with them.
+// One contact's context: who they are, and what else is open with them.
 //
-// The TITLE is the person, and it is a link to their record — a pane naming
+// The TITLE is the contact, and it is a link to their record — a pane naming
 // somebody a rep is about to write to had their name as dead text, so the one
 // obvious way to the whole relationship was to go back to the row and find its
 // own link. `EntityRef` is handed the name the row already carried, so the
 // link costs no lookup; the avatar rides beside it because a face is how a rep
 // recognises whose day they are in before they read a word.
-function PersonContext({
+function ContactContext({
   id,
   label,
 }: Readonly<{ id: string; label?: string }>) {
   const t = useT();
-  const view = usePerson360(id);
+  const view = useContact360(id);
   const state = view.isPending
     ? "loading"
     : view.isError
@@ -71,22 +71,22 @@ function PersonContext({
       : ("ready" as const);
   // The row's own label first, the record's full name once it lands: the pane
   // draws its head before the read answers, and a title that changed from a
-  // generic word to a name would move the reader's eye for nothing. A person
+  // generic word to a name would move the reader's eye for nothing. A contact
   // with neither is unnameable rather than unlinkable, so the generic title
   // stands and no link is drawn round it.
   //
-  // `person` is required on the wire, so an answer without it is version skew
+  // `contact` is required on the wire, so an answer without it is version skew
   // rather than a state the server means — and the honest fallback for a NAME
   // is the generic title, not a page that stops drawing. The board beside this
   // reads a missing count the same way and for the same reason.
-  const name = label ?? view.data?.person?.full_name;
+  const name = label ?? view.data?.contact?.full_name;
   return (
     <Panel
       title={
         name ? (
           <span className="worklist-pane-head">
             <Avatar name={name} identity={id} />
-            <EntityRef kind="person" id={id} name={name} />
+            <EntityRef kind="contact" id={id} name={name} />
           </span>
         ) : (
           t("worklist.pane.title")
@@ -100,7 +100,7 @@ function PersonContext({
           loadingLabel={t("worklist.pane.loading")}
           detail={{ onRetry: () => void view.refetch() }}
         >
-          {view.data && <PersonFacts view={view.data} />}
+          {view.data && <ContactFacts view={view.data} />}
         </SurfaceState>
       </PanelBody>
     </Panel>
@@ -115,8 +115,8 @@ function PersonContext({
 // differently from one who has not written since March.
 //
 // Who they work for and what they do are the other two, and they are here
-// because the READ already carries them — `person.employer` and
-// `person.title` come with the 360 the pane is drawing anyway, so naming them
+// because the READ already carries them — `contact.employer` and
+// `contact.title` come with the 360 the pane is drawing anyway, so naming them
 // costs no request. Both are DROPPED when absent rather than drawn blank: an
 // absent employer is not "works nowhere", it is also the answer for a reader
 // with no grant on relationship edges, and a row saying nothing claims we know
@@ -124,18 +124,18 @@ function PersonContext({
 //
 // A pane that reproduced the record page would be the record page in a
 // narrower column, and the reader who wanted that has the title's own link.
-function PersonFacts({
+function ContactFacts({
   view,
-}: Readonly<{ view: NonNullable<ReturnType<typeof usePerson360>["data"]> }>) {
+}: Readonly<{ view: NonNullable<ReturnType<typeof useContact360>["data"]> }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  // Both come off `person`, which is required on the wire — so an answer
+  // Both come off `contact`, which is required on the wire — so an answer
   // without it is version skew, and the two facts it carries are simply
   // absent. Absent is already this list's ordinary case: a row is dropped
   // rather than drawn blank.
-  const employer = view.person?.employer;
-  const role = view.person?.title;
+  const employer = view.contact?.employer;
+  const role = view.contact?.title;
   const facts: Fact[] = [
     {
       key: "inbound",
@@ -147,7 +147,7 @@ function PersonFacts({
       term: t("worklist.pane.lastOutbound"),
       value: spoken(view.last_outbound_at, t, locale, zone),
     },
-    // The company is a LINK, for the reason the person's name is: a rep
+    // The company is a LINK, for the reason the contact's name is: a rep
     // deciding how to answer often needs the account rather than the contact,
     // and the name is already resolved on this read.
     ...(employer

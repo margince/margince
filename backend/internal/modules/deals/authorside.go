@@ -37,10 +37,10 @@ type Participant struct {
 	UserID string
 	// Address is the raw email address, present when no seat matched.
 	Address string
-	// PersonLinked reports whether this row names a person record. The manual
-	// logging path writes a colleague that way — person_id set, user_id NULL —
-	// so an unaddressed person row is NOT evidence of an outside attendee.
-	PersonLinked bool
+	// ContactLinked reports whether this row names a contact record. The manual
+	// logging path writes a colleague that way — contact_id set, user_id NULL —
+	// so an unaddressed contact row is NOT evidence of an outside attendee.
+	ContactLinked bool
 }
 
 // The activity_participant roles this rule reads. counterpartyRoleInbound in
@@ -77,7 +77,7 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 	if !found {
 		// An inbound message with no identifiable sender is still known to
 		// have ARRIVED, which is a fact about its direction rather than its
-		// author. It is not attributable to a person, so it settles nothing.
+		// author. It is not attributable to a contact, so it settles nothing.
 		return AuthorUnknown
 	}
 	if author.UserID != "" || addressIsOurs(author.Address, ownDomains) {
@@ -106,8 +106,8 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 // An attendee is not an author, which is why a buyer merely being IN the room
 // never makes the meeting buyer-authored.
 // An author carrying NEITHER a seat nor an address identifies nobody. The row
-// can exist — activity_participant only requires one of user_id, person_id or
-// address, so a person_id-only sender is legal — and reading it as an author
+// can exist — activity_participant only requires one of user_id, contact_id or
+// address, so a contact_id-only sender is legal — and reading it as an author
 // we could not place would attribute the message to the counterparty by
 // default, which is the direction this whole rule refuses to guess in.
 func authorOf(participants []Participant) (Participant, bool) {
@@ -162,9 +162,9 @@ const (
 // The test is a real outside address, not the absence of a seat. Three rows
 // carry no user_id and none of them shows an outside attendee:
 //
-//   - a colleague logged through the manual path, written as a person link
+//   - a colleague logged through the manual path, written as a contact link
 //     with no address at all;
-//   - one of our own people writing from an address on a domain we own;
+//   - one of our own contacts writing from an address on a domain we own;
 //   - a row naming nobody, which identifies no side.
 //
 // Counting the absence of a seat as "the buyer was there" is what would let an
@@ -177,7 +177,7 @@ func CountsAsBuyerParticipant(p Participant, ownDomains []string) bool {
 		return false
 	}
 	if p.Address == "" {
-		// A person-linked row with no address may be a colleague; a row naming
+		// A contact-linked row with no address may be a colleague; a row naming
 		// nobody at all is not an attendee either way.
 		return false
 	}
@@ -205,7 +205,7 @@ type MeetingProof struct {
 //
 // Two proofs, in order of strength:
 //
-//   - A TRANSCRIPT. It is a recording of people talking, so it cannot exist
+//   - A TRANSCRIPT. It is a recording of contacts talking, so it cannot exist
 //     for a meeting that did not happen, and it carries text a human can read
 //     to see who was there. This is the strong one: it is a document with
 //     content, not a status somebody clicked.

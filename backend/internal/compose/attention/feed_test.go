@@ -139,7 +139,7 @@ type stubTasks struct {
 	until *time.Time
 	// scope records WHOSE tasks the lane asked for, so a test can prove the
 	// narrowing reaches the QUERY rather than trusting that a filter ran
-	// afterwards. owner records WHICH person, where the scope names one.
+	// afterwards. owner records WHICH contact, where the scope names one.
 	scope TaskScope
 	owner ids.UUID
 	// The upcoming read's own window, limit and rows, kept apart from the
@@ -223,7 +223,7 @@ func approval(summary string) crmcontracts.Approval {
 func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
-		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "person", Confidence: 0.9}}, open: 1},
+		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9}}, open: 1},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(pageReader())
 	if err != nil {
@@ -273,7 +273,7 @@ func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 	pairs := make([]DuplicatePair, needsYouPage+5)
 	for i := range pairs {
-		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "person", Confidence: 0.8}
+		pairs[i] = DuplicatePair{ID: ids.NewV7(), EntityType: "contact", Confidence: 0.8}
 	}
 	svc := NewService(
 		stubApprovals{},
@@ -500,7 +500,7 @@ func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, unreadable: hidden, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: hidden,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -527,7 +527,7 @@ func TestAPairTheReaderCannotChangeIsShownWithoutAVerb(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, undecidable: theirs, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: theirs,
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -576,7 +576,7 @@ func TestAPairTheReaderCanChangeStillOffersTheVerb(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -602,7 +602,7 @@ func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 			Evidence: []FieldComparison{
 				{Field: "full_name", Signal: "collide"},
@@ -633,7 +633,7 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, describeErr: fmt.Errorf("the database is unreachable"), pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock)
@@ -651,7 +651,7 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{open: 1, pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 1,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 1,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 			Evidence: []FieldComparison{
 				{Field: "matched_lane", Signal: "exact_conflict", Left: &lane},

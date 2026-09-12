@@ -9,7 +9,7 @@ package capture
 // They are guarded differently from the claim lifecycle in pending.go, and the
 // difference is the point. A claimed row is held by a worker and every write to
 // it presents that worker's claim token; an `unsure` row is held by nobody and
-// is waiting for a person, so its writes CAS on the status instead. Mixing the
+// is waiting for a contact, so its writes CAS on the status instead. Mixing the
 // two guards is how a row ends up either unwritable or writable by the wrong
 // party.
 

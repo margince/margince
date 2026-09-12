@@ -32,7 +32,7 @@ type row struct {
 	OnBehalfOf *ids.UserID
 	PassportID *ids.PassportID
 	// TargetType + TargetID are the polymorphic pointer to the entity the
-	// staging acts on (deal, company, person, lead, activity, …); the id stays
+	// staging acts on (deal, company, contact, lead, activity, …); the id stays
 	// untyped because the pair IS the discriminated reference.
 	TargetType    *string
 	TargetID      *ids.UUID
@@ -136,7 +136,7 @@ type ListInput struct {
 	// an empty decided_by. Two reasons the inference was wrong: no writer
 	// produces approved-with-no-decider, so the test matched nothing; and
 	// decided_by is emptied by ON DELETE SET NULL when an app_user is deleted,
-	// which would relabel that person's decisions as the system's own.
+	// which would relabel that contact's decisions as the system's own.
 	//
 	// Asked in SQL because the caller bounds its read: filtering after a page
 	// puts the limit on the wrong set, and a page full of ordinary decisions
@@ -154,7 +154,7 @@ type ListInput struct {
 	// FailedForDecider narrows to the approved rows THIS caller decided
 	// whose released work then failed (decide.go's mark). A flag rather
 	// than a caller-supplied decider id — List binds the acting user
-	// itself, so nobody reads another person's failures by naming them.
+	// itself, so nobody reads another contact's failures by naming them.
 	FailedForDecider bool
 	Limit            int
 	// Cursor continues a previous page: the opaque keyset token that page
@@ -177,7 +177,7 @@ func (in ListInput) targeted() bool { return in.TargetType != nil && in.TargetID
 // and diffs to any low-privilege user (C3/ADR-0036).
 //
 // The Page is has_more and the token to continue with. A record page can carry
-// dozens of stagings — one deep site read stages a proposal per person it found
+// dozens of stagings — one deep site read stages a proposal per contact it found
 // — so a client that filtered to one record has to be able to tell a full page
 // from a complete answer, AND to ask for the rest. has_more without a cursor
 // would only tell them rows are missing.

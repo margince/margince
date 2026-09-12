@@ -101,26 +101,26 @@ describe("grants — the pure predicate the hook and the catalog share", () => {
   // non-React caller sees the same answer, because it never exercises that path.
 
   it("grants what the snapshot grants", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    expect(grants(me, "person", "read")).toBe(true);
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "read")).toBe(true);
   });
 
   it("denies an action the snapshot does not carry", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    expect(grants(me, "person", "update")).toBe(false);
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "update")).toBe(false);
   });
 
   it("denies an object absent from the snapshot", () => {
     // The index signature types a miss as PRESENT, so this is the case that
     // proves the optional chain rather than the type system is doing the work.
-    const me = meFixture({ allow: { person: ["read"] } });
+    const me = meFixture({ allow: { contact: ["read"] } });
     expect(grants(me, "deal", "read")).toBe(false);
   });
 
   it("denies while /me has not resolved", () => {
     // The state every surface is in on first paint. Answering true here would
     // flash a settings entry and then withdraw it.
-    expect(grants(undefined, "person", "read")).toBe(false);
+    expect(grants(undefined, "contact", "read")).toBe(false);
   });
 
   it("gives the hook and the pure call the same answer", async () => {

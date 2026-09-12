@@ -20,8 +20,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,7 +33,7 @@ func repPermsWithCompany() principal.Permissions {
 	p := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person":                {Create: true, Read: true, Update: true},
+			"contact":               {Create: true, Read: true, Update: true},
 			"company":               {Create: true, Read: true, Update: true},
 			"deal":                  {Create: true, Read: true, Update: true},
 			"pipeline":              {Read: true},
@@ -81,7 +81,7 @@ func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("CreateDeal with out-of-scope partner → %v, want ErrNotFound", err)
 	}
-	if _, err := e.People.CreateCompany(rep, people.CreateCompanyInput{
+	if _, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: "Sneaky Child", ParentCompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("CreateCompany with out-of-scope parent → %v, want ErrNotFound", err)
@@ -94,7 +94,7 @@ func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 	if _, err := e.Deals.UpdateDeal(rep, myDeal, deals.UpdateDealInput{PartnerCompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("UpdateDeal attaching out-of-scope partner → %v, want ErrNotFound", err)
 	}
-	if _, err := e.People.UpdateCompany(rep, visibleCompanyID, people.UpdateCompanyInput{ParentCompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.UpdateCompany(rep, visibleCompanyID, contacts.UpdateCompanyInput{ParentCompanyID: &foreignCompanyID}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("UpdateCompany reparenting under out-of-scope company → %v, want ErrNotFound", err)
 	}
 

@@ -142,7 +142,7 @@ func (s *Service) Worklist(
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
 	// left the second half seeing no named owner: it fell through to "mine" and
-	// returned the READER's own day under the named person's heading, which is
+	// returned the READER's own day under the named contact's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
 	//
 	// The two refusals travel INTO the projection rather than onto the finished
@@ -229,7 +229,7 @@ func (s *Service) worklistFrom(
 	// One late reply is one row, not three: the escalation's own task about a
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
-	// One PERSON is one row. "Nobody has spoken to them in sixty days" and
+	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
 	// "they wrote last week and are waiting" are both true of the same contact
 	// and read as a contradiction side by side.
 	//
@@ -264,7 +264,7 @@ func (s *Service) worklistFrom(
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
-	// person's day, and leaving it in would make a manager's answer to "show me
+	// contact's day, and leaving it in would make a manager's answer to "show me
 	// Lena's queue" quietly include rows that are not hers.
 	//
 	// The waiting rows above already ran through this — they had to, before

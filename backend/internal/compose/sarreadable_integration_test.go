@@ -5,7 +5,7 @@
 
 package compose
 
-// The Art. 15 package has to be readable by the person receiving it.
+// The Art. 15 package has to be readable by the contact receiving it.
 //
 // Its sections are built as map[string]any straight from pgx rows, and a uuid
 // column arrives as [16]byte — which encoding/json renders as sixteen numbers.
@@ -42,16 +42,16 @@ var byteArrayShaped = regexp.MustCompile(`\[(?:\d{1,3},){15}\d{1,3}\]`)
 // TestTheSubjectAccessPackageIsReadable is the gate the ticket asked for.
 func TestTheSubjectAccessPackageIsReadable(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Mara Kessler", nil)
+	contact := e.SeedContact(t, "Mara Kessler", nil)
 	// An employment, so relationships[] is populated — one of the two sections
 	// the defect was found in, and the one carrying a uuid that is not the
 	// subject's own id.
 	company := e.SeedCompany(t, "Kessler GmbH", nil)
 	e.WsExec(t, `
-		INSERT INTO relationship (person_id, company_id, kind, source, captured_by)
-		VALUES ($1, $2, 'employment', 'test', 'human:test')`, person, company)
+		INSERT INTO relationship (contact_id, company_id, kind, source, captured_by)
+		VALUES ($1, $2, 'employment', 'test', 'human:test')`, contact, company)
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("AssembleSAR → %v", err)
 	}
@@ -73,7 +73,7 @@ func TestTheSubjectAccessPackageIsReadable(t *testing.T) {
 
 	if found := byteArrayShaped.FindAllString(string(encoded), -1); len(found) > 0 {
 		t.Errorf("the package a data subject receives renders %d value(s) as byte arrays rather than as "+
-			"something a person can read: %s\n\nA uuid column scans as [16]byte and encoding/json has one "+
+			"something a contact can read: %s\n\nA uuid column scans as [16]byte and encoding/json has one "+
 			"answer for that. Render it in privacy.readableValue, which every map-shaped section is built "+
 			"through", len(found), strings.Join(sample(found), ", "))
 	}

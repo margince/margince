@@ -44,7 +44,7 @@ const BRIEF = {
 };
 
 const NETWORK = {
-  person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
   colleagues: [
     {
       display_name: "Dana Okafor",

@@ -42,7 +42,7 @@ func (f InstallationCountryFunc) InstallationCountryTx(ctx context.Context, tx p
 //
 // It lands on the STORE rather than the gate because two callers need the
 // jurisdiction's windows and only one of them is a gate: the send path asks
-// through the engine, and GET /people/{id}/consent/guard asks through the
+// through the engine, and GET /contacts/{id}/consent/guard asks through the
 // store. A preview that answered on a different window than the send would be
 // the second answer to one question, which is the failure this repository
 // spends most of its gates preventing.

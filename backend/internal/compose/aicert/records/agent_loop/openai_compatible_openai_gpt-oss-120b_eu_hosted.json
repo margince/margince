@@ -313,7 +313,7 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "who_knows_needs_the_person",
+      "scenario": "who_knows_needs_the_contact",
       "site": "loop",
       "stamp": "de79c068c4b561a4d4fe856ab79facd0e40b02ef0bdfed230ec2f743e4703265367d7ffd3a1214d45a126f371a1023200f2b4c7fbf655da795d4d96e5ceb3b96af61ae8510c4f2a17511df1f1cb808ca415054879ae33fe5ac099d4a1e10db46",
       "verdict": "supported_degraded",

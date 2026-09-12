@@ -51,7 +51,7 @@ export {
 // while the filter builder is a full authoring surface, and a screen this list
 // does not name is a screen only a typed URL reaches.
 //
-// Today is the single door to the work that waits on a person — the approval
+// Today is the single door to the work that waits on a contact — the approval
 // queue, the task queue and the duplicate queue are lanes inside it rather than
 // rows of their own, because three sidebar entries for one question ("what
 // needs me?") read as three separate piles.
@@ -82,7 +82,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         screen: "contacts",
         labelKey: "nav.contacts",
         icon: Users,
-        aliases: ["people"],
+        aliases: ["contacts"],
       },
       { screen: "companies", labelKey: "nav.companies", icon: Building2 },
       { screen: "leads", labelKey: "nav.leads", icon: UserPlus },
@@ -109,11 +109,11 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     headingKey: "nav.group.work",
     items: [
       // The day's own surface, and the only door to the work that waits on a
-      // person: decisions to answer, tasks to finish and duplicates to merge are
+      // contact: decisions to answer, tasks to finish and duplicates to merge are
       // lanes inside it. It leads the group because it is what a reader opens
       // when the question is "what needs me?".
       // A checklist rather than a sunrise: what this surface holds is the work
-      // that waits on a person, and `Sun` says "morning" — which is the Brief's
+      // that waits on a contact, and `Sun` says "morning" — which is the Brief's
       // claim, not this one.
       { screen: "worklist", labelKey: "nav.today", icon: ListTodo },
       // The body of work a deal is about. It starts during the deal and
@@ -272,7 +272,7 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // had a group of its own here once; it does not any more. An installation
 // enabling a unit is not the same as the product growing a twelfth
 // destination, and the rail is the one surface where that distinction is
-// visible to every person who uses the app.
+// visible to every contact who uses the app.
 //
 // The unit's screen is still reachable at `#/ext/<unit>` — what changed is
 // where it is OFFERED: Settings, on the page that already holds the credential

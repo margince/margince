@@ -1,0 +1,379 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+)
+
+// The §1.3 two-record merge (features/01, data-model §3.2): A→B relinks
+// everything that points at A to B in ONE transaction with zero orphaned
+// FKs, fills B's gaps from A without overwriting anything B already has,
+// and archives A with merged_into_id = B so it stays fetchable by id.
+// Relinking is collision-aware, not a blind UPDATE: every unique index
+// and shape constraint on the child tables encodes an invariant the
+// surviving record must still satisfy afterwards —
+//
+//   - ≤1 primary email/phone per (contact, type) and ≤1 primary domain per
+//     company: A's primaries demote when B already holds that slot.
+//   - ≤1 current-primary employer per contact: same demotion rule.
+//   - an activity/list/tag linked to BOTH records keeps B's link and
+//     drops A's (pure link rows, deletion loses nothing).
+//   - a relationship edge A already shares with B (same kind + same far
+//     end) archives instead of relinking — a duplicate edge is noise,
+//     and archived rows keep the provenance.
+//   - a partner edge BETWEEN A and B can survive on neither (a company
+//     cannot partner with itself): it archives.
+//
+// Consent merges restrictively where the two records disagree: A's
+// withdrawal propagates to B (with an appended proof event — a state
+// change without proof would break the Art. 7(1) invariant), and where
+// B already holds a row for a purpose, B's state stands — A's grant
+// never overrides it. For purposes B has NO row for, A's rows travel to
+// B together with their original proof chain: a merge asserts the two
+// records are the same human, so a consent that human granted remains
+// proven (the same carry-through the lead→contact promotion does).
+
+// The audit keys a merge writes, spelled once so the contact, company
+// and lead merges cannot drift apart in what they record.
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
+const (
+	auditKeyMergedInto = "merged_into_id"
+	auditKeyFilled     = "filled"
+)
+
+// MergeSelfError maps to 422: a record cannot merge into itself.
+type MergeSelfError struct{}
+
+func (e *MergeSelfError) Error() string { return "source and target of a merge must differ" }
+
+// FieldFault refuses a merge whose source and target are the same record.
+func (e *MergeSelfError) FieldFault() (field, code, message string) {
+	return "target_id", "merge_self", e.Error()
+}
+
+// AlreadyMergedError maps to 409: the source was already merged away; the
+// pointer names where it went.
+type AlreadyMergedError struct {
+	Kind   string
+	IntoID ids.UUID
+}
+
+func (e *AlreadyMergedError) Error() string { return e.Kind + " is already merged" }
+
+// MergedTargetError maps to 422: the chosen survivor is itself archived
+// or merged away — nothing can merge INTO a dead record.
+type MergedTargetError struct{ Kind string }
+
+func (e *MergedTargetError) Error() string {
+	return "merge target " + e.Kind + " is archived; the survivor must be live"
+}
+
+// FieldFault refuses merging INTO a record that was itself already merged away.
+func (e *MergedTargetError) FieldFault() (field, code, message string) {
+	return "target_id", "merged_target", e.Error()
+}
+
+// relinkCounts is the event payload's accounting (events.md §contact.merged):
+// downstream consumers re-home their references from these numbers.
+type relinkCounts struct {
+	Emails        int64 `json:"emails"`
+	Phones        int64 `json:"phones"`
+	Relationships int64 `json:"relationships"`
+	ActivityLinks int64 `json:"activity_links"`
+}
+
+// targetIDField names the wire path the merge bodies use for the SURVIVOR. Named
+// once because both merge verbs refuse on it, and a field slot holds a wire
+// field path, never prose.
+const targetIDField = "target_id"
+
+// MergeContact merges contact source→target and returns the survivor.
+func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.ContactID) (crmcontracts.Contact, error) {
+	// target_id is required by the contract, which is true only if checked. An
+	// absent key decodes to the zero UUID, and the self-merge guard below does
+	// not catch it (a real source id never equals the zero one), so it reaches
+	// the pair lock and answers not-found for a survivor nobody named.
+	if err := httperr.RequireBodyID(targetIDField, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	// authz.go maps the merge verb to update: rewriting where records
+	// point is curation of both rows, not deletion of one.
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	if sourceID == targetID {
+		return crmcontracts.Contact{}, &MergeSelfError{}
+	}
+
+	active, err := s.activeColumns(ctx, "contact")
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	var out crmcontracts.Contact
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, active)
+		return err
+	})
+	return out, err
+}
+
+// mergeContactTx locks both ends, resolves them, relinks every
+// reference, fills the survivor's gaps, retires the source, and runs
+// the write shape — all inside the caller's transaction. The pair lock
+// is what makes the target check hold until commit: without it a
+// concurrent merge(target→elsewhere) could archive the survivor
+// mid-merge, leaving relinked children pointing at a dead record.
+func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
+	// BEFORE LockPair, because recording a stop takes consent's lock and then
+	// reads the contact row. Locking the rows first and reaching for consent's
+	// lock later (inside carryStopsTx, below) inverts the order between the two
+	// transactions and deadlocks — see StopCarrier.LockStopsTx.
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	_, tgtLock, err := storekit.LockPair(ctx, tx, "contact", sourceID.UUID, targetID.UUID)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	src, tgt, err := mergePair(ctx, tx, "contact", sourceID, targetID, readContactMergeState)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
+	if err != nil {
+		return crmcontracts.Contact{}, err
+	}
+	// The STOPS come across too, and they are not a relink — see stopcarry.go.
+	// relinkContactReferences moved the grants; without this the objections
+	// stayed on a record no send evaluates any more, and marketing resumed
+	// against somebody who had explicitly refused it.
+	if err := s.carryStopsTx(ctx, tx,
+		commsauthz.ContactStopSubject(sourceID),
+		commsauthz.ContactStopSubject(targetID)); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("carry the merged-away contact's stops: %w", err)
+	}
+	p := buildSurvivorshipPatch(tgt, src)
+	if !p.Empty() {
+		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
+			return crmcontracts.Contact{}, fmt.Errorf("apply survivorship fill: %w", err)
+		}
+	}
+	if err := archiveMergedAway(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("retire merged-away contact: %w", err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "merge", "contact", sourceID.UUID,
+		map[string]any{auditKeyMergedInto: nil},
+		map[string]any{auditKeyMergedInto: targetID, "relinked": counts, auditKeyFilled: p.After()})
+	if err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("audit contact merge: %w", err)
+	}
+	// One event, its own verb: the context graph collapses two nodes,
+	// which neither contact.updated nor contact.archived can say.
+	if err := storekit.EmitEvent(ctx, tx, auditID, sourceID.UUID, contactMergedPayload(sourceID, targetID, counts)); err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("emit contact.merged: %w", err)
+	}
+	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
+	if err != nil {
+		return crmcontracts.Contact{}, fmt.Errorf("read surviving contact: %w", err)
+	}
+	return out, nil
+}
+
+// contactMergedPayload builds the contact.merged wire payload from
+// MergeContact's resolved ids and relink tally — the ONE place that maps
+// the local relinkCounts shape onto the published schema, so a future
+// field rename shows up here rather than at an independently-drifting
+// map literal.
+func contactMergedPayload(sourceID, targetID ids.ContactID, counts relinkCounts) crmcontracts.PublicEventContactMerged {
+	return crmcontracts.PublicEventContactMerged{
+		MergedFromId: openapi_types.UUID(sourceID.UUID),
+		MergedIntoId: openapi_types.UUID(targetID.UUID),
+		Relinked: crmcontracts.PublicEventContactMergedRelinkCounts{
+			Emails:        counts.Emails,
+			Phones:        counts.Phones,
+			Relationships: counts.Relationships,
+			ActivityLinks: counts.ActivityLinks,
+		},
+	}
+}
+
+// buildSurvivorshipPatch folds A's values onto B fill-only: B never loses
+// what it already holds; only its empty fields take A's non-empty values.
+func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch {
+	p := storekit.NewPatch()
+	fillString(p, "first_name", target.FirstName, source.FirstName)
+	fillString(p, "last_name", target.LastName, source.LastName)
+	fillString(p, "title", target.Title, source.Title)
+	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
+		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
+	}
+	if target.Address == nil && source.Address != nil {
+		p.Set("address_line1", nil, source.Address.Line1)
+		p.Set("address_line2", nil, source.Address.Line2)
+		p.Set("address_city", nil, source.Address.City)
+		p.Set("address_region", nil, source.Address.Region)
+		p.Set("address_postal_code", nil, source.Address.PostalCode)
+		p.Set("address_country", nil, source.Address.Country)
+	}
+	return p
+}
+
+func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
+	moved, err := relinkWorksWithEdges(ctx, tx, sourceID, targetID)
+	if err != nil {
+		return 0, err
+	}
+	// works_with is handled above and excluded here: its duplicate is a PAIR
+	// duplicate, not a (kind, company, deal) one, and this predicate would archive
+	// a source edge because the target pairs with ANYBODY.
+	if _, err := tx.Exec(ctx, `
+		UPDATE relationship a SET archived_at = $3
+		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL AND EXISTS (
+		  SELECT 1 FROM relationship b
+		  WHERE b.contact_id = $2 AND b.kind = a.kind AND b.archived_at IS NULL
+		    AND b.company_id IS NOT DISTINCT FROM a.company_id
+		    AND b.deal_id IS NOT DISTINCT FROM a.deal_id)`,
+		sourceID, targetID, time.Now().UTC()); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE relationship a SET contact_id = $2,
+		  is_current_primary = a.is_current_primary AND NOT EXISTS (
+		    SELECT 1 FROM relationship b
+		    WHERE b.contact_id = $2 AND `+employment.CurrentPrimarySlotSQL("b")+`)
+		WHERE a.contact_id = $1 AND a.kind <> 'works_with' AND a.archived_at IS NULL`, sourceID, targetID)
+	return moved + tag.RowsAffected(), err
+}
+
+// relinkWorksWithEdges re-homes the merged contact's works_with pairs, on
+// WHICHEVER column the source sits in. A pair whose other end IS the target
+// would relink into a self-pair, and one the target already holds — in either
+// orientation — would double it; both are archived instead, because the
+// surviving record already states the fact.
+func relinkWorksWithEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
+	if _, err := tx.Exec(ctx, `
+		UPDATE relationship a SET archived_at = $3
+		WHERE a.kind = 'works_with' AND a.archived_at IS NULL
+		  AND (a.contact_id = $1 OR a.counterparty_contact_id = $1)
+		  AND (
+		    a.contact_id = $2 OR a.counterparty_contact_id = $2
+		    OR EXISTS (
+		      SELECT 1 FROM relationship b
+		      WHERE b.kind = 'works_with' AND b.archived_at IS NULL AND b.id <> a.id
+		        AND LEAST(b.contact_id, b.counterparty_contact_id) =
+		            LEAST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)
+		        AND GREATEST(b.contact_id, b.counterparty_contact_id) =
+		            GREATEST($2::uuid, CASE WHEN a.contact_id = $1 THEN a.counterparty_contact_id ELSE a.contact_id END)))`,
+		sourceID, targetID, time.Now().UTC()); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE relationship SET
+		  contact_id              = CASE WHEN contact_id = $1 THEN $2::uuid ELSE contact_id END,
+		  counterparty_contact_id = CASE WHEN counterparty_contact_id = $1 THEN $2::uuid ELSE counterparty_contact_id END
+		WHERE kind = 'works_with' AND archived_at IS NULL
+		  AND (contact_id = $1 OR counterparty_contact_id = $1)`, sourceID, targetID)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
+// relinkLinkRows re-homes the pure link tables (activity_link,
+// list_member, taggable): a link the survivor already holds drops A's
+// copy — these rows carry no provenance of their own, so deletion loses
+// nothing — and the rest relink.
+func relinkLinkRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) (int64, error) {
+	column := entityType + "_id" // contact_id | company_id
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM activity_link a
+		WHERE a.`+column+` = $1 AND EXISTS (
+		  SELECT 1 FROM activity_link b
+		  WHERE b.activity_id = a.activity_id AND b.`+column+` = $2)`,
+		sourceID, targetID); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx,
+		`UPDATE activity_link SET `+column+` = $2 WHERE `+column+` = $1`, sourceID, targetID)
+	if err != nil {
+		return 0, err
+	}
+	relinked := tag.RowsAffected()
+
+	for _, t := range []struct{ table, key string }{
+		{"list_member", "list_id"},
+		{"taggable", "tag_id"},
+	} {
+		if _, err := tx.Exec(ctx, `
+			DELETE FROM `+t.table+` a
+			WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
+			  SELECT 1 FROM `+t.table+` b
+			  WHERE b.`+t.key+` = a.`+t.key+` AND b.entity_type = $3 AND b.entity_id = $2)`,
+			sourceID, targetID, entityType); err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE `+t.table+` SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
+			sourceID, targetID, entityType); err != nil {
+			return 0, err
+		}
+	}
+	return relinked, nil
+}
+
+// mergeConsent carries the merged-away contact's consent onto the survivor
+// (consentcarry.go). The contact merge re-homes the proof rows with the state:
+// the delivery gate reads the double-opt-in proof off the live record.
+func mergeConsent(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return carryConsent(ctx, tx, consentCarryContactMerge, sourceID.UUID, targetID.UUID, by)
+}
+
+// archiveMergedAway retires the source row: archived + the redirect
+// pointer, in one statement so a concurrent merge of the same source
+// loses the race instead of double-writing.
+func archiveMergedAway(ctx context.Context, tx pgx.Tx, table string, sourceID, targetID ids.UUID) error {
+	tag, err := tx.Exec(ctx,
+		`UPDATE `+table+` SET archived_at = $3, merged_into_id = $2
+		 WHERE id = $1 AND archived_at IS NULL`,
+		sourceID, targetID, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrConflict
+	}
+	return nil
+}
+
+// fillString sets a nullable text column from the source only when the
+// survivor has none (fill-only survivorship).
+func fillString(p *storekit.Patch, column string, target, source *string) {
+	if target == nil && source != nil {
+		p.Set(column, nil, *source)
+	}
+}

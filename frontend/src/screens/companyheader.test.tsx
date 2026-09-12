@@ -20,7 +20,7 @@ import {
 // to name the author — `ProvenanceTag` takes a `renderUser` — and the header has
 // always had the roster in hand, because the owner control on the line above
 // reads it. Nobody connected the two, so a record every colleague could see
-// reported its author as "a person".
+// reported its author as "a contact".
 //
 // The fallback is the half worth pinning: the roster walk is bounded and the
 // list it walks excludes archived members, so a name that cannot be resolved
@@ -223,7 +223,7 @@ describe("who wrote this record", () => {
     expect(screen.queryByText("typed by a person")).toBeNull();
   });
 
-  it("says a person wrote it, not a uuid, when the roster cannot resolve them", async () => {
+  it("says a contact wrote it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderLine();
 

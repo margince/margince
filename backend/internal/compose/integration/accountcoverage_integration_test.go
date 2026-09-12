@@ -8,7 +8,7 @@ package integration
 // A hidden contact is not an absent one.
 //
 // The account grain asks how broadly we know a company. Its stakeholders can be
-// capture-private people — minted by a connector out of somebody's mailbox and
+// capture-private contacts — minted by a connector out of somebody's mailbox and
 // never promoted — and those are invisible to every other seat, including an
 // admin's. A count that simply omitted them would report an account with four
 // contacts as single-threaded, which is a fact about the reader's permissions
@@ -29,8 +29,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -59,33 +59,33 @@ func accountCoverageFor(
 	return out
 }
 
-// seatHidden puts a capture-private person on a deal with owner SQL.
+// seatHidden puts a capture-private contact on a deal with owner SQL.
 //
 // Not through the store, and the reason is the boundary under test: capture
 // privacy does not yield to row scope, so the ADMIN seeding this fixture cannot
 // see the contact either and CreateRelationship answers not-found. The seat is
-// nonetheless a row production writes — a connector seats the people it
+// nonetheless a row production writes — a connector seats the contacts it
 // captured — so the fixture writes the row the connector would.
-func seatHidden(t *testing.T, owner *pgx.Conn, person, deal ids.UUID, role string) {
+func seatHidden(t *testing.T, owner *pgx.Conn, contact, deal ids.UUID, role string) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+		INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, $3, 'manual', 'connector:gmail')`,
-		person, deal, role); err != nil {
+		contact, deal, role); err != nil {
 		t.Fatalf("seating a capture-private contact: %v", err)
 	}
 }
 
-// seatOn puts one person on one deal as a champion.
+// seatOn puts one contact on one deal as a champion.
 //
 // The role is fixed because no case here turns on which one it is: the reader
-// counts distinct PEOPLE, and a fixture varying the role would suggest the
+// counts distinct CONTACTS, and a fixture varying the role would suggest the
 // count does something with it.
-func seatOn(t *testing.T, e *Env, person ids.PersonID, deal ids.DealID) {
+func seatOn(t *testing.T, e *Env, contact ids.ContactID, deal ids.DealID) {
 	t.Helper()
 	role := "champion"
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "deal_stakeholder", PersonID: &person, DealID: &deal,
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "deal_stakeholder", ContactID: &contact, DealID: &deal,
 		Role: &role, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seating a stakeholder: %v", err)
@@ -114,12 +114,12 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
 
 	// One contact everybody can see.
-	visible := e.SeedPerson(t, "Open Contact", nil)
-	seatOn(t, e, ids.From[ids.PersonKind](visible), dealID)
+	visible := e.SeedContact(t, "Open Contact", nil)
+	seatOn(t, e, ids.From[ids.ContactKind](visible), dealID)
 
 	// Two a connector captured into another seat's mailbox and nobody promoted.
 	// Written the way capture writes them: owner-private, owned by a colleague.
-	// Rep3 is a real seeded seat, and the person FK needs one. Capture privacy
+	// Rep3 is a real seeded seat, and the contact FK needs one. Capture privacy
 	// does not yield to row scope, so a contact owned by any other seat is
 	// invisible to this reader whatever their scope.
 	colleague := e.Rep3
@@ -127,7 +127,7 @@ func TestAnAccountWithHiddenContactsIsUnknownRatherThanSingleThreaded(t *testing
 	for _, name := range []string{"Private Buyer", "Private Sponsor"} {
 		var hidden ids.UUID
 		if err := owner.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, owner_id, visibility, source, captured_by)
+			INSERT INTO contact (full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1, $2, 'owner', 'manual', 'connector:gmail') RETURNING id`,
 			name, colleague).Scan(&hidden); err != nil {
 			t.Fatalf("seeding a capture-private contact: %v", err)
@@ -171,8 +171,8 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
 	}
-	only := e.SeedPerson(t, "The Only Contact", nil)
-	seatOn(t, e, ids.From[ids.PersonKind](only), ids.From[ids.DealKind](ids.UUID(deal.Id)))
+	only := e.SeedContact(t, "The Only Contact", nil)
+	seatOn(t, e, ids.From[ids.ContactKind](only), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
 	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if got.CoverageIncomplete {
@@ -187,7 +187,7 @@ func TestAnAccountWithOneVisibleContactAndNothingHiddenIsSingleThreaded(t *testi
 
 // An account with no stakeholder at all is its own state, not single-threaded
 // and not unknown. A manager acts differently on "nobody recorded" than on
-// "one person carries it".
+// "one contact carries it".
 func TestAnAccountWithNoRecordedContactsSaysSo(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Untouched AG", nil)
@@ -227,12 +227,12 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
 	for _, name := range []string{"First Contact", "Second Contact"} {
-		p := e.SeedPerson(t, name, nil)
-		seatOn(t, e, ids.From[ids.PersonKind](p), dealID)
+		p := e.SeedContact(t, name, nil)
+		seatOn(t, e, ids.From[ids.ContactKind](p), dealID)
 	}
 	var hidden ids.UUID
 	if err := OwnerConn(t).QueryRow(context.Background(), `
-		INSERT INTO person (full_name, owner_id, visibility, source, captured_by)
+		INSERT INTO contact (full_name, owner_id, visibility, source, captured_by)
 		VALUES ('Private Extra', $1, 'owner', 'manual', 'connector:gmail') RETURNING id`,
 		e.Rep3).Scan(&hidden); err != nil {
 		t.Fatalf("seeding a capture-private contact: %v", err)
@@ -249,15 +249,15 @@ func TestEnoughVisibleContactsIsMultiThreadedEvenWithSomethingHidden(t *testing.
 	}
 }
 
-// One person seated on three deals of one account is ONE relationship. Counting
+// One contact seated on three deals of one account is ONE relationship. Counting
 // the edges instead would clear the threading floor on a single contact and
-// report an account as broadly covered when one person carries all of it.
-func TestOnePersonOnThreeDealsIsOneRelationship(t *testing.T) {
+// report an account as broadly covered when one contact carries all of it.
+func TestOneContactOnThreeDealsIsOneRelationship(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Repeated Seat Ltd", nil)
 	companyID := ids.From[ids.CompanyKind](company)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
-	only := ids.From[ids.PersonKind](e.SeedPerson(t, "Everywhere Contact", nil))
+	only := ids.From[ids.ContactKind](e.SeedContact(t, "Everywhere Contact", nil))
 	for _, name := range []string{"Deal one", "Deal two", "Deal three"} {
 		deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 			Name: name, PipelineID: pipeline, StageID: open,
@@ -271,11 +271,11 @@ func TestOnePersonOnThreeDealsIsOneRelationship(t *testing.T) {
 
 	got := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(got.VisibleStakeholders) != 1 {
-		t.Fatalf("counted %d stakeholders, want 1 — one person on three deals is one relationship",
+		t.Fatalf("counted %d stakeholders, want 1 — one contact on three deals is one relationship",
 			len(got.VisibleStakeholders))
 	}
 	if got.Threading != network.ThreadingSingle {
-		t.Errorf("threading = %q, want %q — three seats held by one person is exactly the account "+
+		t.Errorf("threading = %q, want %q — three seats held by one contact is exactly the account "+
 			"a manager needs warning about", got.Threading, network.ThreadingSingle)
 	}
 }
@@ -298,10 +298,10 @@ func TestAProjectStakeholderCountsTowardTheAccount(t *testing.T) {
 	}
 	projectID := ids.From[ids.ProjectKind](ids.UUID(project.Id))
 	for _, name := range []string{"Delivery Lead", "Ops Sponsor"} {
-		person := ids.From[ids.PersonKind](e.SeedPerson(t, name, nil))
+		contact := ids.From[ids.ContactKind](e.SeedContact(t, name, nil))
 		role := "sponsor"
-		if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-			Kind: "project_stakeholder", PersonID: &person, ProjectID: &projectID,
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+			Kind: "project_stakeholder", ContactID: &contact, ProjectID: &projectID,
 			Role: &role, Source: "manual",
 		}); err != nil {
 			t.Fatalf("seating a project stakeholder: %v", err)
@@ -357,8 +357,8 @@ func TestAccountCoverageIsNamedRatherThanEmptyWithoutTheEdgeGrant(t *testing.T) 
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
 	}
-	p := e.SeedPerson(t, "Real Contact", nil)
-	seatOn(t, e, ids.From[ids.PersonKind](p), ids.From[ids.DealKind](ids.UUID(deal.Id)))
+	p := e.SeedContact(t, "Real Contact", nil)
+	seatOn(t, e, ids.From[ids.ContactKind](p), ids.From[ids.DealKind](ids.UUID(deal.Id)))
 
 	granted := accountCoverageFor(t, e, coverageReaderPerms(true), companyID.UUID)
 	if len(granted.SectionsOmitted) != 0 || len(granted.VisibleStakeholders) != 1 {

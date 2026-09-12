@@ -29,7 +29,7 @@ import { viewerZone } from "../format/timezone";
 type FxRate = components["schemas"]["FxRate"];
 type AiModelRate = components["schemas"]["AiModelRate"];
 
-// The reader's own today. These are effective dates a person reads against
+// The reader's own today. These are effective dates a reader reads against
 // their own calendar, and an ISO slice answers about UTC's day — which is
 // yesterday for a reader east of UTC in the small hours.
 function today(): string {

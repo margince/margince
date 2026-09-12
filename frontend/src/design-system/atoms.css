@@ -197,7 +197,7 @@
 }
 
 /* A company's mark is a rounded square, not a circle. A logo is drawn on
-   a square and a face is not, and on a page carrying a company and its people
+   a square and a face is not, and on a page carrying a company and its contacts
    the shape is what tells the two apart before a reader has read either. */
 .avatar-company {
   border-radius: var(--r-sm);
@@ -242,7 +242,7 @@
   border-radius: var(--r-lg);
   font-size: var(--fs-h1);
 }
-/* A round mark keeps its circle at every rung: a person is a portrait, an
+/* A round mark keeps its circle at every rung: a contact is a portrait, an
    company is a tile. `.avatar-company` squares the small rungs and this one
    is square already, so the rule that has to be stated is the round one. */
 .avatar-xl:not(.avatar-company) {

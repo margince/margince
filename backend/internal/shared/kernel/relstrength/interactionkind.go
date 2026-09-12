@@ -6,11 +6,11 @@ package relstrength
 import "strings"
 
 // interactionKinds is the closed set of activity kinds that represent a real
-// exchange worth SCORING: the deal-health window, person strength, and the
+// exchange worth SCORING: the deal-health window, contact strength, and the
 // company signal scan.
 //
-// The membership test is whether two people spoke. A task is intent and a note
-// is a record of thinking; neither means two people spoke, and counting them
+// The membership test is whether two contacts spoke. A task is intent and a note
+// is a record of thinking; neither means two contacts spoke, and counting them
 // would let a rep's own to-do list score as a relationship. A chat message
 // passes that test the same way an email does, and an account whose whole
 // relationship runs over a channel read as having no interactions at all while
@@ -31,7 +31,7 @@ var interactionKinds = []string{"email", "call", "meeting", "message"}
 //
 // TWO QUESTIONS, TWO SETS. "Who was in the room" and "does this count as
 // warmth" hold the same four kinds today, and they are still two sets because
-// they are still two questions: a kind may be worth recording the people on
+// they are still two questions: a kind may be worth recording the contacts on
 // without being worth scoring, while a kind scored with nobody recorded on it
 // would be a relationship with no one in it. That direction is the one a diff
 // may move them apart in, and only that one.
@@ -40,7 +40,7 @@ var interactionKinds = []string{"email", "call", "meeting", "message"}
 //
 // Unexported for the same reason: a caller that could append to it would change
 // what four different writers stamp, and those four must agree or a captured
-// conversation carries the people on it while an identical hand-logged one does
+// conversation carries the contacts on it while an identical hand-logged one does
 // not — live capture stamping, hand-logged stamping, the historical backfill's
 // SQL, and the replay pass.
 var participantKinds = []string{"email", "call", "meeting", "message"}
@@ -65,7 +65,7 @@ func InteractionKindSQLList() string {
 }
 
 // InteractionKindSQLGroup is the same list already parenthesised, for the
-// `kind IN %s` shape the deal-health and person-strength queries use.
+// `kind IN %s` shape the deal-health and contact-strength queries use.
 func InteractionKindSQLGroup() string {
 	return "(" + InteractionKindSQLList() + ")"
 }
@@ -79,7 +79,7 @@ func InteractionKindSQLGroup() string {
 // afternoon of chat outweigh a quarter of meetings. FreqSaturation is 20, so
 // twenty lines typed in five minutes would fill a ninety-day quota of contact.
 //
-// So a message counts once per conversation per day. That is the unit a person
+// So a message counts once per conversation per day. That is the unit a contact
 // uses out loud — "we talked on Tuesday" — and unlike a per-message weight it
 // introduces no constant, so there is no number that has to be tuned against a
 // real channel before the count is honest. Twenty days of talking across the

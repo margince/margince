@@ -3,20 +3,20 @@
 
 package compose
 
-// The cg:cohort-promote consumer: a person's captured mail finds them however
+// The cg:cohort-promote consumer: a contact's captured mail finds them however
 // late they arrive.
 //
 // Capture links the message it ran the ensure for, which is the right scope at
 // capture time and the wrong one afterwards. A workspace does not learn its
 // contacts in the order the mail arrived: a Gmail backfill walks newest-first
-// and creates the person somewhere in the middle of the run, a rep types a
+// and creates the contact somewhere in the middle of the run, a rep types a
 // contact in months later, a verdict settles a question the sender kept writing
 // during. Every message captured before that moment kept an address-only
 // participant row and no link, and no reader of activity_link ever found it
 // again — a company page reporting "no reply for 47 days" about someone who
 // wrote last week.
 //
-// The trigger is the EVENT, not the writer. person.created and person.updated
+// The trigger is the EVENT, not the writer. contact.created and contact.updated
 // reach the outbox because the write shape puts them there, so manual entry,
 // capture, channel ensure, lead promotion, CSV and vCard import, provider claims
 // and merge all land here without any of them knowing this consumer exists — and
@@ -24,18 +24,18 @@ package compose
 // to remember to repair the cohort would guarantee that one of them forgets,
 // which is the defect this consumer exists to close rather than repeat.
 //
-// person.updated matters as much as person.created: an alias added to an
+// contact.updated matters as much as contact.created: an alias added to an
 // existing contact is a new address, and the mail under it is exactly as
-// stranded as a new person's would be. The pass re-derives the address set from
-// person_email, so it needs nothing from the envelope but the id, and an update
+// stranded as a new contact's would be. The pass re-derives the address set from
+// contact_email, so it needs nothing from the envelope but the id, and an update
 // that touched no address is a cheap no-op.
 //
 // It lives in compose because the reaction crosses modules: the events are the
-// people module's own, the seam that acts on them is nobody's private business.
+// contacts module's own, the seam that acts on them is nobody's private business.
 //
 // Idempotent by construction, so the at-least-once bus costs nothing: the link
 // insert is ON CONFLICT DO NOTHING behind a "linked to nobody" guard, and the
-// participant promotion only ever fills a row that names no person yet.
+// participant promotion only ever fills a row that names no contact yet.
 
 import (
 	"context"
@@ -45,25 +45,25 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// CohortPromoteGen repairs a person's captured cohort whenever that person
+// CohortPromoteGen repairs a contact's captured cohort whenever that contact
 // appears or gains an address.
 type CohortPromoteGen struct {
 	pool  *pgxpool.Pool
-	store *people.Store
+	store *contacts.Store
 	log   *slog.Logger
 }
 
-// NewCohortPromoteGen builds the repair consumer over the people store.
-func NewCohortPromoteGen(pool *pgxpool.Pool, store *people.Store, log *slog.Logger) *CohortPromoteGen {
+// NewCohortPromoteGen builds the repair consumer over the contacts store.
+func NewCohortPromoteGen(pool *pgxpool.Pool, store *contacts.Store, log *slog.Logger) *CohortPromoteGen {
 	// The audience derivation is applied HERE rather than asked of the caller.
 	// This consumer's whole job is the cohort repair, and that repair files
-	// captured meetings under the people it resolves; a caller handing over a
+	// captured meetings under the contacts it resolves; a caller handing over a
 	// bare store would leave every meeting it filed held to its participants
 	// forever, and nothing about the call would look wrong.
 	return &CohortPromoteGen{
@@ -77,14 +77,14 @@ func NewCohortPromoteGen(pool *pgxpool.Pool, store *people.Store, log *slog.Logg
 // not care about answers nil, so the group keeps flowing rather than wedging on
 // somebody else's traffic.
 func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.Type != personObject || env.Entity.ID == ids.Nil {
+	if env.Entity.Type != contactObject || env.Entity.ID == ids.Nil {
 		return nil
 	}
-	// Every event that can leave a live person holding addresses whose mail is
+	// Every event that can leave a live contact holding addresses whose mail is
 	// not yet on their record. An archive needs no reaction: the repair only
 	// ever ADDS a link, and an archived contact is not a record anybody is
 	// asking to complete.
-	if !personGainedAddresses(env.Type) {
+	if !contactGainedAddresses(env.Type) {
 		return nil
 	}
 	// The repair reads mail the workspace already holds and attaches it to a
@@ -101,44 +101,44 @@ func (g *CohortPromoteGen) HandleEvent(ctx context.Context, env events.Envelope)
 	// every other consumer on the same stream drains, so the symptom is a
 	// contact whose captured mail and meetings never reach their record.
 	// Carrying the causing event's own id also puts the repair on the trace of
-	// the person write that caused it, which is what makes a link nobody
+	// the contact write that caused it, which is what makes a link nobody
 	// clicked explainable afterwards.
 	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem,
 		ID:   cohortPromoteActor,
 	})
-	person := ids.From[ids.PersonKind](env.Entity.ID)
+	contact := ids.From[ids.ContactKind](env.Entity.ID)
 	return InstallationDB(g.pool).Tx(ctx, func(tx pgx.Tx) error {
-		done, err := g.store.PromotePersonCohortTx(ctx, tx, person)
+		done, err := g.store.PromoteContactCohortTx(ctx, tx, contact)
 		if err != nil {
 			return err
 		}
 		if done.Linked > 0 || done.Promoted > 0 {
-			g.log.InfoContext(ctx, "repaired a person's captured cohort",
-				"person", person, "linked", done.Linked, "promoted", done.Promoted)
+			g.log.InfoContext(ctx, "repaired a contact's captured cohort",
+				"contact", contact, "linked", done.Linked, "promoted", done.Promoted)
 		}
 		return nil
 	})
 }
 
-// personGainedAddresses reports whether an event can leave a live person
+// contactGainedAddresses reports whether an event can leave a live contact
 // holding an address whose mail is not on their record yet — created, renamed
 // or re-addressed, absorbed by a merge, or brought back.
-func personGainedAddresses(eventType string) bool {
+func contactGainedAddresses(eventType string) bool {
 	switch eventType {
-	case personCreatedEvent, personUpdatedEvent, personMergedEvent, personRestoredEvent:
+	case contactCreatedEvent, contactUpdatedEvent, contactMergedEvent, contactRestoredEvent:
 		return true
 	}
 	return false
 }
 
-// The person events this repair reacts to. Spelled beside the predicate that
+// The contact events this repair reacts to. Spelled beside the predicate that
 // reads them rather than at each case, so a fifth event is added in one place.
 const (
-	personUpdatedEvent  = "person.updated"
-	personMergedEvent   = "person.merged"
-	personRestoredEvent = "person.restored"
+	contactUpdatedEvent  = "contact.updated"
+	contactMergedEvent   = "contact.merged"
+	contactRestoredEvent = "contact.restored"
 )
 
 // cohortPromoteActor names this consumer in captured_by and in the audit trail,

@@ -22,7 +22,7 @@ import (
 // The request is this site's whole security perimeter. A conversation carries
 // several senders, each one's bytes reach the model unedited, and the only
 // thing stopping one of them from closing their own span — and speaking for
-// the person who wrote the message below — is a marker minted for THIS call
+// the contact who wrote the message below — is a marker minted for THIS call
 // and named in THIS call's system prompt.
 func TestExtractRequestFencesEveryMessageUnderTheMarkerItDeclares(t *testing.T) {
 	thread := settledThread{Messages: []threadMessage{

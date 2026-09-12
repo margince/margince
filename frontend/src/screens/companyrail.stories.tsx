@@ -52,10 +52,10 @@ const populated = {
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         deal_roles: [],
@@ -92,14 +92,14 @@ const populated = {
   tags: [{ id: "t-1", workspace_id: "w-1", name: "Key account" }],
 } as unknown as View;
 
-// Health and People withheld, exactly the shape a role scoped away from
+// Health and Contacts withheld, exactly the shape a role scoped away from
 // them reads on any real workspace — no seeded demo account can reach this,
 // so this story is the only place it renders.
 const withheld = {
   ...populated,
   health: undefined,
-  people: undefined,
-  sections_omitted: ["health", "people"],
+  contacts: undefined,
+  sections_omitted: ["health", "contacts"],
 } as unknown as View;
 
 function Rail({ view }: Readonly<{ view: View }>) {

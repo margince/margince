@@ -126,7 +126,7 @@ describe("reviewing a candidate voice", () => {
   });
 
   // The evaluator writes for an operator reading a log. "median voice score
-  // 0.56 is below the 0.60 floor" is not a sentence the person being asked to
+  // 0.56 is below the 0.60 floor" is not a sentence the contact being asked to
   // decide can act on.
   it("says why it is waiting in words about the owner's own voice", async () => {
     stub(

@@ -217,7 +217,7 @@
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
  * followed by a level-3 heading measured 45px from line to text on the
- * connections tab, 41px on general and 8px on people — three distances for one
+ * connections tab, 41px on general and 8px on contacts — three distances for one
  * relationship, none of them chosen. `.card` has carried this reset since it
  * was written; `.panel` never got it. */
 .panel-body > .section-header:first-child {
@@ -407,7 +407,7 @@
  * has accepted it yet, and the dashes going solid is what acceptance looks
  * like. So a panel a machine WROTE keeps the hairline it inherits from
  * `.panel`, and a card a machine has only PROPOSED wears the dash until a
- * person answers it.
+ * contact answers it.
  *
  * The tint goes under the TEXT rather than into a head band, because neither
  * box has a head to put it in and the reader has to be able to tell a proposal

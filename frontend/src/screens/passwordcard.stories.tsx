@@ -184,7 +184,7 @@ export const Refused: Story = {
  * It landed. The dialog is gone — a reader who has just been signed out
  * everywhere has nothing left to type — and the row behind it says so in the
  * success tone, having already said, before the button was pressed, that the
- * change ends every session including this one. A person who is not told that
+ * change ends every session including this one. A contact who is not told that
  * reads the sign-in screen that follows as being kicked out.
  */
 export const Changed: Story = {

@@ -39,7 +39,7 @@ func TestOneSpellingOfALiveChampionSeat(t *testing.T) {
 	var declaration token.Pos
 	ast.Inspect(parsed, func(n ast.Node) bool {
 		spec, ok := n.(*ast.ValueSpec)
-		if !ok || len(spec.Names) != 1 || spec.Names[0].Name != "livePersonSeat" {
+		if !ok || len(spec.Names) != 1 || spec.Names[0].Name != "liveContactSeat" {
 			return true
 		}
 		lit, isLit := spec.Values[0].(*ast.BasicLit)
@@ -48,13 +48,13 @@ func TestOneSpellingOfALiveChampionSeat(t *testing.T) {
 		}
 		text, unquoteErr := strconv.Unquote(lit.Value)
 		if unquoteErr != nil {
-			t.Fatalf("reading livePersonSeat: %v", unquoteErr)
+			t.Fatalf("reading liveContactSeat: %v", unquoteErr)
 		}
 		condition, declaration = text, lit.Pos()
 		return false
 	})
 	if condition == "" {
-		t.Fatal("livePersonSeat is gone or is no longer a string literal; " +
+		t.Fatal("liveContactSeat is gone or is no longer a string literal; " +
 			"the two statements in championcover.go no longer share a definition of a live seat")
 	}
 
@@ -72,7 +72,7 @@ func TestOneSpellingOfALiveChampionSeat(t *testing.T) {
 		}
 		if strings.Contains(lit.Value, condition) {
 			t.Errorf("%s writes the live-seat condition out at %s instead of naming "+
-				"livePersonSeat; two spellings drift and the two statements stop "+
+				"liveContactSeat; two spellings drift and the two statements stop "+
 				"agreeing about what a seat is", file, fset.Position(lit.Pos()))
 		}
 		return true

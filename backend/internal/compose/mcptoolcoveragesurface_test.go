@@ -432,7 +432,7 @@ func isToolNameByte(b byte) bool {
 // its headline number was unreadable.
 //
 // There are TWO surfaces and they are not comparable. Surface A is the MCP
-// catalog a person's assistant is offered — broad, because a person is there to
+// catalog a contact's assistant is offered — broad, because a contact is there to
 // correct a wrong reach. Surface B is a scheduled agent's declared allowlist —
 // five to seven tools, because the run is unattended and every listed tool is
 // paid for on every step of every run. Reporting one coverage number over both
@@ -445,10 +445,10 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("A tool being \"untried\" means something different on each, so the numbers above " +
 		"are Surface A's.\n\n")
 	p.WriteString("| | Surface A — MCP | Surface B — scheduled agents |\n|---|---|---|\n")
-	p.WriteString("| Who drives it | a person, watching | a job on a timer, unattended |\n")
+	p.WriteString("| Who drives it | a contact, watching | a job on a timer, unattended |\n")
 	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %d tools, declared per agent |\n",
 		r.Totals.Tools, smallestAgentMenu(r.Agents))
-	p.WriteString("| A wrong reach | the person corrects it | nobody is there |\n")
+	p.WriteString("| A wrong reach | the contact corrects it | nobody is there |\n")
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 

@@ -120,7 +120,7 @@ describe("a thread's card", () => {
     expect(document.querySelectorAll(".tl-msg-mark")).toHaveLength(2);
   });
 
-  it("counts each person once across messages, and gives a face to one person", () => {
+  it("counts each contact once across messages, and gives a face to one contact", () => {
     render(
       <GroupedTimelineList
         zone="UTC"
@@ -143,12 +143,12 @@ describe("a thread's card", () => {
         ]}
       />,
     );
-    // The head names the people, not the phrases: "Ida Keller" and
-    // "Ida Keller, Marc Dubois" are two people, not three entries. Once in
-    // the head, once as the two-person message's own lead.
+    // The head names the contacts, not the phrases: "Ida Keller" and
+    // "Ida Keller, Marc Dubois" are two contacts, not three entries. Once in
+    // the head, once as the two-contact message's own lead.
     expect(screen.getAllByText("Ida Keller, Marc Dubois")).toHaveLength(2);
     expect(screen.queryByText(/Ida Keller, Ida Keller/)).toBeNull();
-    // The face on the two-person message is the first person's, never a
+    // The face on the two-contact message is the first contact's, never a
     // monogram of the phrase.
     expect(screen.getAllByText("IK")).toHaveLength(2);
   });

@@ -7,7 +7,7 @@ package magic
 //
 // ACTOR TYPE IS NOT ENOUGH, and this file is the whole of that argument. A row
 // whose actor_type is agent, system or connector tells you a machine wrote it.
-// It does not tell you the write MEANS anything to the person reading the
+// It does not tell you the write MEANS anything to the reader reading the
 // morning: a projection refresh, a maintenance sweep and a retention pass are
 // all machine writes, and a receipt that showed them would turn internal churn
 // into apparent value — the surface congratulating itself for keeping its own
@@ -102,7 +102,7 @@ func meaningOf(action string) (admittedAction, bool) {
 // machineActors are the actor types this surface reports.
 //
 // Human actors are absent deliberately. This reports what ran WITHOUT being
-// asked; a person's own change is their own, and handing it back to them as
+// asked; a contact's own change is their own, and handing it back to them as
 // machinery would be a lie about who did it.
 func machineActors() []string {
 	return []string{

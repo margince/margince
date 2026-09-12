@@ -7,7 +7,7 @@ package compose
 
 // The vCard near-match review loop against a real database: the import
 // refuses the near-match, the refusal becomes ONE durable proposal however
-// often the same card is uploaded, approving it creates the person through
+// often the same card is uploaded, approving it creates the contact through
 // the real writer, and a decline is remembered against the card's identity.
 
 import (
@@ -16,7 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,35 +28,35 @@ const (
 	reviewedCardEmail    = "a.weber@webers.example"
 )
 
-// reviewedCard is the card that collides on the name with a person the
+// reviewedCard is the card that collides on the name with a contact the
 // workspace already holds — the shape the import refuses to create.
-func reviewedCard() people.VCardEntry {
-	return people.VCardEntry{
+func reviewedCard() contacts.VCardEntry {
+	return contacts.VCardEntry{
 		FullName: "Anna Weber",
 		Company:  "Weber Consulting",
-		Emails:   []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
+		Emails:   []contacts.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
 	}
 }
 
 // seedNearMatch writes the existing contact through the real writer and
 // answers the import's review verdict for the given card, which must
 // resemble them by name.
-func seedNearMatch(ctx context.Context, t *testing.T, e *integration.Env, card people.VCardEntry) *ids.PersonID {
+func seedNearMatch(ctx context.Context, t *testing.T, e *integration.Env, card contacts.VCardEntry) *ids.ContactID {
 	t.Helper()
-	if _, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	if _, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Anna Weber", Source: "ui",
-		Emails: []people.PersonEmailInput{{Email: existingContactEmail, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: existingContactEmail, EmailType: "work", IsPrimary: true}},
 	}); err != nil {
 		t.Fatalf("seeding the existing contact: %v", err)
 	}
-	results, err := e.People.ImportVCards(ctx, []people.VCardEntry{card})
+	results, err := e.Contacts.ImportVCards(ctx, []contacts.VCardEntry{card})
 	if err != nil {
 		t.Fatalf("importing the near-match card: %v", err)
 	}
-	if len(results) != 1 || results[0].Outcome != people.VCardNeedsReview {
+	if len(results) != 1 || results[0].Outcome != contacts.VCardNeedsReview {
 		t.Fatalf("import outcome = %+v, want the one needs_review refusal", results)
 	}
-	return results[0].PersonID
+	return results[0].ContactID
 }
 
 func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
@@ -104,12 +104,12 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	}
 	var created int
 	if err := e.Pool.QueryRow(ctx,
-		`SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		`SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		  WHERE lower(pe.email) = $1`, reviewedCardEmail).Scan(&created); err != nil {
-		t.Fatalf("counting people holding the card's address: %v", err)
+		t.Fatalf("counting contacts holding the card's address: %v", err)
 	}
 	if created != 1 {
-		t.Errorf("people holding the card's own address %s = %d, want exactly the approved create", reviewedCardEmail, created)
+		t.Errorf("contacts holding the card's own address %s = %d, want exactly the approved create", reviewedCardEmail, created)
 	}
 	// The other half of the release: the employer edge, through to the
 	// company the card named.
@@ -117,7 +117,7 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	if err := e.Pool.QueryRow(ctx, `
 		SELECT count(*) FROM relationship r
 		  JOIN company o ON o.id = r.company_id
-		  JOIN person_email pe ON pe.person_id = r.person_id
+		  JOIN contact_email pe ON pe.contact_id = r.contact_id
 		 WHERE r.kind = 'employment' AND lower(pe.email) = $1
 		   AND o.display_name = 'Weber Consulting'`, reviewedCardEmail).Scan(&employed); err != nil {
 		t.Fatalf("counting the employment edge: %v", err)
@@ -131,10 +131,10 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 // still gives it real addressing, but the identity asserts company too
 // (as the empty string), and the staged payload must carry that same key or
 // the engine's containment check refuses the mismatch.
-func companyLessReviewedCard() people.VCardEntry {
-	return people.VCardEntry{
+func companyLessReviewedCard() contacts.VCardEntry {
+	return contacts.VCardEntry{
 		FullName: "Anna Weber",
-		Emails:   []people.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
+		Emails:   []contacts.VCardChannel{{Value: reviewedCardEmail, Kind: "work"}},
 	}
 }
 
@@ -169,16 +169,16 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 	}
 	var created, employed int
 	if err := e.Pool.QueryRow(ctx,
-		`SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		`SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		  WHERE lower(pe.email) = $1`, reviewedCardEmail).Scan(&created); err != nil {
-		t.Fatalf("counting people holding the card's address: %v", err)
+		t.Fatalf("counting contacts holding the card's address: %v", err)
 	}
 	if created != 1 {
-		t.Errorf("people holding %s = %d, want exactly the approved create", reviewedCardEmail, created)
+		t.Errorf("contacts holding %s = %d, want exactly the approved create", reviewedCardEmail, created)
 	}
 	if err := e.Pool.QueryRow(ctx, `
 		SELECT count(*) FROM relationship r
-		  JOIN person_email pe ON pe.person_id = r.person_id
+		  JOIN contact_email pe ON pe.contact_id = r.contact_id
 		 WHERE r.kind = 'employment' AND lower(pe.email) = $1`, reviewedCardEmail).Scan(&employed); err != nil {
 		t.Fatalf("counting employment edges: %v", err)
 	}
@@ -187,13 +187,13 @@ func TestACardNamingNoCompanyCanStillBeStaged(t *testing.T) {
 	}
 }
 
-// vacuousReviewedCard names a person and nothing else — no email, no
+// vacuousReviewedCard names a contact and nothing else — no email, no
 // company. Without a subject folded into the identity, this would
 // collapse to the bare name alone — exactly what two DIFFERENT workspace
-// members could independently produce for two DIFFERENT people who share
+// members could independently produce for two DIFFERENT contacts who share
 // that name.
-func vacuousReviewedCard() people.VCardEntry {
-	return people.VCardEntry{FullName: "Priya Raghunathan"}
+func vacuousReviewedCard() contacts.VCardEntry {
+	return contacts.VCardEntry{FullName: "Priya Raghunathan"}
 }
 
 // A card's identity is scoped to the SUBJECT who staged it (vcard_create is
@@ -217,11 +217,11 @@ func TestAVacuousCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) 
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	adminCandidate, err := e.People.CreatePerson(adminCtx, people.CreatePersonInput{FullName: "A Different Priya", Source: "ui"})
+	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Priya", Source: "ui"})
 	if err != nil {
 		t.Fatalf("seeding the admin's candidate: %v", err)
 	}
-	adminCandidateID := ids.From[ids.PersonKind](ids.UUID(adminCandidate.Id))
+	adminCandidateID := ids.From[ids.ContactKind](ids.UUID(adminCandidate.Id))
 
 	stage := vcardCreateStager(e.Pool)
 	if err := stage(adminCtx, vacuousReviewedCard(), &adminCandidateID); err != nil {
@@ -287,19 +287,19 @@ func TestATwoMembersCardsWithNoCandidateDoNotJoinIntoOneReview(t *testing.T) {
 	}
 }
 
-// coworkerNamedCard names a person AND a company — real addressing, not the
+// coworkerNamedCard names a contact AND a company — real addressing, not the
 // bare-name shape above — because the fix under test is not "vacuous cards
 // get special treatment", it is "every card's identity is subject-scoped".
 // A name and an employer are both facts a coworker could read off a business
 // card or a signature block, so a value-derived identity built from card
 // fields alone is guessable no matter how many of them are populated.
-func coworkerNamedCard() people.VCardEntry {
-	return people.VCardEntry{FullName: "Jan Kowalski", Company: "Acme GmbH"}
+func coworkerNamedCard() contacts.VCardEntry {
+	return contacts.VCardEntry{FullName: "Jan Kowalski", Company: "Acme GmbH"}
 }
 
-// The harder case behind the one above: two DIFFERENT people who both work
+// The harder case behind the one above: two DIFFERENT contacts who both work
 // at the same company and share a name are not a hypothetical the fix
-// happens to miss — they are exactly what an attacker with person:create
+// happens to miss — they are exactly what an attacker with contact:create
 // need only observe (or guess) to reproduce another member's card byte for
 // byte, if company alone still discriminated the identity.
 func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T) {
@@ -307,11 +307,11 @@ func TestATwoFieldCardDoesNotSupersedeAnotherSubjectsPendingReview(t *testing.T)
 	adminCtx := e.Admin()
 	repCtx := e.As(e.Rep1, nil, integration.AdminPerms)
 
-	adminCandidate, err := e.People.CreatePerson(adminCtx, people.CreatePersonInput{FullName: "A Different Jan Kowalski", Source: "ui"})
+	adminCandidate, err := e.Contacts.CreateContact(adminCtx, contacts.CreateContactInput{FullName: "A Different Jan Kowalski", Source: "ui"})
 	if err != nil {
 		t.Fatalf("seeding the admin's candidate: %v", err)
 	}
-	adminCandidateID := ids.From[ids.PersonKind](ids.UUID(adminCandidate.Id))
+	adminCandidateID := ids.From[ids.ContactKind](ids.UUID(adminCandidate.Id))
 
 	stage := vcardCreateStager(e.Pool)
 	if err := stage(adminCtx, coworkerNamedCard(), &adminCandidateID); err != nil {
@@ -375,7 +375,7 @@ func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 // The modify-then-approve arm can rewrite the payload, and the generic edit
 // gate only pins entity references — so the kind's own precheck must refuse
 // an edit that dropped the card, while the proposal is still pending and
-// re-decidable. Without it the approval would commit and create a person
+// re-decidable. Without it the approval would commit and create a contact
 // with no name.
 func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 	e := integration.Setup(t)
@@ -406,10 +406,10 @@ func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
 	}
 	var nameless int
 	if err := e.Pool.QueryRow(ctx,
-		`SELECT count(*) FROM person WHERE trim(full_name) = ''`).Scan(&nameless); err != nil {
+		`SELECT count(*) FROM contact WHERE trim(full_name) = ''`).Scan(&nameless); err != nil {
 		t.Fatal(err)
 	}
 	if nameless != 0 {
-		t.Errorf("a person with no name exists: %d", nameless)
+		t.Errorf("a contact with no name exists: %d", nameless)
 	}
 }

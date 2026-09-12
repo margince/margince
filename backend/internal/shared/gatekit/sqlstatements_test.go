@@ -23,28 +23,28 @@ func TestTheStatementReaderSeesEachShapeAStatementIsWrittenIn(t *testing.T) {
 	}{
 		{
 			name:   "a backticked literal",
-			source: "package p\nvar q = `SELECT id FROM person`\n",
-			want:   "SELECT id FROM person",
+			source: "package p\nvar q = `SELECT id FROM contact`\n",
+			want:   "SELECT id FROM contact",
 		},
 		{
 			// The defect this reader exists for: source text keeps the escape,
 			// so a pattern asking for whitespace matches nothing.
 			name:   "an interpreted literal, whose whitespace is an escape",
-			source: "package p\nvar q = \"SELECT id\\nFROM person\"",
-			want:   "SELECT id\nFROM person",
+			source: "package p\nvar q = \"SELECT id\\nFROM contact\"",
+			want:   "SELECT id\nFROM contact",
 		},
 		{
 			name:   "a chain of literals is one statement",
-			source: "package p\nvar q = \"SELECT id \" + \"FROM person\"\n",
-			want:   "SELECT id FROM person",
+			source: "package p\nvar q = \"SELECT id \" + \"FROM contact\"\n",
+			want:   "SELECT id FROM contact",
 		},
 		{
 			// The chain's readable half folds, and the half it cannot read is
 			// still WALKED — a statement hidden inside it would otherwise leave
 			// with it.
 			name:   "a literal inside a chain's unreadable half is still read",
-			source: "package p\nimport \"fmt\"\nvar q = \"WITH x AS (\" + fmt.Sprintf(\"SELECT id FROM person\") + \")\"\n",
-			want:   "SELECT id FROM person",
+			source: "package p\nimport \"fmt\"\nvar q = \"WITH x AS (\" + fmt.Sprintf(\"SELECT id FROM contact\") + \")\"\n",
+			want:   "SELECT id FROM contact",
 		},
 	}
 	for _, tc := range cases {

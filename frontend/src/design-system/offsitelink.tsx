@@ -15,7 +15,7 @@ import { webUrl } from "../format/weburl";
 //      carried `noreferrer` alone, which most engines imply opener-blocking for
 //      but none promise; both are spelled here so neither depends on a default.
 //   2. The scheme check. An href is untrusted record data — a crawler wrote it,
-//      a connector wrote it, or a person pasted it — so it goes through
+//      a connector wrote it, or a contact pasted it — so it goes through
 //      `webUrl`, the one place deciding whether a string may become a link.
 //      `Chip` already delegates the same way; this is that rule for a value
 //      that is not a chip.

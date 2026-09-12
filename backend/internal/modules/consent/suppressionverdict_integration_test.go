@@ -5,7 +5,7 @@
 
 package consent
 
-// verdict.go's own answer must not disagree with the transmit gate's: a person
+// verdict.go's own answer must not disagree with the transmit gate's: a contact
 // who asked to stop must not read as VerdictAllowed a moment after
 // authorizetransmit.go's liveSuppression would refuse the same send.
 
@@ -16,10 +16,10 @@ import (
 
 // suppress records a communication_suppression row the way suppress.go's
 // writer does, minus the write's own auth/audit machinery — this test is about
-// what VerdictForPerson reads, not about who may write the row.
+// what VerdictForContact reads, not about who may write the row.
 func (e *qualifyingEnv) suppress(t *testing.T, kind string) {
 	t.Helper()
-	seedLiveSuppression(e.ctx, t, e.owner, e.person, kind, "phone call")
+	seedLiveSuppression(e.ctx, t, e.owner, e.contact, kind, "phone call")
 }
 
 func TestASubjectRequestBlocksCorrespondenceTheGuardWouldOtherwiseAllow(t *testing.T) {
@@ -78,11 +78,11 @@ func TestAProcessingRestrictionBlocksCorrespondence(t *testing.T) {
 }
 
 // A hard bounce is a fact about a MAILBOX (liveSuppression's own doc comment)
-// and is recorded against the address alone, never a person — this guard
-// answers about the person in general, with no address of its own to check,
-// so a bounce on one of their addresses must not read as "this person is
+// and is recorded against the address alone, never a contact — this guard
+// answers about the contact in general, with no address of its own to check,
+// so a bounce on one of their addresses must not read as "this contact is
 // blocked" when another channel might still reach them.
-func TestAnAddressPinnedHardBounceDoesNotBlockThePersonLevelVerdict(t *testing.T) {
+func TestAnAddressPinnedHardBounceDoesNotBlockTheContactLevelVerdict(t *testing.T) {
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	if _, err := e.owner.Exec(e.ctx, `
@@ -94,20 +94,20 @@ func TestAnAddressPinnedHardBounceDoesNotBlockThePersonLevelVerdict(t *testing.T
 
 	got := e.verdict(t)
 	if got.State != VerdictAllowed {
-		t.Fatalf("state = %q, want %q — an address-pinned bounce is not a fact about this person", got.State, VerdictAllowed)
+		t.Fatalf("state = %q, want %q — an address-pinned bounce is not a fact about this contact", got.State, VerdictAllowed)
 	}
 }
 
 // A revoked suppression is not a live one — liveSuppression's own WHERE
-// clause already excludes it, and this pins that VerdictForPerson inherits
+// clause already excludes it, and this pins that VerdictForContact inherits
 // that read rather than a second, looser one.
 func TestARevokedSuppressionDoesNotBlock(t *testing.T) {
 	e := setupQualifying(t)
 	e.inbound(t, time.Now().Add(-24*time.Hour))
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level, revoked_at)
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level, revoked_at)
 		VALUES ($1, 'subject_request', 'phone call', 'human:x', 'subject', now())`,
-		e.person); err != nil {
+		e.contact); err != nil {
 		t.Fatalf("seeding the revoked suppression: %v", err)
 	}
 

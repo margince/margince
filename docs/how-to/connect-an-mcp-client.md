@@ -86,7 +86,7 @@ the granting human's live seat and RBAC. See
 directly — importing a file, sending mail, booking, merging, archiving. The
 reasoning is that a passport acts as *you*: it carries your seat, your grants and
 your row scope, so it can only reach what you could already reach in the app, and
-a second confirmation from the same person adds ceremony rather than safety. The
+a second confirmation from the same contact adds ceremony rather than safety. The
 limits that still apply are your limits — RBAC, row scope, the seat ceiling, the
 passport's expiry, and the scopes you chose when you minted it.
 

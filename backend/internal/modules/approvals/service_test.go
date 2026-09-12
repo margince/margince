@@ -160,7 +160,7 @@ func humanCtx(perms principal.Permissions) context.Context {
 	})
 }
 
-// A decision needs a person behind it, and a passport carries one: the
+// A decision needs a contact behind it, and a passport carries one: the
 // admission question is whether this call names a human, never which transport
 // it arrived on. A credential nobody lent — no on_behalf_of — names none, and
 // neither does the system principal or a connector.
@@ -199,7 +199,7 @@ func TestActingForAHumanAdmitsAPassportAndRefusesWhatNobodyLent(t *testing.T) {
 				t.Fatalf("admitted actor refused: %v", err)
 			}
 			if !tc.want && err == nil {
-				t.Fatal("an actor with no person behind it passed the gate")
+				t.Fatal("an actor with no contact behind it passed the gate")
 			}
 			// A missing actor is an internal wiring fault, not a permission
 			// answer: it must not read to a caller as "you may not".
@@ -302,15 +302,15 @@ func TestACredentialDoesNotReleaseTheProposalItMade(t *testing.T) {
 		// Deliberately allowed: an agent that changes its mind takes its own
 		// request off somebody's desk rather than leaving it there.
 		{"but it may still reject its own row", stagedBy(mine, lender), false, true},
-		// Another CREDENTIAL of the same person: the lender could have answered
+		// Another CREDENTIAL of the same human: the lender could have answered
 		// this in the CRM themselves, so answering it on a second credential they
-		// minted is the same person answering.
-		{"another credential of the same person it may approve", stagedBy(theirs, lender), true, true},
-		// Another PERSON's, which is the loop the tier exists to stop: two
-		// passports lent by two people push a confirm-first action through end to
+		// minted is the same contact answering.
+		{"another credential of the same human it may approve", stagedBy(theirs, lender), true, true},
+		// Another CONTACT's, which is the loop the tier exists to stop: two
+		// passports lent by two contacts push a confirm-first action through end to
 		// end and no human ever looks.
-		{"another person's row it does not approve", stagedBy(theirs, someoneElse), true, false},
-		{"but it may still reject another person's row", stagedBy(theirs, someoneElse), false, true},
+		{"another contact's row it does not approve", stagedBy(theirs, someoneElse), true, false},
+		{"but it may still reject another contact's row", stagedBy(theirs, someoneElse), false, true},
 		// serverProposed: a row nobody's passport staged is not self-approval,
 		// and one staged on nobody's behalf is the unattended policy apply,
 		// bounded by the owner's own authority rather than by a staging.
@@ -401,7 +401,7 @@ func TestRequireDecisionGrants(t *testing.T) {
 			wantErr: true, denied: true,
 		},
 		{
-			name:    "promote_lead needs BOTH lead.update and person.create",
+			name:    "promote_lead needs BOTH lead.update and contact.create",
 			a:       row{Kind: "promote_lead"},
 			perms:   grants(map[string]principal.ObjectGrant{"lead": {Update: true}}),
 			wantErr: true, denied: true,
@@ -627,7 +627,7 @@ func TestTargetVisibleAnswersEachStagedShape(t *testing.T) {
 func TestASelfOnlyKindIsUndecidableByAnyoneButItsSubject(t *testing.T) {
 	// The inbox is a SHARED surface, and for almost every kind that is the
 	// point. A LinkedIn match is the exception: it names third parties out of
-	// one member's imported address book, people who never agreed to be in
+	// one member's imported address book, contacts who never agreed to be in
 	// this CRM. Routing it through the shared queue without this predicate
 	// handed every admin a readable copy of a colleague's contact list.
 	mine := ids.NewV7()
@@ -762,7 +762,7 @@ func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
 			if withheldFromOtherSeats(rep, forTheRep) {
 				t.Error("the rep it was staged for cannot see their own proposal")
 			}
-			// An unowned deal records nobody. Nothing here is one person's
+			// An unowned deal records nobody. Nothing here is one contact's
 			// private business, so it stays everybody's rather than nobody's.
 			unowned := row{Kind: kind}
 			if withheldFromOtherSeats(manager, unowned) {
@@ -780,7 +780,7 @@ func TestAProposalStagedForARepIsDecidedByThatRepAlone(t *testing.T) {
 // alone still matches across members on the write side. One seat's pending
 // proposal is then joined and handed to another, or superseded by it, or
 // suppressed by its rejection; each time the surviving row names a seat the
-// reader is not, so it is withheld from the person it was staged for.
+// reader is not, so it is withheld from the contact it was staged for.
 //
 // Derived from the maps rather than listed, so enrolling a kind in either one
 // carries the obligation with it.
@@ -808,7 +808,7 @@ func TestEveryKindNarrowedOnReadIsAlsoNarrowedOnStaging(t *testing.T) {
 
 	// The positive control. Without it this passes just as well if
 	// subjectScopedShape started answering true to everything, which would
-	// split every shared team proposal into one row per person.
+	// split every shared team proposal into one row per contact.
 	shared := "merge_records"
 	if seatNarrowed[shared] {
 		t.Fatalf("the control kind %q is itself seat-narrowed, so it proves nothing", shared)

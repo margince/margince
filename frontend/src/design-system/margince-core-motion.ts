@@ -41,7 +41,7 @@ export type CoreBehaviour = Readonly<{
 /** Amber for a thing that wants a look, red for a thing that broke. */
 // Emissive, so it runs hotter than the token it mirrors (--orbAmber). Walked
 // down from gold: at hue 40 the warning state read as a colour somebody chose
-// for looks, and the point of it is that a person is being asked for something.
+// for looks, and the point of it is that a contact is being asked for something.
 // Chosen from where it LANDS, not from where it looks amber in a swatch.
 //
 // This triple is multiplied by a ribbon's GAIN (up to 3.3) and then run through
@@ -95,7 +95,7 @@ export const BEHAVIOUR: Readonly<Record<MarginceCoreState, CoreBehaviour>> = {
     tint: 0,
     tintCol: RED,
   },
-  /* Stopped and waiting for a person: a contradiction, an unreachable source, a
+  /* Stopped and waiting for a contact: a contradiction, an unreachable source, a
      licence it lacks. Amber, slow, and breathing hard enough to be caught out
      of the corner of an eye. */
   warning: {

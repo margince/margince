@@ -24,13 +24,13 @@ import type { MessageKey } from "../i18n/en";
 import {
   type ActivityDraft,
   activityRequestBody,
-  KINDS_WITH_A_PERSON,
+  KINDS_WITH_A_CONTACT,
 } from "./activitybody";
 import { entityTimelineKeys, taskWriteKeys } from "./activitykeys";
 import { TaskAssigneeField } from "./assigneepicker";
 import { problemMessageOf, throwProblem, useMe, useSorMode } from "./common";
 
-// Log a note or task from a 360 (person/company/deal/lead): the contract's
+// Log a note or task from a 360 (contact/company/deal/lead): the contract's
 // logActivity POST, linked to the record being viewed, occurred_at stamped
 // at submit, source=manual. On success every read that renders this record's
 // timeline is invalidated (see activitykeys) so the fresh entry appears
@@ -92,30 +92,30 @@ function freshDraft(
 
 // The company's own contacts, narrowed by what the reader typed.
 //
-// Scoped to the company rather than searching every person in the installation:
+// Scoped to the company rather than searching every contact in the installation:
 // the question is who from THIS account was in the room, and an unscoped search
 // would offer contacts of other companies as equally likely answers to it.
 async function searchCompanyContacts(
   companyID: string,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/people", {
+  const { data, error } = await api.GET("/contacts", {
     params: { query: { company_id: companyID, q, limit: 20 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((person) => ({
-    id: person.id,
+  return data.data.map((contact) => ({
+    id: contact.id,
     // full_name, which the contract documents as always present. display_name
-    // belongs to a USER; a person has neither the field nor a fallback for it.
-    name: person.full_name,
+    // belongs to a USER; a contact has neither the field nor a fallback for it.
+    name: contact.full_name,
   }));
 }
 
 /**
  * LogActivityForm is the composer itself, without a frame, so the same fields
- * serve the standing card on the person and deal screens and the modal the
+ * serve the standing card on the contact and deal screens and the modal the
  * company screen opens.
  */
 export function LogActivityForm({
@@ -155,10 +155,10 @@ export function LogActivityForm({
   }
   const [fileError, setFileError] = useState<string | null>(null);
   // Who was in the room. Only ever asked on a company, and only for the kinds
-  // that are with a person — see KINDS_WITH_A_PERSON.
+  // that are with a contact — see KINDS_WITH_A_CONTACT.
   const [attendee, setAttendee] = useState<RecordPickerCandidate | null>(null);
   const needsAttendee =
-    entityType === "company" && KINDS_WITH_A_PERSON.has(draft.kind);
+    entityType === "company" && KINDS_WITH_A_CONTACT.has(draft.kind);
 
   const log = useMutation({
     // Keyed on entityId, the record this form is open on, not the created
@@ -198,12 +198,12 @@ export function LogActivityForm({
         queryClient.invalidateQueries({ queryKey });
       }
       // The attendee's OWN timeline too. The activity is filed against the
-      // person, so the company screen this form sits on reaches it through the
-      // employer walk while the person's page holds it directly — and a reader
+      // contact, so the company screen this form sits on reaches it through the
+      // employer walk while the contact's page holds it directly — and a reader
       // who logs a meeting here and opens the contact expects to find it.
       if (input.attendee) {
         for (const queryKey of entityTimelineKeys(
-          "person",
+          "contact",
           input.attendee.id,
         )) {
           queryClient.invalidateQueries({ queryKey });
@@ -287,7 +287,7 @@ export function LogActivityForm({
         onChange={(value) => setField({ assigneeId: value })}
       />
       {/* WHO was in the room, asked before what was said. A meeting or a call
-          is with a person and the server refuses one filed against a company,
+          is with a contact and the server refuses one filed against a company,
           so on a company this is the field that decides whether the entry can
           be sent at all — not a refinement of one that could. */}
       {needsAttendee && (
@@ -389,7 +389,7 @@ export function LogActivityForm({
 }
 
 /**
- * LogActivity is the standing composer card the person and deal screens keep
+ * LogActivity is the standing composer card the contact and deal screens keep
  * open in their rail.
  */
 export function LogActivity({
@@ -409,7 +409,7 @@ export function LogActivity({
   const t = useT();
   // useCanWrite, not useCan: the form issues a POST, and a read seat is
   // refused before RBAC is consulted — the same rule the header verbs on
-  // personpage.tsx state for the identical write. The card stays and says so
+  // contactpage.tsx state for the identical write. The card stays and says so
   // rather than vanishing: a rep whose role may not log a call needs to learn
   // that from the page, not from the absence of a form the product has.
   //

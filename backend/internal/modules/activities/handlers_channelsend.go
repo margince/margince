@@ -69,7 +69,7 @@ func (h Handlers) SendMessage(w http.ResponseWriter, r *http.Request, id crmcont
 // to the shared mapping. All four are 422 and all four name what to do: the
 // request carried no message, the caller pointed at the wrong kind of
 // conversation, this workspace has no bot bound, or the conversation does not
-// reach exactly one person.
+// reach exactly one contact.
 func writeChannelSendErr(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, errEmptyMessageBody) {
 		httperr.Write(w, r, httperr.Validation(fieldBody, "empty_message_body", errEmptyMessageBody.Error()))

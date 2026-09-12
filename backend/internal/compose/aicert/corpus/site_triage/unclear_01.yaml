@@ -36,7 +36,7 @@ expect:
     administrator to contact — so none of the placeholder readings fit: it is not
     a registrar placeholder, a coming-soon notice, a bare error page or a
     domain-for-sale listing.
-    And it identifies nobody. No company name, no person, no service, no product,
+    And it identifies nobody. No company name, no contact, no service, no product,
     no legal notice, not even a tagline; the domain is the only string that could
     hint at anything, and a hostname is not evidence of what a business is. The
     question this site exists to answer is therefore unanswered by the seed page,

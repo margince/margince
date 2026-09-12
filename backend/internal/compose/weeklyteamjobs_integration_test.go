@@ -57,7 +57,7 @@ func seedManagerRoles(t *testing.T, e *integration.Env, users ...ids.UUID) {
 	// the object grant to assemble and the team scope to re-read.
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
 	             VALUES ('team_lead_under_test', 'Team Lead', $1::jsonb)`,
-		`{"objects":{"deal":{"read":true},"person":{"read":true},`+
+		`{"objects":{"deal":{"read":true},"contact":{"read":true},`+
 			`"activity":{"read":true},"installation_settings":{"read":true}},`+
 			`"row_scope":"team"}`)
 	for _, user := range users {

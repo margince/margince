@@ -26,8 +26,8 @@ Three things matter:
 **Your agents do the real work.** An agent connects over MCP or plain
 REST. It gets tools, and every action it takes is logged.
 
-An agent never has more rights than the person who lent it a passport. We
-check that person's seat and permissions on *every* call, not once at the
+An agent never has more rights than the contact who lent it a passport. We
+check that colleague's seat and permissions on *every* call, not once at the
 start. So if you remove someone at 09:00, their agent stops at 09:00.
 
 An agent can never approve its own work. Approvals, consent, data-subject
@@ -35,19 +35,19 @@ requests and pipeline settings are closed to agent credentials. There is
 no way in.
 
 Every action is written to an append-only log naming the passport, the
-person behind it, and the rule that allowed it. A database trigger refuses
+contact behind it, and the rule that allowed it. A database trigger refuses
 any update or delete, and the role the application runs as holds only
 SELECT and INSERT. Be precise about what that buys: it stops the running
 software, not an operator holding the schema owner's credentials.
 
 There is also a cap on how much one passport can send in a day. An
-operator sets the number, and no approval lifts it — a person can hand
+operator sets the number, and no approval lifts it — a seat can hand
 back some budgets mid-window, but sending is not one of them.
 
 Each action has an autonomy tier. Most are 🟢: they run, and they are
-logged. We tried asking a person to confirm work they had already allowed.
-It made the agent weaker than the person behind it, not safer. A smaller
-🟡 set still stops and waits for a person. Which action is which comes
+logged. We tried asking a contact to confirm work they had already allowed.
+It made the agent weaker than the contact behind it, not safer. A smaller
+🟡 set still stops and waits for a contact. Which action is which comes
 from the contract, so nobody keeps that list by hand:
 [docs/reference/agent-tools.md](docs/reference/agent-tools.md). The full
 reasoning is in
@@ -111,7 +111,7 @@ Also: open work lives in
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) ·
 [CHANGELOG.md](CHANGELOG.md).
 
-Everything below this line is for people (and agents) working on the code.
+Everything below this line is for contacts (and agents) working on the code.
 
 ## Quick start
 
@@ -143,7 +143,7 @@ it on :18080, so one port serves both the UI and the contract. Sign in as
 
 That difference is the product working as intended. On a configured
 install, the *operator* picks the first admin password, and that account
-can reach nothing but the change-password screen until the person using it
+can reach nothing but the change-password screen until the colleague using it
 picks their own. `make seed-dev` finishes that first login the way you
 would. That is why the seeded path ends on a password no config file ever
 held.
@@ -153,7 +153,7 @@ earlier session left data behind and you want the first-run experience
 again. Plain `make dev` keeps what is there.
 
 **Skip the cold start** with `make seed-dev` against a running stack. It
-adds demo people, companies and deals, plus two rep seats and FX
+adds demo contacts, companies and deals, plus two rep seats and FX
 rates. The seed goes through the public API, so it produces the same audit
 trail and the same events as real traffic. You can run it twice safely.
 `make seed-reset` wipes the demo workspace for a clean re-seed.
@@ -171,7 +171,7 @@ What every target does, in one place:
 [docs/reference/make-targets.md](docs/reference/make-targets.md).
 
 **Verify** the whole thing end to end: admin login over `/v1`, seeded
-people visible, frontend production build. It stops loudly at the first
+contacts visible, frontend production build. It stops loudly at the first
 broken step. It reads the demo records, so seed first:
 
 ```sh
@@ -209,7 +209,7 @@ claude mcp add --transport http margince <base>/mcp
 ```
 
 It walks discovery, client registration, the consent screen and the token
-exchange by itself. On that screen a person lends one of their own
+exchange by itself. On that screen a contact lends one of their own
 passports, and the connection gets exactly that passport's scopes. You can
 also mint a passport directly (`POST /v1/passports`, session-authed). The
 same token works as a REST bearer credential, and it is governed the same
@@ -286,7 +286,7 @@ this product will look for them.
 - **Outbound cadences.** Deferred in the contract:
   `/sequences, /sequences/{id}/steps, /enrollments (outbound cadences;
   sends gated)`. The automation catalog can write a draft and put it in
-  front of a person — it has `draft_email`, not `send_email`. So a team
+  front of a contact — it has `draft_email`, not `send_email`. So a team
   whose daily work is unattended outbound sequences is not served yet.
 - **Telephony and click-to-call.** Deferred in the contract.
 - **Hosted SaaS and multi-tenancy.** Not in this repository. One
@@ -331,7 +331,7 @@ OSI open source: the full source is public and free to read, run and
 modify.
 
 - **Free** for your own internal production use, up to **10 Seats**. A
-  Seat is an identified person with credentials. AI agents, service
+  Seat is an identified contact with credentials. AI agents, service
   accounts and external data subjects are **not** Seats. Above those ten,
   the published price is a flat €25 per acting seat per month, with read
   seats unlimited and free — no charge per contact, and no markup on AI

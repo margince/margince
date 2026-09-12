@@ -18,7 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -58,7 +58,7 @@ type ModelPath struct {
 	// profile lane's premium-only ladder for it.
 	SiteTriage completer
 	// AccountScan reads one account for one reader and says what needs a
-	// person, quoting the exchanges it read (companyscan).
+	// contact, quoting the exchanges it read (companyscan).
 	AccountScan  completer
 	RateExtract  completer // the model-cost refresh pricing-page extraction lane
 	BriefRanking completer // the Morning-Brief L2 re-order (B-E05.2)
@@ -227,7 +227,7 @@ func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool,
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
 		return ModelPath{}, err
 	}
-	return modelPathForRouter(router, newCompanyContextProvider(people.NewStore(InstallationDB(pool)))), nil
+	return modelPathForRouter(router, newCompanyContextProvider(contacts.NewStore(InstallationDB(pool)))), nil
 }
 
 // seedEmbedBinding plants search's embed_store_binding marker (Task 9's

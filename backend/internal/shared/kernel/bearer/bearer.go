@@ -26,7 +26,7 @@ import (
 
 // tokenBytes is how much entropy a capability carries.
 //
-// 256 bits. A share link is a URL people paste into mail and chat, so it will
+// 256 bits. A share link is a URL contacts paste into mail and chat, so it will
 // be seen by more parties than the one it was issued to, and its only defence
 // is being unguessable.
 const tokenBytes = 32

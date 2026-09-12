@@ -5,7 +5,7 @@
 
 package identity
 
-// Whether a named person is on a team with the CALLER, against real rows.
+// Whether a named contact is on a team with the CALLER, against real rows.
 //
 // This answer gates a Team Lead opening somebody else's queue, so each arm is
 // held separately: sharing a team admits, sharing none refuses, and an archived
@@ -13,7 +13,7 @@ package identity
 // answer wider than that predicate would grant a reach the rows then deny.
 //
 // The caller is taken from the principal rather than passed, so a test drives
-// it by acting AS the person asking, which is also how the product reaches it.
+// it by acting AS the contact asking, which is also how the product reaches it.
 
 import (
 	"context"
@@ -107,7 +107,7 @@ func TestAnArchivedTeamMakesNobodyTeammates(t *testing.T) {
 		t.Fatalf("asking after the archive: %v", err)
 	}
 	if shares {
-		t.Fatal("an archived team still made two people teammates")
+		t.Fatal("an archived team still made two contacts teammates")
 	}
 }
 
@@ -116,7 +116,7 @@ func TestAnArchivedTeamMakesNobodyTeammates(t *testing.T) {
 // team_membership survives a deactivation — SetTeamMember refuses to ADD a
 // suspended member, but nothing removes one who leaves — so a membership-only
 // answer keeps calling them a teammate. Both callers then act on it: one opens
-// a departed person's queue, and the other puts a coaching notice in an inbox
+// a departed contact's queue, and the other puts a coaching notice in an inbox
 // nobody will ever read.
 func TestADeactivatedColleagueIsNoLongerATeammate(t *testing.T) {
 	e := setupRevocationEnv(t, "team-membership-deactivated")
@@ -170,7 +170,7 @@ func TestADeactivatedColleagueIsNoLongerATeammate(t *testing.T) {
 
 // A caller is their own teammate. A reader naming their own id follows the same
 // path as any other ask, and refusing them their own queue would be a bug the
-// two-person cases above cannot see.
+// two-contact cases above cannot see.
 func TestACallerIsTheirOwnTeammate(t *testing.T) {
 	e := setupRevocationEnv(t, "team-membership-self")
 

@@ -675,7 +675,7 @@ func siteKeysOf(rows []aicert.ReadinessRow) []string {
 //
 // The failure names the resolved path and the regeneration command: this
 // package reaches both files by walking up out of the Go module, so a package
-// move surfaces here as a missing file and the person doing the move needs to
+// move surfaces here as a missing file and the contact doing the move needs to
 // be told what to fix rather than handed a bare "no such file".
 func syncAICertFile(t *testing.T, path string, want []byte) {
 	t.Helper()

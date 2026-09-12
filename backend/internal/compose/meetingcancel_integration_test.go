@@ -90,7 +90,7 @@ func calendarOwnerCtx(e *integration.Env, owner ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 				"company":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -225,7 +225,7 @@ func TestCancellingAMeetingNobodyCapturedIsNotAFault(t *testing.T) {
 }
 
 // An ARCHIVED meeting is left where somebody put it. A calendar sync is not the
-// caller entitled to move the status of a row a person deliberately retired.
+// caller entitled to move the status of a row a contact deliberately retired.
 func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
@@ -247,11 +247,11 @@ func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
 
 // A meeting somebody ANSWERED FOR keeps their answer.
 //
-// `held` and `no_show` are recorded by a person who knows what happened. A
+// `held` and `no_show` are recorded by a contact who knows what happened. A
 // calendar disagreeing afterwards — the organizer tidying up a past event, a
 // late deletion — does not un-happen a meeting that took place, and overwriting
 // the answer would delete the only record that it did: silently, on a sync
-// schedule nobody is watching, and against the person who took the trouble to
+// schedule nobody is watching, and against the contact who took the trouble to
 // record it.
 func TestAnAnsweredMeetingKeepsItsOutcome(t *testing.T) {
 	e := integration.Setup(t)

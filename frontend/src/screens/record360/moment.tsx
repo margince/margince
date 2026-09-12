@@ -29,8 +29,8 @@ import { type Grounding, Proof, type StandingTone } from "./verdict";
 // graph, which is a defect nothing fails on.
 import "../company360.css";
 
-type PersonMoment = components["schemas"]["PersonMoment"];
-type PersonMomentEvidence = components["schemas"]["PersonMomentEvidence"];
+type ContactMoment = components["schemas"]["ContactMoment"];
+type ContactMomentEvidence = components["schemas"]["ContactMomentEvidence"];
 
 // The rule that fired, in one word over the sentence it produced.
 //
@@ -40,24 +40,24 @@ type PersonMomentEvidence = components["schemas"]["PersonMomentEvidence"];
 // different moves, and a reader who sees only the sentence has to infer which
 // kind of thing they are looking at.
 export const MOMENT_RULE_LABEL = {
-  meeting_prep: "person.moment.rule.meeting_prep",
-  re_engaged: "person.moment.rule.re_engaged",
-  job_change: "person.moment.rule.job_change",
-  overdue_promise: "person.moment.rule.overdue_promise",
-  gone_quiet: "person.moment.rule.gone_quiet",
-  open_promise: "person.moment.rule.open_promise",
-  role_change: "person.moment.rule.role_change",
-  public_signal: "person.moment.rule.public_signal",
-  missing_next_step: "person.moment.rule.missing_next_step",
-  thin_relationship: "person.moment.rule.thin_relationship",
-  nothing_needed: "person.moment.rule.nothing_needed",
-} as const satisfies Record<PersonMoment["rule"], MessageKey>;
+  meeting_prep: "contact.moment.rule.meeting_prep",
+  re_engaged: "contact.moment.rule.re_engaged",
+  job_change: "contact.moment.rule.job_change",
+  overdue_promise: "contact.moment.rule.overdue_promise",
+  gone_quiet: "contact.moment.rule.gone_quiet",
+  open_promise: "contact.moment.rule.open_promise",
+  role_change: "contact.moment.rule.role_change",
+  public_signal: "contact.moment.rule.public_signal",
+  missing_next_step: "contact.moment.rule.missing_next_step",
+  thin_relationship: "contact.moment.rule.thin_relationship",
+  nothing_needed: "contact.moment.rule.nothing_needed",
+} as const satisfies Record<ContactMoment["rule"], MessageKey>;
 
 export const MOMENT_EVIDENCE_LABEL = {
-  activity: "person.moment.evidence.activity",
-  task: "person.moment.evidence.task",
-  relationship_change: "person.moment.evidence.relationship_change",
-} as const satisfies Record<PersonMomentEvidence["type"], MessageKey>;
+  activity: "contact.moment.evidence.activity",
+  task: "contact.moment.evidence.task",
+  relationship_change: "contact.moment.evidence.relationship_change",
+} as const satisfies Record<ContactMomentEvidence["type"], MessageKey>;
 
 /**
  * What one piece of a moment's evidence says, in the shape every claim on a
@@ -68,7 +68,7 @@ export const MOMENT_EVIDENCE_LABEL = {
  * nothing.
  */
 export function momentGrounding(
-  evidence: readonly PersonMomentEvidence[],
+  evidence: readonly ContactMomentEvidence[],
   t: ReturnType<typeof useT>,
   locale: Locale,
   recordZone: string,
@@ -95,7 +95,7 @@ export function momentGrounding(
 // read as warnings; the quiet success state reads as settled rather than as
 // something nobody has judged. Everything else is a live thread — a fact about
 // the relationship that wants a move rather than a verdict on it.
-export function standingTone(rule: PersonMoment["rule"]): StandingTone {
+export function standingTone(rule: ContactMoment["rule"]): StandingTone {
   if (isLate(rule)) {
     return "warn";
   }
@@ -106,7 +106,7 @@ export function standingTone(rule: PersonMoment["rule"]): StandingTone {
 // date is late whether it was read out of an email or filed as a task — one
 // rung covers both — while a promise not yet due is a live thread, not a
 // warning.
-export function isLate(rule: PersonMoment["rule"]): boolean {
+export function isLate(rule: ContactMoment["rule"]): boolean {
   return rule === "gone_quiet" || rule === "overdue_promise";
 }
 
@@ -129,7 +129,7 @@ export function isLate(rule: PersonMoment["rule"]): boolean {
  * a panel handed no rows at all still has its own one sentence.
  */
 export function momentIsARow(
-  moment: PersonMoment,
+  moment: ContactMoment,
   othersInTheList: boolean,
 ): boolean {
   return moment.rule !== "nothing_needed" || !othersInTheList;
@@ -149,7 +149,7 @@ export function MomentRow({
   moment,
   onOpenRecord,
 }: Readonly<{
-  moment: PersonMoment;
+  moment: ContactMoment;
   onOpenRecord?: (entityType: string, entityId: string) => void;
 }>): ReactNode {
   const t = useT();

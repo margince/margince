@@ -18,7 +18,7 @@ import (
 
 // One item's shape, per producer.
 //
-// The rule every renderer here keeps: the title is what a person would say
+// The rule every renderer here keeps: the title is what a contact would say
 // happened, and the identifiers stay in `id` and `subject` where a client uses
 // them to navigate. A card that printed `company_id` at a reader was
 // showing them the plumbing and calling it information.
@@ -38,8 +38,8 @@ const actionUndo crmcontracts.AttentionItemActions = "undo"
 // actionDismiss puts a lapsed contact aside for a while.
 //
 // Offered ONLY where a dismissal endpoint takes the row's own id, which today
-// is the relationship-decay lane: its rows carry the person's id, and
-// /people/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
+// is the relationship-decay lane: its rows carry the contact's id, and
+// /contacts/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
 // id the endpoint cannot take would be a control that 404s.
 //
 // A reader's own judgement rather than a change to the record — the contact is
@@ -326,7 +326,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 	}
 	// The row this item's verbs write to. `complete` and `snooze` both PATCH the
 	// task, and a client that cannot name the version cannot make either
-	// conditional — so two people acting on one task overwrite each other and
+	// conditional — so two contacts acting on one task overwrite each other and
 	// the second is told nothing.
 	if task.Version != nil {
 		version := *task.Version
@@ -383,7 +383,7 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // used to name a debt every morning with no way to say it was paid, because
 // nothing anywhere could write the `done` the status column has always had.
 //
-// And `open`: the person the promise was made to is named on the card, and a
+// And `open`: the contact the promise was made to is named on the card, and a
 // reader who cannot reach them has been told about a debt and denied the way to
 // pay it.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
@@ -396,7 +396,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Source:  crmcontracts.AttentionItemSource("conversation_claim"),
 		Title:   &body,
 		Detail:  &quote,
-		Subject: subjectOf("person", promise.PersonID),
+		Subject: subjectOf("contact", promise.ContactID),
 		DueAt:   &due,
 		Overdue: &past,
 		Actions: []crmcontracts.AttentionItemActions{
@@ -431,7 +431,7 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	subjectCompany: subjectCompany,
-	"person":       "person",
+	"contact":      "contact",
 	"deal":         "deal",
 	"lead":         "lead",
 	"activity":     "activity",
@@ -447,7 +447,7 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 		return false
 	}
 	switch subject.Type {
-	case subjectCompany, subjectPerson, subjectDeal, "lead", "project":
+	case subjectCompany, subjectContact, subjectDeal, "lead", "project":
 		return true
 	}
 	return false

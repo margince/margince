@@ -6,7 +6,7 @@
 //
 // Held by: TestTheIdleBaseIsSpelledOnce (backend/gates/oneidlebase_test.go)
 //
-// Deal, project, company and person all carry the same pair: a
+// Deal, project, company and contact all carry the same pair: a
 // last_activity_at maintained from the timeline, and the created_at that is
 // always there. Every surface that measures silence — the stalled-deal rule,
 // the gone-quiet project report, an account's coverage view, the ranked
@@ -18,7 +18,7 @@
 // find: the ones nobody has spoken to since the day they were written down.
 // And its column ORDER is invisible: created_at is never null, so a fallback
 // written the other way round silently answers "created" for everything while
-// reading, to a person, like the same rule.
+// reading, to a contact, like the same rule.
 //
 // So both spellings live here together — the Go one a caller applies to
 // scanned values, the SQL one a caller embeds in an ORDER BY, a WHERE or a

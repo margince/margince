@@ -15,7 +15,7 @@ package consent
 // it" — and a later bounce could not travel back to correct that. Worse, the
 // message existed nowhere: no delivery row, no authorization decision, no
 // timeline entry, so it appeared in no subject-access export and no erasure
-// reached it. A person asking "what have you sent me" was answered with silence
+// reached it. A contact asking "what have you sent me" was answered with silence
 // about the one message the installation had written entirely on its own.
 
 import (
@@ -45,7 +45,7 @@ type ConfirmLinkVault interface {
 // where the link should be.
 func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLinkVault, base string) *Store {
 	// ALL THREE or none. A lane with no base URL would mail a link built on an
-	// empty origin — an unusable URL that still spent the one token the person
+	// empty origin — an unusable URL that still spent the one token the contact
 	// was issued, and superseded whatever earlier link they still had.
 	if sender == nil || vault == nil || base == "" {
 		return s
@@ -58,7 +58,7 @@ func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLin
 
 // confirmMailInput is one confirm link, ready to be turned into a message.
 type confirmMailInput struct {
-	personID   ids.PersonID
+	contactID  ids.ContactID
 	recipient  string
 	kind       string
 	tokenRowID ids.UUID
@@ -92,7 +92,7 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 		return false, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
 	if _, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
-		PersonID:  in.personID,
+		ContactID: in.contactID,
 		Recipient: in.recipient,
 		Category:  category,
 		LinkID:    in.tokenRowID,
@@ -165,7 +165,7 @@ func (h Handlers) WithConfirmationLane(sender ConfirmationSender, vault ConfirmL
 // An unwired reader answers the FALLBACK rather than failing. Refusing to send
 // a confirm link because a settings read failed trades the whole message for a
 // formatting preference, and for the consent link that is worse than it sounds:
-// the permission stays withheld until the person answers a mail that never
+// the permission stays withheld until the contact answers a mail that never
 // arrived. mailcopy.For treats an unknown answer the same way, so the two
 // agree without either having to know the other's list.
 func (s *Store) mailLanguage(ctx context.Context, tx pgx.Tx) string {

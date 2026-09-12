@@ -1,4 +1,4 @@
-// The scale between an amount as a person types it and the integer this
+// The scale between an amount as a human types it and the integer this
 // product stores.
 //
 // It is NOT presentation, and that is why it is its own module beside the
@@ -88,7 +88,7 @@ export function minorUnitDigits(currency: string): number {
   return MINOR_UNIT_EXCEPTIONS[currency.trim().toUpperCase()] ?? 2;
 }
 
-// toMinorUnits converts a major-unit amount — what the person typed — into the
+// toMinorUnits converts a major-unit amount — what the human typed — into the
 // integer the API stores, or NaN when it cannot do so exactly.
 //
 // It REFUSES a figure finer than its currency rather than rounding one. That is

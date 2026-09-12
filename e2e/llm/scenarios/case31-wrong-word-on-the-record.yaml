@@ -50,7 +50,7 @@ must_call:
   - remove_tag
 
 # record_type is pinned on both. The tool name alone passes on a read or a
-# removal aimed at a PERSON of the same name — get_record_tags serves three
+# removal aimed at a CONTACT of the same name — get_record_tags serves three
 # record types and remove_tag five, and this errand is about a company.
 must_call_with:
   - get_record_tags.record_type=company

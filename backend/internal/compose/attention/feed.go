@@ -161,9 +161,9 @@ type Service struct {
 	money dayMoney
 	// machine answers whether an address is a sending system, for the group a
 	// routine contact decision joins. Nil means every address reads as a
-	// person's, which under-groups rather than hiding anything.
+	// contact's, which under-groups rather than hiding anything.
 	machine MachineSender
-	// teammates answers whether a team-scoped reader may open a named person's
+	// teammates answers whether a team-scoped reader may open a named contact's
 	// queue. Unlike the lanes above it, nil does NOT mean "absent lane": it
 	// means the question has no answer, and resolveOwner refuses rather than
 	// admits. A lane whose absence widened a scope would be a security hole
@@ -201,7 +201,7 @@ type Service struct {
 	taskOwner ids.UUID
 }
 
-// forOwner returns a copy that reads one named person's queue. Same
+// forOwner returns a copy that reads one named contact's queue. Same
 // copy-per-read reason as forReader: a service is shared by every request, and
 // an owner set on it would follow one manager's question onto another reader's
 // page.
@@ -358,7 +358,7 @@ type laneCount struct {
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,
-// the two things on this surface a person alone may answer.
+// the two things on this surface a contact alone may answer.
 //
 // Both producers are read to the full page depth and then INTERLEAVED, so one
 // of them cannot bury the other. Reading each to depth and concatenating looks

@@ -44,42 +44,42 @@ type contextResponseWire struct {
 	Sections []contextSectionWire `json:"sections"`
 }
 
-// seedPersonWithActivity creates a person and logs one activity linked to
-// it through the real HTTP write path (the same create-person +
+// seedContactWithActivity creates a contact and logs one activity linked to
+// it through the real HTTP write path (the same create-contact +
 // log-activity-with-links shapes activity_lifecycle_integration_test.go
 // and consent_integration_test.go already exercise), returning the
-// person's id — the anchor this suite walks context from.
-func seedPersonWithActivity(t *testing.T, e *apptest.AppEnv) string {
+// contact's id — the anchor this suite walks context from.
+func seedContactWithActivity(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Context Anchor",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "body": "Discussed renewal terms",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
-	return person.ID
+	return contact.ID
 }
 
-// seedMeetingLinkedTo logs a meeting against one person through the real HTTP
+// seedMeetingLinkedTo logs a meeting against one contact through the real HTTP
 // write path, then adds the party the write path cannot express: an attendee
 // address capture matched to nobody. Only the connectors write
 // activity_participant rows, so a suite that needs one writes it as they do.
-func seedMeetingLinkedTo(t *testing.T, e *apptest.AppEnv, personID string) string {
+func seedMeetingLinkedTo(t *testing.T, e *apptest.AppEnv, contactID string) string {
 	t.Helper()
 	var meeting struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Renewal review",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": personID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contactID}},
 	}, nil, &meeting); status != http.StatusCreated {
 		t.Fatalf("log meeting → %d", status)
 	}
@@ -105,15 +105,15 @@ func sectionWire(got contextResponseWire, name string) []contextItemWire {
 func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pid := seedPersonWithActivity(t, e)
+	pid := seedContactWithActivity(t, e)
 
 	var got contextResponseWire
-	status := e.Call(t, "GET", "/v1/records/person/"+pid+"/context?max_items=5", nil, nil, &got)
+	status := e.Call(t, "GET", "/v1/records/contact/"+pid+"/context?max_items=5", nil, nil, &got)
 	if status != http.StatusOK {
 		t.Fatalf("status = %d, want 200", status)
 	}
-	if got.Anchor.Type != "person" || got.Anchor.ID != pid {
-		t.Fatalf("anchor = %+v, want person/%s", got.Anchor, pid)
+	if got.Anchor.Type != "contact" || got.Anchor.ID != pid {
+		t.Fatalf("anchor = %+v, want contact/%s", got.Anchor, pid)
 	}
 	if len(got.Sections) == 0 {
 		t.Fatalf("sections = %+v, want at least the profile section", got.Sections)
@@ -122,7 +122,7 @@ func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 	// Isolation: a random uuid the caller cannot see yields an empty
 	// picture, not an oracle that resurfaces another tenant's neighborhood.
 	var empty contextResponseWire
-	status = e.Call(t, "GET", "/v1/records/person/018f3a1b-0000-7000-8000-0000deadbeef/context", nil, nil, &empty)
+	status = e.Call(t, "GET", "/v1/records/contact/018f3a1b-0000-7000-8000-0000deadbeef/context", nil, nil, &empty)
 	if status != http.StatusNotFound && (status != http.StatusOK || len(empty.Sections) != 0) {
 		t.Fatalf("unknown anchor status = %d, sections = %+v — want 404 or an empty picture", status, empty.Sections)
 	}
@@ -149,8 +149,8 @@ func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 			t.Fatalf("anchor = %+v, want activity/%s", got.Anchor, aid)
 		}
 		prepared := sectionWire(got, "prepared_for")
-		if len(prepared) != 1 || prepared[0].Ref.Type != "person" || prepared[0].Ref.ID != pid {
-			t.Fatalf("prepared_for = %+v, want the one person the meeting names", prepared)
+		if len(prepared) != 1 || prepared[0].Ref.Type != "contact" || prepared[0].Ref.ID != pid {
+			t.Fatalf("prepared_for = %+v, want the one contact the meeting names", prepared)
 		}
 		unresolved := sectionWire(got, "unresolved_attendees")
 		if len(unresolved) != 1 || unresolved[0].Summary == nil ||
@@ -169,19 +169,19 @@ func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 	// where a negative bound would panic on a negative index.
 	t.Run("422 max_items below the contract minimum", func(t *testing.T) {
 		var problem fieldHistoryProblem
-		status := e.Call(t, "GET", "/v1/records/person/"+pid+"/context?max_items=-1", nil, nil, &problem)
+		status := e.Call(t, "GET", "/v1/records/contact/"+pid+"/context?max_items=-1", nil, nil, &problem)
 		assertFieldHistoryValidation422(t, status, problem, "max_items", "out_of_range")
 	})
 
 	t.Run("422 max_items above the contract maximum", func(t *testing.T) {
 		var problem fieldHistoryProblem
-		status := e.Call(t, "GET", "/v1/records/person/"+pid+"/context?max_items=999", nil, nil, &problem)
+		status := e.Call(t, "GET", "/v1/records/contact/"+pid+"/context?max_items=999", nil, nil, &problem)
 		assertFieldHistoryValidation422(t, status, problem, "max_items", "out_of_range")
 	})
 
 	// A lead is a valid anchor (it is in the path enum) but carries no
 	// activity_link neighborhood — the link shape admits only
-	// person/company/deal — so its context is the profile alone: a
+	// contact/company/deal — so its context is the profile alone: a
 	// 200 with an honestly-empty timeline, never the 500 an unsupported
 	// anchor would raise.
 	t.Run("200 lead anchor yields profile-only context", func(t *testing.T) {

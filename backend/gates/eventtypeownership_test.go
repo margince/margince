@@ -16,7 +16,7 @@ package gates
 //
 // Sharing is not always wrong, and the ratified set below is the proof: an
 // overlay write-back announces the NATIVE module's event on purpose, because a
-// subscriber to person.updated must hear about a person changing however the
+// subscriber to contact.updated must hear about a contact changing however the
 // write arrived. What this gate refuses is a NEW sharer arriving unnoticed.
 //
 // It walks composite literals of the generated payload structs rather than the
@@ -227,7 +227,7 @@ func collectEmitSites(t *testing.T) map[string][]emitSite {
 			}
 			// The qualifier the contracts package is reachable under IN THIS FILE.
 			// Matching only a selector's terminal name would count an unrelated
-			// package's PublicEventPersonUpdated as the CRM payload, and a file
+			// package's PublicEventContactUpdated as the CRM payload, and a file
 			// that does not import contracts at all can hold no emit.
 			qualifier, imports := contractsQualifier(file)
 			if !imports {
@@ -273,7 +273,7 @@ func modulesEmitting(sites []emitSite) []string {
 // Keyed on the PAIR and not on the type alone, and that is not a stylistic
 // choice — it was a hole. A type-keyed waiver ratifies the sharing once and
 // then admits any number of further modules under the same entry: planting an
-// emit of person.updated inside deals passed a type-keyed version of this gate
+// emit of contact.updated inside deals passed a type-keyed version of this gate
 // silently, which is the failure this whole gate exists to refuse, reproduced
 // inside its own exception list.
 //
@@ -281,7 +281,7 @@ func modulesEmitting(sites []emitSite) []string {
 // module announces a fact that IS the first module's fact. None is a second
 // meaning for one name, which is what the rule protects.
 var sharedEventTypes = gatekit.Waive(map[string]string{
-	"activity.updated <- internal/modules/people": "the cohort repair files captured mail under the person it belongs to, which IS a relink — the same association change activities publishes for a human's relink, carrying the same typed Relinked ref. People emits it rather than handing the activity to activities because the repair is defined by person_email and the merge redirect, neither of which activities can read without importing a sibling; what the name MEANS is unchanged, and the interaction graph folds both the same way",
+	"activity.updated <- internal/modules/contacts": "the cohort repair files captured mail under the contact it belongs to, which IS a relink — the same association change activities publishes for a human's relink, carrying the same typed Relinked ref. Contacts emits it rather than handing the activity to activities because the repair is defined by contact_email and the merge redirect, neither of which activities can read without importing a sibling; what the name MEANS is unchanged, and the interaction graph folds both the same way",
 	// Structure 0 — ai_task.state_changed is SHARED BY DESIGN, and it is the one
 	// type in this set where sharing is the feature rather than a tolerated
 	// exception.
@@ -305,19 +305,19 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	"ai_task.state_changed <- internal/modules/activities":  "a document reading announces its own six transitions; source=attachment_extraction keys its occurrences",
 	"ai_task.state_changed <- internal/modules/agents":      "a scheduled run announces the same way; source=agent_runner keys its occurrences, and one trigger occurrence is one row because the key carries the spec and the trigger ref",
 	"ai_task.state_changed <- internal/modules/ai":          "the router announces the settled outcome of every task ai.RailOwner leaves to it; source=ai_router keys its occurrences, and one request or job pass is one row because the key carries the correlation id and the task",
-	"ai_task.state_changed <- internal/modules/people":      "a website read announces its own transitions from the dossier row; source=site_read keys its occurrences, one per crawl, beside the router's lines for the model calls the crawl makes",
+	"ai_task.state_changed <- internal/modules/contacts":    "a website read announces its own transitions from the dossier row; source=site_read keys its occurrences, one per crawl, beside the router's lines for the model calls the crawl makes",
 	"ai_task.state_changed <- internal/compose/companyscan": "an account scan announces its own transitions from the row that carries the read; source=account_scan keys its occurrences on the row id, so one reader's read of one account is one line that moves from queued to settled",
 
 	// Structure 1 — the overlay write-back announces the NATIVE module's event.
 	// overlay/writeaudit.go switches on datasource.EntityRef and emits the
 	// system-of-record type for the entity it just wrote. That is the point: a
-	// subscriber to person.updated is subscribed to A PERSON CHANGING, and must
+	// subscriber to contact.updated is subscribed to A CONTACT CHANGING, and must
 	// hear about one whether the write arrived natively or through the write-back.
 	// An overlay.* type instead would make every consumer subscribe twice to
 	// learn one fact, and would leak which path a write took into a contract
 	// that deliberately does not say.
-	"person.updated <- internal/modules/overlay":   "the write-back's update path: a person changed, and the overlay wrote it",
-	"person.archived <- internal/modules/overlay":  "the write-back's archive path, one of the three archivable types",
+	"contact.updated <- internal/modules/overlay":  "the write-back's update path: a contact changed, and the overlay wrote it",
+	"contact.archived <- internal/modules/overlay": "the write-back's archive path, one of the three archivable types",
 	"company.updated <- internal/modules/overlay":  "the write-back's update path",
 	"company.archived <- internal/modules/overlay": "the write-back's archive path",
 	"deal.updated <- internal/modules/overlay":     "the write-back's update path",
@@ -327,23 +327,23 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 
 	// The native side of those seven, listed so the pair map is complete and a
 	// module losing its own event is as visible as one gaining somebody else's.
-	"person.updated <- internal/modules/people":       "the record's own module, natively and for a relationship anchored on a person",
-	"person.archived <- internal/modules/people":      "the record's own module",
-	"company.updated <- internal/modules/people":      "the record's own module, natively and for a relationship anchored on a company",
-	"company.archived <- internal/modules/people":     "the record's own module",
+	"contact.updated <- internal/modules/contacts":    "the record's own module, natively and for a relationship anchored on a contact",
+	"contact.archived <- internal/modules/contacts":   "the record's own module",
+	"company.updated <- internal/modules/contacts":    "the record's own module, natively and for a relationship anchored on a company",
+	"company.archived <- internal/modules/contacts":   "the record's own module",
 	"deal.updated <- internal/modules/deals":          "the record's own module",
 	"deal.archived <- internal/modules/deals":         "the record's own module",
-	"lead.updated <- internal/modules/people":         "the record's own module",
+	"lead.updated <- internal/modules/contacts":       "the record's own module",
 	"activity.updated <- internal/modules/activities": "the record's own module",
 
 	// Structure 2 — a relationship emits its ANCHOR's event.
-	// people/relationshipUpdatedPayload wraps one delta in whichever anchor's
+	// contacts/relationshipUpdatedPayload wraps one delta in whichever anchor's
 	// envelope the edge points at. An employment edge changing IS a change to
-	// the person and to the company it joins; there is no relationship.*
+	// the contact and to the company it joins; there is no relationship.*
 	// type, and inventing one would make every consumer of the anchor subscribe
 	// to a second name to learn that their record moved.
-	"deal.updated <- internal/modules/people":      "a relationship anchored on a deal moved, so the deal changed",
-	"project.updated <- internal/modules/people":   "a relationship anchored on a project moved, so the project changed — the same anchor rule",
+	"deal.updated <- internal/modules/contacts":    "a relationship anchored on a deal moved, so the deal changed",
+	"project.updated <- internal/modules/contacts": "a relationship anchored on a project moved, so the project changed — the same anchor rule",
 	"project.updated <- internal/modules/projects": "the record's own module: projects owns project",
 
 	// Structure 3 — capture announces what it captured, as the RECORD's event.
@@ -351,7 +351,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 	// the record's own, with source_system set so a consumer can tell an
 	// inferred record from one somebody typed. A capture.* type would announce
 	// that a pipeline ran, which no consumer of the record wants.
-	"lead.created <- internal/modules/people":          "a lead somebody created",
+	"lead.created <- internal/modules/contacts":        "a lead somebody created",
 	"lead.created <- internal/modules/capture":         "a lead an inbound message created; source_system names where it came from. Both are a lead existing that did not before",
 	"activity.captured <- internal/modules/activities": "an activity logged through the product",
 	"activity.captured <- internal/modules/capture":    "an activity an inbound message produced, again with source_system. The verb is already `captured` for both — it is the record's arrival, not the pipeline's run",
@@ -402,7 +402,7 @@ func TestEveryEventTypeHasOneEmittingModule(t *testing.T) {
 var unemittedEventTypes = gatekit.Waive(map[string]string{
 	"audit.appended":              "deliberate and documented in the contract: no emit site and none planned. It exists so the catalog is completely covered by a payload schema, never carrying a subscribable type with no contract",
 	"deal.restored":               "documented in the contract as never emitted today — there is no restore path",
-	"person.restored":             "the same, for the person restore path that does not exist",
+	"contact.restored":            "the same, for the contact restore path that does not exist",
 	"mirror.write_rejected":       "documented in the contract as never emitted today, reserved for the overlay write-back's refusal case",
 	"deal_room.decision_recorded": "the buyer's approval of a document version was retired as a product decision — sharing a document with a buyer is sharing it, not submitting it for approval — so nothing writes a decision any more and nothing emits this. The deal_room_decision table went with it. The TYPE stays because the deal timeline still decodes events emitted before the retirement, which are on the bus whether or not the rows behind them survive",
 })
@@ -462,8 +462,8 @@ func positionsFor(sites []emitSite, module string) []string {
 // A bare `var p crmcontracts.PublicEventX` declaration is deliberately NOT one
 // of them, and the tree says why: both such declarations here are DECODE
 // targets, immediately json.Unmarshal-ed from an inbound envelope
-// (compose/leadsla.go reading lead.sla_breached, compose/personautoenrich.go
-// reading person.merged). Counting them made two consumers look like emitters
+// (compose/leadsla.go reading lead.sla_breached, compose/contactautoenrich.go
+// reading contact.merged). Counting them made two consumers look like emitters
 // and would have had this gate ratify a sharing that does not exist. A
 // declaration cannot be told from a construction without dataflow, and here the
 // false positives are real while the construction case is hypothetical.

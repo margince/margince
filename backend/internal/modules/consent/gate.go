@@ -38,9 +38,9 @@ func (g *Gate) RequireGrantedForEmails(ctx context.Context, recipients []string,
 
 // RequireGrantedForRecipients suppresses unless EVERY recipient resolves to
 // a subject with an active granted consent for the named purpose. A mail
-// recipient resolves to a person — or a live, unpromoted lead (E12.20); a
-// channel recipient resolves to a person through their channel identity
-// (person_channel_identity), which is the only subject a channel identity can
+// recipient resolves to a contact — or a live, unpromoted lead (E12.20); a
+// channel recipient resolves to a contact through their channel identity
+// (contact_channel_identity), which is the only subject a channel identity can
 // bind (0146). Default-deny in all directions: an unknown purpose key, a
 // recipient neither subject carries, state unknown, and state withdrawn all
 // block. A DOI purpose additionally demands the confirmed round-trip on the
@@ -54,7 +54,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// A malformed recipient is a caller DEFECT, not an answer about
 			// anybody's consent, and it is reported as the fault it is. Dressed
 			// up as ErrConsentNotGranted it would park the send with a reason an
-			// operator reads as "this person opted out", and the bug that named
+			// operator reads as "this contact opted out", and the bug that named
 			// nobody would look like a customer's choice.
 			return fmt.Errorf("consent: this recipient cannot be put to the gate: %w", err)
 		}
@@ -90,7 +90,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 				return err
 			}
 			if !granted {
-				// The refusal names the recipient, not the person's consent
+				// The refusal names the recipient, not the contact's consent
 				// history. For MAIL that discloses nothing: the caller supplied
 				// the address it is asking about. The channel arm cannot make the
 				// same claim — the channel path resolves its recipient
@@ -107,7 +107,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 
 // grantedForRecipient answers the one recipient's question.
 //
-// A recipient that resolves to a PERSON is answered by VerdictForPerson — the
+// A recipient that resolves to a CONTACT is answered by VerdictForContact — the
 // same code the guard endpoint serves, so the preview a composer shows and the
 // check that fires at transmit cannot drift. Two implementations of one
 // question are two questions, and the one that stops matching looks exactly
@@ -115,17 +115,17 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 //
 // A recipient that resolves only to an unpromoted LEAD falls through to the
 // grant predicate below. A lead carries no qualifying events and no §7(3) flag
-// — those hang off a person — so for a lead the class model has nothing extra
+// — those hang off a contact — so for a lead the class model has nothing extra
 // to say and the recorded grant IS the whole answer.
 func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, since time.Time, marketing MarketingContext) (bool, error) {
-	personID, found, err := resolvePerson(ctx, tx, r)
+	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		return false, err
 	}
 	if !found {
 		return grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
 	}
-	verdict, err := VerdictForPerson(ctx, tx, personID, purpose, since, marketing)
+	verdict, err := VerdictForContact(ctx, tx, contactID, purpose, since, marketing)
 	if err != nil {
 		return false, err
 	}
@@ -134,10 +134,10 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if verdict.State != VerdictAllowed {
 		return false, nil
 	}
-	// false: this is the legacy gate's own path, which reads person_consent and
+	// false: this is the legacy gate's own path, which reads contact_consent and
 	// never looks at communication_suppression, so it has no suppression to
 	// report. The engine's arms pass their own answer.
-	if err := stampDerivedBasis(ctx, tx, personID, verdict, false); err != nil {
+	if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -149,12 +149,12 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // A lawful basis nobody wrote down is an assertion, and the controller carries
 // the burden of showing it. A basis read from a stored row needs nothing: it is
 // already the record.
-func stampDerivedBasis(ctx context.Context, tx pgx.Tx, personID string, verdict Verdict, suppressed bool) error {
+func stampDerivedBasis(ctx context.Context, tx pgx.Tx, contactID string, verdict Verdict, suppressed bool) error {
 	if !verdict.QualifyingDerived || verdict.Qualifying == nil {
 		return nil
 	}
 	if suppressed {
-		// A stamp asserts we hold a ground to correspond with this person.
+		// A stamp asserts we hold a ground to correspond with this contact.
 		// Writing one about somebody carrying a live suppression is itself
 		// processing, and it lands in their own Art. 15 export as a claim made
 		// after they said stop. The same reason recordBasis skips.
@@ -164,40 +164,40 @@ func stampDerivedBasis(ctx context.Context, tx pgx.Tx, personID string, verdict 
 	if err != nil {
 		return err
 	}
-	return RecordDerivedQualifyingEvent(ctx, tx, personID, *verdict.Qualifying, by)
+	return RecordDerivedQualifyingEvent(ctx, tx, contactID, *verdict.Qualifying, by)
 }
 
-// resolvePerson finds the person behind a recipient, through whichever
+// resolveContact finds the contact behind a recipient, through whichever
 // identity the recipient carries.
 //
 // Only a LIVE identity resolves. An archived address is one somebody detached
-// from a record — it is uniquely held only among live rows (uq_person_email_dedupe
+// from a record — it is uniquely held only among live rows (uq_contact_email_dedupe
 // is partial on archived_at IS NULL), so the same string can sit archived on one
-// person and live on another. Picking either would bind this send's whole verdict
+// contact and live on another. Picking either would bind this send's whole verdict
 // to an identity nobody currently holds, and the answer would be about the wrong
 // human.
 //
 // AMBIGUITY REFUSES rather than picks. A bare LIMIT 1 over more than one live
-// match is a silent choice between two people, made by row order — which is the
+// match is a silent choice between two contacts, made by row order — which is the
 // one thing a default-deny gate must never do. The dedupe index makes a live
 // duplicate impossible for email in a healthy schema; this refuses anyway,
 // because a gate that trusts an invariant it does not check is a gate that stops
 // applying the moment the invariant slips.
-func resolvePerson(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string, bool, error) {
+func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string, bool, error) {
 	var rows pgx.Rows
 	var err error
 	if r.Channel != nil {
-		// Person-only by construction: a channel identity binds a Person and
+		// Contact-only by construction: a channel identity binds a Contact and
 		// nothing else (0146 has no lead arm).
 		rows, err = tx.Query(ctx, `
-			SELECT DISTINCT p.id FROM person_channel_identity pci
-			JOIN person p ON p.id = pci.person_id AND p.archived_at IS NULL
+			SELECT DISTINCT p.id FROM contact_channel_identity pci
+			JOIN contact p ON p.id = pci.contact_id AND p.archived_at IS NULL
 			WHERE pci.provider = $1 AND pci.channel_user_id = $2 AND pci.archived_at IS NULL
 			LIMIT 2`, r.Channel.Provider, r.Channel.ChannelUserID)
 	} else {
 		rows, err = tx.Query(ctx, `
-			SELECT DISTINCT p.id FROM person_email pe
-			JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+			SELECT DISTINCT p.id FROM contact_email pe
+			JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 			WHERE lower(pe.email) = lower($1) AND pe.archived_at IS NULL
 			LIMIT 2`, r.Email)
 	}
@@ -224,21 +224,21 @@ func resolvePerson(ctx context.Context, tx pgx.Tx, r connector.Recipient) (strin
 		return matches[0], true, nil
 	default:
 		return "", false, fmt.Errorf(
-			"consent: this recipient resolves to more than one live contact, so no consent answer is about one person: %w",
+			"consent: this recipient resolves to more than one live contact, so no consent answer is about one contact: %w",
 			apperrors.ErrConsentNotGranted)
 	}
 }
 
 // grantedForLead is the unpromoted-lead arm (E12.20).
 //
-// It is only reached when resolvePerson found no person, so a channel
-// recipient never arrives here: a channel identity binds a Person and nothing
+// It is only reached when resolveContact found no contact, so a channel
+// recipient never arrives here: a channel identity binds a Contact and nothing
 // else (0146 has no lead arm), and one that resolves to nobody is a recipient
 // with no subject — which default-deny refuses rather than guesses at.
 //
 // The predicate is the recorded grant, the named purpose, and the DOI
 // round-trip where the purpose demands one — and for the round trip, the same
-// discriminator the person arm uses: issuance_trigger IS NOT NULL, which is set
+// discriminator the contact arm uses: issuance_trigger IS NOT NULL, which is set
 // only where the subject spent a link mailed to their own address. A row an
 // operator produced through the old mint-and-paste endpoint has it NULL and
 // authorizes nothing. A lead carries no qualifying
@@ -253,7 +253,7 @@ func grantedForLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpo
 		SELECT EXISTS (
 		  SELECT 1
 		  FROM lead l
-		  JOIN person_consent pc ON pc.lead_id = l.id AND pc.purpose_id = $2
+		  JOIN contact_consent pc ON pc.lead_id = l.id AND pc.purpose_id = $2
 		  WHERE lower(l.email) = lower($1) AND l.archived_at IS NULL
 		    AND pc.state = 'granted'
 		    AND (NOT $3::boolean OR EXISTS (

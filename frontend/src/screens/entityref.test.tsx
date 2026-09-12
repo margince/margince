@@ -106,11 +106,11 @@ describe("EntityRef", () => {
     expect(window.location.hash).toBe("#/companies/o-1");
   });
 
-  it("resolves a person to contacts/{id} and a deal to deals/{id}", async () => {
+  it("resolves a contact to contacts/{id} and a deal to deals/{id}", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/people/p-1")) {
+        if (request.url.includes("/contacts/p-1")) {
           return jsonResponse({ id: "p-1", full_name: "Anna Weber" });
         }
         if (request.url.includes("/deals/d-1")) {
@@ -119,7 +119,7 @@ describe("EntityRef", () => {
         return jsonResponse({}, 404);
       }),
     );
-    const { rerender } = render(<EntityRef kind="person" id="p-1" />);
+    const { rerender } = render(<EntityRef kind="contact" id="p-1" />);
     expect(
       (await screen.findByRole("link", { name: "Anna Weber" })).getAttribute(
         "href",
@@ -270,7 +270,7 @@ describe("EntityRef", () => {
   it("shows a dash and fetches nothing when the id is absent", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    render(<EntityRef kind="person" id={null} />);
+    render(<EntityRef kind="contact" id={null} />);
     expect(screen.getByText("—")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
   });

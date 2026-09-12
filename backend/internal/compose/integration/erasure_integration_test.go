@@ -34,28 +34,28 @@ const subjectEmail = "selma.subject@example.test"
 // seededPreferenceToken names the preference-center token seedSubject mints
 // for a subject. It is a fixture stand-in, not a realistic credential: the
 // real thing is 256 bits of crypto/rand behind a pref_ prefix. Derived from
-// the person id because the column is UNIQUE and a suite may seed more than
+// the contact id because the column is UNIQUE and a suite may seed more than
 // one subject.
-func seededPreferenceToken(personID ids.UUID) string {
-	return "pref_stands-in-for-a-token-" + personID.String()
+func seededPreferenceToken(contactID ids.UUID) string {
+	return "pref_stands-in-for-a-token-" + contactID.String()
 }
 
-// seedSubject plants a person with an email, a linked activity, a raw
+// seedSubject plants a contact with an email, a linked activity, a raw
 // capture payload mentioning them, one embedding row, and the
 // preference-center token a marketing send would have minted for them.
 func seedSubject(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, title, source, captured_by)
-			 VALUES ($1, 'Selma Subject', 'Selma', 'CFO', 'manual', 'human:x')`, personID); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, title, source, captured_by)
+			 VALUES ($1, 'Selma Subject', 'Selma', 'CFO', 'manual', 'human:x')`, contactID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, $2, 'manual', 'human:x')`, personID, subjectEmail); err != nil {
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'human:x')`, contactID, subjectEmail); err != nil {
 			return err
 		}
 		activityID := ids.NewV7()
@@ -65,14 +65,14 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, activityID, personID); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, activityID, contactID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO preference_token (person_id, token, expires_at)
+			`INSERT INTO preference_token (contact_id, token, expires_at)
 			 VALUES ($1, $2, now() + interval '30 days')`,
-			personID, seededPreferenceToken(personID)); err != nil {
+			contactID, seededPreferenceToken(contactID)); err != nil {
 			return err
 		}
 		// The OTHER consent capability. A double-opt-in token is a bearer
@@ -84,29 +84,29 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
 			 VALUES ($1, $2, 'Newsletter', true)`,
-			purposeID, "doi_fixture_"+personID.String()); err != nil {
+			purposeID, "doi_fixture_"+contactID.String()); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
+			`INSERT INTO consent_doi_token (contact_id, purpose_id, token_hash, issued_at, expires_at)
 			 VALUES ($1, $2, $3, now(), now() + interval '72 hours')`,
-			personID, purposeID, "doi-hash-"+personID.String()); err != nil {
+			contactID, purposeID, "doi-hash-"+contactID.String()); err != nil {
 			return err
 		}
 		// The confirm link and what came back through it: a live capability that
 		// DISPLAYS the record, and the subject's own words in plaintext.
 		var confirmTokenID string
 		if err := tx.QueryRow(ctx,
-			`INSERT INTO confirm_token (person_id, token_hash, delivered_to, expires_at)
+			`INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
 			 VALUES ($1, $2, 'selma@example.test', now() + interval '14 days')
 			 RETURNING id`,
-			personID, "confirm-hash-"+personID.String()).Scan(&confirmTokenID); err != nil {
+			contactID, "confirm-hash-"+contactID.String()).Scan(&confirmTokenID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_confirm_submission (person_id, token_id, kind, field, proposed_value)
+			`INSERT INTO contact_confirm_submission (contact_id, token_id, kind, field, proposed_value)
 			 VALUES ($1, $2, 'correction', 'full_name', 'Selma Corrected')`,
-			personID, confirmTokenID); err != nil {
+			contactID, confirmTokenID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -122,19 +122,19 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 		vector := "[" + strings.TrimSuffix(strings.Repeat("0.1,", 1023), ",") + ",0.1]"
 		_, err := tx.Exec(ctx,
 			`INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-			 VALUES ('person', $1, 0, 'h', 'gemini/gemini-embedding-001@1024', $2::vector)`, personID, vector)
+			 VALUES ('contact', $1, 0, 'h', 'gemini/gemini-embedding-001@1024', $2::vector)`, contactID, vector)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return personID
+	return contactID
 }
 
 // assertSubjectErased verifies every store the subject touched after an
 // erasure: emails, embeddings, search, suppression entry, PII-free
 // tombstone, scrubbed raw capture.
-func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
+func assertSubjectErased(t *testing.T, e *Env, contactID ids.UUID) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -143,13 +143,13 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 			query string
 			want  int
 		}{
-			{"person_email rows", `SELECT count(*) FROM person_email WHERE person_id = $1`, 0},
-			{"embeddings", `SELECT count(*) FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, 0},
-			{"search hits for the name", `SELECT count(*) FROM person WHERE id = $1 AND search_tsv @@ plainto_tsquery('simple', 'Selma')`, 0},
-			{"preference-center tokens", `SELECT count(*) FROM preference_token WHERE person_id = $1`, 0},
-			{"double-opt-in tokens", `SELECT count(*) FROM consent_doi_token WHERE person_id = $1`, 0},
-			{"confirm-details links", `SELECT count(*) FROM confirm_token WHERE person_id = $1`, 0},
-			{"confirm-page submissions", `SELECT count(*) FROM person_confirm_submission WHERE person_id = $1`, 0},
+			{"contact_email rows", `SELECT count(*) FROM contact_email WHERE contact_id = $1`, 0},
+			{"embeddings", `SELECT count(*) FROM embedding WHERE entity_type = 'contact' AND entity_id = $1`, 0},
+			{"search hits for the name", `SELECT count(*) FROM contact WHERE id = $1 AND search_tsv @@ plainto_tsquery('simple', 'Selma')`, 0},
+			{"preference-center tokens", `SELECT count(*) FROM preference_token WHERE contact_id = $1`, 0},
+			{"double-opt-in tokens", `SELECT count(*) FROM consent_doi_token WHERE contact_id = $1`, 0},
+			{"confirm-details links", `SELECT count(*) FROM confirm_token WHERE contact_id = $1`, 0},
+			{"confirm-page submissions", `SELECT count(*) FROM contact_confirm_submission WHERE contact_id = $1`, 0},
 			{"suppression entries", `SELECT count(*) FROM erasure_suppression WHERE kind = 'email'`, 1},
 			{"erase tombstones", `SELECT count(*) FROM audit_log WHERE action = 'erase' AND entity_id = $1`, 1},
 		}
@@ -157,7 +157,7 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 			var got int
 			args := []any{}
 			if strings.Contains(c.query, "$1") {
-				args = append(args, personID)
+				args = append(args, contactID)
 			}
 			if err := tx.QueryRow(ctx, c.query, args...).Scan(&got); err != nil {
 				return fmt.Errorf("%s: %w", c.what, err)
@@ -167,11 +167,11 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 			}
 		}
 		var name string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, personID).Scan(&name); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&name); err != nil {
 			return err
 		}
 		if name != "Erased Subject" {
-			return fmt.Errorf("person name = %q", name)
+			return fmt.Errorf("contact name = %q", name)
 		}
 		var rawLeft int
 		if err := tx.QueryRow(ctx,
@@ -186,7 +186,7 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 		if err := tx.QueryRow(ctx, `
 			SELECT EXISTS (SELECT 1 FROM audit_log WHERE action = 'erase' AND entity_id = $1
 			  AND (after::text ILIKE '%' || $2 || '%' OR after::text ILIKE '%Selma%'))`,
-			personID, subjectEmail).Scan(&piiInTombstone); err != nil {
+			contactID, subjectEmail).Scan(&piiInTombstone); err != nil {
 			return err
 		}
 		if piiInTombstone {
@@ -201,11 +201,11 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 
 func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
+	contactID := seedSubject(t, e)
 	admin := e.Admin()
 
 	// The SAR sees the full picture BEFORE erasure — Art. 15 assembly.
-	pkg, err := privacy.AssembleSAR(admin, e.DB(), ids.From[ids.PersonKind](personID))
+	pkg, err := privacy.AssembleSAR(admin, e.DB(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,11 +215,11 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 			pkg.Subject["full_name"], len(pkg.Emails), len(pkg.Activities), len(pkg.RawCapture))
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
-	assertSubjectErased(t, e, personID)
+	assertSubjectErased(t, e, contactID)
 
 	// Re-capture of the erased address is skipped, not resurrected.
 	sink := capture.NewSink(e.DB())
@@ -246,13 +246,13 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 	// A subject under legal hold cannot be erased.
 	held := seedSubject(t, e)
 	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `UPDATE person SET legal_hold = true WHERE id = $1`, held)
+		_, err := tx.Exec(context.Background(), `UPDATE contact SET legal_hold = true WHERE id = $1`, held)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, held, "test"); !errors.Is(err, apperrors.ErrConflict) {
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, held, "test"); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("erasing a held subject → %v, want ErrConflict", err)
 	}
 }
@@ -261,13 +261,13 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 // preference edge, so the erasure that certifies a subject gone has to end
 // there too: an archived or forwarded List-Unsubscribe URL must stop
 // answering. Otherwise the erased subject keeps a live surface that reads
-// their surviving consent state and writes fresh person_consent,
+// their surviving consent state and writes fresh contact_consent,
 // consent_event, audit and outbox rows against them — through the very
 // capability the erasure destroyed the record of.
 func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
-	token := seededPreferenceToken(personID)
+	contactID := seedSubject(t, e)
+	token := seededPreferenceToken(contactID)
 	store := consent.NewStore(e.DB())
 
 	// The fixture is live first, so the assertion below measures the erasure
@@ -276,11 +276,11 @@ func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the seeded token does not resolve before erasure: %v", err)
 	}
-	if ref.PersonID.UUID != personID {
-		t.Fatalf("the token resolves to person %s, want the seeded subject %s", ref.PersonID.UUID, personID)
+	if ref.ContactID.UUID != contactID {
+		t.Fatalf("the token resolves to contact %s, want the seeded subject %s", ref.ContactID.UUID, contactID)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -291,18 +291,18 @@ func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 	}
 }
 
-// TestErasurePreservesActivityUnderTransitiveHold pins F-011: a person is
+// TestErasurePreservesActivityUnderTransitiveHold pins F-011: a contact is
 // not itself held, but one of its subject-only activities is ALSO linked to
 // a company under legal_hold. Retention freezes such an activity
 // transitively ("a hold on the subject must cover the evidence about them"),
-// so the person-erase cascade must not destroy it either. A sibling
+// so the contact-erase cascade must not destroy it either. A sibling
 // subject-only activity with no hold IS redacted, proving the predicate
 // discriminates rather than blanket-skipping.
 func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	heldActivity := ids.NewV7()
 	freeActivity := ids.NewV7()
 	companyID := ids.NewV7()
@@ -310,8 +310,8 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
-			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, personID); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
+			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, contactID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -319,7 +319,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 			 VALUES ($1, 'Counterparty GmbH', true, 'manual', 'human:x')`, companyID); err != nil {
 			return err
 		}
-		// The held-evidence note: subject-only to the person, but also linked
+		// The held-evidence note: subject-only to the contact, but also linked
 		// to the company under legal_hold. A 'note' kind (not correspondence)
 		// carries no statutory floor, so its survival here is attributable to
 		// the legal_hold alone, not the GoBD floor this binary also arms.
@@ -330,8 +330,8 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, heldActivity, personID); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, heldActivity, contactID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -348,27 +348,27 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, freeActivity, personID)
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, freeActivity, contactID)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, personID, "test"); err != nil {
-		t.Fatalf("erasing an unheld person → %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
+		t.Fatalf("erasing an unheld contact → %v", err)
 	}
 
 	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		// The person's own PII is still erased — the cascade ran.
+		// The contact's own PII is still erased — the cascade ran.
 		var name string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, personID).Scan(&name); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&name); err != nil {
 			return err
 		}
 		if name != "Erased Subject" {
-			return fmt.Errorf("person not erased: full_name = %q", name)
+			return fmt.Errorf("contact not erased: full_name = %q", name)
 		}
 		// The transitively-held note is untouched: retention would freeze it,
 		// so the erase cascade must too.
@@ -398,26 +398,26 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 	}
 }
 
-// TestErasePersonHonoursCommercialCorrespondenceFloor pins F-012: the
-// person-erase cascade applies the SAME statutory correspondence floor the
+// TestEraseContactHonoursCommercialCorrespondenceFloor pins F-012: the
+// contact-erase cascade applies the SAME statutory correspondence floor the
 // retention activity selectors do. With the GoBD floor armed in this binary
 // (retention_jurisdiction_integration_test.go's init), a recent email is a
-// Handelsbrief the floor shields — erasing the person it hangs off must not
+// Handelsbrief the floor shields — erasing the contact it hangs off must not
 // null its body. A same-age note is not correspondence and IS redacted, so
 // the floor discriminates rather than blanket-skipping the whole timeline.
-func TestErasePersonHonoursCommercialCorrespondenceFloor(t *testing.T) {
+func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
 
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	email := ids.NewV7()
 	note := ids.NewV7()
 
 	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
-			 VALUES ($1, 'Floored Subject', 'Floored', 'manual', 'human:x')`, personID); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
+			 VALUES ($1, 'Floored Subject', 'Floored', 'manual', 'human:x')`, contactID); err != nil {
 			return err
 		}
 		// A recent external email — commercial correspondence within the floor.
@@ -428,8 +428,8 @@ func TestErasePersonHonoursCommercialCorrespondenceFloor(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, email, personID); err != nil {
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, email, contactID); err != nil {
 			return err
 		}
 		// A same-age internal note — no statutory floor.
@@ -440,8 +440,8 @@ func TestErasePersonHonoursCommercialCorrespondenceFloor(t *testing.T) {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, note, personID)
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, note, contactID)
 		return err
 	})
 	if err != nil {
@@ -452,18 +452,18 @@ func TestErasePersonHonoursCommercialCorrespondenceFloor(t *testing.T) {
 	// distinction, so the deal is what the shielding now rests on.
 	e.SeedWonDealLinkedTo(t, email)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contactID, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
 	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var name string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, personID).Scan(&name); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&name); err != nil {
 			return err
 		}
 		if name != "Erased Subject" {
-			return fmt.Errorf("person not erased: full_name = %q", name)
+			return fmt.Errorf("contact not erased: full_name = %q", name)
 		}
 		// The Handelsbrief is shielded by the floor.
 		var subject string

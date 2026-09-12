@@ -51,22 +51,22 @@ func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
-	address := "subject-" + e.person.String() + "@example.test"
+	address := "subject-" + e.contact.String() + "@example.test"
 
 	token := mintWithdrawal(t, e, WithdrawalMintInput{
-		Address:  address,
-		PersonID: e.person,
-		Scope:    WithdrawalScopeAllMarketing,
+		Address:   address,
+		ContactID: e.contact,
+		Scope:     WithdrawalScopeAllMarketing,
 	})
 	if token == "" {
 		t.Fatal("the first mint returned no token, so no link could be written into the mail")
 	}
 
-	// Every preference token this person holds rotates and is revoked, which is
+	// Every preference token this contact holds rotates and is revoked, which is
 	// what happens on the next send today.
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE preference_token SET revoked_at = now(), revoked_reason = 'rotated'
-		  WHERE person_id = $1`, e.person); err != nil {
+		  WHERE contact_id = $1`, e.contact); err != nil {
 		t.Fatalf("rotating the preference tokens: %v", err)
 	}
 
@@ -96,8 +96,8 @@ func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
 func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
-	address := "subject-" + e.person.String() + "@example.test"
-	in := WithdrawalMintInput{Address: address, PersonID: e.person, Scope: WithdrawalScopeAllMarketing}
+	address := "subject-" + e.contact.String() + "@example.test"
+	in := WithdrawalMintInput{Address: address, ContactID: e.contact, Scope: WithdrawalScopeAllMarketing}
 
 	first := mintWithdrawal(t, e, in)
 	second := mintWithdrawal(t, e, in)
@@ -109,7 +109,7 @@ func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
 		t.Fatal("two sends carried the same token, which the hash makes impossible to do " +
 			"honestly — the mint can only have read it back from somewhere")
 	}
-	// THE OLD ONE IS THE POINT. A person pressing unsubscribe in last month's
+	// THE OLD ONE IS THE POINT. A contact pressing unsubscribe in last month's
 	// newsletter is the case this whole table exists for.
 	if _, err := e.store.ResolveWithdrawalToken(e.ctx, first); err != nil {
 		t.Errorf("the earlier message's link stopped working when a newer send went out: %v — "+
@@ -120,7 +120,7 @@ func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
 	}
 }
 
-// A LEAD GETS A WORKING OPT-OUT. preference_token.person_id is NOT NULL, so a
+// A LEAD GETS A WORKING OPT-OUT. preference_token.contact_id is NOT NULL, so a
 // lead-only recipient gets no unsubscribe surface at all today: the send simply
 // carries no header.
 func TestALeadOnlyRecipientGetsAWorkingOptOut(t *testing.T) {
@@ -148,8 +148,8 @@ func TestALeadOnlyRecipientGetsAWorkingOptOut(t *testing.T) {
 	if ref.LeadID.UUID != leadID {
 		t.Errorf("the link speaks for lead %s, want %s", ref.LeadID, leadID)
 	}
-	if !ref.PersonID.IsZero() {
-		t.Error("the link names a person, but no person holds this address")
+	if !ref.ContactID.IsZero() {
+		t.Error("the link names a contact, but no contact holds this address")
 	}
 }
 
@@ -161,9 +161,9 @@ func TestAnExpiredPreferenceTokenStillWithdraws(t *testing.T) {
 	seedSubjectAddress(t, e)
 	var legacy string
 	if err := e.owner.QueryRow(context.Background(),
-		`INSERT INTO preference_token (person_id, token, expires_at, revoked_at, revoked_reason)
+		`INSERT INTO preference_token (contact_id, token, expires_at, revoked_at, revoked_reason)
 		 VALUES ($1, 'pref_legacy_expired', now() - interval '400 days', now() - interval '300 days', 'rotated')
-		 RETURNING token`, e.person).Scan(&legacy); err != nil {
+		 RETURNING token`, e.contact).Scan(&legacy); err != nil {
 		t.Fatalf("seeding the legacy token: %v", err)
 	}
 
@@ -191,9 +191,9 @@ func TestATokenRevokedForErasureOrCompromiseNeverWithdrawsAgain(t *testing.T) {
 		t.Run(reason, func(t *testing.T) {
 			token := "pref_dead_" + reason
 			if _, err := e.owner.Exec(context.Background(),
-				`INSERT INTO preference_token (person_id, token, expires_at, revoked_at, revoked_reason)
+				`INSERT INTO preference_token (contact_id, token, expires_at, revoked_at, revoked_reason)
 				 VALUES ($1, $2, now() + interval '30 days', now(), $3)`,
-				e.person, token, reason); err != nil {
+				e.contact, token, reason); err != nil {
 				t.Fatalf("seeding the revoked token: %v", err)
 			}
 			// Unexpired on purpose: the refusal must come from the REASON, not
@@ -210,12 +210,12 @@ func TestATokenRevokedForErasureOrCompromiseNeverWithdrawsAgain(t *testing.T) {
 func TestAnUnknownWithdrawalTokenIsIndistinguishableFromARevokedOne(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
-	address := "subject-" + e.person.String() + "@example.test"
+	address := "subject-" + e.contact.String() + "@example.test"
 	live := mintWithdrawal(t, e, WithdrawalMintInput{
-		Address: address, PersonID: e.person, Scope: WithdrawalScopeAllMarketing,
+		Address: address, ContactID: e.contact, Scope: WithdrawalScopeAllMarketing,
 	})
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		return e.store.RevokeSubjectCredentialsTx(e.ctx, tx, e.person, WithdrawalRevokedErasure)
+		return e.store.RevokeSubjectCredentialsTx(e.ctx, tx, e.contact, WithdrawalRevokedErasure)
 	}); err != nil {
 		t.Fatalf("revoking: %v", err)
 	}
@@ -265,17 +265,17 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 	}
 }
 
-// A PERSON WINS OVER A LEAD holding the same address, because a promoted lead's
-// mail is the person's. Both records can legitimately carry one address —
-// uq_person_email_dedupe bounds person_email alone — so this is reachable in a
-// way two live PERSONS are not.
-func TestAPersonWinsOverALeadHoldingTheSameAddress(t *testing.T) {
+// A CONTACT WINS OVER A LEAD holding the same address, because a promoted lead's
+// mail is the contact's. Both records can legitimately carry one address —
+// uq_contact_email_dedupe bounds contact_email alone — so this is reachable in a
+// way two live CONTACTS are not.
+func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 	e := setupChannelConsent(t)
 	shared := "both-records@example.test"
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		 VALUES ($1, $2, true, 'test', 'human:x')`, e.person, shared); err != nil {
-		t.Fatalf("seeding the person's address: %v", err)
+		`INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		 VALUES ($1, $2, true, 'test', 'human:x')`, e.contact, shared); err != nil {
+		t.Fatalf("seeding the contact's address: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (full_name, email, source, captured_by)
@@ -294,18 +294,18 @@ func TestAPersonWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolving: %v", err)
 	}
-	if ref.PersonID != e.person {
-		t.Errorf("the credential names %v, want the person %v — a promoted lead's mail is "+
-			"the person's, so the person is who the opt-out acts for", ref.PersonID, e.person)
+	if ref.ContactID != e.contact {
+		t.Errorf("the credential names %v, want the contact %v — a promoted lead's mail is "+
+			"the contact's, so the contact is who the opt-out acts for", ref.ContactID, e.contact)
 	}
 	if !ref.LeadID.IsZero() {
-		t.Error("the credential names a lead as well as a person, so two records claim one link")
+		t.Error("the credential names a lead as well as a contact, so two records claim one link")
 	}
 }
 
 // A LEAD'S PRESS ACTUALLY STOPS THE MAIL. Resolving the link is not the same
 // as acting on it: the first spelling resolved a lead's credential and then
-// answered 404, because withdrawing a per-purpose consent state needs a person
+// answered 404, because withdrawing a per-purpose consent state needs a contact
 // and a lead holds none. That handed a lead a link that worked right up to the
 // moment it mattered.
 func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
@@ -363,7 +363,7 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 func TestTheProductionRotationNamesItsReason(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
-	address := "subject-" + e.person.String() + "@example.test"
+	address := "subject-" + e.contact.String() + "@example.test"
 
 	first, found, err := e.store.PreferenceTokenForEmail(e.ctx, address)
 	if err != nil || !found {
@@ -373,7 +373,7 @@ func TestTheProductionRotationNamesItsReason(t *testing.T) {
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE preference_token SET created_at = now() - interval '400 days',
 		        expires_at = now() - interval '1 day'
-		  WHERE person_id = $1`, e.person); err != nil {
+		  WHERE contact_id = $1`, e.contact); err != nil {
 		t.Fatalf("ageing the token: %v", err)
 	}
 
@@ -389,7 +389,7 @@ func TestTheProductionRotationNamesItsReason(t *testing.T) {
 	var reason *string
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT revoked_reason FROM preference_token
-		  WHERE person_id = $1 AND revoked_at IS NOT NULL`, e.person).Scan(&reason); err != nil {
+		  WHERE contact_id = $1 AND revoked_at IS NOT NULL`, e.contact).Scan(&reason); err != nil {
 		t.Fatalf("reading the rotated row: %v", err)
 	}
 	if reason == nil || *reason != "rotated" {
@@ -407,7 +407,7 @@ func TestTheProductionRotationNamesItsReason(t *testing.T) {
 //
 // The legacy one-click sweep stops every purpose in the catalog except the
 // locked transactional one, so a press also ends business correspondence: the
-// person who unsubscribed from a newsletter stops receiving replies to their
+// contact who unsubscribed from a newsletter stops receiving replies to their
 // own enquiries. Narrowing THAT changes what links already in mailboxes do, so
 // it belongs to the slice owning the purpose vocabulary. A new credential is
 // owed no such breadth, and its scope is called all_marketing.
@@ -426,7 +426,7 @@ func TestAnAllMarketingLinkLeavesBusinessCorrespondenceRunning(t *testing.T) {
 		}
 	}
 
-	stopped, err := e.store.WithdrawMarketingForCredential(e.ctx, e.person)
+	stopped, err := e.store.WithdrawMarketingForCredential(e.ctx, e.contact)
 	if err != nil {
 		t.Fatalf("the credential's press failed: %v", err)
 	}
@@ -438,7 +438,7 @@ func TestAnAllMarketingLinkLeavesBusinessCorrespondenceRunning(t *testing.T) {
 		}
 	}
 	if slices.Contains(stopped, "business_correspondence") {
-		t.Error("the press stopped business correspondence — the person who unsubscribed " +
+		t.Error("the press stopped business correspondence — the contact who unsubscribed " +
 			"from a newsletter would stop receiving replies to their own enquiries")
 	}
 	if slices.Contains(stopped, PurposeTransactional) {
@@ -506,7 +506,7 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 	// the routing guard disabled — it proved the store method works and said
 	// nothing about whether the press reaches it.
 	named := "business_correspondence"
-	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+	stopped, err := Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
 		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, true)
 	if err != nil {
 		t.Fatalf("the press errored: %v", err)
@@ -519,7 +519,7 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 	// And a purpose it MAY stop still stops, or the guard has just broken the
 	// ordinary press.
 	marketing := "newsletter_blast"
-	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
 		crmcontracts.OneClickUnsubscribeParams{Purpose: &marketing}, true)
 	if err != nil {
 		t.Fatalf("the ordinary press errored: %v", err)
@@ -531,7 +531,7 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 	// A PREFERENCE TOKEN IS UNCHANGED, which is the other half of the rule:
 	// narrowing the legacy sweep would change what links already in mailboxes
 	// do, and that belongs to the slice owning the purpose vocabulary.
-	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.person,
+	stopped, err = Handlers{store: e.store}.unsubscribe(e.ctx, e.contact,
 		crmcontracts.OneClickUnsubscribeParams{Purpose: &named}, false)
 	if err != nil {
 		t.Fatalf("the legacy press errored: %v", err)
@@ -602,14 +602,14 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 				// RowScopeAll deliberately: this case is about the OBJECT grant,
 				// and a narrowed scope would refuse one probe later and prove
 				// nothing about which grant the door asked for.
-				Objects: map[string]principal.ObjectGrant{entityPerson: grant}, RowScope: principal.RowScopeAll,
+				Objects: map[string]principal.ObjectGrant{entityContact: grant}, RowScope: principal.RowScopeAll,
 			},
 		})
 	}
 	mint := func(ctx context.Context, door func(context.Context, pgx.Tx, WithdrawalMintInput) (string, error)) error {
 		return e.store.db.Tx(ctx, func(tx pgx.Tx) error {
 			_, err := door(ctx, tx, WithdrawalMintInput{
-				Address: "grant@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+				Address: "grant@example.test", Scope: WithdrawalScopeAllMarketing, ContactID: e.contact,
 			})
 			return err
 		})
@@ -617,17 +617,17 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 
 	readOnly := as(principal.ObjectGrant{Read: true})
 	if err := mint(readOnly, e.store.EnsureWithdrawalCredentialTx); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a person:read caller named a subject and minted their opt-out (err = %v); "+
+		t.Errorf("a contact:read caller named a subject and minted their opt-out (err = %v); "+
 			"naming somebody is a claim of authority over that record", err)
 	}
 	if err := mint(readOnly, e.store.ensureWithdrawalCredentialForSendTx); err != nil {
-		t.Errorf("the send door refused a person:read caller (%v) — every sender without "+
-			"person:update would ship marketing mail with no working unsubscribe link", err)
+		t.Errorf("the send door refused a contact:read caller (%v) — every sender without "+
+			"contact:update would ship marketing mail with no working unsubscribe link", err)
 	}
 
 	none := as(principal.ObjectGrant{})
 	if err := mint(none, e.store.ensureWithdrawalCredentialForSendTx); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a caller with no person grant at all minted through the send door (err = %v)", err)
+		t.Errorf("a caller with no contact grant at all minted through the send door (err = %v)", err)
 	}
 
 	// AND BOTH DOORS REACH THE SHARED VALIDATOR. It is unit-tested on its own,
@@ -643,7 +643,7 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 	} {
 		err := e.store.db.Tx(writable, func(tx pgx.Tx) error {
 			_, mintErr := door.mint(writable, tx, WithdrawalMintInput{
-				Address: "   ", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+				Address: "   ", Scope: WithdrawalScopeAllMarketing, ContactID: e.contact,
 			})
 			return mintErr
 		})
@@ -661,7 +661,7 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 // so an erasure committing between the send path's address lookup and this
 // insert would leave the mint writing a NEW capability — carrying the plaintext
 // address — for the subject whose credentials that erasure had just deleted. The
-// person row survives an anonymize-in-place, so the foreign key does not catch
+// contact row survives an anonymize-in-place, so the foreign key does not catch
 // it and the fresh token resolves happily.
 //
 // TWO LINES HOLD IT, and this case is deliberately indifferent to which:
@@ -676,14 +676,14 @@ func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
 	// It works first, so the refusal below is about the erasure and not about
 	// the fixture never having been mintable.
 	before := mintWithdrawal(t, e, WithdrawalMintInput{
-		Address: "gone@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+		Address: "gone@example.test", Scope: WithdrawalScopeAllMarketing, ContactID: e.contact,
 	})
 	if before == "" {
 		t.Fatal("the fixture minted no token before the erasure, so the refusal below would prove nothing")
 	}
 
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE person SET archived_at = now() WHERE id = $1`, e.person); err != nil {
+		`UPDATE contact SET archived_at = now() WHERE id = $1`, e.contact); err != nil {
 		t.Fatalf("retiring the subject: %v", err)
 	}
 
@@ -692,7 +692,7 @@ func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
 			// A DIFFERENT scope, so the idempotent reuse of the live row above
 			// cannot answer this — the mint has to reach the insert to refuse.
 			Address: "gone@example.test", Scope: WithdrawalScopeNamedPurpose,
-			PurposeID: e.newsletter.UUID, PersonID: e.person,
+			PurposeID: e.newsletter.UUID, ContactID: e.contact,
 		})
 		return mintErr
 	})
@@ -705,9 +705,9 @@ func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
 // A READ share is not authority to mint. This is the half of the mint's probe
 // nothing held, and the one that has no second line behind it.
 //
-// `person` is shareable, so a manual read grant widens who can SEE a contact
+// `contact` is shareable, so a manual read grant widens who can SEE a contact
 // without widening who may act on them — and this path WRITES a bearer
-// credential that can stop that person's mail for two years. LockSubjectLive
+// credential that can stop that contact's mail for two years. LockSubjectLive
 // below the probe asks only `archived_at IS NULL`, so it does not catch this;
 // ensureWriteAuthority inside EnsureWritableLive is the only thing that does,
 // and it is a no-op for an unbounded principal, which is why every existing
@@ -721,7 +721,7 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 	colleague := ids.NewV7()
 
 	// Bounded to their OWN rows, which is what makes the share the only thing
-	// that can admit them: e.person is owned by somebody else.
+	// that can admit them: e.contact is owned by somebody else.
 	shared := principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + colleague.String(), UserID: colleague,
 		Permissions: principal.Permissions{
@@ -730,7 +730,7 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 				// The OBJECT grant is deliberately generous: this case is about
 				// the ROW, and a narrow object grant would refuse one gate
 				// earlier and prove nothing about the other.
-				"person": {Read: true, Update: true},
+				"contact": {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},
@@ -740,10 +740,10 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 		t.Helper()
 		if _, err := e.owner.Exec(context.Background(), `
 			INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-			VALUES ('person', $1, 'user', $2, $3, $4)
+			VALUES ('contact', $1, 'user', $2, $3, $4)
 			ON CONFLICT (record_type, record_id, subject_type, subject_id)
 			DO UPDATE SET access = EXCLUDED.access`,
-			e.person, colleague, access, e.user); err != nil {
+			e.contact, colleague, access, e.user); err != nil {
 			t.Fatalf("granting %s on the contact: %v", access, err)
 		}
 	}
@@ -751,7 +751,7 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 	grant(t, "read")
 	err := e.store.db.Tx(shared, func(tx pgx.Tx) error {
 		_, mintErr := e.store.EnsureWithdrawalCredentialTx(shared, tx, WithdrawalMintInput{
-			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, ContactID: e.contact,
 		})
 		return mintErr
 	})
@@ -764,7 +764,7 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 	grant(t, "write")
 	if err := e.store.db.Tx(shared, func(tx pgx.Tx) error {
 		_, mintErr := e.store.EnsureWithdrawalCredentialTx(shared, tx, WithdrawalMintInput{
-			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, PersonID: e.person,
+			Address: "shared@example.test", Scope: WithdrawalScopeAllMarketing, ContactID: e.contact,
 		})
 		return mintErr
 	}); err != nil {

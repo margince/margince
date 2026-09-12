@@ -17,7 +17,7 @@ import "slices"
 // The OAuth capture providers. Gmail and Google Calendar (gcal) share one
 // Google OAuth app; graph (Outlook mail) and graphcal (Outlook calendar) share
 // one Microsoft app. Within each vendor the two differ only in scope, and each
-// is its own CONNECTION: one consent apiece, so a person can bring their
+// is its own CONNECTION: one consent apiece, so a contact can bring their
 // calendar without their mail and disconnect either.
 const (
 	providerGmail    = "gmail"

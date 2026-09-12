@@ -6,7 +6,7 @@
 package integration
 
 // The preference token's authority, proven at the two seams that decide who
-// can hold one. The token is a bearer credential over ONE person's consent
+// can hold one. The token is a bearer credential over ONE contact's consent
 // record — on the anonymous public edge it reads their per-purpose state,
 // withdraws, and grants, with no session at all — so the send path's mint
 // carries the same row-scope gate the authenticated read does: a seat that
@@ -19,23 +19,23 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedRecipient creates a person with one email address, owned by the given
-// user, so the send path's email→person resolve can find them.
+// seedRecipient creates a contact with one email address, owned by the given
+// user, so the send path's email→contact resolve can find them.
 func seedRecipient(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.UUID {
 	t.Helper()
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: name, OwnerID: userIDPtr(owner), Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding %s: %v", name, err)
 	}
-	return ids.UUID(person.Id)
+	return ids.UUID(contact.Id)
 }
 
 // livePreferenceTokens counts the minted tokens. The assertion resting on it
@@ -60,12 +60,12 @@ func TestPreferenceTokenMintRefusesAnInvisibleRecipient(t *testing.T) {
 	store := consent.NewStore(e.DB())
 
 	// A recipient leaves a colleague's row scope through capture privacy:
-	// ownership alone keeps a person readable by every seat with the grant.
+	// ownership alone keeps a contact readable by every seat with the grant.
 	foreignID := seedRecipient(t, e, "Foreign Recipient", "foreign@recipient.test", &e.Rep2)
-	e.MakeCapturePrivate(t, "person", foreignID, e.Rep2)
+	e.MakeCapturePrivate(t, "contact", foreignID, e.Rep2)
 	seedRecipient(t, e, "Own Recipient", "own@recipient.test", &e.Rep1)
 
-	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, ownPersonPerms())
+	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, ownContactPerms())
 
 	token, found, err := store.PreferenceTokenForEmail(rep1, "foreign@recipient.test")
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -83,13 +83,13 @@ func TestPreferenceTokenMintRefusesAnInvisibleRecipient(t *testing.T) {
 	if err != nil || !found || !strings.HasPrefix(own, "pref_") {
 		t.Fatalf("minting for the caller's own recipient = (%q, %v, %v), want a pref_ token", own, found, err)
 	}
-	captor := e.As(e.Rep2, []ids.UUID{e.Team1}, ownPersonPerms())
+	captor := e.As(e.Rep2, []ids.UUID{e.Team1}, ownContactPerms())
 	foreign, found, err := store.PreferenceTokenForEmail(captor, "foreign@recipient.test")
 	if err != nil || !found || !strings.HasPrefix(foreign, "pref_") {
 		t.Fatalf("the captor minting for the private recipient = (%q, %v, %v), want a pref_ token", foreign, found, err)
 	}
 	if own == foreign {
-		t.Fatal("two recipients share one preference token — a token must address exactly one person")
+		t.Fatal("two recipients share one preference token — a token must address exactly one contact")
 	}
 }
 
@@ -197,7 +197,7 @@ func TestPreferenceTokenRotatesPastItsAgeCeiling(t *testing.T) {
 	}
 }
 
-// An address no person in the workspace carries still yields no token and no
+// An address no contact in the workspace carries still yields no token and no
 // error: that send has nothing to unsubscribe from, and the consent gate
 // ahead of it has already refused. The row-scope gate must not turn this into
 // a refusal, or the send path becomes an in-CRM/not-in-CRM oracle.

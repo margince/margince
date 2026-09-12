@@ -215,11 +215,11 @@ func TestBuildDDL_LabelWithSQLNeverReachesRawText(t *testing.T) {
 	// AC-12/CUSTOM-FIELDS-AC-12: the identifier is slug-derived, never free
 	// text — even a label carrying an injection attempt must never appear
 	// verbatim in the generated DDL.
-	label := `evil'); DROP TABLE person;--`
+	label := `evil'); DROP TABLE contact;--`
 	slug := DeriveSlug(label)
 	col := ColumnName(slug)
-	spec := FieldSpec{Object: "person", Label: label, Type: TypeText}
-	ddl, err := BuildDDL("person", col, spec)
+	spec := FieldSpec{Object: "contact", Label: label, Type: TypeText}
+	ddl, err := BuildDDL("contact", col, spec)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestFieldTypes_AgreesWithThePortsClosedSet(t *testing.T) {
 // its cf_* columns and a contract shape that carries them — is derived in
 // fieldobjects_test.go rather than restated here.
 func TestFieldObjects_IsTheExplicitTargetSet(t *testing.T) {
-	want := []string{"person", "company", "deal", "lead", "project"}
+	want := []string{"contact", "company", "deal", "lead", "project"}
 	if len(FieldObjects) != len(want) {
 		t.Fatalf("FieldObjects = %v, want %v — activity and relationship are excluded for want of "+
 			"wire carriage and store wiring; see the engine's own comment", FieldObjects, want)

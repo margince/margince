@@ -151,7 +151,7 @@ func TestMintMessageIDIsUnbracketedAndFreshPerMessage(t *testing.T) {
 
 // Recipients is the MERGED consent list (to + cc + bcc) by design, so the
 // delivery's To: is what remains once the Cc: and Bcc: addresses come out —
-// rendering the merged list as To: would copy every cc'd person twice and
+// rendering the merged list as To: would copy every cc'd contact twice and
 // expose both lists as primary recipients.
 func TestDeliveryToRecipientsExcludeTheCcAddresses(t *testing.T) {
 	to := toRecipients(
@@ -224,7 +224,7 @@ func TestSendPathOptionsAccumulateOnOneStore(t *testing.T) {
 	}
 }
 
-// The floor greets the person the draft is TO, and greets nobody when nobody is
+// The floor greets the contact the draft is TO, and greets nobody when nobody is
 // known. Greeting whoever is nearest is how a draft ends up addressed to its
 // own author — the defect the certification judge floored on the
 // eight-months-old fixture.

@@ -28,10 +28,10 @@ import (
 // same row for its label and would refuse this too, so a whole-seam assertion
 // passes whether or not the guard is there at all.
 func TestArchiveGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
-	call := NewArchiveCall(unreadableProvider{}, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	call := NewArchiveCall(unreadableProvider{}, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("guarding an unreadable person answered %v, want the row-scope miss — a staged approval "+
+		t.Fatalf("guarding an unreadable contact answered %v, want the row-scope miss — a staged approval "+
 			"for a record the caller cannot see is authority nobody asked for", err)
 	}
 }
@@ -40,10 +40,10 @@ func TestArchiveGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
 // reason refuseStagingElsewhere states: the decidability probe and the version
 // pin both read OUR tables, so the approval could never be released.
 func TestArchiveGuardsRefuseATargetHeldElsewhere(t *testing.T) {
-	call := NewArchiveCall(elsewhereProvider{}, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	call := NewArchiveCall(elsewhereProvider{}, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("guarding a mirrored person answered %v, want the unsupported-by-SoR refusal", err)
+		t.Fatalf("guarding a mirrored contact answered %v, want the unsupported-by-SoR refusal", err)
 	}
 }
 
@@ -52,15 +52,15 @@ func TestArchiveGuardsRefuseATargetHeldElsewhere(t *testing.T) {
 // here would be discarded.
 func TestArchiveSubjectNamesTheRecordAndSuppliesNoPin(t *testing.T) {
 	id := ids.NewV7()
-	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityPerson, id, true)}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "person", ID: id})
+	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityContact, id, true)}
+	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: id})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
-		t.Fatalf("staging a readable person answered %v, want it staged", err)
+		t.Fatalf("staging a readable contact answered %v, want it staged", err)
 	}
-	if info.TargetType != "person" || info.TargetID != id {
-		t.Errorf("staged target = (%s,%s), want (person,%s) — the engine cannot pin or scope a target it was not given",
+	if info.TargetType != "contact" || info.TargetID != id {
+		t.Errorf("staged target = (%s,%s), want (contact,%s) — the engine cannot pin or scope a target it was not given",
 			info.TargetType, info.TargetID, id)
 	}
 	if info.TargetVersion != nil {
@@ -111,7 +111,7 @@ type archivesWhatNativeDoes struct{}
 
 func (archivesWhatNativeDoes) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
 	}, nil
 }
@@ -146,10 +146,10 @@ func (c *countingProvider) Read(_ context.Context, ref datasource.EntityRef) (da
 // with the authority that admitted it.
 func TestBothGovernanceQuestionsAreAnsweredFromOneRead(t *testing.T) {
 	provider := &countingProvider{}
-	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	call := NewArchiveCall(provider, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 
 	if _, err := StageSubject(context.Background(), call); err != nil {
-		t.Fatalf("staging a readable person answered %v, want it staged", err)
+		t.Fatalf("staging a readable contact answered %v, want it staged", err)
 	}
 	if provider.reads != 1 {
 		t.Errorf("the resolver read its target %d times, want 1 — the guard and the subject must describe "+
@@ -168,11 +168,11 @@ func TestAResolverAskedAboutASecondTargetReadsIt(t *testing.T) {
 	resolver := &archiveResolver{records: provider}
 	ctx := context.Background()
 
-	first, err := resolver.Subject(ctx, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	first, err := resolver.Subject(ctx, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 	if err != nil {
 		t.Fatalf("the first subject answered %v", err)
 	}
-	second, err := resolver.Subject(ctx, ArchiveCommand{RecordType: "person", ID: ids.NewV7()})
+	second, err := resolver.Subject(ctx, ArchiveCommand{RecordType: "contact", ID: ids.NewV7()})
 	if err != nil {
 		t.Fatalf("the second subject answered %v", err)
 	}

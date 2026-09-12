@@ -66,7 +66,7 @@ must_mention:
 # to get an answer on packaging, while saying plainly that nobody committed to
 # anything, has done what a rep asking to have the meeting put in the CRM wants;
 # it is not Lars's undertaking and not Matthias's. The invention this criterion
-# exists to catch is a commitment put in a PERSON's mouth.
+# exists to catch is a commitment put in a PARTICIPANT's mouth.
 #
 # Criterion 14 asks whether a denial about the approval queue is a denial about
 # THIS meeting's own writes (true, and correct) or about the workspace (false,

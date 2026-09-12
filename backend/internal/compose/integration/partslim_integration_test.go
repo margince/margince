@@ -104,7 +104,7 @@ func seedSlimOriginal(ctx context.Context, tx pgx.Tx, sourceID string, raw []byt
 }
 
 // seedSlimAttachment writes the row the sweep's join finds. entity_type is the
-// person arm so the fixture needs no activity: the sweep reads neither column.
+// contact arm so the fixture needs no activity: the sweep reads neither column.
 func seedSlimAttachment(
 	ctx context.Context, tx pgx.Tx, sourceID, key string, size int64, sum string,
 ) error {
@@ -112,7 +112,7 @@ func seedSlimAttachment(
 		INSERT INTO attachment (entity_type, entity_id, filename, content_type,
 		                        byte_size, storage_key, checksum, source, captured_by,
 		                        category, external_source_id, external_part_id)
-		VALUES ('person', gen_random_uuid(), 'figures.pdf', 'application/pdf',
+		VALUES ('contact', gen_random_uuid(), 'figures.pdf', 'application/pdf',
 		        $1, $2, $3, 'email', 'connector:test', 'email_attachment',
 		        'email:' || $4, 'part:1')`, size, key, sum, sourceID)
 	return err
@@ -370,16 +370,16 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 		[]byte("Subject: Quarterly figures"),
 		[]byte("To: "+subject+"\r\nSubject: Quarterly figures"), 1)
 
-	var person string
+	var contact string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
-			`INSERT INTO person (full_name, source, captured_by)
-			 VALUES ('Restore Subject', 'manual', 'human:seed') RETURNING id`).Scan(&person); err != nil {
+			`INSERT INTO contact (full_name, source, captured_by)
+			 VALUES ('Restore Subject', 'manual', 'human:seed') RETURNING id`).Scan(&contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, $2, 'manual', 'human:seed')`, person, subject); err != nil {
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'human:seed')`, contact, subject); err != nil {
 			return err
 		}
 		if err := seedSlimOriginal(ctx, tx, sourceID, original); err != nil {
@@ -408,7 +408,7 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 	}
 
 	payloads, err := compose.ExportedRawCapturePayloadsForTest(
-		e.Admin(), e.DB(), blob, personUUID(t, person))
+		e.Admin(), e.DB(), blob, contactUUID(t, contact))
 	if err != nil {
 		t.Fatalf("assembling the export: %v", err)
 	}
@@ -429,7 +429,7 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 		t.Fatalf("removing the object: %v", err)
 	}
 	withheld, err := compose.ExportedRawCapturePayloadsForTest(
-		e.Admin(), e.DB(), blob, personUUID(t, person))
+		e.Admin(), e.DB(), blob, contactUUID(t, contact))
 	if err != nil {
 		t.Fatalf("assembling the export with the object gone: %v", err)
 	}
@@ -441,12 +441,12 @@ func TestTheExportRestoresASlimmedOriginal(t *testing.T) {
 	}
 }
 
-// personUUID parses the id the seeding scanned as text.
-func personUUID(t *testing.T, id string) ids.UUID {
+// contactUUID parses the id the seeding scanned as text.
+func contactUUID(t *testing.T, id string) ids.UUID {
 	t.Helper()
 	parsed, err := ids.Parse(id)
 	if err != nil {
-		t.Fatalf("parsing the seeded person id %q: %v", id, err)
+		t.Fatalf("parsing the seeded contact id %q: %v", id, err)
 	}
 	return parsed
 }

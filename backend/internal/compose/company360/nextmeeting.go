@@ -75,8 +75,8 @@ func nextMeetingSection(
 	if err != nil {
 		return nil, err
 	}
-	// WHO is in the room is a fact about PEOPLE, and the meeting's own grant
-	// does not open it. A caller holding activity but not person may learn a
+	// WHO is in the room is a fact about CONTACTS, and the meeting's own grant
+	// does not open it. A caller holding activity but not contact may learn a
 	// meeting is booked — that is an activity fact — and may not be handed the
 	// attendees' names, so the list comes back empty for them rather than the
 	// section disappearing whole.
@@ -85,28 +85,28 @@ func nextMeetingSection(
 	// OBJECT grant has already opened and returns no predicate at all for an
 	// unbounded actor, so a scope clause on its own admits everybody.
 	namesReadable := true
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, err
 		}
 		namesReadable = false
 	}
-	// Row-scoped per PERSON, not per meeting: the meeting is visible through any
+	// Row-scoped per CONTACT, not per meeting: the meeting is visible through any
 	// of its links, so a rep who reaches it through their own contact must not
 	// be handed the names of a colleague's contacts who were also in the room.
 	//
 	// DISTINCT because uq_activity_participant is unique on (activity, ROLE,
-	// person): one person legitimately holds several roles on one meeting — a
+	// contact): one contact legitimately holds several roles on one meeting — a
 	// captured email makes its sender `from` and `attendee`, a reply adds `to` —
 	// and each is its own row. The question here is who is in the room, and the
-	// answer for a person is once.
+	// answer for a contact is once.
 	// Built only when the names are readable: `scopeClause` APPENDS its
 	// operands to `args` as it goes, so a clause built and then thrown away
 	// leaves its arguments behind and the statement's placeholder count no
 	// longer matches what pgx is handed.
-	personVisible := scopeNone
+	contactVisible := scopeNone
 	if namesReadable {
-		personVisible, err = scopeClause(ctx, "person", "p", arg)
+		contactVisible, err = scopeClause(ctx, "contact", "p", arg)
 		if err != nil {
 			return nil, err
 		}
@@ -125,11 +125,11 @@ func nextMeetingSection(
 		         ORDER BY dl.id LIMIT 1),
 		       coalesce((
 		         SELECT jsonb_agg(jsonb_build_object(
-		                  'person_id', att.id, 'display_name', att.full_name)
+		                  'contact_id', att.id, 'display_name', att.full_name)
 		                ORDER BY att.full_name, att.id)
 		           FROM (SELECT DISTINCT p.id, p.full_name
 		                   FROM activity_participant ap
-		                   JOIN person p ON p.id = ap.person_id
+		                   JOIN contact p ON p.id = ap.contact_id
 		                  WHERE ap.activity_id = a.id AND p.archived_at IS NULL AND %[5]s
 		                  ORDER BY p.full_name, p.id
 		                  LIMIT %[6]d) att
@@ -146,7 +146,7 @@ func nextMeetingSection(
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), dealVisible, nowPos,
-		personVisible, meetingParticipantLimit, opts.projectScope(arg)),
+		contactVisible, meetingParticipantLimit, opts.projectScope(arg)),
 		args...,
 	).Scan(&id, &occurred, &meeting.Subject, &dealID, &meeting.Participants)
 	if errors.Is(err, pgx.ErrNoRows) {

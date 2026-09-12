@@ -78,15 +78,15 @@ func TestRelationshipReadsWhetherBothSidesAreTalking(t *testing.T) {
 			reasonHas:      "No reply",
 		},
 		{
-			name:           "in contact, but one person carries it",
+			name:           "in contact, but one contact carries it",
 			activeContacts: 1,
 			daysSince:      ptrInt(3),
 			singleThreaded: true,
 			want:           crmcontracts.HealthDimensionRatingGood,
-			reasonHas:      "one person",
+			reasonHas:      "one contact",
 		},
 		{
-			name:           "several people, recently",
+			name:           "several contacts, recently",
 			activeContacts: 3,
 			daysSince:      ptrInt(3),
 			want:           crmcontracts.HealthDimensionRatingStrong,

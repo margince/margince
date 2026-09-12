@@ -8,7 +8,7 @@ package integration_test
 // The commitments lane against a real database.
 //
 // The unit lane cannot see any of what these pin. Whose promises a rep is shown
-// is a WHERE clause on person.owner_id; which claims are settled is a filter on
+// is a WHERE clause on contact.owner_id; which claims are settled is a filter on
 // two lifecycle columns nothing in Go touches; and the join that keeps a claim
 // from outliving the message it quotes is SQL. Each of those reads as a working
 // lane in a stub and can be wrong here.
@@ -20,7 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,22 +35,22 @@ var laneClock = time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
 // Through RecordConversationClaim rather than an INSERT on purpose: a lane
 // filled by rows the production writer never produces would prove nothing
 // about the production writer, and this writer is the one that takes the
-// person and activity gates.
+// contact and activity gates.
 func seedPromise(
-	t *testing.T, e *integration.Env, personID ids.UUID, body string, due *time.Time,
+	t *testing.T, e *integration.Env, contactID ids.UUID, body string, due *time.Time,
 ) ids.UUID {
 	t.Helper()
 	subject := "Rückfragen zum Angebot"
 	occurred := laneClock.AddDate(0, 0, -7)
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, OccurredAt: &occurred, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: personID}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
 		t.Fatalf("logging the message the promise was made in: %v", err)
 	}
-	claim, err := people.NewStore(e.DB()).RecordConversationClaim(e.Admin(), people.ClaimInput{
-		PersonID: ids.From[ids.PersonKind](personID), Kind: "commitment_ours",
+	claim, err := contacts.NewStore(e.DB()).RecordConversationClaim(e.Admin(), contacts.ClaimInput{
+		ContactID: ids.From[ids.ContactKind](contactID), Kind: "commitment_ours",
 		Body: body, ActivityID: ids.UUID(message.Id), Quote: body, DueAt: due,
 		Source: "manual",
 	})
@@ -60,7 +60,7 @@ func seedPromise(
 	return ids.UUID(claim.Id)
 }
 
-func bodiesOf(rows []people.CommitmentDue) []string {
+func bodiesOf(rows []contacts.CommitmentDue) []string {
 	out := make([]string, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, row.Body)
@@ -68,19 +68,19 @@ func bodiesOf(rows []people.CommitmentDue) []string {
 	return out
 }
 
-// A rep is shown the promises made to the people THEY own, and nobody else's.
+// A rep is shown the promises made to the contacts THEY own, and nobody else's.
 // Ownership is the only thing standing between one rep's lane and another's,
 // and it is a WHERE clause — so it is checked against a database that has both
 // reps' promises in it.
 func TestACommitmentReachesOnlyTheRepWhoOwnsTheRelationship(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	mine := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	theirs := e.SeedPerson(t, "Frau Keller", &e.Rep2)
+	mine := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	theirs := e.SeedContact(t, "Frau Keller", &e.Rep2)
 	seedPromise(t, e, mine, "Referenzliste schicken", &due)
 	seedPromise(t, e, theirs, "Angebot überarbeiten", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
 	if err != nil {
 		t.Fatalf("reading rep1's promises: %v", err)
@@ -90,28 +90,28 @@ func TestACommitmentReachesOnlyTheRepWhoOwnsTheRelationship(t *testing.T) {
 	}
 }
 
-// A promise on a person nobody owns reaches nobody. It is a real promise and
+// A promise on a contact nobody owns reaches nobody. It is a real promise and
 // there is no rep it is honestly on the hook for, so a lane that showed it to
-// everyone would put one person's work on every screen.
-func TestAPromiseOnAnUnownedPersonReachesNobodysLane(t *testing.T) {
+// everyone would put one contact's work on every screen.
+func TestAPromiseOnAnUnownedContactReachesNobodysLane(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	orphan := e.SeedPerson(t, "Niemands Kontakt", nil)
+	orphan := e.SeedContact(t, "Niemands Kontakt", nil)
 	seedPromise(t, e, orphan, "Unterlagen nachreichen", &due)
 	// Genuinely ownerless. A create that names no owner is stamped with the
 	// ACTING user (storekit.OwnerOrActor), so seeding with nil produces an
-	// admin-owned person rather than an unowned one — and a person nobody owns
+	// admin-owned contact rather than an unowned one — and a contact nobody owns
 	// is what this test is about.
-	e.WsExec(t, `UPDATE person SET owner_id = NULL WHERE id = $1`, orphan)
+	e.WsExec(t, `UPDATE contact SET owner_id = NULL WHERE id = $1`, orphan)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3, e.AdminUser} {
 		rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](rep), laneClock.Add(24*time.Hour), 20)
 		if err != nil {
 			t.Fatalf("reading a rep's promises: %v", err)
 		}
 		if len(rows) != 0 {
-			t.Fatalf("an unowned person's promise reached a lane: %v", bodiesOf(rows))
+			t.Fatalf("an unowned contact's promise reached a lane: %v", bodiesOf(rows))
 		}
 	}
 }
@@ -123,11 +123,11 @@ func TestAPromiseOnAnUnownedPersonReachesNobodysLane(t *testing.T) {
 func TestASettledOrDisputedPromiseLeavesTheLane(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	open := seedPromise(t, e, person, "Bleibt offen", &due)
-	done := seedPromise(t, e, person, "Schon erledigt", &due)
-	dismissed := seedPromise(t, e, person, "War nie eine Zusage", &due)
-	disputed := seedPromise(t, e, person, "Widersprüchlich belegt", &due)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	open := seedPromise(t, e, contact, "Bleibt offen", &due)
+	done := seedPromise(t, e, contact, "Schon erledigt", &due)
+	dismissed := seedPromise(t, e, contact, "War nie eine Zusage", &due)
+	disputed := seedPromise(t, e, contact, "Widersprüchlich belegt", &due)
 
 	// These are the extractor's own lifecycle columns and have no writer on
 	// this path, so they are set directly — the filter is exercised against
@@ -136,7 +136,7 @@ func TestASettledOrDisputedPromiseLeavesTheLane(t *testing.T) {
 	e.WsExec(t, `UPDATE conversation_claim SET status = 'dismissed' WHERE id = $1`, dismissed)
 	e.WsExec(t, `UPDATE conversation_claim SET needs_review = true WHERE id = $1`, disputed)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
@@ -153,16 +153,16 @@ func TestASettledOrDisputedPromiseLeavesTheLane(t *testing.T) {
 // either. The window is the lane's whole claim to be a DAY's page.
 func TestOnlyAPromiseDueByTheEndOfTodayIsOnTodaysLane(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	overdue := laneClock.AddDate(0, 0, -3)
 	todayLater := laneClock.Add(6 * time.Hour)
 	nextWeek := laneClock.AddDate(0, 0, 7)
-	seedPromise(t, e, person, "Längst überfällig", &overdue)
-	seedPromise(t, e, person, "Heute Nachmittag", &todayLater)
-	seedPromise(t, e, person, "Nächste Woche", &nextWeek)
-	seedPromise(t, e, person, "Ohne Datum", nil)
+	seedPromise(t, e, contact, "Längst überfällig", &overdue)
+	seedPromise(t, e, contact, "Heute Nachmittag", &todayLater)
+	seedPromise(t, e, contact, "Nächste Woche", &nextWeek)
+	seedPromise(t, e, contact, "Ohne Datum", nil)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
@@ -183,10 +183,10 @@ func TestOnlyAPromiseDueByTheEndOfTodayIsOnTodaysLane(t *testing.T) {
 func TestTheLaneNamesTheConversationThePromiseWasMadeIn(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	seedPromise(t, e, person, "Referenzliste schicken", &due)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	seedPromise(t, e, contact, "Referenzliste schicken", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
@@ -198,8 +198,8 @@ func TestTheLaneNamesTheConversationThePromiseWasMadeIn(t *testing.T) {
 	if row.SourceLabel != "Rückfragen zum Angebot" {
 		t.Errorf("source label = %q, want the message subject", row.SourceLabel)
 	}
-	if row.PersonName != "Herr Vogt" {
-		t.Errorf("person name = %q, want the person it was promised to", row.PersonName)
+	if row.ContactName != "Herr Vogt" {
+		t.Errorf("contact name = %q, want the contact it was promised to", row.ContactName)
 	}
 	if !row.OccurredAt.Equal(laneClock.AddDate(0, 0, -7)) {
 		t.Errorf("occurred at %s, want when the message was sent", row.OccurredAt)
@@ -215,13 +215,13 @@ func TestTheLaneNamesTheConversationThePromiseWasMadeIn(t *testing.T) {
 func TestAPromiseWhoseEvidenceWasArchivedLeavesTheLane(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	claim := seedPromise(t, e, person, "Referenzliste schicken", &due)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	claim := seedPromise(t, e, contact, "Referenzliste schicken", &due)
 
 	e.WsExec(t, `UPDATE activity SET archived_at = now()
 		WHERE id = (SELECT source_activity_id FROM conversation_claim WHERE id = $1)`, claim)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), 20)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
@@ -238,10 +238,10 @@ func TestAPromiseWhoseEvidenceWasArchivedLeavesTheLane(t *testing.T) {
 func TestASweepWithNoSensibleBoundStillAnswers(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	seedPromise(t, e, person, "Referenzliste schicken", &due)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	seedPromise(t, e, contact, "Referenzliste schicken", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	for _, asked := range []int{0, -1} {
 		rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), laneClock.Add(24*time.Hour), asked)
 		if err != nil {
@@ -264,13 +264,13 @@ func TestASweepWithNoSensibleBoundStillAnswers(t *testing.T) {
 func TestAReaderWithoutTheActivityGrantIsRefusedRatherThanShownNothing(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	seedPromise(t, e, person, "Referenzliste schicken", &due)
-	store := people.NewStore(e.DB())
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	seedPromise(t, e, contact, "Referenzliste schicken", &due)
+	store := contacts.NewStore(e.DB())
 	by := laneClock.Add(24 * time.Hour)
 	owner := ids.From[ids.UserKind](e.Rep1)
 
-	// REFUSE: read-only holds person but not activity.
+	// REFUSE: read-only holds contact but not activity.
 	readOnly := e.As(e.Rep1, nil, integration.ReadOnlyPerms)
 	if _, err := store.OpenCommitmentsDue(readOnly, owner, by, 20); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a reader with no activity grant got %v, want permission denied", err)
@@ -296,13 +296,13 @@ func TestAReaderWithoutTheActivityGrantIsRefusedRatherThanShownNothing(t *testin
 // read it exclusively, so the two disagreed about the same afternoon.
 func TestAPromiseDueExactlyAtTheBoundBelongsToTomorrow(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Frau Vogt", &e.Rep1)
+	contact := e.SeedContact(t, "Frau Vogt", &e.Rep1)
 	bound := laneClock.Add(24 * time.Hour)
 	justInside := bound.Add(-time.Second)
-	seedPromise(t, e, person, "Kurz vor Mitternacht", &justInside)
-	seedPromise(t, e, person, "Punkt Mitternacht", &bound)
+	seedPromise(t, e, contact, "Kurz vor Mitternacht", &justInside)
+	seedPromise(t, e, contact, "Punkt Mitternacht", &bound)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 20)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
@@ -321,20 +321,20 @@ func TestAPromiseDueExactlyAtTheBoundBelongsToTomorrow(t *testing.T) {
 // it one arm at a time, and nothing would fail to say so.
 func TestTheCommitmentCountAnswersTheSameQuestionAsThePage(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	other := e.SeedPerson(t, "Frau Nachbar", &e.Rep2)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	other := e.SeedContact(t, "Frau Nachbar", &e.Rep2)
 	todayLater := laneClock.Add(6 * time.Hour)
 	nextWeek := laneClock.AddDate(0, 0, 7)
 	for range 3 {
-		seedPromise(t, e, person, "Heute Nachmittag", &todayLater)
+		seedPromise(t, e, contact, "Heute Nachmittag", &todayLater)
 	}
 	// Neither of these is on this rep's lane: one is due next week, one belongs
 	// to a colleague. A count that included either would be counting a lane the
 	// reader is not looking at.
-	seedPromise(t, e, person, "Nächste Woche", &nextWeek)
+	seedPromise(t, e, contact, "Nächste Woche", &nextWeek)
 	seedPromise(t, e, other, "Nicht meins", &todayLater)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	bound := laneClock.Add(24 * time.Hour)
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 20)
 	if err != nil {
@@ -354,13 +354,13 @@ func TestTheCommitmentCountAnswersTheSameQuestionAsThePage(t *testing.T) {
 // more than fits is told how many, on a lane with no second page.
 func TestTheCommitmentCountSeesPastTheLanesCap(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
 	todayLater := laneClock.Add(6 * time.Hour)
 	for range 5 {
-		seedPromise(t, e, person, "Heute Nachmittag", &todayLater)
+		seedPromise(t, e, contact, "Heute Nachmittag", &todayLater)
 	}
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	bound := laneClock.Add(24 * time.Hour)
 	rows, err := store.OpenCommitmentsDue(e.Admin(), ids.From[ids.UserKind](e.Rep1), bound, 2)
 	if err != nil {
@@ -385,14 +385,14 @@ func TestTheCommitmentCountSeesPastTheLanesCap(t *testing.T) {
 // behind a number that worried them. If the two disagree the lead is sent to a
 // desk where the work is not, and neither screen says which is right.
 //
-// The multi-owner count exists because a board reaches a hundred people and a
+// The multi-owner count exists because a board reaches a hundred contacts and a
 // hundred sequential queries is a slow morning. What this holds is that making
 // it one query did not make it a different question.
 func TestTheBoardsPromiseColumnAgreesWithEachRepsOwnLane(t *testing.T) {
 	e := integration.Setup(t)
-	mine := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	theirs := e.SeedPerson(t, "Frau Keller", &e.Rep2)
-	orphan := e.SeedPerson(t, "Niemands Kontakt", nil)
+	mine := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	theirs := e.SeedContact(t, "Frau Keller", &e.Rep2)
+	orphan := e.SeedContact(t, "Niemands Kontakt", nil)
 	todayLater := laneClock.Add(6 * time.Hour)
 	nextWeek := laneClock.AddDate(0, 0, 7)
 
@@ -401,11 +401,11 @@ func TestTheBoardsPromiseColumnAgreesWithEachRepsOwnLane(t *testing.T) {
 	}
 	seedPromise(t, e, theirs, "Auch heute", &todayLater)
 	// Neither of these belongs on today's board: one is due next week, one is
-	// on a person nobody owns.
+	// on a contact nobody owns.
 	seedPromise(t, e, mine, "Nächste Woche", &nextWeek)
 	seedPromise(t, e, orphan, "Unterlagen nachreichen", &todayLater)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	bound := laneClock.Add(24 * time.Hour)
 	owners := []ids.UserID{
 		ids.From[ids.UserKind](e.Rep1),

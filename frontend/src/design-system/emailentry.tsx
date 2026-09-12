@@ -13,7 +13,7 @@ import "./emailentry.css";
 // One retained email, as a row.
 //
 // The tree had four independent readings of a message — the timeline's, the
-// company page's recent list, the person memory's fold, and the relationship
+// company page's recent list, the contact memory's fold, and the relationship
 // spine's — each deciding for itself which parts of an email to show and
 // whether it could be opened. This is the one row, and its layout is fixed:
 // screens pass the server's own summary and where they sit, never a density, a

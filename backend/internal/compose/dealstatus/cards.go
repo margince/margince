@@ -154,7 +154,7 @@ func cardFromPayload(payload []byte) (CachedCard, bool) {
 // activitiesCitedBy reads the messages one sentence was written from.
 //
 // ACTIVITIES ONLY, because they are the records that carry an audience. A
-// sentence citing a deal or a person rests on rows the reader already reached —
+// sentence citing a deal or a contact rests on rows the reader already reached —
 // the deal grant is what put this row on their queue — and asking the audience
 // question about a record that has none would refuse every standing.
 func activitiesCitedBy(sentence crmcontracts.CompanyBriefSentence) []ids.UUID {

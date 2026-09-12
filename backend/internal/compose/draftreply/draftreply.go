@@ -38,7 +38,7 @@ import (
 // asks nothing, so a caller may pass one it does not have.
 //
 // This is a SHAPE check, not a grounding filter: it says a message was written
-// to the right people, and claims nothing about what it says about them. What a
+// to the right contacts, and claims nothing about what it says about them. What a
 // draft may CLAIM is scored by a rubric, because no substring test can.
 //
 // Errors carry no package prefix — the caller wraps with its own, because the
@@ -57,7 +57,7 @@ func Parse(raw string, mustName ...string) (subject, body string, err error) {
 		return "", "", fmt.Errorf("the reply carries no message to send")
 	}
 	for _, needed := range mustName {
-		if !draftfloor.NamesPerson(body, needed) {
+		if !draftfloor.NamesContact(body, needed) {
 			return "", "", fmt.Errorf("the draft never names %q", needed)
 		}
 	}

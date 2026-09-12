@@ -15,7 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -44,8 +44,8 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, httperr.Validation("url", "invalid", "url must be an absolute http(s) URL"))
 		return
 	}
-	read, joined, err := e.people.StartOnboardingSiteRead(r.Context(), seedURL, requestedBy(r.Context()),
-		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
+	read, joined, err := e.contacts.StartOnboardingSiteRead(r.Context(), seedURL, requestedBy(r.Context()),
+		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
 				Workspace: storekit.MustWorkspace(ctx), SiteReadID: read.ID,
 				RequestedBy: read.RequestedBy,
@@ -67,7 +67,7 @@ func (e *deepReadEngine) startCompanySiteRead(w http.ResponseWriter, r *http.Req
 }
 
 func (e *deepReadEngine) getCompanySiteRead(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
-	read, comparisons, err := e.people.GetCompanySiteRead(r.Context(), ids.UUID(readID))
+	read, comparisons, err := e.contacts.GetCompanySiteRead(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -126,7 +126,7 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a domain or an absolute http(s) URL"))
 		return
 	}
-	company, unadoptedLogos, err := e.people.ConfirmCompanySiteRead(r.Context(), people.ConfirmCompanySiteReadInput{
+	company, unadoptedLogos, err := e.contacts.ConfirmCompanySiteRead(r.Context(), contacts.ConfirmCompanySiteReadInput{
 		ReadID: ids.UUID(readID), DraftVersion: req.DraftVersion, ProposalHash: req.ProposalHash,
 		DisplayName: strings.TrimSpace(req.Profile.DisplayName), Website: website,
 		// The object store lives on this side of the seam, so the dossier
@@ -147,9 +147,9 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		},
 		SelectedFactKeys: req.SelectedFactKeys,
 		Resolutions:      siteReadResolutions(req.Resolutions),
-	}, e.stageOnboardingPeople)
+	}, e.stageOnboardingContacts)
 	if err != nil {
-		var invalid *people.InvalidSiteReadResolutionError
+		var invalid *contacts.InvalidSiteReadResolutionError
 		if errors.As(err, &invalid) {
 			httperr.Write(w, r, httperr.Validation("resolutions", "invalid", invalid.Reason))
 			return
@@ -176,12 +176,12 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 // registry and is left to it.
 func siteReadConfirmationRefusal(err error) error {
 	switch {
-	case errors.Is(err, people.ErrSiteReadAlreadyConfirmed):
+	case errors.Is(err, contacts.ErrSiteReadAlreadyConfirmed):
 		return &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "already_confirmed",
 			Detail: "This website read was already confirmed. Open the company profile to see what it created.",
 		}
-	case errors.Is(err, people.ErrSiteReadNotConfirmable):
+	case errors.Is(err, contacts.ErrSiteReadNotConfirmable):
 		return &httperr.DetailedError{
 			Status: http.StatusConflict, Code: "not_confirmable",
 			Detail: "This website read has no draft to confirm. Wait for it to finish, or start a new read.",
@@ -190,7 +190,7 @@ func siteReadConfirmationRefusal(err error) error {
 	return err
 }
 
-func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, read people.SiteRead, found []people.SiteReadPerson) ([]ids.UUID, error) {
+func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, read contacts.SiteRead, found []contacts.SiteReadContact) ([]ids.UUID, error) {
 	decider, ok := principal.Actor(ctx)
 	if !ok {
 		return nil, errors.New("compose: company site-read confirmation has no deciding principal")
@@ -200,7 +200,7 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, c
 	})
 	// One confirmation, one bundle — the same grouping the crawl worker stages
 	// under, so a confirmed onboarding read reaches the inbox as one question
-	// about this company rather than as one per person it published.
+	// about this company rather than as one per contact it published.
 	bundleID := ids.NewV7()
 	// Every row lock the loop below will need, taken here in the canonical
 	// order. The loop takes them one at a time in the order the site listed its
@@ -213,8 +213,8 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, c
 		return nil, err
 	}
 	proposalIDs := make([]ids.UUID, 0, len(found))
-	for _, person := range found {
-		// A published person the workspace already reaches by email is not a
+	for _, contact := range found {
+		// A published contact the workspace already reaches by email is not a
 		// decision — the same floor the crawl worker's staging applies.
 		//
 		// Asked as the CONFIRMING HUMAN, not as execCtx's system principal.
@@ -222,8 +222,8 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, c
 		// workspace-wide answer would let them learn which addresses exist on
 		// records their own row scope hides. Under their scope such a record
 		// reads as absent and they simply get the proposal.
-		known, err := e.people.EmailAlreadyOnFileTx(ctx, tx, person.PublishedEmail)
-		// A confirmer who may not read people is told nothing and gets the
+		known, err := e.contacts.EmailAlreadyOnFileTx(ctx, tx, contact.PublishedEmail)
+		// A confirmer who may not read contacts is told nothing and gets the
 		// proposal; asking on the system principal's authority instead is the
 		// disclosure the human context is here to prevent.
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -235,15 +235,15 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, c
 		if known {
 			continue
 		}
-		in, err := siteLeadStageInput(read.ID, companyID.UUID, read.SeedURL, sitePerson{
-			Name: person.Name, Role: person.Role, PublishedEmail: person.PublishedEmail,
-			LinkedinURL: person.LinkedinURL, EvidenceSnippet: person.EvidenceSnippet, SourceURL: person.SourceURL,
+		in, err := siteLeadStageInput(read.ID, companyID.UUID, read.SeedURL, siteContact{
+			Name: contact.Name, Role: contact.Role, PublishedEmail: contact.PublishedEmail,
+			LinkedinURL: contact.LinkedinURL, EvidenceSnippet: contact.EvidenceSnippet, SourceURL: contact.SourceURL,
 		}, bundleID)
 		if err != nil {
 			return nil, err
 		}
 		// The joining path, not StageInTx: two onboarding confirmations of the
-		// same site before anyone decides must leave ONE question per person,
+		// same site before anyone decides must leave ONE question per contact,
 		// exactly as the crawl worker's staging does.
 		id, err := e.approvals.StageOrJoinPendingInTx(execCtx, tx, in)
 		if err != nil {
@@ -254,20 +254,20 @@ func (e *deepReadEngine) stageOnboardingPeople(ctx context.Context, tx pgx.Tx, c
 	return proposalIDs, nil
 }
 
-func siteReadResolutions(in *[]crmcontracts.CompanySiteReadResolution) []people.SiteReadResolution {
+func siteReadResolutions(in *[]crmcontracts.CompanySiteReadResolution) []contacts.SiteReadResolution {
 	if in == nil {
 		return nil
 	}
-	out := make([]people.SiteReadResolution, len(*in))
+	out := make([]contacts.SiteReadResolution, len(*in))
 	for i, resolution := range *in {
-		out[i] = people.SiteReadResolution{
+		out[i] = contacts.SiteReadResolution{
 			Key: resolution.Key, Action: string(resolution.Action), Value: resolution.Value,
 		}
 	}
 	return out
 }
 
-func companySiteRead(read people.SiteRead, compared []people.SiteReadComparison, runtime *ai.RunSummary) crmcontracts.CompanySiteRead {
+func companySiteRead(read contacts.SiteRead, compared []contacts.SiteReadComparison, runtime *ai.RunSummary) crmcontracts.CompanySiteRead {
 	pages := make([]crmcontracts.CompanySiteReadPage, 0, len(read.Pages)+len(read.Skipped))
 	for _, page := range read.Pages {
 		kind := crmcontracts.CompanySiteReadPageKind(page.Kind)
@@ -294,12 +294,12 @@ func companySiteRead(read people.SiteRead, compared []people.SiteReadComparison,
 	for _, fact := range read.Facts {
 		facts = append(facts, crmcontracts.CompanySiteReadFact{
 			Category: crmcontracts.CompanySiteReadFactCategory(fact.Category), Field: crmcontracts.CompanySiteReadFactField(fact.Field),
-			Value: fact.Value, ValueKey: people.SiteReadFactKey(fact), EvidenceSnippet: fact.EvidenceSnippet,
+			Value: fact.Value, ValueKey: contacts.SiteReadFactKey(fact), EvidenceSnippet: fact.EvidenceSnippet,
 			EvidenceUrl: fact.SourceURL, Confidence: fact.Confidence,
 		})
 	}
 	entities := contractSiteReadLegalEntities(read.LegalEntities)
-	found := contractSiteReadPeople(read.People)
+	found := contractSiteReadContacts(read.Contacts)
 	comparisons := contractSiteReadComparisons(compared)
 	// Every terminal status the store can hold maps to something. A status
 	// missing from this table renders as the empty string, which is not a
@@ -316,7 +316,7 @@ func companySiteRead(read people.SiteRead, compared []people.SiteReadComparison,
 	out := crmcontracts.CompanySiteRead{
 		Id: openapi_types.UUID(read.ID), TargetKind: crmcontracts.CompanySiteReadTargetKind("onboarding"),
 		RootUrl: read.SeedURL, Status: crmcontracts.CompanySiteReadStatus(status), Pages: pages,
-		ProfileFields: fields, Facts: facts, Comparisons: comparisons, People: found,
+		ProfileFields: fields, Facts: facts, Comparisons: comparisons, Contacts: found,
 		LegalEntities: &entities, Warnings: read.Warnings,
 		DraftVersion: read.DraftVersion, ProposalHash: read.ProposalHash,
 		CreatedAt: read.CreatedAt, UpdatedAt: read.UpdatedAt, PagesRead: &read.PagesRead,
@@ -326,7 +326,7 @@ func companySiteRead(read people.SiteRead, compared []people.SiteReadComparison,
 	return out
 }
 
-func attachCompanySiteReadOptionals(out *crmcontracts.CompanySiteRead, read people.SiteRead, runtime *ai.RunSummary) {
+func attachCompanySiteReadOptionals(out *crmcontracts.CompanySiteRead, read contacts.SiteRead, runtime *ai.RunSummary) {
 	if runtime != nil {
 		mapped := contractRunSummary(*runtime)
 		out.AiRuntime = &mapped
@@ -374,7 +374,7 @@ func contractRunSummary(summary ai.RunSummary) crmcontracts.AiRunSummary {
 	}
 }
 
-func contractSiteReadLegalEntities(entities []people.SiteReadLegalEntity) []crmcontracts.CompanySiteReadLegalEntity {
+func contractSiteReadLegalEntities(entities []contacts.SiteReadLegalEntity) []crmcontracts.CompanySiteReadLegalEntity {
 	out := make([]crmcontracts.CompanySiteReadLegalEntity, 0, len(entities))
 	for _, entity := range entities {
 		wire := crmcontracts.CompanySiteReadLegalEntity{Name: entity.Name, SourceUrl: entity.SourceURL}
@@ -397,27 +397,27 @@ func contractSiteReadLegalEntities(entities []people.SiteReadLegalEntity) []crmc
 	return out
 }
 
-func contractSiteReadPeople(found []people.SiteReadPerson) []crmcontracts.CompanySiteReadPerson {
-	out := make([]crmcontracts.CompanySiteReadPerson, 0, len(found))
-	for _, person := range found {
-		disposition := crmcontracts.CompanySiteReadPersonDisposition("separate_lead_proposal")
-		wire := crmcontracts.CompanySiteReadPerson{
-			Name: person.Name, Role: person.Role, EvidenceSnippet: person.EvidenceSnippet,
-			EvidenceUrl: person.SourceURL, Disposition: &disposition,
+func contractSiteReadContacts(found []contacts.SiteReadContact) []crmcontracts.CompanySiteReadContact {
+	out := make([]crmcontracts.CompanySiteReadContact, 0, len(found))
+	for _, contact := range found {
+		disposition := crmcontracts.CompanySiteReadContactDisposition("separate_lead_proposal")
+		wire := crmcontracts.CompanySiteReadContact{
+			Name: contact.Name, Role: contact.Role, EvidenceSnippet: contact.EvidenceSnippet,
+			EvidenceUrl: contact.SourceURL, Disposition: &disposition,
 		}
-		if person.PublishedEmail != "" {
-			email := openapi_types.Email(person.PublishedEmail)
+		if contact.PublishedEmail != "" {
+			email := openapi_types.Email(contact.PublishedEmail)
 			wire.PublishedEmail = &email
 		}
-		if person.LinkedinURL != "" {
-			wire.LinkedinUrl = &person.LinkedinURL
+		if contact.LinkedinURL != "" {
+			wire.LinkedinUrl = &contact.LinkedinURL
 		}
 		out = append(out, wire)
 	}
 	return out
 }
 
-func contractSiteReadComparisons(compared []people.SiteReadComparison) []crmcontracts.CompanySiteReadComparison {
+func contractSiteReadComparisons(compared []contacts.SiteReadComparison) []crmcontracts.CompanySiteReadComparison {
 	out := make([]crmcontracts.CompanySiteReadComparison, 0, len(compared))
 	for _, comparison := range compared {
 		var source *crmcontracts.CompanySiteReadComparisonCurrentSource

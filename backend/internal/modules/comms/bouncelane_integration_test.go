@@ -7,7 +7,7 @@ package comms
 
 // The bounce-lane read against rows the real writers produced: staged with
 // StageTx, sent with RecordSent, marked by RecordBounce — never hand-inserted.
-// The predicates under test are SQL (kind, window, ownership, the person
+// The predicates under test are SQL (kind, window, ownership, the contact
 // join), which a unit double proves nothing about.
 
 import (
@@ -25,18 +25,18 @@ import (
 func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	e := setupStore(t)
 
-	// The send that hard-bounced, filed under a person.
-	person := ids.NewV7()
+	// The send that hard-bounced, filed under a contact.
+	contact := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, person); err != nil {
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, contact); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
-		ids.NewV7(), e.activity, person); err != nil {
+		`INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
+		ids.NewV7(), e.activity, contact); err != nil {
 		t.Fatal(err)
 	}
-	// A second, capture-private person on the SAME activity, owned by someone
+	// A second, capture-private contact on the SAME activity, owned by someone
 	// else, with a UUID sorting below the visible one: the join must never
 	// pick them, because owning the send licenses nothing about who its
 	// activity touches.
@@ -46,18 +46,18 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 		otherOwner, "owner-"+otherOwner.String()+"@comms.test"); err != nil {
 		t.Fatal(err)
 	}
-	// Minted BEFORE the visible person below would sort first under the
+	// Minted BEFORE the visible contact below would sort first under the
 	// join's ORDER BY, but v7 ids are time-ordered — so pin a literal that
 	// sorts below every fresh id instead, making the private link the one
 	// an unscoped join would pick.
 	hidden := ids.MustParse("00000000-0000-7000-8000-000000000001")
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, source, captured_by, visibility, owner_id) VALUES ($1, 'Private Contact', 'test', 'human:x', 'owner', $2)`,
+		`INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id) VALUES ($1, 'Private Contact', 'test', 'human:x', 'owner', $2)`,
 		hidden, otherOwner); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
+		`INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
 		ids.NewV7(), e.activity, hidden); err != nil {
 		t.Fatal(err)
 	}
@@ -90,8 +90,8 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	if got.Reason != "550 5.1.1 user unknown" {
 		t.Errorf("reason = %q, want the receiving side's own words", got.Reason)
 	}
-	if got.PersonID != person {
-		t.Errorf("person = %s, want the VISIBLE one the activity is filed under (%s), never the private link", got.PersonID, person)
+	if got.ContactID != contact {
+		t.Errorf("contact = %s, want the VISIBLE one the activity is filed under (%s), never the private link", got.ContactID, contact)
 	}
 	if got.Subject == "" {
 		t.Error("the send's subject line did not travel, so the card cannot name the send")
@@ -106,7 +106,7 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 		t.Fatalf("aged window = %+v, want empty", none)
 	}
 
-	// Another person's context reads nothing of this caller's.
+	// Another contact's context reads nothing of this caller's.
 	stranger := ids.New[ids.UserKind]()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Other')`,
@@ -115,10 +115,10 @@ func TestHardBouncesForCarriesTheCallersHardBouncesOnly(t *testing.T) {
 	}
 	othersView, err := e.store.HardBouncesFor(readerCtx(e.ws, stranger), since, 8)
 	if err != nil {
-		t.Fatalf("HardBouncesFor as another person: %v", err)
+		t.Fatalf("HardBouncesFor as another contact: %v", err)
 	}
 	if len(othersView) != 0 {
-		t.Fatalf("another person reads %+v, want nothing of this caller's", othersView)
+		t.Fatalf("another reader reads %+v, want nothing of this caller's", othersView)
 	}
 }
 
@@ -158,14 +158,14 @@ func TestHardBouncesForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
 // test thinks it should.
 func TestHardBouncesForNamesTheAddressThatRefused(t *testing.T) {
 	e := setupStore(t)
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, person); err != nil {
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, contact); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
-		ids.NewV7(), e.activity, person); err != nil {
+		`INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
+		ids.NewV7(), e.activity, contact); err != nil {
 		t.Fatal(err)
 	}
 	// Staged with an EXPLICIT recipient rather than through sentDelivery, whose

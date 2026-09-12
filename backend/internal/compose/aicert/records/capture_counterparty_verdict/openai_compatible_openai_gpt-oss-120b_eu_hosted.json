@@ -104,7 +104,7 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "a_trade_offices_city_mailbox_names_a_place_not_a_person",
+      "scenario": "a_trade_offices_city_mailbox_names_a_place_not_a_contact",
       "site": "verdict",
       "stamp": "f0fe80963123949555146cacbda86bb5b810fc4665145e19029d93d4f579f7feb9048916b9b12cb3912e786dc6ee11aca504d42fb717aca819b89e34197ff3d587509c5ba75be6f57e92abac212c8ecc5714e32557e2d08434616a37bfaad2e6",
       "verdict": "supported_degraded",

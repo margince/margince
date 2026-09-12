@@ -12,10 +12,10 @@ package privacy
 // file alongside erasure.go, so moving a scrub here does not take the tables it
 // purges out of that gate's sight.
 //
-// Every clause here reaches the subject by IDENTIFIER as well as by person id,
+// Every clause here reaches the subject by IDENTIFIER as well as by contact id,
 // because the graph structures exist precisely to hold a party who never
 // became a record: that is what the address arm of a participant row and a
-// LinkedIn ghost both ARE. A person-keyed sweep alone leaves the subject
+// LinkedIn ghost both ARE. A contact-keyed sweep alone leaves the subject
 // named, reachable and re-matchable.
 
 import (
@@ -29,26 +29,26 @@ import (
 // scrubSubjectFromGraph removes the subject from the relationship graph.
 // subjectName and linkedInHandles are the caller's, read before the
 // anonymization that overwrote them: the ghost sweep identifies rows by both,
-// and by the time it runs neither the person row nor person_social still holds
+// and by the time it runs neither the contact row nor contact_social still holds
 // them.
 func scrubSubjectFromGraph(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	emails []string, identities []channelIdentity, subjectName string, linkedInHandles []string,
 ) error {
-	if err := scrubSubjectFromParticipants(ctx, tx, personID, emails, identities); err != nil {
+	if err := scrubSubjectFromParticipants(ctx, tx, contactID, emails, identities); err != nil {
 		return err
 	}
-	if err := deleteSubjectLinkedInGhosts(ctx, tx, personID, emails, subjectName, linkedInHandles); err != nil {
+	if err := deleteSubjectLinkedInGhosts(ctx, tx, contactID, emails, subjectName, linkedInHandles); err != nil {
 		return err
 	}
-	return deleteSubjectInteractionEdges(ctx, tx, personID)
+	return deleteSubjectInteractionEdges(ctx, tx, contactID)
 }
 
 // scrubSubjectFromParticipants clears the subject off the interaction
-// participants (ACT-DDL-3), which name them three times over: by person_id, by
+// participants (ACT-DDL-3), which name them three times over: by contact_id, by
 // the raw ADDRESS a message carried, and by the ACCOUNT a chat roster named
 // them with. The last two exist precisely for the party who never became a
-// record, so they survive the person_email purge and would keep the erased
+// record, so they survive the contact_email purge and would keep the erased
 // subject readable and re-matchable.
 //
 // The account arm is paired with the TRANSPORT, read off the activity the row
@@ -58,7 +58,7 @@ func scrubSubjectFromGraph(
 // row carries no provider of its own, so the transport a scrub matches on is
 // the transport the message actually rode.
 func scrubSubjectFromParticipants(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	emails []string, identities []channelIdentity,
 ) error {
 	providers, accounts := channelIdentityPairs(identities)
@@ -68,10 +68,10 @@ func scrubSubjectFromParticipants(
 	// users is a different matter: the colleague was in that conversation and
 	// that is not the subject's data to erase, so the subject's arms are
 	// nulled and the row stands.
-	if _, err := tx.Exec(ctx, subjectParticipantsDelete, personID, emails, providers, accounts); err != nil {
+	if _, err := tx.Exec(ctx, subjectParticipantsDelete, contactID, emails, providers, accounts); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, subjectParticipantsBlank, personID, emails, providers, accounts)
+	_, err := tx.Exec(ctx, subjectParticipantsBlank, contactID, emails, providers, accounts)
 	return err
 }
 
@@ -86,7 +86,7 @@ func scrubSubjectFromParticipants(
 // reads exactly like a hold arm that passes.
 func subjectNamedOnAParticipantRow() string {
 	return `
-		   AND (ap.person_id = $1
+		   AND (ap.contact_id = $1
 		     OR (ap.address IS NOT NULL AND ap.address = ANY($2))
 		     OR (ap.channel_user_id IS NOT NULL AND EXISTS (
 		           SELECT 1 FROM activity a
@@ -107,7 +107,7 @@ var subjectParticipantsDelete = `
 
 var subjectParticipantsBlank = `
 		UPDATE activity_participant ap
-		   SET person_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
+		   SET contact_id = NULL, address = NULL, display_name = NULL, channel_user_id = NULL
 		 WHERE ap.user_id IS NOT NULL` + subjectNamedOnAParticipantRow() +
 	notTransitivelyHeld("ap.activity_id")
 
@@ -116,27 +116,27 @@ var subjectParticipantsBlank = `
 // — their address, imported from a colleague's export without the subject ever
 // being asked. That is exactly the data an Art. 17 request is about, and it is
 // invisible to every other clause in the cascade because a ghost is not a
-// person row.
+// contact row.
 //
 // It deletes on SUGGESTION-GRADE evidence, not just on a confirmed match, and
 // that asymmetry is deliberate. Matching errs toward caution because a wrong
 // link attaches a stranger to a customer record. Deletion errs the other way,
 // because the two mistakes do not cost the same: deleting one ghost too many
 // costs a re-import of a file the colleague still has, while keeping one too
-// few leaves a named person's data behind after we certified it destroyed.
+// few leaves a named contact's data behind after we certified it destroyed.
 //
 // So: matched to them, or carrying their address, or bearing their name at an
 // employer they actually work for — the same evidence that would have produced
 // a suggestion.
 func deleteSubjectLinkedInGhosts(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	emails []string, subjectName string, linkedInHandles []string,
 ) error {
 	_, err := tx.Exec(ctx, `
 		DELETE FROM linkedin_connection g
-		 WHERE g.matched_person_id = $1
+		 WHERE g.matched_contact_id = $1
 		    OR (g.email IS NOT NULL AND g.email = ANY($2))
-		    -- The LinkedIn address, passed in rather than joined: person_social
+		    -- The LinkedIn address, passed in rather than joined: contact_social
 		    -- is cleared earlier in this same transaction, so a join here would
 		    -- read an empty table and miss every ghost identified only by URL.
 		    OR (g.profile_url IS NOT NULL AND g.profile_url = ANY($4))
@@ -151,12 +151,12 @@ func deleteSubjectLinkedInGhosts(
 		        AND EXISTS (
 		            SELECT 1 FROM relationship r
 		              JOIN company o ON o.id = r.company_id
-		             WHERE r.person_id = $1 AND r.kind = 'employment'
+		             WHERE r.contact_id = $1 AND r.kind = 'employment'
 		               AND r.archived_at IS NULL
 		               AND (r.company_id = g.matched_company_id
 		                    OR lower(f_unaccent(o.display_name)) = g.normalized_company
 		                    OR lower(f_unaccent(o.display_name)) LIKE g.normalized_company || ' %')))`,
-		personID, emails, subjectName, linkedInHandles)
+		contactID, emails, subjectName, linkedInHandles)
 	return err
 }
 
@@ -167,17 +167,17 @@ func deleteSubjectLinkedInGhosts(
 // to the cg:graph-edge consumer: an erasure obligation that depends on an
 // event being delivered is an obligation that fails silently when the bus is
 // behind or the handler is wrong. It was in fact wrong — the consumer listened
-// for a `person.erased` event this path has never emitted, so the edges
+// for a `contact.erased` event this path has never emitted, so the edges
 // outlived every erasure.
-func deleteSubjectInteractionEdges(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
+func deleteSubjectInteractionEdges(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM graph_interaction_edge WHERE person_id = $1`, personID); err != nil {
+		`DELETE FROM graph_interaction_edge WHERE contact_id = $1`, contactID); err != nil {
 		return err
 	}
 	// The contact↔contact projection names the subject on EITHER end, so both
-	// endpoint columns are matched — a person_a-only delete leaves the subject
+	// endpoint columns are matched — a contact_a-only delete leaves the subject
 	// standing on the far side of everyone else's edges.
 	_, err := tx.Exec(ctx,
-		`DELETE FROM graph_contact_edge WHERE person_a = $1 OR person_b = $1`, personID)
+		`DELETE FROM graph_contact_edge WHERE contact_a = $1 OR contact_b = $1`, contactID)
 	return err
 }

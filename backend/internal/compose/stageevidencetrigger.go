@@ -70,7 +70,7 @@ import (
 const stageEvidenceBacklogWindow = 7 * 24 * time.Hour
 
 // stageEvidenceActor is what the audit trail names as the writer of these
-// rows. No human asked for them, and binding the last person to touch the deal
+// rows. No human asked for them, and binding the last contact to touch the deal
 // would put their name on an observation they never made.
 const stageEvidenceActor = "system:stage-evidence"
 

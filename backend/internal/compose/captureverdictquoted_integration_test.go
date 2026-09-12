@@ -57,7 +57,7 @@ func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {
 	activityID := seedCapturedMail(t, e, "ada@quoted.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@quoted.example", "quoted.example", activityID)
 
-	brain := &literalConfidenceBrain{verdict: capture.KindPerson, confidence: `"0.9"`}
+	brain := &literalConfidenceBrain{verdict: capture.KindContact, confidence: `"0.9"`}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -71,9 +71,9 @@ func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {
 		t.Errorf("the model was asked %d times, want 1 — a re-ask means the first answer was not read", brain.calls)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'ada@quoted.example'`); n != 1 {
-		t.Fatalf("%d persons created, want 1 — the verdict did not reach the records capture withheld", n)
+		t.Fatalf("%d contacts created, want 1 — the verdict did not reach the records capture withheld", n)
 	}
 }
 
@@ -84,7 +84,7 @@ func TestVerdictDefersAnUnreadableConfidence(t *testing.T) {
 	activityID := seedCapturedMail(t, e, "ada@unreadable.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@unreadable.example", "unreadable.example", activityID)
 
-	brain := &literalConfidenceBrain{verdict: capture.KindPerson, confidence: `"very high"`}
+	brain := &literalConfidenceBrain{verdict: capture.KindContact, confidence: `"very high"`}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -95,9 +95,9 @@ func TestVerdictDefersAnUnreadableConfidence(t *testing.T) {
 			got, capture.PendingStatusPending)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'ada@unreadable.example'`); n != 0 {
-		t.Fatalf("%d persons created from an unreadable reply, want 0", n)
+		t.Fatalf("%d contacts created from an unreadable reply, want 0", n)
 	}
 	attempts := countIn(t, e,
 		`SELECT attempts FROM capture_pending_counterparty WHERE id = $1`, dispositionID)

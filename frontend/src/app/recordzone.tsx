@@ -38,7 +38,7 @@ const RecordZoneContext = createContext<string>(FALLBACK_RECORD_ZONE);
  *
  * A record's dates belong to the record rather than to whoever is looking at
  * it: a close date, a renewal, an invoice's issue day and a timeline's day
- * headings must read the same for every colleague, or two people quoting the
+ * headings must read the same for every colleague, or two colleagues quoting the
  * same page quote different days. That is the rule `format/timezone.ts` states,
  * and this hook is where the company's answer to it now comes from.
  *

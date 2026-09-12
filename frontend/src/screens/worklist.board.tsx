@@ -3,9 +3,9 @@
 
 // Who on the team is carrying what.
 //
-// The queue below this ranks ONE person's day, so it cannot answer "who is
+// The queue below this ranks ONE contact's day, so it cannot answer "who is
 // drowning": its per-user sources were never read for anybody else. This is
-// counts instead, and pressing a row opens that person's own day — which is the
+// counts instead, and pressing a row opens that contact's own day — which is the
 // whole point of showing counts rather than rows. The board is where a lead
 // decides who to look at; the queue is where they look.
 
@@ -21,8 +21,8 @@ import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
 //
 // It rides in the same shape rather than beside the table, because it is the
 // same question — how much work is sitting there — asked of the one holder who
-// is not a person. Its id is empty, and pressing it opens the `unassigned`
-// scope rather than a person's day: the work is real and somebody has to pick
+// is not a contact. Its id is empty, and pressing it opens the `unassigned`
+// scope rather than a contact's day: the work is real and somebody has to pick
 // it up, so the row leads to the queue that shows it.
 type BoardRow = Readonly<{
   id: string;
@@ -145,7 +145,7 @@ export function TeamBoard({
           {board.data && (
             <>
               {/* WHAT to do about the table, above the table. A lead reading
-                  five columns across six people is doing arithmetic before they
+                  five columns across six contacts is doing arithmetic before they
                   can act; these are the same numbers with the arithmetic done.
                   Drawn from board.data, so they add no request and cannot
                   disagree with the rows beneath them. */}
@@ -164,7 +164,7 @@ export function TeamBoard({
                     t("worklist.board.nobody"),
                   )}
                   rowKey={(row) => row.id || "unassigned"}
-                  // Every row goes somewhere: a person's row opens their day, and
+                  // Every row goes somewhere: a contact's row opens their day, and
                   // the unassigned row opens the scope that holds unowned work.
                   //
                   // DataTable draws every row as pressable once onRowClick is set —

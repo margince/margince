@@ -9,7 +9,7 @@ package compose
 // It lives apart from the registry wiring because it is the one place capture
 // meets the approvals engine, and what it has to get right is a question about
 // approvals rather than about capture — which repeats of one collision are the
-// same question, so that a rep who says "these are not the same person" is
+// same question, so that a rep who says "these are not the same contact" is
 // answered once and not on every sync.
 
 import (
@@ -37,7 +37,7 @@ const mergeIdentityAddress = "Email"
 func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (ids.UUID, error) {
 	digest := sha256.Sum256(in.ProposedChange)
 	// A connector re-syncing the same upstream record hits the same collision
-	// every cycle, and a rep who says "these are not the same person" must be
+	// every cycle, and a rep who says "these are not the same contact" must be
 	// answered once rather than every cycle after.
 	//
 	// The identity is the ADDRESS the collision was found on, against a target

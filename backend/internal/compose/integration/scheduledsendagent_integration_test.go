@@ -80,7 +80,7 @@ func (p *preflightEnv) auditActor(t *testing.T, entityType string, entityID ids.
 //
 // The human's id is in the row already, and rebuilding an agent identity from it
 // produces `agent:<human-uuid>`: an actor that never existed, and the same one
-// for every agent and every passport acting for that person. The release audit
+// for every agent and every passport acting for that contact. The release audit
 // row, the activity's captured_by and the outbox envelope then cannot say which
 // agent produced the message, which is the attribution ADR-0055 rests on
 // (#1258).
@@ -109,7 +109,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -135,7 +135,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 	}
 	// The specific shape of the old defect: an identity derived from the human.
 	if actorID == "agent:"+p.user {
-		t.Error("the actor id was rebuilt from the human's id — every agent acting for this person collapses into one invented actor")
+		t.Error("the actor id was rebuilt from the human's id — every agent acting for this colleague collapses into one invented actor")
 	}
 }
 
@@ -145,7 +145,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 //
 // Falling back to the principal's UserID for `agent_on_behalf_of` is wrong: an
 // agent principal's UserID may name the AGENT's own app_user row rather than a
-// person, so it writes an agent's id into a column meaning "the human behind
+// contact, so it writes an agent's id into a column meaning "the human behind
 // this". The fire path hands that to actor.OnBehalfOf, which auth.Admit reads to
 // derive seat and RBAC — a fabricated authority.
 //
@@ -172,7 +172,7 @@ func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -251,7 +251,7 @@ func TestARevokedPassportHoldsTheMessageItWasScheduledUnder(t *testing.T) {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

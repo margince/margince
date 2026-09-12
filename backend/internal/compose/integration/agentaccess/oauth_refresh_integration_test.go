@@ -183,14 +183,14 @@ func (o *oauthEnv) assertChainLinked(t *testing.T, presented, successor string) 
 // authority — the only question a connector's user actually cares about.
 func (o *oauthEnv) accessTokenWorks(t *testing.T, accessToken string) bool {
 	t.Helper()
-	status := o.Call(t, "GET", "/v1/people", nil, map[string]string{"Authorization": "Bearer " + accessToken}, nil)
+	status := o.Call(t, "GET", "/v1/contacts", nil, map[string]string{"Authorization": "Bearer " + accessToken}, nil)
 	switch status {
 	case http.StatusOK:
 		return true
 	case http.StatusUnauthorized:
 		return false
 	default:
-		t.Fatalf("GET /v1/people with the access token → %d, want 200 or 401", status)
+		t.Fatalf("GET /v1/contacts with the access token → %d, want 200 or 401", status)
 		return false
 	}
 }

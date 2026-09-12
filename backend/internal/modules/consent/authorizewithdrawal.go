@@ -5,10 +5,10 @@ package consent
 
 // The subject's own recorded stop, read where the evidence arms can see it.
 //
-// A withdrawal is Art. 7(3): the person takes back a permission they gave. It
-// is written to person_consent and NOT to communication_suppression, so
+// A withdrawal is Art. 7(3): the contact takes back a permission they gave. It
+// is written to contact_consent and NOT to communication_suppression, so
 // liveSuppression cannot see it — and the evidence arms allow on the record's
-// own ground without ever reading person_consent, which is exactly what lets a
+// own ground without ever reading contact_consent, which is exactly what lets a
 // reply to a thread the subject started work with no consent row.
 //
 // Those two facts together were a leak: somebody who wrote into a thread and
@@ -40,15 +40,15 @@ func withdrawalCovers(ctx context.Context, tx pgx.Tx, subject subjectRef, catego
 	if len(classes) == 0 {
 		return false, nil
 	}
-	// person_consent carries person_id OR lead_id, so one statement answers for
+	// contact_consent carries contact_id OR lead_id, so one statement answers for
 	// both subject kinds rather than a second copy answering for one.
 	var withdrawn bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
-			  FROM person_consent pc
+			  FROM contact_consent pc
 			  JOIN consent_purpose cp ON cp.id = pc.purpose_id
-			 WHERE (($1 = 'person' AND pc.person_id = $2::uuid)
+			 WHERE (($1 = 'contact' AND pc.contact_id = $2::uuid)
 			     OR ($1 = 'lead'   AND pc.lead_id   = $2::uuid))
 			   AND pc.state = 'withdrawn'
 			   -- ARCHIVED PURPOSES COUNT. A withdrawal is a thing the subject
@@ -65,7 +65,7 @@ func withdrawalCovers(ctx context.Context, tx pgx.Tx, subject subjectRef, catego
 // classesCovering inverts categoryForClass: which purpose classes produce this
 // category, and so which withdrawals speak about it.
 //
-// The five subject-serving categories return none. A person cannot withdraw
+// The five subject-serving categories return none. A contact cannot withdraw
 // their way out of a security warning or the acknowledgement of their own
 // opt-out, and reading a withdrawal as covering those would make pressing
 // unsubscribe silence the confirmation that it worked.

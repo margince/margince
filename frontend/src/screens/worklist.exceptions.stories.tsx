@@ -8,7 +8,7 @@ import { TeamExceptionsPanel } from "./worklist.exceptions";
 
 // WHAT IS GOING WRONG on this lead's team — the rows, worst first.
 //
-// The board beside this answers "who is carrying what" and routes to a person.
+// The board beside this answers "who is carrying what" and routes to a contact.
 // It cannot answer this: three counts per teammate cannot say that one customer
 // has waited past the target while another rep's queue is merely long.
 //
@@ -45,7 +45,7 @@ const aTeamNeedingALead: TeamExceptionsData = {
       kind: "response_breached",
       owner: { kind: "user", id: LENA, label: "Lena Fischer" },
       subject: {
-        type: "person",
+        type: "contact",
         id: "00000000-0000-4000-8000-0000000000a1",
         label: "Kirsten Bauer",
       },
@@ -67,7 +67,7 @@ const aTeamNeedingALead: TeamExceptionsData = {
     },
     {
       // NOBODY answers for this one, and the row says so in its own words
-      // rather than naming a person. An exception a teammate is carrying and
+      // rather than naming a colleague. An exception a teammate is carrying and
       // one going nowhere are different news to the reader who has to act.
       kind: "unassigned",
       owner: { kind: "unassigned" },

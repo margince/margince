@@ -40,7 +40,7 @@ const VIEWS = {
     {
       id: "v-1",
       owner_id: "u-1",
-      resource: "people",
+      resource: "contacts",
       name: "Gold tier in Berlin",
       query: {
         filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
@@ -53,7 +53,7 @@ const VIEWS = {
       // entry at all.
       id: "v-2",
       owner_id: "u-1",
-      resource: "people",
+      resource: "contacts",
       name: "Saved by an older build",
       query: { filter: { and: [{ field: "city", op: "like", value: "Ber" }] } },
       version: 1,
@@ -67,7 +67,10 @@ const VIEWS = {
 // left to the stub's fallback: an unrouted /me answers a list shape, which
 // reads as a malformed session, fails every grant closed, and renders a
 // refusal none of these stories is named for.
-const SESSION: GrantSpec = { saved_view: ["read", "create"], person: ["read"] };
+const SESSION: GrantSpec = {
+  saved_view: ["read", "create"],
+  contact: ["read"],
+};
 
 function routes(extra: Parameters<typeof installFetchStub>[0] = {}): void {
   installFetchStub({
@@ -99,7 +102,7 @@ export const NamingAView: Story = {
   // The one dialog both surfaces share, opened.
   render: () => {
     routes();
-    return <SaveViewAction resource="people" query={NARROWED} />;
+    return <SaveViewAction resource="contacts" query={NARROWED} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -113,7 +116,7 @@ export const NothingWorthSaving: Story = {
   // Deliberately an empty capture — that IS the documented behaviour.
   render: () => {
     routes();
-    return <SaveViewAction resource="people" query={UNNARROWED} />;
+    return <SaveViewAction resource="contacts" query={UNNARROWED} />;
   },
 };
 
@@ -125,7 +128,7 @@ export const SavingAFilter: Story = {
     routes();
     return (
       <SaveFilterViewAction
-        resource="people"
+        resource="contacts"
         tree={newGroup("and", [newLeaf("city", "eq", "Berlin")])}
       />
     );
@@ -139,7 +142,7 @@ export const NoSaveForAnIncompleteFilter: Story = {
     routes();
     return (
       <SaveFilterViewAction
-        resource="people"
+        resource="contacts"
         tree={newGroup("and", [newLeaf("city", "eq", "")])}
       />
     );
@@ -154,7 +157,7 @@ export const TheRailFailedToLoad: Story = {
     routes({
       "GET /views": () => jsonResponse({ title: "Server error" }, 500),
     });
-    return <SaveViewAction resource="people" query={NARROWED} />;
+    return <SaveViewAction resource="contacts" query={NARROWED} />;
   },
 };
 
@@ -162,7 +165,7 @@ export const LoadingASavedFilter: Story = {
   // Two stored views, one offered: the menu leaves out what it cannot read.
   render: () => {
     routes();
-    return <LoadFilterViewMenu resource="people" onLoad={() => undefined} />;
+    return <LoadFilterViewMenu resource="contacts" onLoad={() => undefined} />;
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

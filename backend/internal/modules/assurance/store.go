@@ -65,7 +65,7 @@ const (
 	CoveragePermissionLimited = "permission_limited"
 	// CoverageNotConnected is a source the workspace never configured. Distinct
 	// from unavailable: there is nothing to fix, only something to decide, and
-	// the two route to different people.
+	// the two route to different contacts.
 	CoverageNotConnected = "not_connected"
 )
 
@@ -184,7 +184,7 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		    updated_at = now(),
 		    -- A cleared row REOPENS on re-detection: the scan closed it because
 		    -- the condition left the record, so the condition being back is a
-		    -- new fact for a person. A resolved row does not — somebody
+		    -- new fact for a contact. A resolved row does not — somebody
 		    -- answered that one, and re-detection must not un-ask them.
 		    status = CASE WHEN assurance_exception.status = 'condition_cleared'
 		                  THEN 'open' ELSE assurance_exception.status END,
@@ -218,7 +218,7 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 // a clean record and clears then.
 //
 // No per-finding resolution row is written: assurance_resolution attributes an
-// answer to a person (actor_id is NOT NULL because an answer is BY somebody),
+// answer to a contact (actor_id is NOT NULL because an answer is BY somebody),
 // and the scan is not one. The night's clearing is recorded once, on the run's
 // own audit row, where FinishRun carries the cleared count.
 func (s *Store) CloseCleared(ctx context.Context, tx pgx.Tx, types []string, subjects, seen []string) (int64, error) {

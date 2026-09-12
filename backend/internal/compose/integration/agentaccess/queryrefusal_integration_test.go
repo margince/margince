@@ -30,7 +30,7 @@ func TestARefusedPlanTellsTheAgentWhatToPutInTheMemberItRefused(t *testing.T) {
 
 	refused := refusedToolText(t, env, bearer,
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"query_workspace",`+
-			`"arguments":{"plan":{"target":"person","where":[]}}}}`)
+			`"arguments":{"plan":{"target":"contact","where":[]}}}}`)
 
 	if !strings.Contains(refused, search.CodeUnknownPlanVersion) {
 		t.Errorf("refusal = %q, want the machine code an agent branches on", refused)
@@ -57,7 +57,7 @@ func TestARefusedPlanCarriesARemedyForEveryBadPredicate(t *testing.T) {
 
 	refused := refusedToolText(t, env, bearer,
 		`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"query_workspace",`+
-			`"arguments":{"plan":{"version":"`+search.PlanVersion+`","target":"person","where":[`+
+			`"arguments":{"plan":{"version":"`+search.PlanVersion+`","target":"contact","where":[`+
 			`{"field":"invented_field","op":"eq","value":"x"},`+
 			`{"field":"full_name","op":"invented_op","value":"x"}]}}}}`)
 

@@ -40,7 +40,7 @@ type DigestPayload struct {
 type DigestCapture struct {
 	MessagesSynced    int `json:"messages_synced"`
 	ActivitiesCreated int `json:"activities_created"`
-	PeopleCreated     int `json:"people_created"`
+	ContactsCreated   int `json:"contacts_created"`
 	CompaniesCreated  int `json:"companies_created"`
 }
 
@@ -145,7 +145,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		SELECT
 		  (SELECT count(*) FROM activity a
 		    WHERE a.captured_by LIKE 'connector:%' AND a.kind = 'email' AND a.created_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
-		  (SELECT count(*) FROM person WHERE captured_by LIKE 'connector:%' AND created_at >= $1),
+		  (SELECT count(*) FROM contact WHERE captured_by LIKE 'connector:%' AND created_at >= $1),
 		  -- Companies now arrive from the domain-triage verdict, not from the
 		  -- connector: capture withholds the company until a site read
 		  -- says the domain deserves one, so the row is stamped by the system
@@ -160,7 +160,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		    WHERE a.capture_label = 'meeting' AND a.capture_labeled_at >= $1`+auth.AudienceWorkspaceOnly("a")+`),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'noise' AND capture_labeled_at >= $1)`,
 		since).Scan(
-		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.CompaniesCreated,
+		&p.Capture.ActivitiesCreated, &p.Capture.ContactsCreated, &p.Capture.CompaniesCreated,
 		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise,
 	)
 	if err != nil {
@@ -194,7 +194,7 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		return DigestPayload{}, err
 	}
 	// Everything below is per READER rather than per workspace: it names
-	// records, and which records a person can see is theirs. One context binds
+	// records, and which records a contact can see is theirs. One context binds
 	// that reader once, with the live authority the resolver answers.
 	if r.digestProjects == nil && r.digestReview == nil {
 		return p, nil

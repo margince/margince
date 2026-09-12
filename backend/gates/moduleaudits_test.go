@@ -53,7 +53,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/platform/database/storekit": "storekit IS the audit writer; the four tables it owns are the ledgers themselves",
 
 	// The job fleet's own queue. river_job is River's operational state — what
-	// is queued, running or retained — and not a record of anything a person
+	// is queued, running or retained — and not a record of anything a contact
 	// did. Every domain write a job performs is audited by the module that
 	// performs it, under that module's own row; the queue row is the machinery
 	// that got the worker there.
@@ -65,25 +65,25 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/platform/jobs": "river_job is the fleet's operational state rather than a record fact — what a job DID is audited by the module that did it, and the purge that deletes these rows is audited by the erasure that ordered it",
 
 	// Per-READER derived state. Every one of these tables carries a user_id and
-	// holds an assembly generated FOR one person — a brief, a dossier, a view
+	// holds an assembly generated FOR one contact — a brief, a dossier, a view
 	// cursor, a dismissal. None is a shared record fact, so none has a record
 	// history to write: regenerating one for a different reader produces
 	// different rows legitimately, and an audit trail over that would record
 	// reading rather than changing. Verified against the DDL, not the package
-	// name: user_record_view, suggestion_dismissal, person_moment_dismissal,
-	// company_brief, person_brief, deal_status_card, company_dossier and company_growth_fit all
+	// name: user_record_view, suggestion_dismissal, contact_moment_dismissal,
+	// company_brief, contact_brief, deal_status_card, company_dossier and company_growth_fit all
 	// key on user_id.
 	// company360 is deliberately absent from this list. Its per-reader tables
 	// (user_record_view, suggestion_dismissal) still need no history for the
 	// reason above, but the package now writes a real audit row — the evidence
 	// each agent-read buying role rests on — so it satisfies the gate outright
 	// and a waiver here would be a claim about it that is no longer true.
-	"internal/compose/person360":      "person_moment_dismissal, the same per-reader shape",
+	"internal/compose/contact360":     "contact_moment_dismissal, the same per-reader shape",
 	"internal/compose/companybrief":   "company_brief is an assembly generated for one reader and never served to another",
 	"internal/compose/companyscan":    "company_scan, the same per-reader shape — the model's reading of one account for one reader, regenerable from the records at any time and never served to another; the read's own history is the AI activity rail, which every transition announces",
-	"internal/compose/personbrief":    "person_brief, the same",
-	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one person may see, never served to another",
-	"internal/compose/worklistsnap":   "worklist_snapshot, the same per-reader shape — one person's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
+	"internal/compose/contactbrief":   "contact_brief, the same",
+	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one contact may see, never served to another",
+	"internal/compose/worklistsnap":   "worklist_snapshot, the same per-reader shape — one contact's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
 	"internal/compose/companydossier": "company_dossier and company_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 
 	// The installation's ciphertext store. vault_secret is a ref -> ciphertext

@@ -50,7 +50,7 @@ import (
 // passing, no longer about anything.
 var voiceRuleHeading = promptvoice.Heading
 
-// voiceWaiverPrefix marks a request whose output no person reads as prose.
+// voiceWaiverPrefix marks a request whose output no contact reads as prose.
 //
 // Deliberately NOT the language gate's prefix. The first version of this gate
 // reused everyManyRequest's waiver walk, which matched //promptlang:exempt
@@ -58,7 +58,7 @@ var voiceRuleHeading = promptvoice.Heading
 // comment entirely, and let a pre-existing language waiver on an unrelated
 // function silently exempt a file from the voice rule. The two answers are
 // different answers: a prompt returning an enum needs neither, but a prompt
-// returning a person's own name in their own language needs a language waiver
+// returning a contact's own name in their own language needs a language waiver
 // and still has no prose to sound like anything.
 const voiceWaiverPrefix = "//promptvoice:exempt"
 
@@ -73,7 +73,7 @@ func TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot(t *testing.T) {
 			continue
 		}
 		t.Errorf("%s builds a model.Request that neither composes the shared voice nor waives it. "+
-			"If a person reads its output as prose, compose promptvoice.Rule into the System prompt; "+
+			"If a reader reads its output as prose, compose promptvoice.Rule into the System prompt; "+
 			"if the reply is data — an enum, a number, a field copied out of a document — mark it %s <reason>",
 			site.where, voiceWaiverPrefix)
 	}
@@ -84,7 +84,7 @@ func TestEveryVoiceWaiverGivesAReason(t *testing.T) {
 	for _, site := range everyModelRequest(t) {
 		if site.voiceWaived && site.voiceWaiverReason == "" {
 			t.Errorf("%s waives the voice without saying why. A waiver nobody can check is one nobody will "+
-				"revisit: say what this request returns that no person reads as prose", site.where)
+				"revisit: say what this request returns that no contact reads as prose", site.where)
 		}
 	}
 }

@@ -100,7 +100,7 @@ const (
 // openingRoles is who to write to first, best answer first. A champion will
 // carry the conversation internally; an economic buyer can decide; a
 // decision-maker or an influencer is a way in. A blocker is deliberately
-// absent — opening a deal by writing to the person most likely to refuse it is
+// absent — opening a deal by writing to the contact most likely to refuse it is
 // not a first move, and suggesting it would be worse than saying nothing.
 var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, roleInfluencer}
 
@@ -108,7 +108,7 @@ var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, 
 //
 // Without it such a deal was told "Nothing has been logged on this deal yet —
 // agree the next step", which restates the empty timeline the reader is
-// looking at and names no person, no role and no verb they could not have
+// looking at and names no contact, no role and no verb they could not have
 // worked out themselves. A deal with named seats and no contact has exactly
 // one obvious next move, and the records already say who it is with.
 //
@@ -135,7 +135,7 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 // openingReason says who to open with and why they are the one.
 //
 // It carries the seat COUNT because that is the fact a reader checks the
-// advice against: "four people are named and none has been contacted" is
+// advice against: "four contacts are named and none has been contacted" is
 // checkable against the page, where "reach out" is not.
 func openingReason(seat Seat, seats int) string {
 	who := roleWord(seat.Role)
@@ -145,7 +145,7 @@ func openingReason(seat Seat, seats int) string {
 	if seats == 1 {
 		return fmt.Sprintf("Nobody has been contacted yet. Open with %s.", who)
 	}
-	return fmt.Sprintf("%d people are named on this deal and none has been contacted. Open with %s.", seats, who)
+	return fmt.Sprintf("%d contacts are named on this deal and none has been contacted. Open with %s.", seats, who)
 }
 
 // roleWords is the wire value on the left, the words a sentence uses on the
@@ -186,7 +186,7 @@ func move(action, reason string, args map[string]any, evidence ...crmcontracts.D
 }
 
 // upcomingMeeting is the soonest booked meeting inside the horizon. A meeting
-// with no status is booked — the predicate person360 and company360's next-meeting
+// with no status is booked — the predicate contact360 and company360's next-meeting
 // reads spell — so the card and the record pages agree about which is next.
 func upcomingMeeting(f facts) (crmcontracts.Activity, bool) {
 	var best crmcontracts.Activity

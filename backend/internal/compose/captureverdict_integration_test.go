@@ -42,7 +42,7 @@ import (
 // disposition id in the prompt. A confidence below the floor stays below it on
 // the re-ask too, which is how the terminal-unsure path is reached.
 type scriptedVerdictBrain struct {
-	verdicts   map[string]string  // by disposition id; default the person kind
+	verdicts   map[string]string  // by disposition id; default the contact kind
 	confidence map[string]float64 // by disposition id; default 0.95
 	// servedModel is which model the response says answered; default a stand-in
 	// name. The ledger records it, so a test can assert the provenance rather
@@ -61,7 +61,7 @@ func (s *scriptedVerdictBrain) Complete(_ context.Context, req model.Request) (m
 	for _, id := range askedFor {
 		verdict := s.verdicts[id]
 		if verdict == "" {
-			verdict = capture.KindPerson
+			verdict = capture.KindContact
 		}
 		conf, ok := s.confidence[id]
 		if !ok {
@@ -87,7 +87,7 @@ func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
 	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -97,11 +97,11 @@ func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
 		t.Fatalf("disposition status = %q, want real", got)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'ada@realco.example'`); n != 1 {
-		t.Fatalf("%d persons created for a real verdict, want 1", n)
+		t.Fatalf("%d contacts created for a real verdict, want 1", n)
 	}
-	// A `real` verdict admits the PERSON. Whether they have an employer is a
+	// A `real` verdict admits the CONTACT. Whether they have an employer is a
 	// separate question with its own evidence, so the verdict opens it rather
 	// than inventing "Realco" from the domain.
 	if n := countIn(t, e, `SELECT count(*) FROM company`); n != 0 {
@@ -141,9 +141,9 @@ func TestVerdictNoiseHidesNowAndRedactsOnlyAfterTheUndoWindow(t *testing.T) {
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND body IS NOT NULL`, activityID); n != 1 {
 		t.Fatal("the content was redacted at hide time — the undo window would not exist")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+	if n := countIn(t, e, `SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'blast@bulk.example'`); n != 0 {
-		t.Fatal("a noise verdict created a person")
+		t.Fatal("a noise verdict created a contact")
 	}
 
 	if n := rawCaptureRows(t, e, activityID); n != 1 {
@@ -205,9 +205,9 @@ func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
 	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, activityID); n != 1 {
 		t.Fatal("a below-floor noise verdict hid the message — the floor must abstain, not act")
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+	if n := countIn(t, e, `SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'maybe@ambiguous.example'`); n != 0 {
-		t.Fatal("an unsure verdict created a person")
+		t.Fatal("an unsure verdict created a contact")
 	}
 	if brain.calls < 2 {
 		t.Fatalf("%d model calls, want at least 2 — a below-floor answer must be re-asked solo before it retires", brain.calls)
@@ -416,7 +416,7 @@ func (b *promptRecordingBrain) Complete(_ context.Context, req model.Request) (m
 		return model.Response{}, fmt.Errorf("prompt carried %d fenced senders, want 1 (0 means no declared boundary)", len(ids))
 	}
 	payload, err := json.Marshal(map[string]any{"results": []map[string]any{
-		{"id": ids[0], "verdict": capture.KindPerson, "confidence": 0.95},
+		{"id": ids[0], "verdict": capture.KindContact, "confidence": 0.95},
 	}})
 	if err != nil {
 		return model.Response{}, err
@@ -438,7 +438,7 @@ func TestEachSenderIsJudgedOnItsOwnMessage(t *testing.T) {
 
 	brain := &scriptedVerdictBrain{
 		verdicts: map[string]string{
-			victim.String():   capture.KindPerson,
+			victim.String():   capture.KindContact,
 			attacker.String(): capture.KindSpam,
 		},
 	}
@@ -489,7 +489,7 @@ func backdateArchive(t *testing.T, e *integration.Env, id ids.UUID) {
 }
 
 // An address erased between capture and the verdict creates nothing, and the
-// ledger has to say so: a row reading `real` for someone with no person behind
+// ledger has to say so: a row reading `real` for someone with no contact behind
 // it describes a record that does not exist, and every later message from that
 // address would then take the create path and fail.
 //
@@ -502,7 +502,7 @@ func TestAnAddressErasedBeforeTheVerdictRecordsSuppressedNotReal(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "gone@erased.example", "erased.example", activityID)
 	suppressAddress(t, e, "gone@erased.example")
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -512,7 +512,7 @@ func TestAnAddressErasedBeforeTheVerdictRecordsSuppressedNotReal(t *testing.T) {
 		t.Fatalf("disposition = %q, want suppressed — erasure outranks a verdict, and the ledger must not claim a record exists", got)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'gone@erased.example'`); n != 0 {
 		t.Fatal("an erased address was re-created by a verdict")
 	}
@@ -533,29 +533,29 @@ func suppressAddress(t *testing.T, e *integration.Env, email string) {
 	}
 }
 
-// Only a person becomes a person. The binary vocabulary put "a person or
+// Only a contact becomes a contact. The binary vocabulary put "a contact or
 // company" on one side of a single line, so every above-floor `real` ran the
-// person-creation path and a company writing under its own name became a
-// contact named after the company — a real import produced people called
+// contact-creation path and a company writing under its own name became a
+// contact named after the company — a real import produced contacts called
 // "Docsign" (on a vendor's support address), "VINASA" and "Expensify".
-func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
+func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 	e := integration.Setup(t)
 	cases := []struct {
-		kind        string
-		email       string
-		wantPersons int
-		wantStatus  string
-		wantHidden  bool
+		kind         string
+		email        string
+		wantContacts int
+		wantStatus   string
+		wantHidden   bool
 	}{
-		{kind: capture.KindPerson, email: "anna@realco.example", wantPersons: 1, wantStatus: capture.PendingStatusReal},
+		{kind: capture.KindContact, email: "anna@realco.example", wantContacts: 1, wantStatus: capture.PendingStatusReal},
 		// Real correspondence, no human to name. The mail stays visible; the
 		// contact is what is withheld.
-		{kind: capture.KindRoleMailbox, email: "support@respacio.example", wantPersons: 0, wantStatus: capture.PendingStatusReal},
-		{kind: capture.KindCompanySender, email: "contact@vinasa.example", wantPersons: 0, wantStatus: capture.PendingStatusReal},
+		{kind: capture.KindRoleMailbox, email: "support@respacio.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
+		{kind: capture.KindCompanySender, email: "contact@vinasa.example", wantContacts: 0, wantStatus: capture.PendingStatusReal},
 		// Bulk and automated mail is hidden as before.
-		{kind: capture.KindNewsletter, email: "digest@saasweekly.example", wantPersons: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
-		{kind: capture.KindTransactional, email: "receipts@expensify.example", wantPersons: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
-		{kind: capture.KindSpam, email: "deals@peinsights.example", wantPersons: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
+		{kind: capture.KindNewsletter, email: "digest@saasweekly.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
+		{kind: capture.KindTransactional, email: "receipts@expensify.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
+		{kind: capture.KindSpam, email: "deals@peinsights.example", wantContacts: 0, wantStatus: capture.PendingStatusNoise, wantHidden: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.kind, func(t *testing.T) {
@@ -571,9 +571,9 @@ func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
 				t.Errorf("disposition = %q, want %q", got, tc.wantStatus)
 			}
 			if n := countIn(t, e, `
-				SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
-				WHERE pe.email = $1`, tc.email); n != tc.wantPersons {
-				t.Errorf("%d persons for a %s sender, want %d", n, tc.kind, tc.wantPersons)
+				SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
+				WHERE pe.email = $1`, tc.email); n != tc.wantContacts {
+				t.Errorf("%d contacts for a %s sender, want %d", n, tc.kind, tc.wantContacts)
 			}
 			live := countIn(t, e, `SELECT count(*) FROM activity WHERE id = $1 AND archived_at IS NULL`, activity)
 			if tc.wantHidden && live != 0 {
@@ -599,13 +599,13 @@ func TestOnlyThePersonKindCreatesAPerson(t *testing.T) {
 
 // A role mailbox is settled by its address, with no model call at all.
 //
-// The lane runs on one small local model, and that model answered `person` for
+// The lane runs on one small local model, and that model answered `contact` for
 // `support+<ticket>@…zendesk.com`, `billing_apac@…` and `hello.events@…` often
 // enough to put departments in a founder's CRM as contacts. The address says
 // what those are; spending a call to be told something we then have to discard
 // is the wrong trade twice over.
 //
-// The default scripted verdict is `person`, so a lane that still asked would
+// The default scripted verdict is `contact`, so a lane that still asked would
 // create the contact and fail this — the assertion is not merely that the brain
 // went unused.
 func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
@@ -638,9 +638,9 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 				t.Errorf("kind = %q, want %q", kind, capture.KindRoleMailbox)
 			}
 			if n := countIn(t, e, `
-				SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+				SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 				WHERE pe.email = $1`, address); n != 0 {
-				t.Errorf("%d persons for a role mailbox, want 0 — a department is not a contact", n)
+				t.Errorf("%d contacts for a role mailbox, want 0 — a department is not a contact", n)
 			}
 		})
 	}
@@ -666,8 +666,8 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 		t.Fatal("the fixture composed a model — the case under test needs none")
 	}
 
-	person := seedCapturedMail(t, e, "anna@realco.example", "hello")
-	personRow := seedPendingDisposition(t, e, "anna@realco.example", "realco.example", person)
+	contact := seedCapturedMail(t, e, "anna@realco.example", "hello")
+	contactRow := seedPendingDisposition(t, e, "anna@realco.example", "realco.example", contact)
 	role := seedCapturedMail(t, e, "billing@realco.example", "your invoice")
 	roleRow := seedPendingDisposition(t, e, "billing@realco.example", "realco.example", role)
 
@@ -681,8 +681,8 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 			got, capture.PendingStatusReal)
 	}
 	// The one that needs a model reaches a human rather than nobody.
-	if got := dispositionStatus(t, e, personRow); got != capture.PendingStatusUnsure {
-		t.Errorf("disposition = %q, want %q — a sender no model can judge is a question for a person",
+	if got := dispositionStatus(t, e, contactRow); got != capture.PendingStatusUnsure {
+		t.Errorf("disposition = %q, want %q — a sender no model can judge is a question for a contact",
 			got, capture.PendingStatusUnsure)
 	}
 }
@@ -692,14 +692,14 @@ func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 // Neither survived the decision before: the engine compared the confidence
 // against a floor and dropped it, so a 0.86 answer and a 0.99 one were
 // indistinguishable afterwards. An operator asking why a department was filed
-// as a person could see the answer and never how close it came to being
+// as a contact could see the answer and never how close it came to being
 // refused, nor which of the deployment's models to distrust.
 func TestTheLedgerRecordsHowSureTheVerdictWasAndWhoAnswered(t *testing.T) {
 	e := integration.Setup(t)
 	activityID := seedCapturedMail(t, e, "ada@realco.example", "quote request")
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 	brain := &scriptedVerdictBrain{
-		verdicts:    map[string]string{dispositionID.String(): capture.KindPerson},
+		verdicts:    map[string]string{dispositionID.String(): capture.KindContact},
 		confidence:  map[string]float64{dispositionID.String(): 0.91},
 		servedModel: "some-local-model:8b",
 	}
@@ -749,18 +749,18 @@ func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
 // A CREATING answer needs more confidence than a refusing one.
 //
 // The two mistakes are not the same size: refusing a contact leaves the mail
-// visible and the question answerable by a person, while creating one puts a
+// visible and the question answerable by a contact, while creating one puts a
 // record in a shared CRM. Between the two floors the sender becomes a question
-// for a person rather than a contact — escalated, not dismissed.
-func TestAWeakPersonAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
+// for a contact rather than a contact — escalated, not dismissed.
+func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 	e := integration.Setup(t)
-	t.Run("a person answer below the create floor escalates", func(t *testing.T) {
+	t.Run("a contact answer below the create floor escalates", func(t *testing.T) {
 		activityID := seedCapturedMail(t, e, "maybe@realco.example", "hello")
 		dispositionID := seedPendingDisposition(t, e, "maybe@realco.example", "realco.example", activityID)
 		// Above the ordinary floor, below the create floor — and the same on the
 		// re-ask, so the lane runs out of confidence rather than of attempts.
 		brain := &scriptedVerdictBrain{
-			verdicts:   map[string]string{dispositionID.String(): capture.KindPerson},
+			verdicts:   map[string]string{dispositionID.String(): capture.KindContact},
 			confidence: map[string]float64{dispositionID.String(): 0.75},
 		}
 		engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
@@ -772,9 +772,9 @@ func TestAWeakPersonAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 				got, capture.PendingStatusUnsure)
 		}
 		if n := countIn(t, e, `
-			SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+			SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			WHERE pe.email = $1`, "maybe@realco.example"); n != 0 {
-			t.Errorf("%d persons for a weakly-judged sender, want 0", n)
+			t.Errorf("%d contacts for a weakly-judged sender, want 0", n)
 		}
 	})
 

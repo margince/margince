@@ -17,7 +17,7 @@ import { installFetchStub } from "./story-utils";
 // The connect-time backfill is the coldstart payoff: the scope must auto-load
 // (honest scope before any click), the spend must still wait for the explicit
 // start (ADR-0020 preview-before-spend), and the run must render the three
-// headline figures — captured mail, people, companies — from real persisted
+// headline figures — captured mail, contacts, companies — from real persisted
 // counts as they climb. Every number here is a server number.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -278,12 +278,12 @@ describe("the connect-time backfill payoff", () => {
     );
   });
 
-  it("renders the three headline figures — captured, people, companies — from the run counts", async () => {
+  it("renders the three headline figures — captured, contacts, companies — from the run counts", async () => {
     stubApi({
       statuses: [
         countsStatus("running", {
           captured: 128,
-          people_created: 47,
+          contacts_created: 47,
           companies_created: 12,
           messages_scanned: 150,
         }),
@@ -306,7 +306,7 @@ describe("the connect-time backfill payoff", () => {
       statuses: [
         countsStatus("done", {
           captured: 512,
-          people_created: 90,
+          contacts_created: 90,
           companies_created: 20,
           messages_scanned: 600,
         }),
@@ -380,7 +380,7 @@ describe("the connect-time backfill payoff", () => {
 
   it("surfaces an honest error class without hiding the counts captured so far", async () => {
     stubApi({
-      statuses: [countsStatus("error", { captured: 40, people_created: 9 })],
+      statuses: [countsStatus("error", { captured: 40, contacts_created: 9 })],
     });
     render(<BackfillPanel provider="gmail" />);
 

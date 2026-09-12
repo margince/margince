@@ -6,7 +6,7 @@ package consent
 // Answering a refusal by saying what happened away from the system.
 //
 // The engine refuses a send to somebody it has no evidence about, and it is
-// right to: nothing on the record connects the workspace to that person. But
+// right to: nothing on the record connects the workspace to that contact. But
 // the record is not the world. A customer rang and asked for a quote, somebody
 // took a card at a stand — and the rep who was there is the only place that
 // fact exists.
@@ -46,22 +46,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// fieldSubjectID is the body field naming the person a statement is about. One
+// fieldSubjectID is the body field naming the contact a statement is about. One
 // spelling, because the guard below and the refusal above both name it and a
 // typo in either would highlight a box the caller did not fill in.
 const fieldSubjectID = "subject_id"
 
-// RecordContextInput is one rep's statement about one person.
+// RecordContextInput is one rep's statement about one contact.
 //
 // THE SUBJECT IS NAMED, and that is a correction rather than a detail. The
 // first attempt copied one statement onto every refused recipient, so a
-// sentence about a phone call with one person became recorded evidence about
+// sentence about a phone call with one contact became recorded evidence about
 // three others who had nothing to do with it. A statement is about whoever it
 // is about.
 type RecordContextInput struct {
-	// SubjectID is the person the statement is about, which must be one of the
-	// people this review was refused for.
-	SubjectID ids.PersonID
+	// SubjectID is the contact the statement is about, which must be one of the
+	// contacts this review was refused for.
+	SubjectID ids.ContactID
 	// Kind is how the exchange happened: an in-person meeting, or a request the
 	// subject made themselves.
 	Kind string
@@ -103,7 +103,7 @@ func (s *Store) RecordContext(
 ) (Review, error) {
 	// AN ABSENT subject_id DECODES TO THE ZERO UUID with no error, and would
 	// then match no refusal and answer 404 — telling the caller this review does
-	// not name a person they never named.
+	// not name a contact they never named.
 	//
 	// Refused at the STORE rather than in the handler, because that is the door
 	// every transport comes through: a check in the HTTP handler alone is what
@@ -118,12 +118,12 @@ func (s *Store) RecordContext(
 	if err := httperr.RequireBodyID(fieldSubjectID, in.SubjectID.UUID); err != nil {
 		return Review{}, err
 	}
-	// A PERSON, not merely a principal auth.RequireHuman admits. That check
+	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
 	// lets connectors through, and a connector runs with the granting human's
 	// own grants — so it would hold whatever this is gated on and could assert,
 	// in a named employee's name, that a phone call happened. This is a
 	// statement about what somebody remembers.
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Review{}, err
 	}
 	review, err := s.ReviewForReader(ctx, reviewID)
@@ -145,7 +145,7 @@ func (s *Store) RecordContext(
 	refusal, found := refusalNaming(review, in.SubjectID)
 	if !found {
 		// Not found rather than forbidden: from the caller's side there is no
-		// such person on this review, and saying which of the two it was would
+		// such contact on this review, and saying which of the two it was would
 		// disclose who else the message was refused for.
 		return Review{}, apperrors.ErrNotFound
 	}
@@ -202,9 +202,9 @@ func (s *Store) RecordContext(
 //
 // BY SUBJECT ID, never by address. Two recipients can share an address in a
 // malformed envelope, and the subject is what the qualifying event is written
-// against — matching on anything else would record evidence about one person
+// against — matching on anything else would record evidence about one contact
 // under the authority of a refusal about another.
-func refusalNaming(review Review, subject ids.PersonID) (RefusedRecipient, bool) {
+func refusalNaming(review Review, subject ids.ContactID) (RefusedRecipient, bool) {
 	want := subject.String()
 	for _, r := range review.Refusals {
 		if r.SubjectID == want {
@@ -224,7 +224,7 @@ func refusalNaming(review Review, subject ids.PersonID) (RefusedRecipient, bool)
 func whyAStatementCannotAnswer(reason string) string {
 	switch reason {
 	case commsauthz.ReasonObjection, commsauthz.ReasonSubjectRequest:
-		return "this person asked us to stop, so what you remember does not change it; " +
+		return "this contact asked us to stop, so what you remember does not change it; " +
 			"a send that has to go anyway needs a recorded exception"
 	case commsauthz.ReasonRestricted:
 		return "this record is under a processing restriction, which only lifting the " +
@@ -241,11 +241,11 @@ func whyAStatementCannotAnswer(reason string) string {
 		return "this jurisdiction's limit on how often we may write has been reached; it passes " +
 			"with time rather than with evidence"
 	case commsauthz.ReasonNoSubject:
-		return "this address does not resolve to one person, so there is nobody to record the " +
+		return "this address does not resolve to one contact, so there is nobody to record the " +
 			"evidence against"
 	case commsauthz.ReasonUnknownPurpose:
 		return "this message names a purpose this installation does not define, which is a " +
-			"problem with the message rather than with what you know about the person"
+			"problem with the message rather than with what you know about the contact"
 	case commsauthz.ReasonLegacyTransactionalUnevidenced:
 		return "this message was sent under the old transactional key with nothing behind it; " +
 			"give it a communication context and the engine can judge it properly"
@@ -253,14 +253,14 @@ func whyAStatementCannotAnswer(reason string) string {
 	return fmt.Sprintf("this refusal (%s) is not one a statement about what happened can answer", reason)
 }
 
-// HeldSubjectsForReview lists the people a review was refused for, so a caller
+// HeldSubjectsForReview lists the contacts a review was refused for, so a caller
 // re-reading a review knows whom it may take a statement about.
 //
 // It exists because the answer is not simply "every refusal": only the ones
 // coded no_compatible_evidence can be answered this way, and offering a form
 // for the others is offering a box that cannot work.
-func HeldSubjectsForReview(review Review) []ids.PersonID {
-	var out []ids.PersonID
+func HeldSubjectsForReview(review Review) []ids.ContactID {
+	var out []ids.ContactID
 	for _, r := range review.Refusals {
 		if r.ReasonCode != commsauthz.ReasonNoEvidence || r.SubjectID == "" {
 			continue
@@ -269,7 +269,7 @@ func HeldSubjectsForReview(review Review) []ids.PersonID {
 		if err != nil {
 			continue
 		}
-		out = append(out, ids.From[ids.PersonKind](id))
+		out = append(out, ids.From[ids.ContactKind](id))
 	}
 	return out
 }
@@ -301,7 +301,7 @@ func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, occurredAt ti
 	}
 	return &ContextNotAnswerableError{
 		Why: fmt.Sprintf("this happened more than %d days ago, which is longer than a recorded "+
-			"exchange keeps supporting a message the person did not prompt; a send that has to "+
+			"exchange keeps supporting a message the contact did not prompt; a send that has to "+
 			"go anyway needs a recorded exception", int(window.Hours()/24)),
 	}
 }
@@ -328,7 +328,7 @@ func whyThisReviewIsNotOpenToIt(state string) string {
 // for this recipient — and that is what makes this narrower than a bare EXISTS.
 // The question is not "is there a stop" but "is there a stop that binds THIS
 // message", and a marketing objection binds marketing only. An earlier spelling
-// refused on any live row, which turned a person who had opted out of the
+// refused on any live row, which turned a contact who had opted out of the
 // newsletter into somebody a rep could not record a phone call about, while the
 // send path would have let the ordinary letter through.
 //
@@ -336,19 +336,19 @@ func whyThisReviewIsNotOpenToIt(state string) string {
 // reaches is the engine's judgement and lives one file over; a copy here would
 // be a second answer free to drift from the one the send actually applies.
 //
-// KEYED THE WAY THE SEND PATH KEYS IT (authorizetransmitrecord.go): person,
+// KEYED THE WAY THE SEND PATH KEYS IT (authorizetransmitrecord.go): contact,
 // lead, or the address itself. A hard bounce recorded against the address alone
-// carries no person id, and a check that looked only at the person would accept
+// carries no contact id, and a check that looked only at the contact would accept
 // a statement about a mailbox that does not accept mail.
 func aStopThatBindsTheMessage(
-	ctx context.Context, db *database.DB, subject ids.PersonID, refusal RefusedRecipient,
+	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
 	var kinds []string
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT kind FROM communication_suppression
 			 WHERE revoked_at IS NULL
-			   AND (person_id = $1
+			   AND (contact_id = $1
 			        OR lead_id = $1
 			        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
 			subject.UUID, refusal.Address)

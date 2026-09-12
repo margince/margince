@@ -12,7 +12,7 @@
 //
 // WHY A PACKAGE RATHER THAN A HELPER ON ONE SIDE. The two sources live in
 // tables owned by different modules — `activity` in activities,
-// `conversation_claim` in people — and a module never imports a sibling, so
+// `conversation_claim` in contacts — and a module never imports a sibling, so
 // neither side can host a comparison over both. Ranking them is not a
 // database question anyway: it is a pure function of due dates, and putting it
 // where every tier may import it is what stops the next surface from writing a

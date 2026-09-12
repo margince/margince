@@ -42,15 +42,15 @@ var auditGovernedTypes = []string{
 //
 // The four collateral routes, each verified against the baseline schema:
 //
-//   - attachment hangs off SEVEN parent types, not one: person, company,
+//   - attachment hangs off SEVEN parent types, not one: contact, company,
 //     deal, lead, activity, project and relationship, by its own CHECK. Only the
 //     activity parent has an audience, so the route reads the polymorphic
 //     (entity_type, entity_id) pair and resolves nothing for the other six.
-//     TestADocumentOnAPersonKeepsItsName is the case that fails.
+//     TestADocumentOnAContactKeepsItsName is the case that fails.
 //
 //     Which is why the route answers TWO questions rather than one. "No activity
 //     resolved" has two meanings and they take opposite answers: a document
-//     filed on a person is not governed at all and must reach a compliance
+//     filed on a contact is not governed at all and must reach a compliance
 //     reader whole, while an unreleased account-origin scheduled send IS
 //     governed and simply cannot be checked — that one is withheld. The
 //     `governed` column is what tells them apart, so neither has to be inferred
@@ -115,7 +115,7 @@ const auditActivityRouteSQL = `
 //
 // The route resolves first and the activity is joined on its result, so
 // entity_id is never matched against activity.id directly: entity_id is a bare
-// uuid across every entity type, and a direct match is what would let a person's
+// uuid across every entity type, and a direct match is what would let a contact's
 // id collide with an activity's and withhold an image that has no audience to
 // answer to.
 const auditActivityJoin = `

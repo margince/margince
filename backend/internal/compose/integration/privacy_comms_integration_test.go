@@ -46,11 +46,11 @@ import (
 // different fixtures and a mixed-up constant would still compile.
 const mailRecipientEmail = "erika.recipient@example.test"
 
-// delivered is one seeded outbound message: the person it was sent to, the
+// delivered is one seeded outbound message: the contact it was sent to, the
 // timeline row that records it, the delivery row that carried it, and the
 // subject line and terminal status both held before any engine touched them.
 type delivered struct {
-	person   ids.UUID
+	contact  ids.UUID
 	activity ids.UUID
 	delivery ids.UUID
 	subject  string
@@ -62,23 +62,23 @@ type delivered struct {
 // to decide whether the address survived a scrub.
 func seedMailRecipient(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, source, captured_by)
-			 VALUES ($1, 'Erika Recipient', 'manual', 'human:x')`, personID); err != nil {
+			`INSERT INTO contact (id, full_name, source, captured_by)
+			 VALUES ($1, 'Erika Recipient', 'manual', 'human:x')`, contactID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, $2, 'manual', 'human:x')`, personID, mailRecipientEmail)
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'human:x')`, contactID, mailRecipientEmail)
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return personID
+	return contactID
 }
 
 // seedDelivery plants an outbound email activity and the comms_outbound row
@@ -86,7 +86,7 @@ func seedMailRecipient(t *testing.T, e *Env) ids.UUID {
 // message occurred, as a Postgres interval literal — the correspondence floor
 // reads it, so it decides whether a destructive engine may touch the row at
 // all. recipient is the address on the message; linkTo, when non-zero, links
-// the activity to that person. The two are independent on purpose — a delivery
+// the activity to that contact. The two are independent on purpose — a delivery
 // addressed to a third party but linked to the subject's timeline, and one
 // addressed to the subject with no link at all, are what tell the SAR's two
 // reach arms apart.
@@ -113,7 +113,7 @@ type addresses struct{ counterparty, to, cc string }
 // seedAddressedDelivery is seedDelivery with the address lists stated apart.
 func seedAddressedDelivery(t *testing.T, e *Env, age, subject, body, status string, addr addresses, linkTo ids.UUID) delivered {
 	t.Helper()
-	out := delivered{person: linkTo, activity: ids.NewV7(), delivery: ids.NewV7(), subject: subject, status: status}
+	out := delivered{contact: linkTo, activity: ids.NewV7(), delivery: ids.NewV7(), subject: subject, status: status}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
@@ -125,8 +125,8 @@ func seedAddressedDelivery(t *testing.T, e *Env, age, subject, body, status stri
 		}
 		if !linkTo.IsZero() {
 			if _, err := tx.Exec(ctx,
-				`INSERT INTO activity_link (activity_id, entity_type, person_id)
-				 VALUES ($1, 'person', $2)`, out.activity, linkTo); err != nil {
+				`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				 VALUES ($1, 'contact', $2)`, out.activity, linkTo); err != nil {
 				return err
 			}
 		}
@@ -237,32 +237,32 @@ func assertDeliveryIntact(t *testing.T, e *Env, d delivered, what string) {
 	}
 }
 
-// Art. 17: erasing the person redacts the delivery behind every activity the
+// Art. 17: erasing the contact redacts the delivery behind every activity the
 // cascade redacted — and only those. The floor-shielded sibling proves the
 // scrub inherits the activity engine's shields rather than reaching by address
 // on its own, which would destroy a Handelsbrief the nightly evaluator refuses
 // to touch.
 func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
+	contact := seedMailRecipient(t, e)
 	// Both terminal shapes, because the scrub has to clear a different column
 	// on each: a sent delivery's receipt must survive, a parked one's operator
 	// reason quotes the address and must not.
-	aged := seedDelivery(t, e, "9 years", "Old order confirmation", "the agreed price was 4200 EUR", "sent", mailRecipientEmail, person)
-	agedParked := seedDelivery(t, e, "9 years", "Old quote", "the quote nobody could deliver", "parked", mailRecipientEmail, person)
-	shielded := seedDelivery(t, e, "30 days", "Recent order confirmation", "the agreed price was 900 EUR", "sent", mailRecipientEmail, person)
+	aged := seedDelivery(t, e, "9 years", "Old order confirmation", "the agreed price was 4200 EUR", "sent", mailRecipientEmail, contact)
+	agedParked := seedDelivery(t, e, "9 years", "Old quote", "the quote nobody could deliver", "parked", mailRecipientEmail, contact)
+	shielded := seedDelivery(t, e, "30 days", "Recent order confirmation", "the agreed price was 900 EUR", "sent", mailRecipientEmail, contact)
 	// Age alone no longer shields: A165 narrowed the floor to correspondence
 	// about an actual transaction, so the shielded case needs the transaction.
 	e.SeedWonDealLinkedTo(t, shielded.activity)
 	// The class the link-walk cannot see: a message this installation SENT to
-	// the subject whose activity inherited no person link (its anchor had
+	// the subject whose activity inherited no contact link (its anchor had
 	// none, or was linked to a company or deal instead). Nothing links
 	// it to the subject, and its captured_by is a human — so both halves of
 	// the timeline selector miss it unless erasure reaches mail by address.
 	unlinked := seedDelivery(t, e, "9 years", "Sent with no timeline link", "the unlinked quote", "sent", mailRecipientEmail, ids.UUID{})
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	assertDeliveryRedacted(t, e, aged)
@@ -293,8 +293,8 @@ func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 // through the delivery's address lists or it leaves the whole message readable.
 func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
-	// Nothing on the timeline names the subject: no person link, and the
+	contact := seedMailRecipient(t, e)
+	// Nothing on the timeline names the subject: no contact link, and the
 	// activity's counterparty_email is the To address. Only the delivery's cc
 	// list records that this message reached them.
 	ccd := seedAddressedDelivery(t, e, "9 years", "Quote for the renewal", "the quote we discussed", "sent",
@@ -316,8 +316,8 @@ func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
 	// nothing commercial is erasable, which is the narrowing, not a regression.
 	e.SeedWonDealLinkedTo(t, fresh.activity)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	assertDeliveryRedacted(t, e, ccd)
@@ -328,27 +328,27 @@ func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
 
 // A delivery still pending keeps a live River job, and the dispatcher transmits
 // whatever the row holds — so a scrub that empties the content and leaves the
-// status alone mails the tombstone it just wrote to the person who exercised
+// status alone mails the tombstone it just wrote to the contact who exercised
 // Art. 17. Closing the row is what stops that; a message that already left
 // keeps its status and its receipt, because rewriting those would falsify the
 // send log.
 func TestErasureParksAPendingDeliveryInsteadOfLeavingItToTransmit(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
+	contact := seedMailRecipient(t, e)
 	// Aged past the statutory correspondence floor, which decides whether the
 	// erase may reach the activity at all: a fresh fixture would be shielded and
 	// would prove nothing about the scrub.
 	pending := seedDelivery(t, e, "9 years", "Queued for the subject",
-		"the words still waiting to go out", "pending", mailRecipientEmail, person)
-	sent := seedDelivery(t, e, "9 years", "Already gone", "the words that left", "sent", mailRecipientEmail, person)
+		"the words still waiting to go out", "pending", mailRecipientEmail, contact)
+	sent := seedDelivery(t, e, "9 years", "Already gone", "the words that left", "sent", mailRecipientEmail, contact)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	row := readDelivery(t, e, pending.delivery)
 	if row.status != "parked" {
-		t.Errorf("a pending delivery for an erased person is still %q — its job would transmit to them", row.status)
+		t.Errorf("a pending delivery for an erased contact is still %q — its job would transmit to them", row.status)
 	}
 	switch {
 	case row.reason == nil || *row.reason == "":
@@ -378,7 +378,7 @@ func TestErasureParksAPendingDeliveryInsteadOfLeavingItToTransmit(t *testing.T) 
 
 // linkToHeldDeal hangs an activity off a deal under legal_hold — the position
 // a sent reply lands in by default, because the send path copies its anchor's
-// company and deal links onto the message it stages. No person link is
+// company and deal links onto the message it stages. No contact link is
 // written: this is the arm the link-walk cannot see.
 func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 	t.Helper()
@@ -393,7 +393,7 @@ func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 
 // A litigation hold reaches mail the link-walk cannot see. Sent mail is
 // STRUCTURALLY company- and deal-linked — the send path inherits the
-// anchor's links — and carries no person link of its own, so it is reached by
+// anchor's links — and carries no contact link of its own, so it is reached by
 // address rather than by link. Destroying it because of that would spoliate
 // litigation-held evidence the nightly retention evaluator refuses to touch,
 // and the delivery behind it would go with it.
@@ -403,7 +403,7 @@ func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 // the hold exclusion removed.
 func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
+	contact := seedMailRecipient(t, e)
 	held := seedDelivery(t, e, "9 years", "Disputed renewal terms",
 		"the terms we agreed before the dispute", "sent", mailRecipientEmail, ids.UUID{})
 	linkToHeldDeal(t, e, held.activity)
@@ -412,8 +412,8 @@ func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 	free := seedDelivery(t, e, "9 years", "Ordinary quote",
 		"the quote nobody disputed", "sent", mailRecipientEmail, ids.UUID{})
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	var subject string
@@ -440,17 +440,17 @@ func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 // a message the send path never linked to a record is still data about them.
 func TestSARIncludesTheSubjectsSentMessages(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
+	contact := seedMailRecipient(t, e)
 	// One fixture per arm, and neither can satisfy the other: the linked
 	// message went to somebody ELSE (only the timeline link ties it to the
 	// subject), and the addressed one carries no link at all. Sharing an
 	// address between them would let either clause alone keep this green.
 	linked := seedDelivery(t, e, "10 days", "Linked to the record", "quoted terms",
-		"sent", "third.party@example.test", person)
+		"sent", "third.party@example.test", contact)
 	unlinked := seedDelivery(t, e, "11 days", "Addressed but unlinked", "second quote",
 		"sent", mailRecipientEmail, ids.UUID{})
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

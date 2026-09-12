@@ -14,7 +14,7 @@ package integration
 //
 // WHAT MUST REMAIN TRUE AFTERWARDS is the whole point, and it is what these
 // tests hold: the refusal is still a refusal, the suppression is untouched, the
-// decision rows still read `deny`, and the next message to the same person is
+// decision rows still read `deny`, and the next message to the same contact is
 // refused all over again. An override that quietly became a consent grant would
 // be worse than no override at all.
 
@@ -80,7 +80,7 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 	}
 	if authority != "instruction" {
 		t.Errorf("the delivery went out under %q, want instruction — a message sent on a "+
-			"person's decision that records the engine's permission attributes it to nobody",
+			"human's decision that records the engine's permission attributes it to nobody",
 			authority)
 	}
 	if instruction == nil || *instruction == "" {
@@ -107,9 +107,9 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 //
 // An instruction authorizes one message to one envelope. If it survived its own
 // use, a single acknowledgement would license every future message to that
-// person — which is a standing consent grant nobody gave, wearing an override's
+// contact — which is a standing consent grant nobody gave, wearing an override's
 // name.
-func TestTheNextMessageToTheSamePersonNeedsItsOwnDecision(t *testing.T) {
+func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -127,10 +127,10 @@ func TestTheNextMessageToTheSamePersonNeedsItsOwnDecision(t *testing.T) {
 	}
 	if status != "consumed" {
 		t.Errorf("the decision reads %q after being acted on, want consumed — a decision that "+
-			"survives its own use licenses every later message to the same person", status)
+			"survives its own use licenses every later message to the same contact", status)
 	}
 
-	// A fresh message to the same person: refused again, exactly as before.
+	// A fresh message to the same contact: refused again, exactly as before.
 	if code, _ := c.send(t, "marketing_email"); code != http.StatusConflict {
 		t.Errorf("the next marketing send → %d, want 409 — the override leaked into a standing "+
 			"permission", code)
@@ -144,9 +144,9 @@ func TestDirectingASendLeavesTheSubjectsStopExactlyWhereItWas(t *testing.T) {
 	c := setupConsent(t)
 
 	if _, err := c.Owner.Exec(context.Background(), `
-		INSERT INTO communication_suppression (person_id, kind, source, captured_by, decided_by_level)
+		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'operator_ui', 'test', 'subject')`,
-		c.personID); err != nil {
+		c.contactID); err != nil {
 		t.Fatalf("recording the subject's stop: %v", err)
 	}
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -160,8 +160,8 @@ func TestDirectingASendLeavesTheSubjectsStopExactlyWhereItWas(t *testing.T) {
 	var live int
 	if err := c.Owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
-		 WHERE person_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
-		c.personID).Scan(&live); err != nil {
+		 WHERE contact_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
+		c.contactID).Scan(&live); err != nil {
 		t.Fatalf("reading the stop: %v", err)
 	}
 	if live != 1 {
@@ -170,7 +170,7 @@ func TestDirectingASendLeavesTheSubjectsStopExactlyWhereItWas(t *testing.T) {
 	}
 	var grants int
 	if err := c.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM person_consent WHERE person_id = $1`, c.personID).Scan(&grants); err != nil {
+		`SELECT count(*) FROM contact_consent WHERE contact_id = $1`, c.contactID).Scan(&grants); err != nil {
 		t.Fatalf("reading the consent rows: %v", err)
 	}
 	if grants != 0 {
@@ -191,7 +191,7 @@ func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
 		body, nil, nil); status == http.StatusCreated {
 		t.Fatal("an unacknowledged direction sent the message — the acknowledgement is the act, " +
-			"and a record written without one says a person decided something they did not")
+			"and a record written without one says a human decided something they did not")
 	}
 	var sent int
 	if err := c.Owner.QueryRow(context.Background(),
@@ -205,7 +205,7 @@ func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
 
 // A DECISION IS SPENT ON ONE MESSAGE AND CANNOT BE RE-POINTED AT ANOTHER.
 //
-// The record says a named person decided that THIS message goes. If the row
+// The record says a named human decided that THIS message goes. If the row
 // could later be made to name a different delivery, the account of who
 // authorized what would be rewritable by whoever wanted it rewritten — which is
 // the one thing a dispute about an override needs not to be possible.
@@ -290,7 +290,7 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 
 // THE WARNING IS THE SERVER'S OWN WORDS.
 //
-// An instruction's whole claim is that a named person read a particular
+// An instruction's whole claim is that a named human read a particular
 // caution before overruling the engine, and it records that as a version. A
 // client free to compose its own wording, or to name any version it liked,
 // would have the record assert an acknowledgement of text nobody published.

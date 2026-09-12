@@ -18,18 +18,18 @@ import (
 // The published vocabulary is the INTERSECTION of what the contract declares
 // and what a store can bind.
 //
-// `tag` is the live case and the reason this matters: listPeople declares it
+// `tag` is the live case and the reason this matters: listContacts declares it
 // and no column here holds tags, so publishing it would offer a narrowing that
 // runs the list whole. A filter only one half carries is offered by neither.
 func TestOnlyAFilterBothTheContractAndAStoreCarryIsPublished(t *testing.T) {
 	tool := listRecords{filters: bindableFilters(probeVocabulary{})}
 
-	person := filterNamesOf(tool, "person")
-	if slices.Contains(person, "tag") {
-		t.Errorf("person publishes %v, which includes a filter no store binds — the list would run whole", person)
+	contact := filterNamesOf(tool, "contact")
+	if slices.Contains(contact, "tag") {
+		t.Errorf("contact publishes %v, which includes a filter no store binds — the list would run whole", contact)
 	}
-	if !slices.Contains(person, "owner_id") {
-		t.Errorf("person publishes %v, which drops a filter both halves carry", person)
+	if !slices.Contains(contact, "owner_id") {
+		t.Errorf("contact publishes %v, which drops a filter both halves carry", contact)
 	}
 	if deal := filterNamesOf(tool, "deal"); !slices.Contains(deal, "stage_id") {
 		t.Errorf("deal publishes %v, want the contract's own stage_id", deal)
@@ -52,7 +52,7 @@ func TestARecordTypeOutsideTheEnumerationIsRefused(t *testing.T) {
 	if seam.queries != nil {
 		t.Errorf("the call reached the seam before it was refused: %+v", seam.queries)
 	}
-	for _, want := range []string{"person", "deal"} {
+	for _, want := range []string{"contact", "deal"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal never says what may be listed instead: %v", err)
 		}
@@ -66,10 +66,10 @@ func TestAFilterTheTypeDoesNotCarryIsRefusedByName(t *testing.T) {
 	seam := &listProbeProvider{}
 	tool := listRecords{p: seam, filters: bindableFilters(probeVocabulary{})}
 
-	_, err := tool.Handle(t.Context(), json.RawMessage(`{"record_type":"person","filters":{"stage_id":"x"}}`))
+	_, err := tool.Handle(t.Context(), json.RawMessage(`{"record_type":"contact","filters":{"stage_id":"x"}}`))
 
 	if err == nil {
-		t.Fatal("a person was listed by a filter only a deal carries")
+		t.Fatal("a contact was listed by a filter only a deal carries")
 	}
 	if !strings.Contains(err.Error(), "stage_id") || !strings.Contains(err.Error(), "owner_id") {
 		t.Errorf("the refusal names neither what was refused nor what may be asked: %v", err)
@@ -157,7 +157,7 @@ func TestTheDescriptionCarriesThePerTypeVocabulary(t *testing.T) {
 	// entry fails the day a type gains a filter earlier in the alphabet —
 	// which says nothing about whether the vocabulary is published correctly.
 	for _, want := range []string{
-		"person — ", "owner_id", "deal — ", "stage_id", "open|won|lost",
+		"contact — ", "owner_id", "deal — ", "stage_id", "open|won|lost",
 	} {
 		if !strings.Contains(described, want) {
 			t.Errorf("the filter description lacks %q:\n%s", want, described)
@@ -178,7 +178,7 @@ func TestATypeWithNoBindableFilterSaysItListsWhole(t *testing.T) {
 
 // probeVocabulary answers the store half of the vocabulary the way the
 // composite provider does: everything the contract declares EXCEPT the three
-// parameters no store binds today (person.tag, company.domain,
+// parameters no store binds today (contact.tag, company.domain,
 // lead.min_score).
 type probeVocabulary struct{}
 

@@ -31,7 +31,7 @@ import { problemMessageOf, throwProblem } from "./common";
 // An ARRAY with the type derived from it, rather than a bare union, because the
 // picker below has to decide at RUNTIME whether a search hit is one of these.
 export const RELINK_KINDS = [
-  "person",
+  "contact",
   "company",
   "deal",
   "lead",
@@ -80,7 +80,7 @@ function useSearchTargets() {
 }
 
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
-// activity's typed link to the right person/company/deal/lead. Idempotent on the
+// activity's typed link to the right contact/company/deal/lead. Idempotent on the
 // backend — re-relinking the same target is a no-op that still answers 200.
 // `threadKey` is the activity's conversation key when it has one. With it the
 // dialog offers to move the whole thread through `relinkThread`, which applies

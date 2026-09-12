@@ -94,7 +94,7 @@ func (h Handlers) ListRecordAssignments(
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RecordAssignmentListResponse{Data: out})
 }
 
-// CreateRecordAssignment makes a person or team responsible for a record.
+// CreateRecordAssignment makes a colleague or team responsible for a record.
 func (h Handlers) CreateRecordAssignment(
 	w http.ResponseWriter, r *http.Request,
 	recordType crmcontracts.AssignmentRecordType, recordID crmcontracts.Id,

@@ -152,7 +152,7 @@ describe("removing a value", () => {
 // set. What matters is that each remove control names its OWN token and that a
 // reader who may not change the set is not shown controls that refuse.
 describe("TokenList", () => {
-  const PEOPLE = [
+  const CONTACTS = [
     { id: "8801", label: "Chi Mai" },
     { id: "8802", label: "Anh Tuan" },
   ];
@@ -162,7 +162,7 @@ describe("TokenList", () => {
     const removed: string[] = [];
     render(
       <TokenList
-        items={PEOPLE}
+        items={CONTACTS}
         removeLabel={(item) => `Take ${item.label} off the list`}
         onRemove={(id) => removed.push(id)}
       />,
@@ -179,7 +179,7 @@ describe("TokenList", () => {
   it("offers no remove control at all when the set is read-only", () => {
     render(
       <TokenList
-        items={PEOPLE}
+        items={CONTACTS}
         removeLabel={(item) => `Take ${item.label} off the list`}
       />,
     );
@@ -193,7 +193,7 @@ describe("TokenList", () => {
   it("refuses removal while the caller is busy, without hiding the set", () => {
     render(
       <TokenList
-        items={PEOPLE}
+        items={CONTACTS}
         disabled
         removeLabel={(item) => `Take ${item.label} off the list`}
         onRemove={() => {}}
@@ -210,7 +210,7 @@ describe("TokenList", () => {
 // The optional half: a vocabulary the field offers while the reader types. Every
 // rule below is one that decides whether the list is HELP or a constraint.
 
-const PEOPLE = [
+const CONTACTS = [
   { value: "dana@nordwand.example", label: "Dana Ellwanger", hint: "Nordwand" },
   { value: "milo@nordwand.example", label: "Milo Fenn", hint: "Nordwand" },
 ] as const;
@@ -221,7 +221,7 @@ function Offering({ start = [] }: Readonly<{ start?: readonly string[] }>) {
     <TokenInput
       values={values}
       onChange={setValues}
-      suggestions={PEOPLE}
+      suggestions={CONTACTS}
       aria-label="To"
       placeholder="name@example.com"
     />
@@ -253,7 +253,7 @@ describe("offering a vocabulary", () => {
     expect(toBox().value).toBe("");
   });
 
-  it("finds a row by the person's name, not only by the address", async () => {
+  it("finds a row by the contact's name, not only by the address", async () => {
     const user = userEvent.setup();
     render(<Offering />);
     await user.type(toBox(), "Fenn");

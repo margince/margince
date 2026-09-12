@@ -12,7 +12,7 @@ THE GROUND TRUTH IS NOT ANOTHER MODEL'S OPINION. e2e/llm/testdata/judge holds
 185 verdicts recorded by whichever model is pinned; scoring a judge against them
 measures resemblance to that model and hands it a free hundred per cent when it
 IS that model. The fixtures under e2e/llm/testdata/<case>/ carry a better label:
-a person wrote each answer to be right or wrong on a named criterion, and
+a contact wrote each answer to be right or wrong on a named criterion, and
 scripts/test-e2e-llm-check.sh states which. So this drives that suite with a
 LIVE judge and reads its own pass/fail lines — no second copy of the harness,
 and no labels this file invents.
@@ -43,7 +43,7 @@ RECORDS = os.path.join(
 JUDGED = re.compile(r"^case\d+/")
 
 # The model id becomes a file name under RECORDS, so it is checked before it is
-# joined rather than trusted because a person typed it. This script is driven by
+# joined rather than trusted because a contact typed it. This script is driven by
 # agents that assemble their own argument list, and `os.path.join` with a value
 # carrying a separator writes wherever the caller pointed it — the one directory
 # this script owns is the only place its record belongs.

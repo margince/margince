@@ -55,7 +55,7 @@ type restrictedRecord struct {
 // subject's own linked rows, the unlinked mail about them, the unlinked
 // channel messages from them — over the activity aliased `a`. Both the destroy
 // statement and the restrict statements select from it, with the SAME
-// placeholder numbering: $1 person, $2 addresses, $6 the `provider:account`
+// placeholder numbering: $1 contact, $2 addresses, $6 the `provider:account`
 // channel keys.
 var subjectTimelineIDs = `(a.id IN (` + subjectOnlyActivities + `)
 		    OR a.id IN (` + unlinkedSubjectMail + `)
@@ -80,10 +80,10 @@ const channelRowOf = `a.source_system || ':' || split_part(coalesce(a.thread_key
 //
 // It returns what it held so the caller can drop the derived copies (vectors,
 // readings, proposals) and write the tombstone and the event per record. The
-// placeholders are erasuretimeline.go's: $1 person, $2 addresses, $3/$4 the
+// placeholders are erasuretimeline.go's: $1 contact, $2 addresses, $3/$4 the
 // floor interval and anchor, $5 the class, $6 the channel keys.
-func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]restrictedRecord, error) {
-	args := []any{personID, emails, floorInterval, floorAnchor, retentionClassCorrespondence, channelKeys}
+func restrictShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]restrictedRecord, error) {
+	args := []any{contactID, emails, floorInterval, floorAnchor, retentionClassCorrespondence, channelKeys}
 	if err := stampLegacyHandelsbriefe(ctx, tx, args); err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func tombstoneRestrictions(ctx context.Context, tx pgx.Tx, held []restrictedReco
 			return err
 		}
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionRestrict, "activity", r.ID, nil, nil, map[string]any{
-			evidenceKeyCause: "person_erasure", evidenceKeyClass: r.Class, evidenceKeyBasis: statutoryBasisCorrespondence,
+			evidenceKeyCause: "contact_erasure", evidenceKeyClass: r.Class, evidenceKeyBasis: statutoryBasisCorrespondence,
 			"restricted_until": r.RestrictedUntil, "deal_ids": dealIDs,
 		})
 		if err != nil {
@@ -273,9 +273,9 @@ func tombstoneRestrictions(ctx context.Context, tx pgx.Tx, held []restrictedReco
 // reading of a hidden record is the record in another shape, reachable by a
 // similarity probe or a proposal), and write the tombstone and the event per
 // record. It answers with what it held so the caller can withdraw the
-// proposals citing those rows and count them on the person's tombstone.
-func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]ids.UUID, error) {
-	held, err := restrictShieldedTimeline(ctx, tx, personID, emails, channelKeys, floorInterval, floorAnchor, payloads)
+// proposals citing those rows and count them on the contact's tombstone.
+func holdShieldedTimeline(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool, payloads PayloadPurger) ([]ids.UUID, error) {
+	held, err := restrictShieldedTimeline(ctx, tx, contactID, emails, channelKeys, floorInterval, floorAnchor, payloads)
 	if err != nil || len(held) == 0 {
 		return nil, err
 	}

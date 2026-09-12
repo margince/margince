@@ -16,7 +16,7 @@
 // That matters more here than for retention. A pack that could decide a send
 // would be country-specific code on the path of every outbound message, and the
 // one thing this product cannot afford is two answers to "may we write to this
-// person". So a pack states its jurisdiction's rules and the engine applies
+// contact". So a pack states its jurisdiction's rules and the engine applies
 // them, in one place, the same way for every country.
 //
 // These types are frozen published API from their first external consumer; they
@@ -130,7 +130,7 @@ func (k ExceptionKind) Validate() error {
 type MarketingException struct {
 	Kind ExceptionKind
 
-	// RequiresSaleEvidence: there must be a recorded sale to this person.
+	// RequiresSaleEvidence: there must be a recorded sale to this contact.
 	RequiresSaleEvidence bool
 
 	// RequiresCollectionTimeOptOut: the address must have been collected with
@@ -138,7 +138,7 @@ type MarketingException struct {
 	RequiresCollectionTimeOptOut bool
 
 	// RequiresSimilarity: the advertised goods must be similar to what was
-	// bought. Checked per message, not once per person: a customer who bought
+	// bought. Checked per message, not once per contact: a customer who bought
 	// one product has not opened the door to every catalogue the seller has.
 	RequiresSimilarity bool
 

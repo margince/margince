@@ -8,7 +8,7 @@ package integration
 // What a confirm link's row says happened, and whether it is true.
 //
 // opened_at is evidence: the middle of the ask-to-click chain a controller
-// produces to show a consent was freely given — the mail went out, the person
+// produces to show a consent was freely given — the mail went out, the contact
 // opened it, the answer landed.
 //
 // It was stamped by every GET, and most GETs of a link in a mail are machines.
@@ -44,7 +44,7 @@ func readLinkRow(t *testing.T, c *consentEnv) linkRow {
 // askForALink has the workspace mail a confirm link and returns its token.
 func askForALink(t *testing.T, c *consentEnv) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
@@ -83,7 +83,7 @@ func TestAScannerFetchingTheLinkIsNotAnOpening(t *testing.T) {
 	}
 }
 
-// A PERSON OPENING THE PAGE STILL RECORDS AN OPENING.
+// A HUMAN OPENING THE PAGE STILL RECORDS AN OPENING.
 //
 // Without this, the test above would pass against an implementation that
 // stopped writing opened_at altogether — which would lose the middle of the

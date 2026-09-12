@@ -43,7 +43,7 @@ func TestOnlyTheColleagueAnswersTheAsk(t *testing.T) {
 	}
 }
 
-// A reply is the product's best outcome and the one claim a person must never
+// A reply is the product's best outcome and the one claim a contact must never
 // be able to type. It comes from captured activity or not at all.
 func TestOnlyCapturedActivityRecordsAReply(t *testing.T) {
 	for _, from := range []Status{StatusIntroduced, StatusNameDropped} {
@@ -93,7 +93,7 @@ func TestExpiryReachesEveryStateThatStillOwesAnAction(t *testing.T) {
 	}
 }
 
-// The clock is not a person. A sweep that could decline on a colleague's behalf
+// The clock is not a human. A sweep that could decline on a colleague's behalf
 // would put a refusal in their mouth that they never gave.
 func TestTheSweepCanOnlyExpire(t *testing.T) {
 	answers := []Status{
@@ -136,7 +136,7 @@ func TestASuggestionIsTerminal(t *testing.T) {
 	}
 }
 
-// A move nobody may make and a move the wrong person attempts are different
+// A move nobody may make and a move the wrong contact attempts are different
 // facts, and the caller renders them as 409 and 403. Collapsing them would tell
 // a rep the record was in the wrong state when the truth is it is not theirs.
 func TestAnImpossibleMoveIsNotAForbiddenOne(t *testing.T) {

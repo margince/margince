@@ -75,8 +75,8 @@ echo "and it does not bury a divergence it did not cause"
 cat > "$tmp/divergence" <<'EOF'
   assigned but not run: backend|./internal/compose/integration|TestABlindCopiedSend
   assigned but not run: backend|./internal/compose/integration|TestAccountTimeline
-  assigned but not run: backend|./internal/modules/people|TestSomethingElseEntirely
-  ran but not assigned: backend|./internal/modules/people|TestAppearedFromNowhere
+  assigned but not run: backend|./internal/modules/contacts|TestSomethingElseEntirely
+  ran but not assigned: backend|./internal/modules/contacts|TestAppearedFromNowhere
 EOF
 printf 'backend|./internal/compose/integration\n' > "$tmp/timedout"
 lane_drop_timed_out "$tmp/divergence" "$tmp/timedout"

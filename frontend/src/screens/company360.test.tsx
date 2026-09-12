@@ -72,7 +72,7 @@ function view(overrides: Partial<Company360> = {}): Company360 {
     as_of: "2026-06-01T09:00:00Z",
     company: company,
     sections_omitted: [],
-    people: { data: [], page: emptyPage },
+    contacts: { data: [], page: emptyPage },
     deals: {
       data: [],
       page: emptyPage,
@@ -148,16 +148,16 @@ function stub(
       if (pathname.endsWith("/360")) {
         return jsonResponse(three60, status);
       }
-      // The Contacts tab's list, served from the SAME people section the 360
+      // The Contacts tab's list, served from the SAME contacts section the 360
       // fixture carries: a test that seeds a contact sees it on the tab
       // without seeding it twice in two shapes that could disagree.
       if (pathname.endsWith("/contacts")) {
-        const people =
-          (three60 as { people?: { data?: Record<string, unknown>[] } })?.people
-            ?.data ?? [];
+        const contacts =
+          (three60 as { contacts?: { data?: Record<string, unknown>[] } })
+            ?.contacts?.data ?? [];
         return jsonResponse({
-          data: people.map((contact) => ({
-            person_id: contact.person_id,
+          data: contacts.map((contact) => ({
+            contact_id: contact.contact_id,
             full_name: contact.full_name,
             title: contact.title,
             engagement: "untried",
@@ -179,7 +179,7 @@ function stub(
         return jsonResponse({
           nodes: [
             { id: "u-2", kind: "user", label: "Mira", root: false },
-            { id: "p-1", kind: "person", label: "Dana Buyer", root: false },
+            { id: "p-1", kind: "contact", label: "Dana Buyer", root: false },
           ],
           edges: [
             {
@@ -371,15 +371,15 @@ describe("company view — withheld sections", () => {
     ).toBeNull();
   });
 
-  it("reports no committee gap when the people section was withheld", async () => {
+  it("reports no committee gap when the contacts section was withheld", async () => {
     // The gap is computed from the contact list, and a withheld section
     // arrives as the same empty array an account with no contacts does.
     // Reading "nobody here is your champion" off contacts the caller was
     // never allowed to see states a fact about data the page does not have.
     stub(
       view({
-        people: undefined,
-        sections_omitted: ["people"],
+        contacts: undefined,
+        sections_omitted: ["contacts"],
         deals: {
           data: [
             {
@@ -694,7 +694,7 @@ describe("company view — next steps", () => {
             due_at: "2026-05-01T09:00:00Z",
             overdue: true,
             linked_deal_id: null,
-            linked_person_id: null,
+            linked_contact_id: null,
             assignee_id: null,
           },
         ],
@@ -767,7 +767,7 @@ describe("company view — a section still loading is not one that failed", () =
 
     resolve360?.();
     await waitFor(() => expect(brief().querySelector(".skeleton")).toBeNull());
-    // The settled read on an account with nothing needing a person today —
+    // The settled read on an account with nothing needing a contact today —
     // the honest answer the brief gives once it has actually read the account,
     // never the failure text a still-loading read would be mistaken for.
     expect(
@@ -786,7 +786,7 @@ describe("company view — a failed read is not an empty account", () => {
       expect(screen.getByText(/may not show everything/)).toBeTruthy(),
     );
     // The business rail STAYS, with each card saying it could not be loaded.
-    // Removing it would read as an account with no people and no deals,
+    // Removing it would read as an account with no contacts and no deals,
     // which is the one thing this page does not know.
     const card = screen.getByRole("complementary", { name: "Context" });
     expect(
@@ -904,10 +904,10 @@ describe("company view — the citations under a finding", () => {
   // this account's 360 holds the rest.
   it("names the record from the account's own roster when the citation does not", async () => {
     const three60 = view({
-      people: {
+      contacts: {
         data: [
           {
-            person_id: "p-9",
+            contact_id: "p-9",
             full_name: "Frédéric de Gombert",
             deal_roles: [],
             consent: {},
@@ -925,7 +925,7 @@ describe("company view — the citations under a finding", () => {
         ],
         page: { has_more: false },
       },
-      suggestions: [suggestion([{ entity_type: "person", entity_id: "p-9" }])],
+      suggestions: [suggestion([{ entity_type: "contact", entity_id: "p-9" }])],
     });
     stub(three60);
     renderSuggestions(three60);
@@ -1011,7 +1011,7 @@ describe("company view — the citations under a finding", () => {
     ]);
   });
 
-  // deal/person each open their OWN screen rather than a shared stepper, so
+  // deal/contact each open their OWN screen rather than a shared stepper, so
   // grouping them the same way would silently drop every record past the
   // first — they stay one chip per record instead.
   it("keeps a separate chip per record for a kind with its own screen", async () => {
@@ -1103,7 +1103,7 @@ describe("company view — an open task can be acted on", () => {
     due_at: "2026-06-10T09:00:00Z",
     overdue: false,
     linked_deal_id: null,
-    linked_person_id: null,
+    linked_contact_id: null,
     assignee_id: null,
   };
 
@@ -1192,7 +1192,7 @@ describe("CommercialPanel — a capped deals page says so", () => {
 // say who is: the roles live on relationship rows written from the deal
 // screen. The warning was true, unactionable and permanent.
 
-// A role belongs to a deal, so the same person can be champion on one and
+// A role belongs to a deal, so the same contact can be champion on one and
 // nobody on another. Rendering the role alone made two clauses that read
 // identically.
 
@@ -1767,7 +1767,7 @@ describe("company view — advice you can act on", () => {
       due_at: "2026-05-01T09:00:00Z",
       overdue: true,
       linked_deal_id: null,
-      linked_person_id: null,
+      linked_contact_id: null,
       assignee_id: null,
     };
     const three60 = view({
@@ -1812,10 +1812,10 @@ describe("company view — the account's own tabs", () => {
   it("keeps the rail summary beside the Contacts tab", async () => {
     stub(
       view({
-        people: {
+        contacts: {
           data: [
             {
-              person_id: "p-1",
+              contact_id: "p-1",
               full_name: "Christian Hagemeyer",
               title: "Managing director",
               strength: {
@@ -1881,7 +1881,7 @@ describe("company view — the account's own tabs", () => {
 
 // The connections card asked nobody and answered everybody: a staff directory
 // in the rail of every account, costing a graph read on every page load. The
-// route-in asks the question a rep actually has, about one person, and only
+// route-in asks the question a rep actually has, about one contact, and only
 // when they ask it.
 
 describe("company view — the account's primary actions", () => {

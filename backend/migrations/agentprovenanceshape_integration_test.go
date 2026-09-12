@@ -13,7 +13,7 @@ package migrations_test
 // nothing about tomorrow's, and a writer that forgot them used to degrade in
 // silence — the fire path read the absent actor as "cannot say which agent this
 // was" and derived `agent:<human-uuid>`, an identity that never existed and
-// that every agent acting for one person collapses into. Making omission a
+// that every agent acting for one human collapses into. Making omission a
 // REFUSAL is what stops that being reachable at all.
 //
 // Both directions, because a constraint that refused everything would pass the

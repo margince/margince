@@ -39,7 +39,7 @@ func New() extension.Extension {
 // name and the event types derive, sorted, and the handler does not.
 func TestSubscriptionsDeriveIntoManifest(t *testing.T) {
 	src := subscriptionsUnitSource(
-		"\t\t\t{Name: \"withdraw_filing\", Events: []string{\"person.archived\", \"activity.archived\"}, Handle: react},\n" +
+		"\t\t\t{Name: \"withdraw_filing\", Events: []string{\"contact.archived\", \"activity.archived\"}, Handle: react},\n" +
 			"\t\t\t{Name: \"another_listener\", Events: []string{\"deal.created\"}, Handle: react},\n")
 	derived, err := deriveSynthetic(t, "x", src)
 	if err != nil {
@@ -47,7 +47,7 @@ func TestSubscriptionsDeriveIntoManifest(t *testing.T) {
 	}
 	s := string(derived)
 	for _, want := range []string{
-		`"name": "withdraw_filing"`, `"activity.archived"`, `"person.archived"`,
+		`"name": "withdraw_filing"`, `"activity.archived"`, `"contact.archived"`,
 		`"name": "another_listener"`, `"deal.created"`,
 	} {
 		if !strings.Contains(s, want) {
@@ -57,7 +57,7 @@ func TestSubscriptionsDeriveIntoManifest(t *testing.T) {
 	if strings.Index(s, "another_listener") > strings.Index(s, "withdraw_filing") {
 		t.Errorf("subscriptions are not sorted by name:\n%s", s)
 	}
-	if strings.Index(s, "activity.archived") > strings.Index(s, "person.archived") {
+	if strings.Index(s, "activity.archived") > strings.Index(s, "contact.archived") {
 		t.Errorf("event types are not sorted:\n%s", s)
 	}
 	if strings.Contains(s, "react") || strings.Contains(s, "Handle") {
@@ -84,7 +84,7 @@ func TestNoSubscriptionsOmitsTheField(t *testing.T) {
 func TestDuplicateSubscriptionIsRejected(t *testing.T) {
 	src := subscriptionsUnitSource(
 		"\t\t\t{Name: \"withdraw_filing\", Events: []string{\"activity.archived\"}, Handle: react},\n" +
-			"\t\t\t{Name: \"withdraw_filing\", Events: []string{\"person.archived\"}, Handle: react},\n")
+			"\t\t\t{Name: \"withdraw_filing\", Events: []string{\"contact.archived\"}, Handle: react},\n")
 	_, err := deriveSynthetic(t, "x", src)
 	if err == nil || !strings.Contains(err.Error(), "declared twice") {
 		t.Fatalf("err = %v, want the duplicate-subscription refusal", err)

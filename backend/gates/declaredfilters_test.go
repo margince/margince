@@ -9,7 +9,7 @@ package gates
 // it is not declared.
 //
 // The defect this closes is the widest wrong answer there is. `GET
-// /v1/people?tag=vip` whose handler never reads `tag` returns EVERY person the
+// /v1/contacts?tag=vip` whose handler never reads `tag` returns EVERY contact the
 // caller may see, with 200 OK and a well-formed page: the client cannot tell
 // that from a workspace where everyone carries the tag. Three of these were
 // live when the gate was written — `tag`, `company.domain`,
@@ -294,21 +294,21 @@ func TestTheDeclaredFilterWalkReportsADroppedParameterAndNothingElse(t *testing.
 func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
 	t.Parallel()
 	declared := narrowingParametersByType(t)
-	people, listed := declared["ListPeopleParams"]
+	contacts, listed := declared["ListContactsParams"]
 	if !listed {
-		t.Fatalf("the census carries no ListPeopleParams — it is reading the wrong shape")
+		t.Fatalf("the census carries no ListContactsParams — it is reading the wrong shape")
 	}
 	var wire []string
-	for _, filter := range people {
+	for _, filter := range contacts {
 		wire = append(wire, filter.wire)
 	}
-	// The person list declares exactly these. cursor and limit ARE among them —
+	// The contact list declares exactly these. cursor and limit ARE among them —
 	// the gate judges a page dial the same way it judges a filter — and `sort`
 	// is not, because it is the one type still scoped out.
 	want := "ai_written,captured_by_kind,company_id,cursor,include_archived,limit,owner_id," +
 		"owner_team_id,q,tag_id,tag_mode,unassigned"
 	if got := strings.Join(wire, ","); got != want {
-		t.Errorf("listPeople's narrowing parameters = %q, want %q", got, want)
+		t.Errorf("listContacts's narrowing parameters = %q, want %q", got, want)
 	}
 }
 

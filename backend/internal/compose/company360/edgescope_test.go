@@ -28,7 +28,7 @@ func graphReader(objects map[string]principal.ObjectGrant) context.Context {
 // precisely the situation the edge grant exists for.
 func TestEdgeScopeRefusesACallerHoldingOnlyTheEndpoints(t *testing.T) {
 	ctx := graphReader(map[string]principal.ObjectGrant{
-		"person": {Read: true}, "company": {Read: true}, "deal": {Read: true},
+		"contact": {Read: true}, "company": {Read: true}, "deal": {Read: true},
 	})
 	clause, err := edgeScope(ctx, func(any) int { return 1 })
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -62,7 +62,7 @@ func TestEdgeScopeAnswersScopeAllWhenNothingBoundsTheCaller(t *testing.T) {
 func TestContactDealRolesYieldsAnEmptyMapWithoutTheEdgeGrant(t *testing.T) {
 	ctx := graphReader(map[string]principal.ObjectGrant{"deal": {Read: true}})
 	roles, err := contactDealRoles(ctx, nil, ids.From[ids.CompanyKind](ids.NewV7()),
-		[]ids.PersonID{ids.From[ids.PersonKind](ids.NewV7())})
+		[]ids.ContactID{ids.From[ids.ContactKind](ids.NewV7())})
 	if err != nil {
 		t.Fatalf("contactDealRoles(no edge grant) = %v, want an empty map — a required field must not "+
 			"go absent and take the card down", err)

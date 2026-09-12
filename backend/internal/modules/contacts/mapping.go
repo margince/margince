@@ -1,0 +1,354 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// Contract request → store input mappings, in ONE place: the HTTP
+// handlers and the SoR provider (the MCP surface's door) both decode the
+// same crm.yaml shapes, and a defaulting rule that lived in only one of
+// them would make the two surfaces silently disagree.
+
+import (
+	"bytes"
+	"encoding/json"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
+
+// RequiredFieldError maps to 422 on both surfaces — via FieldFault, so the
+// two surfaces read one mapping rather than each keeping their own.
+// codeRequired is the contract's machine code for a missing required field —
+// one spelling across every refusal in this module that means "you left it out".
+const codeRequired = "required"
+
+type RequiredFieldError struct{ Field string }
+
+func (e *RequiredFieldError) Error() string { return e.Field + " is required" }
+
+// FieldFault carries the verdict to every surface: the MCP tool surface never runs
+// this module's HTTP mapper, so a refusal that lived only there read as a server fault.
+func (e *RequiredFieldError) FieldFault() (field, code, message string) {
+	return e.Field, codeRequired, e.Error()
+}
+
+// pathID asserts a contract path id as entity K's id — the widening
+// point between the wire and the typed store surface (the route already
+// names the entity, so the assertion lives here, not in the store).
+func pathID[K ids.EntityKind](id crmcontracts.Id) ids.ID[K] {
+	return ids.From[K](ids.UUID(id))
+}
+
+// idArg asserts an optional wire UUID (body field or query parameter)
+// as entity K's id; nil stays nil.
+func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
+	if u == nil {
+		return nil
+	}
+	v := ids.From[K](ids.UUID(*u))
+	return &v
+}
+
+func contactCreateInput(req crmcontracts.CreateContactRequest) (CreateContactInput, error) {
+	if req.FullName == "" {
+		return CreateContactInput{}, &RequiredFieldError{Field: "full_name"}
+	}
+	if err := provenance.Refuse("source", req.Source); err != nil {
+		return CreateContactInput{}, err
+	}
+	in := CreateContactInput{
+		FullName:  req.FullName,
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Title:     req.Title,
+		Source:    req.Source,
+		OwnerID:   idArg[ids.UserKind](req.OwnerId),
+		// The body's extra top-level keys (custom-field values); the
+		// store decides which land (active catalog columns only).
+		CustomFields: req.AdditionalProperties,
+	}
+	if req.Social != nil {
+		in.Social = *req.Social
+	}
+	in.Address = req.Address
+	in.Emails = contactEmailInputs(req.Emails)
+	in.Phones = contactPhoneInputs(req.Phones)
+	return in, nil
+}
+
+// contactEmailInputs maps the contract's addresses onto the store's, for both
+// transports that carry them.
+//
+// One function because create and update mean the same thing by an address, and
+// the store replaces the whole set either way. Two loops would be two answers to
+// "what does position default to" that nothing would notice disagreeing.
+func contactEmailInputs(emails *[]crmcontracts.ContactEmailInput) []ContactEmailInput {
+	if emails == nil {
+		return nil
+	}
+	// Non-nil and empty is a real answer — remove every address — and it must
+	// stay distinguishable from absent, which is "leave them alone".
+	out := make([]ContactEmailInput, 0, len(*emails))
+	for i, e := range *emails {
+		email := ContactEmailInput{Email: string(e.Email), EmailType: emailTypeWork, Position: i}
+		if e.EmailType != nil {
+			email.EmailType = string(*e.EmailType)
+		}
+		if e.IsPrimary != nil {
+			email.IsPrimary = *e.IsPrimary
+		}
+		if e.Position != nil {
+			email.Position = *e.Position
+		}
+		out = append(out, email)
+	}
+	return out
+}
+
+// contactPhoneInputs maps the contract's numbers onto the store's, for both
+// transports that carry them — the same rule contactEmailInputs holds for
+// addresses, and for the same reason: create and update mean the same thing by
+// a number, and two loops would be two answers to "what does position default
+// to" that nothing would notice disagreeing.
+func contactPhoneInputs(phones *[]crmcontracts.ContactPhoneInput) []ContactPhoneInput {
+	if phones == nil {
+		return nil
+	}
+	// Non-nil and empty is a real answer — remove every number — and it must
+	// stay distinguishable from absent, which is "leave them alone".
+	out := make([]ContactPhoneInput, 0, len(*phones))
+	for i, p := range *phones {
+		phone := ContactPhoneInput{Phone: p.Phone, PhoneType: "work", Position: i}
+		if p.PhoneType != nil {
+			phone.PhoneType = string(*p.PhoneType)
+		}
+		if p.IsPrimary != nil {
+			phone.IsPrimary = *p.IsPrimary
+		}
+		if p.Position != nil {
+			phone.Position = *p.Position
+		}
+		out = append(out, phone)
+	}
+	return out
+}
+
+// manualSource is this schema's word for "a contact did this", as against an
+// import or a capture run.
+//
+// It is what a patch's own children are stamped with: `source` is required on
+// every ContactEmail the response carries, and UpdateContactRequest has no field
+// to carry one, so a child written through the patch needs an origin from
+// somewhere. The create path takes the caller's `source` because its request
+// has one; if the patch ever gains the field, read it instead of this.
+const manualSource = "manual"
+
+// contactVisibilityArg renders the wire's visibility enum as the store's
+// string, or nothing where the caller did not ask.
+//
+// A typed enum on the wire and a text column underneath: the contract's own
+// values are the CHECK constraint's, so there is nothing to translate and a
+// mapping table here would be a second place for them to disagree.
+func contactVisibilityArg(v *crmcontracts.UpdateContactRequestVisibility) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
+}
+
+func contactUpdateInput(req crmcontracts.UpdateContactRequest, ifVersion *int64) UpdateContactInput {
+	in := UpdateContactInput{
+		FullName:     req.FullName,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		Title:        req.Title,
+		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		Visibility:   contactVisibilityArg(req.Visibility),
+		IfVersion:    ifVersion,
+		CustomFields: req.AdditionalProperties,
+	}
+	if req.Social != nil {
+		in.Social = *req.Social
+	}
+	in.Address = req.Address
+	in.Emails = contactEmailInputs(req.Emails)
+	in.Phones = contactPhoneInputs(req.Phones)
+	in.Source = manualSource
+	return in
+}
+
+func companyCreateInput(req crmcontracts.CreateCompanyRequest) (CreateCompanyInput, error) {
+	if req.DisplayName == "" {
+		return CreateCompanyInput{}, &RequiredFieldError{Field: "display_name"}
+	}
+	if err := provenance.Refuse("source", req.Source); err != nil {
+		return CreateCompanyInput{}, err
+	}
+	in := CreateCompanyInput{
+		DisplayName:     req.DisplayName,
+		LegalName:       req.LegalName,
+		Description:     req.Description,
+		Industry:        req.Industry,
+		Source:          req.Source,
+		OwnerID:         idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
+		CustomFields:    req.AdditionalProperties,
+	}
+	in.Address = req.Address
+	if req.SizeBand != nil {
+		band := string(*req.SizeBand)
+		in.SizeBand = &band
+	}
+	if req.Domains != nil {
+		for _, d := range *req.Domains {
+			in.Domains = append(in.Domains, CompanyDomainInput{
+				Domain:    d.Domain,
+				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
+			})
+		}
+	}
+	return in, nil
+}
+
+func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
+	in := UpdateCompanyInput{
+		DisplayName:     req.DisplayName,
+		LegalName:       req.LegalName,
+		Description:     req.Description,
+		Industry:        req.Industry,
+		OwnerID:         idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
+		IfVersion:       ifVersion,
+		CustomFields:    req.AdditionalProperties,
+		LinkedInURL:     req.LinkedinUrl,
+	}
+	in.Address = req.Address
+	if req.SizeBand != nil {
+		band := string(*req.SizeBand)
+		in.SizeBand = &band
+	}
+	if req.Domains != nil {
+		desired := make([]CompanyDomainInput, 0, len(*req.Domains))
+		for _, d := range *req.Domains {
+			desired = append(desired, CompanyDomainInput{
+				Domain:    d.Domain,
+				IsPrimary: d.IsPrimary != nil && *d.IsPrimary,
+			})
+		}
+		in.Domains = &desired
+	}
+	if req.Lifecycle != nil {
+		lifecycle := string(*req.Lifecycle)
+		in.Lifecycle = &lifecycle
+	}
+	if req.RelationshipTypes != nil {
+		desired := make([]string, 0, len(*req.RelationshipTypes))
+		for _, t := range *req.RelationshipTypes {
+			desired = append(desired, string(t))
+		}
+		in.RelationshipTypes = &desired
+	}
+	return in
+}
+
+// leadCreateInput maps the create wire onto the store input, refusing a
+// client write into the importer's source-system namespace: the lead
+// store keys its idempotent replay on (source_system, source_id), so a
+// caller able to spell the reserved prefix could pre-plant a row under
+// an incumbent record id and have a later import hand it back as
+// already existing — suppressing the real record. The importer writes
+// that namespace from inside the process, never through this mapper.
+func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error) {
+	if req.SourceSystem != nil {
+		if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
+			return CreateLeadInput{}, err
+		}
+	}
+	if err := provenance.Refuse("source", req.Source); err != nil {
+		return CreateLeadInput{}, err
+	}
+	in := CreateLeadInput{
+		FullName:            req.FullName,
+		Title:               req.Title,
+		CompanyName:         req.CompanyName,
+		CandidateCompanyKey: req.CandidateCompanyKey,
+		LinkedInURL:         req.LinkedinUrl,
+		SourceSystem:        req.SourceSystem,
+		SourceID:            req.SourceId,
+		Source:              req.Source,
+		OwnerID:             idArg[ids.UserKind](req.OwnerId),
+		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		CustomFields:        req.AdditionalProperties,
+	}
+	if req.Email != nil {
+		email := string(*req.Email)
+		in.Email = &email
+	}
+	if req.Status != nil {
+		in.Status = string(*req.Status)
+	}
+	return in, nil
+}
+
+// LeadUpdateRequest is the contract's UpdateLeadRequest plus the
+// null-vs-absent distinction encoding/json erases on pointer fields: the
+// §3.1 override gestures give JSON null a meaning (clear the override)
+// distinct from omitting the field (leave it alone). Both transports —
+// the HTTP handler and the SoR provider — decode into this one type, so
+// the gesture cannot drift between surfaces.
+//
+// Held by: TestEveryLeadUpdateDecodeKeepsTheNullGesture (backend/internal/modules/contacts/onederivation_test.go)
+type LeadUpdateRequest struct {
+	crmcontracts.UpdateLeadRequest
+	scoreNull  bool
+	reasonNull bool
+}
+
+func (r *LeadUpdateRequest) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, &r.UpdateLeadRequest); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	r.scoreNull = isJSONNull(fields["score"])
+	r.reasonNull = isJSONNull(fields["score_override_reason"])
+	return nil
+}
+
+// isJSONNull distinguishes a field explicitly sent as null (raw present,
+// value null) from one omitted (raw nil).
+func isJSONNull(raw json.RawMessage) bool {
+	return raw != nil && bytes.Equal(bytes.TrimSpace(raw), []byte("null"))
+}
+
+func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
+	in := UpdateLeadInput{
+		FullName:            req.FullName,
+		Title:               req.Title,
+		CompanyName:         req.CompanyName,
+		CandidateCompanyKey: req.CandidateCompanyKey,
+		Source:              req.Source,
+		Score:               req.Score,
+		ScoreOverrideReason: req.ScoreOverrideReason,
+		ClearScoreOverride:  req.scoreNull || req.reasonNull,
+		OwnerID:             idArg[ids.UserKind](req.OwnerId),
+		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
+		IfVersion:           ifVersion,
+		CustomFields:        req.AdditionalProperties,
+	}
+	if req.Email != nil {
+		email := string(*req.Email)
+		in.Email = &email
+	}
+	if req.Status != nil {
+		s := string(*req.Status)
+		in.Status = &s
+	}
+	return in
+}

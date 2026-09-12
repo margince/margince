@@ -10,7 +10,7 @@ import (
 )
 
 // State is the per-purpose consent vocabulary — the Go spelling of the
-// person_consent state CHECK (0010), kept in sync by the enumsync
+// contact_consent state CHECK (0010), kept in sync by the enumsync
 // fitness gate. Unknown and withdrawn both suppress (default-deny);
 // only a proven granted authorizes an outbound action.
 type ConsentState string

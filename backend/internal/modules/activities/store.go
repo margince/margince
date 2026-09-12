@@ -71,7 +71,7 @@ type Store struct {
 	// about to use; nil skips the pre-flight (WithSendAuthority wires it) and
 	// the delivery path still refuses at transmission.
 	sendAuthority SendAuthority
-	// reachability answers which channel account the person behind a
+	// reachability answers which channel account the contact behind a
 	// conversation can be reached at; nil fails the channel send path CLOSED
 	// (WithChannelReachability wires it), because a surface that cannot ask
 	// must not send to a recipient it never resolved.
@@ -82,7 +82,7 @@ type Store struct {
 	// directly, and a signal closed on one transport only is a corpus built
 	// from half the sends.
 	draftOutcome DraftOutcomeRecorder
-	// recipients resolves an account-started send's addressees to people the
+	// recipients resolves an account-started send's addressees to contacts the
 	// sender may read; nil fails that path CLOSED
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.

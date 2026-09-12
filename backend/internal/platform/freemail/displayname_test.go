@@ -54,8 +54,8 @@ func TestDisplayNameNamesTheCompanyOrNothingAtAll(t *testing.T) {
 	}
 }
 
-// The label is read for its own sake too — people's domain triage asks whether
-// it looks like a person rather than a business — so it has to answer about the
+// The label is read for its own sake too — contacts's domain triage asks whether
+// it looks like a contact rather than a business — so it has to answer about the
 // same string a name is derived from.
 func TestRegistrableLabelIsTheLabelDisplayNameTitles(t *testing.T) {
 	for _, domain := range []string{"gitex.com", "eu.docusign.net", "acme-corp.co.uk", "acme.internal"} {

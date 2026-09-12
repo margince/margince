@@ -352,7 +352,7 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * Seats used against seats granted, at the foot of both panels.
  *
  * The foot is where a tool puts what the installation is entitled to, and seats
- * are the one number about it that changes under people while they work: an
+ * are the one number about it that changes under contacts while they work: an
  * invitation spends one, and the refusal when the last is gone arrives in the
  * middle of adding a colleague.
  *

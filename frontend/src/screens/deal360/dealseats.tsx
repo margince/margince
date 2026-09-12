@@ -7,12 +7,12 @@
 // findings about them. That put the same two facts on screen twice once the
 // readings band started counting them and Deal360 started naming the risks as
 // chips: a reader met "Single-threaded" in the band, again as a chip, and a
-// third time as a card. The seats are CONTEXT — who these people are — so they
-// belong where the company page keeps its people, in the rail.
+// third time as a card. The seats are CONTEXT — who these contacts are — so they
+// belong where the company page keeps its contacts, in the rail.
 //
 // The rows are the coverage card's own markup, moved rather than rewritten:
 // `.net-seats` already spells a seat with its name, whether they are engaged
-// and their role, and a second spelling of a person-with-role row is exactly
+// and their role, and a second spelling of a contact-with-role row is exactly
 // the drift the frontend rulebook names.
 
 import type { components } from "../../api/schema";
@@ -23,7 +23,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel } from "../record360";
 import "../network.css";
-import { SeatPerson } from "./seatperson";
+import { SeatContact } from "./seatcontact";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
@@ -93,9 +93,9 @@ export function DealSeats({
       <PanelBody>
         <ul className="net-seats">
           {seats.map((seat) => (
-            <li key={seat.person_id}>
+            <li key={seat.contact_id}>
               <span className="net-seat-name">
-                <SeatPerson seat={seat} />
+                <SeatContact seat={seat} />
               </span>
               <Badge tone={seat.engaged ? "success" : undefined}>
                 {seat.engaged ? t("coverage.engaged") : t("coverage.quiet")}

@@ -6,7 +6,7 @@
 //
 // Every message the product sent was hard-coded English while the screens were
 // translated three ways. For the two transactional messages that is a small
-// thing — a person reading a password link already knows what they asked for.
+// thing — a reader reading a password link already knows what they asked for.
 // The weekly retrospective is not: it arrives unasked every Monday, it is the
 // product talking to a rep about their own week, and a German-speaking rep read
 // their Home panel in German and then got an English summary of the same
@@ -134,7 +134,7 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
-	// The password reset a person asked for.
+	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string
 	ResetAction  string
@@ -185,7 +185,7 @@ type Copy struct {
 	// These are the hardest copy in the catalog to get wrong safely. Both go to
 	// somebody who did not ask for them and may not remember the company, so a
 	// bare "confirm your details" reads exactly like a phishing mail; and both
-	// are EVIDENCE — the consent proof records which version a person was
+	// are EVIDENCE — the consent proof records which version a contact was
 	// shown, so what these say is what an installation will one day have to
 	// stand behind. A translation that softens "we will not write to you about
 	// it" into a pleasantry changes what was promised, not just how it reads.

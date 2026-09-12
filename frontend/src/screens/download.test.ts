@@ -15,10 +15,10 @@ describe("filenameFromDisposition", () => {
   it("reads the name the server sent", () => {
     expect(
       filenameFromDisposition(
-        'attachment; filename="person-export.csv"',
+        'attachment; filename="contact-export.csv"',
         "fallback.csv",
       ),
-    ).toBe("person-export.csv");
+    ).toBe("contact-export.csv");
   });
 
   it.each([
@@ -65,7 +65,7 @@ describe("downloadBytes", () => {
       .spyOn(HTMLAnchorElement.prototype, "click")
       .mockImplementation(() => undefined);
 
-    downloadBytes("id,name\n1,Ann\n", "person-export.csv", "text/csv");
+    downloadBytes("id,name\n1,Ann\n", "contact-export.csv", "text/csv");
 
     expect(createObjectURL).toHaveBeenCalledOnce();
     expect(click).toHaveBeenCalledOnce();

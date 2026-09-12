@@ -42,16 +42,16 @@ import (
 func refusals(inc refusingIncumbent) map[string]error {
 	ctx := context.Background()
 	epoch := time.Time{}
-	_, backfillErr := inc.Backfill(ctx, "person", "")
-	_, modifiedErr := inc.Modified(ctx, "person", epoch, "")
-	_, deletionsErr := inc.Deletions(ctx, "person", epoch, "")
-	_, getErr := inc.Get(ctx, "person", "1")
-	_, assocErr := inc.Associations(ctx, "person", "1", "company")
+	_, backfillErr := inc.Backfill(ctx, "contact", "")
+	_, modifiedErr := inc.Modified(ctx, "contact", epoch, "")
+	_, deletionsErr := inc.Deletions(ctx, "contact", epoch, "")
+	_, getErr := inc.Get(ctx, "contact", "1")
+	_, assocErr := inc.Associations(ctx, "contact", "1", "company")
 	_, ownerEmailErr := inc.OwnerEmail(ctx, "owner-1")
 	_, ownersErr := inc.Owners(ctx)
 	_, accountErr := inc.AccountID(ctx)
-	_, createErr := inc.Create(ctx, "person", nil)
-	_, updateErr := inc.Update(ctx, "person", "1", nil, epoch)
+	_, createErr := inc.Create(ctx, "contact", nil)
+	_, updateErr := inc.Update(ctx, "contact", "1", nil, epoch)
 	return map[string]error{
 		"Backfill":     backfillErr,
 		"Modified":     modifiedErr,
@@ -63,7 +63,7 @@ func refusals(inc refusingIncumbent) map[string]error {
 		"AccountID":    accountErr,
 		"Create":       createErr,
 		"Update":       updateErr,
-		"Archive":      inc.Archive(ctx, "person", "1", epoch),
+		"Archive":      inc.Archive(ctx, "contact", "1", epoch),
 	}
 }
 

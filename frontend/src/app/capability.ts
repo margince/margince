@@ -170,7 +170,7 @@ export type WritableRecord = {
  * its neighbour (an extension object misspelled reads as a grant not made).
  *
  * The caller supplies the two sentences because they name the record's KIND —
- * "this deal", "this person" — and a sentence that said "this record" on
+ * "this deal", "this contact" — and a sentence that said "this record" on
  * every page would be the first line on the page not to know what it was
  * about.
  *

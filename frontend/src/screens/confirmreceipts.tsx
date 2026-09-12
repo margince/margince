@@ -5,11 +5,11 @@ import type { MessageKey } from "../i18n/en";
 // What the subject is told to quote when they ask after a request they just
 // sent through their confirm link.
 //
-// Until the request opened a case, this page said "a person here will apply
+// Until the request opened a case, this page said "a contact here will apply
 // your changes" and left it there. The subject had no way to chase it: no
 // reference, no statement that an answer is owed, and no name for the right
 // they had exercised. Art. 12(3) gives them an answer within a month, and a
-// person who cannot identify their own request cannot ask whether it came.
+// contact who cannot identify their own request cannot ask whether it came.
 
 export type RightsCaseReceipt = components["schemas"]["RightsCaseReceipt"];
 

@@ -3,10 +3,10 @@
 # Three criteria the Go suite cannot reach:
 #
 #   Criterion 1 — a briefing arrives without naming a record. The prompt names
-#   the account the way a person says it out loud, "Vietnam partner", and the
+#   the account the way a contact says it out loud, "Vietnam partner", and the
 #   record carries "Vietnam Partner JSC". So the prompt is not the answer: what
 #   the workspace holds beyond the words the user used — the legal suffix, the
-#   person on the account — is the evidence that a record was opened at all.
+#   contact on the account — is the evidence that a record was opened at all.
 #
 #   Criterion 3 — the diary nobody showed it. The prompt says "check my calendar"
 #   because the real one did, and no calendar is connected in this stack, so
@@ -58,7 +58,7 @@ must_mention:
   # Nguyen below is the stronger evidence that the record was opened, and this
   # entry is the weaker half of a pair rather than the case's proof.
   - "Vietnam Partner JSC|\bJSC\b"
-  # Criterion 2's server half is already pinned; here it must NAME the people
+  # Criterion 2's server half is already pinned; here it must NAME the contacts
   # rather than describing seats.
   - "Mai Nguyen"
 

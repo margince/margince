@@ -196,7 +196,7 @@ func TestMovingAMessageLeavesItsReviewLive(t *testing.T) {
 // destroyed.
 //
 // The card is reached HERE and nowhere else. The erasure's own approval sweep
-// finds cards by the subject they name — person target, lead twin, or an
+// finds cards by the subject they name — contact target, lead twin, or an
 // address quoted in the payload — and a review card names none of those: its
 // payload is the review id and the intent id, because the question is "may this
 // refused send go" and never repeats who it was to.
@@ -211,7 +211,7 @@ func TestErasingTheRecipientEndsTheReviewAndItsCard(t *testing.T) {
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind":        "erasure",
-		"subject_ref": c.personID,
+		"subject_ref": c.contactID,
 		"due_at":      time.Now().Add(30 * 24 * time.Hour).UTC().Format(time.RFC3339),
 	}, nil, &request); status != http.StatusCreated {
 		t.Fatalf("opening the erasure case → %d, want 201", status)

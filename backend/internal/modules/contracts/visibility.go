@@ -10,7 +10,7 @@ package contracts
 // table name they do not know rather than guessing, so `contract` cannot join
 // them: there is no column for their clauses to test.
 //
-// A contract belongs to a company, not a person (ADR-0109 §8). It is visible
+// A contract belongs to a company, not a contact (ADR-0109 §8). It is visible
 // when the deal it came from is visible, and — for the contracts that never ran
 // through a pipeline — when its company is visible. Deriving it rather
 // than copying an owner at creation is what makes a deal reassignment carry its

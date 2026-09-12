@@ -87,14 +87,14 @@ func objectiveLine(ask ClaimIn, typ MeetingType, now time.Time) string {
 	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship {
 		return fmt.Sprintf(
 			"Confirm whether %s is still a priority, and leave with one dated next step on it: %s",
-			ask.PersonName, ask.Body)
+			ask.ContactName, ask.Body)
 	}
 	if deadline.Passed(ask.DueAt, now) {
 		return fmt.Sprintf(
 			"Close out what we owe %s, overdue since %s, and agree the next step: %s",
-			ask.PersonName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
+			ask.ContactName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
 	}
-	return fmt.Sprintf("Leave with %s's answer on: %s", ask.PersonName, ask.Body)
+	return fmt.Sprintf("Leave with %s's answer on: %s", ask.ContactName, ask.Body)
 }
 
 func objectiveByType(typ MeetingType, in Input) string {
@@ -181,14 +181,14 @@ func responseFor(claim ClaimIn, in Input) Response {
 		return Response{
 			Say: fmt.Sprintf(
 				"Acknowledge it in their words before answering: %q is still open.", claim.Body),
-			Show:  "The record that answers it, or the person who can.",
+			Show:  "The record that answers it, or the contact who can.",
 			Avoid: "Re-arguing a point they have already made twice.",
 		}
 	}
 	return Response{
 		Say: fmt.Sprintf(
 			"Own the delay plainly and name a date: we owe %s on %q.",
-			claim.PersonName, claim.Body),
+			claim.ContactName, claim.Body),
 		Show:  "What is actually ready, and what the remaining step is.",
 		Avoid: "Promising a date nobody on our side has agreed to.",
 	}

@@ -5,7 +5,7 @@
 //
 // Not a Disclosure. A disclosure adds its content to the page, which is right
 // when the content is the next thing to read and wrong when it is an aside: on
-// a row of readings the reading a person opened grew and the three beside it
+// a row of readings the reading a contact opened grew and the three beside it
 // jumped down the page, so checking what one figure rests on moved the other
 // three out from under the eye that was comparing them. A popover leaves the
 // page where it was.

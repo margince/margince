@@ -187,7 +187,7 @@ export function TeamWeeklySection({
 // The team's landing, drawn through the rep panel's own component.
 //
 // Its own horizon state, held here rather than lifted: the team page and the
-// rep page are different surfaces a person reads at different moments, and a
+// rep page are different surfaces a reader reads at different moments, and a
 // shared dial would move one when they turned the other.
 function TeamOutlook({
   review,
@@ -239,7 +239,7 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  *
  * `reps_unread` is drawn whenever it is non-zero, never behind a disclosure: a
  * snapshot silently covering four of six reps reads exactly like a team of
- * four, and every figure above is short by the same two people.
+ * four, and every figure above is short by the same two contacts.
  */
 function Coverage({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();

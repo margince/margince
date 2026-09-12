@@ -45,7 +45,7 @@ import (
 // record contains, so "this table has no owner_id" is never on its own a
 // reason to skip the probe.
 var rowScopedResponses = map[string]expectedTarget{
-	"Person":  {table: "person", idPath: "id"},
+	"Contact": {table: "contact", idPath: "id"},
 	"Company": {table: "company", idPath: "id"},
 	"Deal":    {table: "deal", idPath: "id"},
 	"Lead":    {table: "lead", idPath: "id"},
@@ -63,7 +63,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	"List":                {table: "list", idPath: "id"},
 	"SavedView":           {table: "saved_view", idPath: "id"},
 	"Automation":          {table: "automation", idPath: "id"},
-	"PromoteLeadResponse": {table: "person", idPath: "person.id"},
+	"PromoteLeadResponse": {table: "contact", idPath: "contact.id"},
 	// A rejection hands back the archived company alongside the standing domain
 	// decision recorded with it. The COMPANY is the record a replay returns —
 	// its name, its fields, its archived stamp — so it is probed exactly as the
@@ -72,11 +72,11 @@ var rowScopedResponses = map[string]expectedTarget{
 	// probe covers the body.
 	"RejectCompanyResponse": {table: "company", idPath: "company.id"},
 	"DemoteLeadResponse":    {table: "lead", idPath: "lead.id"},
-	// The quick-capture result wraps the person it created, alongside the
-	// employer it attached them to. The person is the record a replay hands
+	// The quick-capture result wraps the contact it created, alongside the
+	// employer it attached them to. The contact is the record a replay hands
 	// back, so it is probed exactly as PromoteLeadResponse above is — the
 	// company id beside it is a reference, not a second body.
-	"QuickCapturePersonResult": {table: "person", idPath: "person.id"},
+	"QuickCaptureContactResult": {table: "contact", idPath: "contact.id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and
@@ -108,7 +108,7 @@ var rowScopedResponses = map[string]expectedTarget{
 	// parameter is the only handle on the record whose scope governs them.
 	// A body with no reference of its own is the easiest kind to wave through
 	// and still hands back whatever its parent contains.
-	"PersonConsentState": {table: "person", pathParam: "id"},
+	"ContactConsentState": {table: "contact", pathParam: "id"},
 	// The company's evidence sidecars. Neither carries an id or an owner of
 	// its own — the claim belongs to the company named in the path and
 	// inherits exactly its visibility, so the probe is the parent's.
@@ -204,8 +204,8 @@ func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
 
 		// EVERY record the body names, not only the one it replays by. A
 		// companion reference discloses that a record exists and what it was to
-		// this call: quick-capture hands back the employer a person was
-		// attached to, and probing the person alone returned that id to a
+		// this call: quick-capture hands back the employer a contact was
+		// attached to, and probing the contact alone returned that id to a
 		// caller who may since have lost sight of the employer.
 		//
 		// Derived from the contract rather than listed, so a third schema that
@@ -234,7 +234,7 @@ func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
 // gatekit:fixture the field-to-table convention this census reads, not costs
 // anyone is waived from: an entry here adds a check rather than removing one.
 var companionRecordFields = map[string]string{
-	"person_id":  "person",
+	"contact_id": "contact",
 	"company_id": "company",
 	"deal_id":    "deal",
 	"lead_id":    "lead",
@@ -247,9 +247,9 @@ var companionRecordFields = map[string]string{
 // ONLY FOR A BODY THAT WRAPS A RECORD, and the distinction is the whole rule.
 // `company_id` on a Deal is the deal's own field: the live read of that
 // deal returns it to anyone who can see the deal, so replaying it discloses
-// nothing the product would not. `company_id` on QuickCapturePersonResult
-// sits BESIDE the person, naming a second record the call attached them to —
-// and that one the live path never hands back with the person.
+// nothing the product would not. `company_id` on QuickCaptureContactResult
+// sits BESIDE the contact, naming a second record the call attached them to —
+// and that one the live path never hands back with the contact.
 //
 // A dotted idPath is what says the body is a wrapper: the record is nested
 // inside it, and the fields beside it are the wrapper's own. TOP-LEVEL

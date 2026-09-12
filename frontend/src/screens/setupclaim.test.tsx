@@ -57,7 +57,7 @@ describe("SetupClaimScreen", () => {
 
     // The button is the gate, and the hint says why — a form that lets you
     // press submit and then reports a 422 has wasted the round trip and the
-    // person's attention.
+    // contact's attention.
     expect(
       screen.getByRole("button", { name: /create the company/i }),
     ).toBeDisabled();

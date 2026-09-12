@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 const COMPANY = { record: "company", id: "o-1" } as const;
-const CONTACT = { record: "person", id: "p-1" } as const;
+const CONTACT = { record: "contact", id: "p-1" } as const;
 
 const DEAL = {
   id: "deal-1",
@@ -56,7 +56,7 @@ const USER = { id: "u-1", email: "rep@example.com", name: "Demo Rep" };
 const GRANTS = {
   deal: { update: true },
   company: { update: true },
-  person: { update: true },
+  contact: { update: true },
 };
 
 const FULL_SEAT = {
@@ -436,7 +436,7 @@ describe("adding a document from the account", () => {
 
     await waitFor(() => expect(uploadedForm(calls)).toBeTruthy());
     const sent = uploadedForm(calls);
-    expect(sent.get("entity_type")).toBe("person");
+    expect(sent.get("entity_type")).toBe("contact");
     expect(sent.get("entity_id")).toBe("p-1");
     // Nothing asked the account's deals about a contact's file.
     expect(calls.some((call) => call.url.includes("/v1/deals"))).toBe(false);

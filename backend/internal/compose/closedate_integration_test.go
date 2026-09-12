@@ -122,7 +122,7 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		// The deal carries an owner because the gone-quiet review reads its
-		// correspondence under that person's authority — an unowned deal is
+		// correspondence under that contact's authority — an unowned deal is
 		// reviewed unnamed, which is a case its own test covers.
 		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
 		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5, $6,
@@ -947,7 +947,7 @@ func TestAReaderWithNoDealGrantStillSeesTheirOtherReceipts(t *testing.T) {
 	noDeals := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true},
+			"contact": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}

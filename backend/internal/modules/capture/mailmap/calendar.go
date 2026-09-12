@@ -12,7 +12,7 @@ package mailmap
 // with the attendee in To, and the provider files a copy in Sent. Nothing in
 // that shape says "machine": there is no Auto-Submitted header, no List-* pair,
 // no bulk Precedence. So it read as ordinary outbound mail the owner wrote, T1
-// took the attendee as an address the workspace writes to, and every person the
+// took the attendee as an address the workspace writes to, and every contact the
 // owner had ever invited to anything became a contact — a spouse, a language
 // teacher, and the owner's own second address among them.
 //
@@ -31,7 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// calendarSenders are the addresses groupware puts in `Sender:` when a person's
+// calendarSenders are the addresses groupware puts in `Sender:` when a contact's
 // calendar sends on their behalf. The header is the provider speaking, not the
 // organizer, and nobody is reachable at any of them.
 var calendarSenders = map[string]bool{
@@ -51,14 +51,14 @@ var calendarSenders = map[string]bool{
 const exchangeCalendarClass = "urn:content-classes:calendarmessage"
 
 // calendarNotification reports whether this message is groupware speaking for a
-// person rather than the person writing.
+// contact rather than the contact writing.
 //
 // It reads SENDER, never From. An invitation's From is the organizer, a real
 // human with a real address whose ordinary mail must be unaffected; Sender is
 // the field RFC 5322 reserves for the agent that actually submitted the
 // message, which is exactly the distinction being drawn.
 //
-// The iCalendar part alone is not enough either: a person can attach an .ics to
+// The iCalendar part alone is not enough either: a contact can attach an .ics to
 // a mail they wrote themselves, and that message IS correspondence. Requiring
 // the provider's own Sender address keeps this to messages a machine composed.
 func calendarNotification(header mail.Header, hasCalendarPart bool) bool {
@@ -122,7 +122,7 @@ func (m Message) recordCounterparty() connector.Counterparty {
 //
 // A calendar invitation has no counterparty, so there is nothing to exclude.
 // Excluding the attendee anyway would drop them from the record entirely, and
-// they were on the meeting: the calendar connector records the same person as a
+// they were on the meeting: the calendar connector records the same contact as a
 // participant from the event side, and mail must not disagree with it.
 func participantExclusion(counterparty string, calendarNotice bool) string {
 	if calendarNotice {

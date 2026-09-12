@@ -11,7 +11,7 @@ package compose
 // that sharing is exactly the arrangement in which a mis-wired slot is
 // invisible: an icon upload that wrote the wide column would return 200, store
 // real bytes, and answer a plausible URL — while quietly taking away the
-// wordmark a person had chosen. So every case here watches BOTH slots, and the
+// wordmark a contact had chosen. So every case here watches BOTH slots, and the
 // assertion that matters most is about the one the request did not name.
 
 import (
@@ -23,7 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
@@ -46,26 +46,26 @@ func uploadIcon(t *testing.T, e *integration.Env, handlers companyHandlers, imag
 func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := companyHandlers{store: e.People, blob: blob}
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
 	company := theCompanyExists(t, e)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 800, 200), "acme-wordmark.png")
-	wide, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide)
+	wide, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide)
 	if err != nil {
 		t.Fatalf("the company wears no wide mark after its own upload: %v", err)
 	}
 
 	uploadIcon(t, e, handlers, logoFixture(t, 256, 256), "acme-badge.png")
 
-	icon, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoIcon)
+	icon, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoIcon)
 	if err != nil {
 		t.Fatalf("the company wears no badge after its own upload: %v", err)
 	}
 	if icon == wide {
 		t.Fatal("both slots name one object, so the badge upload overwrote the wordmark")
 	}
-	if stillWide, keyErr := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoWide); keyErr != nil || stillWide != wide {
+	if stillWide, keyErr := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoWide); keyErr != nil || stillWide != wide {
 		t.Fatalf("the wide mark is now %q (%v), want the untouched %q", stillWide, keyErr, wide)
 	}
 	// Both objects are in the store: the badge's bytes were written, and the
@@ -82,16 +82,16 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 
 	// The profile answers each slot's own endpoint, which is what the sidebar
 	// picks between at its two widths.
-	read, err := e.People.GetAnchorCompany(ctx)
+	read, err := e.Contacts.GetAnchorCompany(ctx)
 	if err != nil {
 		t.Fatalf("reading the company back: %v", err)
 	}
 	profile := toContractCompany(read)
-	wantIcon := *people.LogoURL(company.CompanyID.UUID, &icon, people.LogoIcon)
+	wantIcon := *contacts.LogoURL(company.CompanyID.UUID, &icon, contacts.LogoIcon)
 	if profile.LogoIconUrl == nil || *profile.LogoIconUrl != wantIcon {
 		t.Fatalf("logo_icon_url = %v, want %q", profile.LogoIconUrl, wantIcon)
 	}
-	wantWide := *people.LogoURL(company.CompanyID.UUID, &wide, people.LogoWide)
+	wantWide := *contacts.LogoURL(company.CompanyID.UUID, &wide, contacts.LogoWide)
 	if profile.LogoUrl == nil || *profile.LogoUrl != wantWide {
 		t.Fatalf("logo_url = %v, want the untouched %q", profile.LogoUrl, wantWide)
 	}
@@ -100,7 +100,7 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	// column would stream a real, correct-looking PNG of the wrong picture,
 	// which no status or header check can see — so the two responses are
 	// compared against each other rather than merely inspected.
-	serve := people.NewHandlers(e.DB()).WithBlobstore(blob)
+	serve := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	badge := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
 		serve.GetCompanyLogoIcon(recorder, request, crmcontracts.Id(company.CompanyID.UUID))
 	}, "/v1/companies/"+company.CompanyID.String()+"/logo/icon")
@@ -129,13 +129,13 @@ func streamedMark(ctx context.Context, t *testing.T, serve func(*httptest.Respon
 func TestRemovingTheBadgeLeavesTheWideMarkStanding(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	handlers := companyHandlers{store: e.People, blob: blob}
+	handlers := companyHandlers{store: e.Contacts, blob: blob}
 	company := theCompanyExists(t, e)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	uploadMark(t, e, handlers, logoFixture(t, 800, 200), "acme-wordmark.png")
 	uploadIcon(t, e, handlers, logoFixture(t, 256, 256), "acme-badge.png")
-	icon, err := e.People.CompanyLogoKey(ctx, company.CompanyID, people.LogoIcon)
+	icon, err := e.Contacts.CompanyLogoKey(ctx, company.CompanyID, contacts.LogoIcon)
 	if err != nil {
 		t.Fatalf("reading the uploaded badge: %v", err)
 	}

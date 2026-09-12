@@ -99,12 +99,12 @@ type ChannelDeliveryRequest struct {
 	ConsentPurpose string
 }
 
-// ChannelReachability answers where a person can be reached on a messaging
-// channel. The people module owns the identity binding and implements it; the
+// ChannelReachability answers where a contact can be reached on a messaging
+// channel. The contacts module owns the identity binding and implements it; the
 // composition root injects it, so this module never reaches across to read
 // another's rows.
 //
-// It returns every reachable identity rather than one, because a person may hold
+// It returns every reachable identity rather than one, because a contact may hold
 // two accounts on the same channel and NOTHING here may pick between them: the
 // two accounts are two chats, and a reply delivered to the wrong one reaches the
 // human somewhere they did not write from.
@@ -112,7 +112,7 @@ type ChannelDeliveryRequest struct {
 // An empty list is an ANSWER — unreachable — and not a fault. Only a failure to
 // ask is an error.
 type ChannelReachability interface {
-	ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, personID ids.UUID, provider string) ([]connector.ChannelIdentity, error)
+	ReachableChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.UUID, provider string) ([]connector.ChannelIdentity, error)
 }
 
 // WithChannelReachability returns a store whose channel reply can resolve the
@@ -130,7 +130,7 @@ func (s *Store) WithChannelReachability(reach ChannelReachability) *Store {
 // identity seam. It carries no sentinel for errNoDeliveryStager's reason: this
 // is a composition defect, not a client-correctable condition, so it must
 // surface as the 500 it is rather than borrow a refusal that would tell the
-// caller something untrue about their request — here, that the person they are
+// caller something untrue about their request — here, that the contact they are
 // looking at cannot be reached.
 var errNoChannelReachability = errors.New("activities: channel send path has no reachability authority wired")
 
@@ -165,7 +165,7 @@ var errEmptyMessageBody = errors.New("a message needs something to say — type 
 // so this maps to 422 and says which case it is.
 //
 // The two are one type because they are one question with one answer shape (how
-// many people this conversation can reach), and because the alternative — a
+// many contacts this conversation can reach), and because the alternative — a
 // default that picks somebody — is the failure both exist to prevent.
 type ChannelRecipientError struct {
 	Provider  string
@@ -175,10 +175,10 @@ type ChannelRecipientError struct {
 func (e *ChannelRecipientError) Error() string {
 	if e.Reachable == 0 {
 		return "nobody on this conversation can be reached on " + e.Provider +
-			" — the person has never messaged this workspace's bot, or they have blocked it"
+			" — the contact has never messaged this workspace's bot, or they have blocked it"
 	}
-	return "this conversation reaches " + strconv.Itoa(e.Reachable) + " people on " + e.Provider +
-		"; a channel reply addresses exactly one — send it from the person's own record"
+	return "this conversation reaches " + strconv.Itoa(e.Reachable) + " contacts on " + e.Provider +
+		"; a channel reply addresses exactly one — send it from the contact's own record"
 }
 
 // FieldFault carries the recipient code the caller must correct.
@@ -192,7 +192,7 @@ func (e *ChannelRecipientError) FieldFault() (field, code, message string) {
 // both.
 func (e *ChannelRecipientError) Code() string {
 	if e.Reachable == 0 {
-		return "person_unreachable"
+		return "contact_unreachable"
 	}
 	return "ambiguous_channel_recipient"
 }
@@ -205,7 +205,7 @@ func (e *ChannelRecipientError) Code() string {
 // The ORDER is the invariant, and it is SendEmail's order for SendEmail's
 // reasons: AUTHORIZATION REFUSES BEFORE ANYTHING ELSE ANSWERS. A caller with no
 // rights over the anchor learns neither how this installation is wired nor
-// whether the person behind the conversation consented — both are facts about a
+// whether the contact behind the conversation consented — both are facts about a
 // record they may not read.
 //
 // Recipient resolution precedes the consent gate because the gate is asked about
@@ -283,7 +283,7 @@ func (s *Store) SendMessage(ctx context.Context, anchorID ids.ActivityID, in Sen
 	}
 	var sent crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The staged delivery names the anchor's conversation and the person it
+		// The staged delivery names the anchor's conversation and the contact it
 		// is with, so this transaction reads records too — and anything that
 		// reads a record carries the row-scope gate, whatever an earlier read
 		// already answered.
@@ -371,27 +371,27 @@ func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID
 	return out, err
 }
 
-// reachableOnConversation collects every account the anchor's linked people can
+// reachableOnConversation collects every account the anchor's linked contacts can
 // be reached at on provider.
 //
-// It reads the links rather than taking a person from the caller: the reply goes
+// It reads the links rather than taking a contact from the caller: the reply goes
 // to the counterparty of THIS conversation, and the links are the record of who
 // that is. They were visibility-checked when the anchor was read, and each one is
 // re-checked when the reply's own links are inserted.
 func (s *Store) reachableOnConversation(ctx context.Context, tx pgx.Tx, anchorID ids.ActivityID, provider string) ([]connector.ChannelIdentity, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT person_id FROM activity_link
-		  WHERE activity_id = $1 AND entity_type = 'person' AND person_id IS NOT NULL`, anchorID)
+		`SELECT contact_id FROM activity_link
+		  WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id IS NOT NULL`, anchorID)
 	if err != nil {
 		return nil, err
 	}
-	people, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return nil, err
 	}
 	var reachable []connector.ChannelIdentity
-	for _, personID := range people {
-		identities, err := s.reachability.ReachableChannelIdentities(ctx, tx, personID, provider)
+	for _, contactID := range contacts {
+		identities, err := s.reachability.ReachableChannelIdentities(ctx, tx, contactID, provider)
 		if err != nil {
 			return nil, err
 		}

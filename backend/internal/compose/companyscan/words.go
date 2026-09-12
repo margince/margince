@@ -28,7 +28,7 @@ const (
 	// stated in a message's opening; past this is quoted history and a
 	// signature, which the model would otherwise cite as if it were new.
 	scanBodyChars = 1200
-	// scanWindowDays is how far back an exchange still needs a person. A
+	// scanWindowDays is how far back an exchange still needs a contact. A
 	// question from a year ago that nobody answered has been answered by time.
 	scanWindowDays = 180
 )

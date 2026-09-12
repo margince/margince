@@ -18,7 +18,7 @@ import (
 // CapturesPayload reports whether this router would retain content for task.
 // Both the deployment posture and the task's own contract prohibition must
 // allow it: the posture is an operator's choice about their own workspace's
-// data, and a no-payload task carries other people's.
+// data, and a no-payload task carries other contacts's.
 func (r *Router) CapturesPayload(task Task) bool {
 	return r.capturePayloads && !NoPayload(task)
 }

@@ -23,7 +23,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -67,7 +67,7 @@ func decodeSeedOverride(w http.ResponseWriter, r *http.Request) (string, bool) {
 // deepReadEngine backs the transport: start creates-or-joins the dossier
 // and queues the crawl job; report is the SPA's poll.
 type deepReadEngine struct {
-	people    *people.Store
+	contacts  *contacts.Store
 	approvals *approvals.Service
 	runtime   runTransparencyReader
 	brain     completer
@@ -125,8 +125,8 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 	companyID := ids.From[ids.CompanyKind](id)
 	seedURL := override
 	if seedURL == "" {
-		resolved, err := e.people.EnrichTargetURL(ctx, companyID)
-		if errors.Is(err, people.ErrNoEnrichTarget) {
+		resolved, err := e.contacts.EnrichTargetURL(ctx, companyID)
+		if errors.Is(err, contacts.ErrNoEnrichTarget) {
 			return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
 				Status: http.StatusUnprocessableEntity,
 				Code:   companyUnreadable,
@@ -139,8 +139,8 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 		seedURL = resolved
 	}
 
-	read, joined, err := e.people.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
-		func(ctx context.Context, tx pgx.Tx, read people.SiteRead) error {
+	read, joined, err := e.contacts.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
+		func(ctx context.Context, tx pgx.Tx, read contacts.SiteRead) error {
 			return e.enqueue.EnqueueTx(ctx, tx, SiteDeepReadArgs{
 				Workspace:   storekit.MustWorkspace(ctx),
 				CompanyID:   companyID.UUID,
@@ -170,7 +170,7 @@ func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, overrid
 
 // report answers the SPA's poll with the dossier as it stands.
 func (e *deepReadEngine) report(w http.ResponseWriter, r *http.Request, id, readID openapi_types.UUID) {
-	read, err := e.people.GetSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), ids.UUID(readID))
+	read, err := e.contacts.GetSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -181,7 +181,7 @@ func (e *deepReadEngine) report(w http.ResponseWriter, r *http.Request, id, read
 // latestReport answers with the newest read on this account, for a page that
 // holds no read id — which is every load after the one that started the crawl.
 func (e *deepReadEngine) latestReport(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	read, err := e.people.LatestSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
+	read, err := e.contacts.LatestSiteRead(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -192,7 +192,7 @@ func (e *deepReadEngine) latestReport(w http.ResponseWriter, r *http.Request, id
 // siteReadReport maps the dossier onto the contract report. Lists are
 // always concrete (empty, never null): the report's whole point is an
 // explicit account.
-func siteReadReport(read people.SiteRead) crmcontracts.SiteReadReport {
+func siteReadReport(read contacts.SiteRead) crmcontracts.SiteReadReport {
 	if read.CompanyID == nil {
 		panic("siteReadReport called for an unbound onboarding dossier")
 	}
@@ -252,7 +252,7 @@ func requestedBy(ctx context.Context) string {
 func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		engine := &deepReadEngine{
-			people: people.NewStore(InstallationDB(pool)), approvals: approvals.NewService(InstallationDB(pool)),
+			contacts: contacts.NewStore(InstallationDB(pool)), approvals: approvals.NewService(InstallationDB(pool)),
 			runtime: ai.NewRunTransparency(InstallationDB(pool)), brain: brain, enqueue: inserter, log: s.log,
 			// Read here AND written by WithBlobstore, so neither option order
 			// leaves the onboarding confirmation unable to collect the mark its
@@ -263,11 +263,11 @@ func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 		rollout := s.companyContextRollout
 		s.siteReadHandlers = siteReadHandlers{engine: engine, start: engine.start, report: engine.report, latest: engine.latestReport, companyContextRollout: rollout}
 		s.assistant = &onboardingCompanyAssistant{
-			state: s.state, people: people.NewStore(InstallationDB(pool)),
+			state: s.state, contacts: contacts.NewStore(InstallationDB(pool)),
 			brain: brain, runtime: ai.NewRunTransparency(InstallationDB(pool)),
 			rollout: &s.companyContextRollout,
 			voice:   ai.NewVoiceStore(InstallationDB(pool)),
-			company: people.NewStore(InstallationDB(pool)),
+			company: contacts.NewStore(InstallationDB(pool)),
 		}
 	}
 }

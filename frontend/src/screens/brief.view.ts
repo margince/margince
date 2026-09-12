@@ -9,7 +9,7 @@ import type { UrlParams } from "../app/urlstate";
 // deliberately keeps its four dials in state, and its own comment says why: an
 // address carrying one of four would describe a fraction of what is on screen.
 // The Brief is the case that reasoning excluded. It has exactly two, both are
-// on screen at once, and it is a destination people return to and send to each
+// on screen at once, and it is a destination contacts return to and send to each
 // other, so an address that could not say which half they meant would be a link
 // to the wrong page half the time.
 //
@@ -54,7 +54,7 @@ export function scopesFor(
  * Read the address, narrowed to what the product can answer.
  *
  * An unknown or unreachable value falls back rather than erroring: an address
- * is something a person can type, a link can carry from an older build, and a
+ * is something a contact can type, a link can carry from an older build, and a
  * colleague can send from a seat with wider reach than the reader's. None of
  * those should produce a broken page — they should produce the nearest page
  * this reader is entitled to.

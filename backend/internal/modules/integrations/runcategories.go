@@ -8,7 +8,7 @@ package integrations
 // An automatic run spends nothing: nobody weighed the purchase, so it takes
 // only the categories the provider gives away, which is what lets enrichment
 // run on every arrival without anybody deciding it was worth the money. A
-// human pressing a button may buy a priced category for one named person, but
+// human pressing a button may buy a priced category for one named contact, but
 // never one the connection does not carry.
 
 import (
@@ -33,7 +33,7 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 		// Nobody weighed THIS purchase. An automatic run takes only what the
 		// provider gives away, so enrichment can run on every arrival without
 		// anybody deciding it was worth the money — a priced category is
-		// bought by a human pressing a button for one named person.
+		// bought by a human pressing a button for one named contact.
 		free := intersect(permitted, desc.Free())
 		if len(free) == 0 {
 			// This connection buys nothing free, so an automatic run has

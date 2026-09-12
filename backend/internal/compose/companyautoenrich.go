@@ -7,10 +7,10 @@ package compose
 // event queues the workspace's enrich pass NOW.
 //
 // The daily sweep (captureautoenrich.go) is the reconciler, and before this
-// consumer it was also the only trigger for a company a person or an agent
+// consumer it was also the only trigger for a company a contact or an agent
 // CREATED — so one minted five minutes after the sweep waited a day for its
 // dossier, which is exactly the moment its creator is looking at the empty
-// page. THE TRIGGER IS THE EVENT, NOT THE WRITER (the person-auto-enrich
+// page. THE TRIGGER IS THE EVENT, NOT THE WRITER (the contact-auto-enrich
 // rule): company.created and company.updated reach the outbox
 // because the write shape puts them there, so manual entry, the MCP tools,
 // a site-read confirm and an import all land here without any of them

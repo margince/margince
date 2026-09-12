@@ -16,7 +16,7 @@ import "./relationshipmap.css";
 // The account's routes, drawn.
 //
 // A picture earns its place here by showing what a list cannot: which of our
-// colleagues can reach which of their people, how warm each of those routes is,
+// colleagues can reach which of their contacts, how warm each of those routes is,
 // and where the buying team has a hole. The previous diagram on this page was
 // unlabeled dots hidden from screen readers — it showed that the account had
 // many connections, which the page already said in words.
@@ -83,7 +83,7 @@ export function RelationshipMap({
   //
   // The cursor is an ID, not an index. An index into the placed list is stale
   // the moment a lane expands — the row the reader was standing on is replaced
-  // by the people it was hiding — and an index that survives into a different
+  // by the contacts it was hiding — and an index that survives into a different
   // list silently points at somebody else.
   const order = placement.placed.map((node) => node.id);
   const [cursorId, setCursorId] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export function RelationshipMap({
 
   // Focus FOLLOWS the cursor. Moving only the tabindex leaves the ring, the
   // screen reader and Enter all pointing at the node the reader walked away
-  // from — the arrow keys look like they work and activate the wrong person.
+  // from — the arrow keys look like they work and activate the wrong contact.
   useEffect(() => {
     if (!moved.current || !focused) {
       return;
@@ -129,7 +129,7 @@ export function RelationshipMap({
 
   const openLane = (id: string) => {
     const lane = id.slice("more:".length);
-    // The row the reader is standing on is about to be replaced by the people
+    // The row the reader is standing on is about to be replaced by the contacts
     // it was hiding, so the cursor moves to the first of them — otherwise
     // focus falls out of the map entirely.
     const firstHidden = model.lanes
@@ -416,7 +416,7 @@ function Panel({
   const best = route
     ? model.edges.find((e) => e.id === route.edgeIds[0])
     : null;
-  // A route runs colleague → person, so which END is the reader's depends on
+  // A route runs colleague → contact, so which END is the reader's depends on
   // which they selected. Reading it one way round printed "Lars Meyer → Lars
   // Meyer" for a colleague focus and listed none of their other routes.
   const fromColleague = node.kind === "user";

@@ -156,7 +156,7 @@ var composedIntents = map[string]bool{
 	// neither filters on nor sorts by. Read-only.
 	"review_commitments": true,
 	// prepare_handoff composes the project read with the deals rolled up to it,
-	// the people attached to it and the promises outstanding on it — four
+	// the contacts attached to it and the promises outstanding on it — four
 	// operations, so no single one declares it. Read-only, and it writes
 	// nothing: moving work into delivery is advance_project_phase's act.
 	"prepare_handoff": true,

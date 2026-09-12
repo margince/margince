@@ -192,7 +192,7 @@ func cityOf(t *testing.T, e *apptest.AppEnv, id string) string {
 
 // A row naming an id nothing answers to is REFUSED, not quietly created.
 //
-// Silently creating would be the worst of both: the person meant to correct one
+// Silently creating would be the worst of both: the contact meant to correct one
 // company, the file had a typo or a stale export, and they get a new record
 // instead — reported as a create they would have to read carefully to notice.
 func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
@@ -224,7 +224,7 @@ func TestCSVImportByIDRefusesAnIDNothingAnswersTo(t *testing.T) {
 					report.Disposition.Created, report.Disposition.Skipped)
 			}
 			if len(report.Issues) != 1 || !strings.Contains(report.Issues[0].Reason, tc.wants) {
-				t.Fatalf("issues = %+v, want one naming %q so the person can go fix the file",
+				t.Fatalf("issues = %+v, want one naming %q so the contact can go fix the file",
 					report.Issues, tc.wants)
 			}
 			if got := report.Disposition.Created + report.Disposition.Updated +
@@ -356,7 +356,7 @@ func createRunWithSourceKey(t *testing.T, e *apptest.AppEnv, object, sourceRef s
 // external ids are not line numbers.
 //
 // The report collapses a row refused by BOTH the dry run and the commit into a
-// single issue, so a person is not sent to fix the same line twice. It keyed that
+// single issue, so a contact is not sent to fix the same line twice. It keyed that
 // collapsing on the LINE derived from the external
 // id, and lineOf answers 0 for every id not shaped "line N" — which is every id
 // in a file carrying its own key column. Several refusals then collapsed onto
@@ -388,7 +388,7 @@ func TestCSVImportSkippedRowsAreCountedIndividually(t *testing.T) {
 			"own row", report.Disposition.Skipped)
 	}
 	if len(report.Issues) != 2 {
-		t.Errorf("%d issue(s) for 2 refused rows; a person fixing the file needs both named",
+		t.Errorf("%d issue(s) for 2 refused rows; a contact fixing the file needs both named",
 			len(report.Issues))
 	}
 	if got := report.Disposition.Created + report.Disposition.Updated +

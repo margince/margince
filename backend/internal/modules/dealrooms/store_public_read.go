@@ -129,7 +129,7 @@ func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.Buyer
 
 // readBuyerParticipant returns the caller's own row — and only theirs. The
 // predicate is the session's (participant, room) pair, so even a session whose
-// room column was somehow wrong could not read another room's person.
+// room column was somehow wrong could not read another room's contact.
 func readBuyerParticipant(ctx context.Context, tx pgx.Tx, sess Session) (crmcontracts.BuyerRoomParticipant, error) {
 	var (
 		out   crmcontracts.BuyerRoomParticipant

@@ -56,7 +56,7 @@ func TestTheBoundingBoxSurvivesThePoles(t *testing.T) {
 // the answer says so rather than pretending.
 func TestARecordTypeWithNoPlaceAnswersUnavailable(t *testing.T) {
 	km := 50.0
-	for _, target := range []string{"deal", "person", "lead", "project"} {
+	for _, target := range []string{"deal", "contact", "lead", "project"} {
 		bound, note, err := bindGeo(context.Background(), stubPlaces{},
 			target, "address", radiusOperand{Center: "Stuttgart", RadiusKM: &km})
 		if err != nil {

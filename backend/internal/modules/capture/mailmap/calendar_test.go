@@ -39,7 +39,7 @@ func calendarInviteFixture() []byte {
 
 // An invitation names an EVENT. Its recipient is an attendee, not somebody the
 // workspace corresponded with, and reading the two as the same fact turned
-// every person the owner had ever invited into a contact — a spouse, a language
+// every contact the owner had ever invited into a contact — a spouse, a language
 // teacher, and the owner's own second address among them.
 func TestACalendarInviteNamesNoCounterparty(t *testing.T) {
 	t.Parallel()
@@ -80,7 +80,7 @@ func TestACalendarInviteIsStillCaptured(t *testing.T) {
 // The rule reads Sender, never From. An organizer is a real human whose
 // ordinary mail must be unaffected, and a rule keyed on From would refuse them
 // everywhere.
-func TestAPersonsOwnMailIsNotACalendarNotice(t *testing.T) {
+func TestAContactsOwnMailIsNotACalendarNotice(t *testing.T) {
 	t.Parallel()
 	// The same organizer, writing to the same address, by hand.
 	plain := crlf(
@@ -99,11 +99,11 @@ func TestAPersonsOwnMailIsNotACalendarNotice(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "attendee@partner.example" {
-		t.Errorf("counterparty = %q, want the attendee — a person's own mail is correspondence", got)
+		t.Errorf("counterparty = %q, want the attendee — a contact's own mail is correspondence", got)
 	}
 }
 
-// An .ics a person attaches to a mail they wrote is not groupware speaking for
+// An .ics a contact attaches to a mail they wrote is not groupware speaking for
 // them, and that message IS correspondence. Requiring the provider's own Sender
 // address is what keeps the rule to messages a machine composed.
 func TestAHandAttachedCalendarFileIsNotANotice(t *testing.T) {
@@ -135,7 +135,7 @@ func TestAHandAttachedCalendarFileIsNotANotice(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 	if got := msg.ToRecord("gmail", nil).Counterparty.Email; got != "alice@acme.com" {
-		t.Errorf("counterparty = %q, want alice — a person attaching an .ics is still writing", got)
+		t.Errorf("counterparty = %q, want alice — a contact attaching an .ics is still writing", got)
 	}
 }
 
@@ -208,7 +208,7 @@ func TestBothCalendarGuardsAreLoadBearing(t *testing.T) {
 
 // An invitation the owner RECEIVES is not the case this rule is about.
 //
-// Its organizer is named in From and is a person who wrote to the owner —
+// Its organizer is named in From and is a contact who wrote to the owner —
 // exactly the counterparty capture exists to record. The wrong contacts all
 // came from the other direction: the owner invites, and every attendee reads as
 // somebody the workspace writes to. Suppressing the inbound side as well

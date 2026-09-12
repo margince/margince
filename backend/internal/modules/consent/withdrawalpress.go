@@ -6,7 +6,7 @@ package consent
 // What a press on a withdrawal link actually does.
 //
 // Two answers, because two kinds of subject can hold one of these links. A
-// PERSON has per-purpose consent rows, so their press withdraws the marketing
+// CONTACT has per-purpose consent rows, so their press withdraws the marketing
 // ones. A LEAD or a bare address has none, so their press records a
 // suppression instead — without which their link resolved and then refused,
 // which is worse than never issuing it.
@@ -26,7 +26,7 @@ import (
 // StopForCredentialTx records the stop a withdrawal link presses when its
 // subject holds no per-purpose consent state to withdraw.
 //
-// A LEAD HAS NO person_consent ROWS, and neither does a bare address. The
+// A LEAD HAS NO contact_consent ROWS, and neither does a bare address. The
 // per-purpose withdrawal every other press performs therefore has nothing to
 // act on, and returning "not found" for those links — which is what this path
 // did before — hands a lead a working-looking unsubscribe link that refuses.
@@ -36,16 +36,16 @@ import (
 // So the press records a SUPPRESSION instead, against the lead or the bare
 // address, which is the shape communication_suppression already carries for
 // exactly this case. The send engine reads that table for every message, so a
-// stop written here binds the same way a person's withdrawal does.
+// stop written here binds the same way a contact's withdrawal does.
 //
 // MACHINE LEVEL, not subject level. The press is genuine and unauthenticated
 // both: possession of a mailed link is good evidence and not proof of who
 // pressed it, and a subject-level row is one no seat may ever lift. An
 // operator must be able to correct a mis-scanned link; they must not be able
-// to undo a person's Art. 21 objection. This is the former.
+// to undo a contact's Art. 21 objection. This is the former.
 func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref WithdrawalRef) error {
-	if !ref.PersonID.IsZero() {
-		return fmt.Errorf("consent: a person's link withdraws their purposes rather than " +
+	if !ref.ContactID.IsZero() {
+		return fmt.Errorf("consent: a contact's link withdraws their purposes rather than " +
 			"recording an address stop")
 	}
 	if ref.LeadID.IsZero() && ref.Address == "" {
@@ -62,7 +62,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// marketing message stopped.
 	//
 	// The narrow stop needs a per-purpose shape for subjects who hold no
-	// person_consent rows, which is a schema question this slice does not
+	// contact_consent rows, which is a schema question this slice does not
 	// answer. Until then a named-purpose lead link is issued and declines to
 	// act, which is visible in the audit as nothing happening rather than as
 	// the wrong thing happening.
@@ -109,8 +109,8 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		return nil
 	}
 	// AUDITED BUT NOT ANNOUNCED. consent.suppressed declares
-	// x-entity-type: person, so a lead subject would ship an envelope naming
-	// person:<lead uuid> — an id of the wrong kind, scoped by a fan-out gate
+	// x-entity-type: contact, so a lead subject would ship an envelope naming
+	// contact:<lead uuid> — an id of the wrong kind, scoped by a fan-out gate
 	// that was told it could trust the type. stopcarry.go refuses the same
 	// event for the same reason. Widening the contract to leads is a question
 	// for the slice that asks it.
@@ -144,12 +144,12 @@ func (s *Store) StopForCredential(ctx context.Context, token string) error {
 	})
 }
 
-// WithdrawMarketingForCredential stops the MARKETING-CLASS purposes a person
+// WithdrawMarketingForCredential stops the MARKETING-CLASS purposes a contact
 // holds, for a credential whose scope is all_marketing.
 //
 // SCOPED BY CLASS, unlike the legacy one-click sweep beside it, which stops
 // every purpose in the catalog except the locked transactional one — so a
-// press there also withdraws business correspondence, and a person who
+// press there also withdraws business correspondence, and a contact who
 // unsubscribed from a newsletter stops receiving replies to their own
 // enquiries. That defect is older than this credential and its fix is a slice
 // of its own, because narrowing the LEGACY path changes what an existing link
@@ -164,7 +164,7 @@ func (s *Store) StopForCredential(ctx context.Context, token string) error {
 // are not subscriptions anybody opted into and so not things to unsubscribe
 // from.
 func (s *Store) WithdrawMarketingForCredential(
-	ctx context.Context, personID ids.PersonID,
+	ctx context.Context, contactID ids.ContactID,
 ) ([]string, error) {
 	var keys []string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -184,7 +184,7 @@ func (s *Store) WithdrawMarketingForCredential(
 	if len(keys) == 0 {
 		return []string{}, nil
 	}
-	return s.PublicWithdrawAll(ctx, personID, keys)
+	return s.PublicWithdrawAll(ctx, contactID, keys)
 }
 
 // WithdrawMarketingNamed stops ONE purpose, and only if it is one an
@@ -199,10 +199,10 @@ func (s *Store) WithdrawMarketingForCredential(
 //
 // A purpose outside the marketing classes answers "nothing changed" rather
 // than an error. The presser is a mailbox provider acting on a header, not a
-// person who typed something wrong, and a 4xx would turn a press we simply
+// contact who typed something wrong, and a 4xx would turn a press we simply
 // decline to widen into a delivery failure they retry.
 func (s *Store) WithdrawMarketingNamed(
-	ctx context.Context, personID ids.PersonID, key string,
+	ctx context.Context, contactID ids.ContactID, key string,
 ) ([]string, error) {
 	var allowed bool
 	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -217,7 +217,7 @@ func (s *Store) WithdrawMarketingNamed(
 	if !allowed {
 		return []string{}, nil
 	}
-	return s.PublicWithdrawAll(ctx, personID, []string{key})
+	return s.PublicWithdrawAll(ctx, contactID, []string{key})
 }
 
 // stopSubjectKey is what this press locks under: the lead when one holds the

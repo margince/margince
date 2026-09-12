@@ -988,7 +988,7 @@ describe("AvailabilityScreen", () => {
     for (const locale of LOCALES) {
       const notice = translate(locale, "auth.noticeOidcFailed");
       expect(notice).not.toMatch(/\{[^}]+\}/);
-      // And it still tells the one person who is genuinely stuck what to do.
+      // And it still tells the one contact who is genuinely stuck what to do.
       expect(notice.length).toBeGreaterThan(40);
     }
   });

@@ -47,11 +47,11 @@ func TestOneUnitMayClaimTheSameKeyInEveryLocale(t *testing.T) {
 	}
 }
 
-// A unit rewriting `nav.people` would change core copy from a directory, which
+// A unit rewriting `nav.contacts` would change core copy from a directory, which
 // is not a capability this tier grants.
 func TestMergeUnitLocalesRefusesAKeyOutsideTheUnitNamespace(t *testing.T) {
 	_, err := mergeUnitLocales([]unitLocale{
-		{Unit: "notes", Locale: "en", Keys: map[string]string{"nav.people": "Hijacked"}},
+		{Unit: "notes", Locale: "en", Keys: map[string]string{"nav.contacts": "Hijacked"}},
 	})
 	if err == nil || !strings.Contains(err.Error(), "outside its namespace") {
 		t.Fatalf("err = %v, want the namespace refusal", err)

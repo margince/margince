@@ -1,0 +1,308 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package contacts
+
+// A mailbox that has been switched off is never SELECTED, which is a stronger
+// claim than "its results are dropped" and the reason the test is here rather
+// than beside the pass: what enforces it is one predicate in SQL, and a Go-side
+// filter that looked identical from the outside would still have read the mail.
+//
+// The join it rests on is a string rather than a foreign key — capture stamps
+// `connector:<provider>:<user id>` onto every activity it writes — so a test
+// against real Postgres is the only place the two halves of that convention are
+// checked against each other.
+
+import (
+	"context"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+// seedSignatureCandidate plants what SignatureCandidates looks for: a contact
+// captured by a connector, with no title and no phone, and one inbound email
+// carrying the mailbox's own provenance stamp.
+func (e *dedupeEnv) seedSignatureCandidate(
+	ctx context.Context,
+	t *testing.T,
+	name string,
+	capturedBy string,
+) {
+	e.seedSignatureCandidateWithAudience(ctx, t, name, capturedBy, "workspace")
+}
+
+// seedSignatureCandidateWithAudience is the same fixture with the mail's
+// audience under the caller's control, so a test can tell a candidate skipped
+// for its MAILBOX apart from one skipped for its message's audience.
+func (e *dedupeEnv) seedSignatureCandidateWithAudience(
+	ctx context.Context,
+	t *testing.T,
+	name string,
+	capturedBy string,
+	audience string,
+) {
+	t.Helper()
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: name,
+		Source:   "connector:gmail",
+		Emails: []ContactEmailInput{{
+			Email: "sig-" + ids.NewV7().String() + "@seed.test", EmailType: emailTypeWork, IsPrimary: true,
+		}},
+	})
+	if err != nil {
+		t.Fatalf("seed contact: %v", err)
+	}
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+
+	// captured_by on the CONTACT is what the candidate predicate filters on;
+	// captured_by on the ACTIVITY is what the mailbox switch reads.
+	activityID := ids.New[ids.ActivityKind]()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			UPDATE contact SET captured_by = $2, title = NULL WHERE id = $1`,
+			contactID, capturedBy); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+			VALUES ($1, 'email', 'Regards, Dana | VP Finance | +49 30 1234', 'inbound', now(), 'gmail:seed', $2, $3)`,
+			activityID, capturedBy, audience); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+			VALUES ($1, $2, 'contact', $3)`,
+			ids.NewV7(), activityID, contactID); err != nil {
+			return err
+		}
+		// THEY sent it. A signature is only theirs to read off a message they
+		// wrote, so the candidate query asks for this row and a mail seeded
+		// without one is a mail nobody wrote.
+		_, err := tx.Exec(ctx, `
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'from')`, activityID, contactID)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the captured mail: %v", err)
+	}
+}
+
+// connectedMailbox seeds a capture_connection whose provenance string is the
+// one the activities above carry, with the switch in the given position.
+func (e *dedupeEnv) connectedMailbox(
+	ctx context.Context,
+	t *testing.T,
+	userID ids.UUID,
+	enabled *bool,
+) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		// The connection's owner is a real seat: capture_connection carries a
+		// foreign key to app_user, and a mailbox belonging to nobody is not a
+		// state the product can reach.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Mailbox Owner')`,
+			userID, "mailbox-"+userID.String()+"@seed.test"); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO capture_connection (id, provider, user_id, status, signature_enrich_enabled)
+			VALUES ($1, 'gmail', $2, 'connected', $3)`,
+			ids.NewV7(), userID, enabled)
+		return err
+	}); err != nil {
+		t.Fatalf("seed the mailbox: %v", err)
+	}
+}
+
+func candidateNames(candidates []SignatureCandidate) []string {
+	names := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		names = append(names, c.FullName)
+	}
+	return names
+}
+
+func contains(names []string, want string) bool {
+	for _, name := range names {
+		if name == want {
+			return true
+		}
+	}
+	return false
+}
+
+func TestSignatureCandidatesSkipASwitchedOffMailbox(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	on := true
+	off := false
+	willing := ids.NewV7()
+	refusing := ids.NewV7()
+	e.connectedMailbox(ctx, t, willing, &on)
+	e.connectedMailbox(ctx, t, refusing, &off)
+
+	e.seedSignatureCandidate(ctx, t, "From A Willing Mailbox", "connector:gmail:"+willing.String())
+	e.seedSignatureCandidate(ctx, t, "From A Refusing Mailbox", "connector:gmail:"+refusing.String())
+
+	got, err := e.store.SignatureCandidates(ctx, 50, true)
+	if err != nil {
+		t.Fatalf("selecting candidates: %v", err)
+	}
+	names := candidateNames(got)
+	if !contains(names, "From A Willing Mailbox") {
+		t.Errorf("the willing mailbox's contact is absent from %v", names)
+	}
+	if contains(names, "From A Refusing Mailbox") {
+		t.Errorf("a switched-off mailbox's contact was selected: %v", names)
+	}
+}
+
+// A mailbox that never chose follows the workspace, in both directions — which
+// is what makes the null a third state rather than a missing value.
+func TestSignatureCandidatesFollowTheWorkspaceWhenAMailboxHasNotChosen(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	undecided := ids.NewV7()
+	e.connectedMailbox(ctx, t, undecided, nil)
+	e.seedSignatureCandidate(ctx, t, "Undecided Mailbox", "connector:gmail:"+undecided.String())
+
+	enabled, err := e.store.SignatureCandidates(ctx, 50, true)
+	if err != nil {
+		t.Fatalf("selecting with the workspace on: %v", err)
+	}
+	if !contains(candidateNames(enabled), "Undecided Mailbox") {
+		t.Error("a mailbox with no choice of its own was skipped while the workspace was on")
+	}
+
+	disabled, err := e.store.SignatureCandidates(ctx, 50, false)
+	if err != nil {
+		t.Fatalf("selecting with the workspace off: %v", err)
+	}
+	if contains(candidateNames(disabled), "Undecided Mailbox") {
+		t.Error("a mailbox with no choice of its own was selected while the workspace was off")
+	}
+}
+
+// Mail stamped with the bare `connector:<name>` form — no granting user bound —
+// matches no connection row. It follows the workspace, which is the answer it
+// had before the switch existed.
+func TestSignatureCandidatesTreatUnboundMailAsTheWorkspaceDefault(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	e.seedSignatureCandidate(ctx, t, "Unbound Provenance", "connector:gmail")
+
+	enabled, err := e.store.SignatureCandidates(ctx, 50, true)
+	if err != nil {
+		t.Fatalf("selecting with the workspace on: %v", err)
+	}
+	if !contains(candidateNames(enabled), "Unbound Provenance") {
+		t.Error("unbound mail was skipped while the workspace default was on")
+	}
+
+	disabled, err := e.store.SignatureCandidates(ctx, 50, false)
+	if err != nil {
+		t.Fatalf("selecting with the workspace off: %v", err)
+	}
+	if contains(candidateNames(disabled), "Unbound Provenance") {
+		t.Error("unbound mail was selected while the workspace default was off")
+	}
+}
+
+// A limited message is not signature material. The pass writes what it extracts
+// onto a contact every seat can read, so mining a message whose audience
+// excludes those seats republishes its content as fields — and narrowing the
+// message afterwards does not take the fields back.
+//
+// The switched-on mailbox is what makes this a claim about the AUDIENCE: both
+// contacts below sit behind the same willing mailbox, and only the audience of
+// the mail they were last written from differs.
+func TestSignatureCandidatesSkipALimitedMessage(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	on := true
+	mailbox := ids.NewV7()
+	e.connectedMailbox(ctx, t, mailbox, &on)
+	stamp := "connector:gmail:" + mailbox.String()
+
+	e.seedSignatureCandidateWithAudience(ctx, t, "Wrote From Open Mail", stamp, "workspace")
+	e.seedSignatureCandidateWithAudience(ctx, t, "Wrote From Limited Mail", stamp, "participants")
+
+	got, err := e.store.SignatureCandidates(ctx, 50, true)
+	if err != nil {
+		t.Fatalf("selecting candidates: %v", err)
+	}
+	names := candidateNames(got)
+	if !contains(names, "Wrote From Open Mail") {
+		t.Errorf("the open message's contact is absent from %v — the fixture cannot tell a working gate from a broken query", names)
+	}
+	if contains(names, "Wrote From Limited Mail") {
+		t.Errorf("a contact whose only mail is limited was offered for signature mining: %v — "+
+			"their title, phone and employer would be written onto a workspace-readable record from a message those readers may not open", names)
+	}
+}
+
+// The apply path re-tests the SOURCE, not only the candidate query that
+// selected it.
+//
+// SignatureCandidates selects an open message, a model call runs, and a human
+// or a verdict can limit that message before the fields land. What lands is a
+// title, a phone and an employer on a contact every seat reads, and the audience
+// rescope deliberately does not retract profile fields — so a field written
+// after the narrowing stays readable for good. That is the one outcome no later
+// correction reaches, which is why the test is at the write.
+func TestApplySignatureFieldsSkipsASourceLimitedWhileTheModelRan(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	apply := func(audience string) SignatureApplyResult {
+		t.Helper()
+		contact, err := e.store.CreateContact(ctx, CreateContactInput{
+			FullName: "Signature Subject " + audience,
+			Source:   "connector:gmail",
+			Emails: []ContactEmailInput{{
+				Email: "sig-" + ids.NewV7().String() + "@seed.test", EmailType: emailTypeWork, IsPrimary: true,
+			}},
+		})
+		if err != nil {
+			t.Fatalf("seed contact: %v", err)
+		}
+		contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+		activityID := ids.NewV7()
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO activity (id, kind, body, direction, occurred_at, source, captured_by, audience)
+				VALUES ($1, 'email', 'Regards, Dana | VP Finance', 'inbound', now(), 'gmail:seed', 'connector:gmail', $2)`,
+				activityID, audience)
+			return err
+		}); err != nil {
+			t.Fatalf("seed the source message: %v", err)
+		}
+		res, err := e.store.ApplySignatureFields(ctx, contactID, activityID, []SignatureField{
+			{Name: "title", Value: "VP Finance", Evidence: "Regards, Dana | VP Finance", Confidence: 0.95},
+		})
+		if err != nil {
+			t.Fatalf("applying signature fields from %s mail: %v", audience, err)
+		}
+		return res
+	}
+
+	// The open case first: without it a re-check that refused everything would
+	// pass the assertion below and silently switch signature enrichment off.
+	if open := apply("workspace"); open.Applied != 1 {
+		t.Fatalf("an open source applied %d field(s), want 1 — the re-check refuses more than the audience", open.Applied)
+	}
+	if limited := apply("participants"); limited.Applied != 0 {
+		t.Errorf("a source limited while the model ran applied %d field(s) — a title read from a message its readers may not open, "+
+			"written onto a contact every seat sees, and the audience rescope does not retract profile fields", limited.Applied)
+	}
+}

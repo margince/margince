@@ -119,7 +119,7 @@ func (h Handlers) RequestCommunicationDecision(
 	})
 }
 
-// RecordCommunicationContext takes one rep's statement about one person and
+// RecordCommunicationContext takes one rep's statement about one contact and
 // answers with the review as it now stands.
 //
 // Thin transport, like its siblings. Which refusals a statement can answer, who
@@ -137,7 +137,7 @@ func (h Handlers) RecordCommunicationContext(
 		return
 	}
 	review, err := h.store.RecordContext(r.Context(), ids.UUID(id), RecordContextInput{
-		SubjectID:  ids.From[ids.PersonKind](ids.UUID(body.SubjectId)),
+		SubjectID:  ids.From[ids.ContactKind](ids.UUID(body.SubjectId)),
 		Kind:       string(body.Kind),
 		Note:       body.Note,
 		OccurredAt: body.OccurredAt,

@@ -71,8 +71,8 @@ type LeadDisqualifier interface {
 }
 
 // LeadDemoter reverses a promotion: the lead returns to the open ladder and
-// the person the promotion created is archived. It answers the reversal's own
-// shape rather than a bare record, because WHICH unwind happened — the person
+// the contact the promotion created is archived. It answers the reversal's own
+// shape rather than a bare record, because WHICH unwind happened — the contact
 // archived, or only the lineage cleared — is the part a caller acts on.
 type LeadDemoter interface {
 	DemoteLead(ctx context.Context, id ids.UUID, reason string) (json.RawMessage, error)
@@ -90,7 +90,7 @@ type ProjectPhaseAdvancer interface {
 // relinkTargets is the link-target vocabulary, mirroring the contract enum so a
 // target the store would refuse is refused before it reaches the store.
 var relinkTargets = map[string]bool{
-	string(datasource.EntityPerson):  true,
+	string(datasource.EntityContact): true,
 	string(datasource.EntityCompany): true,
 	string(datasource.EntityDeal):    true,
 	string(datasource.EntityLead):    true,
@@ -126,7 +126,7 @@ func (t relinkActivity) Spec() mcp.ToolSpec {
 		OpenAPIOp:    "relinkActivity",
 		InputSchema: schema(`{"type":"object","required":["activity_id","entity_type","entity_id"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The captured activity to re-associate"},
-			"entity_type":{"type":"string","enum":["person","company","deal","lead","project"]},
+			"entity_type":{"type":"string","enum":["contact","company","deal","lead","project"]},
 			"entity_id":{"type":"string","format":"uuid","description":"The record to link it to"},
 			"replace_existing_of_type":{"type":"boolean","default":false,
 				"description":"Replace the existing link of the same entity_type (move) rather than adding one (associate)"},
@@ -163,7 +163,7 @@ func (t relinkActivity) StageInfo(ctx context.Context, in json.RawMessage) (Stag
 // because an unpinned write would run unattended — and this tool answered no
 // version at all. The resolver's own contract says it "raises a relink onto a
 // PROJECT to confirm-first and leaves every other destination auto-executing";
-// that second half was unreachable, so relinking to a person, a company or a
+// that second half was unreachable, so relinking to a contact, a company or a
 // deal cost a human decision the app itself does not ask for.
 //
 // The version comes from the same read the staging path already performs

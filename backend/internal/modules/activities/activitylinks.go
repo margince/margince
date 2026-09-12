@@ -65,7 +65,7 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 }
 
 // insertActivityLinks writes the polymorphic link rows. The last_activity_at
-// clocks on deal, person and company move with them, but not from here:
+// clocks on deal, contact and company move with them, but not from here:
 // migration 1787032690 keeps them on the activity_link row itself (a trigger
 // recomputing from the timeline), because this is one of several writers of
 // that row — capture, ensure, relink and message identity insert links too —
@@ -178,7 +178,7 @@ func refuseACompanyMeeting(kind string, link ActivityLinkInput) error {
 //
 // Email is deliberately absent: a mail can legitimately be addressed to an
 // account alias nobody owns personally. `note` and `task` are absent for a
-// different reason — they are ABOUT a record rather than with a person, and a
+// different reason — they are ABOUT a record rather than with a contact, and a
 // note about a company is exactly what a company timeline is for.
 var personalActivityKinds = map[string]bool{"meeting": true, "call": true}
 
@@ -186,7 +186,7 @@ var personalActivityKinds = map[string]bool{"meeting": true, "call": true}
 type CompanyMeetingError struct{ Kind string }
 
 func (e *CompanyMeetingError) Error() string {
-	return fmt.Sprintf("a %s is with a person, not with a company: link the person who was there, "+
+	return fmt.Sprintf("a %s is with a contact, not with a company: link the contact who was there, "+
 		"and the company is reached through their employer", e.Kind)
 }
 
@@ -214,7 +214,7 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // an EXISTING activity — reaches its own writer rather than this one.
 //
 // Filing under a project classifies an activity as commercial correspondence:
-// write-once in the database, monotonic, and removable only by a named person
+// write-once in the database, monotonic, and removable only by a named contact
 // giving a written reason. relink_activity was raised to confirm-first for a
 // project destination for exactly that reason. The create path reaches the same
 // write and five tools ride it — log_activity, create_task, book_meeting,
@@ -234,7 +234,7 @@ func (e *InvalidLinkTypeError) FieldFault() (field, code, message string) {
 // an operator the AI is working while it waits for them.
 //
 // A human at a form, a REST caller, and the capture sink are untouched — none
-// of them is an agent principal, and having a person in the loop is the whole
+// of them is an agent principal, and having a contact in the loop is the whole
 // distinction being drawn.
 func refuseAnUnattendedFiling(ctx context.Context) error {
 	actor, ok := principal.Actor(ctx)
@@ -250,15 +250,15 @@ type UnattendedProjectFilingError struct{}
 
 func (e *UnattendedProjectFilingError) Error() string {
 	return "filing an activity under a project marks it as commercial correspondence, which is " +
-		"write-once and removable only by a named person giving a written reason — not a mark this " +
+		"write-once and removable only by a named contact giving a written reason — not a mark this " +
 		"call may write unattended"
 }
 
 // FieldFault names the array to change and the verb that files under a project
-// with a person deciding it, because a refusal a caller cannot act on is one
+// with a contact deciding it, because a refusal a caller cannot act on is one
 // they retry unchanged.
 func (e *UnattendedProjectFilingError) FieldFault() (field, code, message string) {
 	return fieldLinks, "project_filing_needs_approval", e.Error() +
-		". Create it with its other links, then call relink_activity for the project: a person " +
+		". Create it with its other links, then call relink_activity for the project: a contact " +
 		"approves that one before it takes effect"
 }

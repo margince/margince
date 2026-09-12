@@ -74,7 +74,7 @@ var activityReadLiteral = gatekit.TableReadPattern("activity")
 // audit_log" AND "mentions before" anywhere in the declaration. A declaration
 // carries its error strings too, and this tree writes sentences with the words
 // "before" and "after" in them: asked separately, the two conditions pulled in
-// a person-name repair and a JSON-decode error message as audit-image readers,
+// a contact-name repair and a JSON-decode error message as audit-image readers,
 // which is a corpus that has to be ratified reader by reader for reasons that
 // are not true.
 //
@@ -288,7 +288,7 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
 	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
 	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",
-	"internal/modules/people/ensurenamefill.go:displayNameSetByHumanTx":      "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
+	"internal/modules/contacts/ensurenamefill.go:displayNameSetByHumanTx":    "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
 
 	"internal/modules/capture/tracestore.go:TraceStore.readRungs": "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
 })
@@ -540,8 +540,8 @@ func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 // spec may be repeating the previous one's, and only the caller walking the
 // block knows what that was.
 //
-// One spec can bind several at once — `const activitySQL, personSQL = "…", "…"`
-// — so taking every name in the spec would let the person statement's name
+// One spec can bind several at once — `const activitySQL, contactSQL = "…", "…"`
+// — so taking every name in the spec would let the contact statement's name
 // answer for the activity one, in both directions: as evidence the activity
 // fragment is composed somewhere, and, when the function naming it reaches no
 // exclusion, as a reported reader of SQL it never touches.
@@ -778,7 +778,7 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 			// The false positives that made the window bounded in the first
 			// place: prose and error strings carrying the words on their own.
 			name: "a sentence using the words apart from any audit read",
-			sql:  `"the person's name was repaired before the export and after the merge"`,
+			sql:  `"the contact's name was repaired before the export and after the merge"`,
 			want: false,
 		},
 	} {

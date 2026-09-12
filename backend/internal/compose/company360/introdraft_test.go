@@ -27,7 +27,7 @@ func warmIntro() IntroFixture {
 
 // The template states every fact the model is given, so a deployment with no
 // lane gets a message a rep can send rather than an apology.
-func TestTheFloorAsksForTheIntroductionAndNamesBothPeople(t *testing.T) {
+func TestTheFloorAsksForTheIntroductionAndNamesBothContacts(t *testing.T) {
 	t.Parallel()
 	subject, body := IntroFloorFor(warmIntro())
 	if !strings.Contains(subject, "Philipp Königs") {
@@ -124,7 +124,7 @@ func TestAGermanAccountAsksInGerman(t *testing.T) {
 }
 
 // And the names alone are NOT the signal: a German account whose records happen
-// to be named in a way no detector reads still asks in the language its people
+// to be named in a way no detector reads still asks in the language its contacts
 // actually write in.
 func TestRecordNamesAloneDoNotDecideTheLanguage(t *testing.T) {
 	t.Parallel()
@@ -137,8 +137,8 @@ func TestRecordNamesAloneDoNotDecideTheLanguage(t *testing.T) {
 }
 
 // Every fact the model reads is somebody's typed text — a contact's name and a
-// deal's name were both entered by a person, and on a shared account that
-// person may not be us.
+// deal's name were both entered by a contact, and on a shared account that
+// contact may not be us.
 func TestTheModelCallFencesEveryFactItIsGiven(t *testing.T) {
 	t.Parallel()
 	req := IntroRequestFor(warmIntro())
@@ -255,8 +255,8 @@ func TestTheIntroPromptAsksForTheNamesTheCheckerRequires(t *testing.T) {
 	t.Parallel()
 	for _, required := range []string{
 		"Address the colleague by name: open with their first name",
-		"name the person you want to meet in full",
-		`Write a short subject line in the "subject" field, naming the person you want to meet`,
+		"name the contact you want to meet in full",
+		`Write a short subject line in the "subject" field, naming the contact you want to meet`,
 	} {
 		if !strings.Contains(introSystem, required) {
 			t.Fatalf("the prompt never asks the model to %q, but parseIntroDraft refuses a draft that omits it", required)

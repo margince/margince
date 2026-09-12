@@ -235,7 +235,7 @@ func heldDraftPrecheck(
 // that was staged, however well the words survived. Consent re-runs against
 // whatever address the send ends up with, so this was never a way to write to
 // somebody who refused — but it was a way to send an automation's draft, filed
-// under one thread and approved as a reply to one person, to a different person
+// under one thread and approved as a reply to one contact, to a different contact
 // entirely. The inbox has never offered the field; this is what makes that true
 // of the API as well.
 //

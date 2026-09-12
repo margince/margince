@@ -8,12 +8,12 @@ package integration
 // resolve_entities as a CLIENT reaches it: through the registered tool, over
 // real rows, real RLS and the real row-scope clauses.
 //
-// The ladder's own properties are proven in the people module, and the
+// The ladder's own properties are proven in the contacts module, and the
 // translation rules are unit-tested there. What only this lane can prove is the
 // half the tool owns and the half a unit test cannot fake: the match ladder is
 // workspace-wide, so the ONLY thing standing between one team's records and
 // another team's agent is the read-back through the datasource seam. A
-// hydration step that skipped it would pass every test in the people module and
+// hydration step that skipped it would pass every test in the contacts module and
 // answer a rep with a colleague's record.
 
 import (
@@ -27,29 +27,29 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// resolveFixture is one person per team, each with an address only they hold.
+// resolveFixture is one contact per team, each with an address only they hold.
 type resolveFixture struct {
-	rep1Person, rep3Person ids.UUID
+	rep1Contact, rep3Contact ids.UUID
 }
 
 func seedResolveFixture(t *testing.T, e *queryEnv) resolveFixture {
 	t.Helper()
 	var f resolveFixture
-	f.rep1Person = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+	f.rep1Contact = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Anna Weber', 'manual', 'human:x')`, e.Rep1)
-	f.rep3Person = e.SeedID(t, `INSERT INTO person (id, owner_id, full_name, source, captured_by)
+	f.rep3Contact = e.SeedID(t, `INSERT INTO contact (id, owner_id, full_name, source, captured_by)
 		VALUES ($1, $2, 'Bernd Kruse', 'manual', 'human:x')`, e.Rep3)
-	seedEmail(t, e, f.rep1Person, "anna@acme.example")
-	seedEmail(t, e, f.rep3Person, "bernd@logistik.example")
+	seedEmail(t, e, f.rep1Contact, "anna@acme.example")
+	seedEmail(t, e, f.rep3Contact, "bernd@logistik.example")
 	return f
 }
 
-func seedEmail(t *testing.T, e *queryEnv, person ids.UUID, address string) {
+func seedEmail(t *testing.T, e *queryEnv, contact ids.UUID, address string) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(),
-		`INSERT INTO person_email (id, person_id, email, email_type, is_primary, source, captured_by)
+		`INSERT INTO contact_email (id, contact_id, email, email_type, is_primary, source, captured_by)
 		 VALUES ($1, $2, $3, 'work', true, 'manual', 'human:x')`,
-		ids.NewV7(), person, address); err != nil {
+		ids.NewV7(), contact, address); err != nil {
 		t.Fatalf("seeding %s: %v", address, err)
 	}
 }
@@ -62,7 +62,7 @@ func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
 	sealed := invokeResolve(e.admin(), t, registry,
-		`{"candidates":[{"kind":"person","ref":"card","emails":["anna@acme.example"]}]}`)
+		`{"candidates":[{"kind":"contact","ref":"card","emails":["anna@acme.example"]}]}`)
 	answer := resolvePayload(t, sealed.Data)
 
 	if len(answer.Candidates) != 1 {
@@ -72,8 +72,8 @@ func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
 	if got.Ref != "card" || got.Decision != agents.ResolveDecisionMatched {
 		t.Fatalf("answer = %+v, want the caller's label and a match", got)
 	}
-	if len(got.Matches) != 1 || got.Matches[0].Record.ID != f.rep1Person {
-		t.Fatalf("matches = %+v, want the seeded person %s", got.Matches, f.rep1Person)
+	if len(got.Matches) != 1 || got.Matches[0].Record.ID != f.rep1Contact {
+		t.Fatalf("matches = %+v, want the seeded contact %s", got.Matches, f.rep1Contact)
 	}
 	if len(got.Matches[0].Record.Fields) == 0 || got.Matches[0].Record.Version == 0 {
 		t.Errorf("the match is a reference, not a record: fields=%s version=%d",
@@ -82,7 +82,7 @@ func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
 	// Every record served is a read, and the envelope is what the reads
 	// reported. A tool that answered ids without going through the seam would
 	// name nothing here.
-	if !sealedNames(sealed, f.rep1Person) {
+	if !sealedNames(sealed, f.rep1Contact) {
 		t.Errorf("the envelope does not name the resolved record: %+v", sealed.Evidence)
 	}
 }
@@ -95,19 +95,19 @@ func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
 func TestAnAddressOutsideTheCallersScopeResolvesToNothingItCanTellApart(t *testing.T) {
 	e := setupQuery(t)
 	f := seedResolveFixture(t, e)
-	// Ownership alone leaves a person readable by every seat with the grant;
+	// Ownership alone leaves a contact readable by every seat with the grant;
 	// capture privacy is what takes Bernd out of Rep1's row scope.
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE person SET visibility = 'owner' WHERE id = $1`, f.rep3Person); err != nil {
+		`UPDATE contact SET visibility = 'owner' WHERE id = $1`, f.rep3Contact); err != nil {
 		t.Fatalf("capturing Bernd privately: %v", err)
 	}
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	rep1 := e.teamRep(e.Rep1, e.Team1)
 
 	withheld := resolvePayload(t, invokeResolve(rep1, t, registry,
-		`{"candidates":[{"kind":"person","emails":["bernd@logistik.example"]}]}`).Data)
+		`{"candidates":[{"kind":"contact","emails":["bernd@logistik.example"]}]}`).Data)
 	absent := resolvePayload(t, invokeResolve(rep1, t, registry,
-		`{"candidates":[{"kind":"person","emails":["nobody@nowhere.example"]}]}`).Data)
+		`{"candidates":[{"kind":"contact","emails":["nobody@nowhere.example"]}]}`).Data)
 
 	if got := withheld.Candidates[0].Decision; got != agents.ResolveDecisionUnresolved {
 		t.Fatalf("a colleague's record answered %q — the caller can now probe for records they may not read", got)
@@ -132,9 +132,9 @@ func TestTheNarrowedAnswerSaysSoWithoutSizingTheHiddenSet(t *testing.T) {
 
 	rep1 := e.teamRep(e.Rep1, e.Team1)
 	withheld := invokeResolve(rep1, t, registry,
-		`{"candidates":[{"kind":"person","emails":["bernd@logistik.example"]}]}`)
+		`{"candidates":[{"kind":"contact","emails":["bernd@logistik.example"]}]}`)
 	absent := invokeResolve(rep1, t, registry,
-		`{"candidates":[{"kind":"person","emails":["nobody@nowhere.example"]}]}`)
+		`{"candidates":[{"kind":"contact","emails":["nobody@nowhere.example"]}]}`)
 
 	for _, sealed := range []sealedResult{withheld, absent} {
 		warned := false
@@ -174,14 +174,14 @@ func TestResolveEntitiesSourcesEveryRecordItServes(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
 	sealed := invokeResolve(e.admin(), t, registry, `{"candidates":[
-		{"kind":"person","emails":["anna@acme.example"]},
-		{"kind":"person","emails":["bernd@logistik.example"]}]}`)
+		{"kind":"contact","emails":["anna@acme.example"]},
+		{"kind":"contact","emails":["bernd@logistik.example"]}]}`)
 	answer := resolvePayload(t, sealed.Data)
 
 	if len(answer.Candidates) != 2 {
 		t.Fatalf("got %d answers for two candidates", len(answer.Candidates))
 	}
-	for _, id := range []ids.UUID{f.rep1Person, f.rep3Person} {
+	for _, id := range []ids.UUID{f.rep1Contact, f.rep3Contact} {
 		if !sealedNames(sealed, id) {
 			t.Errorf("the envelope does not name %s — every record served is a read and is sourced as one", id)
 		}

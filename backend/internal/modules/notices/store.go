@@ -38,7 +38,7 @@ func NewStore(db *database.DB) *Store {
 	return &Store{db: db}
 }
 
-// Notice is one durable line addressed to one person.
+// Notice is one durable line addressed to one contact.
 type Notice struct {
 	ID        ids.UUID
 	Kind      string
@@ -214,18 +214,18 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	}, nil
 }
 
-// UnreadFor answers the CALLING person's own unread notices, newest first,
-// bounded. The person comes from the bound principal and is not a parameter
-// — another person's notices cannot be expressed — and a caller with no
-// person behind it is refused with the permission sentinel, which the
+// UnreadFor answers the CALLING contact's own unread notices, newest first,
+// bounded. The contact comes from the bound principal and is not a parameter
+// — another contact's notices cannot be expressed — and a caller with no
+// contact behind it is refused with the permission sentinel, which the
 // attention feed renders as a withheld lane.
 func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// The PERSON, not merely a user id: an agent or system principal
+		// The CONTACT, not merely a user id: an agent or system principal
 		// can carry a human's id, and reading — like settling — a notice
 		// is that human's own act.
-		return nil, fmt.Errorf("notices: reading your notices needs an authenticated person: %w", apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("notices: reading your notices needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	var unread []Notice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -264,16 +264,16 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 }
 
 // MarkRead settles one notice for its own recipient. Scoped by recipient in
-// the statement — another person's notice reads as absent (404), so its
+// the statement — another contact's notice reads as absent (404), so its
 // existence stays hidden — and idempotent: marking a read notice again is a
 // no-op success, because the reader's goal state already holds. The
 // read-state flip is a mutation and carries the write shape.
 func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		// The same person-not-id rule UnreadFor states: acknowledgment is
+		// The same contact-not-id rule UnreadFor states: acknowledgment is
 		// the recipient's own act, never a principal acting as them.
-		return fmt.Errorf("notices: marking a notice read needs an authenticated person: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("notices: marking a notice read needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The write claims the unread row alone, so two concurrent settles
@@ -311,7 +311,7 @@ func (s *Store) MarkRead(ctx context.Context, id ids.UUID) error {
 		}
 		// The event's subject is the RECIPIENT, like the created event's:
 		// the self-only delivery rule compares the subscription owner to the
-		// entity, and the notice's lifecycle is that one person's to hear.
+		// entity, and the notice's lifecycle is that one contact's to hear.
 		return storekit.EmitEvent(ctx, tx, auditID, actor.UserID, crmcontracts.PublicEventNoticeRead{
 			NoticeId: openapi_types.UUID(id),
 		})

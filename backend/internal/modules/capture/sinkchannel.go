@@ -9,8 +9,8 @@ package capture
 // for no one human, so it needs its own seam and its own decision — not a flag
 // on the mail contract.
 //
-// Capture still touches no person SQL: this is the same shape as the mail
-// resolver seam, and compose injects the same people module behind both.
+// Capture still touches no contact SQL: this is the same shape as the mail
+// resolver seam, and compose injects the same contacts module behind both.
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 
 // ChannelCounterpartyEnsurer is the channel twin of CounterpartyEnsurer: after
 // a captured channel activity commits, the pipeline ensures the human behind it
-// exists — person only — through the ONE dedupe chokepoint.
+// exists — contact only — through the ONE dedupe chokepoint.
 type ChannelCounterpartyEnsurer interface {
 	EnsureChannelCounterparty(ctx context.Context, req EnsureChannelRequest) (EnsureOutcome, error)
 }
@@ -35,7 +35,7 @@ type ChannelCounterpartyEnsurer interface {
 // EnsureChannelRequest names one inbound channel message's counterparty for the
 // resolver. It carries no OwnerID and no SuppressCompany, and the omissions are the
 // design: a workspace bot has no granting human for anything created to belong
-// to (design D2 — the person is ownerless), and no company is derived here even
+// to (design D2 — the contact is ownerless), and no company is derived here even
 // when an address rides along — a corroborating address is evidence about WHO
 // this is, and reading an employer out of it would be the mail ladder's job,
 // which this path deliberately bypasses.
@@ -45,7 +45,7 @@ type EnsureChannelRequest struct {
 	// CorroboratingEmail is the sender's address where the provider knew one and
 	// the source declared the email merge key (admitCounterpartyKeys). It names
 	// nobody — Identity does that — and reaches only the resolution ladder and
-	// the person's own address list. Empty for a transport that holds no
+	// the contact's own address list. Empty for a transport that holds no
 	// address, which is every core channel connector.
 	CorroboratingEmail string
 	ActivityID         ids.UUID
@@ -68,7 +68,7 @@ func (s *Sink) WithChannelEnsurer(ensurer ChannelCounterpartyEnsurer) *Sink {
 //
 // A record holding both a channel identity and an address is named by the
 // IDENTITY. That is precedence, not a coin toss: the identity is the key a reply
-// is routed on and the one a person is bound by, while an address can only
+// is routed on and the one a contact is bound by, while an address can only
 // corroborate. Reading it the other way round would classify the record as mail,
 // which binds no channel identity and — because every mail gate keys off the
 // address — would record no fault either, the one capture outcome that leaves no
@@ -98,7 +98,7 @@ const (
 // Provider is not cosmetic: it is hashed into the advisory lock key and the
 // suppression key, so a provider-less identity would lock and probe a different
 // key space than the eraser's and the gate below would pass while the eraser was
-// mid-purge — the mutex would be decorative. people's ensure refuses the same
+// mid-purge — the mutex would be decorative. contacts's ensure refuses the same
 // half-identity; refusing it here keeps the two in step.
 func counterpartyShapeOf(cp connector.Counterparty) counterpartyShape {
 	provider, account := cp.ChannelIdentity.Provider, cp.ChannelIdentity.ChannelUserID
@@ -192,7 +192,7 @@ var (
 // never inside.
 //
 // Landing inside it is not a near miss. The activity would commit after the
-// erasure certified the subject scrubbed, and with no person link it matches
+// erasure certified the subject scrubbed, and with no contact link it matches
 // the link-walking selector afterwards — and a record from a transport that
 // holds no address, which is every core channel connector, carries no
 // counterparty_email for the mail selector to find either. So no later erasure,
@@ -200,7 +200,7 @@ var (
 // audit tombstone records a clean scrub. A corroborating address narrows that
 // window where one exists; it does not close it, because the transports most
 // likely to be erased on are exactly the ones with no address to carry. The
-// probe in people's EnsureChannelCounterparty runs after this commit and its
+// probe in contacts's EnsureChannelCounterparty runs after this commit and its
 // refusal is mapped to nil by design, so it is the second gate and cannot be
 // the only one.
 //
@@ -242,7 +242,7 @@ func (s *Sink) decideChannelCounterparty(ctx context.Context) counterpartyDecisi
 	// The granting human the mail path owns its rows through is deliberately
 	// dropped: a channel connection's connected_by is audit-only (design §4.1),
 	// and reusing that admin here is exactly what would produce the owned record
-	// D2 refuses. owner stays zero, and the created person stays ownerless.
+	// D2 refuses. owner stays zero, and the created contact stays ownerless.
 	actor, _ := capturePrincipal(ctx)
 	return counterpartyDecision{create: true, channel: true, capturedBy: actor.ID}
 }

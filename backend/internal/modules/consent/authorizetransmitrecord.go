@@ -104,17 +104,17 @@ func nullableText(s string) *string {
 // liveSuppression reads what stops a message reaching this recipient
 // independently of any consent grant.
 //
-// Two shapes, and the address arm matters as much as the person arm: a hard
+// Two shapes, and the address arm matters as much as the contact arm: a hard
 // bounce is a fact about a MAILBOX, so it is recorded against the address and
 // keeps applying when the same address later appears on a different record.
-// The person arm carries objections and restrictions, which follow the human.
-func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connector.Recipient) ([]string, error) {
+// The contact arm carries objections and restrictions, which follow the human.
+func liveSuppression(ctx context.Context, tx pgx.Tx, contactID string, r connector.Recipient) ([]string, error) {
 	// EVERY live kind, not the strongest one.
 	//
 	// An earlier version took one row ordered by a fixed strength, which was
 	// sound while every kind refused everything: whichever won, the answer was
 	// the same. It stopped being sound when reach became category-dependent —
-	// a marketing objection sorts first and binds the LEAST, so a person
+	// a marketing objection sorts first and binds the LEAST, so a contact
 	// carrying both an objection and a hard bounce had the bounce masked and
 	// their invoice sent to a dead mailbox. Strength is no longer a total
 	// order, so the caller is given all of them and applies each.
@@ -125,10 +125,10 @@ func liveSuppression(ctx context.Context, tx pgx.Tx, personID string, r connecto
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT kind FROM communication_suppression
 		 WHERE revoked_at IS NULL
-		   AND (person_id = $1
+		   AND (contact_id = $1
 		        OR lead_id = $1
 		        OR (address IS NOT NULL AND $2 <> '' AND lower(address) = lower($2)))`,
-		personID, r.Email)
+		contactID, r.Email)
 	if err != nil {
 		return nil, fmt.Errorf("consent: read the recipient's suppressions: %w", err)
 	}

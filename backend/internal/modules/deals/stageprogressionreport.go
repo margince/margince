@@ -6,7 +6,7 @@ package deals
 // What a transition has earned, counted from the ledger.
 //
 // This is the launch gate's evidence: a transition may only move deals by
-// itself once these numbers say people agreed with it often enough, for long
+// itself once these numbers say contacts agreed with it often enough, for long
 // enough, without having to correct it. Nothing here DECIDES that — the policy
 // that reads these rates is its own file — because a report that also enforced
 // would be a number nobody could check against the thing it authorized.
@@ -120,13 +120,13 @@ func rateOf(part, whole int) float64 {
 	return float64(part) / float64(whole)
 }
 
-// reviewedOutcomes are the outcomes that mean a PERSON answered.
+// reviewedOutcomes are the outcomes that mean a CONTACT answered.
 //
 // `proposed` is not here: the card is still open. `expired` is not either, and
 // that is the subtle one — the window closing IS a refusal in the approvals
 // module's own vocabulary, but it is a refusal by nobody. Counting it as a
 // rejection would let a transition nobody has time to read look like one
-// people actively disagree with, and the fix for those two is opposite: one
+// contacts actively disagree with, and the fix for those two is opposite: one
 // needs a better proposal, the other needs somebody to look. `superseded` is
 // not an answer at all — a fresher card replaced it.
 //
@@ -135,7 +135,7 @@ func rateOf(part, whole int) float64 {
 // itself; putting it in the denominator lets it dilute every rate the launch
 // gate reads, so a transition running on automatic would report a falling
 // clean-acceptance rate as its own volume grew — one human approval among nine
-// automatic moves reads as 10% agreement when every person who looked agreed.
+// automatic moves reads as 10% agreement when every contact who looked agreed.
 // The autopilot cannot be allowed to vote on whether it should be running. It
 // is counted and reported on its own line instead.
 //
@@ -206,7 +206,7 @@ func readTransitionRates(
 		       -- push a transition past a ceiling it had not actually crossed.
 		       --
 		       -- The OUTCOME is an arm of the OR, not only the timestamp. The
-		       -- column is nullable and its constraint only forbids a person
+		       -- column is nullable and its constraint only forbids a contact
 		       -- with no instant, so a row standing at reversed with a null
 		       -- reversed_at is legal — and reading only the timestamp would
 		       -- count that undone move as a safe one, which is the single
@@ -266,7 +266,7 @@ func readTransitionRates(
 //
 // Whole days ROUNDED DOWN, so a transition observed for twenty-seven days and
 // twenty-three hours reports 27 and does not clear a 28-day bar. The bar is a
-// floor on how long people have had to notice a problem, and rounding up would
+// floor on how long contacts have had to notice a problem, and rounding up would
 // let it be cleared by an hour.
 func observationDays(first, last *time.Time) int {
 	if first == nil || last == nil {

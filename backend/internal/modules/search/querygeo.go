@@ -42,7 +42,7 @@ import (
 // held when the worker last ran, and an address can change at any time. Reading
 // lat/lon without geocode_status would answer distances from where a company
 // USED to be, reporting success — which is the whole defect the status column
-// was added to prevent (see people/geocode.go and the staleness trigger).
+// was added to prevent (see contacts/geocode.go and the staleness trigger).
 type geoColumns struct {
 	Lat, Lon, Status string
 }
@@ -51,7 +51,7 @@ type geoColumns struct {
 //
 // Only `company` today, and that is a product fact rather than a
 // limitation of this code: a company has an address that means a place on the
-// earth. A person's address is where somebody lives, which this product does
+// earth. A contact's address is where somebody lives, which this product does
 // not geocode and should think hard about before it does.
 var geoCapableTargets = map[string]geoColumns{
 	"company": {Lat: "geocode_lat", Lon: "geocode_lon", Status: "geocode_status"},
@@ -69,7 +69,7 @@ func locatableTarget(target string) bool {
 }
 
 // geoResolvedStatus is the one status a radius query may read. It mirrors
-// people.GeocodeOK, spelled here because search may not import people.
+// contacts.GeocodeOK, spelled here because search may not import contacts.
 const geoResolvedStatus = "ok"
 
 // geoBinding is a radius predicate this deployment CAN answer: where to measure

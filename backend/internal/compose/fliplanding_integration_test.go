@@ -29,8 +29,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -115,42 +115,42 @@ func landingRow(ext string, fields map[string]any) migration.Row {
 	return migration.Row{ExternalID: ext, Fields: fields}
 }
 
-func TestFlipLandsAPersonAndItsIdentityInOneTransaction(t *testing.T) {
+func TestFlipLandsAContactAndItsIdentityInOneTransaction(t *testing.T) {
 	f := setupLanding(t)
 
-	res, err := f.w.Ensure(f.ctx, flipObjectPerson, landingRow("hs-person-1", map[string]any{"full_name": "Ada Lovelace"}))
+	res, err := f.w.Ensure(f.ctx, flipObjectContact, landingRow("hs-contact-1", map[string]any{"full_name": "Ada Lovelace"}))
 	if err != nil {
-		t.Fatalf("landing the person: %v", err)
+		t.Fatalf("landing the contact: %v", err)
 	}
 	if !res.Created {
-		t.Fatalf("result = %+v, want a created person", res)
+		t.Fatalf("result = %+v, want a created contact", res)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM person WHERE full_name = 'Ada Lovelace'`); n != 1 {
-		t.Errorf("person rows = %d, want 1", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM contact WHERE full_name = 'Ada Lovelace'`); n != 1 {
+		t.Errorf("contact rows = %d, want 1", n)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map m JOIN person p ON p.id = m.native_id
-		WHERE m.object = 'person' AND m.external_id = 'hs-person-1' AND p.full_name = 'Ada Lovelace'`); n != 1 {
-		t.Errorf("mapped persons = %d, want 1 — the landing committed the record without its map row, or a map row naming nothing", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map m JOIN contact p ON p.id = m.native_id
+		WHERE m.object = 'contact' AND m.external_id = 'hs-contact-1' AND p.full_name = 'Ada Lovelace'`); n != 1 {
+		t.Errorf("mapped contacts = %d, want 1 — the landing committed the record without its map row, or a map row naming nothing", n)
 	}
 }
 
-func TestAFailedIdentityWriteLeavesNoPersonBehind(t *testing.T) {
+func TestAFailedIdentityWriteLeavesNoContactBehind(t *testing.T) {
 	f := setupLanding(t)
-	audits := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'person'`)
+	audits := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact'`)
 
-	_, err := f.brokenRun().Ensure(f.ctx, flipObjectPerson, landingRow("hs-person-2", map[string]any{"full_name": "Grace Hopper"}))
+	_, err := f.brokenRun().Ensure(f.ctx, flipObjectContact, landingRow("hs-contact-2", map[string]any{"full_name": "Grace Hopper"}))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want the identity write's refusal for a run this workspace does not hold", err)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM person WHERE full_name = 'Grace Hopper'`); n != 0 {
-		t.Errorf("person rows = %d, want 0 — the record outlived the transaction that was supposed to carry its identity, which is the orphan the reconcile has to clean up", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM contact WHERE full_name = 'Grace Hopper'`); n != 0 {
+		t.Errorf("contact rows = %d, want 0 — the record outlived the transaction that was supposed to carry its identity, which is the orphan the reconcile has to clean up", n)
 	}
 	// The write shape's audit row rides the same transaction as the record, so
 	// it must be gone too. Counted as a delta rather than as an absence, so
 	// this stays an assertion about the landing even if the fixture ever seeds
-	// a person of its own.
-	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'person'`); n != audits {
-		t.Errorf("person audit rows = %d, want the %d there were before the failed landing — the audit row committed without the record it describes", n, audits)
+	// a contact of its own.
+	if n := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'contact'`); n != audits {
+		t.Errorf("contact audit rows = %d, want the %d there were before the failed landing — the audit row committed without the record it describes", n, audits)
 	}
 }
 
@@ -161,13 +161,13 @@ func TestARolledBackLandingCachesNothing(t *testing.T) {
 	f := setupLanding(t)
 	broken := f.brokenRun()
 
-	if _, err := broken.Ensure(f.ctx, flipObjectPerson, landingRow("hs-person-3", map[string]any{"full_name": "Katherine Johnson"})); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := broken.Ensure(f.ctx, flipObjectContact, landingRow("hs-contact-3", map[string]any{"full_name": "Katherine Johnson"})); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want the identity write's refusal", err)
 	}
-	if _, found, err := broken.lookup(f.ctx, flipObjectPerson, "hs-person-3"); err != nil {
+	if _, found, err := broken.lookup(f.ctx, flipObjectContact, "hs-contact-3"); err != nil {
 		t.Fatalf("lookup after the failed landing: %v", err)
 	} else if found {
-		t.Error("the run cache names a person the failed landing never committed, so the resume would skip creating it")
+		t.Error("the run cache names a contact the failed landing never committed, so the resume would skip creating it")
 	}
 }
 
@@ -260,7 +260,7 @@ func TestALeadReplayedUnderItsNaturalKeyIsSkippedAndNotMapped(t *testing.T) {
 	}
 }
 
-// An estate contact whose email a native person already holds is disclosed as
+// An estate contact whose email a native contact already holds is disclosed as
 // a skip rather than merged — and this is the one preserved behaviour that now
 // depends on the store's error travelling out through a rolled-back landing.
 // Without this arm, a refactor that wrapped the landing error without %w would
@@ -268,19 +268,19 @@ func TestALeadReplayedUnderItsNaturalKeyIsSkippedAndNotMapped(t *testing.T) {
 func TestAContactWhoseEmailIsTakenIsSkippedAndLeavesNothingBehind(t *testing.T) {
 	f := setupLanding(t)
 	const taken = "ada@lovelace.test"
-	if _, err := f.e.People.CreatePerson(f.ctx, people.CreatePersonInput{
+	if _, err := f.e.Contacts.CreateContact(f.ctx, contacts.CreateContactInput{
 		FullName: "Ada Lovelace", Source: "ui",
-		Emails: []people.PersonEmailInput{{Email: taken, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: taken, EmailType: "work", IsPrimary: true}},
 	}); err != nil {
-		t.Fatalf("seeding the native person who already holds the email: %v", err)
+		t.Fatalf("seeding the native contact who already holds the email: %v", err)
 	}
 
-	res, err := f.w.Ensure(f.ctx, flipObjectPerson, migration.Row{
-		ExternalID: "hs-person-dup",
+	res, err := f.w.Ensure(f.ctx, flipObjectContact, migration.Row{
+		ExternalID: "hs-contact-dup",
 		// The email rides the nested TargetChild map the mapper writes, which
-		// is the shape overlayPersonEmail reads — a flat "email" key is
+		// is the shape overlayContactEmail reads — a flat "email" key is
 		// silently ignored, and with it the whole duplicate check.
-		Fields: map[string]any{"full_name": "A. Lovelace", "person_email": map[string]any{"email": taken}},
+		Fields: map[string]any{"full_name": "A. Lovelace", "contact_email": map[string]any{"email": taken}},
 	})
 	if err != nil {
 		t.Fatalf("the duplicate-email landing answered an error rather than a disclosed skip: %v", err)
@@ -288,10 +288,10 @@ func TestAContactWhoseEmailIsTakenIsSkippedAndLeavesNothingBehind(t *testing.T) 
 	if !res.Skipped || res.SkipReason != skipReasonDuplicateEmail {
 		t.Fatalf("result = %+v, want a skip naming the duplicate email", res)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM person WHERE full_name = 'A. Lovelace'`); n != 0 {
-		t.Errorf("person rows = %d, want 0 — the estate contact must not land beside the person who holds its email", n)
+	if n := f.e.WsCount(t, `SELECT count(*) FROM contact WHERE full_name = 'A. Lovelace'`); n != 0 {
+		t.Errorf("contact rows = %d, want 0 — the estate contact must not land beside the contact who holds its email", n)
 	}
-	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map WHERE object = 'person' AND external_id = 'hs-person-dup'`); n != 0 {
+	if n := f.e.WsCount(t, `SELECT count(*) FROM import_record_map WHERE object = 'contact' AND external_id = 'hs-contact-dup'`); n != 0 {
 		t.Error("the skipped contact was mapped, so the next attempt would report it converged")
 	}
 }
@@ -461,7 +461,7 @@ func TestAMappedButOpenDealIsClosedOnTheNextPass(t *testing.T) {
 // It is asked of the REAL writer rather than of the predicate, because the
 // question the writer has to answer is which uniqueness rule refused it: only
 // a rule keyed on the pair being inserted says the edge is already there. The
-// primary-employer index is keyed on the person alone, and reading its refusal
+// primary-employer index is keyed on the contact alone, and reading its refusal
 // as convergence reported an import as applied while dropping the employment.
 // That refusal is reachable only under a concurrent writer, which is why this
 // case can exercise one side and TestOnlyATupleKeyedRefusalMeansTheEdgeIsAlreadyOnFile
@@ -469,16 +469,16 @@ func TestAMappedButOpenDealIsClosedOnTheNextPass(t *testing.T) {
 func TestAReplayedEmploymentAssociationConvergesRatherThanFailing(t *testing.T) {
 	f := setupLanding(t)
 
-	if _, err := f.w.Ensure(f.ctx, flipObjectPerson,
-		landingRow("hs-person-emp", map[string]any{"full_name": "Ada Lovelace"})); err != nil {
-		t.Fatalf("landing the person: %v", err)
+	if _, err := f.w.Ensure(f.ctx, flipObjectContact,
+		landingRow("hs-contact-emp", map[string]any{"full_name": "Ada Lovelace"})); err != nil {
+		t.Fatalf("landing the contact: %v", err)
 	}
 	if _, err := f.w.Ensure(f.ctx, flipObjectCompany,
 		landingRow("hs-company-emp", map[string]any{"display_name": "Analytical Engines Ltd"})); err != nil {
 		t.Fatalf("landing the company: %v", err)
 	}
 	edge := migration.Assoc{
-		FromType: flipObjectPerson, FromID: "hs-person-emp",
+		FromType: flipObjectContact, FromID: "hs-contact-emp",
 		ToType: flipObjectCompany, ToID: "hs-company-emp", Label: "primary",
 	}
 

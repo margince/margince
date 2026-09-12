@@ -111,8 +111,8 @@ var dsrTransitions = map[string]map[string]bool{
 // admin's live grants, so without this arm a read-scoped passport would
 // enumerate every data subject who ever filed against the workspace.
 func requireDSRAdmin(ctx context.Context, action principal.Action) error {
-	// ONE object where there were two gates. `person` plus the literal admin
-	// role said "may read people, and is an administrator" — two questions
+	// ONE object where there were two gates. `contact` plus the literal admin
+	// role said "may read contacts, and is an administrator" — two questions
 	// standing in for the one nobody could ask: may this caller work the subject
 	// queue. privacy_request asks it directly, so an installation delegating the
 	// privacy inbox no longer has to hand out member administration with it.
@@ -206,7 +206,7 @@ type CreateDSRInput struct {
 //
 // Filing is working the queue, not a lesser act beside it. An erasure request is
 // the instruction FulfilErasure later carries out irreversibly, and the officer
-// who fulfils it trusts that whoever filed it could. person.update is not that
+// who fulfils it trusts that whoever filed it could. contact.update is not that
 // authority: every rep holds it for their own contact edits, and none of them
 // may read the queue a request lands in.
 func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error) {
@@ -354,28 +354,28 @@ func (s *Store) UpdateDSR(ctx context.Context, id ids.UUID, in UpdateDSRInput) (
 //
 // erase is the privacy engine's cross-store scrub (compose injects it via the
 // Eraser seam); it commits in its OWN transaction — consent owns
-// data_subject_request, privacy owns the person/capture/retrieval erase, and no
+// data_subject_request, privacy owns the contact/capture/retrieval erase, and no
 // single transaction may legally span both. Ordering carries the guarantee: the
 // scrub MUST land before the status flips to fulfilled. A finalize that fails
 // after the scrub committed leaves an already-erased subject on a still-open
-// request, which a retry re-fulfils harmlessly (ErasePerson anonymizes in place
+// request, which a retry re-fulfils harmlessly (EraseContact anonymizes in place
 // and is idempotent) — never a request certified fulfilled over an erase that
-// never ran. Because we hold the request lock (not the person rows) while erase
+// never ran. Because we hold the request lock (not the contact rows) while erase
 // checks out a second pooled connection for its own transaction, the two never
 // contend: this nests one connection deep, well within the pool on the
 // human-driven, admin-only DSR surface.
 func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInput,
-	erase func(ctx context.Context, personID ids.UUID, reason string) error,
+	erase func(ctx context.Context, contactID ids.UUID, reason string) error,
 ) (dsrRow, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionUpdate); err != nil {
 		return dsrRow{}, err
 	}
 	// ids.Parse proves syntax only; a subject_ref that fails even that names
-	// no person at all. Both doors — unparseable, and syntactically valid but
+	// no contact at all. Both doors — unparseable, and syntactically valid but
 	// naming nobody (the erase's ErrNotFound) — converge on this one refusal.
 	unresolvedSubject := &ValidationError{
 		Field:  fieldSubjectRef,
-		Reason: "an erasure request must name a person id before it can be fulfilled",
+		Reason: "an erasure request must name a contact id before it can be fulfilled",
 	}
 	var out dsrRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -389,11 +389,11 @@ func (s *Store) FulfilErasure(ctx context.Context, id ids.UUID, in UpdateDSRInpu
 		if verr := validateDSRUpdate(current, in); verr != nil {
 			return verr
 		}
-		personID, parseErr := ids.Parse(current.SubjectRef)
+		contactID, parseErr := ids.Parse(current.SubjectRef)
 		if parseErr != nil {
 			return unresolvedSubject
 		}
-		if err := erase(ctx, personID, "dsr:"+current.ID.String()); err != nil {
+		if err := erase(ctx, contactID, "dsr:"+current.ID.String()); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return unresolvedSubject
 			}

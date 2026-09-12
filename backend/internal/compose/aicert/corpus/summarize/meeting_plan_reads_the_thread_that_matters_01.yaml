@@ -19,7 +19,7 @@ fixture:
       body: >
         We keep losing track of issues and quotes. What we need is issue
         tracking, quote tracking and multi-channel capture in one place, so
-        nobody has to ask three people where a request went. How do we get
+        nobody has to ask three contacts where a request went. How do we get
         started on this?
     - label: ownership_change
       days_ago: 30

@@ -8,12 +8,12 @@ package consent
 // The DSR case queue over a real migrated Postgres. Two gates:
 // BE-1 — the ?status= filter the contract publishes actually narrows the
 // queue (it was parsed and dropped, so every filter returned everything).
-// BE-2 — fulfilling an erasure whose subject_ref names no person fails
+// BE-2 — fulfilling an erasure whose subject_ref names no contact fails
 // loudly instead of certifying a deletion that never ran. This file proves
 // the fails-to-parse half with the recordingEraser fake below, which is
 // sufficient because that half never reaches the erase path at all. The
 // syntactically-valid-but-nonexistent half, and the idempotent-repeat-fulfil
-// case sharing its premise (ErasePerson anonymizes a person row IN PLACE and
+// case sharing its premise (EraseContact anonymizes a contact row IN PLACE and
 // never deletes it, so its ErrNotFound can only mean "nobody found", never
 // "already erased"), both need a genuine ErrNotFound/nil that only the real
 // privacy.Eraser can produce — a module store must never import a sibling
@@ -112,10 +112,10 @@ func setupDSR(t *testing.T) *dsrEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
-				// The subject queue moved off a compound person+admin gate onto
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
+				// The subject queue moved off a compound contact+admin gate onto
 				// its own object, so an operator working it needs the grant that
-				// names the work rather than one that names people.
+				// names the work rather than one that names contacts.
 				"privacy_request": {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -255,7 +255,7 @@ func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 	h.UpdateDataSubjectRequest(w, r, openapi_types.UUID(req.ID))
 
 	if w.Code != http.StatusUnprocessableEntity {
-		t.Fatalf("an erasure whose subject_ref names no person must be refused 422, got %d: %s", w.Code, w.Body)
+		t.Fatalf("an erasure whose subject_ref names no contact must be refused 422, got %d: %s", w.Code, w.Body)
 	}
 	// Four distinct paths through this handler return 422; assert the one
 	// this scenario must hit, not just "a" 422.
@@ -278,7 +278,7 @@ func TestFulfillErasureHTTPRefusesAnUnresolvableSubject(t *testing.T) {
 // effect never runs when the same request that triggers it would be
 // refused by UpdateDSR's own "closing needs an answer" guard — a freshly
 // created DSR has no resolution, so a bare {"status":"fulfilled"} must be
-// rejected before ErasePerson is ever called, not after.
+// rejected before EraseContact is ever called, not after.
 func TestFulfillErasureHTTPRefusesAMissingResolution(t *testing.T) {
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
@@ -297,7 +297,7 @@ func TestFulfillErasureHTTPRefusesAMissingResolution(t *testing.T) {
 		t.Fatalf("fulfilling with no resolution must be refused 422, got %d: %s", w.Code, w.Body)
 	}
 	if eraser.calls != 0 {
-		t.Fatalf("the person must not be erased before the resolution guard is checked, got %d call(s)", eraser.calls)
+		t.Fatalf("the contact must not be erased before the resolution guard is checked, got %d call(s)", eraser.calls)
 	}
 	after, err := e.store.GetDSR(e.ctx, req.ID)
 	if err != nil {
@@ -311,8 +311,8 @@ func TestFulfillErasureHTTPRefusesAMissingResolution(t *testing.T) {
 // TestFulfillErasureHTTPRefusesAnAlreadyRejectedRequest proves a stale
 // fulfil against a request another officer already rejected is refused
 // before the erase runs — the illegal transition (rejected → fulfilled)
-// must be caught ahead of ErasePerson, not discovered afterward by
-// UpdateDSR once the person is already gone.
+// must be caught ahead of EraseContact, not discovered afterward by
+// UpdateDSR once the contact is already gone.
 func TestFulfillErasureHTTPRefusesAnAlreadyRejectedRequest(t *testing.T) {
 	e := setupDSR(t)
 	req := e.mustCreate(t, "erasure", ids.NewV7().String())
@@ -373,7 +373,7 @@ func validationField(t *testing.T, body []byte) string {
 // refusal happens BEFORE any erase is attempted.
 type recordingEraser struct{ calls int }
 
-func (e *recordingEraser) ErasePerson(context.Context, ids.UUID, string) error {
+func (e *recordingEraser) EraseContact(context.Context, ids.UUID, string) error {
 	e.calls++
 	return nil
 }

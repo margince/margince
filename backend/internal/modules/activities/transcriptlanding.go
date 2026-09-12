@@ -87,7 +87,7 @@ func skipARefusedReading(err error) error {
 	return err
 }
 
-// requestingHuman names the person a transcript reading is requested for.
+// requestingHuman names the contact a transcript reading is requested for.
 //
 // The HUMAN, never the passport: a reading's proposals are staged for somebody
 // to accept, and deepreadprincipal recovers an on-behalf user only from a

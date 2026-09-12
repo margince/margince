@@ -139,7 +139,7 @@ func (f *transcriptFixture) projection(t *testing.T) projectedOccurrence {
 
 // The line the router could never draw: a reading is live and the rep's own
 // from the moment they ask for it, not from the moment it finishes.
-func TestAQueuedTranscriptReadingIsProjectedAsThePersonsOwnLiveWork(t *testing.T) {
+func TestAQueuedTranscriptReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
 	f := newTranscriptFixture(t)
 	f.drain(t)
 

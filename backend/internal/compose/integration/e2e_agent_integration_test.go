@@ -76,14 +76,14 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 	}
 
 	// The read scope reads…
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != 200 {
-		t.Fatalf("bearer GET /people → %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != 200 {
+		t.Fatalf("bearer GET /contacts → %d", status)
 	}
 	// …and cannot write: refused with the scope code, and no row lands.
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/people", AnyMap{
+	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Should not exist", "source": "mcp", "captured_by": "x",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
@@ -91,7 +91,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 	}
 
 	// Bad tokens are 401, not 500.
-	if status := e.Call(t, "GET", "/v1/people", nil, map[string]string{"Authorization": "Bearer mgp_bogus"}, nil); status != 401 {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, map[string]string{"Authorization": "Bearer mgp_bogus"}, nil); status != 401 {
 		t.Fatalf("bogus bearer → %d", status)
 	}
 
@@ -99,7 +99,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 	if status := e.Call(t, "DELETE", "/v1/passports/"+minted.PassportID, nil, nil, nil); status != 204 {
 		t.Fatalf("revoke → %d", status)
 	}
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != 401 {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != 401 {
 		t.Fatalf("revoked bearer still reads: %d", status)
 	}
 }
@@ -130,7 +130,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		ID         string `json:"id"`
 		CapturedBy string `json:"captured_by"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Governed Green Write", "source": "mcp", "captured_by": "human:forged",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
@@ -140,21 +140,21 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	}
 
 	// The archive PERFORMS now: a passport carries the granting human's seat
-	// and row scope, and archiving a person is ordinary work its holder does
+	// and row scope, and archiving a contact is ordinary work its holder does
 	// unaided. Read back rather than trusting the status, because "not 403" is
 	// satisfied by a 404 or a 500 too, and what this line claims is that the
-	// person is archived.
-	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, bearer, nil); status != 200 {
+	// contact is archived.
+	if status := e.Call(t, "DELETE", "/v1/contacts/"+created.ID, nil, bearer, nil); status != 200 {
 		t.Fatalf("agent archive → %d, want 200 — a passport archives what its holder could "+
 			"archive unaided", status)
 	}
 	var archived bool
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT archived_at IS NOT NULL FROM person WHERE id = $1`, created.ID).Scan(&archived); err != nil {
-		t.Fatalf("reading the person back: %v", err)
+		`SELECT archived_at IS NOT NULL FROM contact WHERE id = $1`, created.ID).Scan(&archived); err != nil {
+		t.Fatalf("reading the contact back: %v", err)
 	}
 	if !archived {
-		t.Error("the archive answered 200 and the person is still live")
+		t.Error("the archive answered 200 and the contact is still live")
 	}
 
 	// 🟡 still exists, on the routes whose destination the credential-holder did
@@ -226,7 +226,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Full Seat Made", "source": "manual", "captured_by": "admin",
 	}, nil, &created); status != 201 {
 		t.Fatalf("full-seat create → %d", status)
@@ -237,19 +237,19 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	e.SetWorkspaceSeat(t, "read")
 
 	// Reads still succeed…
-	if status := e.Call(t, "GET", "/v1/people", nil, nil, nil); status != 200 {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, nil, nil); status != 200 {
 		t.Fatalf("read-seat GET → %d", status)
 	}
 	// …every mutation is refused with the seat code, before RBAC.
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Read Seat Blocked", "source": "manual", "captured_by": "admin",
 	}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat create → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "X"}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "X"}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat update → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
 }

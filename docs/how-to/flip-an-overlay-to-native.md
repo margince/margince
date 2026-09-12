@@ -57,7 +57,7 @@ all: an agent cannot call it, and it cannot be *staged* as a 🟡 confirm-first 
 is deliberate. The typed confirmation phrase in step 3 **is** the human-intent control; routing it
 through the approvals queue would let an agent supply the phrase in the staged arguments and reduce a
 one-way, estate-wide cutover to one click on an approval card — the same click that approves a single
-record edit. A cutover that cannot be undone must be typed by the person who owns the consequence.
+record edit. A cutover that cannot be undone must be typed by the contact who owns the consequence.
 
 There is no SPA screen for the flip today (Settings → Integrations covers connect/disconnect, sync
 status, budget and the user map). This is a terminal operation, run against `/v1` with an admin or
@@ -120,14 +120,14 @@ when green and `emergency` when the incumbent is unreachable:
   "snapshot": { "id": "snap-2026-08-05T09:14:22Z-0198…", "frozen_at": "2026-08-05T09:14:22Z" },
   "parity": [
     { "object": "company", "mirror_count": 412, "will_create": 412, "will_update": 0 },
-    { "object": "person", "mirror_count": 3180, "will_create": 3176, "will_update": 0,
+    { "object": "contact", "mirror_count": 3180, "will_create": 3176, "will_update": 0,
       "skipped": [ { "external_id": "701", "reason": "duplicate_email" } ] }
   ]
 }
 ```
 
 `parity` is the migration engine's zero-write dry-run over the sealed snapshot, in import order
-(company → person → lead → deal → activity). It writes no CRM row; every row it cannot carry is
+(company → contact → lead → deal → activity). It writes no CRM row; every row it cannot carry is
 listed with a reason rather than dropped.
 
 ### Blocking reasons
@@ -145,7 +145,7 @@ is always empty and the reason is never emitted. Do not write tooling that waits
 
 ### A green preflight SEALS the mirror
 
-This is the part that surprises people. On a fully green verdict *whose parity dry-run also
+This is the part that surprises contacts. On a fully green verdict *whose parity dry-run also
 succeeded*, the preflight writes `flip_snapshot_id` + `mirror_frozen_at` onto `overlay_sync_state` and
 leaves them there. While the seal holds:
 
@@ -216,7 +216,7 @@ no others.
 | Reason | Which rows | Why |
 | --- | --- | --- |
 | `empty_payload` | any class | The mirror row carries no fields at all — a payload-less system entry. Creating it would land a nameless native row |
-| `duplicate_email` | person | The contact's email already belongs to a native person. That is a merge candidate, and the flip never auto-merges |
+| `duplicate_email` | contact | The contact's email already belongs to a native contact. That is a merge candidate, and the flip never auto-merges |
 | `natural_key_already_taken` | lead, activity | The store replayed an existing row under the flip's namespaced `(source_system, source_id)` key instead of creating one. It is not adopted into the identity map — a one-shot disclosure beats silent convergence |
 
 Association edges carry their own two reasons: `endpoint_not_imported` (one of the edge's endpoints
@@ -277,7 +277,7 @@ with the connection `active` but no longer authoritative.
 
 ```sh
 curl -sS http://localhost:8080/v1/me -b cookies.txt | jq '.system_of_record.mode'   # "native"
-curl -sS 'http://localhost:8080/v1/people?limit=5' -b cookies.txt | jq '.data[].full_name'
+curl -sS 'http://localhost:8080/v1/contacts?limit=5' -b cookies.txt | jq '.data[].full_name'
 ```
 
 Spot-check ownership and the timeline before retiring anything — a record imported under the flip

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -19,14 +19,14 @@ import (
 
 // resolveScopeNames crosses the contract's scope NAMES onto this module's
 // scope type. The crossing happens once, here, because modules/ai carries the
-// generated policy and must not import modules/people. The vocabulary is the
+// generated policy and must not import modules/contacts. The vocabulary is the
 // owning module's own parser rather than a list kept beside it, so a scope
 // added or renamed there cannot leave a stale table behind; a name that parser
 // refuses is a contract defect and is named as one.
-func resolveScopeNames(names []string) ([]people.CompanyContextScope, error) {
-	scopes := make([]people.CompanyContextScope, 0, len(names))
+func resolveScopeNames(names []string) ([]contacts.CompanyContextScope, error) {
+	scopes := make([]contacts.CompanyContextScope, 0, len(names))
 	for _, name := range names {
-		scope, known := people.ParseCompanyContextScope(name)
+		scope, known := contacts.ParseCompanyContextScope(name)
 		if !known {
 			return nil, fmt.Errorf("company-context scope %q is not a scope this build knows", name)
 		}
@@ -36,7 +36,7 @@ func resolveScopeNames(names []string) ([]people.CompanyContextScope, error) {
 }
 
 // companyContextScopesFor resolves one task's declared scopes.
-func companyContextScopesFor(task ai.Task) ([]people.CompanyContextScope, error) {
+func companyContextScopesFor(task ai.Task) ([]contacts.CompanyContextScope, error) {
 	policy, declared := ai.CompanyContextFor(task)
 	if !declared {
 		return nil, fmt.Errorf("AI task %q has no company-context policy in the task contract", task)
@@ -50,7 +50,7 @@ func companyContextScopesFor(task ai.Task) ([]people.CompanyContextScope, error)
 // inside the boundary the calling prompt declared.
 
 type companyContextReader interface {
-	GetCompanyContext(context.Context, []people.CompanyContextScope) (people.CompanyContext, error)
+	GetCompanyContext(context.Context, []contacts.CompanyContextScope) (contacts.CompanyContext, error)
 }
 
 type companyContextProvider struct {
@@ -146,7 +146,7 @@ func contextFence(req *model.Request) (promptfence.Fence, error) {
 	return fence, nil
 }
 
-func contextScopeNames(scopes []people.CompanyContextScope) []string {
+func contextScopeNames(scopes []contacts.CompanyContextScope) []string {
 	names := make([]string, len(scopes))
 	for i, scope := range scopes {
 		names[i] = string(scope)
@@ -180,7 +180,7 @@ type promptContextItem struct {
 	Confidence *float32 `json:"confidence,omitempty"`
 }
 
-func renderCompanyContext(companyContext people.CompanyContext, tokenBudget int) (string, error) {
+func renderCompanyContext(companyContext contacts.CompanyContext, tokenBudget int) (string, error) {
 	if tokenBudget <= 0 {
 		return "", fmt.Errorf("token budget must be positive")
 	}

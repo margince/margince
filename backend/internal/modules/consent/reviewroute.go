@@ -12,7 +12,7 @@ package consent
 //
 // This is that ask. It puts the review in front of a decision-maker as an
 // approval card, and the card's effect is the directed send itself: whoever
-// approves it is the person whose name goes on the instruction.
+// approves it is the human whose name goes on the instruction.
 //
 // THE ROUTE IS NOT THE DECISION. Asking costs nothing and grants nothing — a
 // rep who cannot direct a send still cannot, and the card they raised is
@@ -81,11 +81,11 @@ type ReviewRouteRequest struct {
 	// ReasonCode is the strongest reason across the recipients, so a queue can
 	// show what this is about without opening the snapshot.
 	ReasonCode string
-	// Recipients is how many people the refusal names, which is the other half
+	// Recipients is how many contacts the refusal names, which is the other half
 	// of what makes a card readable at a glance. The addresses themselves stay
 	// on the review.
 	Recipients int
-	// Note is what the person asking wants the decider to know. Optional: a
+	// Note is what the colleague asking wants the decider to know. Optional: a
 	// refusal is often self-explanatory.
 	Note string
 }
@@ -100,8 +100,8 @@ func (s *Store) WithReviewRouter(router ReviewRouter) *Store {
 //
 // GATED ON READING THE REVIEW, not on directing a send. That is the point: the
 // caller is asking precisely because they cannot direct it themselves. What
-// they must be is the person whose send was refused — a seat that could route
-// anybody's review would be raising cards about other people's correspondence.
+// they must be is the colleague whose send was refused — a seat that could route
+// anybody's review would be raising cards about other colleagues' correspondence.
 func (s *Store) RequestDecision(ctx context.Context, reviewID ids.UUID, note string) (ids.UUID, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ids.UUID{}, err
@@ -248,7 +248,7 @@ func routedCardFor(ctx context.Context, db *database.DB, reviewID ids.UUID) (ids
 	return approvalID, nil
 }
 
-// ReturnToAskerTx puts a routed review back in front of the person who raised
+// ReturnToAskerTx puts a routed review back in front of the colleague who raised
 // it, because nobody is going to decide it.
 //
 // A decider said no, or the card ran out its window. Either way the review must
@@ -269,7 +269,7 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 		   SET state = 'needs_context', approval_id = NULL
 		 WHERE id = $1 AND resolved_at IS NULL AND state = 'awaiting_decision'`, reviewID)
 	if err != nil {
-		return fmt.Errorf("consent: returning this review to the person who raised it: %w", err)
+		return fmt.Errorf("consent: returning this review to the colleague who raised it: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
 		// Already moved on — directed from the review itself, cancelled, or
@@ -288,24 +288,24 @@ func ReturnToAskerTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, why stri
 //
 // THE DECIDER'S OWN QUEUE, and gated on the grant that makes them one. A seat
 // that cannot direct a send has nothing to do with this list, and handing it to
-// them would be disclosing other people's refused correspondence to somebody
+// them would be disclosing other colleagues' refused correspondence to somebody
 // with no reason to see it.
 //
 // EVERY WAITING REVIEW, not only the ones routed to them personally. Routing
 // names no assignee: a rep asks the installation, not a colleague, and whoever
 // holds the authority answers. An assignee-scoped list would leave a card
-// nobody could find the moment the person it named went on leave.
+// nobody could find the moment the colleague it named went on leave.
 //
 // BOUNDED, because a queue read has to answer in time whatever the backlog is.
 // A list at its limit is a list with more behind it, and the caller is told so
 // by the count rather than by discovering it.
 func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int, error) {
-	// A PERSON, not merely a principal auth.RequireHuman admits. That check
+	// A HUMAN, not merely a principal auth.RequireHuman admits. That check
 	// refuses buyers and agents and lets CONNECTORS through, and a connector
 	// runs with the granting human's own grants — so it would hold whatever
 	// this queue is gated on and could read the installation's refused
-	// correspondence wholesale. This list is a person's work queue.
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	// correspondence wholesale. This list is a colleague's work queue.
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return nil, 0, err
 	}
 	// READ rather than create, for ReviewForReader's reason: seeing the queue
@@ -320,7 +320,7 @@ func (s *Store) AwaitingDecision(ctx context.Context, limit int) ([]Review, int,
 	var out []Review
 	var total int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Count and page share a statement snapshot, even when another person
+		// Count and page share a statement snapshot, even when another colleague
 		// routes or resolves a review while this request is reading.
 		rows, err := tx.Query(ctx, `
 			SELECT id, state, kind,
@@ -380,7 +380,7 @@ const maxAwaitingDecision = 100
 // ON initiated_by, which is the rep who pressed send and therefore the rep the
 // held message belongs to. Consent cannot read scheduled_send to check
 // ownership directly — that is activities' table — and it does not need to:
-// the review records who was refused, and that is the same person.
+// the review records who was refused, and that is the same rep.
 //
 // ONE READ FOR EVERY ID, because the surface that needs this is a list.
 func (s *Store) LiveReviewsForIntents(

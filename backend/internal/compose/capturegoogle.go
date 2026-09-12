@@ -252,7 +252,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// The env-composed clients exist only where the ENVIRONMENT actually
 		// carries the app. Built unconditionally they are a pair of usable-looking
 		// clients holding an empty client id, and gmailApp's fallback would reach
-		// for them the moment the stored app is not servable — sending a person to
+		// for them the moment the stored app is not servable — sending a contact to
 		// Google's consent screen with `client_id=`, which fails there rather than
 		// here and gives them nothing to act on. Nil is what makes the declared
 		// 501 the answer instead.

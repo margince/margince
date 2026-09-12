@@ -12,7 +12,7 @@
 // file whose ORDER is a dependency order — extensions and the ext schema,
 // the functions a column default can call, every table, the functions whose
 // bodies read a table, then every constraint, index, trigger, grant and
-// reference row, because a foreign key names two tables and person/lead
+// reference row, because a foreign key names two tables and contact/lead
 // reference each other. Everything after the baseline is named for the unix
 // second it was written. The baseline's version is zero-padded, so it sorts
 // below every ten-digit stamp, and the runner's string ordering puts the

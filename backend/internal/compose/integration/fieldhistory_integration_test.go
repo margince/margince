@@ -24,7 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -92,23 +92,23 @@ func TestFieldHistoryGatesOnReadPermissionAndVisibility(t *testing.T) {
 	// Capture-private to Rep1: a contact is readable by every seat unless
 	// its capture is private, so that is the state the out-of-scope
 	// assertion below needs to exclude Rep3.
-	personID := e.SeedPerson(t, "History Subject", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", personID, e.Rep1)
+	contactID := e.SeedContact(t, "History Subject", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contactID, e.Rep1)
 
 	// Rep3 is not the owner: 404, not an empty page — existence-hiding on
 	// the visibility gate like every record read.
 	outsiderCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
 	_, err := privacy.ListFieldHistory(outsiderCtx, e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("out-of-scope read: err = %v, want not found", err)
 	}
 
-	// A principal without person:read at all: 403 before any row is touched.
+	// A principal without contact:read at all: 403 before any row is touched.
 	noReadCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{RowScope: principal.RowScopeTeam})
 	if _, err := privacy.ListFieldHistory(noReadCtx, e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("no-permission read: err = %v, want permission denied", err)
 	}
@@ -116,27 +116,27 @@ func TestFieldHistoryGatesOnReadPermissionAndVisibility(t *testing.T) {
 
 func TestFieldHistoryProjectsDiffsNewestFirst(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Diff Subject", nil)
-	// SeedPerson's own create-audit row is stamped at real "now"; the two
+	contactID := e.SeedContact(t, "Diff Subject", nil)
+	// SeedContact's own create-audit row is stamped at real "now"; the two
 	// diff rows below must land unambiguously after it, so they are
 	// dated forward rather than back-dated off a since-elapsed "now".
 	older := time.Now().Add(1 * time.Hour).UTC().Truncate(time.Microsecond)
 	newer := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Microsecond)
 
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		map[string]any{"email": "old@x.com", "name": "Same"},
 		map[string]any{"email": "new@x.com", "name": "Same"}, older)
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		map[string]any{"phone": "111"},
 		map[string]any{"phone": "222"}, newer)
 
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	// SeedPerson's own create-audit row may contribute entries; the two
+	// SeedContact's own create-audit row may contribute entries; the two
 	// seeded rows' fields must appear in newest-first row order with the
 	// unchanged key absent.
 	var fields []string
@@ -155,18 +155,18 @@ func TestFieldHistoryProjectsDiffsNewestFirst(t *testing.T) {
 
 func TestFieldHistoryActorAndFieldFilters(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Filter Subject", nil)
+	contactID := e.SeedContact(t, "Filter Subject", nil)
 	base := time.Now().Add(-time.Minute).UTC().Truncate(time.Microsecond)
 
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		map[string]any{"label": "h1"}, map[string]any{"label": "h2"}, base)
-	seedAuditDiffRow(t, e, "person", personID, "agent",
+	seedAuditDiffRow(t, e, "contact", contactID, "agent",
 		map[string]any{"label": "a1", "score": "1"},
 		map[string]any{"label": "a2", "score": "2"}, base.Add(time.Second))
 
 	agent := "agent"
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID, ActorType: &agent,
+		EntityType: "contact", EntityID: contactID, ActorType: &agent,
 	})
 	if err != nil {
 		t.Fatalf("actor filter: %v", err)
@@ -182,7 +182,7 @@ func TestFieldHistoryActorAndFieldFilters(t *testing.T) {
 
 	label := "label"
 	page, err = privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID, Field: &label,
+		EntityType: "contact", EntityID: contactID, Field: &label,
 	})
 	if err != nil {
 		t.Fatalf("field filter: %v", err)
@@ -272,16 +272,16 @@ func TestFieldHistoryPaginationPreservesRowBoundaries(t *testing.T) {
 // the "activity" table.
 func TestFieldHistoryForActivityDispatchesToLinkWalkVisibility(t *testing.T) {
 	e := Setup(t)
-	// The activity's own visibility rides its link to this person, which
+	// The activity's own visibility rides its link to this contact, which
 	// is capture-private to Rep1 — the state that excludes Rep3 below.
 	// Rep1 logs it, because the private contact is invisible to anyone else.
-	myPerson := e.SeedPerson(t, "Field History Subject", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", myPerson, e.Rep1)
+	myContact := e.SeedContact(t, "Field History Subject", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", myContact, e.Rep1)
 	admin := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	activity, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Pricing call"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: myPerson}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: myContact}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -330,20 +330,20 @@ func TestFieldHistoryForActivityDispatchesToLinkWalkVisibility(t *testing.T) {
 // the scrub project.
 func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Selma Subject", nil)
+	contactID := e.SeedContact(t, "Selma Subject", nil)
 	// Pre-erasure PII images, backdated so the erasure tombstone (stamped
 	// at real now) is unambiguously newer.
 	past := time.Now().Add(-2 * time.Hour).UTC().Truncate(time.Microsecond)
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		map[string]any{"email": "selma@example.com", "full_name": "Selma Subject"},
 		map[string]any{"email": "selma.subject@example.com", "full_name": "Selma S."}, past)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("post-erasure list: %v", err)
@@ -355,10 +355,10 @@ func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 	// The boundary is a cut, not a ban: a change made AFTER the scrub is
 	// ordinary history again.
 	future := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		nil, map[string]any{"owner_id": "rep-2"}, future)
 	page, err = privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("post-scrub change list: %v", err)
@@ -369,7 +369,7 @@ func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 }
 
 // TestFieldHistoryErasureBoundsCollateralScrubs proves the erasure
-// boundary reaches every record the eraser scrubs, not only the person:
+// boundary reaches every record the eraser scrubs, not only the contact:
 // the lead twin's create image carries the subject's email and the
 // activity's create image carries the subject line, and both live in the
 // append-only spine — so each collaterally-scrubbed record needs its OWN
@@ -377,24 +377,24 @@ func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 // twin's field history.
 func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Selma Subject", nil)
+	contactID := e.SeedContact(t, "Selma Subject", nil)
 	const twinEmail = "selma.twin@example.test"
-	// The subject's address is what ties the twin to the person: the
+	// The subject's address is what ties the twin to the contact: the
 	// eraser wipes any lead carrying one of the subject's emails.
-	e.WsExec(t, `INSERT INTO person_email (person_id, email, source, captured_by)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
 		 VALUES ($1, $2, 'manual', 'human:x')`,
-		personID, twinEmail)
+		contactID, twinEmail)
 	leadID := seedLead(t, e, "Selma Subject", twinEmail, nil)
 
 	activity, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: strPtr("Call with Selma"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: personID}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 	})
 	if err != nil {
 		t.Fatalf("log activity: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
@@ -426,23 +426,23 @@ func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 // honest create/update rows around them still project.
 func TestFieldHistoryProjectsOnlyFieldImageVerbs(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Meta Subject", nil)
+	contactID := e.SeedContact(t, "Meta Subject", nil)
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
 
-	seedAuditActionRow(t, e, "merge", "person", personID, "human",
+	seedAuditActionRow(t, e, "merge", "contact", contactID, "human",
 		map[string]any{"merged_into_id": nil},
 		map[string]any{
 			"merged_into_id": ids.NewV7(),
 			"relinked":       map[string]any{"activities": 3},
 			"filled":         map[string]any{"title": "CTO"},
 		}, base)
-	seedAuditActionRow(t, e, "export", "person", personID, "human",
+	seedAuditActionRow(t, e, "export", "contact", contactID, "human",
 		nil, map[string]any{"format": "sar_json"}, base.Add(time.Second))
-	seedAuditDiffRow(t, e, "person", personID, "human",
+	seedAuditDiffRow(t, e, "contact", contactID, "human",
 		map[string]any{"title": "VP"}, map[string]any{"title": "CTO"}, base.Add(2*time.Second))
 
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID,
+		EntityType: "contact", EntityID: contactID,
 	})
 	if err != nil {
 		t.Fatalf("list: %v", err)
@@ -456,7 +456,7 @@ func TestFieldHistoryProjectsOnlyFieldImageVerbs(t *testing.T) {
 			t.Errorf("meta payload key %q projected as a field change", fabricated)
 		}
 	}
-	// The honest rows still project: the seeded update and SeedPerson's
+	// The honest rows still project: the seeded update and SeedContact's
 	// own create-genesis row.
 	if !fields["title"] || !fields["full_name"] {
 		t.Errorf("honest field images went missing: %v", fields)
@@ -512,10 +512,10 @@ func TestFieldHistoryExcludesRetentionArchiveMeta(t *testing.T) {
 
 func TestFieldHistoryHonestEmptyForVisibleRecordWithNoMatches(t *testing.T) {
 	e := Setup(t)
-	personID := e.SeedPerson(t, "Quiet Subject", nil)
+	contactID := e.SeedContact(t, "Quiet Subject", nil)
 	ghost := "field_that_never_changed"
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
-		EntityType: "person", EntityID: personID, Field: &ghost,
+		EntityType: "contact", EntityID: contactID, Field: &ghost,
 	})
 	if err != nil {
 		t.Fatalf("empty history must not error: %v", err)
@@ -540,9 +540,9 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 
 	// The apply resolves its target by the source URL's host, so it names the
 	// company it touched rather than one seeded beside it.
-	company, err := e.People.ApplyColdStartProfile(e.Admin(), people.ApplyColdStartProfileInput{
+	company, err := e.Contacts.ApplyColdStartProfile(e.Admin(), contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://scale.example/impressum",
-		Fields: []people.ColdStartFieldInput{
+		Fields: []contacts.ColdStartFieldInput{
 			{Field: "legal_name", Value: "Scale Commerce GmbH", EvidenceSnippet: "Scale Commerce GmbH, Berlin", SourceURL: "https://scale.example/impressum", Confidence: 0.9},
 			// Column-backed through a column of a DIFFERENT name: an accepted
 			// offer_summary fills company.description. It is here because

@@ -565,7 +565,7 @@ function stubBackend(
 }
 
 describe("mapDealUpdate", () => {
-  // The form's controls as a person who changed nothing left them. Every value
+  // The form's controls as a contact who changed nothing left them. Every value
   // here is exactly what dealEditRecord seeded, so a key reaching the body is
   // the form reporting a change nobody made.
   const untouched = {
@@ -582,7 +582,7 @@ describe("mapDealUpdate", () => {
     project_id: "",
   };
 
-  it("rebuilds amount_minor from major units for the fields the person moved", () => {
+  it("rebuilds amount_minor from major units for the fields the contact moved", () => {
     const body = mapDealUpdate(
       {
         ...untouched,
@@ -606,16 +606,16 @@ describe("mapDealUpdate", () => {
 
   // The reported defect. The body used to carry every field on every save, so a
   // deal with no company resubmitted `company_id: null` — and the API,
-  // correctly, refused to clear a field the person never touched. On an
+  // correctly, refused to clear a field the contact never touched. On an
   // installation with no partners the refusal named `partner_attribution`, a
   // field the form does not even render.
-  it("sends nothing at all when the person changed nothing", () => {
+  it("sends nothing at all when the contact changed nothing", () => {
     const body = mapDealUpdate(untouched, untouched);
 
     expect(Object.keys(body)).toEqual([]);
   });
 
-  it("names only the field the person moved, on a deal missing every optional value", () => {
+  it("names only the field the contact moved, on a deal missing every optional value", () => {
     const bare = {
       name: "Any Deal",
       amount: "",
@@ -1475,7 +1475,7 @@ describe("DealsScreen", () => {
             name: "progress_deal",
             title: "Progress a deal with a note",
             description:
-              'Move a deal to a new stage and leave a note on its timeline saying why. (Governance: some calls run immediately and others a person approves first, decided per call from its arguments; requires passport scope "write".)',
+              'Move a deal to a new stage and leave a note on its timeline saying why. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)',
             required_scope: "write",
             tier: "auto_execute",
             egress: false,
@@ -1842,7 +1842,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   // A form offers nothing the record already carries as a blank. The partner
   // picker offers one capped page of partners, so a deal's own partner can be
   // missing from it — and a select whose stored value is not an option shows
-  // blank, which the patch then reads as the person having chosen "Unset" and
+  // blank, which the patch then reads as the contact having chosen "Unset" and
   // sends as a real null, clearing the partner and its commission attribution.
   //
   // The save says nothing about the partner at all, which is what makes it
@@ -2045,7 +2045,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
   // A control that can only fail is worse than none: an archived deal is not
   // moved through the pipeline, it is restored first.
   // The deal's tags ride in the CONTEXT rail, beside the seats, the deal room
-  // and the mail card — the same column a person and a company draw theirs in.
+  // and the mail card — the same column a contact and a company draw theirs in.
   // They sat in the overview pane once, full-width between the readings and the
   // stage stepper, on the belief that this page had no side column; it has the
   // details pane every record page draws.

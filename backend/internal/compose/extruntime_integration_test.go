@@ -125,7 +125,7 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 // TestRuntimeTxCommitsAndRollsBack walks the seam's own contract: the three
 // verbs work, fn returning nil commits, fn returning an error rolls back.
 //
-// It runs against `app_user` — a CORE table, and one holding people's names —
+// It runs against `app_user` — a CORE table, and one holding contacts's names —
 // because the extension's own ext_* tables arrive with the demo unit and this
 // seam has to be correct before there is one.
 //

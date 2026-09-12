@@ -11,14 +11,14 @@ import "./projectpicker.css";
 // The ONE way a surface is told which project it is about, and the ONE line
 // that says which project its output was narrowed to.
 //
-// Every AI surface that reads an account or a person — the composers, the
+// Every AI surface that reads an account or a contact — the composers, the
 // prepared questions, the account brief, the meeting brief — renders this
 // picker over the same `projects` section the two 360s carry, and prints the
 // same scope line under its output. One control, so "Scoped to ERP-27" reads
 // identically wherever a rep meets it.
 
 // One project as the picker shows it: the fields the Company360 and
-// Person360 `projects` sections share.
+// Contact360 `projects` sections share.
 export type PickableProject = Pick<
   components["schemas"]["Company360Project"],
   "project_id" | "name" | "key" | "phase"

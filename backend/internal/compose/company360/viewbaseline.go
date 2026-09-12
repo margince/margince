@@ -85,7 +85,7 @@ func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crm
 // RecordVisit moves one (user, record) baseline forward, and is the only
 // statement in this product that writes user_record_view.
 //
-// Exported because a SECOND record type acknowledges visits — person360 — and
+// Exported because a SECOND record type acknowledges visits — contact360 — and
 // a caller reaching for its own upsert instead is what this export exists to
 // prevent. `GREATEST` is the whole correctness argument: a copy that lost it
 // would rewind a baseline on a late-arriving ack from a slow tab, consuming an
@@ -93,8 +93,8 @@ func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crm
 // while they agree, and they agree right up until one of them is edited.
 //
 // What the callers keep is the part that legitimately differs: their own
-// visibility gate. company360 asks `EnsureVisible`, person360 asks
-// `EnsureVisibleLive`, because an anonymized person keeps their owner_id and
+// visibility gate. company360 asks `EnsureVisible`, contact360 asks
+// `EnsureVisibleLive`, because an anonymized contact keeps their owner_id and
 // the plain probe would still admit them. That difference is a ruling per
 // record type; the upsert is not.
 //

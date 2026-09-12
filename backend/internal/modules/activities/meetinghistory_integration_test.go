@@ -68,7 +68,7 @@ func meetingCtx(e *sendEnv) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Create: true, Update: true},
-				"person":   {Read: true}, "deal": {Read: true},
+				"contact":  {Read: true}, "deal": {Read: true},
 				"company": {Read: true}, "project": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -441,7 +441,7 @@ func TestBothMeetingStatusDoorsRecordHistory(t *testing.T) {
 
 // A transition never outlives the meeting it belongs to. Erasure and hard
 // delete both reach it through the FK rather than leaving orphan history that
-// still says a person met somebody.
+// still says a contact met somebody.
 func TestHistoryDiesWithItsMeeting(t *testing.T) {
 	e := setupSend(t)
 	id := bookMeeting(t, e, "To be deleted", time.Now().Add(24*time.Hour))

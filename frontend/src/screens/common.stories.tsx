@@ -63,7 +63,7 @@ export const ErrorState: Story = {
     installFetchStub({
       "GET /story-demo": () =>
         jsonResponse(
-          { title: "Forbidden", detail: "missing scope people:read" },
+          { title: "Forbidden", detail: "missing scope contacts:read" },
           403,
         ),
     });

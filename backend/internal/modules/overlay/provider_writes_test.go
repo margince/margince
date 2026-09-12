@@ -17,8 +17,8 @@ import (
 // These pure unit tests cover the per-entity type switch, unknown-field
 // rejection, and the precision-preserving json.Number round-trip without a DB.
 
-func TestDecodeCanonicalValidPerson(t *testing.T) {
-	fields, err := decodeCanonical(datasource.EntityPerson, false, map[string]any{"first_name": "Ada", "last_name": "Lovelace"})
+func TestDecodeCanonicalValidContact(t *testing.T) {
+	fields, err := decodeCanonical(datasource.EntityContact, false, map[string]any{"first_name": "Ada", "last_name": "Lovelace"})
 	if err != nil {
 		t.Fatalf("decodeCanonical: %v", err)
 	}
@@ -30,7 +30,7 @@ func TestDecodeCanonicalValidPerson(t *testing.T) {
 func TestDecodeCanonicalRejectsUnknownField(t *testing.T) {
 	// A misspelled field must 422 (like the native providers), not silently
 	// no-op — StrictDecode rejects it.
-	if _, err := decodeCanonical(datasource.EntityPerson, false, map[string]any{"frist_name": "Ada"}); err == nil {
+	if _, err := decodeCanonical(datasource.EntityContact, false, map[string]any{"frist_name": "Ada"}); err == nil {
 		t.Error("an unknown/misspelled field must be rejected, not silently dropped")
 	}
 }
@@ -53,7 +53,7 @@ func TestDecodeCanonicalPreservesLargeIntPrecision(t *testing.T) {
 }
 
 func TestDecodeCanonicalNilPayloadIsEmptyMap(t *testing.T) {
-	fields, err := decodeCanonical(datasource.EntityPerson, true, nil)
+	fields, err := decodeCanonical(datasource.EntityContact, true, nil)
 	if err != nil {
 		t.Fatalf("decodeCanonical nil: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestDecodeCanonicalNilPayloadIsEmptyMap(t *testing.T) {
 
 func TestWriteContractTargetCoversEveryEntity(t *testing.T) {
 	for _, et := range []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityLead, datasource.EntityActivity,
 	} {
 		for _, upd := range []bool{false, true} {
@@ -112,7 +112,7 @@ func TestCompleteWritePatchDealMoneyPair(t *testing.T) {
 // "supported" out of step with the provider's.
 func TestSupportsWriteMatchesTheProviderVerbs(t *testing.T) {
 	mirroredTypes := []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityLead, datasource.EntityActivity,
 	}
 
@@ -149,8 +149,8 @@ func TestSupportsWriteMatchesTheProviderVerbs(t *testing.T) {
 	if SupportsWrite(WriteArchive, datasource.EntityType("widget")) {
 		t.Error("SupportsWrite(WriteArchive, widget) = true, want false for an unknown type")
 	}
-	if SupportsWrite(WriteVerb("noop"), datasource.EntityPerson) {
-		t.Error("SupportsWrite(noop, person) = true, want false for an unrecognized verb")
+	if SupportsWrite(WriteVerb("noop"), datasource.EntityContact) {
+		t.Error("SupportsWrite(noop, contact) = true, want false for an unrecognized verb")
 	}
 }
 

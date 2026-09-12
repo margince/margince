@@ -9,7 +9,7 @@ package gates
 // two answers are deliberately different sizes.
 //
 // The SERVER decides what may be STORED as a contact's profile — the
-// person_social slot, the vCard import's slot, the classifier that splits a
+// contact_social slot, the vCard import's slot, the classifier that splits a
 // card's URL into LinkedIn or website. The CLIENT decides what may be DRAWN
 // under the word "LinkedIn", and a label is a claim about where a link goes: a
 // stored `https://attacker.example/login` rendered as "LinkedIn" inside the
@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 const frontendWebURL = "../frontend/src/format/weburl.ts"
@@ -75,8 +75,8 @@ func TestTheFrontendLinkedInHostsMatchTheGoDeclaration(t *testing.T) {
 		t.Fatal("no hosts parsed out of the frontend array — a gate that reads nothing agrees with everything")
 	}
 
-	storable := people.LinkedInSlotHosts()
-	displayOnly := people.LinkedInDisplayOnlyHosts()
+	storable := contacts.LinkedInSlotHosts()
+	displayOnly := contacts.LinkedInDisplayOnlyHosts()
 	// Both halves populated. An empty storable set would withhold the slot from
 	// every value while this gate still balanced, and an empty display-only set
 	// would make the assertion below a plain equality that no longer records
@@ -92,7 +92,7 @@ func TestTheFrontendLinkedInHostsMatchTheGoDeclaration(t *testing.T) {
 	if strings.Join(declared, ",") != strings.Join(inTS, ",") {
 		t.Errorf("the LinkedIn host sets have drifted.\n"+
 			"  %s draws: %v\n"+
-			"  people declares: %v (storable %v + display-only %v)\n"+
+			"  contacts declares: %v (storable %v + display-only %v)\n"+
 			"A host the client links and the server does not declare is a link nobody decided to draw; "+
 			"a host the server would store and the client does not link is a handle the product keeps "+
 			"and refuses to show. Add it to whichever half it belongs in, with the reason.",

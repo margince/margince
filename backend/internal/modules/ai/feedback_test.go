@@ -61,7 +61,7 @@ func TestEverySubjectTypeIsAnRBACObject(t *testing.T) {
 			t.Error("an empty subject type would gate auth.Require on nothing")
 		}
 	}
-	for _, want := range []string{"company", "person", "deal", "lead"} {
+	for _, want := range []string{"company", "contact", "deal", "lead"} {
 		if !feedbackSubjects[want] {
 			t.Errorf("%q is in the column's CHECK but not accepted here", want)
 		}
@@ -168,7 +168,7 @@ func TestAVerdictThatNamesItsValueAppliesToThatValueAlone(t *testing.T) {
 
 // AND THE STAMP DOES NOT DECIDE IT.
 //
-// person_profile_field.updated_at is bumped by its trigger on EVERY update, so
+// contact_profile_field.updated_at is bumped by its trigger on EVERY update, so
 // a re-capture that revises the source or the evidence and leaves the sentence
 // alone moves it. Comparing stamps refuses a verdict about a value still in
 // front of the reader — a false negative the ordering it replaced did not have,

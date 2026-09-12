@@ -108,7 +108,7 @@ func TestRenderedShapesCarryTheItemShapesThatWereGuessedWrong(t *testing.T) {
 		{"a company's domains on create", createRecordShapes["company"], "domains?: [{domain: string, is_primary?: boolean}]"},
 		{"a company's domains on update", updateRecordShapes["company"], "domains?: [{domain: string, is_primary?: boolean}]"},
 		{"an activity's links on create", createRecordShapes["activity"], "links?: [{entity_id: uuid, entity_type:"},
-		{"a person's emails on create", createRecordShapes["person"], "emails?: [{email: email,"},
+		{"a contact's emails on create", createRecordShapes["contact"], "emails?: [{email: email,"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if !strings.Contains(tc.rendered, tc.want) {
@@ -144,7 +144,7 @@ func TestRenderedShapesCarryEnumValues(t *testing.T) {
 func TestRenderedShapesMarkRequiredKeys(t *testing.T) {
 	for _, tc := range []struct{ name, rendered, required string }{
 		{"a company's display_name", createRecordShapes["company"], "display_name: string"},
-		{"a person's full_name", createRecordShapes["person"], "full_name: string"},
+		{"a contact's full_name", createRecordShapes["contact"], "full_name: string"},
 		{"a deal's pipeline_id", createRecordShapes["deal"], "pipeline_id: uuid"},
 		{"an activity's kind", createRecordShapes["activity"], "kind: "},
 	} {

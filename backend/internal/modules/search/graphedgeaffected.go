@@ -19,14 +19,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// pair is one (user, person) key.
+// pair is one (user, contact) key.
 type pair struct {
-	user   ids.UUID
-	person ids.UUID
+	user    ids.UUID
+	contact ids.UUID
 }
 
 // affectedPairs resolves which edges the named activities can affect: every
-// (user, person) combination appearing on their participant rows, plus every
+// (user, contact) combination appearing on their participant rows, plus every
 // EXISTING edge either end of which is still on those activities.
 //
 // The second arm is the RELINK case, and it is the reason this is not simply a
@@ -45,7 +45,7 @@ type pair struct {
 // It is a WIDER target than the rows alone, and deliberately: over-including a
 // pair costs a refold that writes back what was already there, while omitting
 // one leaves a claim nobody can see is false. The lookup is served by
-// idx_graph_edge_user and idx_graph_edge_person, and recomputePairs folds the
+// idx_graph_edge_user and idx_graph_edge_contact, and recomputePairs folds the
 // whole target set in one statement rather than one per pair.
 func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]pair, error) {
 	rows, err := tx.Query(ctx, `
@@ -54,22 +54,22 @@ func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]pa
 		      FROM activity_participant
 		     WHERE activity_id = ANY($1) AND user_id IS NOT NULL
 		),
-		present_people AS (
-		    SELECT DISTINCT person_id
+		present_contacts AS (
+		    SELECT DISTINCT contact_id
 		      FROM activity_participant
-		     WHERE activity_id = ANY($1) AND person_id IS NOT NULL
+		     WHERE activity_id = ANY($1) AND contact_id IS NOT NULL
 		)
-		SELECT DISTINCT u.user_id, p.person_id
+		SELECT DISTINCT u.user_id, p.contact_id
 		  FROM activity_participant u
 		  JOIN activity_participant p ON p.activity_id = u.activity_id
 		 WHERE u.activity_id = ANY($1)
 		   AND u.user_id IS NOT NULL
-		   AND p.person_id IS NOT NULL
+		   AND p.contact_id IS NOT NULL
 		 UNION
-		SELECT e.user_id, e.person_id
+		SELECT e.user_id, e.contact_id
 		  FROM graph_interaction_edge e
 		 WHERE e.user_id IN (SELECT user_id FROM present_users)
-		    OR e.person_id IN (SELECT person_id FROM present_people)`, activityIDs)
+		    OR e.contact_id IN (SELECT contact_id FROM present_contacts)`, activityIDs)
 	if err != nil {
 		return nil, fmt.Errorf("search: resolving the pairs an activity touches: %w", err)
 	}
@@ -77,7 +77,7 @@ func affectedPairs(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) ([]pa
 	var out []pair
 	for rows.Next() {
 		var pr pair
-		if err := rows.Scan(&pr.user, &pr.person); err != nil {
+		if err := rows.Scan(&pr.user, &pr.contact); err != nil {
 			return nil, err
 		}
 		out = append(out, pr)

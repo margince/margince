@@ -340,7 +340,7 @@ func TestAHumanSelectedAudienceIsNotMovedByADerivation(t *testing.T) {
 	sync(t, customerMail("selected-1@acme.example"))
 	activityID := oneActivityID(t, e)
 
-	// A person named a specific set of readers. No contribution below knows
+	// A contact named a specific set of readers. No contribution below knows
 	// how to rebuild that set, so a derivation that moved the row would either
 	// publish what they narrowed or discard the names they chose.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

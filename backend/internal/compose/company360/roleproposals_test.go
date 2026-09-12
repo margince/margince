@@ -12,11 +12,11 @@ import (
 // A contact's job title is carried into the prompt only so the instruction can
 // say what it is NOT. What a human typed wins; a purchased claim fills a blank
 // and never seconds an answer somebody gave.
-func TestTitleOfPrefersWhatAPersonTypedOverWhatWasBought(t *testing.T) {
+func TestTitleOfPrefersWhatAContactTypedOverWhatWasBought(t *testing.T) {
 	t.Parallel()
 	typed, bought := "Head of Fleet", "VP Operations"
 	if got := titleOf(contactCard{title: &typed, providerTitle: &bought}); got != typed {
-		t.Fatalf("a bought title displaced one a person typed: %q", got)
+		t.Fatalf("a bought title displaced one a human typed: %q", got)
 	}
 	if got := titleOf(contactCard{providerTitle: &bought}); got != bought {
 		t.Fatalf("a bought title did not fill the blank: %q", got)
@@ -68,8 +68,8 @@ func TestTheReadingWindowIsBoundedToAYear(t *testing.T) {
 }
 
 // Both caps bound one model call's cost and latency. A committee is a dozen
-// people; past that the account's contacts are a mailing list, and reading all
-// of them spends a premium call on people nobody is selling to.
+// contacts; past that the account's contacts are a mailing list, and reading all
+// of them spends a premium call on contacts nobody is selling to.
 func TestTheCandidateAndMessageCapsStayBounded(t *testing.T) {
 	t.Parallel()
 	if proposalCandidates > 25 {
@@ -87,7 +87,7 @@ func TestParseLeavesEveryJudgementToTheGate(t *testing.T) {
 	t.Parallel()
 	// A proposal the gate will certainly refuse — no candidates at all — still
 	// parses, because refusing it is not Parse's job.
-	got, err := proposeroles.Parse(`{"proposals":[{"person_id":"p-1","role":"chief_wizard",
+	got, err := proposeroles.Parse(`{"proposals":[{"contact_id":"p-1","role":"chief_wizard",
 		"evidence_snippet":"x","source_id":"a-1","confidence":9}]}`)
 	if err != nil {
 		t.Fatalf("a well-formed reply was refused at the decode step: %v", err)

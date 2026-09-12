@@ -92,7 +92,7 @@ type RecordHistoryEntry struct {
 // same order as field-history's diff feed, and the order the surface needs.
 //
 // A record's history is read to answer "what just happened", and the change a
-// person wants to put back is almost always the last one. Oldest-first buried
+// contact wants to put back is almost always the last one. Oldest-first buried
 // it at the bottom of the page and put the reader's own edit furthest from
 // them; it also meant page one held the oldest twenty rows, so no amount of
 // reversing at the surface could fix the order.
@@ -274,7 +274,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 //
 // Neither join carries a workspace predicate, and does not need one: both
 // match app_user.id, a global primary key, so a uuid can only ever resolve
-// the one person it names. What bounds the ROWS is the caller's gate — the
+// the one contact it names. What bounds the ROWS is the caller's gate — the
 // row-scope visibility check above for this read, admin-only for the
 // compliance log — not anything on the joined table.
 func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFilter,

@@ -27,7 +27,7 @@ import {
 // Settings → Capture: the domains this installation refuses a company. The card
 // answers one question nothing else can — a company that never appeared, was it
 // refused and by whom — so what it must never do is lose the difference between
-// a machine's refusal and a person's, claim an empty list is a broken one, or
+// a machine's refusal and a contact's, claim an empty list is a broken one, or
 // offer a write it has no reason to send.
 //
 // The write is three inputs submitted together, so it lives in a dialog behind
@@ -98,7 +98,7 @@ afterEach(() => {
 });
 
 describe("BlockedDomainsCard", () => {
-  it("says of every decision whether a machine or a person made it", async () => {
+  it("says of every decision whether a machine or a contact made it", async () => {
     mount(OPS, {
       [LIST]: () => jsonResponse({ data: [BY_HEURISTIC, BY_HUMAN], total: 2 }),
     });

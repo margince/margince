@@ -137,7 +137,7 @@ func (d *Dispatcher) WithControllerRelay(relay ControllerRelay, payloads Payload
 // The sequence is authority → consent → pacing, and the order is load-bearing
 // rather than stylistic: authority must refuse BEFORE consent answers, or the
 // difference between "you may not" and "they said no" tells a caller with no
-// rights at all something about a person's consent state.
+// rights at all something about a contact's consent state.
 func (d *Dispatcher) DispatchWithWait(ctx context.Context, id ids.UUID) (Outcome, time.Duration, error) {
 	// Load counts this attempt and refuses a delivery that already finished.
 	// Job delivery is at-least-once, and that terminal status — not any
@@ -479,7 +479,7 @@ func (d *Dispatcher) classifySendFailure(ctx context.Context, del Delivery, err 
 	// own send path cannot honour, which is the half no gate above it can see.
 	if errors.Is(err, connector.ErrFilesNotCarried) {
 		// The cause is LOGGED rather than dropped. filesNotCarriedReason cannot
-		// carry it — a park reason is read by the person who wrote the message,
+		// carry it — a park reason is read by the contact who wrote the message,
 		// and the refusals below the gate name a file, a byte count and a bound
 		// that were built for an operator — but those are the only statement of
 		// WHICH file and WHICH limit ended this delivery. Parking returns nil, so

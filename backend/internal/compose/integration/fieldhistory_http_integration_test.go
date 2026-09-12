@@ -135,7 +135,7 @@ func seedHumanFieldHistoryRow(t *testing.T, app *apptest.AppEnv, e *Env, entityI
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, action,
 			                        entity_type, entity_id, before, after, occurred_at)
-			 VALUES ($1, 'human', $2, 'update', 'person', $3, $4, $5, $6)`,
+			 VALUES ($1, 'human', $2, 'update', 'contact', $3, $4, $5, $6)`,
 			ids.NewV7(), "human:"+seat.String(), entityID, beforeJSON, afterJSON, occurredAt)
 		return err
 	}); err != nil {
@@ -173,12 +173,12 @@ func seedAgentFieldHistoryRow(t *testing.T, e *Env, entityType string, entityID,
 }
 
 // fieldHistoryHTTPFixture is the seeded shape TestFieldHistoryHTTP's happy
-// path reads back: a person created through the real HTTP write path (its
+// path reads back: a contact created through the real HTTP write path (its
 // own create-audit row is honest genesis history), a human-actor title
 // diff, and — dated newest so it lands at data[0] — an agent-actor diff
 // carrying a passport id and evidence.
 type fieldHistoryHTTPFixture struct {
-	personID   ids.UUID
+	contactID  ids.UUID
 	passportID ids.UUID
 }
 
@@ -186,31 +186,31 @@ type fieldHistoryHTTPFixture struct {
 // diff rows the happy-path subtest below asserts on.
 func seedFieldHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) fieldHistoryHTTPFixture {
 	t.Helper()
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "History Wire Subject",
 		"source":    "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
-	personID, err := ids.Parse(person["id"].(string))
+	contactID, err := ids.Parse(contact["id"].(string))
 	if err != nil {
-		t.Fatalf("parsing person id %q: %v", person["id"], err)
+		t.Fatalf("parsing contact id %q: %v", contact["id"], err)
 	}
 
 	// Dated forward from the create row so ordering is unambiguous
 	// (fieldhistory_integration_test.go's own convention).
 	humanAt := time.Now().Add(1 * time.Hour).UTC().Truncate(time.Microsecond)
 	agentAt := time.Now().Add(2 * time.Hour).UTC().Truncate(time.Microsecond)
-	seedHumanFieldHistoryRow(t, e, dbEnv, personID,
+	seedHumanFieldHistoryRow(t, e, dbEnv, contactID,
 		map[string]any{"title": "VP"}, map[string]any{"title": "CTO"}, humanAt)
 
 	passportID := ids.NewV7()
 	evidence := map[string]any{"tool_call_id": "call-1", "confidence": "0.92"}
-	seedAgentFieldHistoryRow(t, dbEnv, "person", personID, passportID, evidence,
+	seedAgentFieldHistoryRow(t, dbEnv, "contact", contactID, passportID, evidence,
 		map[string]any{"score": "1"}, map[string]any{"score": "2"}, agentAt)
 
-	return fieldHistoryHTTPFixture{personID: personID, passportID: passportID}
+	return fieldHistoryHTTPFixture{contactID: contactID, passportID: passportID}
 }
 
 // assertFieldHistoryHappyPath drives the GET and checks the wire shape:
@@ -220,7 +220,7 @@ func seedFieldHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) fi
 func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistoryHTTPFixture) {
 	t.Helper()
 	var page fieldHistoryListWire
-	status := e.Call(t, "GET", "/v1/field-history?entity_type=person&entity_id="+fx.personID.String(), nil, nil, &page)
+	status := e.Call(t, "GET", "/v1/field-history?entity_type=contact&entity_id="+fx.contactID.String(), nil, nil, &page)
 	if status != http.StatusOK {
 		t.Fatalf("field-history status = %d, want 200: %+v", status, page)
 	}
@@ -246,10 +246,10 @@ func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistor
 	}
 
 	// A MACHINE ACTOR NAMES NO HUMAN, which is the honest half: the id is a
-	// passport, not a person, and the human behind it rides on_behalf_of_name.
+	// passport, not a human, and the human behind it rides on_behalf_of_name.
 	if newest.ActorName != nil {
 		t.Errorf("agent entry actor_name = %q, want null — the actor is a machine "+
-			"and naming it as a person is the confusion PD-002 is about", *newest.ActorName)
+			"and naming it as a contact is the confusion PD-002 is about", *newest.ActorName)
 	}
 
 	var sawHumanTitle bool
@@ -265,10 +265,10 @@ func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistor
 			// anybody. The id was accurate and unreadable.
 			if en.ActorName == nil {
 				t.Errorf("human entry actor_name is null — the rail still shows a raw id "+
-					"beside a record-history row that names the person: %+v", en)
+					"beside a record-history row that names the contact: %+v", en)
 			} else if *en.ActorName == "" {
 				t.Errorf("human entry actor_name is empty — absent and blank are different " +
-					"answers, and a blank one renders as a person with no name")
+					"answers, and a blank one renders as a contact with no name")
 			}
 		}
 	}
@@ -300,14 +300,14 @@ func TestFieldHistoryHTTP(t *testing.T) {
 	t.Run("422 invalid actor_type", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET",
-			"/v1/field-history?entity_type=person&entity_id="+ids.NewV7().String()+"&actor_type=bogus", nil, nil, &problem)
+			"/v1/field-history?entity_type=contact&entity_id="+ids.NewV7().String()+"&actor_type=bogus", nil, nil, &problem)
 		assertFieldHistoryValidation422(t, status, problem, "actor_type", "invalid_actor_type")
 	})
 
 	t.Run("422 malformed cursor", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET",
-			"/v1/field-history?entity_type=person&entity_id="+ids.NewV7().String()+"&cursor=!!!notatoken", nil, nil, &problem)
+			"/v1/field-history?entity_type=contact&entity_id="+ids.NewV7().String()+"&cursor=!!!notatoken", nil, nil, &problem)
 		assertFieldHistoryValidation422(t, status, problem, "cursor", "malformed_cursor")
 	})
 

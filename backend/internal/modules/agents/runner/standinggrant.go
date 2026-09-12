@@ -242,7 +242,7 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 //
 // WHOSE ANSWER. It takes no user id. The rep is read from the acting principal,
 // so the only decision any caller can record is their own — an argument would
-// let one person answer for another, and "the admin turned it on for you" is
+// let one human answer for another, and "the admin turned it on for you" is
 // precisely what this feature exists not to be. A principal with no human
 // behind it is refused: a machine has no standing decision to make.
 func RecordDecisionTx(

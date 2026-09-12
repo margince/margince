@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -47,7 +47,7 @@ func newTriageTestWorker(e *integration.Env, site *fakeSite, extractBrain comple
 	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(e.Pool, CaptureConfig{})))
 	return &siteDeepReadWorker{
 		pool:        e.Pool,
-		people:      e.People,
+		contacts:    e.Contacts,
 		crawler:     testSiteCrawler(site),
 		extract:     evidenceExtractor{brain: extractBrain, factBrain: extractBrain},
 		triageBrain: triage,
@@ -75,7 +75,7 @@ func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display
 	}); err != nil {
 		t.Fatal(err)
 	}
-	res, err := e.People.EnsureCounterparty(ctx, people.EnsureCounterpartyInput{
+	res, err := e.Contacts.EnsureCounterparty(ctx, contacts.EnsureCounterpartyInput{
 		Email: email, DisplayName: display, Domain: domain,
 		OwnerID: e.Rep1, ActivityID: activityID,
 		Source: "gmail:" + activityID.String(), CapturedBy: "connector:gmail",
@@ -87,7 +87,7 @@ func openTriageQuestion(t *testing.T, e *integration.Env, domain, email, display
 		t.Fatalf("ensure %s did not open the triage question: %+v", email, res)
 	}
 
-	read, _, err := e.People.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor, nil)
+	read, _, err := e.Contacts.StartDomainTriageSiteRead(ctx, domain, systemDomainTriageActor, nil)
 	if err != nil {
 		t.Fatalf("starting the triage read: %v", err)
 	}
@@ -105,7 +105,7 @@ func triageState(t *testing.T, e *integration.Env, domain string) (status, readS
 		}
 		if err := tx.QueryRow(ctx,
 			`SELECT status FROM site_read WHERE target_kind = 'domain_triage' AND seed_url = $1`,
-			people.TriageSeedURL(domain)).Scan(&readStatus); err != nil {
+			contacts.TriageSeedURL(domain)).Scan(&readStatus); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx,
@@ -120,7 +120,7 @@ func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
 	e := integration.Setup(t)
 	site := &fakeSite{pages: map[string]fakeSitePage{
 		seedURL:                {text: readable("Sebastian Kestner.") + " Eigentuemer der Domain ist Sebastian Kestner. Kontakt per E-Mail."},
-		seedURL + "/impressum": {text: readable("Impressum.") + " Sebastian Kestner, Privatperson."},
+		seedURL + "/impressum": {text: readable("Impressum.") + " Sebastian Kestner, Privatcontact."},
 	}}
 	// The extraction brain would happily invent a company from this page. It
 	// must never be asked: the classification stops the read first.
@@ -134,8 +134,8 @@ func TestTriageStopsAtTheLandingPageForAPersonalDomain(t *testing.T) {
 	}
 
 	status, readStatus, companies := triageState(t, e, triageTestDomain)
-	if status != people.DomainPersonal {
-		t.Errorf("disposition = %q, want %q", status, people.DomainPersonal)
+	if status != contacts.DomainPersonal {
+		t.Errorf("disposition = %q, want %q", status, contacts.DomainPersonal)
 	}
 	if companies != 0 {
 		t.Errorf("%d companies on a personal domain, want 0", companies)
@@ -164,8 +164,8 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 	}
 
 	status, readStatus, companies := triageState(t, e, triageTestDomain)
-	if status != people.DomainCompany {
-		t.Fatalf("disposition = %q, want %q", status, people.DomainCompany)
+	if status != contacts.DomainCompany {
+		t.Fatalf("disposition = %q, want %q", status, contacts.DomainCompany)
 	}
 	if companies != 1 {
 		t.Fatalf("%d companies for a company domain, want 1", companies)
@@ -194,7 +194,7 @@ func TestTriageReadsOnAndCreatesTheCompanyTheSiteNames(t *testing.T) {
 		return tx.QueryRow(ctx, `
 			SELECT company_id IS NOT NULL AND confirmed_at IS NOT NULL FROM site_read
 			WHERE target_kind = 'domain_triage' AND seed_url = $1`,
-			people.TriageSeedURL(triageTestDomain)).Scan(&boundToCompany)
+			contacts.TriageSeedURL(triageTestDomain)).Scan(&boundToCompany)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestTriageWithNoModelPathStillClosesTheQuestion(t *testing.T) {
 	// Nobody's name explains "acme-triage" and no site was read, so nothing has
 	// EARNED a company. The question stays open and marked, where it used to
 	// mint a company named after the domain label.
-	if status != people.DomainPending {
+	if status != contacts.DomainPending {
 		t.Errorf("disposition = %q, want it left open", status)
 	}
 	if companies != 0 {
@@ -249,11 +249,11 @@ func TestTriageWithoutAModelRefusesADomainThatIsTheSendersName(t *testing.T) {
 	}
 
 	status, _, companies := triageState(t, e, domain)
-	if status != people.DomainPersonal {
-		t.Errorf("disposition = %q, want %q", status, people.DomainPersonal)
+	if status != contacts.DomainPersonal {
+		t.Errorf("disposition = %q, want %q", status, contacts.DomainPersonal)
 	}
 	if companies != 0 {
-		t.Errorf("%d companies named after a person, want 0", companies)
+		t.Errorf("%d companies named after a contact, want 0", companies)
 	}
 }
 

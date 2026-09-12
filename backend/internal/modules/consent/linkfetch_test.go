@@ -5,8 +5,8 @@ package consent
 
 // What the request admits about who sent it.
 //
-// The rule is one-sided on purpose: every arm turns a person into a machine and
-// none turns a machine into a person, because the defect being fixed is
+// The rule is one-sided on purpose: every arm turns a human into a machine and
+// none turns a machine into a human, because the defect being fixed is
 // recording openings nobody made. These cases pin both halves of that — the
 // requests that must be refused an opening, and the ones that must still get
 // one.
@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-func TestARequestThatSaysItIsNotAPersonDoesNotOpenTheLink(t *testing.T) {
+func TestARequestThatSaysItIsNotAHumanDoesNotOpenTheLink(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -59,14 +59,14 @@ func TestARequestThatSaysItIsNotAPersonDoesNotOpenTheLink(t *testing.T) {
 				r.Header.Set(k, v)
 			}
 			if got := WhatFetchedThis(r); got != FetchByAMachine {
-				t.Errorf("%s was recorded as a person opening their consent link, which writes a "+
+				t.Errorf("%s was recorded as a human opening their consent link, which writes a "+
 					"line of evidence about a moment that did not happen", tc.name)
 			}
 		})
 	}
 }
 
-func TestARequestThatPresentsAsAPersonOpensTheLink(t *testing.T) {
+func TestARequestThatPresentsAsAHumanOpensTheLink(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
@@ -85,7 +85,7 @@ func TestARequestThatPresentsAsAPersonOpensTheLink(t *testing.T) {
 			// THE LENIENT DIRECTION, and it is deliberate. An older browser or
 			// a proxy that strips headers sends nothing, and refusing to record
 			// their opening would swing the defect the other way — a real
-			// person's click going unrecorded because of their network.
+			// human's click going unrecorded because of their network.
 			name:    "a request that says nothing either way",
 			headers: nil,
 		},
@@ -108,7 +108,7 @@ func TestARequestThatPresentsAsAPersonOpensTheLink(t *testing.T) {
 			for k, v := range tc.headers {
 				r.Header.Set(k, v)
 			}
-			if got := WhatFetchedThis(r); got != FetchByAPerson {
+			if got := WhatFetchedThis(r); got != FetchByAHuman {
 				t.Errorf("%s was refused an opening, so a real click goes unrecorded and the "+
 					"ask-to-click chain loses its middle", tc.name)
 			}

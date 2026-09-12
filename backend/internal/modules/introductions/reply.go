@@ -3,7 +3,7 @@
 
 package introductions
 
-// The one transition no person can make.
+// The one transition no human can make.
 //
 // Every other move on an ask is somebody's decision, reached through an
 // endpoint and checked against who they are. `replied` is not: it is the
@@ -47,7 +47,7 @@ import (
 //
 // And the actor is the clock's cousin, not a party: only ActorCapture may make
 // this move, so no endpoint can reach it. `replied` is the product's best
-// outcome, which is exactly why a person must not be able to assert it.
+// outcome, which is exactly why a contact must not be able to assert it.
 func (s *Store) RecordReply(
 	ctx context.Context, id ids.UUID, activity ids.UUID, at time.Time,
 ) (bool, error) {
@@ -94,7 +94,7 @@ func (s *Store) RecordReply(
 		// would find the mail that came before it. The earlier evidence is not
 		// lost: the audit row for the handshake still names it.
 		var before Status
-		var personID ids.UUID
+		var contactID ids.UUID
 		err := tx.QueryRow(ctx, `
 			WITH prior AS (
 				SELECT id, status FROM intro_request
@@ -109,7 +109,7 @@ func (s *Store) RecordReply(
 			  FROM prior
 			 WHERE r.id = prior.id
 			   AND r.status IN ('introduced', 'name_dropped')
-			 RETURNING prior.status, r.person_id`, id, at, activity).Scan(&before, &personID)
+			 RETURNING prior.status, r.contact_id`, id, at, activity).Scan(&before, &contactID)
 		// No row is the ordinary outcome rather than a fault. The ask is already
 		// replied, was never introduced, or is archived — each a message that
 		// answers nothing, which the caller reads off the false. Erroring here
@@ -128,10 +128,10 @@ func (s *Store) RecordReply(
 			return auditErr
 		}
 		evidence := openapi_types.UUID(activity)
-		if emitErr := storekit.EmitEvent(ctx, tx, auditID, personID,
+		if emitErr := storekit.EmitEvent(ctx, tx, auditID, contactID,
 			crmcontracts.PublicEventIntroRequestReplied{
 				IntroRequestId:   openapi_types.UUID(id),
-				PersonId:         openapi_types.UUID(personID),
+				ContactId:        openapi_types.UUID(contactID),
 				SourceActivityId: &evidence,
 			}); emitErr != nil {
 			return emitErr
@@ -156,7 +156,7 @@ func (s *Store) RecordReply(
 // The system principal reads here. It is unbounded by design, which is the
 // only way a consumer can see an ask between two colleagues it is not party
 // to — and the reason this method takes no filter a caller could widen.
-func (s *Store) AwaitingReply(ctx context.Context, personID ids.UUID) ([]Pending, error) {
+func (s *Store) AwaitingReply(ctx context.Context, contactID ids.UUID) ([]Pending, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -169,8 +169,8 @@ func (s *Store) AwaitingReply(ctx context.Context, personID ids.UUID) ([]Pending
 			-- one that exists rather than choosing between two candidates.
 			SELECT id, COALESCE(introduced_at, name_dropped_at)
 			  FROM intro_request
-			 WHERE person_id = $1 AND archived_at IS NULL
-			   AND status IN ('introduced', 'name_dropped')`, personID)
+			 WHERE contact_id = $1 AND archived_at IS NULL
+			   AND status IN ('introduced', 'name_dropped')`, contactID)
 		if err != nil {
 			return fmt.Errorf("introductions: listing the asks awaiting a reply: %w", err)
 		}

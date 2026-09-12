@@ -26,7 +26,7 @@ const (
 	// amortized across ten messages.
 	classifyBatchSize = 10
 	// signatureLineCount mirrors compose/captureenrich.go's §2.9 input pin: the
-	// trailing non-quoted signature lines fed to the per-person enrich prompt.
+	// trailing non-quoted signature lines fed to the per-contact enrich prompt.
 	signatureLineCount = 15
 
 	// charsPerToken is the ~4-chars-per-token rule of thumb for the GPT/Gemini
@@ -41,7 +41,7 @@ const (
 	classifySystemTokens  = 160 // classifySystem prompt (~640 chars) in tokens
 	classifyVerdictTokens = 8   // one {id,label,confidence} verdict per message
 
-	// The per-person enrich shape: the signature lines plus the extraction
+	// The per-contact enrich shape: the signature lines plus the extraction
 	// prompt in, a small field bundle out.
 	signatureLineTokens = 12  // mean tokens per trailing signature line
 	enrichSystemTokens  = 120 // signatureEnrichSystem prompt (~480 chars) in tokens
@@ -61,16 +61,16 @@ const (
 	embedItemTokens   = (embedSubjectChars + embedBodyChars) / charsPerToken
 )
 
-// defaultPersonsPerMsg is the cold-start sender density — distinct new
+// defaultContactsPerMsg is the cold-start sender density — distinct new
 // correspondents worth enriching per captured message — used ONLY when a
-// connection has no completed backfill to measure its own people/scanned ratio.
+// connection has no completed backfill to measure its own contacts/scanned ratio.
 // It is the single honest heuristic constant this package carries.
 //
 // Derivation (not a magic literal): one classify batch of classifyBatchSize
 // (=10) captured messages introduces on the order of one new correspondent, so
-// ~0.1 persons per message — a deliberately conservative floor. A real backfill
+// ~0.1 contacts per message — a deliberately conservative floor. A real backfill
 // yield replaces it the moment one run completes.
-const defaultPersonsPerMsg = 1.0 / classifyBatchSize
+const defaultContactsPerMsg = 1.0 / classifyBatchSize
 
 // workShapeFloor returns the per-UNIT token means for one task's floor estimate,
 // derived from the real prompt shape above and held in the rule the contract
@@ -92,18 +92,18 @@ func workShapeFloor(task ai.Task) ai.Usage {
 func unitsFloor(task ai.Task, scanned int64) int64 {
 	switch task {
 	case ai.TaskEnrich:
-		return int64(float64(scanned) * defaultPersonsPerMsg)
+		return int64(float64(scanned) * defaultContactsPerMsg)
 	default:
 		// classify AND embeddings: captured ≈ scanned at first connect. The
-		// cold-start embed floor counts MESSAGE-embeds only — person/company embeds are
+		// cold-start embed floor counts MESSAGE-embeds only — contact/company embeds are
 		// omitted here on purpose. The floor prices every embed unit at
-		// embedItemTokens (a full email); a person embed's real input is just a
-		// name (a few tokens), so folding expected persons into this count would
-		// charge each person as a full email — a large per-person overquote on the
+		// embedItemTokens (a full email); a contact embed's real input is just a
+		// name (a few tokens), so folding expected contacts into this count would
+		// charge each contact as a full email — a large per-contact overquote on the
 		// cheapest, input-only lane. The two simple sizings are both worse than the
 		// omission (email-size = overquote; a name-size special-case = added
 		// complexity for a negligible term), so message-embeds it is. The OBSERVED
-		// path is unaffected: it still counts captured + people + companies from real
+		// path is unaffected: it still counts captured + contacts + companies from real
 		// yields (rules.go). Documented in the ADR-0068 design note and
 		// docs/explanation/ai-runtime.md.
 		return scanned

@@ -10,7 +10,7 @@ For the mental model (SoR modes, mirror-as-cache, fail-closed visibility) read
 connect reference, [connect-a-hubspot-overlay.md](connect-a-hubspot-overlay.md). This page is the
 opinionated *team test* workflow those two don't spell out.
 
-## Why a developer test account (and one per person)
+## Why a developer test account (and one per contact)
 
 - A HubSpot **developer test account** is a separate portal that **cannot sync with any other account**,
   so it is structurally impossible for anything you do here to reach a production portal. Create one at
@@ -18,7 +18,7 @@ opinionated *team test* workflow those two don't spell out.
   *Test accounts → Create* (up to 10, free, 90-day Enterprise-feature trial).
 - **One account per teammate**, not a shared one: write-back mutates records, and separate portals keep
   teammates from stepping on each other. The committed seed script makes every account's data identical,
-  so "per person" costs nothing in reproducibility.
+  so "per contact" costs nothing in reproducibility.
 
 ## The one rule that makes or breaks it: owner email = your margince admin email
 
@@ -83,7 +83,7 @@ curl -sS -X POST http://localhost:8080/v1/overlay/reconcile -b cookies.txt
 # 5. Watch it hydrate, then read the fixture back FROM THE MIRROR
 curl -sS http://localhost:8080/v1/overlay/sync-status -b cookies.txt | jq '.objects'
 curl -sS 'http://localhost:8080/v1/deals?limit=10'         -b cookies.txt | jq '.data[].name'    # [fixture] deals
-curl -sS 'http://localhost:8080/v1/people?limit=10'        -b cookies.txt | jq '.data[].full_name'
+curl -sS 'http://localhost:8080/v1/contacts?limit=10'        -b cookies.txt | jq '.data[].full_name'
 curl -sS 'http://localhost:8080/v1/companies?limit=10' -b cookies.txt | jq '.data[].name'
 curl -sS http://localhost:8080/v1/overlay/budget           -b cookies.txt | jq  # window/consumed/band + per-source sources + ~unknown headroom + search
 ```
@@ -99,7 +99,7 @@ curl -sS -X PATCH "http://localhost:8080/v1/deals/$DEAL" -b cookies.txt \
   -H 'content-type: application/json' -d '{"name":"[fixture] Acme Renewal (edited)"}'
 ```
 It writes to HubSpot **first**, then re-mirrors — confirm the rename in the test account's HubSpot UI.
-Update and archive on person/company/deal, plus update on lead and activity, all write back this
+Update and archive on contact/company/deal, plus update on lead and activity, all write back this
 way; the 360 screens show Edit/Archive in overlay mode for every type that supports them. `create`,
 `merge`, `advance-deal`, `promote-lead`, and `disqualify-lead` still answer `422 unsupported_by_sor`:
 `create` because a record made this way would carry no `owner_id`, and the fail-closed visibility rule
@@ -114,7 +114,7 @@ custom field and `owner_id` — has no writable counterpart and is dropped from 
 
 | Entity | Writable fields |
 | --- | --- |
-| person | `first_name`, `last_name`, `title` |
+| contact | `first_name`, `last_name`, `title` |
 | company | `display_name`, `industry` |
 | lead | `full_name` |
 | deal | `name`, `expected_close_date`, `amount_minor` + `currency` (a pair — supply both or neither; `pipeline_id`/`stage_id` are read-only and always `null` in overlay) |
@@ -162,7 +162,7 @@ HUBSPOT_TOKEN=pat-XXXX scripts/overlay-hubspot-fixture.sh whoami  # print the ow
   classes (calls/meetings/emails/notes/tasks) are swept **best-effort** with no requested scope, so a
   portal that gates one of them (HubSpot 403s leads/emails, 400s some engagement endpoints on a starter
   portal) logs a "best-effort object class not accessible … skipping" line and moves on. The
-  scope-backed classes (contacts/companies/deals → person/company/deal) still mirror fully. A `403`
+  scope-backed classes (contacts/companies/deals → contact/company/deal) still mirror fully. A `403`
   on one of *those* three, by contrast, is a real token/scope problem and aborts the sweep.
 - **`sync-status` shows `pending`/`stale`.** Give the poller a beat or `POST /overlay/reconcile` again;
   `backfillComplete: true` + `state: "fresh"` per class means it's caught up.

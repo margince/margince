@@ -23,9 +23,9 @@ import { describe, expect, it } from "vitest";
 // only in a stale-cache bug report. The swept set (11 ops per
 // overlaywrite.go, minus DELETE /activities/{id}, which no SPA screen
 // calls):
-//   create person/company/deal/lead, log-activity (POST /activities from
+//   create contact/company/deal/lead, log-activity (POST /activities from
 //   logactivity.tsx), advance-deal (both its board and reopen callers),
-//   merge-person, merge-company, promote-lead, disqualify-lead.
+//   merge-contact, merge-company, promote-lead, disqualify-lead.
 const dir = dirname(fileURLToPath(import.meta.url));
 
 function source(file: string): string {
@@ -148,21 +148,21 @@ describe("what counts as distance", () => {
 });
 
 describe("overlay refusal copy — translator coverage", () => {
-  it("create-person (POST /people)", () => {
+  it("create-contact (POST /contacts)", () => {
     assertTranslatedRefusal(
       "contacts.tsx",
-      'api.POST("/people", {',
-      "create-person",
+      'api.POST("/contacts", {',
+      "create-contact",
     );
   });
 
-  it("merge-person (POST /people/{id}/merge)", () => {
+  it("merge-contact (POST /contacts/{id}/merge)", () => {
     // Edit, merge and archive live in their own shared file, imported by
-    // both PersonScreen's header (contacts.tsx) and PersonPageV2's.
+    // both ContactScreen's header (contacts.tsx) and ContactPageV2's.
     assertTranslatedRefusal(
-      "personeditmergearchive.tsx",
-      '"/people/{id}/merge"',
-      "merge-person",
+      "contacteditmergearchive.tsx",
+      '"/contacts/{id}/merge"',
+      "merge-contact",
     );
   });
 

@@ -19,12 +19,12 @@ afterEach(cleanup);
 const CHOICES = [
   {
     value: "everyone_except" as const,
-    label: "Everyone I talk to — except the people I leave out",
+    label: "Everyone I talk to — except the contacts I leave out",
     description: "Every conversation goes in until you name somebody.",
   },
   {
     value: "only_chosen" as const,
-    label: "Only the people I choose",
+    label: "Only the contacts I choose",
     description: "Nothing goes in until you name somebody.",
   },
 ];
@@ -48,7 +48,7 @@ describe("ChoiceList", () => {
     // Both answers are on screen at rest — the whole difference from a Select.
     expect(screen.getAllByRole("radio")).toHaveLength(2);
     expect(
-      screen.getByRole("radio", { name: /Only the people I choose/ }),
+      screen.getByRole("radio", { name: /Only the contacts I choose/ }),
     ).toBeTruthy();
     expect(
       screen.getAllByRole("radio").filter((radio) => radio.matches(":checked")),

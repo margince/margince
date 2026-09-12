@@ -54,7 +54,7 @@ function deal(over: Partial<Deal> = {}): Deal {
   } as Deal;
 }
 
-// One harness, with the query client: the seat cells resolve a person through
+// One harness, with the query client: the seat cells resolve a contact through
 // `EntityRef` now, so every card on this record needs one. There were two
 // helpers before — this and `showFacts` below — differing only in whether they
 // supplied it.
@@ -214,8 +214,8 @@ describe("the readings say what is wrong, with the figure behind it", () => {
         coverage={{
           deal_id: DEAL_ID,
           stakeholders: [
-            { person_id: "p1", role: "champion", engaged: true },
-            { person_id: "p2", role: "user", engaged: false },
+            { contact_id: "p1", role: "champion", engaged: true },
+            { contact_id: "p2", role: "user", engaged: false },
           ],
           our_side: [],
           risks: [],
@@ -227,7 +227,7 @@ describe("the readings say what is wrong, with the figure behind it", () => {
     expect(screen.getByText(/a champion is named/)).toBeInTheDocument();
   });
 
-  it("says the people are hidden rather than reporting nobody", () => {
+  it("says the contacts are hidden rather than reporting nobody", () => {
     // Withheld and empty are different answers, and a card that read one as
     // the other would report a clean bill of health from a check that never
     // ran.
@@ -329,8 +329,8 @@ describe("the rail says who is on the deal", () => {
           deal_id: DEAL_ID,
           stakeholders: [
             {
-              person_id: "p1",
-              person_name: "Thorsten Ortner",
+              contact_id: "p1",
+              contact_name: "Thorsten Ortner",
               role: "economic_buyer",
               engaged: true,
             },
@@ -366,7 +366,7 @@ describe("the rail says who is on the deal", () => {
         overlay={false}
         coverage={{
           deal_id: DEAL_ID,
-          stakeholders: [{ person_id: "p1", role: "user", engaged: false }],
+          stakeholders: [{ contact_id: "p1", role: "user", engaged: false }],
           our_side: [],
           risks: [],
           sections_omitted: [],
@@ -458,7 +458,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     ).toBeInTheDocument();
   });
 
-  it("prints the words a person wrote rather than the category they chose", () => {
+  it("prints the words a contact wrote rather than the category they chose", () => {
     // `other` is the only reason carrying a detail, and the detail is the only
     // part of this answer somebody typed. "Something else: renewed on a
     // handshake" says the category twice and buries it.
@@ -489,7 +489,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     // VISUALLY, with the whole string in the DOM. An earlier version trimmed it
     // in TS and put the rest in a `title`, which reads as solved and is not: a
     // tooltip wants a mouse, is ignored by most screen readers, and never
-    // appears for a keyboard or touch reader. The person most likely to look is
+    // appears for a keyboard or touch reader. The contact most likely to look is
     // the one checking the words they just typed.
     const long =
       `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
@@ -526,7 +526,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
   // This has been wrong twice in opposite directions, which is why it is held
   // rather than described. Clipped with the rest in a `title` needs a mouse;
   // clipped with no `title` is unreadable for everyone. Either way the reader
-  // who loses is the person checking the words they just typed, and the value
+  // who loses is the contact checking the words they just typed, and the value
   // exists to be audited.
   it("bounds the won-reason detail's width and never its content", () => {
     const css = readFileSync(

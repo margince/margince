@@ -13,7 +13,7 @@ package capture
 // It is an explicit act, not a derivation. narrowhistory.go says why the
 // derivation never widens on its own: the messages were held for reasons that
 // were true when they landed, and a posture change is not a review of them.
-// This is that review, asked for by the person whose hold it was.
+// This is that review, asked for by the contact whose hold it was.
 //
 // SEAT granularity, not per-hold. capture_import records which seat imported a
 // message and that a counterparty hold caught it; it does not record WHICH hold
@@ -151,7 +151,7 @@ func WidenHistoryTx(
 // the honest number is the one this operation is responsible for.
 //
 // The gate is the same as every other hold operation's: a human seat, acting on
-// their own imports. There is no id and no admin arm — whose mail a person keeps
+// their own imports. There is no id and no admin arm — whose mail a colleague keeps
 // private is itself private, so an operation that reached another seat's holds
 // would disclose that they have any.
 //

@@ -41,8 +41,8 @@ import (
 
 // LiftInput names the suppression to take back and why.
 type LiftInput struct {
-	PersonID ids.PersonID
-	// SuppressionID is the row, not the person: a subject may carry more than
+	ContactID ids.ContactID
+	// SuppressionID is the row, not the contact: a subject may carry more than
 	// one stop, and lifting "the suppression" would silently take back whichever
 	// the query happened to return first.
 	SuppressionID ids.UUID
@@ -65,7 +65,7 @@ func (s *Store) Lift(ctx context.Context, in LiftInput) error {
 
 // admitLift settles what is decidable before a connection is taken.
 func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.AuthorityLevel, error) {
-	sub, err := consentSubject(RecordInput{PersonID: in.PersonID})
+	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
 	if err != nil {
 		return subject{}, "", err
 	}
@@ -78,7 +78,7 @@ func admitLift(ctx context.Context, in LiftInput) (subject, commsauthz.Authority
 	if err := requireReason(in.Reason, "taking back a stop"); err != nil {
 		return subject{}, "", err
 	}
-	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return subject{}, "", err
 	}
 	return sub, authorityOf(ctx), nil
@@ -90,7 +90,7 @@ const fieldReason = "reason"
 
 // reasonMax bounds a reason. It is the contract's own maxLength written again
 // here because nothing generated enforces it — unchecked, one caller stores a
-// megabyte in an audit payload every later reader of this person's history is
+// megabyte in an audit payload every later reader of this contact's history is
 // served in full.
 const reasonMax = 500
 
@@ -133,7 +133,7 @@ func (s *Store) liftAdmittedTx(
 	// FIRST, before anything that reads the subject's row. The count below and
 	// the level read want every concurrent writer of this subject's stops to be
 	// committed or not-yet-started, never half-applied — and the lock has to be
-	// the transaction's FIRST, because a merge holds the person row while it
+	// the transaction's FIRST, because a merge holds the contact row while it
 	// reaches for this same advisory lock. Taking EnsureRetractable first would
 	// invert the order between the two and deadlock; see suppress.go, where it
 	// did exactly that.
@@ -155,7 +155,7 @@ func (s *Store) liftAdmittedTx(
 	var decided string
 	err = tx.QueryRow(ctx, `
 		SELECT decided_by_level FROM communication_suppression
-		 WHERE id = $1 AND person_id = $2 AND revoked_at IS NULL
+		 WHERE id = $1 AND contact_id = $2 AND revoked_at IS NULL
 		 FOR UPDATE`, in.SuppressionID, sub.id).Scan(&decided)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A row that is already revoked, belongs to another subject, or never
@@ -182,14 +182,14 @@ func (s *Store) liftAdmittedTx(
 	// Counted AFTER the revoke and inside the same transaction, so the number
 	// describes this lift's own snapshot rather than the world before it. Not a
 	// serialized by the FOR UPDATE above, which locks only the row being lifted.
-	// Two lifts of DIFFERENT rows on one person would otherwise each see the
+	// Two lifts of DIFFERENT rows on one contact would otherwise each see the
 	// other's row still live and both emit still_suppressed=true — and nothing
-	// emits again afterwards, so both consumers hold mail forever on a person
+	// emits again afterwards, so both consumers hold mail forever on a contact
 	// with no stop left. "A moment of over-counting" was the wrong reading: an
 	// event is not a poll, and there is no later correction.
 	//
-	// So the whole person is taken first, and every lift of the same person
-	// queues behind it. One person's lock, held for the length of one lift —
+	// So the whole contact is taken first, and every lift of the same contact
+	// queues behind it. One contact's lock, held for the length of one lift —
 	// this is not a table lock and it does not touch anybody else's subject.
 	//
 	// NOT held by a test, deliberately. Each Lift opens its own short
@@ -200,14 +200,14 @@ func (s *Store) liftAdmittedTx(
 	// hand around the read — worth writing when this file next gains a seam
 	// that can do it, and worth nobody's confidence until then.
 	//
-	// Person AND address, not person alone. A row pinned to an address carries
-	// no person_id, so counting by person would report "nothing stands" while
+	// Contact AND address, not contact alone. A row pinned to an address carries
+	// no contact_id, so counting by contact would report "nothing stands" while
 	// the engine still refuses every message to that mailbox. Reporting fewer
 	// stops than exist is the one error this field must not make: it is the
 	// direction that resumes mail.
 	//
 	// liveSuppression carries a third arm, lead_id, because it is called with
-	// either a person or a lead. This is not: LiftInput takes a PersonID and
+	// either a contact or a lead. This is not: LiftInput takes a ContactID and
 	// consentSubject resolves it, so a lead arm here would be a clause that can
 	// never match — the appearance of mirroring the engine without the fact.
 	//
@@ -216,10 +216,10 @@ func (s *Store) liftAdmittedTx(
 	if err = tx.QueryRow(ctx, `
 		SELECT count(*) FROM communication_suppression s
 		 WHERE s.revoked_at IS NULL
-		   AND (s.person_id = $1
+		   AND (s.contact_id = $1
 		        OR (s.address IS NOT NULL AND EXISTS (
-		              SELECT 1 FROM person_email pe
-		               WHERE pe.person_id = $1
+		              SELECT 1 FROM contact_email pe
+		               WHERE pe.contact_id = $1
 		                 AND pe.archived_at IS NULL
 		                 AND pe.email = lower(s.address))))`,
 		sub.id).Scan(&remaining); err != nil {
@@ -248,10 +248,10 @@ func (s *Store) liftAdmittedTx(
 // suppressionLiftedPayload says a stop was taken back and by whose authority.
 //
 // It carries the two levels rather than the reason, for the same reason the
-// recording event does: the words belong to the people who wrote them, and an
+// recording event does: the words belong to the contacts who wrote them, and an
 // event reaches readers the explanation was not given to.
 //
-// It also carries what the lift did NOT do. One person can hold several stops —
+// It also carries what the lift did NOT do. One contact can hold several stops —
 // their own objection and a rep's separate note — and lifting one leaves the
 // others standing. An event saying only "a stop was lifted" reads as "you may
 // write to them now", so `still_suppressed` states the opposite plainly and

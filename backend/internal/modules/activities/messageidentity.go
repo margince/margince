@@ -254,7 +254,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 	//     theoretical: the send takes its FIRST To (primaryCounterparty), while
 	//     capture takes the first NON-OWNER address (mailmap). A human who
 	//     addresses themselves ahead of the recipient therefore produces two
-	//     rows naming different people, and this absorb declines — one duplicate
+	//     rows naming different contacts, and this absorb declines — one duplicate
 	//     row, which is the defect this whole path removes, in the one shape it
 	//     does not. One spelling of "who was this message with" would close it,
 	//     and that is an ADR-0072 correspondence-semantics decision rather than
@@ -310,7 +310,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 }
 
 // copyEchoLinks gives the survivor the echo's timeline placements — the sent
-// mail's presence on an auto-created person's record, which is most of what the
+// mail's presence on an auto-created contact's record, which is most of what the
 // echo's row was worth — and LEAVES the echo's own copies where they are.
 //
 // Copying rather than moving is load-bearing, and it follows from the echo
@@ -318,7 +318,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 // every timeline read, so its links cannot show the message twice; moving them
 // would only have been necessary while the row was being deleted out from under
 // them. What moving them WOULD cost is reach: the subject-scoped Art. 17
-// erasure walks from a person to an activity's attachments, provenance and
+// erasure walks from a contact to an activity's attachments, provenance and
 // embeddings through activity_link, so an archived row with no links left is a
 // row whose derived evidence that walk no longer finds. Releasing the natural
 // key instead of deleting the echo exists precisely to keep that evidence
@@ -345,9 +345,9 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.ActivityID, stamp StampProject) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
-		  (activity_id, entity_type, person_id, company_id, deal_id, lead_id, project_id)
+		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id)
 		SELECT $1, echo_link.entity_type,
-		       echo_link.person_id, echo_link.company_id, echo_link.deal_id,
+		       echo_link.contact_id, echo_link.company_id, echo_link.deal_id,
 		       echo_link.lead_id, echo_link.project_id
 		  FROM activity_link echo_link
 		 WHERE echo_link.activity_id = $2
@@ -355,8 +355,8 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1
 		          AND held.entity_type = echo_link.entity_type
-		          AND coalesce(held.person_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
-		            = coalesce(echo_link.person_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
+		          AND coalesce(held.contact_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
+		            = coalesce(echo_link.contact_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
 		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
 		       SELECT 1 FROM activity_link held
 		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,

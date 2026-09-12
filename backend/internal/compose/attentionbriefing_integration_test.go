@@ -24,8 +24,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -47,7 +47,7 @@ func setupBriefingLane(t *testing.T) *briefingLaneEnv {
 	e := integration.Setup(t)
 	b := &briefingLaneEnv{
 		Env:    e,
-		engine: briefs.NewBriefEngine(e.Pool, people.NewStore(InstallationDB(e.Pool))),
+		engine: briefs.NewBriefEngine(e.Pool, contacts.NewStore(InstallationDB(e.Pool))),
 		now:    time.Date(2026, 6, 4, 8, 0, 0, 0, time.UTC),
 	}
 	b.nowFunc = func() time.Time { return b.now }
@@ -82,7 +82,7 @@ func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
 // The run's DATA CUTOFF reaches the feed, and it is the run's as_of.
 //
 // WHAT THIS DOES AND DOES NOT PROVE, stated plainly because the difference
-// matters to the next person who edits it. It proves the lane carries as_of. It
+// matters to the next contact who edits it. It proves the lane carries as_of. It
 // does NOT prove as_of was preferred over generated_at, and no test here can:
 // briefrank.go:242 and briefstore.go:133 both take the same `now`, so today the
 // two columns always hold the same instant and a fixture cannot tell them apart.

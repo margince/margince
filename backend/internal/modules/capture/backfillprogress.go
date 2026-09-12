@@ -137,7 +137,7 @@ func (c *pageProgress) Observed(ctx context.Context, scanned, captured, skipped 
 // nothing downstream said so: they drive a progress display and divide into the
 // cost estimator's ratios, where a floor understates cost.
 //
-// The ledger is keyed on WHAT WAS CREATED — a person's row id, or the domain a
+// The ledger is keyed on WHAT WAS CREATED — a contact's row id, or the domain a
 // verdict was opened on — so writing the same creation twice writes it once.
 // That is what makes the write RETRYABLE, and the retry is what shrinks the
 // loss window from "any failure" to "a failure that outlives it".
@@ -209,8 +209,8 @@ type createdSubject struct {
 // createdSubjects names what one outcome created, or nothing.
 func createdSubjects(outcome EnsureOutcome) []createdSubject {
 	var out []createdSubject
-	if outcome.PersonCreated && outcome.PersonID != (ids.UUID{}) {
-		out = append(out, createdSubject{kind: "person", subject: outcome.PersonID.String()})
+	if outcome.ContactCreated && outcome.ContactID != (ids.UUID{}) {
+		out = append(out, createdSubject{kind: "contact", subject: outcome.ContactID.String()})
 	}
 	// The company kind counts domains this run QUEUED for a verdict, not
 	// companies it created — capture creates none. A run that met twelve new
@@ -264,10 +264,10 @@ func (c *pageProgress) recordCreations(ctx context.Context, created []createdSub
 		}
 		_, err := tx.Exec(ctx, `
 			UPDATE capture_backfill b
-			SET people_created = greatest(counted.people, b.people_created),
+			SET contacts_created = greatest(counted.contacts, b.contacts_created),
 			    companies_created = greatest(counted.companies, b.companies_created)
 			FROM (
-				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
+				SELECT count(*) FILTER (WHERE kind = 'contact') AS contacts,
 				       count(*) FILTER (WHERE kind = 'company_queued') AS companies
 				  FROM capture_backfill_creation
 				 WHERE backfill_id = $1

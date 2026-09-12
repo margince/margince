@@ -187,7 +187,7 @@ func ingestOne(ctx context.Context, rt extension.Runtime, req queued) (extension
 	// The OWNER, taken from the row and frozen there at arrival. The record lands
 	// on that member's LIVE authority — the core resolves what they may do right
 	// now — so a member demoted since the request arrived lands nothing, which is
-	// the point of naming a person rather than the installation.
+	// the point of naming a contact rather than the installation.
 	return rt.Ingest(ctx, extension.UserID(req.owner), rec)
 }
 

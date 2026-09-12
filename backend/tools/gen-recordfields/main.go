@@ -38,7 +38,7 @@ import (
 // IS that vocabulary — and the order is the one the rendered text uses, so the
 // description is byte-stable across processes.
 var recordBodies = []struct{ recordType, create, update string }{
-	{"person", "CreatePersonRequest", "UpdatePersonRequest"},
+	{"contact", "CreateContactRequest", "UpdateContactRequest"},
 	{"company", "CreateCompanyRequest", "UpdateCompanyRequest"},
 	{"deal", "CreateDealRequest", "UpdateDealRequest"},
 	{"lead", "CreateLeadRequest", "UpdateLeadRequest"},

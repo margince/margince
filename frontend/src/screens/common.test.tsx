@@ -87,7 +87,7 @@ describe("CreateAction dedupe link", () => {
             details: { existing_id: "01ABC" },
           })
         }
-        invalidate="people"
+        invalidate="contacts"
         screen="contacts"
         resolveExisting={(_code, id) => ({ screen: "contacts", id })}
       />,
@@ -148,7 +148,7 @@ describe("problemMessage", () => {
       t,
     );
     const rowDenial = problemMessage(
-      { code: "permission_denied", detail: "person:update denied" },
+      { code: "permission_denied", detail: "contact:update denied" },
       t,
     );
     expect(rowDenial).toBe(objectDenial);
@@ -177,11 +177,14 @@ describe("problemMessage", () => {
   // them — so this is the same nothing, spelled longer.
   it("stands in for a wrapped sentinel too, and never shows the object and verb", () => {
     const message = problemMessage(
-      { code: "permission_denied", detail: "person.update: permission denied" },
+      {
+        code: "permission_denied",
+        detail: "contact.update: permission denied",
+      },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("person.update");
+    expect(message).not.toContain("contact.update");
   });
 
   it("keeps the server detail when no translator is given", () => {
@@ -335,9 +338,9 @@ describe("provenanceOf", () => {
     // contract enumerates are four different answers to "who do I ask", and
     // routing the unrecognised ones into the agent arm made a scheduled sweep
     // announce itself as an AI.
-    expect(provenanceOf("system:person_auto_enrich")).toEqual({
+    expect(provenanceOf("system:contact_auto_enrich")).toEqual({
       kind: "system",
-      job: "person_auto_enrich",
+      job: "contact_auto_enrich",
     });
     // A kind this app cannot read names no actor rather than the wrong one.
     expect(provenanceOf("capture")).toEqual({ kind: "unknown" });
@@ -345,7 +348,7 @@ describe("provenanceOf", () => {
 
   it("says a job ran without naming one when the wire names none", () => {
     // The privacy-retention sweep stamps a bare `system`, so the kind is all
-    // there is; the tag still has to say it was the system and not a person.
+    // there is; the tag still has to say it was the system and not a contact.
     expect(provenanceOf("system")).toEqual({ kind: "system", job: undefined });
   });
 
@@ -449,7 +452,7 @@ describe("provenanceOf", () => {
     // A buyer's own write stamps `buyer:<participant uuid>` — the principal is
     // the participant — and with no arm for it the string fell through to the
     // fallback below, which says nobody recorded a source. The source IS
-    // recorded here, and it is a person: the two are one branch apart, so both
+    // recorded here, and it is a contact: the two are one branch apart, so both
     // are asserted together.
     expect(provenanceOf("buyer:0192abcd-2222-4222-8222-222222222222")).toEqual({
       kind: "buyer",

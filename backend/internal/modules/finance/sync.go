@@ -16,7 +16,7 @@ package finance
 // The write shape here is the mirrored row and its audit row in ONE
 // transaction, `captured_by` stamped from the connector principal the sweep
 // runs as — which is what makes every mirrored row say a connector wrote it
-// rather than a person. There is no outbox event, and audit.go carries the
+// rather than a contact. There is no outbox event, and audit.go carries the
 // whole reason: the event catalog is closed and holds no finance type, so the
 // mirror publishes nothing until the contract ratifies one.
 

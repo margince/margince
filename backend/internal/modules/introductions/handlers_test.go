@@ -28,11 +28,11 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 	decided := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
 	r := &Request{
 		ID:               ids.NewV7(),
-		PersonID:         ids.NewV7(),
+		ContactID:        ids.NewV7(),
 		RequesterUserID:  ids.NewV7(),
 		IntroducerUser:   ids.NewV7(),
 		RouteType:        "through_contact",
-		ThroughPersonID:  &through,
+		ThroughContactID: &through,
 		InternalReason:   "she ran the migration we are pitching",
 		ValueForTarget:   "a shorter path to the same answer",
 		ForwardableNote:  "Hallo Dana, darf ich vorstellen",
@@ -65,7 +65,7 @@ func TestTheWireCarriesEachPieceOfCopySeparately(t *testing.T) {
 	if got.NoteGeneratedBy != crmcontracts.IntroNoteOriginIntroNoteOriginModel || !got.NoteAiGenerated {
 		t.Errorf("provenance went out as %q / %v", got.NoteGeneratedBy, got.NoteAiGenerated)
 	}
-	if got.ThroughPersonId == nil || ids.UUID(*got.ThroughPersonId) != through {
+	if got.ThroughContactId == nil || ids.UUID(*got.ThroughContactId) != through {
 		t.Error("the intermediary did not reach the wire")
 	}
 	if got.SuggestedUserId == nil || ids.UUID(*got.SuggestedUserId) != suggested {
@@ -93,7 +93,7 @@ func TestUnsetCopyIsAbsentRatherThanEmpty(t *testing.T) {
 	if got.ForwardableNote != nil {
 		t.Errorf("an unwritten forwardable_note went out as %q", *got.ForwardableNote)
 	}
-	if got.ThroughPersonId != nil || got.SuggestedUserId != nil || got.SourceActivityId != nil {
+	if got.ThroughContactId != nil || got.SuggestedUserId != nil || got.SourceActivityId != nil {
 		t.Error("an unset id went out as a value")
 	}
 }
@@ -120,7 +120,7 @@ func TestANameDroppedAskCarriesNoIntroducedAt(t *testing.T) {
 	}
 }
 
-// A client that sends no provenance has a person typing. Defaulting the other
+// A client that sends no provenance has a contact typing. Defaulting the other
 // way would mark honest copy as machine-authored, which is the same lie in
 // reverse and just as visible to whoever reads the disclosure.
 func TestUnstatedProvenanceIsHuman(t *testing.T) {
@@ -152,27 +152,27 @@ func TestARouteNamesItsIntermediaryOrIsDirect(t *testing.T) {
 	id := openapi_types.UUID(ids.NewV7())
 	cases := []struct {
 		name    string
-		route   crmcontracts.PersonGraphRouteType
+		route   crmcontracts.ContactGraphRouteType
 		through *openapi_types.UUID
 		refused bool
 	}{
-		{"direct with nobody named", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect, nil, false},
-		{"through a named contact", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact, &id, false},
-		{"direct that names somebody", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeDirect, &id, true},
-		{"through nobody", crmcontracts.PersonGraphRouteTypePersonGraphRouteTypeThroughContact, nil, true},
+		{"direct with nobody named", crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeDirect, nil, false},
+		{"through a named contact", crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeThroughContact, &id, false},
+		{"direct that names somebody", crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeDirect, &id, true},
+		{"through nobody", crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeThroughContact, nil, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			body, err := json.Marshal(crmcontracts.IntroRequestInput{
 				IntroducerUserId: openapi_types.UUID(ids.NewV7()),
 				RouteType:        c.route,
-				ThroughPersonId:  c.through,
+				ThroughContactId: c.through,
 				InternalReason:   "worth asking",
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			req := httptest.NewRequest(http.MethodPost, "/v1/people/x/intro-requests",
+			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/intro-requests",
 				bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()

@@ -5,12 +5,12 @@
 
 package compose
 
-// Two people reversing ONE audited link change, with the race FORCED rather than
+// Two contacts reversing ONE audited link change, with the race FORCED rather than
 // hoped for.
 //
 // The window is between the binding edge decision and the edge write: the
 // decision reads the edge's version and the write pins it, and the two are
-// separate transactions because the write is the people store's own. A test that
+// separate transactions because the write is the contacts store's own. A test that
 // starts two requests and lets the scheduler decide can pass as a sequential
 // "the second one loses", which says nothing about a reverse overtaken INSIDE
 // that window — the only place the defect lives. So the first reverser is held
@@ -23,8 +23,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -68,24 +68,24 @@ func TestAnEdgeReverseOvertakenInsideItsDecisionWindowRefuses(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	personID := e.SeedPerson(t, "Ada Overtaken", nil)
+	contactID := e.SeedContact(t, "Ada Overtaken", nil)
 	companyID := e.SeedCompany(t, "Overtaken GmbH", nil)
-	person := ids.From[ids.PersonKind](personID)
+	contact := ids.From[ids.ContactKind](contactID)
 	company := ids.From[ids.CompanyKind](companyID)
 	held, changed := "cto", "coo"
-	edge, err := e.People.CreateRelationship(ctx, people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &person, CompanyID: &company,
+	edge, err := e.Contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company,
 		Role: &held, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seed the link through the real writer: %v", err)
 	}
-	if _, err := e.People.UpdateRelationship(ctx, edge.ID,
-		people.UpdateRelationshipInput{Role: &changed}); err != nil {
+	if _, err := e.Contacts.UpdateRelationship(ctx, edge.ID,
+		contacts.UpdateRelationshipInput{Role: &changed}); err != nil {
 		t.Fatalf("change the link through the real writer: %v", err)
 	}
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge.ID, "update")
-	version := currentVersion(t, e, "person", personID)
+	version := currentVersion(t, e, "contact", contactID)
 
 	decided, release := make(chan struct{}), make(chan struct{})
 	overtaken := restoreSeamFor(e)
@@ -95,13 +95,13 @@ func TestAnEdgeReverseOvertakenInsideItsDecisionWindowRefuses(t *testing.T) {
 	}
 	refusal := make(chan error, 1)
 	go func() {
-		_, err := overtaken.Restore(ctx, "person", personID, auditID, version)
+		_, err := overtaken.Restore(ctx, "contact", contactID, auditID, version)
 		refusal <- err
 	}()
 
 	<-decided
 	// The whole second reverse — decision and write — inside the first's window.
-	if _, err := restoreSeamFor(e).Restore(ctx, "person", personID, auditID, version); err != nil {
+	if _, err := restoreSeamFor(e).Restore(ctx, "contact", contactID, auditID, version); err != nil {
 		t.Fatalf("the overtaking reverse: %v", err)
 	}
 	close(release)

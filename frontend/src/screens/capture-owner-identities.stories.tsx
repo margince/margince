@@ -50,7 +50,7 @@ const meta: Meta<typeof OwnerIdentitiesCard> = {
 export default meta;
 type Story = StoryObj<typeof OwnerIdentitiesCard>;
 
-// Both kinds at once: one address, and a whole domain the same person reads.
+// Both kinds at once: one address, and a whole domain the same contact reads.
 // The kind is the row's answer, because "l.jankowfsky@privat.example" and
 // "privat.example" bind very different amounts of mail and the row has to say
 // which it is.

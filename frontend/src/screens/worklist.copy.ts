@@ -10,7 +10,11 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
-import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
+import {
+  BRIEF_PARAM,
+  COMPOSE_PARAM,
+  THREAD_PARAM,
+} from "./contactpage.address";
 import { settingsHref } from "./settingsrouting";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -36,7 +40,7 @@ type T = ReturnType<typeof useT>;
 // Which record an item points at, as an address the router understands.
 //
 // Through the entity registry, never a switch written here: the record types
-// have route names of their own (`contacts`, not `people`), and a second
+// have route names of their own (`contacts`, not `contacts`), and a second
 // spelling of them sends a reader to a page that does not exist. An activity
 // resolves to nothing on purpose — it is a timeline entry rather than a record
 // with a page, so naming it on the row is honest and linking it is not.
@@ -106,7 +110,7 @@ export function rowHref(item: WorklistItem): string | undefined {
 export function askHref(item: WorklistItem): string | undefined {
   if (
     item.source !== "introduction_request" ||
-    item.subject?.type !== "person"
+    item.subject?.type !== "contact"
   ) {
     return undefined;
   }
@@ -115,7 +119,7 @@ export function askHref(item: WorklistItem): string | undefined {
 
 // One comparator value, in the reader's notation.
 //
-// A magnitude written in the wrong notation is a different number to the person
+// A magnitude written in the wrong notation is a different number to the contact
 // reading it: a German reader reads "1.234", and the coerced form says
 // something else.
 function valueText(
@@ -315,7 +319,7 @@ function paired(
 //
 // The comparator that DECIDED, with both sides' values — so a reader can check
 // the order rather than trust it. `order` means every comparator tied and the
-// ids broke it, which is not a reason a person needs to read, so it draws
+// ids broke it, which is not a reason a contact needs to read, so it draws
 // nothing at all.
 export function comparisonText(
   comparison: WorklistComparison | undefined,
@@ -458,7 +462,7 @@ function momentText(
 //
 // Compared in the VIEWER's zone rather than the runner's, because the whole row
 // is drawn in that zone: a meeting at 23:30 in Berlin, read on a machine set to
-// UTC, is still tonight's meeting to the person reading it.
+// UTC, is still tonight's meeting to the reader reading it.
 function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
   return calendarDay(new Date(utcIso), zone) === calendarDay(now, zone);
 }
@@ -469,12 +473,12 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // entry with no page of its own — `app/entity.ts` says so in as many words —
 // so `#/activities/<id>` would be a control that goes nowhere.
 //
-// A `draft_reply` row whose subject is a PERSON opens the composer, through
-// `?compose=reply` on their record (personpage.tsx COMPOSE_PARAM). Everything
+// A `draft_reply` row whose subject is a CONTACT opens the composer, through
+// `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything
 // else lands on the record itself, and its verb says so.
 //
-// WHY ONLY A PERSON. The composer lives on the person page and drafts to the
-// person, choosing its transport from their own reachability. A deal or an
+// WHY ONLY A CONTACT. The composer lives on the contact page and drafts to the
+// contact, choosing its transport from their own reachability. A deal or an
 // company has no composer to open, so a link claiming to draft there would
 // promise what the click cannot do — the defect this function's own comment
 // warned about before the route existed.
@@ -490,13 +494,13 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // answering.
 // The verbs this row can take a reader to.
 //
-// Both end at a person's composer, and which of the two the server chose
+// Both end at a contact's composer, and which of the two the server chose
 // reaches the address as well as the label: `draft_reply` names the message it
 // answers, `draft_email` names none because it is opening a conversation.
 //
 // `open_meeting_brief` is the third, and it lands somewhere else entirely: the
-// brief is read as `?prep=<activity>` on the PERSON's record, so the address
-// needs an id the subject does not carry. The server sends it as `with_person`,
+// brief is read as `?prep=<activity>` on the CONTACT's record, so the address
+// needs an id the subject does not carry. The server sends it as `with_contact`,
 // and only where the meeting names somebody this reader may see.
 //
 // It used to be described here as PERFORMED rather than navigated — "opens a
@@ -524,7 +528,7 @@ const NAVIGABLE_MOVES = new Set([
  * `activity_id` names nothing to answer — schema-valid, since the field is
  * optional for the verbs that take no record, and undrawable all the same.
  *
- * `draft_email` needs none: an opening outreach is a first message to a person,
+ * `draft_email` needs none: an opening outreach is a first message to a contact,
  * and there is no earlier record for it to name.
  */
 function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
@@ -538,17 +542,17 @@ function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
  * The brief's address: which meeting, on whose page.
  *
  * BOTH ids, because neither names it. The activity says which meeting to brief
- * and the person says whose record it opens on — the brief is not a page of its
+ * and the contact says whose record it opens on — the brief is not a page of its
  * own. A row missing either names nothing openable and draws no control, which
  * is the same promise every other verb here makes about its own operand.
  */
 function briefHref(item: WorklistItem): string | undefined {
   const meeting = item.move?.activity_id;
-  if (!meeting || !item.with_person) {
+  if (!meeting || !item.with_contact) {
     return undefined;
   }
-  const person = routeHash(ENTITY.person.route(item.with_person));
-  return `${person}?${BRIEF_PARAM}=${meeting}`;
+  const contact = routeHash(ENTITY.contact.route(item.with_contact));
+  return `${contact}?${BRIEF_PARAM}=${meeting}`;
 }
 
 export function moveHref(item: WorklistItem): string | undefined {
@@ -561,7 +565,7 @@ export function moveHref(item: WorklistItem): string | undefined {
   }
   const record = subjectHref(item);
   if (move.action === "open_task") return record;
-  if (!record || item.subject?.type !== "person") {
+  if (!record || item.subject?.type !== "contact") {
     return record;
   }
   // The message the row is about travels with the ask. Without it the composer
@@ -588,7 +592,7 @@ export function moveOpensComposer(item: WorklistItem): boolean {
     move !== undefined &&
     NAVIGABLE_MOVES.has(move.action) &&
     moveIsComplete(move) &&
-    item.subject?.type === "person"
+    item.subject?.type === "contact"
   );
 }
 

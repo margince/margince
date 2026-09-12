@@ -12,7 +12,7 @@ import (
 // registeredIDTypes lists one scalar and one slice specimen per entity
 // id. Scalars encode/scan through the stdlib driver.Valuer/sql.Scanner
 // fallbacks without registration; the registration exists for the
-// SLICE forms — pgx can only encode []ids.PersonID as a uuid[] bind
+// SLICE forms — pgx can only encode []ids.ContactID as a uuid[] bind
 // parameter (the `= ANY($1)` idiom) when the element's default OID is
 // known.
 //
@@ -21,7 +21,7 @@ var registeredIDTypes = []struct{ scalar, slice any }{
 	{ids.WorkspaceID{}, []ids.WorkspaceID{}},
 	{ids.UserID{}, []ids.UserID{}},
 	{ids.TeamID{}, []ids.TeamID{}},
-	{ids.PersonID{}, []ids.PersonID{}},
+	{ids.ContactID{}, []ids.ContactID{}},
 	{ids.CompanyID{}, []ids.CompanyID{}},
 	{ids.LeadID{}, []ids.LeadID{}},
 	{ids.DealID{}, []ids.DealID{}},

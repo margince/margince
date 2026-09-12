@@ -8,16 +8,16 @@ package approvals
 // A second agent passport, lent by a SECOND human, approving a
 // confirmation-required action it never staged — against a real database.
 //
-// The self-approval rule bound the CREDENTIAL and nothing bound the PERSON, so
-// two passports lent by two people walked a confirm-first action through end to
+// The self-approval rule bound the CREDENTIAL and nothing bound the HUMAN, so
+// two passports lent by two contacts walked a confirm-first action through end to
 // end — A's stages, B's approves, A's redeems — and the decide route is itself
 // auto_execute, so B's approval needed no confirmation of its own. The whole
 // "a human must look at this" guarantee of the tier was satisfied by a second
-// autonomous agent instead of a person.
+// autonomous agent instead of a contact.
 //
 // It lives here rather than in the unit suite because approval.passport_id and
 // approval.on_behalf_of are foreign keys: the two credentials and the two
-// people have to be real rows, and a fabricated id exercises a shape the
+// contacts have to be real rows, and a fabricated id exercises a shape the
 // database refuses rather than the rule under test.
 
 import (
@@ -56,7 +56,7 @@ func (e *stagingEnv) lentPassport(t *testing.T, human ids.UUID) context.Context 
 	})
 }
 
-func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *testing.T) {
+func TestASecondContactsPassportDoesNotReleaseAConfirmationRequiredAction(t *testing.T) {
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -77,9 +77,9 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 	// The three credentials the sequence needs, minted ONCE each: redemption is
 	// bound to the passport that staged, so a fresh context per call would
 	// exercise that binding instead of the rule under test.
-	stager := e.lentPassport(t, e.rep)       // A's, which stages and redeems
-	sameperson := e.lentPassport(t, e.rep)   // A's SECOND, the sanctioned decider
-	otherperson := e.lentPassport(t, second) // B's, the attacker
+	stager := e.lentPassport(t, e.rep)        // A's, which stages and redeems
+	samecontact := e.lentPassport(t, e.rep)   // A's SECOND, the sanctioned decider
+	othercontact := e.lentPassport(t, second) // B's, the attacker
 
 	staging := func(name, hash string) StageInput {
 		return StageInput{
@@ -96,15 +96,15 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 	attacked := staging("Gitex Global", "cross-passport")
 	staged, err := e.svc.Stage(stager, attacked)
 	if err != nil {
-		t.Fatalf("staging as the first person's agent: %v", err)
+		t.Fatalf("staging as the first contact's agent: %v", err)
 	}
 
 	// Step 2, and the defect: B's passport — a different token, a different
 	// human, never having seen the proposal — approves it. The exact sentinel,
 	// because the surface answers 403 on this refusal and a bare non-nil check
 	// would stay green if it became an unrelated internal failure.
-	if _, err := e.svc.Decide(otherperson, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a second person's passport approved an action staged for somebody else → %v, want "+
+	if _, err := e.svc.Decide(othercontact, staged, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a second contact's passport approved an action staged for somebody else → %v, want "+
 			"ErrPermissionDenied — two agents then push any confirmation-required mutation through "+
 			"end to end with no human in the loop", err)
 	}
@@ -112,23 +112,23 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 	// A rejection is still allowed: it discards the proposal and cannot
 	// escalate, and an agent unable to take a request off a desk is an obstacle
 	// rather than a rule.
-	if _, err := e.svc.Decide(otherperson, staged, false, nil); err != nil {
-		t.Errorf("a second person's passport could not REJECT the proposal: %v", err)
+	if _, err := e.svc.Decide(othercontact, staged, false, nil); err != nil {
+		t.Errorf("a second contact's passport could not REJECT the proposal: %v", err)
 	}
 
 	// THE POSITIVE CONTROL, and it runs all three steps to the
 	// end. Without it this test also passes when no passport can decide anything
 	// and the tier has simply stopped working: a SECOND credential of the SAME
-	// person releases it, and A's staging credential then redeems and the effect
-	// runs — the path the product deliberately allows, because that person could
+	// contact releases it, and A's staging credential then redeems and the effect
+	// runs — the path the product deliberately allows, because that contact could
 	// have answered it in the CRM themselves.
-	control := staging("Gitex Worldwide", "same-person")
+	control := staging("Gitex Worldwide", "same-contact")
 	sanctioned, err := e.svc.Stage(stager, control)
 	if err != nil {
 		t.Fatalf("staging the control proposal: %v", err)
 	}
-	if _, err := e.svc.Decide(sameperson, sanctioned, true, nil); err != nil {
-		t.Fatalf("another credential of the SAME person was refused: %v — the rule binds the person, "+
+	if _, err := e.svc.Decide(samecontact, sanctioned, true, nil); err != nil {
+		t.Fatalf("another credential of the SAME human was refused: %v — the rule binds the human, "+
 			"not the credential, and this is the path the product deliberately allows", err)
 	}
 	// Redeeming is step 3, and it is also what keeps this test
@@ -136,6 +136,6 @@ func TestASecondPersonsPassportDoesNotReleaseAConfirmationRequiredAction(t *test
 	// approved stagings nobody came back for, so a control stopping at the
 	// decision would leave a row the sweep's own tests report as a second lapse.
 	if _, _, err := e.svc.Redeem(stager, sanctioned, control.Kind, control.DiffHash); err != nil {
-		t.Errorf("the staging credential could not redeem what its person released: %v", err)
+		t.Errorf("the staging credential could not redeem what its contact released: %v", err)
 	}
 }

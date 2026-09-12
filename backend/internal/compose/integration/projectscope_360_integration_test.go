@@ -26,7 +26,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/company360"
-	"github.com/margince/margince/backend/internal/compose/person360"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -98,13 +98,13 @@ func assertScopedNeighbours(t *testing.T, f scopeFixture, tasks map[string]bool,
 
 func activityIDOf(id openapi_types.UUID) *string { s := id.String(); return &s }
 
-func TestPerson360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+func TestContact360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := personRoomService(e)
-	personID := PersonIDOf(f.person)
+	svc := contactRoomService(e)
+	contactID := ContactIDOf(f.contact)
 
-	scoped, err := svc.AssembleScoped(e.Admin(), personID, person360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), contactID, contact360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestPerson360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 
 	// Unscoped, the same page still shows the other engagement and dates its
 	// last touch from it — so the narrowing above is the scope's doing.
-	wide, err := svc.Assemble(e.Admin(), personID)
+	wide, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestPerson360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()),
+	svc := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return roomFixedNow })
 	companyID := companyIDOf(f.company)
 
@@ -190,28 +190,28 @@ func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
 	f := seedTwoEngagementAccount(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "project"))
 	nobodyID := ids.From[ids.ProjectKind](ids.NewV7())
-	person := string(datasource.RecordPerson)
+	contact := string(datasource.RecordContact)
 
 	if _, _, err := e.Activities.ListActivities(rep, activities.ListActivitiesInput{
-		EntityType: &person, EntityID: &f.person, WithinProjectID: &f.erp,
+		EntityType: &contact, EntityID: &f.contact, WithinProjectID: &f.erp,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("list scoped to a project without a project grant: err = %v, want permission denied", err)
 	}
 	if _, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{
-		EntityType: &person, EntityID: &f.person, WithinProjectID: &nobodyID,
+		EntityType: &contact, EntityID: &f.contact, WithinProjectID: &nobodyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("list scoped to a project that does not exist: err = %v, want not found", err)
 	}
 
-	personSvc := personRoomService(e)
-	if _, err := personSvc.AssembleScoped(rep, PersonIDOf(f.person), person360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("person page scoped without a project grant: err = %v, want permission denied", err)
+	contactSvc := contactRoomService(e)
+	if _, err := contactSvc.AssembleScoped(rep, ContactIDOf(f.contact), contact360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("contact page scoped without a project grant: err = %v, want permission denied", err)
 	}
-	if _, err := personSvc.AssembleScoped(e.Admin(), PersonIDOf(f.person), person360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("person page scoped to a project that does not exist: err = %v, want not found", err)
+	if _, err := contactSvc.AssembleScoped(e.Admin(), ContactIDOf(f.contact), contact360.AssembleOptions{ProjectID: &nobodyID}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("contact page scoped to a project that does not exist: err = %v, want not found", err)
 	}
 
-	companySvc := company360.NewService(e.Pool, e.People, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
+	companySvc := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()), func() time.Time { return roomFixedNow })
 	if _, err := companySvc.AssembleScoped(rep, companyIDOf(f.company), company360.AssembleOptions{ProjectID: &f.erp}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("company page scoped without a project grant: err = %v, want permission denied", err)
 	}
@@ -247,21 +247,21 @@ func TestAProjectScopeOnTheActivityListAnswers403And404OnTheWire(t *testing.T) {
 	}
 }
 
-// The person page's derived sections narrow with its timeline. Strength is the
+// The contact page's derived sections narrow with its timeline. Strength is the
 // one that says out loud which activities it rests on, so it is the one a
 // reader can catch disagreeing with the page: a score citing an activity the
 // scope dropped is a number the reader cannot check.
-func TestPerson360ScopedToOneProjectScoresFromOneEngagement(t *testing.T) {
+func TestContact360ScopedToOneProjectScoresFromOneEngagement(t *testing.T) {
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
-	svc := personRoomService(e)
-	personID := PersonIDOf(f.person)
+	svc := contactRoomService(e)
+	contactID := ContactIDOf(f.contact)
 
-	scoped, err := svc.AssembleScoped(e.Admin(), personID, person360.AssembleOptions{ProjectID: &f.erp})
+	scoped, err := svc.AssembleScoped(e.Admin(), contactID, contact360.AssembleOptions{ProjectID: &f.erp})
 	if err != nil {
 		t.Fatalf("assemble scoped: %v", err)
 	}
-	wide, err := svc.Assemble(e.Admin(), personID)
+	wide, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
 		t.Fatalf("assemble unscoped: %v", err)
 	}

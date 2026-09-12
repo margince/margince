@@ -67,7 +67,7 @@ export function useMaxUploadBytes(): number | undefined {
 }
 
 /**
- * The ceiling as a person reading a form would write it: decimal MB, exactly.
+ * The ceiling as a reader reading a form would write it: decimal MB, exactly.
  *
  * Decimal because that is what the server enforces and what its refusal says. A
  * binary megabyte here would state a limit 4.8% larger than the real one, and

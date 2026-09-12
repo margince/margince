@@ -18,9 +18,9 @@ package deals
 // clause below is what makes that choice bite: without it every reader would
 // get the same rows and the principal would be decoration.
 //
-// Names are deliberately NOT resolved here. This module cannot import people,
+// Names are deliberately NOT resolved here. This module cannot import contacts,
 // and the composition root attaches them inside the same owner-bound
-// transaction through PersonNamesTx, which carries the person object gate a
+// transaction through ContactNamesTx, which carries the contact object gate a
 // local copy would drop.
 
 import (
@@ -44,11 +44,11 @@ type QuietSide struct {
 	// The reason says what actually happened, and "wrote" on a phone call is a
 	// small lie that costs the sentence its authority.
 	Kind string
-	// PersonID is the counterparty the message was from (inbound) or to
-	// (outbound). Zero when the address never matched a person — an unmatched
+	// ContactID is the counterparty the message was from (inbound) or to
+	// (outbound). Zero when the address never matched a contact — an unmatched
 	// address is common, and privacy erasure actively nulls the link — so a
 	// reader must treat this as "who, if we know".
-	PersonID ids.UUID
+	ContactID ids.UUID
 }
 
 // QuietFacts is what the sweep knows about a deal's silence: the last time each
@@ -120,7 +120,7 @@ func ReadQuietFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (QuietFac
 
 // readQuietSide is one direction's arm, reporting whether the deal has a
 // message that way at all. The participant lookup may find nobody: a message
-// whose address never matched a person still tells the reader WHEN the side
+// whose address never matched a contact still tells the reader WHEN the side
 // last spoke, and dropping it would report a deal as never-contacted because
 // the address is unknown.
 func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction, role string) (QuietSide, bool, error) {
@@ -150,23 +150,23 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 	// the statement at runtime with nothing to catch it.
 	//
 	// The counterparty is named only when there is exactly ONE participant in
-	// that role. A message to four people has no single person the silence
+	// that role. A message to four contacts has no single contact the silence
 	// belongs to, and picking one — by id order or any other arbitrary rule —
 	// would print a name the reader can check and find misleading. Group
 	// correspondence therefore reports its dates with no name attached, which is
 	// the true answer.
 	//
 	// The count is over EVERY participant in the role, not only the matched
-	// ones. An address that never resolved to a person is still somebody on the
-	// thread, so counting matches alone would read "one person plus three
+	// ones. An address that never resolved to a contact is still somebody on the
+	// thread, so counting matches alone would read "one contact plus three
 	// unknown addresses" as a private exchange and name them for it.
 	var side QuietSide
-	var personID *ids.UUID
+	var contactID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT a.occurred_at, a.kind,
-		       (SELECT sole.person_id FROM activity_participant sole
+		       (SELECT sole.contact_id FROM activity_participant sole
 		         WHERE sole.activity_id = a.id AND sole.role = $%[3]d
-		           AND sole.person_id IS NOT NULL
+		           AND sole.contact_id IS NOT NULL
 		           AND (SELECT count(*) FROM activity_participant every
 		                 WHERE every.activity_id = a.id AND every.role = $%[3]d) = 1)
 		FROM activity a
@@ -174,15 +174,15 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		WHERE a.archived_at IS NULL AND %[4]s AND a.direction = $%[2]d
 		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope), args...).
-		Scan(&side.At, &side.Kind, &personID)
+		Scan(&side.At, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil
 	}
 	if err != nil {
 		return QuietSide{}, false, err
 	}
-	if personID != nil {
-		side.PersonID = *personID
+	if contactID != nil {
+		side.ContactID = *contactID
 	}
 	return side, true, nil
 }

@@ -16,7 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -33,11 +33,11 @@ import (
 // briefs handlers, and two embedded types called Handlers collide.
 type Reads struct {
 	pool *pgxpool.Pool
-	// people names the stakeholders a coverage payload seats. Injected rather
-	// than re-implemented here: PersonNames carries the person object gate as
+	// contacts names the stakeholders a coverage payload seats. Injected rather
+	// than re-implemented here: ContactNames carries the contact object gate as
 	// well as the row scope, and a second copy of that read is a second place
 	// for one of the two halves to go missing.
-	people *people.Store
+	contacts *contacts.Store
 	// now is injected so the decayed scores are testable against a fixed
 	// clock. A score that reads time.Now() inside the handler cannot be
 	// asserted on without sleeping.
@@ -54,21 +54,21 @@ type Reads struct {
 }
 
 // NewReads builds the network surface over the pool.
-func NewReads(pool *pgxpool.Pool, ppl *people.Store) Reads {
-	return Reads{pool: pool, people: ppl, now: func() time.Time { return time.Now().UTC() }}
+func NewReads(pool *pgxpool.Pool, ppl *contacts.Store) Reads {
+	return Reads{pool: pool, contacts: ppl, now: func() time.Time { return time.Now().UTC() }}
 }
 
-// GetPersonNetwork implements GET /people/{id}/network.
-func (h Reads) GetPersonNetwork(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	personID := ids.From[ids.PersonKind](ids.UUID(id))
+// GetContactNetwork implements GET /contacts/{id}/network.
+func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	contactID := ids.From[ids.ContactKind](ids.UUID(id))
 	now := h.now()
-	var out crmcontracts.PersonNetwork
-	out.PersonId = id
-	out.Colleagues = []crmcontracts.PersonNetworkColleague{}
+	var out crmcontracts.ContactNetwork
+	out.ContactId = id
+	out.Colleagues = []crmcontracts.ContactNetworkColleague{}
 
 	ctx := r.Context()
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		// EdgesForPerson carries both gates: the person grant, and the row
+		// EdgesForContact carries both gates: the contact grant, and the row
 		// probe that 404s a contact this caller cannot read. Capture privacy
 		// rides that probe, so an unpromoted contact discloses neither its
 		// existence nor who talks to it.
@@ -76,13 +76,13 @@ func (h Reads) GetPersonNetwork(w http.ResponseWriter, r *http.Request, id crmco
 		// last contact, and the answer this endpoint promises is who is
 		// warmest — a recent one-line reply would evict the colleague who has
 		// worked the account for a year.
-		edges, err := search.EdgesForPerson(ctx, tx, personID.UUID, personNetworkFetch)
+		edges, err := search.EdgesForContact(ctx, tx, contactID.UUID, contactNetworkFetch)
 		if err != nil {
 			return err
 		}
 		search.SortByStrength(edges, now)
-		if len(edges) > personNetworkCap {
-			edges = edges[:personNetworkCap]
+		if len(edges) > contactNetworkCap {
+			edges = edges[:contactNetworkCap]
 		}
 		names, err := UserNames(ctx, tx, EdgeUsers(edges))
 		if err != nil {
@@ -100,15 +100,15 @@ func (h Reads) GetPersonNetwork(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// personNetworkCap bounds the answer. The question is "who should I ask", and
+// contactNetworkCap bounds the answer. The question is "who should I ask", and
 // nobody reads past the tenth name; an uncapped list would also make the
 // payload grow with a contact's history rather than with its relevance.
-const personNetworkCap = 10
+const contactNetworkCap = 10
 
-// personNetworkFetch is how many edges are read before ranking. Generous
+// contactNetworkFetch is how many edges are read before ranking. Generous
 // relative to the cap because the ranking is the point: too tight a fetch
 // reintroduces the eviction it exists to prevent.
-const personNetworkFetch = 100
+const contactNetworkFetch = 100
 
 // GetDealCoverage implements GET /deals/{id}/coverage.
 func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
@@ -119,7 +119,7 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 
 	ctx := r.Context()
 	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		// The deal gate first: a coverage payload names the deal's people, so
+		// The deal gate first: a coverage payload names the deal's contacts, so
 		// a caller who cannot read the deal must not learn who sits on it.
 		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 			return err
@@ -157,15 +157,15 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 // never spoken" and "we spoke and it went cold" are different facts, and a
 // zero renders them identically.
 //
-// Exported so the person composite read renders a colleague exactly as this
+// Exported so the contact composite read renders a colleague exactly as this
 // endpoint does — two spellings of the same row would let the network card and
 // the record page disagree about who is warmest.
-func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcontracts.PersonNetworkColleague {
+func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcontracts.ContactNetworkColleague {
 	score := e.StrengthOf(now)
-	out := crmcontracts.PersonNetworkColleague{
+	out := crmcontracts.ContactNetworkColleague{
 		UserId:          openapi_types.UUID(e.UserID),
 		DisplayName:     name,
-		StrengthBucket:  crmcontracts.PersonNetworkColleagueStrengthBucket(score.Bucket),
+		StrengthBucket:  crmcontracts.ContactNetworkColleagueStrengthBucket(score.Bucket),
 		Interactions90d: e.Count90d,
 		// The direction split, from the same projection the score reads.
 		// Without it a surface can say "6 exchanges" but not "6 two-way
@@ -189,12 +189,12 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 }
 
 func wireCoverage(
-	c DealCoverage, names map[ids.UUID]string, people map[ids.UUID]string,
+	c DealCoverage, names map[ids.UUID]string, contacts map[ids.UUID]string,
 ) crmcontracts.DealCoverage {
 	out := crmcontracts.DealCoverage{
 		DealId:       openapi_types.UUID(c.DealID),
 		Stakeholders: []crmcontracts.DealCoverageSeat{},
-		OurSide:      []crmcontracts.PersonNetworkColleague{},
+		OurSide:      []crmcontracts.ContactNetworkColleague{},
 		Risks:        []crmcontracts.DealCoverageRisk{},
 		// Present and empty on every read, never absent: the contract requires
 		// it, and a client that had to tell "no sections were withheld" from
@@ -208,21 +208,21 @@ func wireCoverage(
 	}
 	for _, s := range c.Stakeholders {
 		seat := crmcontracts.DealCoverageSeat{
-			PersonId: openapi_types.UUID(s.PersonID), Role: s.Role, Engaged: s.Engaged,
+			ContactId: openapi_types.UUID(s.ContactID), Role: s.Role, Engaged: s.Engaged,
 		}
-		// Absent rather than empty when the caller may not read the person:
+		// Absent rather than empty when the caller may not read the contact:
 		// the seat still counts toward coverage, and a "" would render as a
 		// nameless row that looks like a data fault rather than a boundary.
-		if name, ok := people[s.PersonID]; ok {
-			seat.PersonName = &name
+		if name, ok := contacts[s.ContactID]; ok {
+			seat.ContactName = &name
 		}
 		out.Stakeholders = append(out.Stakeholders, seat)
 	}
 	for _, e := range c.OurSide {
-		colleague := crmcontracts.PersonNetworkColleague{
+		colleague := crmcontracts.ContactNetworkColleague{
 			UserId:          openapi_types.UUID(e.UserID),
 			DisplayName:     names[e.UserID],
-			StrengthBucket:  crmcontracts.PersonNetworkColleagueStrengthBucket(e.Strength.Bucket),
+			StrengthBucket:  crmcontracts.ContactNetworkColleagueStrengthBucket(e.Strength.Bucket),
 			Interactions90d: e.Count90d,
 		}
 		if e.Strength.Bucket != relstrength.BucketNone {
@@ -233,10 +233,10 @@ func wireCoverage(
 	}
 	for _, r := range c.Risks {
 		risk := crmcontracts.DealCoverageRisk{
-			Kind:      crmcontracts.DealCoverageRiskKind(r.Kind),
-			Summary:   r.Summary,
-			PersonIds: wireIDs(r.PersonIDs),
-			UserIds:   wireIDs(r.UserIDs),
+			Kind:       crmcontracts.DealCoverageRiskKind(r.Kind),
+			Summary:    r.Summary,
+			ContactIds: wireIDs(r.ContactIDs),
+			UserIds:    wireIDs(r.UserIDs),
 		}
 		// Only going-cold carries a day count. Sending a zero on the others
 		// would read as "touched today", which is the opposite of the truth on
@@ -280,30 +280,30 @@ func coverageUsers(c DealCoverage) []ids.UUID {
 
 // seatNames names the stakeholders on a coverage payload.
 //
-// It delegates to people.PersonNames rather than reading `person` here, and
-// that is the whole point of the function: PersonNames carries BOTH halves of
-// the gate — the person object check and the row-scope clause — and a copy of
+// It delegates to contacts.ContactNames rather than reading `contact` here, and
+// that is the whole point of the function: ContactNames carries BOTH halves of
+// the gate — the contact object check and the row-scope clause — and a copy of
 // that read in this package would be a second place for one half to go
 // missing. It went missing here once already: this started life as a local
 // query with the row scope and no object gate, so a caller holding deal:read
-// without person:read was named the deal's contacts.
+// without contact:read was named the deal's contacts.
 //
-// A person the caller may not read is simply absent from the map, and their
-// seat ships unnamed: how many people carry a deal is not the secret, only who
+// A contact the caller may not read is simply absent from the map, and their
+// seat ships unnamed: how many contacts carry a deal is not the secret, only who
 // they are.
 func (h Reads) seatNames(ctx context.Context, tx pgx.Tx, c DealCoverage) (map[ids.UUID]string, error) {
 	if len(c.Stakeholders) == 0 {
 		return map[ids.UUID]string{}, nil
 	}
-	seated := make([]ids.PersonID, 0, len(c.Stakeholders))
+	seated := make([]ids.ContactID, 0, len(c.Stakeholders))
 	for _, s := range c.Stakeholders {
-		seated = append(seated, ids.From[ids.PersonKind](s.PersonID))
+		seated = append(seated, ids.From[ids.ContactKind](s.ContactID))
 	}
-	names, err := h.people.PersonNamesTx(ctx, tx, seated)
+	names, err := h.contacts.ContactNamesTx(ctx, tx, seated)
 	if err != nil {
-		// A caller who may read the deal but not people still gets their
+		// A caller who may read the deal but not contacts still gets their
 		// coverage — the seats simply arrive unnamed, which is what the
-		// contract's person_name already describes. Refusing the whole payload
+		// contract's contact_name already describes. Refusing the whole payload
 		// would take the findings away too, and those are about the deal.
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return map[ids.UUID]string{}, nil

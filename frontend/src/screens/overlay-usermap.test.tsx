@@ -41,7 +41,7 @@ const grace: Owner = {
 const mappedEntry: Entry = {
   user_id: "u1",
   email: "mapped@acme.test",
-  name: "Mapped Person",
+  name: "Mapped Contact",
   incumbent_user_id: "o1",
   incumbent_user_name: "Ada Lovelace",
   incumbent_user_email: "ada@acme.test",
@@ -401,7 +401,7 @@ describe("the mirror user-map card", () => {
     );
   });
 
-  it("names the other person when unmapping someone else", async () => {
+  it("names the other contact when unmapping someone else", async () => {
     renderCard({
       me: "admin-1",
       entries: [mappedEntry],
@@ -410,7 +410,9 @@ describe("the mirror user-map card", () => {
       await screen.findByRole("button", { name: /unmap/i }),
     );
     expect(
-      screen.getByText(/Mapped Person will stop seeing every mirrored record/i),
+      screen.getByText(
+        /Mapped Contact will stop seeing every mirrored record/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/you will stop seeing/i)).not.toBeInTheDocument();
   });
@@ -437,7 +439,9 @@ describe("the mirror user-map card", () => {
       await screen.findByText(/the workspace went native/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Mapped Person will stop seeing every mirrored record/i),
+      screen.getByText(
+        /Mapped Contact will stop seeing every mirrored record/i,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -560,7 +564,7 @@ describe("the mirror user-map card", () => {
     expect(
       screen.queryByText(/workspace is not in overlay mode/),
     ).not.toBeInTheDocument();
-    // Nor the words the admin typed for the other person: the dialog is mounted
+    // Nor the words the admin typed for the other contact: the dialog is mounted
     // only while a row is picking, so the next row opens a genuinely fresh one
     // rather than one carrying a query that was about somebody else.
     expect(screen.getByLabelText(/search .* users/i)).toHaveValue("");
@@ -665,7 +669,7 @@ describe("the mirror user-map card", () => {
     await userEvent.click(await screen.findByRole("button", { name: /^Map/ }));
     // The choice is made in a dialog, not in the row: a search field with its
     // own candidate list, truncation caveat and failure state is not an answer
-    // the row can state beside the person it is about.
+    // the row can state beside the contact it is about.
     const picker = await screen.findByRole("dialog");
     await userEvent.type(
       within(picker).getByLabelText(/search .* users/i),
@@ -942,7 +946,7 @@ describe("the mirror user-map card", () => {
     ).toHaveLength(1);
     // The first page's rows stay on screen — a next page appends, never
     // replaces.
-    expect(screen.getByText(/Mapped Person/)).toBeInTheDocument();
+    expect(screen.getByText(/Mapped Contact/)).toBeInTheDocument();
   });
 
   it("has nothing to show for a workspace with no users", async () => {

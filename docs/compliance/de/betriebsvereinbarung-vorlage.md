@@ -16,7 +16,7 @@ objektiv zur Überwachung von Verhalten und Leistung geeignet und damit nach
 ## 2. Geltungsbereich
 
 Alle Beschäftigten, deren dienstliches Postfach mit Margince verbunden wird.
-Die Verbindung erfolgt durch die beschäftigte Person selbst.
+Die Verbindung erfolgt durch die beschäftigte Contact selbst.
 
 ## 3. Was erfasst wird
 
@@ -45,7 +45,7 @@ bedürfen der vorherigen Zustimmung des Betriebsrats.
 ## 5. Sichtbarkeit
 
 Voreinstellung jedes Postfachs ist `classified`: erfasste Nachrichten sind
-zunächst nur der beschäftigten Person und den auf der Nachricht genannten
+zunächst nur der beschäftigten Contact und den auf der Nachricht genannten
 Personen zugänglich. Die Einstellung `shared`, bei der Nachrichten ab Eingang
 für Kolleginnen und Kollegen lesbar sind, wird **nur nach Zustimmung des
 Betriebsrats** freigeschaltet.
@@ -54,7 +54,7 @@ Eine Administratorin kann zurückgehaltene Inhalte nicht lesen.
 
 ## 6. Rechte der Beschäftigten
 
-Jede beschäftigte Person kann Absender ausschließen, bereits erfasste Post
+Jede beschäftigte Contact kann Absender ausschließen, bereits erfasste Post
 unwiderruflich löschen, jede automatische Entscheidung über ihre Korrespondenten
 einsehen und korrigieren, einzelne Threads freigeben oder privat halten und das
 Postfach jederzeit trennen. Diese Möglichkeiten dürfen nicht eingeschränkt

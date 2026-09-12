@@ -64,7 +64,7 @@ import (
 // publishing a number it cannot stand behind.
 //
 // NO WRITER TOMBSTONES A DEAL TODAY, so this excludes nothing in practice: the
-// scrub verbs are written against person, lead, activity, attachment,
+// scrub verbs are written against contact, lead, activity, attachment,
 // deal_room_participant, scheduled_send and the AI records. It is here because
 // it must be here BEFORE deal erasure lands rather than after — a boundary added
 // afterwards has already served the images it was meant to withhold. The day the

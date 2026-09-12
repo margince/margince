@@ -23,13 +23,13 @@ import type { WorklistItem } from "./worklist.queries";
 //
 // Read every frame in BOTH themes with the toolbar's Theme control.
 
-const PERSON = "01a05500-0000-7000-8000-0000000000aa";
+const CONTACT = "01a05500-0000-7000-8000-0000000000aa";
 
-function personRow(): WorklistItem {
+function contactRow(): WorklistItem {
   return {
     id: "one",
     title: "Kirsten Vogel is waiting on an answer",
-    subject: { type: "person", id: PERSON, label: "Kirsten Vogel" },
+    subject: { type: "contact", id: CONTACT, label: "Kirsten Vogel" },
   } as WorklistItem;
 }
 
@@ -64,9 +64,9 @@ type Story = StoryObj<typeof WorklistPane>;
  *  quiet since. */
 export const BothSidesSpoken: Story = {
   render: () =>
-    frame(personRow(), async () =>
+    frame(contactRow(), async () =>
       jsonResponse({
-        person: { id: PERSON, full_name: "Kirsten Vogel" },
+        contact: { id: CONTACT, full_name: "Kirsten Vogel" },
         last_inbound_at: "2026-03-14T08:12:00Z",
         last_outbound_at: "2026-08-30T16:40:00Z",
       }),
@@ -76,9 +76,9 @@ export const BothSidesSpoken: Story = {
 /** Nobody has ever answered them. "Never" is the reading, not a blank. */
 export const NeverAnswered: Story = {
   render: () =>
-    frame(personRow(), async () =>
+    frame(contactRow(), async () =>
       jsonResponse({
-        person: { id: PERSON, full_name: "Kirsten Vogel" },
+        contact: { id: CONTACT, full_name: "Kirsten Vogel" },
         last_inbound_at: "2026-08-30T16:40:00Z",
         last_outbound_at: null,
       }),
@@ -86,15 +86,15 @@ export const NeverAnswered: Story = {
 };
 
 /** The read failed. The pane says so and offers the retry rather than drawing
- *  a person with no history. */
+ *  a contact with no history. */
 export const CouldNotBeRead: Story = {
   render: () =>
-    frame(personRow(), async () =>
+    frame(contactRow(), async () =>
       jsonResponse({ title: "Upstream failed" }, 502),
     ),
 };
 
-/** A row about a deal rather than a person draws NOTHING — not an empty frame,
+/** A row about a deal rather than a contact draws NOTHING — not an empty frame,
  *  which would read as a pane that failed to arrive. */
 export const NoPaneForThisRow: Story = {
   render: () =>

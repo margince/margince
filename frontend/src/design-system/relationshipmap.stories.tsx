@@ -49,7 +49,7 @@ const FULL: RelationshipMapModel = {
     { id: "d-1", kind: "deal", label: "Retrofit 2026", sublabel: "Proposal" },
     {
       id: "p-1",
-      kind: "person",
+      kind: "contact",
       label: "Philipp Königs",
       sublabel: "CFO",
       engagement: "untried",
@@ -61,7 +61,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-2",
-      kind: "person",
+      kind: "contact",
       label: "Anne Wiegert",
       sublabel: "Head of Operations",
       engagement: "answered",
@@ -69,7 +69,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-3",
-      kind: "person",
+      kind: "contact",
       label: "Jan Roth",
       sublabel: "Workshop lead",
       engagement: "no_reply",
@@ -77,7 +77,7 @@ const FULL: RelationshipMapModel = {
     },
     {
       id: "p-4",
-      kind: "person",
+      kind: "contact",
       label: "Sabine Vogel",
       sublabel: "Head of Partnerships",
       engagement: "waiting",
@@ -227,7 +227,7 @@ export const LargeAccount: Story = {
         { id: "u-1", kind: "user", label: "Sofia Meier" },
         ...Array.from({ length: 14 }, (_, i) => ({
           id: `p-${i}`,
-          kind: "person" as const,
+          kind: "contact" as const,
           label: `Contact ${i + 1}`,
           engagement: "untried" as const,
           engagementLabel: "Not approached",

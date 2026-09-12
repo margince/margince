@@ -60,11 +60,11 @@ Where a carrier exists it is the better reporter and **the router stays silent**
 so the two never write one occurrence between them.
 
 The website read is the one carrier that is not a task. A deep read
-(`people/sitereadactivity.go`, `source=site_read`, kind `site_read`) is a crawl of
+(`contacts/sitereadactivity.go`, `source=site_read`, kind `site_read`) is a crawl of
 up to a dozen pages and several model calls, and the router announces each of
 those calls under its own task (`site_triage`, `site_extract`,
 `site_fact_extract`) — settled lines, because the router learns of a call once it
-is over. The dossier row is what can say `queued` when a person presses "read the
+is over. The dossier row is what can say `queued` when a contact presses "read the
 site" and `running` while the crawl is in flight, so the dossier announces
 itself, one occurrence per read, keyed on its own id. The two grains do not
 collide: they are different sources with different keys, and the rail draws the
@@ -86,7 +86,7 @@ somebody else by filling in a field.
 
 The last row is the interesting one: a human actor that does not parse is
 REFUSED rather than quietly made workspace-scoped, because quietly widening it is
-how one person's work becomes a system sweep nobody can find and nobody notices
+how one contact's work becomes a system sweep nobody can find and nobody notices
 is missing.
 
 Stated honestly: on a worker path `OnBehalfOf` is itself derived from the job's
@@ -103,11 +103,11 @@ rail — not by editorial choice, but structurally.
 `GET /me/ai-activity` (`aiactivity/read.go`), cookie-authenticated, `human-only`,
 read-only — no audit or event row.
 
-**The person is taken from the bound principal and is NOT a parameter, and that
+**The contact is taken from the bound principal and is NOT a parameter, and that
 is the whole of the authorization.** A store method that accepted a user id would
 let any in-process caller ask for somebody else's feed, and the only thing
 standing between that and a leak would be every caller remembering to pass its
-own. Here there is nothing to remember: another person's feed cannot be
+own. Here there is nothing to remember: another contact's feed cannot be
 expressed. No RBAC object gates it, because there is no wider set to withhold.
 
 Four properties worth knowing:
@@ -128,7 +128,7 @@ Four properties worth knowing:
   is what stops a worker that died mid-run from being displayed as working
   forever.
 - **`recent` is bounded** — since local midnight, at most 10. An unbounded
-  per-person history is a per-person activity ledger, which this installation
+  per-contact history is a per-contact activity ledger, which this installation
   deliberately does not keep. `summary` and `degrade_reason` are capped on the
   way to the wire (2000 / 500), because a model's whole output — possibly
   inflated by a prompt injection — otherwise ships to every open tab on every
@@ -191,14 +191,14 @@ requires it — not because a producer is missing.
 |---|---|---|
 | Watched by the asker | `growth_fit`, `cold_start`, `corpus_ask` | The work lands on the surface that asked and changes it on arrival. `growth_fit` renders the band it returns on the panel that asked. `cold_start` runs behind TWO product surfaces and both need naming (it declares four invocation *sites* in `aitaskregistry.go`, which is a different count and not the one that matters here): onboarding, whose screen is deliberately RAILLESS (`onboarding` is a member of `RAIL_LESS_SCREENS` in `nav.ts`, which `shell.tsx` reads to drop the chrome), and the company page's Enrich card — `cmd/api/modelwiring.go` wires `WithScrape` with the cold-start brain — where a rail does exist and the card itself renders the proposal. |
 | System sweep | `brief_ranking`, `capture_classify`, `capture_confidentiality_verdict`, `capture_counterparty_verdict`, `owed_verdict`, `propose_roles`, `rate_extract`, `signal_extract`, `transcript_propose`, `voice_build` | Background workspace work that belongs to nobody in particular, so it has no personal line to draw. |
-| The read narrates itself | `site_extract`, `site_fact_extract`, `site_triage` | These are the individual model calls a website read makes, and `site_read` above is the read: one occurrence for the whole crawl, announced by the dossier from queued to settled, so a line per call would tell one reading several times over. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). Attribution is a fact about the READ: a human-requested read carries that person as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. |
-| Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-person even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-person subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the person record. |
+| The read narrates itself | `site_extract`, `site_fact_extract`, `site_triage` | These are the individual model calls a website read makes, and `site_read` above is the read: one occurrence for the whole crawl, announced by the dossier from queued to settled, so a line per call would tell one reading several times over. A grain problem seals it: the occurrence key is correlation+task and a read's correlation is its `site_read` row id, so one read files one occurrence per lane it runs — and only a domain-triage read reaches all three (`site_triage` fires solely for `isDomainTriageRequest`). Attribution is a fact about the READ: a human-requested read carries that human as `on_behalf_of` and IS personal to them; a domain-triage or auto-enrich read names no human and is workspace-scoped. |
+| Reaches nobody, and would not be worth showing | `enrich` | Both halves matter. **Reachability:** its one production site is the signature-enrichment pass, which runs under a system principal with no `on_behalf_of` — so every occurrence is workspace-scoped with a NULL `actor_user_id`, and the personal feed selects on `actor_user_id`. **Worth:** it could not be per-contact even if it were reachable. The pass mints ONE correlation id for the whole run (`capture_enrich`, up to 100 candidates in series) and the occurrence key is correlation+task, so every candidate collapses into one row — a per-contact subject would make that row flap rather than narrate anybody. What a reader wants from it is what it FOUND, which is durable and already drawn as evidence-or-omit provenance on the contact record. |
 | An operator's measurement | `cert_judge` | The certification lane grading this build's own answers — not a rep's work. |
 | Declared, not built | `deal_health`, `nl_search`, `transcript` | Named in `api/ai-tasks.yaml`; no site runs them, so nothing reports them yet. |
 
 `enrich` is the one worth reading twice, because it looks visible and is not: the
-ticker's own `enrich` key names DIFFERENT work — a provider run on a person
-(`personprovider.tsx`), and the company page's Enrich card
+ticker's own `enrich` key names DIFFERENT work — a provider run on a contact
+(`contactprovider.tsx`), and the company page's Enrich card
 (`companies.tsx`), which POSTs `/companies/{id}/enrich` and therefore
 runs `cold_start`, not this task. The deep read rides its own `site-read` ticker
 key, not this one.
@@ -229,7 +229,7 @@ looked at.
 
 ### The ask: what this tab knows before the feed does
 
-The feed arrives on a poll, so between a person pressing "Draft with AI" and
+The feed arrives on a poll, so between a contact pressing "Draft with AI" and
 the next read there is a live model call nothing on screen reports. The client
 closes that window from its own end (`frontend/src/api/model-inflight.ts`): it
 counts every request it is holding open to a route whose handler calls a model
@@ -242,7 +242,7 @@ the request, so the feed's own line follows within seconds.
 **Which routes count is the contract's to say, not the client's.** An operation
 whose handler holds the request open on a model carries
 `x-waits-on-model: always` (a draft, the meeting brief — generated on every
-call) or `x-waits-on-model: on-miss` (the dossier, the person brief, the deal
+call) or `x-waits-on-model: on-miss` (the dossier, the contact brief, the deal
 status, the morning brief — served from a stored reading and generated only
 when there is none). The client's `MODEL_ROUTES` table (`api/client.ts`) is a
 declared mirror of the marked set, keyed by method AND path because the dossier
@@ -346,12 +346,12 @@ reporting nothing at all.
 - **`subject_type` / `subject_id` are forwarded, never filtered on.** The
   event envelope has both, `ai_task_run` has both columns, and the feed ships
   them beside `subject_label` so the rail can make the name a link to the
-  record (a company or a person; a document or a meeting has no page and stays
+  record (a company or a contact; a document or a meeting has no page and stays
   text). They travel on the same ground as the label — the source emitted them
-  only where the actor is the person the record was already shown to — and
-  the read stays keyed on the person alone. **A subject-scoped read is not a
+  only where the actor is the contact the record was already shown to — and
+  the read stays keyed on the contact alone. **A subject-scoped read is not a
   to-do.** It was designed and declined: it would replace an
-  authorization that holds by construction — another person's feed cannot be
+  authorization that holds by construction — another contact's feed cannot be
   expressed — with one that holds because a gate ran, and `auth.EnsureVisible`
   alone is not that gate (it checks no object grant, and for an identity table
   its clause is empty, so it returns success without a query). The one populated
@@ -360,10 +360,10 @@ reporting nothing at all.
   one population evict the other, which is the opposite of what a subject arm is
   for. If it is ever built it copies `ai/feedback.go`, which already spells the
   gate correctly.
-- **Per-person `enrich` narration was considered and declined**, not deferred.
+- **Per-contact `enrich` narration was considered and declined**, not deferred.
   The reason is in the census entry beside the code: the pass mints one
   correlation id for all its candidates, so they share a single occurrence that
-  no per-person subject could describe.
+  no per-contact subject could describe.
 
 [#2272]: https://github.com/margince/margince/issues/2272
 [#2276]: https://github.com/margince/margince/issues/2276

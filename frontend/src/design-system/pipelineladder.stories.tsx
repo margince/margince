@@ -47,7 +47,7 @@ const CHAT_MESSAGE: Rung[] = [
     subject_kind: "sender",
   }),
   rung({
-    stage: "person_create",
+    stage: "contact_create",
     order: 70,
     status: "done",
     subject_kind: "sender",
@@ -127,7 +127,7 @@ export const CannotBeToldToANonOwner: Story = {
         subject_kind: "sender",
       }),
       rung({
-        stage: "person_create",
+        stage: "contact_create",
         order: 70,
         status: "unknown",
         reason: "record_not_available",
@@ -228,7 +228,7 @@ export const EveryToneDark: Story = {
         reason: "derivation_failed",
       }),
       rung({
-        stage: "person_create",
+        stage: "contact_create",
         order: 70,
         status: "pending",
         subject_kind: "sender",

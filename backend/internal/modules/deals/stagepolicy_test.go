@@ -60,7 +60,7 @@ func TestAnUnmetRequiredCriterionOnlyObserves(t *testing.T) {
 // An OPTIONAL criterion left unmet does not REFUSE the move — the stage said
 // it was optional, and treating it as required would make the flag mean
 // nothing — but it does cost the move its automatic pass. A stage carrying an
-// unsettled criterion of any kind is one a person should glance at before the
+// unsettled criterion of any kind is one a contact should glance at before the
 // deal moves itself.
 func TestAnUnmetOptionalCriterionDoesNotRefuseButAsksForAGlance(t *testing.T) {
 	facts := settledFacts()
@@ -73,11 +73,11 @@ func TestAnUnmetOptionalCriterionDoesNotRefuseButAsksForAGlance(t *testing.T) {
 			"flag then means nothing (%s)", got.Reason)
 	}
 	if got.Outcome != OutcomeProposeConfirmFirst {
-		t.Errorf("an unmet optional criterion decided %q, want a card a person looks at", got.Outcome)
+		t.Errorf("an unmet optional criterion decided %q, want a card a contact looks at", got.Outcome)
 	}
 
 	// And it must outrank a measured autopilot: an unsettled criterion is
-	// exactly what a person should see before the deal moves itself.
+	// exactly what a contact should see before the deal moves itself.
 	facts.Autopilot = AutopilotFacts{Enabled: true, ThresholdsMet: true}
 	if got := DecideStageMove(facts); got.Outcome == OutcomeAutoApply {
 		t.Error("an unmet optional criterion auto-applied under a measured autopilot")
@@ -190,7 +190,7 @@ func TestAProtectedDealIsNeverProposed(t *testing.T) {
 
 // Protection outranks a perfect case, INCLUDING a measured autopilot: a
 // product that moved a deal the rep had just steered would be arguing with the
-// person it works for, and doing it silently.
+// contact it works for, and doing it silently.
 func TestProtectionOutranksAMeasuredAutopilot(t *testing.T) {
 	facts := settledFacts()
 	facts.Protected = true
@@ -214,7 +214,7 @@ func TestEnteringOrLeavingWonOrLostIsAlwaysConfirmFirst(t *testing.T) {
 	}
 }
 
-// A terminal move stays a person's call however well measured the transition
+// A terminal move stays a contact's call however well measured the transition
 // is. This is the row a future autopilot must not be able to reach.
 func TestNoFactCombinationYieldsAutoApplyOntoATerminalStage(t *testing.T) {
 	facts := settledFacts()

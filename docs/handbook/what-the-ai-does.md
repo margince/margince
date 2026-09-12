@@ -1,16 +1,16 @@
 # What the AI does, and what it does not
 
-Margince is built to be worked in by AI agents as well as by people. That is
+Margince is built to be worked in by AI agents as well as by contacts. That is
 the point of the product, and it is also the part most worth understanding
 before you trust it.
 
 There is one rule underneath everything on this page:
 
-> **An agent can do what the person behind it could do unaided — and nothing
-> more. It is checked against that person on every single call.**
+> **An agent can do what the contact behind it could do unaided — and nothing
+> more. It is checked against that contact on every single call.**
 
 Everything else follows from that sentence. It is worth understanding properly,
-because it is not the rule most people assume.
+because it is not the rule most contacts assume.
 
 ## The two tiers
 
@@ -25,16 +25,16 @@ logging an activity, promoting a lead, archiving a record — and sending an ema
 or a message.
 
 **confirm-first.** The action does **not** happen. The agent's intention is
-written down as a card in the approval inbox, and a person decides.
+written down as a card in the approval inbox, and a human decides.
 
 ### Why sending is not automatically confirm-first
 
-This surprises people, so here is the product's own reasoning.
+This surprises contacts, so here is the product's own reasoning.
 
 A passport carries the granting human's own seat, permissions and record
 visibility. So a send an agent can make is one its holder could already make
-unaided, sitting in the app. Requiring that same person to confirm it again made
-the agent surface *weaker* than the person behind it, not safer — it added a
+unaided, sitting in the app. Requiring that same contact to confirm it again made
+the agent surface *weaker* than the contact behind it, not safer — it added a
 click without adding a check.
 
 What is kept behind a confirmation is narrower and more specific: **the calls
@@ -64,7 +64,7 @@ filing under a project marks the message as commercial correspondence, which is
 write-once and cannot be undone by relinking away. See
 [Capture](capture.md#filing-under-a-project-is-permanent).
 
-**Any field a person last wrote.** See the section below — this one catches more
+**Any field a contact last wrote.** See the section below — this one catches more
 in practice than all the others together.
 
 ### Your installation can be stricter
@@ -84,11 +84,11 @@ installation whether that floor is set. Do not assume it.
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
-## An agent never has more rights than the person behind it
+## An agent never has more rights than the contact behind it
 
 An agent does not have an identity of its own. It acts **on behalf of** a
-person, using a credential that person minted, and it is checked against that
-person's permissions on every call.
+contact, using a credential that colleague minted, and it is checked against that
+contact's permissions on every call.
 
 Concretely:
 
@@ -114,10 +114,10 @@ mind is allowed to take its own request off your desk.
 
 **An agent may never write consent or data-subject decisions.** Granting or
 withdrawing consent, and fulfilling or rejecting a privacy request, are for
-people only.
+contacts only.
 
 **An agent may never ask a document set.** Asking a set, and defining or
-changing one, are people's work. A grounded answer is only as good as the
+changing one, are contacts's work. A grounded answer is only as good as the
 reader's ability to open the passage under each sentence and disagree with it,
 and an agent acting on that answer unattended is precisely the reader who
 cannot. This is why the question box exists for a NAMED set of documents and
@@ -158,7 +158,7 @@ exact: holding `write` does not imply holding `send`.
 
 **A hard ceiling on outward calls.** Each passport gets a fixed allowance of
 calls that leave the building per 24 hours. Unlike the read and write
-allowances — which a person can widen by approving a card — **this one no
+allowances — which a seat can widen by approving a card — **this one no
 approval lifts.** It ends when the window ends.
 
 ## Human edits win, field by field
@@ -167,16 +167,16 @@ This is a subtle rule and worth reading twice, because it is what stops an
 agent from quietly undoing your work.
 
 When an agent updates a record, the product looks at each field it is trying to
-change and asks: **did a person last type this value?**
+change and asks: **did a contact last type this value?**
 
-- Fields no person has touched are updated straight away.
-- Fields whose current value a person last wrote are split off and staged for
+- Fields no contact has touched are updated straight away.
+- Fields whose current value a contact last wrote are split off and staged for
   approval — those fields only.
 
 So a mixed update partly applies and partly waits. The record comes back
 updated, together with a note naming exactly which fields were withheld and
 which approval card they went to. If *every* field in the update was one a
-person had written, nothing applies and the whole thing waits.
+contact had written, nothing applies and the whole thing waits.
 
 When you approve that card, only the withheld fields are written. The agent's
 original wider request is not replayed.
@@ -211,7 +211,7 @@ does not cover is refused rather than guessed at.
 This one is **yours to ask, not an agent's.** Asking a document set is refused
 outright to an agent, however wide its passport — see "Things the AI is refused
 outright" below. The reason is the same one that earns the text box in the first
-place: a person reading a grounded answer can see which passage each sentence
+place: a reader of a grounded answer can see which passage each sentence
 rests on and go and check it, and an agent acting on that answer unattended
 cannot.
 
@@ -250,7 +250,7 @@ dismissal that gets overwritten next time.
 Everywhere a value can be attributed, the app says who put it there. The
 labels are:
 
-- "typed by you", "typed by a person", "typed by a buyer"
+- "typed by you", "typed by a contact", "typed by a buyer"
 - "Automated by {agent}" — or "Automated by an agent" when the credential
   carries no readable name, because printing an opaque id at you would not help
 - "System task {job}" — the installation's own housekeeping: a scheduled sweep,
@@ -262,11 +262,11 @@ labels are:
 
 ## Passports: how an agent is connected
 
-A **passport** is the credential that binds one agent to one person. You mint
+A **passport** is the credential that binds one agent to one colleague. You mint
 it yourself in Settings, and you can revoke it yourself. Revoking is the kill
 switch for that one binding.
 
-A passport carries **scopes** — narrower rights than the person has. There are
+A passport carries **scopes** — narrower rights than the contact has. There are
 five, and they are exact rather than nested: holding one never implies another.
 
 - **read** — reads only. The only scope a read-only seat may spend at all.
@@ -285,7 +285,7 @@ The token is shown **once** and never again — the app says so: "Copy it now �
 you'll only see this token once." Only the hash is stored, so nobody, including
 an administrator, can recover it for you.
 
-Revoking takes effect at the agent's next call. So does demoting the person
+Revoking takes effect at the agent's next call. So does demoting the contact
 behind it: authority is re-derived every time, so a change binds mid-session
 rather than at the next login.
 
@@ -298,7 +298,7 @@ each one — granted, declined, or not yet asked.
 
 Granting **mints your own passport** in the same act. That is the whole point:
 the overnight run carries a credential that is yours, bound to you as both the
-person acted for and the person who granted it, so everything it does is limited
+contact acted for and the contact who granted it, so everything it does is limited
 to what you could have done yourself and is attributed to you. Withdrawing the
 grant revokes that credential rather than merely unlinking it — the authority
 actually ends.
@@ -318,7 +318,7 @@ Each passport gets a fixed allowance per 24-hour window: records read, changes
 made, outward calls, and total calls.
 
 Two of these behave differently when they run out. Reading and writing are
-**step-ups** — the agent is refused, and a card goes to the person who
+**step-ups** — the agent is refused, and a card goes to the contact who
 approved the connection, whose approval widens the window by one allowance.
 Outward calls and total calls are **hard stops**: no approval lifts them, and
 only the window ending clears them.
@@ -327,9 +327,9 @@ The window is fixed, not rolling, so every allowance in an installation resets a
 the same moment. That is why a refusal says "when the window rolls" rather than
 naming a number of hours.
 
-Nobody but the person who approved the connection can answer a step-up. Not an
+Nobody but the contact who approved the connection can answer a step-up. Not an
 administrator, not the owner of the company. An agent's ceiling is that
-person's own authority.
+contact's own authority.
 
 The app's own summary: "Point any MCP-capable agent at your company and
 approve the access it asks for. There is nothing to set up first."
@@ -377,7 +377,7 @@ It is worked out fresh each time you look, and never written down. That is
 deliberate. Nothing has to remember to mark it, which is what stops a job that
 died halfway from being shown as working forever.
 
-A run that is waiting on a *person* is never called stalled. It is waiting, which
+A run that is waiting on a *contact* is never called stalled. It is waiting, which
 is a different thing, and it may wait as long as it needs to.
 
 Two limits worth knowing. Work with nobody behind it — a nightly sweep — reaches

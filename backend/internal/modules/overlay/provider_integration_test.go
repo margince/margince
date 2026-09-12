@@ -34,7 +34,7 @@ func TestProviderReadServesFromTheMirror(t *testing.T) {
 		t.Fatal("testWorkspaceCtx did not bind an actor")
 	}
 
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "100214862042"
 	baseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 
@@ -56,7 +56,7 @@ func TestProviderReadServesFromTheMirror(t *testing.T) {
 	if err != nil {
 		t.Fatalf("externalIDToUUID(%q): %v", externalID, err)
 	}
-	rec, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityPerson, ID: id})
+	rec, err := p.Read(ctx, datasource.EntityRef{Type: datasource.EntityContact, ID: id})
 	if err != nil {
 		t.Fatalf("Read: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestProviderReadServesFromTheMirror(t *testing.T) {
 	if !rec.Freshness.LastSyncedAt.After(baseline) && !rec.Freshness.LastSyncedAt.Equal(baseline) {
 		t.Fatalf("Freshness.LastSyncedAt must come from the mirror row, got %v (ingested at %v)", rec.Freshness.LastSyncedAt, baseline)
 	}
-	if rec.Ref.Type != datasource.EntityPerson || rec.Ref.ID != id {
+	if rec.Ref.Type != datasource.EntityContact || rec.Ref.ID != id {
 		t.Fatalf("Ref mismatch: got %+v", rec.Ref)
 	}
 

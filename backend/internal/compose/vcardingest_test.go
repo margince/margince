@@ -11,7 +11,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -19,7 +19,7 @@ import (
 // noopRecordFailure is the failure-notice port for every test in this file
 // that is not itself testing the notice — it must never be nil, since a real
 // worker never hands stageReviewsWith one.
-func noopRecordFailure(context.Context, ids.UUID, people.VCardEntry) error { return nil }
+func noopRecordFailure(context.Context, ids.UUID, contacts.VCardEntry) error { return nil }
 
 // The insert carries the declared constant, and that constant is itself a
 // sane bound — an unset MaxAttempts is silently River's own default with no
@@ -40,14 +40,14 @@ func TestVCardIngestDeclaresABoundedRetryLadder(t *testing.T) {
 // first one's staging fault, and the whole job with it. Both cards must get
 // their own attempt regardless of which one fails.
 func TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Broken Card"}, {FullName: "Fine Card"}}
-	results := []people.VCardResult{
-		{Index: 0, Outcome: people.VCardNeedsReview},
-		{Index: 1, Outcome: people.VCardNeedsReview},
+	entries := []contacts.VCardEntry{{FullName: "Broken Card"}, {FullName: "Fine Card"}}
+	results := []contacts.VCardResult{
+		{Index: 0, Outcome: contacts.VCardNeedsReview},
+		{Index: 1, Outcome: contacts.VCardNeedsReview},
 	}
 	var attempts int
 	failing := errors.New("a staging conflict a test forced")
-	stage := func(_ context.Context, entry people.VCardEntry, _ *ids.PersonID) error {
+	stage := func(_ context.Context, entry contacts.VCardEntry, _ *ids.ContactID) error {
 		attempts++
 		if entry.FullName == "Broken Card" {
 			return failing
@@ -71,13 +71,13 @@ func TestAFailedStageDoesNotCostItsSiblingsTheirOwnReview(t *testing.T) {
 // lands on the SECOND card, so a bug that only kept going after a successful
 // attempt (rather than after any attempt) would still pass the first test.
 func TestALaterCardsFailureDoesNotSkipAnEarlierCardsAttempt(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Fine Card"}, {FullName: "Broken Card"}}
-	results := []people.VCardResult{
-		{Index: 0, Outcome: people.VCardNeedsReview},
-		{Index: 1, Outcome: people.VCardNeedsReview},
+	entries := []contacts.VCardEntry{{FullName: "Fine Card"}, {FullName: "Broken Card"}}
+	results := []contacts.VCardResult{
+		{Index: 0, Outcome: contacts.VCardNeedsReview},
+		{Index: 1, Outcome: contacts.VCardNeedsReview},
 	}
 	var attempts int
-	stage := func(_ context.Context, entry people.VCardEntry, _ *ids.PersonID) error {
+	stage := func(_ context.Context, entry contacts.VCardEntry, _ *ids.ContactID) error {
 		attempts++
 		if entry.FullName == "Broken Card" {
 			return errors.New("a staging conflict a test forced")
@@ -96,12 +96,12 @@ func TestALaterCardsFailureDoesNotSkipAnEarlierCardsAttempt(t *testing.T) {
 // TestEveryCardFailingNamesTheFullCount — the aggregate error's count must
 // track every failure, not just whether at least one occurred.
 func TestEveryCardFailingNamesTheFullCount(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "First"}, {FullName: "Second"}}
-	results := []people.VCardResult{
-		{Index: 0, Outcome: people.VCardNeedsReview},
-		{Index: 1, Outcome: people.VCardNeedsReview},
+	entries := []contacts.VCardEntry{{FullName: "First"}, {FullName: "Second"}}
+	results := []contacts.VCardResult{
+		{Index: 0, Outcome: contacts.VCardNeedsReview},
+		{Index: 1, Outcome: contacts.VCardNeedsReview},
 	}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error {
 		return errors.New("a staging conflict a test forced")
 	}
 
@@ -115,9 +115,9 @@ func TestEveryCardFailingNamesTheFullCount(t *testing.T) {
 // answers cleanly, so the aggregate-error path above is additive rather
 // than a permanent fault where none existed before.
 func TestStageReviewsSucceedsWhenEveryCardStages(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Fine Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error { return nil }
+	entries := []contacts.VCardEntry{{FullName: "Fine Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardNeedsReview}}
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error { return nil }
 
 	if err := stageReviewsWith(context.Background(), quietTestLogger(), ids.UUID{}, stage, noopRecordFailure, entries, results); err != nil {
 		t.Fatalf("every card staged cleanly, want no error, got: %v", err)
@@ -128,10 +128,10 @@ func TestStageReviewsSucceedsWhenEveryCardStages(t *testing.T) {
 // skipped card (any outcome but VCardNeedsReview) is not a staging
 // candidate at all, and must never reach the stager.
 func TestStageReviewsSkipsCardsThatDoNotNeedReview(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Created Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardCreated}}
+	entries := []contacts.VCardEntry{{FullName: "Created Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardCreated}}
 	called := false
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error {
 		called = true
 		return nil
 	}
@@ -145,15 +145,15 @@ func TestStageReviewsSkipsCardsThatDoNotNeedReview(t *testing.T) {
 }
 
 // TestAFailedStageNotifiesTheImporter: the headline gap this file exists to
-// close. A mailed card that fails to stage used to leave nothing a person
+// close. A mailed card that fails to stage used to leave nothing a contact
 // would ever read; the notice port must fire once per failed card, naming
 // the same activity the failure came from and that card's own entry (so the
 // production port can key its notice on the card's own identity, not its
 // position — see vcardStagingFailureKey).
 func TestAFailedStageNotifiesTheImporter(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Broken Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+	entries := []contacts.VCardEntry{{FullName: "Broken Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardNeedsReview}}
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error {
 		return errors.New("a staging conflict a test forced")
 	}
 	activity := ids.NewV7()
@@ -162,7 +162,7 @@ func TestAFailedStageNotifiesTheImporter(t *testing.T) {
 		name     string
 	}
 	var notified []call
-	recordFailure := func(_ context.Context, a ids.UUID, entry people.VCardEntry) error {
+	recordFailure := func(_ context.Context, a ids.UUID, entry contacts.VCardEntry) error {
 		notified = append(notified, call{a, entry.FullName})
 		return nil
 	}
@@ -177,19 +177,19 @@ func TestAFailedStageNotifiesTheImporter(t *testing.T) {
 
 // TestAFailedStageNotifiesForEveryFailedCard — two failed cards in one
 // message must each raise their own notice, each carrying its OWN entry: a
-// person checking after the fact should not learn about only one of two
+// contact checking after the fact should not learn about only one of two
 // cards that silently failed, or be unable to tell the two apart.
 func TestAFailedStageNotifiesForEveryFailedCard(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Broken One"}, {FullName: "Broken Two"}}
-	results := []people.VCardResult{
-		{Index: 0, Outcome: people.VCardNeedsReview},
-		{Index: 1, Outcome: people.VCardNeedsReview},
+	entries := []contacts.VCardEntry{{FullName: "Broken One"}, {FullName: "Broken Two"}}
+	results := []contacts.VCardResult{
+		{Index: 0, Outcome: contacts.VCardNeedsReview},
+		{Index: 1, Outcome: contacts.VCardNeedsReview},
 	}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error {
 		return errors.New("a staging conflict a test forced")
 	}
 	var names []string
-	recordFailure := func(_ context.Context, _ ids.UUID, entry people.VCardEntry) error {
+	recordFailure := func(_ context.Context, _ ids.UUID, entry contacts.VCardEntry) error {
 		names = append(names, entry.FullName)
 		return nil
 	}
@@ -204,13 +204,13 @@ func TestAFailedStageNotifiesForEveryFailedCard(t *testing.T) {
 
 // TestAStagedCardNeverTriggersAFailureNotice — the mirror of the two tests
 // above: a card that stages cleanly must never be noted as failed, or a
-// person would be told about a review that in fact landed.
+// contact would be told about a review that in fact landed.
 func TestAStagedCardNeverTriggersAFailureNotice(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Fine Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error { return nil }
+	entries := []contacts.VCardEntry{{FullName: "Fine Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardNeedsReview}}
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error { return nil }
 	called := false
-	recordFailure := func(context.Context, ids.UUID, people.VCardEntry) error {
+	recordFailure := func(context.Context, ids.UUID, contacts.VCardEntry) error {
 		called = true
 		return nil
 	}
@@ -230,11 +230,11 @@ func TestAStagedCardNeverTriggersAFailureNotice(t *testing.T) {
 // ErrPermissionDenied/ErrNotFound, which DO get demoted when the notice also
 // fails — is TestACompoundFailureForcesARetryDespiteANotFaultVerdict below.)
 func TestANotesOwnFailureDoesNotChangeTheCardsOutcome(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Broken Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
+	entries := []contacts.VCardEntry{{FullName: "Broken Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardNeedsReview}}
 	stageFailure := errors.New("a staging conflict a test forced")
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error { return stageFailure }
-	recordFailure := func(context.Context, ids.UUID, people.VCardEntry) error {
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error { return stageFailure }
+	recordFailure := func(context.Context, ids.UUID, contacts.VCardEntry) error {
 		return errors.New("the notice write itself failed, in a test")
 	}
 
@@ -253,12 +253,12 @@ func TestANotesOwnFailureDoesNotChangeTheCardsOutcome(t *testing.T) {
 // the notice never raised, silently, which is the exact bug margince#3410
 // describes, reproduced through a second failure instead of the first.
 func TestACompoundFailureForcesARetryDespiteANotFaultVerdict(t *testing.T) {
-	entries := []people.VCardEntry{{FullName: "Broken Card"}}
-	results := []people.VCardResult{{Index: 0, Outcome: people.VCardNeedsReview}}
-	stage := func(context.Context, people.VCardEntry, *ids.PersonID) error {
+	entries := []contacts.VCardEntry{{FullName: "Broken Card"}}
+	results := []contacts.VCardResult{{Index: 0, Outcome: contacts.VCardNeedsReview}}
+	stage := func(context.Context, contacts.VCardEntry, *ids.ContactID) error {
 		return apperrors.ErrPermissionDenied
 	}
-	recordFailure := func(context.Context, ids.UUID, people.VCardEntry) error {
+	recordFailure := func(context.Context, ids.UUID, contacts.VCardEntry) error {
 		return errors.New("the notice write itself failed too, in a test")
 	}
 
@@ -281,7 +281,7 @@ func TestACompoundFailureForcesARetryDespiteANotFaultVerdict(t *testing.T) {
 // it.
 func TestRecordStagingFailureRefusesAnUnboundActor(t *testing.T) {
 	w := &vcardIngestWorker{}
-	entry := people.VCardEntry{FullName: "Whoever"}
+	entry := contacts.VCardEntry{FullName: "Whoever"}
 	if err := w.recordStagingFailure(context.Background(), ids.NewV7(), entry); !errors.Is(err, errNoMailboxGrantorBound) {
 		t.Fatalf("recordStagingFailure with no actor bound = %v, want errNoMailboxGrantorBound", err)
 	}
@@ -292,20 +292,20 @@ func TestRecordStagingFailureRefusesAnUnboundActor(t *testing.T) {
 // identity but SWAPPED positions (an attachment reordered between retries)
 // must still produce the SAME key each, not each other's.
 func TestVCardStagingFailureKeyIgnoresPosition(t *testing.T) {
-	alice := people.VCardEntry{
+	alice := contacts.VCardEntry{
 		FullName: "Alice Example", Company: "Acme",
-		Emails: []people.VCardChannel{{Value: "alice@example.com"}},
+		Emails: []contacts.VCardChannel{{Value: "alice@example.com"}},
 	}
 	// A second, independently-built value with the same content — not the
 	// same variable read twice — so the determinism check below is not the
 	// tautological "x == x" a linter (and a reader) would rightly distrust.
-	aliceAgain := people.VCardEntry{
+	aliceAgain := contacts.VCardEntry{
 		FullName: "Alice Example", Company: "Acme",
-		Emails: []people.VCardChannel{{Value: "alice@example.com"}},
+		Emails: []contacts.VCardChannel{{Value: "alice@example.com"}},
 	}
-	bob := people.VCardEntry{
+	bob := contacts.VCardEntry{
 		FullName: "Bob Example", Company: "Acme",
-		Emails: []people.VCardChannel{{Value: "bob@example.com"}},
+		Emails: []contacts.VCardChannel{{Value: "bob@example.com"}},
 	}
 
 	if vcardStagingFailureKey(alice) == vcardStagingFailureKey(bob) {

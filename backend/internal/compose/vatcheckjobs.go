@@ -28,7 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
@@ -46,12 +46,12 @@ import (
 type CheckCompanyVatArgs struct {
 	Workspace ids.UUID `json:"workspace_id"`
 	CompanyID ids.UUID `json:"company_id"`
-	// Requested marks a consultation a PERSON asked for, and it does two things
+	// Requested marks a consultation a CONTACT asked for, and it does two things
 	// that both matter.
 	//
 	// It tells the worker to ask even when the stored answer already names this
 	// number: the automatic lanes ask only about a number they have not seen,
-	// because nothing re-reads a website on a schedule either, but a person
+	// because nothing re-reads a website on a schedule either, but a contact
 	// pressing the button has said the stored answer is not good enough.
 	//
 	// It also makes the args DIFFER from a write-queued job's, which is what
@@ -81,13 +81,13 @@ const (
 	vatCheckMaxAttempts = 3
 )
 
-// VatCheckEnqueueFor builds the in-transaction enqueue the people store calls
+// VatCheckEnqueueFor builds the in-transaction enqueue the contacts store calls
 // when a VAT number is written.
 //
 // Nil-safe by contract, and nil is a real composition: a deployment that checks
 // no VAT numbers writes the number and queues nothing. The number is what the
 // page stated; the verification is what this installation can offer.
-func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) people.VatCheckEnqueue {
+func VatCheckEnqueueFor(enqueue vatCheckEnqueuer) contacts.VatCheckEnqueue {
 	if enqueue == nil {
 		return nil
 	}
@@ -172,7 +172,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 		return jobs.FaultContext(ctx, err)
 	}
 	wsCtx = vatCheckJobActor(wsCtx)
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
 	companyID := ids.From[ids.CompanyKind](args.CompanyID)
@@ -181,7 +181,7 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	if err != nil {
 		return jobs.FaultContext(wsCtx, fmt.Errorf("reading the VAT number to check: %w", err))
 	}
-	// A person who pressed the button asked for THIS consultation, so the only
+	// A contact who pressed the button asked for THIS consultation, so the only
 	// thing that stops it is the company stating no number at all. The staleness
 	// rule the automatic lanes obey is about not spending the installation's
 	// shared rate on questions nobody asked; this one was asked.
@@ -216,10 +216,10 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 		// or retried rather than written (below), so this branch was the only
 		// producer of that status and the distinction it protected was never
 		// visible to anybody.
-		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
+		return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, contacts.VatCheck{
 			CompanyID: companyID,
 			Number:    number,
-			Status:    people.VatCheckInvalid,
+			Status:    contacts.VatCheckInvalid,
 			CheckedAt: w.clock(),
 		}))
 	}
@@ -242,10 +242,10 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 	if consultedAt.IsZero() {
 		consultedAt = w.clock()
 	}
-	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, people.VatCheck{
+	return jobs.FaultContext(wsCtx, store.RecordVatCheck(wsCtx, contacts.VatCheck{
 		CompanyID:          companyID,
 		Number:             number,
-		Status:             people.VatCheckStatus(result.Status),
+		Status:             contacts.VatCheckStatus(result.Status),
 		ConsultationNumber: result.ConsultationNumber,
 		RegisteredName:     result.Name,
 		RegisteredAddress:  result.Address,
@@ -268,12 +268,12 @@ func (w *vatCheckWorker) Work(ctx context.Context, job *river.Job[CheckCompanyVa
 func WithVatChecking(inserter *jobs.Runner) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		enqueue := VatCheckEnqueueFor(inserter)
-		// BOTH, because they are two stores: the services read s.peopleStore
+		// BOTH, because they are two stores: the services read s.contactsStore
 		// and the HTTP transport carries its own. Wiring one would leave every
 		// VAT number a rep corrects unchecked with nothing coming to ask.
-		s.peopleStore = s.peopleStore.WithVatCheckEnqueue(enqueue)
+		s.contactsStore = s.contactsStore.WithVatCheckEnqueue(enqueue)
 		//nolint:staticcheck // QF1008: the embedded name is load-bearing — s.Handlers resolves to briefs.Handlers, a different embedded type
-		s.peopleHandlers = s.peopleHandlers.WithVatCheckEnqueue(enqueue)
+		s.contactsHandlers = s.contactsHandlers.WithVatCheckEnqueue(enqueue)
 		// And every store compose builds from a pool — the approval effects,
 		// the capture sink, the verdict engine — which is where a site read's
 		// accepted VAT number actually lands.
@@ -281,7 +281,7 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 	}
 }
 
-// vatCheckBinding is the enqueue every people.Store built inside compose picks
+// vatCheckBinding is the enqueue every contacts.Store built inside compose picks
 // up, held at package scope for the reason WithVatChecking cannot cover.
 //
 // The Option wires the two stores the SERVER holds. The approval effects — the
@@ -293,14 +293,14 @@ func WithVatChecking(inserter *jobs.Runner) Option {
 // meant the main path queued nothing at all.
 var vatCheckBinding struct {
 	mu      sync.RWMutex
-	enqueue people.VatCheckEnqueue
+	enqueue contacts.VatCheckEnqueue
 }
 
 // BindVatChecking records the enqueue for every store compose builds from a
 // pool. Called once at boot by the role that queues, after the job runner
 // exists. A nil enqueue is a deployment that checks no VAT numbers, and every
 // such store then writes the number and queues nothing.
-func BindVatChecking(enqueue people.VatCheckEnqueue) {
+func BindVatChecking(enqueue contacts.VatCheckEnqueue) {
 	vatCheckBinding.mu.Lock()
 	defer vatCheckBinding.mu.Unlock()
 	vatCheckBinding.enqueue = enqueue
@@ -309,7 +309,7 @@ func BindVatChecking(enqueue people.VatCheckEnqueue) {
 // boundVatCheckEnqueue reads the binding. Read per STORE rather than captured
 // once, so the ordering between binding and building a store cannot matter —
 // only the ordering against the first write, which is after boot either way.
-func boundVatCheckEnqueue() people.VatCheckEnqueue {
+func boundVatCheckEnqueue() contacts.VatCheckEnqueue {
 	vatCheckBinding.mu.RLock()
 	defer vatCheckBinding.mu.RUnlock()
 	return vatCheckBinding.enqueue

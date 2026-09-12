@@ -6,7 +6,7 @@ package agents
 // A tier the CONTRACT tightens for ONE record type, made visible to the tool door.
 //
 // ADR-0026's tighten-only floor is declared per contract OPERATION — `createProject`
-// is confirm-first where `createPerson` is not — while a tool's tier is declared per
+// is confirm-first where `createContact` is not — while a tool's tier is declared per
 // VERB. The REST door resolves the operation and sees the tightening; this door
 // resolves `create_record` and could not, so the write a route staged for a human
 // ran unattended through the verb that performs it (#982).

@@ -267,7 +267,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          data: [{ type: "person", id: "p1", title: "Dana Buyer at Acme" }],
+          data: [{ type: "contact", id: "p1", title: "Dana Buyer at Acme" }],
           page: { next_cursor: null, has_more: false },
         }),
       ),
@@ -517,11 +517,11 @@ describe("useBuiltinCommands", () => {
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader
-  // who learned "People" or "Pipeline" types it, and the row it named must be
+  // who learned "Contacts" or "Pipeline" types it, and the row it named must be
   // what answers — against the REAL rail rows, because the alias lives on the
   // nav item and a fixture command list would only prove the fixture.
   it.each([
-    ["people", "Contacts", "#/contacts"],
+    ["contacts", "Contacts", "#/contacts"],
     ["pipeline", "Deals", "#/deals"],
   ])(
     "reaches %s's destination by the name it used to print",

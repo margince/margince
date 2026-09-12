@@ -47,7 +47,7 @@ package gates
 //
 // Reachability is resolved through IMPORT PATHS rather than bare function
 // names. Two packages here export a BriefRequest — meetingbrief's and
-// personbrief's — and a name-keyed check reports the uncertified one as
+// contactbrief's — and a name-keyed check reports the uncertified one as
 // certified because its certified namesake answers for it. That is the same
 // under-recognition this gate exists to refuse, one level down.
 

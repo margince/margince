@@ -57,7 +57,7 @@ const (
 const freshness = 30 * 24 * time.Hour
 
 // The label on each required input is the reader's own words, because it
-// becomes the next-step sentence. A person told to go and gather
+// becomes the next-step sentence. A contact told to go and gather
 // `buying_center` has been told nothing.
 //
 // Both field types are the CONTRACT's, so a required input naming a field the
@@ -195,7 +195,7 @@ func freshFact(in Input, field crmcontracts.CompanyFactField, now time.Time) (bo
 // otherwise serve forever.
 //
 // A value a HUMAN gave us never ages out, and its expiry is the zero time. A
-// person who typed the answer did not read a source, so there is nothing to
+// contact who typed the answer did not read a source, so there is nothing to
 // re-read and nothing to go stale; expiring their entry would ask them to
 // retype the same fact on a schedule.
 //
@@ -408,7 +408,7 @@ func gatherNextStep(c crmcontracts.DataCompleteness) string {
 	return "find out " + joinReadably(*c.Missing) + " before this fit can be judged"
 }
 
-// joinReadably renders a list the way a person would say it, so the next step
+// joinReadably renders a list the way a contact would say it, so the next step
 // reads as a sentence rather than as a serialized array.
 func joinReadably(items []string) string {
 	switch len(items) {

@@ -27,9 +27,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/network"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,10 +63,10 @@ func newDealStatusService(pool *pgxpool.Pool) *dealstatus.Service {
 // A reader refused the stakeholder edge gets no seats, not an error —
 // CoverageFor answers a denial with an empty stakeholder list and a named
 // omission, and the card's contract with the reader is that it says less
-// rather than failing. A reader who may see the seats but not the people gets
-// the seats unnamed, which is people.PersonNamesTx's own posture.
+// rather than failing. A reader who may see the seats but not the contacts gets
+// the seats unnamed, which is contacts.ContactNamesTx's own posture.
 func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
-	peopleStore := people.NewStore(InstallationDB(pool))
+	contactsStore := contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, dealID ids.DealID, now time.Time) ([]dealstatus.Seat, error) {
 		var seats []dealstatus.Seat
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -74,14 +74,14 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 			if err != nil {
 				return err
 			}
-			names, err := seatNamesForCard(ctx, tx, peopleStore, coverage)
+			names, err := seatNamesForCard(ctx, tx, contactsStore, coverage)
 			if err != nil {
 				return err
 			}
 			seats = make([]dealstatus.Seat, 0, len(coverage.Stakeholders))
 			for _, s := range coverage.Stakeholders {
 				seats = append(seats, dealstatus.Seat{
-					Role: s.Role, Name: names[s.PersonID], Engaged: s.Engaged,
+					Role: s.Role, Name: names[s.ContactID], Engaged: s.Engaged,
 				})
 			}
 			return nil
@@ -96,20 +96,20 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 // seatNamesForCard names the seats, or names none of them.
 //
 // The permission-denied arm is the same one the coverage handler takes: a
-// reader holding deal:read without person:read still gets the deal's shape —
-// how many people carry it, in what roles — and simply no names. The card then
-// writes "the champion" where it would have written a person.
+// reader holding deal:read without contact:read still gets the deal's shape —
+// how many contacts carry it, in what roles — and simply no names. The card then
+// writes "the champion" where it would have written a contact.
 func seatNamesForCard(
-	ctx context.Context, tx pgx.Tx, store *people.Store, coverage network.DealCoverage,
+	ctx context.Context, tx pgx.Tx, store *contacts.Store, coverage network.DealCoverage,
 ) (map[ids.UUID]string, error) {
 	if len(coverage.Stakeholders) == 0 {
 		return map[ids.UUID]string{}, nil
 	}
-	seated := make([]ids.PersonID, 0, len(coverage.Stakeholders))
+	seated := make([]ids.ContactID, 0, len(coverage.Stakeholders))
 	for _, s := range coverage.Stakeholders {
-		seated = append(seated, ids.From[ids.PersonKind](s.PersonID))
+		seated = append(seated, ids.From[ids.ContactKind](s.ContactID))
 	}
-	names, err := store.PersonNamesTx(ctx, tx, seated)
+	names, err := store.ContactNamesTx(ctx, tx, seated)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return map[ids.UUID]string{}, nil

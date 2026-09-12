@@ -104,7 +104,7 @@ const reading: CompanySiteRead = {
   profile_fields: [],
   facts: facts.slice(0, 2),
   comparisons: [],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 2,
   proposal_hash: "proposal-2",

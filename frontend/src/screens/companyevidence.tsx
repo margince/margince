@@ -41,7 +41,7 @@ export type CitedRecord = {
 
 /**
  * EvidenceModal is the receipt behind one cited record: where the value came
- * from, when it was read, whether a person has confirmed it — and what could
+ * from, when it was read, whether a contact has confirmed it — and what could
  * not be filled in.
  *
  * The gaps are shown, not hidden. A claim the reader was told is checkable,
@@ -151,12 +151,12 @@ export function EvidenceModal({
 }
 
 // "AI extracted · not yet confirmed", derived rather than stored: a MODEL read
-// it out of something, and no person has verified it since. The predicate is
+// it out of something, and no contact has verified it since. The predicate is
 // stated here rather than left implicit, because the badge makes a claim about
 // a claim and a reader deserves to know what earned it.
 //
 // `site_read` alone. The other four are not model extractions and the badge
-// would be false of each: a person typed a `human` value, an older system
+// would be false of each: a human typed a `human` value, an older system
 // holds a `migration` one, a `connector` value came out of an API verbatim,
 // and a `rule` value was computed by code somebody wrote. Calling any of them
 // AI-extracted is exactly the mislabelling this badge exists to prevent.
@@ -250,7 +250,7 @@ function EvidenceIdentity({
 /**
  * Read and confirmed are shown as two lines, never merged. They are different
  * assurances: one says a machine fetched this and it still said so, the other
- * says a person looked at it and agreed.
+ * says a contact looked at it and agreed.
  */
 function EvidenceTimes({
   retrievedAt,

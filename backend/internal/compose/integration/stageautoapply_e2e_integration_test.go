@@ -437,7 +437,7 @@ func appliedCardFor(t *testing.T, e *Env, deal ids.DealID) ids.ApprovalID {
 	return id
 }
 
-// reviewedCount is how many proposals a PERSON answered on this transition.
+// reviewedCount is how many proposals a CONTACT answered on this transition.
 func reviewedCount(t *testing.T, e *Env, ref deals.TransitionRef) int {
 	t.Helper()
 	var n int

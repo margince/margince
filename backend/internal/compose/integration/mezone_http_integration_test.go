@@ -11,7 +11,7 @@ package integration
 // captures the browser's zone, values.ParseTimezone validates it, and the row
 // stores it on the workspace and the first user — and then meResponse built the
 // User without the field, so the endpoint every client fetches first never said
-// it. Nothing downstream could localize an instant to the person reading it,
+// it. Nothing downstream could localize an instant to the reader reading it,
 // and the frontend's twelve hard-coded "Europe/Berlin" literals are what a
 // caller writes when no correct answer is served. margince/margince#26, whose
 // own words are that everything else in it is blocked on this.
@@ -75,7 +75,7 @@ func TestMeServesTheZoneTheSeatWasStoredWith(t *testing.T) {
 // `locale` beside it already was. Absent means NOBODY HAS CHOSEN, and this
 // endpoint has to say that rather than answer 'UTC' on their behalf: a client
 // told a zone renders instants in it, and a client told nothing asks the
-// browser, which is the right answer for a person who has never said.
+// browser, which is the right answer for a contact who has never said.
 //
 // The empty string is the other, and it is the shape rather than the data:
 // Identity is an ordinary struct several paths build partially, and one of

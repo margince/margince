@@ -138,7 +138,7 @@ func activityAudienceIncludes(ctx context.Context, tx pgx.Tx, id ids.UUID) (bool
 func linkTargetWritable(p principal.Principal, alias string, arg func(any) int) string {
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
-		{personIDColumn, tablePerson, "wp"},
+		{contactIDColumn, tableContact, "wp"},
 		{companyIDColumn, tableCompany, "wo"},
 		{dealIDColumn, tableDeal, "wd"},
 		{leadIDColumn, tableLead, "wl"},

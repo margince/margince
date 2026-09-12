@@ -14,7 +14,7 @@ import (
 )
 
 // Every filter this module declares narrows something — the deal half of the
-// check people/listfilters_test.go states: a binding that parses
+// check contacts/listfilters_test.go states: a binding that parses
 // its operand and writes nowhere runs the list WIDER than the caller asked,
 // and does it while looking exactly like a narrowed answer.
 func TestEveryDeclaredDealsFilterNarrowsSomething(t *testing.T) {
@@ -30,7 +30,7 @@ func TestEveryDeclaredDealsFilterNarrowsSomething(t *testing.T) {
 }
 
 // Each entity type is offered ITS OWN vocabulary — the deal half of the check
-// people/listfilters_test.go states: a switch arm pointing at a
+// contacts/listfilters_test.go states: a switch arm pointing at a
 // sibling's table hands out a vocabulary the store then refuses, and comparing
 // ListFilters against the table it returns would never see it.
 func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
@@ -55,8 +55,8 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 
 // An entity type this module does not enumerate offers no filters.
 func TestAnEntityThisModuleDoesNotListOffersNoFilters(t *testing.T) {
-	if got := (&Provider{}).ListFilters(datasource.EntityPerson); len(got) != 0 {
-		t.Errorf("person is not this module's to list, yet it offers %v", got)
+	if got := (&Provider{}).ListFilters(datasource.EntityContact); len(got) != 0 {
+		t.Errorf("contact is not this module's to list, yet it offers %v", got)
 	}
 }
 

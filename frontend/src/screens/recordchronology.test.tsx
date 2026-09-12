@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { PersonTimelineTab } from "./persontabs";
+import { ContactTimelineTab } from "./contacttabs";
 import { useRecordChronology } from "./recordchronology";
 
 // The chronology is exercised THROUGH the tab that renders it: what the
@@ -26,8 +26,8 @@ import { useRecordChronology } from "./recordchronology";
 // ledger, Changes can read a failed fetch as "nothing was ever changed", and
 // All can drop one feed's rows on the floor while looking perfectly ordered.
 
-type Person360 = components["schemas"]["Person360"];
-type SectionActivity = NonNullable<Person360["activities"]>["data"][number];
+type Contact360 = components["schemas"]["Contact360"];
+type SectionActivity = NonNullable<Contact360["activities"]>["data"][number];
 type FieldChange = components["schemas"]["FieldHistoryEntry"];
 
 const CAPTURED = {
@@ -46,7 +46,7 @@ function activity(
 
 const change: FieldChange = {
   id: "h-1",
-  entity_type: "person",
+  entity_type: "contact",
   entity_id: "p-1",
   field: "owner_id",
   old_value: null,
@@ -58,10 +58,10 @@ const change: FieldChange = {
   actor_id: "u-1",
 };
 
-function viewWith(hasMore: boolean): Person360 {
+function viewWith(hasMore: boolean): Contact360 {
   return {
     as_of: "2026-08-13T09:00:00Z",
-    person: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
+    contact: { id: "p-1", full_name: "Dana Buyer", ...CAPTURED },
     sections_omitted: [],
     activities: {
       data: [
@@ -144,7 +144,9 @@ describe("the record's chronology", () => {
   it("opens on the whole chronology, which costs the changes read", async () => {
     const feed = changeFeed();
     vi.stubGlobal("fetch", feed.fetcher);
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
 
     expect(screen.getByText("Fleet renewal")).toBeTruthy();
     // What was said and what changed are one order of events, so the record
@@ -158,7 +160,9 @@ describe("the record's chronology", () => {
     const user = userEvent.setup();
     const feed = changeFeed();
     vi.stubGlobal("fetch", feed.fetcher);
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
 
     // The Changes view IS the record's history now, so the read it must not
     // spend before being asked is that one.
@@ -174,7 +178,9 @@ describe("the record's chronology", () => {
   it("puts both feeds in one order under All, newest first", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", changeFeed().fetcher);
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
 
     await user.click(screen.getByRole("button", { name: "All" }));
 
@@ -196,7 +202,9 @@ describe("the record's chronology", () => {
   it("says a failed change read failed rather than reporting nothing was ever changed", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", changeFeed(500).fetcher);
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
 
     // Under All, where the chronology still assembles both feeds.
     await user.click(screen.getByRole("button", { name: "All" }));
@@ -214,7 +222,7 @@ describe("the record's chronology", () => {
   it("states that a capped page is not the whole ledger, in the words of the cut", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", changeFeed().fetcher);
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(true)} />);
+    withProviders(<ContactTimelineTab contactId="p-1" view={viewWith(true)} />);
 
     expect(screen.getByText("Fleet renewal")).toBeTruthy();
     // On the combined cut the honest sentence is about BOTH feeds: the merge
@@ -236,7 +244,9 @@ describe("the record's chronology", () => {
   });
 
   it("keeps that notice off a page the server did not cut", () => {
-    withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+    withProviders(
+      <ContactTimelineTab contactId="p-1" view={viewWith(false)} />,
+    );
 
     expect(screen.queryByText(/more activities here than fit/)).toBeNull();
   });
@@ -275,13 +285,13 @@ describe("useRecordChronology's narrowed reads", () => {
     const rendered = renderHook(
       () =>
         useRecordChronology({
-          kind: "person",
+          kind: "contact",
           recordId: "p-1",
           filter: "all",
           narrowed,
           activities,
           activitiesHaveMore: false,
-          // The reading context every change row needs. A person record holds
+          // The reading context every change row needs. A contact record holds
           // no money of its own, and the zone comes from the harness's own
           // provider the same way a record page takes it from the workspace.
           values: { currency: null, locale: "en", zone: "UTC" },

@@ -148,7 +148,7 @@ func TestSyncHealthReportsRecentlyOverwrittenClassesAndThenForgetsThem(t *testin
 	// is under test here is the READ's horizon, not the writer.
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO system_log (actor_type, actor_id, action, detail, occurred_at)
-		VALUES ('system', 'system:reconcile', $1, jsonb_build_object('object_class', 'person'),
+		VALUES ('system', 'system:reconcile', $1, jsonb_build_object('object_class', 'contact'),
 		        now() - $2::interval)`,
 		mirrorConflictAction, overwriteWindow+time.Hour); err != nil {
 		t.Fatalf("planting the aged overwrite: %v", err)

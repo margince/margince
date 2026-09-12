@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// Finding is one thing wrong with a draft, in words a person can act on.
+// Finding is one thing wrong with a draft, in words a contact can act on.
 type Finding struct {
 	// Rule names what was violated, for the log and the regeneration prompt.
 	Rule string
@@ -116,7 +116,7 @@ var invention = map[textlang.Lang][]string{
 // directedRelationship are the ways a draft claims who introduced, referred or
 // first contacted whom.
 //
-// The product holds no person-to-person referral record — referred_by is
+// The product holds no contact-to-contact referral record — referred_by is
 // constrained company-to-company — so a directed introduction fact in a draft is
 // necessarily read out of quoted correspondence, which is how the reported
 // defect got the direction backwards. Silence about introductions is the
@@ -202,7 +202,7 @@ func allDirectedRelationshipPhrases() []string {
 // reads as machine-written, which is the thing VOICE-STRIP exists to prevent.
 // It is checked rather than merely instructed because the prompt already said
 // to be consistent and the model was not — three consecutive drafts to one
-// person came back du, du, Sie.
+// contact came back du, du, Sie.
 //
 // The check is on the draft's OWN text, so it needs no envelope: a body holding
 // both forms is inconsistent whichever one the envelope asked for.
@@ -219,7 +219,7 @@ func mixedRegister(body string) bool {
 // concluded". Nobody said it concluded. The draft turned the recipient's own
 // condition into a completed fact, and then reasoned from it.
 //
-// It is a first-person claim about THEIR side's state, which is the one thing a
+// It is a first-contact claim about THEIR side's state, which is the one thing a
 // drafter cannot know: the record holds what they told us, and anything past
 // that is invention wearing the grammar of an update.
 var resolvedEvent = map[textlang.Lang][]string{

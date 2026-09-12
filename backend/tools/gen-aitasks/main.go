@@ -309,7 +309,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	b.WriteString(")\n\n")
 
 	b.WriteString("// taskDisplayNames is what each task is CALLED, for a surface that has to\n")
-	b.WriteString("// name one to a person. The constant is vocabulary — a reader shown\n")
+	b.WriteString("// name one to a contact. The constant is vocabulary — a reader shown\n")
 	b.WriteString("// \"site_triage failed 8 times\" learns nothing they can act on.\n")
 	b.WriteString("//\n")
 	b.WriteString("// Generated from the same declaration as the constants, so a task cannot\n")
@@ -320,7 +320,7 @@ func emitGo(c contract, contractHash string) (string, error) {
 	}
 	b.WriteString("}\n\n")
 
-	b.WriteString("// DisplayName is what to call this task in front of a person. An unknown\n")
+	b.WriteString("// DisplayName is what to call this task in front of a contact. An unknown\n")
 	b.WriteString("// task answers the empty string: a caller with nothing to show is better\n")
 	b.WriteString("// served saying nothing than showing the key it was handed.\n")
 	b.WriteString("func DisplayName(t Task) string { return taskDisplayNames[t] }\n\n")

@@ -57,7 +57,7 @@ describe("an address a reader was sent", () => {
   });
 
   it("opens at a page size it recognises, and ignores one it does not", () => {
-    // An address is text a person can edit. `per=7` may not become a request:
+    // An address is text a contact can edit. `per=7` may not become a request:
     // listFetchLimit divides by it.
     expect(shown("per=100").perPage).toBe(100);
     expect(shown("per=7").perPage).toBe(OPENING.perPage);

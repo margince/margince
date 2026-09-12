@@ -293,21 +293,21 @@ func TestAnUnreadableRecordArgumentNamesNoRecord(t *testing.T) {
 	}
 }
 
-// A row about a person is not a deal row. Asking for it would send a person's
+// A row about a contact is not a deal row. Asking for it would send a contact's
 // id into a deal-keyed read, and the answer would be a miss dressed as one.
 func TestOnlyDealRowsAreAskedAbout(t *testing.T) {
 	moves := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{}}
 	svc := (&Service{}).WithDealMoves(moves)
-	person := riskRow(ids.NewV7())
-	person.Subject.Type = "person"
-	queue := []crmcontracts.WorklistItem{person}
+	contact := riskRow(ids.NewV7())
+	contact.Subject.Type = "contact"
+	queue := []crmcontracts.WorklistItem{contact}
 
 	if err := svc.nameTheStep(context.Background(), queue); err != nil {
 		t.Fatalf("naming the step: %v", err)
 	}
 
 	if moves.calls != 0 {
-		t.Fatalf("a person row provoked %d deal reads, wanted none", moves.calls)
+		t.Fatalf("a contact row provoked %d deal reads, wanted none", moves.calls)
 	}
 }
 

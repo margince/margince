@@ -52,7 +52,7 @@ const narrateBudget = 40 * time.Second
 // reviewHour is the local hour on Monday from which a rep's week is measured.
 //
 // Late enough that the week it closes is genuinely over in the installation's
-// own zone, early enough that the review is waiting when the first person
+// own zone, early enough that the review is waiting when the first contact
 // opens Margince.
 const reviewHour = 6
 

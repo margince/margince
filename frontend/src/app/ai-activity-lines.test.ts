@@ -200,7 +200,7 @@ describe("speak", () => {
         kind: "summarize",
         state: "done",
         subject_label: "I",
-        subject_type: "person",
+        subject_type: "contact",
         subject_id: "019f7e65-fbf7-7114-b114-40af4af63a77",
       },
       (key) => en[key],
@@ -287,9 +287,9 @@ describe("speak", () => {
 // A prose reason cannot be checked by reading it, but the OBJECT a kind carries
 // can be. These three sat on SYSTEM_SWEEP, whose sentence says the work belongs
 // to nobody in particular — false whenever a human asked for the read, because
-// compose binds that person as on_behalf_of and the occurrence lands in their
+// compose binds that contact as on_behalf_of and the occurrence lands in their
 // own feed. A reader who trusted the shared sentence would conclude no site read
-// can reach a person, and stop looking.
+// can reach a contact, and stop looking.
 //
 // Identity, not text: the reason may be reworded freely and only re-pointing a
 // lane at another entry fails. Three assertions, because each catches a
@@ -341,12 +341,12 @@ describe("the site-read lanes carry one reason of their own", () => {
 // been shown the copy that came with it.
 //
 // A failure here is not a bug. It means somebody widened what the rail draws,
-// and owes two answers: can an occurrence of that kind reach ONE person's feed,
+// and owes two answers: can an occurrence of that kind reach ONE seat's feed,
 // and does it still fit inside `recent`'s cap of ten alongside the rest.
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
     expect([...displayedKinds()].sort()).toEqual([
-      // The account scan's sentence. It reaches one person's feed — the read
+      // The account scan's sentence. It reaches one seat's feed — the read
       // runs under the reader's own principal, for the account they opened,
       // so the occurrence is theirs rather than the workspace's. And it fits:
       // one per reader per account opened, held to one read an hour by the
@@ -358,7 +358,7 @@ describe("the kinds the rail asks for", () => {
       "morning_brief",
       "offer_draft",
       "overnight_at_risk_sweep",
-      // A company's website read end to end. It reaches one person's feed:
+      // A company's website read end to end. It reaches one seat's feed:
       // the dossier is announced under the requester as on_behalf_of, so a
       // read a rep started from a company page is scoped to that rep, while
       // the sweeps' reads name no human and never reach anyone. And it fits:
@@ -366,14 +366,14 @@ describe("the kinds the rail asks for", () => {
       "site_read",
       "summarize",
       // Reading a meeting transcript for the next steps in it. It reaches one
-      // person's feed: the run row records who pressed the button, so the
+      // seat's feed: the run row records who pressed the button, so the
       // occurrence is theirs rather than the workspace's — which is also why it
       // is no longer SYSTEM_SWEEP's "belongs to nobody in particular". And it
       // fits: a rep reads the transcript of a meeting they sat in, a handful a
       // week, and uq_transcript_read_inflight allows one in flight per
       // transcript however often the button is pressed.
       "transcript_propose",
-      // Learning the reader's own writing voice. It reaches one person's feed:
+      // Learning the reader's own writing voice. It reaches one seat's feed:
       // the build names the requester and visibleProfile admits only the
       // profile's owner, so the occurrence can belong to nobody else. And it
       // fits: a voice is learned when a rep asks for it or when their corpus
@@ -387,7 +387,7 @@ describe("the kinds the rail asks for", () => {
       // a rep waiting on their own week should be told what is being done to
       // it, and "lessons" is a different promise from "a summary".
       "weekly_learnings",
-      // The weekly retrospective's sentence. It reaches one person's feed —
+      // The weekly retrospective's sentence. It reaches one seat's feed —
       // the pass runs under that rep's own principal over their own week, so
       // ResolveActor scopes the occurrence to them rather than to the
       // workspace. And it fits: one occurrence per rep per week is the rarest
@@ -451,7 +451,7 @@ describe("the ticker and the rail never narrate one action twice", () => {
 // hook, exported by nothing.
 describe("the email mutation keys stay split", () => {
   // DERIVED from the tree, never listed. The list was two named files, and one
-  // of them stopped writing mail at all when the person page's second composer
+  // of them stopped writing mail at all when the contact page's second composer
   // was retired — so the gate failed on a file that had become innocent, and
   // would have gone on passing for any NEW screen that took up the old key. A
   // census that can fail short has already failed: what this protects is the

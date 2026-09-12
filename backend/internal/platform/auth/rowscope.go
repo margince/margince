@@ -102,7 +102,7 @@ func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRow
 // widen (A52/ADR-0039); grants on anything else cannot exist (the
 // record_grant CHECK is the schema-side twin of this set).
 var shareableTables = map[string]bool{
-	tablePerson: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
+	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
@@ -128,7 +128,7 @@ var shareableTables = map[string]bool{
 // TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate keeps the two in step: add
 // 'owner' back to a table's CHECK and that test demands this map learn about
 // it, so the pair cannot drift into a silent disclosure again.
-var ownerPrivateTables = map[string]bool{tablePerson: true, tableCompany: true}
+var ownerPrivateTables = map[string]bool{tableContact: true, tableCompany: true}
 
 // UnboundedFor reports whether the actor reads the named tables with NO
 // predicate at all: an unbounded actor, or an identity table (tableclass.go)
@@ -168,7 +168,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 // names itself so a new caller that forwards an unvalidated string is
 // an error, never an injection.
 var ownerScopedTables = map[string]bool{
-	tablePerson: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
+	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 	"list": true, "saved_view": true, "automation": true, "voice_profile": true,
 }
 
@@ -301,7 +301,7 @@ func ScopeClauseFor(ctx context.Context, table, alias string, arg func(any) int)
 // row never passes.
 //
 // Both differences are load-bearing where a record is served or referenced
-// outside the store that owns it. Art. 17 erasure anonymizes a person in
+// outside the store that owns it. Art. 17 erasure anonymizes a contact in
 // place and stamps archived_at while LEAVING owner_id alone, so the
 // tombstone still satisfies the original owner's predicate: a probe without
 // the live filter answers "yes, still yours" for a record every live read
@@ -338,11 +338,11 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 // captured record is still held — a SAR that silently omitted it, or an
 // erasure that silently spared it, would be the defect. The crossing is
 // authorized by the stronger object gate every caller here passes first
-// (person.delete, the same trust level erasure needs) plus, on the SAR
+// (contact.delete, the same trust level erasure needs) plus, on the SAR
 // path, an explicit unbounded-scope check.
 //
-// It deliberately does not widen the OWNER scope: a rep with person.delete
-// still cannot erase a colleague's person. Only the capture-privacy arm
+// It deliberately does not widen the OWNER scope: a rep with contact.delete
+// still cannot erase a colleague's contact. Only the capture-privacy arm
 // is lifted, so the caller sees exactly what their scope tier holds.
 func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if !ownerScopedTables[table] {

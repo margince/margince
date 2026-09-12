@@ -95,7 +95,7 @@ type LogActivityInput struct {
 
 // The origins an activity can have.
 //
-// Two of them are the system writing rather than a person, and neither counts
+// Two of them are the system writing rather than a contact, and neither counts
 // as the record being touched: OriginSystemRemediation marks work the product
 // files about a record — a forecast-assurance review task — and OriginSystemNotice
 // marks a message the installation owes somebody, such as the confirm-details
@@ -266,7 +266,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
-	// whichever person they name — and they have just been through the
+	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
 	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
 		return crmcontracts.Activity{}, false, err

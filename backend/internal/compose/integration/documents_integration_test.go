@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,12 +58,12 @@ func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 	theirs := e.SeedDeal(t, "Another team's deal", pipeline, stage, &e.Rep3)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, mine, company)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, theirs, company)
-	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	private := e.SeedContact(t, "Their private contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	seedDocument(t, e, company, "deal", mine, "our-contract.pdf", "contract", false)
 	seedDocument(t, e, company, "deal", theirs, "their-contract.pdf", "contract", false)
-	seedDocument(t, e, company, "person", private, "their-private-note.pdf", "legal", false)
+	seedDocument(t, e, company, "contact", private, "their-private-note.pdf", "legal", false)
 	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
 
 	docs, _, err := store.ListCompanyDocuments(
@@ -148,7 +148,7 @@ var docWritePerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -206,7 +206,7 @@ var docUploadPerms = principal.Permissions{
 	Objects: map[string]principal.ObjectGrant{
 		"company":               {Read: true, Update: true},
 		"deal":                  {Read: true, Update: true},
-		"person":                {Read: true},
+		"contact":               {Read: true},
 		"installation_settings": {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
@@ -221,11 +221,11 @@ func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	// The unreadable parent is a capture-private contact: a deal would be
 	// readable by every seat.
-	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	private := e.SeedContact(t, "Their private contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	mine := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
-	hidden := seedDocument(t, e, company, "person", private, "their-v1.pdf", "contract", false)
+	hidden := seedDocument(t, e, company, "contact", private, "their-v1.pdf", "contract", false)
 
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, docWritePerms)
 	_, err := store.UpdateAttachmentMetadata(ctx, mine,
@@ -306,13 +306,13 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	mine := e.SeedDeal(t, "My deal", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, mine, company)
-	private := e.SeedPerson(t, "Their private contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	private := e.SeedContact(t, "Their private contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	// Two emails on this account: one linked to a deal the rep covers, one
 	// linked only to a contact they cannot read.
 	visibleEmail := seedActivityWithDeal(t, e, mine)
-	hiddenEmail := seedActivityWithPerson(t, e, private)
+	hiddenEmail := seedActivityWithContact(t, e, private)
 	seedDocument(t, e, company, "activity", visibleEmail, "signed-msa.pdf", "contract", false)
 	seedDocument(t, e, company, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
 
@@ -333,9 +333,9 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	}
 }
 
-// seedActivityWithPerson files one email against a contact; the activity's
+// seedActivityWithContact files one email against a contact; the activity's
 // scope is then that contact's visibility, through the link walk.
-func seedActivityWithPerson(t *testing.T, e *Env, person ids.UUID) ids.UUID {
+func seedActivityWithContact(t *testing.T, e *Env, contact ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `
@@ -343,8 +343,8 @@ func seedActivityWithPerson(t *testing.T, e *Env, person ids.UUID) ids.UUID {
 		VALUES ($1, 'email', 'Contract', $2::timestamptz, 'manual', 'human:test')`,
 		id, activityOccurredAt)
 	e.WsExec(t, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, person)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, contact)
 	return id
 }
 
@@ -371,7 +371,7 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
 	e := Setup(t)
 	files := activities.NewStore(e.DB())
-	companies := people.NewStore(e.DB())
+	companies := contacts.NewStore(e.DB())
 	survivor := e.SeedCompany(t, "Acme", &e.Rep1)
 	dissolved := e.SeedCompany(t, "Acme Holdings", &e.Rep1)
 

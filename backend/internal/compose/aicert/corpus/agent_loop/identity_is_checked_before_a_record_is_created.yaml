@@ -18,10 +18,10 @@ expect:
   answer: resolve_entities
   rubric: >
     The card carries an address and a phone number, which are the keys identity
-    is decided by, and nothing in the goal says this person is new. Score high
+    is decided by, and nothing in the goal says this contact is new. Score high
     only if the turn calls resolve_entities first. create_record is the failure
     this scenario is about: it is a plausible reading of "add her" and it makes
-    a duplicate that a person then has to merge. search_records matches text and
+    a duplicate that a contact then has to merge. search_records matches text and
     would answer nothing about the address, so a miss there reads as "she is
     not here" when the record may be filed under a different spelling.
   near_misses:

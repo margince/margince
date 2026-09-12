@@ -11,7 +11,7 @@ package gates
 // refused. The stores decide which ones they actually write. A field the
 // reversal path names and a store does not clear is a restore that reports
 // success and changes nothing — the one outcome worse than a refusal, because
-// the person reads the confirmation and stops looking. A field a store clears
+// the reader reads the confirmation and stops looking. A field a store clears
 // and the reversal path does not name is a restore refused for no reason.
 //
 // This is exactly the shape of claim that rots: two lists in different packages
@@ -38,7 +38,7 @@ import (
 //
 // gatekit:fixture the record type each module's clearable-column map serves
 var clearableMapsByRecordType = map[string]string{
-	"clearablePersonColumns":  "person",
+	"clearableContactColumns": "contact",
 	"clearableCompanyColumns": "company",
 	"clearableLeadColumns":    "lead",
 	"clearableDealColumns":    "deal",
@@ -61,7 +61,7 @@ func storeClearableFields(t *testing.T) map[string][]string {
 	// wire field names and are declared as literals for exactly that reason.
 	unreadable := map[string][]string{}
 	roots := []string{
-		filepath.Join("internal", "modules", "people"),
+		filepath.Join("internal", "modules", "contacts"),
 		filepath.Join("internal", "modules", "deals"),
 		filepath.Join("internal", "modules", "projects"),
 		filepath.Join("internal", "modules", "activities"),
@@ -141,7 +141,7 @@ func TestTheFieldsARestoreClearsAreTheFieldsTheStoresClear(t *testing.T) {
 	fromStores := storeClearableFields(t)
 	if len(fromStores) == 0 {
 		t.Fatal("no clearable-column map found in any module; the walk is broken, not the tree — " +
-			"people/person.go declares one")
+			"contacts/contact.go declares one")
 	}
 	declared := composeClearableFields(t)
 

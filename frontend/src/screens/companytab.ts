@@ -3,7 +3,7 @@ import type { Route } from "../app/router";
 // The account record's tabs, and the ONE way to address one.
 //
 // They live apart from the page that draws them for the same reason the
-// contact's do (screens/persontab.ts): `navigate` takes `id2` as a bare string,
+// contact's do (screens/contacttab.ts): `navigate` takes `id2` as a bare string,
 // so a call site that names a tab by hand keeps pointing at an id that no
 // longer exists after a rename, and the router falls back to Overview with
 // nothing anywhere saying so. `companyTabRoute` is typed on `CompanyTab`, so

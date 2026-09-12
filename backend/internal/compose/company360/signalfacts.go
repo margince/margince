@@ -67,7 +67,7 @@ func readSignalFacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (s
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	companyPos := arg(companyID)
 	// The SUBJECT row scope, not the account's. A signal's subject can be a
-	// person or a deal the caller may not see, resolved onto an account they
+	// contact or a deal the caller may not see, resolved onto an account they
 	// can — and every figure below is drawn from the signal's own text. The
 	// canonical company predicate comes from the signals module for the same
 	// reason: a second spelling of "belongs to this account" would decide

@@ -36,7 +36,7 @@ expect:
     whose life the money belongs to, never the presence of an invoice, an amount
     or a due date — all three appear here and in every private bill beside it.
     "personal" is the failure this scenario exists to catch and scores zero at
-    any confidence. A CRM that hides supplier invoices from the people who
+    any confidence. A CRM that hides supplier invoices from the contacts who
     procure and pay them has stopped being a CRM, and the failure is silent: the
     thread simply is not there. Other holding kinds score low for the same
     reason, though a hold on a mail asking about a disputed line item would be a

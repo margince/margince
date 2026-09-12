@@ -6,12 +6,12 @@ package attention
 // The tier that admits the three READINGS ABOUT the queue, as against the queue
 // itself.
 //
-// `/worklist` assembles one person's day and every seat gets their own. The team
+// `/worklist` assembles one colleague's day and every seat gets their own. The team
 // board, the hidden-backlog guardrail and the response metrics are a different
 // kind of question: they ask how the WORK is going rather than what to do next,
 // and they are read by whoever can change how it goes — the horizon that is set
 // wrong, the rep marking every hard reply not_sales, the fortnight nobody
-// answered in. A rep working their queue to the bottom is not the person who
+// answered in. A rep working their queue to the bottom is not the colleague who
 // acts on any of those.
 //
 // One spelling, because two of the three used to have none. The board refused
@@ -39,7 +39,7 @@ import (
 // tier test answers from `Permissions`, and a Deal Room buyer is minted
 // carrying none — so it would be refused here by the accident of an empty
 // struct rather than by a rule, and the first constructor to give a buyer any
-// permissions would hand an external person with a room link the seller's team
+// permissions would hand an external contact with a room link the seller's team
 // roster. `RequireHuman` states that refusal where every other gate in this
 // tree inherits it, and it turns away an agent passport too, which matches the
 // `human-only` these three endpoints already declare in the contract.

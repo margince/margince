@@ -19,9 +19,9 @@ import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // A seat's OWN other addresses: a send-as alias, a private domain the same
-// person reads, an address they forward from.
+// contact reads, an address they forward from.
 //
-// Mail among a person's own addresses is not correspondence with anybody, so
+// Mail among a contact's own addresses is not correspondence with anybody, so
 // declaring one keeps those messages out of the CRM and stops the address being
 // minted as a contact. Until this card there was no way to say so — the endpoint
 // shipped and nothing reached it.
@@ -159,7 +159,7 @@ const kindLabel: Record<Kind, MessageKey> = {
  * An address somebody typed needs no explanation. One the product LEARNED does:
  * a seat scanning this card would otherwise find an address they never entered
  * and have no way to tell whether they forgot adding it or something else did —
- * and they are the person who decides whether it stays.
+ * and they are the colleague who decides whether it stays.
  */
 function learnedNote(source: OwnerIdentity["source"]): MessageKey | null {
   switch (source) {

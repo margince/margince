@@ -16,9 +16,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,11 +39,11 @@ func WithProvider(reg *integrations.Registry, vault keyvault.Vault, inserter *jo
 		}
 		store = bindProviderDomain(store).WithSubmitEnqueue(providerSubmitEnqueue(inserter))
 		s.integrationsHandlers = integrationsHandlers{store: store, runs: store, pool: pool}
-		// The person page reads the provider's category vocabulary to say
+		// The contact page reads the provider's category vocabulary to say
 		// what a run did NOT ask for. Bound here rather than at construction
 		// because the registry arrives with this option.
-		if s.person360Svc != nil {
-			s.person360Svc.WithProviders(reg)
+		if s.contact360Svc != nil {
+			s.contact360Svc.WithProviders(reg)
 		}
 	}
 }
@@ -84,15 +84,15 @@ func BindProviderDomain(store *integrations.Store) *integrations.Store {
 	return bindProviderDomain(store)
 }
 
-// bindProviderDomain attaches the owning domain's callbacks: people decides
+// bindProviderDomain attaches the owning domain's callbacks: contacts decides
 // whether a subject may be enriched, which records might be the same human,
 // what may leave the installation about them, and where the bought values
-// land. THIS is the cross-module edge — integrations may not import people,
+// land. THIS is the cross-module edge — integrations may not import contacts,
 // so compose injects it, and it is injected in exactly one place so the api
 // role and the worker role can never disagree about what is bound.
 func bindProviderDomain(store *integrations.Store) *integrations.Store {
 	return store.
-		WithDomain(providerFence, people.DuplicateCluster, people.SubjectIdentifiers).
+		WithDomain(providerFence, contacts.DuplicateCluster, contacts.SubjectIdentifiers).
 		WithRequesterStanding(providerRequesterHoldsCompany).
 		WithSubjectHold(providerSubjectHold).
 		WithStoredClaimApplier(providerStoredClaimApplier).
@@ -103,26 +103,26 @@ func bindProviderDomain(store *integrations.Store) *integrations.Store {
 
 // providerSubjectHold is the fence asked while holding the subject, for the
 // hand-off that goes on to write about them.
-func providerSubjectHold(ctx context.Context, tx pgx.Tx, personID string) (integrations.FenceVerdict, error) {
-	allowed, reason, err := people.HoldEnrichmentSubject(ctx, tx, personID)
+func providerSubjectHold(ctx context.Context, tx pgx.Tx, contactID string) (integrations.FenceVerdict, error) {
+	allowed, reason, err := contacts.HoldEnrichmentSubject(ctx, tx, contactID)
 	if err != nil {
 		return integrations.FenceVerdict{}, err
 	}
 	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
-// providerFence adapts people's verdict to the shape integrations declares.
+// providerFence adapts contacts's verdict to the shape integrations declares.
 // The two refusals stay distinct across the seam: a suppressed subject
 // objected, an ineligible one is a record we should not be buying about.
-func providerFence(ctx context.Context, tx pgx.Tx, personID string) (integrations.FenceVerdict, error) {
-	allowed, reason, err := people.EnrichmentFence(ctx, tx, personID)
+func providerFence(ctx context.Context, tx pgx.Tx, contactID string) (integrations.FenceVerdict, error) {
+	allowed, reason, err := contacts.EnrichmentFence(ctx, tx, contactID)
 	if err != nil {
 		return integrations.FenceVerdict{}, err
 	}
 	return integrations.FenceVerdict{Allowed: allowed, Reason: reason}, nil
 }
 
-// providerClaimWriter lands one run's values in the table people owns, and
+// providerClaimWriter lands one run's values in the table contacts owns, and
 // folds what a record can hold onto the record itself.
 //
 // The two are one write. A purchase stored but not applied is a run that is
@@ -130,16 +130,16 @@ func providerFence(ctx context.Context, tx pgx.Tx, personID string) (integration
 // across transactions would make that state reachable by a crash rather than
 // only by a refusal.
 func providerClaimWriter(ctx context.Context, tx pgx.Tx, w integrations.ClaimWrite) error {
-	if err := people.WriteProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims, w.RetrievedAt); err != nil {
+	if err := contacts.WriteProviderClaims(ctx, tx, w.RunID, w.ContactID, w.Provider, w.Claims, w.RetrievedAt); err != nil {
 		return err
 	}
-	return people.ApplyProviderClaims(ctx, tx, w.RunID, w.PersonID, w.Provider, w.Claims)
+	return contacts.ApplyProviderClaims(ctx, tx, w.RunID, w.ContactID, w.Provider, w.Claims)
 }
 
 // providerStoredClaimApplier folds a purchase the domain already stored onto
 // the record, for the catch-up sweep.
-func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID string) (bool, error) {
-	return people.ApplyStoredProviderClaims(ctx, tx, personID, runID)
+func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, contactID, runID string) (bool, error) {
+	return contacts.ApplyStoredProviderClaims(ctx, tx, contactID, runID)
 }
 
 // providerFillReverter is the domain half of taking a purchase back off the
@@ -147,9 +147,9 @@ func providerStoredClaimApplier(ctx context.Context, tx pgx.Tx, personID, runID 
 // removed the claims and left the values standing.
 func providerFillReverter() integrations.RevertFillsFunc {
 	return integrations.RevertFillsFunc{
-		Subjects: people.SubjectsWithProviderFills,
+		Subjects: contacts.SubjectsWithProviderFills,
 		RevertOne: func(ctx context.Context, tx pgx.Tx, providerName string, subject ids.UUID) ([]string, error) {
-			reverted, err := people.RevertProviderFills(ctx, tx, providerName, subject)
+			reverted, err := contacts.RevertProviderFills(ctx, tx, providerName, subject)
 			return reverted.Fields, err
 		},
 	}
@@ -157,7 +157,7 @@ func providerFillReverter() integrations.RevertFillsFunc {
 
 // providerClaimDeleter is the domain half of the delete-data action.
 func providerClaimDeleter(ctx context.Context, tx pgx.Tx, providerName string) (int64, error) {
-	return people.DeleteProviderClaims(ctx, tx, providerName)
+	return contacts.DeleteProviderClaims(ctx, tx, providerName)
 }
 
 // providerRequesterHoldsCompany answers whether the human who queued a run may read

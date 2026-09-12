@@ -23,7 +23,7 @@ func TestAReplyChainIsOneConversation(t *testing.T) {
 	history := []HistoryIn{
 		mail(activityID, 3, "CRM requirements", "outbound"),
 		mail(dealID, 4, "Re: CRM requirements", "inbound"),
-		mail(personID, 5, "AW: Re: CRM requirements", "outbound"),
+		mail(contactID, 5, "AW: Re: CRM requirements", "outbound"),
 		mail(projectID, 6, "WG: AW: Re: CRM requirements", "inbound"),
 	}
 	threads := threadsOf(history)
@@ -65,7 +65,7 @@ func TestALongSilenceSplitsTheArcIntoMoments(t *testing.T) {
 		mail(activityID, 1, "Scoping", "inbound"),
 		mail(dealID, 3, "Re: Scoping", "outbound"),
 		// Well past arcGapDays.
-		mail(personID, 28, "New question", "inbound"),
+		mail(contactID, 28, "New question", "inbound"),
 	}
 	moments := clusterThreads(threadsOf(history))
 	if len(moments) != 2 {
@@ -80,7 +80,7 @@ func TestAMomentHoldingAPromiseOutranksNewerChatter(t *testing.T) {
 	in := fullInput()
 	// The promise was made here, months ago.
 	in.Commitments = []ClaimIn{{
-		PersonName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
+		ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
 		Status: statusOpen, SourceID: activityID,
 	}}
 	history := []HistoryIn{mail(activityID, 1, "Security review", "inbound")}

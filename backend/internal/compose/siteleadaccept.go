@@ -4,9 +4,9 @@
 package compose
 
 // The site_lead ACCEPT executor (R5): a human approval of one staged
-// published person captures them as a LEAD through the one capture Sink —
-// never directly a person (ADR-0008: leads graduate; the Sink's own
-// cross-source email dedupe stages the 🟡 merge when the person later
+// published contact captures them as a LEAD through the one capture Sink —
+// never directly a contact (ADR-0008: leads graduate; the Sink's own
+// cross-source email dedupe stages the 🟡 merge when the contact later
 // emails in, and that staged merge is the promotion trigger, not this
 // effect). Redeem-then-execute like every 🟡 executor: the single-use
 // redemption is the exactly-once claim, and the Sink's natural key makes
@@ -45,7 +45,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		}
 		// A proposal staged before the payload carried its natural key still
 		// has to land on the right lead — and an empty key would collide every
-		// such person onto ONE row. It is derivable from what those payloads do
+		// such contact onto ONE row. It is derivable from what those payloads do
 		// carry, so derive it rather than refusing a decision a human already
 		// made.
 		if proposal.NaturalKey == "" {
@@ -91,7 +91,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 				Email:    proposal.PublishedEmail,
 				Title:    proposal.Role,
 				// Accepting a name read off a company's website records that
-				// the person exists. It is not a statement that the accepter
+				// the contact exists. It is not a statement that the accepter
 				// has taken them on, and owning it would say so: the lead would
 				// enter their "owes a reply" lane and start its first-response
 				// clock against somebody who has never written to anyone.

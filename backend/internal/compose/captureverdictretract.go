@@ -6,12 +6,12 @@ package compose
 // A noise verdict reaches the RECORD the sender already has, not only their
 // mail. The verdict often arrives after the contact: capture creates on
 // commit, the ledger is drained later, and a sender judged noise today may
-// have been minted a person under an earlier, looser creation rule. Hiding
-// their mail while their contact stands leaves "receipts@" on the people list
+// have been minted a contact under an earlier, looser creation rule. Hiding
+// their mail while their contact stands leaves "receipts@" on the contacts list
 // forever — the exact junk the verdict said does not belong there.
 //
 // The two halves stay in their own modules, on the pattern the confidentiality
-// engine set: compose asks which records the address still holds, and people
+// engine set: compose asks which records the address still holds, and contacts
 // archives them through its own writer, so the write shape holds and a
 // retraction lands an audit row exactly like a human's archive.
 
@@ -38,7 +38,7 @@ import (
 // prevent.
 //
 // TestAKeepOutRetractsOnlyTheDecidersOwnContact holds the narrow bound. It
-// cannot be held twice over: `uq_person_email_dedupe` makes an address unique
+// cannot be held twice over: `uq_contact_email_dedupe` makes an address unique
 // across live records, so a second seat's copy of one address is a state this
 // installation cannot reach — the bound matters for the OTHER shapes a
 // colleague's record takes, which is why it is a constant rather than a
@@ -61,7 +61,7 @@ const (
 func (e *CounterpartyVerdictEngine) retractSendersContacts(
 	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, ownersOnly bool,
 ) error {
-	holders, err := e.people.CaptureOnlyHoldersOfAddressTx(ctx, tx, row.Email)
+	holders, err := e.contacts.CaptureOnlyHoldersOfAddressTx(ctx, tx, row.Email)
 	if err != nil {
 		return err
 	}
@@ -69,13 +69,13 @@ func (e *CounterpartyVerdictEngine) retractSendersContacts(
 		if ownersOnly && h.OwnerID != row.OwnerID {
 			continue
 		}
-		retracted, err := e.people.RetractCaptureOnlyPersonTx(ctx, tx, h.PersonID, h.OwnerID)
+		retracted, err := e.contacts.RetractCaptureOnlyContactTx(ctx, tx, h.ContactID, h.OwnerID)
 		if err != nil {
 			return err
 		}
 		if retracted {
 			e.log.InfoContext(ctx, "counterparty verdict: withdrew the contact a disowned sender had been given",
-				"person", h.PersonID.String())
+				"contact", h.ContactID.String())
 		}
 	}
 	return nil
@@ -127,7 +127,7 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 					return err
 				}
 			}
-			done, err := w.store.RetractCaptureOnlyPersonTx(ctx, tx, c.PersonID, c.OwnerID)
+			done, err := w.store.RetractCaptureOnlyContactTx(ctx, tx, c.ContactID, c.OwnerID)
 			if err != nil {
 				return err
 			}
@@ -136,7 +136,7 @@ func (w *linkReconcileWorker) retractNoiseJudgedContacts(ctx context.Context) (i
 			}
 			return nil
 		}); err != nil {
-			failed = errors.Join(failed, fmt.Errorf("retracting %s: %w", c.PersonID, err))
+			failed = errors.Join(failed, fmt.Errorf("retracting %s: %w", c.ContactID, err))
 		}
 	}
 	return retracted, failed

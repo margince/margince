@@ -139,7 +139,7 @@ function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
   return (
     <p className="t-caption roompage-facts">
       <span>
-        {t("room.card.people", {
+        {t("room.card.contacts", {
           invited: formatNumber(invited, locale),
           active: formatNumber(active, locale),
         })}
@@ -177,7 +177,7 @@ function ViewAsBuyerButton({ room }: Readonly<{ room: DealRoom }>) {
   //
   // Archived is named first because it is the specific thing a reader can act
   // on: unarchive the room. The general refusal covers the other three
-  // conditions the server checks — the caller's grant, being a person rather
+  // conditions the server checks — the caller's grant, being a contact rather
   // than an agent, and the deal being writable and live — which a screen cannot
   // tell apart and should not guess between.
   //

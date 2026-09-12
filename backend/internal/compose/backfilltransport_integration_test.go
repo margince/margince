@@ -153,7 +153,7 @@ func (backfillAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (aut
 	return authz.RBAC{Permissions: principal.Permissions{
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
-			"person":   {Read: true},
+			"contact":  {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}}, nil
@@ -722,7 +722,7 @@ func (r backfillAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ i
 // the engine never sees — a worker killed mid-page, a rescue, a queue that
 // dropped it — and the row stays live with no job behind it. The index then
 // refuses every future StartBackfill for that connection, and the only symptom
-// is a person who cannot start one.
+// is a contact who cannot start one.
 //
 // The stranded state is built the way the strand happens rather than described:
 // StartBackfill is given an enqueue that does nothing, so the run is committed

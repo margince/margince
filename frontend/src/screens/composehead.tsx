@@ -14,10 +14,10 @@ import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { TokenInput, type TokenSuggestion } from "../design-system/tokeninput";
 import { useT } from "../i18n";
-import type { Transport } from "./persontransports";
+import type { Transport } from "./contacttransports";
 import "./composehead.css";
 
-type Person360 = components["schemas"]["Person360"];
+type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
 
 /**
@@ -80,18 +80,18 @@ export function FieldNeed({
  * Read off the two 360s the composer ALREADY holds — the contact it was opened
  * on, and the account behind it — so the offer costs no request of its own and
  * cannot disagree with what the page behind the drawer is showing. A reader
- * remembers a colleague's NAME and not their address, which is why the person is
- * the label; the address is the value AND the hint beside it, because one person
+ * remembers a colleague's NAME and not their address, which is why the contact is
+ * the label; the address is the value AND the hint beside it, because one contact
  * can have several and a row that showed only the name would be a choice between
  * two identical-looking options.
  *
- * The record's own contact leads, because a message written from a person's page
- * is overwhelmingly to that person; the account's roster follows in the order
+ * The record's own contact leads, because a message written from a contact's page
+ * is overwhelmingly to that contact; the account's roster follows in the order
  * the 360 already put it in. A contact with no address on file is not offered —
  * a row that commits an empty recipient is help that refuses at the send.
  */
 export function recipientSuggestions(
-  person: Person360 | undefined,
+  contact: Contact360 | undefined,
   company: Company360 | undefined,
 ): readonly TokenSuggestion[] {
   const seen = new Set<string>();
@@ -104,11 +104,11 @@ export function recipientSuggestions(
     seen.add(address);
     out.push({ value: address, label, hint: address });
   };
-  const subject = person?.person;
+  const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
     offer(address.email, subject?.full_name ?? address.email);
   }
-  for (const contact of company?.people?.data ?? []) {
+  for (const contact of company?.contacts?.data ?? []) {
     offer(contact.primary_email, contact.full_name);
   }
   return out;

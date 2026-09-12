@@ -79,7 +79,7 @@ func TestARoomRefusesADeactivatedColleagueTheCallerNamed(t *testing.T) {
 	if !strings.Contains(err.Error(), "steward") {
 		t.Fatalf("the room was refused for some other reason: %v", err)
 	}
-	// Refused rather than silently dropped: the caller CHOSE this person, and
+	// Refused rather than silently dropped: the caller CHOSE this contact, and
 	// telling them is what lets them choose again. The refusal must not read as
 	// a missing DEAL, which sends them looking in the wrong place.
 	if errors.Is(err, apperrors.ErrNotFound) {

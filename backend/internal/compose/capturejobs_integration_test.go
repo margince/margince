@@ -162,7 +162,7 @@ func TestCaptureOvernightJobsRegisterAndRun(t *testing.T) {
 		GmailRegistry:     b.registry,
 		// Zero-value scripts: the classify brain labels whatever backlog
 		// the fake connector synced; the enrich pass finds no
-		// connector-created person (this registry wires no ensurer) and
+		// connector-created contact (this registry wires no ensurer) and
 		// completes as an honest no-op.
 		ClassifyBrain: &scriptedClassifyBrain{},
 		EnrichBrain:   &signatureScriptBrain{},

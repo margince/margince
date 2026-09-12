@@ -7,7 +7,7 @@ package integration
 
 // Art. 17 over a chat roster: the third human in a group is named by an ACCOUNT
 // and by nothing else, and an erasure that reached them only by address or by
-// person id would leave that account behind — readable, and matchable back to
+// contact id would leave that account behind — readable, and matchable back to
 // the subject by the next roster naming it.
 //
 // It also pins the pairing. An account id is a short opaque string, and the same
@@ -37,14 +37,14 @@ const (
 // seedRosterRowsFor puts the subject on two group chats: one on the transport
 // their account belongs to, one on another transport that happens to issue the
 // same id to somebody else. Returns the two participant row ids.
-func seedRosterRowsFor(t *testing.T, e *Env, personID ids.UUID) (mine, decoy ids.UUID) {
+func seedRosterRowsFor(t *testing.T, e *Env, contactID ids.UUID) (mine, decoy ids.UUID) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person_channel_identity (person_id, provider, channel_user_id, source, captured_by)
+			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, source, captured_by)
 			VALUES ($1, $2, $3, 'capture', 'connector:telegram')`,
-			personID, subjectTransport, subjectAccount); err != nil {
+			contactID, subjectTransport, subjectAccount); err != nil {
 			return err
 		}
 		for transport, into := range map[string]*ids.UUID{subjectTransport: &mine, decoyTransport: &decoy} {
@@ -56,7 +56,7 @@ func seedRosterRowsFor(t *testing.T, e *Env, personID ids.UUID) (mine, decoy ids
 				return err
 			}
 			// Named by ACCOUNT alone, which is what a chat roster gives: no
-			// person id, no address, nothing the other arms of the scrub see.
+			// contact id, no address, nothing the other arms of the scrub see.
 			row := ids.NewV7()
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO activity_participant (id, activity_id, channel_user_id, role)
@@ -89,8 +89,8 @@ func participantRowExists(t *testing.T, e *Env, row ids.UUID) bool {
 // the transport boundary.
 func TestErasingASubjectRemovesTheRosterRowsNamingTheirAccount(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
-	mine, decoy := seedRosterRowsFor(t, e, personID)
+	contactID := seedSubject(t, e)
+	mine, decoy := seedRosterRowsFor(t, e, contactID)
 
 	// The fixture has to start with both rows, or "gone" below is the state it
 	// was seeded in rather than the state the erasure produced.
@@ -98,8 +98,8 @@ func TestErasingASubjectRemovesTheRosterRowsNamingTheirAccount(t *testing.T) {
 		t.Fatal("the fixture did not seed both roster rows")
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "art-17"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	if participantRowExists(t, e, mine) {

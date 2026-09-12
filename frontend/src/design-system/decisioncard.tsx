@@ -20,7 +20,7 @@ import {
 } from "./trust";
 import "./decisioncard.css";
 
-// DecisionCard — the ONE way this product asks a person to decide something an
+// DecisionCard — the ONE way this product asks a colleague to decide something an
 // automation staged.
 //
 // It was `ApprovalRow` in a screen file, imported by seven screens, which
@@ -30,7 +30,7 @@ import "./decisioncard.css";
 //
 // It RENDERS THE PROPOSED CONTENT. The old row said "an automation drafted a
 // reply to <them>" and stopped — the summary, the provenance and the countdown,
-// which are everything about the proposal EXCEPT the proposal. A person cannot
+// which are everything about the proposal EXCEPT the proposal. A contact cannot
 // answer a question they have not been shown, so the drafted subject and body,
 // and the old→new sides of a field change, are on the card itself now.
 //
@@ -42,7 +42,7 @@ import "./decisioncard.css";
 // It holds no mutation, no query and no copy: the verbs arrive as callbacks, the
 // words arrive as `labels`, and the two layouts are one component because a
 // decision that reads one way in a queue and another way on the Brief is
-// two decisions to the person answering it.
+// two decisions to the contact answering it.
 
 export type DecisionApproval = components["schemas"]["Approval"];
 
@@ -377,7 +377,7 @@ export type DecisionDisplay = Readonly<{
 //
 // A kind that declares a display policy shows exactly what it declared: the
 // caller resolved those fields, so the payload's remaining keys are identifiers
-// and bookkeeping that answer nothing a person was asked. Printing them was how
+// and bookkeeping that answer nothing a contact was asked. Printing them was how
 // a business question came to read as a database row — `deal_id`,
 // `target_version`, `flags: ["unrealistic_stale"]` under a headline about a
 // deal going quiet.
@@ -487,7 +487,7 @@ function DraftBody({
 // then the values that would move, then the rest.
 //
 // The reason comes FIRST and unlabelled. It is a sentence the server wrote for
-// a person — the close-date sweep calls its own field "the plain-language
+// a contact — the close-date sweep calls its own field "the plain-language
 // derivation" — so captioning it would frame an explanation as a data point,
 // and burying it under the values it explains asks the reader to work out the
 // question from the answer.
@@ -537,7 +537,7 @@ function DecisionContent({
 }
 
 // The receipts, always on the card and never behind a popover: this is the one
-// surface where a person has to be able to check a claim BEFORE agreeing to it.
+// surface where a contact has to be able to check a claim BEFORE agreeing to it.
 // Collapsed in the row layout, where a queue of verbatim snippets would bury
 // the verbs; open in the deck, where there is one card and room to read it.
 function DecisionEvidence({
@@ -722,7 +722,7 @@ function cardName(
 //
 // The headline is the drafted SUBJECT where there is one, because that is the
 // line that differs: the server's summary names only the addressee, so a queue
-// of drafts to the same handful of people reads as one sentence over and over.
+// of drafts to the same handful of contacts reads as one sentence over and over.
 //
 // Failing that it is the RECORD'S NAME, where the server recorded one. Half the
 // stageable kinds carry no typed payload, and the summaries their paths compose

@@ -12,7 +12,7 @@
 //
 // Tables owned: project, project_phase_history.
 // A project's stakeholders are `relationship` rows of kind project_stakeholder,
-// and that table is people's.
+// and that table is contacts's.
 //
 // SUPERSEDES ADR-0073, which placed the project inside the deals bounded
 // context on the reasoning that a project is what a deal turns into. That held

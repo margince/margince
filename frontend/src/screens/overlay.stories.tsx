@@ -48,7 +48,7 @@ const errorConnection: Connection = { ...activeConnection, status: "error" };
 const freshSyncStatus: SyncStatus = {
   objects: [
     {
-      object: "person",
+      object: "contact",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,
@@ -65,7 +65,7 @@ const freshSyncStatus: SyncStatus = {
 const backfillingSyncStatus: SyncStatus = {
   objects: [
     {
-      object: "person",
+      object: "contact",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,

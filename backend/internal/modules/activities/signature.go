@@ -116,7 +116,7 @@ func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDel
 
 // htmlLines escapes plain text for a markup document and keeps its line breaks,
 // which a signature depends on: a name, a company and a phone number written on
-// three lines are three lines to the person who wrote them.
+// three lines are three lines to the contact who wrote them.
 func htmlLines(text string) string {
 	return strings.ReplaceAll(html.EscapeString(text), "\n", "<br>")
 }

@@ -73,7 +73,7 @@ func project360Stakeholders(rows []crmcontracts.Project360Stakeholder) []Handoff
 	out := make([]HandoffStakeholder, 0, len(rows))
 	for _, s := range rows {
 		out = append(out, HandoffStakeholder{
-			PersonID: ids.UUID(s.PersonId), Name: orBlank(s.PersonName), Role: orBlank(s.Role),
+			ContactID: ids.UUID(s.ContactId), Name: orBlank(s.ContactName), Role: orBlank(s.Role),
 		})
 	}
 	return out

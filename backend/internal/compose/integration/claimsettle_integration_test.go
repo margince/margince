@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -29,11 +29,11 @@ import (
 func TestASettledPromiseLeavesTheLaneItWasOn(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Vogt", &e.Rep1)
-	kept := seedPromise(t, e, person, "Angebot nachreichen", &due)
-	seedPromise(t, e, person, "Bleibt offen", &due)
+	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
+	kept := seedPromise(t, e, contact, "Angebot nachreichen", &due)
+	seedPromise(t, e, contact, "Bleibt offen", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if err := store.SettleConversationClaim(e.Admin(), kept, "done"); err != nil {
 		t.Fatalf("settling the promise: %v", err)
 	}
@@ -53,21 +53,21 @@ func TestASettledPromiseLeavesTheLaneItWasOn(t *testing.T) {
 func TestSettlingTwiceTheSameWayIsOneSettlement(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Frau Adler", &e.Rep1)
-	claim := seedPromise(t, e, person, "Termin bestätigen", &due)
+	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
+	claim := seedPromise(t, e, contact, "Termin bestätigen", &due)
 
-	store := people.NewStore(e.DB())
-	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, person)
+	store := contacts.NewStore(e.DB())
+	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, contact)
 	for range 2 {
 		if err := store.SettleConversationClaim(e.Admin(), claim, "done"); err != nil {
 			t.Fatalf("settling: %v", err)
 		}
 	}
-	// The second settle writes NOTHING. A second audit row would say a person's
+	// The second settle writes NOTHING. A second audit row would say a contact's
 	// record changed when it did not, and the trail is read to answer "what
-	// happened to this person" — an entry for a call that changed nothing is a
+	// happened to this contact" — an entry for a call that changed nothing is a
 	// false answer to that.
-	after := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, person)
+	after := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, contact)
 	if after-before != 1 {
 		t.Fatalf("settling twice wrote %d audit rows, want 1", after-before)
 	}
@@ -76,10 +76,10 @@ func TestSettlingTwiceTheSameWayIsOneSettlement(t *testing.T) {
 func TestSettlingAPromiseTheOtherWayIsRefused(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Herr Baum", &e.Rep1)
-	claim := seedPromise(t, e, person, "Preisliste schicken", &due)
+	contact := e.SeedContact(t, "Herr Baum", &e.Rep1)
+	claim := seedPromise(t, e, contact, "Preisliste schicken", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	if err := store.SettleConversationClaim(e.Admin(), claim, "done"); err != nil {
 		t.Fatalf("settling as done: %v", err)
 	}
@@ -95,10 +95,10 @@ func TestSettlingAPromiseTheOtherWayIsRefused(t *testing.T) {
 func TestSettlingWritesTheWholeShape(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Frau Kern", &e.Rep1)
-	claim := seedPromise(t, e, person, "Vertrag prüfen", &due)
+	contact := e.SeedContact(t, "Frau Kern", &e.Rep1)
+	claim := seedPromise(t, e, contact, "Vertrag prüfen", &due)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	outbox := e.WsCount(t, `SELECT count(*) FROM event_outbox`)
 	if err := store.SettleConversationClaim(e.Admin(), claim, "done"); err != nil {
 		t.Fatalf("settling: %v", err)
@@ -113,7 +113,7 @@ func TestSettlingWritesTheWholeShape(t *testing.T) {
 		t.Error("the claim did not reach status done")
 	}
 	audits := e.WsCount(t,
-		`SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, person)
+		`SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'update'`, contact)
 	if audits != 1 {
 		t.Errorf("the settlement wrote %d update audit rows, want 1", audits)
 	}
@@ -122,24 +122,24 @@ func TestSettlingWritesTheWholeShape(t *testing.T) {
 	}
 }
 
-func TestAReaderWhoMayNotWriteThePersonCannotSettleTheirPromise(t *testing.T) {
+func TestAReaderWhoMayNotWriteTheContactCannotSettleTheirPromise(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	// Rep2's person, settled by Rep3. A person outside the caller's scope reads
+	// Rep2's contact, settled by Rep3. A contact outside the caller's scope reads
 	// as absent, which is what keeps the claim's existence from leaking to
-	// somebody who may not know the person exists.
-	person := e.SeedPerson(t, "Herr Fremd", &e.Rep2)
-	claim := seedPromise(t, e, person, "Nicht deine Zusage", &due)
+	// somebody who may not know the contact exists.
+	contact := e.SeedContact(t, "Herr Fremd", &e.Rep2)
+	claim := seedPromise(t, e, contact, "Nicht deine Zusage", &due)
 
-	store := people.NewStore(e.DB())
-	// RepPerms, not AdminPerms. An admin legitimately may write any person in
+	store := contacts.NewStore(e.DB())
+	// RepPerms, not AdminPerms. An admin legitimately may write any contact in
 	// the workspace, so an admin fixture here would test nothing: the refusal
 	// this asserts is row scope, and admin has none to fail. Rep3 sits in Team2
-	// while the person is Rep2's, so a team-scoped reader cannot reach them.
+	// while the contact is Rep2's, so a team-scoped reader cannot reach them.
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.RepPerms)
 	err := store.SettleConversationClaim(stranger, claim, "done")
 	if err == nil {
-		t.Fatal("a reader settled a promise on a person they may not write")
+		t.Fatal("a reader settled a promise on a contact they may not write")
 	}
 	if !errors.Is(err, apperrors.ErrNotFound) && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the refusal was %v, want not-found or permission-denied", err)
@@ -154,15 +154,15 @@ func TestAReaderWhoMayNotWriteThePersonCannotSettleTheirPromise(t *testing.T) {
 func TestAPromiseWhoseEvidenceIsGoneCannotBeSettled(t *testing.T) {
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
-	person := e.SeedPerson(t, "Frau Winter", &e.Rep1)
-	claim := seedPromise(t, e, person, "Muster zusenden", &due)
+	contact := e.SeedContact(t, "Frau Winter", &e.Rep1)
+	claim := seedPromise(t, e, contact, "Muster zusenden", &due)
 
 	// The message the promise was read from, archived after the fact.
 	e.WsExec(t, `
 		UPDATE activity SET archived_at = now()
 		WHERE id = (SELECT source_activity_id FROM conversation_claim WHERE id = $1)`, claim)
 
-	err := people.NewStore(e.DB()).SettleConversationClaim(e.Admin(), claim, "done")
+	err := contacts.NewStore(e.DB()).SettleConversationClaim(e.Admin(), claim, "done")
 	if err == nil {
 		t.Fatal("a promise was settled from evidence that is no longer readable")
 	}

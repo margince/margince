@@ -8,7 +8,7 @@ package privacy
 // Its own file because erasure.go had outgrown the size cap, and because these
 // are one concept: an Eraser is the set of seams a destruction can travel
 // along, and each option here is one more place the data actually lives. What
-// erasing a person DOES is next door.
+// erasing a contact DOES is next door.
 
 import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -50,7 +50,7 @@ func NewEraser(db *database.DB) *Eraser { return &Eraser{db: db} }
 // Every path that erases an activity's CONTENT needs it — the retention sweep's
 // erase action, the expiry of a statutory floor, and a controller's release —
 // and each is reached without an Art. 17 request, so none can lean on the
-// person-scoped purge the cascade does. compose supplies capture's, which owns
+// contact-scoped purge the cascade does. compose supplies capture's, which owns
 // the natural-key join those rows are found by.
 func (e *Eraser) WithRawCapturePurger(purge RawCapturePurger) *Eraser {
 	clone := *e

@@ -52,7 +52,7 @@ func TestAnUploadFromAGrantlessSessionIsRefusedBeforeItsBodyIsRead(t *testing.T)
 		// A reader: every grant this session holds is a read, so no object type
 		// the body could name would admit the write.
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
-			"person":   {Read: true},
+			"contact":  {Read: true},
 			"activity": {Read: true},
 		}},
 	})
@@ -74,7 +74,7 @@ func TestAnUploadFromASessionThatMayWriteSomethingReachesTheParse(t *testing.T) 
 	rec, body := uploadRequest(t, principal.Principal{
 		Type: principal.PrincipalHuman,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true, Update: true},
+			"contact": {Read: true, Update: true},
 		}},
 	})
 

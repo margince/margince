@@ -29,8 +29,8 @@ export type PairRow = {
   // came to nothing — a row saying "unchanged" over data that moved is the one
   // outcome worse than showing two rows.
   whollyUndone: boolean;
-  // Whether one person undid their own change. The copy differs: naming the same
-  // person twice reads as two parties who happen to share a name.
+  // Whether one contact undid their own change. The copy differs: naming the same
+  // contact twice reads as two parties who happen to share a name.
   sameActor: boolean;
 };
 

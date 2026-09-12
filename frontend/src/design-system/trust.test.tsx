@@ -114,7 +114,7 @@ describe("ProvenanceTag", () => {
   // "typed by you" over a colleague's entry is a false statement about who to
   // ask, and it used to be what an UNATTRIBUTED row said too — the two cases a
   // reader most needs kept apart both read as their own handiwork.
-  it("names another person rather than claiming the reader typed it", () => {
+  it("names another contact rather than claiming the reader typed it", () => {
     render(
       <ProvenanceTag
         provenance={{ kind: "human", self: false, userId: "u-2" }}
@@ -125,7 +125,7 @@ describe("ProvenanceTag", () => {
     expect(screen.queryByText("typed by you")).toBeNull();
   });
 
-  it("says a person entered it when it cannot say which person", () => {
+  it("says a contact entered it when it cannot say which contact", () => {
     render(<ProvenanceTag provenance={{ kind: "human", self: false }} />);
     expect(screen.getByText("typed by a person")).toBeTruthy();
   });
@@ -139,16 +139,16 @@ describe("ProvenanceTag", () => {
 
   // A buyer and an unrecorded source are one branch apart, and collapsing the
   // first into the second is what put "source not recorded" on a row whose
-  // source was a person. The two are asserted together because that is the
+  // source was a contact. The two are asserted together because that is the
   // distinction: `unknown` still has to mean nobody recorded a source.
-  it("reads a buyer as a person from outside, never as an unrecorded source", () => {
+  it("reads a buyer as a contact from outside, never as an unrecorded source", () => {
     render(<ProvenanceTag provenance={{ kind: "buyer" }} />);
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
 
     const buyer = screen.getByText("typed by a buyer");
     expect(buyer.className).toContain("provenance-buyer");
     // Not the colleague arm either: a buyer holds no seat, and "typed by a
-    // person" would send a reader looking for them in the member directory.
+    // contact" would send a reader looking for them in the member directory.
     expect(buyer.className).not.toContain("provenance-human");
     expect(screen.getByText("source not recorded").className).toContain(
       "provenance-unknown",

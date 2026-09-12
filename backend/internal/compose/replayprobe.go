@@ -98,7 +98,7 @@ func ensureReplayVisible(ctx context.Context, pool *pgxpool.Pool, probes map[str
 		}
 		// LIVE, not merely visible. The recorded body is a frozen snapshot the
 		// store itself would no longer serve: Art. 17 erasure anonymizes the
-		// person row in place, stamps archived_at and leaves owner_id alone, so
+		// contact row in place, stamps archived_at and leaves owner_id alone, so
 		// a plain visibility probe still answers "yours" and the middleware
 		// would hand back the pre-erasure names, e-mails and phone numbers that
 		// every live read path now refuses. EnsureVisibleLive also declines to
@@ -221,7 +221,7 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 // ensureCompanionsVisible re-checks every OTHER record the body names.
 //
 // An absent or null field names nothing and is skipped: these are optional by
-// contract, and a person captured with no employer carries no company id.
+// contract, and a contact captured with no employer carries no company id.
 // The value is resolved ONCE and by the same walk that reads it — a separate
 // presence test would answer for a different path than the one the probe uses,
 // and the disagreement resolves to a skip, which is a pass.
@@ -232,13 +232,13 @@ func replayTableFor(target replayTarget, body string) (string, error) {
 //
 // SCOPE, NOT LIVENESS, and the difference is load-bearing. The primary probe is
 // EnsureVisibleLive because the recorded body carries that record's FIELDS —
-// erasure anonymises a person in place, and a frozen snapshot would hand back
+// erasure anonymises a contact in place, and a frozen snapshot would hand back
 // names every live read now refuses. A companion is an id and nothing else, so
 // what a replay can disclose is that the record exists and what it was to this
 // call — a question of row scope.
 //
 // Using the live probe here would also refuse the retries this exists to serve:
-// promoting a lead ARCHIVES it, and demoting a person can archive them, so the
+// promoting a lead ARCHIVES it, and demoting a contact can archive them, so the
 // companion those calls name is archived by the very operation being replayed.
 // EnsureVisibleLive requires archived_at IS NULL, so every promote replay would
 // have answered 404.

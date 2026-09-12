@@ -230,7 +230,7 @@ export function CorpusAskCard({
 
 function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
   const t = useT();
-  // A line and a column are MAGNITUDES a person counts with, so they take the
+  // A line and a column are MAGNITUDES a contact counts with, so they take the
   // reader's own notation like every other figure on the page.
   const { locale } = useLocale();
   if (answer.outcome !== "answered" && answer.outcome !== "unreviewed") {

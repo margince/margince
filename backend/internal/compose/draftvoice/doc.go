@@ -4,14 +4,14 @@
 // Package draftvoice is the one spelling of how a drafting surface writes in
 // the SENDER's own voice.
 //
-// Three surfaces generate outbound email — the reply to an activity, the person
+// Three surfaces generate outbound email — the reply to an activity, the contact
 // composer, and account-started outbound — and only the reply drafter read the
 // actor's Voice DNA. The other two composed draftrules.Shared and a comment
 // claiming that block "carries the user's own voice instead". It does not:
 // draftrules holds language, register, greeting and formatting rules, and not
-// one sentence of how this particular person writes. So a rep who had built a
+// one sentence of how this particular contact writes. So a rep who had built a
 // voice profile got their own voice when they answered a mail and a generic one
-// when they started a message from a contact's page — the same person, the same
+// when they started a message from a contact's page — the same contact, the same
 // mailbox, two different writers.
 //
 // What lives here is everything a surface needs to draft under a profile:

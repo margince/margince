@@ -8,7 +8,7 @@ gate) stay in [`frontend/src/design-system/README.md`](frontend/src/design-syste
 and the two do not overlap: this file decides *how it should look*, the catalog
 decides *what you build it from*.
 
-Read this once before designing anything a person can see, and again when a
+Read this once before designing anything a reader can see, and again when a
 screen "looks fine but not like the others" — that sentence is the symptom this
 file exists to cure.
 
@@ -30,14 +30,14 @@ each one prevents is named.
 - **Numbers set like words.** Money and counts in a proportional face with no
   alignment make a column of amounts a ragged block rather than a ledger.
 - **Colour spent on nothing.** When the accent is a button and a link and the
-  rest is grey, a product with a strong opinion about *who did this* (a person
+  rest is grey, a product with a strong opinion about *who did this* (a contact
   or an agent) shows that opinion at chip size only.
 
 The answer to all five is not a new colour; it is a hierarchy.
 
 ## What the refined products actually do
 
-The products people name when they say "that looks professional" — Linear,
+The products contacts name when they say "that looks professional" — Linear,
 Attio, Vercel, Stripe, Raycast, Notion — disagree on colour and agree on
 almost everything else. The techniques below recur in every one of them, and
 each is stated here as the rule this language adopts, so a screen can be
@@ -196,7 +196,7 @@ to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme patt
 - **The page carries at most ONE filled control in view**, in emerald: the
   move the page names. Every other button is a pane with an outline.
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
-  staged change is a row with a dashed `--aiLine` edge until a person accepts
+  staged change is a row with a dashed `--aiLine` edge until a contact accepts
   it. Nothing else is indigo.
 - **Status is a dot before it is a pill.**
 - **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
@@ -301,7 +301,7 @@ scrolls inside itself.
 │ Brief  │ ┌ THE 360 ─────────────────────────────┐ ┌ details (288) ────┐│
 │ RECORDS│ │ ● {name} · 360                        ││ │ Ask               ││
 │ …      │ │ VERDICT  because · sources (hover)    ││ │ Details           ││
-│ WORK   │ │ readings ┊ readings ┊ readings        ││ │ People / Seats    ││
+│ WORK   │ │ readings ┊ readings ┊ readings        ││ │ Contacts / Seats    ││
 │ …      │ │ spine · · · gap · today · ahead       ││ │ Tags / Room / Docs││
 │ ● agent│ │ the thread, newest first              ││ └───────────────────┘│
 │        │ └───────────────────────────────────────┘│                      │
@@ -345,7 +345,7 @@ scrolls inside itself.
   until the Details control at the end of the tab row opens it. It holds Ask, the attributes as label and
   value rows (with the evidence underline on a machine-read value and a
   lighter "Add …" on an empty one), and the short lists that describe the
-  record (people, seats, tags, the Deal Room, documents). It is where the
+  record (contacts, seats, tags, the Deal Room, documents). It is where the
   current product keeps its context column, so a rep's hand does not move.
 - **The glows**: the emerald light at the top-left is faint (`.06` in light,
   `.10` in dark); the indigo one at the top-right a step stronger. They are
@@ -364,7 +364,7 @@ as it grows (a fact with several homes, verdicts stacked above the list they
 should lead):
 
 1. **Every fact has one home.** If a deal appears in the readings, it does not
-   also appear in the rail. If people are in the context column, they are not
+   also appear in the rail. If contacts are in the context column, they are not
    also a section in the work column.
 2. **Zones, numbered, in reading order.** A record page is five zones with a
    heading each. The number is not decoration: it is the order a rep reads an
@@ -372,11 +372,11 @@ should lead):
 3. **One list of what needs you.** The agent's read of the record is the lead
    row of that list, not a separate card above it; the agent's finds, the manual
    moves, the overdue tasks and the next meeting are rows below it, sorted by
-   urgency. A person has one place to look and one place to clear.
+   urgency. A contact has one place to look and one place to clear.
 4. **One timeline.** The spine (the axis with the gap drawn at width) heads the
    list of what happened; they are one component, not two panes.
 5. **The context column answers "who and what is this", not "what is
-   happening".** Ask at the top, then the people, the fields, the tags. State
+   happening".** Ask at the top, then the contacts, the fields, the tags. State
    and work stay in the work column, where the reading order is.
 
 ### Glance, then depth
@@ -393,7 +393,7 @@ one present, none at full depth:
   ("In conversation · Hamburg · Freight forwarding · 240 employees · Owner"),
   and three verbs. No badges beyond the standing, no second line.
 - **A quiet tab row** under the head — no pane, no rule, a 2px accent under
-  the current tab — so every sub page (History, People, Deals, Tasks,
+  the current tab — so every sub page (History, Contacts, Deals, Tasks,
   Finance, Documents, Profile, Partner) is one click away. The links inside
   the panes ("All deals", "Full history") open the same tabs.
 - **Five readings as roomy cards**, 138px tall, an uppercase label, one
@@ -422,10 +422,10 @@ one present, none at full depth:
   can answer today — "What changed since I last looked?", "Why is Rostock
   stalled?" — each a full-width row on `--bg3` that tints indigo on hover;
   no free-text field until the answers earn one), About (the lead sentence,
-  one paragraph, its sources, "Profile" for the rest), People as chips with
+  one paragraph, its sources, "Profile" for the rest), Contacts as chips with
   a "+N".
 - **The details panel is hidden until asked**, and the Details control at
-  the end of the tab row opens it on the right at 300px with the fields, the people and
+  the end of the tab row opens it on the right at 300px with the fields, the contacts and
   the tags. It is the only thing on the glance that starts closed.
 - No zone numbers. Commercial and the rest of About are the deep overview,
   one click away, with the same panes.
@@ -447,13 +447,13 @@ glance line for line; what changes is the content of each slot.
 | Live dot | In conversation | Your move (warn) | Your move (warn) | In motion |
 | Facts | city · industry · size · owner · way in | title · employer · email · phone · way in | account · value · stage · close · owner · partner | title · company · email · source · owner |
 | Verbs (base, never the task) | Write email · Log activity · Add task · more | Write email · Call · Add task · more | Write email · Log activity · Edit deal · more | Qualify · Write email · Edit · Disqualify · more |
-| Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The people · Momentum | Company · Score · First response · Next · Your move |
+| Readings | Open pipeline · Invoiced · Conversation · Last touch · Next | Whose move · Open promises · Deals she decides · Next meeting · She answers in | The money · The close · Stage · The contacts · Momentum | Company · Score · First response · Next · Your move |
 | 360 word | Good | Promise overdue | Live | In motion |
 | In the 360 | the spine | the spine | the stage stepper, then the spine | the ladder, then the spine |
 | Needs-list lead | Your move | The move the call names | Margince suggests, then the staged change | Ready to qualify (no agent tint: a lead carries no suggestions) |
 | Second left pane | Deals | The deal she decides, with the room | The buying committee, with the cover gap | The score as factors |
-| Right column | Ask (prepared questions) · About · People | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
-| Tabs | Overview · History · People · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
+| Right column | Ask (prepared questions) · About · Contacts | Ask · Understanding her · Around her | Ask · What this deal is · Offers · Deal Room | Ask · If she is qualified · What she asked for |
+| Tabs | Overview · History · Contacts · Deals · Tasks · Finance · Documents · Profile · Partner | Overview · History · Network · Deals · Meetings · Data & tools · Documents | Overview · History · Documents | Overview · History |
 
 The test: a rep back from a week away reads the glance in ten seconds and
 knows where the account stands, what happened last, what they owe, and what
@@ -487,7 +487,7 @@ The details panel is the same on every record: Ask at the top, then the
 panes that answer "who and what is this".
 
 **Sub pages.** Every tab in the strip opens a real page, in the same panes:
-History (the filter strip, then the **rail timeline** below), People (the
+History (the filter strip, then the **rail timeline** below), Contacts (the
 coverage band, **the committee map**, the roster as a table with list, board
 and map cuts),
 Deals (the commercial band, the deals table with won and lost), Tasks (tick,
@@ -532,7 +532,7 @@ the rest; nothing below is lost, it is one click further in.
 6. **About.** The dossier lead and paragraph, its provenance and age, the
    signals, the fit verdict with a link to how it was judged.
 
-Context column: Ask (with three prepared questions), People (three, with who is
+Context column: Ask (with three prepared questions), Contacts (three, with who is
 in touch from our side), Details (nine fields including mail capture), Tags.
 
 **What merged, moved or went.** The call card merged into Health. Next steps,
@@ -540,7 +540,7 @@ the agent's suggestions, the manual moves and the tasks merged into one list.
 The record spine merged into the timeline, and the timeline moved up to third.
 Work in flight, the commercial figures and projects merged into Commercial. The
 dossier, signals and growth fit merged into About. Active deals left the rail;
-key people became the rail's People; Ask moved from the foot of the page to
+key contacts became the rail's Contacts; Ask moved from the foot of the page to
 the top of the column. Nothing the page could say is gone; each thing is said
 once.
 
@@ -581,7 +581,7 @@ became a compact rail pane; the grant and withdraw table lives behind Manage.
    Log activity, Edit deal, more (Archive, Share, Reopen).
 2. **Where this deal stands.** The money (with the newest offer and its
    status), The close (days, forecast category, provisional or waiting), The
-   people (engaged of total, champion named, single-threaded), The momentum
+   contacts (engaged of total, champion named, single-threaded), The momentum
    (days since the last contact, stalled). Under them the stage stepper: done
    stages tinted, the current one filled, terminal stages last, the rule that
    a terminal stage asks first stated beside it.
@@ -597,7 +597,7 @@ became a compact rail pane; the grant and withdraw table lives behind Manage.
    fields as rows.
 6. **The buying committee.** The map (our circle, their seats, threads only to
    the engaged, a dashed ghost per coverage gap), then the stakeholder table
-   with role, person, talking, dates and edit. Add stakeholder in the zone
+   with role, contact, talking, dates and edit. Add stakeholder in the zone
    head.
 
 Context column: Ask, Deal Room (state, invited, signed in, last seen, open),
@@ -665,12 +665,12 @@ verb slot. The mark says what kind of thing happened: a solid 8px dot for an
 exchange, a hollow one for a field change, an indigo one for a change the
 agent made, a dashed indigo ring for a staged change, and a 24px circled
 glyph for a thread. The body opens with the kind in 10.5px uppercase, the
-direction words ("they wrote", "we sent", "both sides") and the people; then
+direction words ("they wrote", "we sent", "both sides") and the contacts; then
 the title at 13.5px 600; then **the text of the message itself**, clamped to
 three lines, because a timeline of subject lines is a list of things you
 cannot read; then a meta line (the summary's author, the attachment, Restore).
 A thread is one entry: its mark on the rail, a card on the body side with the
-count and the people, and the messages inside it newest first, each with its
+count and the contacts, and the messages inside it newest first, each with its
 avatar, direction and two lines of text. A hairline under each entry is the
 only divider; there are no day headings, the date column is the axis. The
 same rail, without the message text, is the 360's folded thread.
@@ -698,7 +698,7 @@ marker, not the marker itself.
 One drawing primitive, the product's `RelationshipMap`, on three pages, with
 its own geometry: three columns of 184 / 200 / 184px with 72px gutters and
 16px padding (744px, scrolling sideways rather than shrinking), node heights
-by kind (a colleague 40, a person 60, a company 48, a deal 44, a gap
+by kind (a colleague 40, a contact 60, a company 48, a deal 44, a gap
 60), 8px between nodes, 20px between lanes, a lane heading in 10.5px
 uppercase. Nodes are rounded boxes on `--pane` with the name at 13px 600 and
 a sublabel; a colleague on `--bg`, a company with a 2px `--ink3` edge,
@@ -712,8 +712,8 @@ strongest route in ink and fades everything unrelated to 35%; a 280px panel
 on the right names the selection, the best route with its evidence, the
 alternatives, and the one write the picture offers (record an acquaintance
 the graph saw). On the contact's Network tab the lanes are our team, the
-target, their company; on the company's People tab they are our side, the
-account with its deals, and their people **by buying role** in the product's
+target, their company; on the company's Contacts tab they are our side, the
+account with its deals, and their contacts **by buying role** in the product's
 order (champion, economic buyer, influencer, blocker, user), with a gap node
 where a critical role is unheld. The deal keeps its small decorative
 committee picture beside the seat rows: our circle, their seats, 2px accent
@@ -722,7 +722,7 @@ coverage gap.
 
 ### The Deal Room, two surfaces on one board
 
-The Deal Room is the one thing in the product a person outside it reaches,
+The Deal Room is the one thing in the product a contact outside it reaches,
 so it is two pages that share one document board and nothing else.
 
 **The seller's side** is a page inside Margince, under the deal: "Back to
@@ -794,7 +794,7 @@ call card, the day's panel, the timeline thread) after this document's first
 inventory. The structure above holds; these are the facts it now carries.
 
 - **Every record page reads in the same order** on main: readings, then the
-  call with the thread under it, then what needs a person, then the pairs.
+  call with the thread under it, then what needs a contact, then the pairs.
   That is the order here, with the thread as its own zone between the
   readings and the needs, because the 360 opens on what happened last.
 - **The contact's strip on main is four readings**: Whose move (Yours / Theirs /
@@ -828,7 +828,7 @@ inventory. The structure above holds; these are the facts it now carries.
   to its limit. The old four cards are gone.
 - **Tags** are a panel on company, contact and deal (four visible, "+N more",
   a split pill that opens the tag or its menu, "Add tag" opens a picker that
-  cannot create a word), a Tags column on the people, companies and deals
+  cannot create a word), a Tags column on the contacts, companies and deals
   lists (two visible, not sortable), a tag on the board card, and a "Tags ·
   Any tag" filter chip. Leads are not tagged.
 - **The email verb is an outlined button on every record**, in the same
@@ -899,7 +899,7 @@ The existing durations and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms,
 - Does not say a fact twice. One home per fact; the rest are links to it.
 - Does not fill a button, a row or a surface with emerald except the one
   primary verb and a selected row's wash.
-- Does not tint anything indigo that a person wrote.
+- Does not tint anything indigo that a contact wrote.
 - Does not set a number in the proportional face.
 - Does not centre a title, a section or a table.
 - Does not use uppercase outside an eyebrow, or weight 700 outside the rare

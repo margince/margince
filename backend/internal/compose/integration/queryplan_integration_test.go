@@ -62,7 +62,7 @@ func setupQuery(t *testing.T) *queryEnv {
 // the RBAC object governing the EDGE a join-table hop reads, and without it
 // TestEveryPublishedRelationExecutes would quietly stop covering the
 // employment and stakeholder hops rather than fail.
-var queryObjects = []string{"person", "company", "deal", "lead", "project", "activity", "relationship"}
+var queryObjects = []string{"contact", "company", "deal", "lead", "project", "activity", "relationship"}
 
 func queryGrants() map[string]principal.ObjectGrant {
 	grants := map[string]principal.ObjectGrant{}
@@ -395,15 +395,15 @@ func TestQueryPlanAnAnswerThatFitsIsNotReportedAsTruncated(t *testing.T) {
 // returns its note and NO row count, so nothing leaks the size of an answer
 // the caller cannot have.
 //
-// A PERSON, because that is what is genuinely unanswerable now: a person has an
+// A CONTACT, because that is what is genuinely unanswerable now: a contact has an
 // address, so the field and the operator both exist, but this product does not
-// geocode where people live and there is nothing to measure from. A company's
+// geocode where contacts live and there is nothing to measure from. A company's
 // radius runs — see the test below.
 func TestQueryPlanAnUnanswerablePredicateReturnsItsNoteNotRows(t *testing.T) {
 	q := setupQuery(t)
 	q.seedFixture(t)
 	result := q.run(q.admin(), t, `{
-		"version": "v1", "target": "person",
+		"version": "v1", "target": "contact",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Stuttgart", "radius_km": 50}}]}`)
 	if len(result.Rows) != 0 {

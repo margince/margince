@@ -15,7 +15,7 @@ import {
 } from "./recordassignments.queries";
 
 /**
- * Settings → the responsibilities a person or team can hold on a record.
+ * Settings → the responsibilities a colleague or team can hold on a record.
  *
  * A role names what somebody is accountable for and grants no access of its
  * own, which the subtitle says because "role" reads like a permission on most

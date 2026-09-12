@@ -39,7 +39,7 @@ func WithCaptureTrace(tracePayloads bool) Option {
 		// and nothing behind it.
 		//
 		// It is the cross-module edge: capture holds the stored rungs and
-		// activities holds the label and the person link, and neither may
+		// activities holds the label and the contact link, and neither may
 		// import the other, so compose injects both.
 		s.pipelineTraceHandlers = pipelinetrace.NewHandlers(pipelinetrace.NewAssembler(
 			traces, activities.NewStore(InstallationDB(pool)), tracePayloads))
@@ -56,7 +56,7 @@ func WithCaptureTrace(tracePayloads bool) Option {
 // not the other would leave this reading a queue nobody writes and reporting
 // "no pass is coming" forever.
 //
-// One pass per surface, named where a person meets the wait. The sender verdict
+// One pass per surface, named where a contact meets the wait. The sender verdict
 // is what the capture-activity counters wait on; the thread verdict, an hour
 // faster, is what a held thread waits on. Handing both to both screens would put
 // a clock on each that nothing there is waiting for.

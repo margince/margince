@@ -51,7 +51,7 @@ type historyPage struct {
 	Data []historyEntry `json:"data"`
 }
 
-type personRecord struct {
+type contactRecord struct {
 	ID       string  `json:"id"`
 	Version  int64   `json:"version"`
 	FullName string  `json:"full_name"`
@@ -70,16 +70,16 @@ func readHistory(t *testing.T, e *apptest.AppEnv, entityType, id string) history
 	return page
 }
 
-func readPerson(t *testing.T, e *apptest.AppEnv, id string) personRecord {
+func readContact(t *testing.T, e *apptest.AppEnv, id string) contactRecord {
 	t.Helper()
-	var person personRecord
-	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, &person); status != 200 {
-		t.Fatalf("read person → %d", status)
+	var contact contactRecord
+	if status := e.Call(t, "GET", "/v1/contacts/"+id, nil, nil, &contact); status != 200 {
+		t.Fatalf("read contact → %d", status)
 	}
-	return person
+	return contact
 }
 
-// theUpdateEntry is the record's newest `update` line — the one a person would
+// theUpdateEntry is the record's newest `update` line — the one a contact would
 // press Undo on.
 func theUpdateEntry(t *testing.T, page historyPage) historyEntry {
 	t.Helper()
@@ -108,24 +108,24 @@ func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Original", "title": "CTO"}, nil, &created); status != 201 {
-		t.Fatalf("create person → %d", status)
+		t.Fatalf("create contact → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"title": "CEO"}, nil, nil); status != 200 {
-		t.Fatalf("patch person → %d", status)
+		t.Fatalf("patch contact → %d", status)
 	}
 
-	page := readHistory(t, e, "person", created.ID)
+	page := readHistory(t, e, "contact", created.ID)
 	entry := theUpdateEntry(t, page)
 	if !entry.Undoable.Undoable {
 		t.Fatalf("a fresh, unsuperseded update reads as not undoable: %v", reasonOf(entry))
 	}
 
-	current := readPerson(t, e, created.ID)
-	status, restoreEntry := restore(t, e, "person", created.ID, entry.ID, current.Version)
+	current := readContact(t, e, created.ID)
+	status, restoreEntry := restore(t, e, "contact", created.ID, entry.ID, current.Version)
 	if status != 200 {
 		t.Fatalf("restore → %d, want 200", status)
 	}
@@ -133,13 +133,13 @@ func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
 		t.Errorf("the reversal was recorded as %q, want %q", restoreEntry.Action, "restore")
 	}
 
-	back := readPerson(t, e, created.ID)
+	back := readContact(t, e, created.ID)
 	if back.Title == nil || *back.Title != "CTO" {
 		t.Errorf("title after the restore = %v, want the value it held before the change", back.Title)
 	}
 	// Every other field the update did not touch is untouched too — a restore
 	// that quietly rewrote a field outside the entry's image would be reversing
-	// more than the person asked to reverse.
+	// more than the contact asked to reverse.
 	if back.FullName != "Greta Original" {
 		t.Errorf("full_name = %q; the restore wrote a field outside the entry's image", back.FullName)
 	}
@@ -152,52 +152,52 @@ func TestEndToEnd_anEntryAlreadyPutBackRefusesBySayingSo(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Twice", "title": "CTO"}, nil, &created); status != 201 {
-		t.Fatalf("create person → %d", status)
+		t.Fatalf("create contact → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	if status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version); status != 200 {
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	if status, _ := restore(t, e, "contact", created.ID, entry.ID, readContact(t, e, created.ID).Version); status != 200 {
 		t.Fatalf("first restore → %d", status)
 	}
 
-	after := theEntryByID(t, readHistory(t, e, "person", created.ID), entry.ID)
+	after := theEntryByID(t, readHistory(t, e, "contact", created.ID), entry.ID)
 	if after.Undoable.Undoable {
 		t.Error("an entry a live reversal already covers still reads as undoable")
 	} else if reasonOf(after) != "already_undone" {
 		t.Errorf("reason = %v, want already_undone", reasonOf(after))
 	}
-	if status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version); status != 409 {
+	if status, _ := restore(t, e, "contact", created.ID, entry.ID, readContact(t, e, created.ID).Version); status != 409 {
 		t.Errorf("second restore → %d, want 409", status)
 	}
 }
 
 // A later write of the same field refuses the restore rather than clobbering
-// it. Where another person edited in between the result is ambiguous, and
+// it. Where another contact edited in between the result is ambiguous, and
 // saying so IS the behaviour.
 func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Superseded", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("first patch → %d", status)
 	}
-	target := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "COO"}, nil, nil); status != 200 {
+	target := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "COO"}, nil, nil); status != 200 {
 		t.Fatalf("second patch → %d", status)
 	}
 
-	after := theEntryByID(t, readHistory(t, e, "person", created.ID), target.ID)
+	after := theEntryByID(t, readHistory(t, e, "contact", created.ID), target.ID)
 	if after.Undoable.Undoable {
 		t.Fatal("an entry whose field was written again still reads as undoable")
 	}
@@ -207,7 +207,7 @@ func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
 	if detailOf(after) != "title" {
 		t.Errorf("detail = %v, want the field that moved", detailOf(after))
 	}
-	status, _ := restore(t, e, "person", created.ID, target.ID, readPerson(t, e, created.ID).Version)
+	status, _ := restore(t, e, "contact", created.ID, target.ID, readContact(t, e, created.ID).Version)
 	if status != 409 {
 		t.Errorf("restoring a superseded entry → %d, want 409", status)
 	}
@@ -256,29 +256,29 @@ func TestEndToEnd_undoingAnUndoReopensTheOriginalEntry(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Reundo", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	original := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	status, reversal := restore(t, e, "person", created.ID, original.ID, readPerson(t, e, created.ID).Version)
+	original := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	status, reversal := restore(t, e, "contact", created.ID, original.ID, readContact(t, e, created.ID).Version)
 	if status != 200 {
 		t.Fatalf("restore → %d", status)
 	}
 
-	status, _ = restore(t, e, "person", created.ID, reversal.ID, readPerson(t, e, created.ID).Version)
+	status, _ = restore(t, e, "contact", created.ID, reversal.ID, readContact(t, e, created.ID).Version)
 	if status != 200 {
 		t.Fatalf("restoring the reversal → %d, want 200 — a restore row carries real images "+
 			"by construction and is replayable", status)
 	}
-	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "CEO" {
+	if title := readContact(t, e, created.ID).Title; title == nil || *title != "CEO" {
 		t.Errorf("title after undoing the undo = %v, want the value the original change made", title)
 	}
-	reopened := theEntryByID(t, readHistory(t, e, "person", created.ID), original.ID)
+	reopened := theEntryByID(t, readHistory(t, e, "contact", created.ID), original.ID)
 	if !reopened.Undoable.Undoable {
 		t.Errorf("the original entry stayed refused (%v) after its reversal was itself reversed; "+
 			"the trail must be navigable in both directions", reasonOf(reopened))
@@ -293,26 +293,26 @@ func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Stale", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	stale := readPerson(t, e, created.ID).Version
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	stale := readContact(t, e, created.ID).Version
 
 	// Somebody else touches the record between reading and pressing.
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"full_name": "Greta Moved"}, nil, nil); status != 200 {
 		t.Fatalf("concurrent patch → %d", status)
 	}
-	if status, _ := restore(t, e, "person", created.ID, entry.ID, stale); status != 409 {
+	if status, _ := restore(t, e, "contact", created.ID, entry.ID, stale); status != 409 {
 		t.Errorf("restore on a stale version → %d, want 409", status)
 	}
-	moved := readPerson(t, e, created.ID)
+	moved := readContact(t, e, created.ID)
 	if moved.FullName != "Greta Moved" {
 		t.Errorf("full_name = %q; the refused restore wrote anyway", moved.FullName)
 	}
@@ -327,19 +327,19 @@ func TestEndToEnd_anEntryFromAnotherRecordIsNotFound(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var mine, theirs personRecord
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Mine"}, nil, &mine); status != 201 {
+	var mine, theirs contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Mine"}, nil, &mine); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+theirs.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+theirs.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	other := theUpdateEntry(t, readHistory(t, e, "person", theirs.ID))
+	other := theUpdateEntry(t, readHistory(t, e, "contact", theirs.ID))
 
-	if status, _ := restore(t, e, "person", mine.ID, other.ID, readPerson(t, e, mine.ID).Version); status != 404 {
+	if status, _ := restore(t, e, "contact", mine.ID, other.ID, readContact(t, e, mine.ID).Version); status != 404 {
 		t.Errorf("restoring another record's entry → %d, want 404", status)
 	}
 }
@@ -377,33 +377,33 @@ func theEntryByID(t *testing.T, page historyPage, id string) historyEntry {
 }
 
 // An archived record's update path refuses on its own terms. Naming it here
-// makes the refusal legible instead of a surprise the person reads as a bug.
+// makes the refusal legible instead of a surprise the reader reads as a bug.
 func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	version := readPerson(t, e, created.ID).Version
-	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, nil, nil); status != 200 && status != 204 {
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	version := readContact(t, e, created.ID).Version
+	if status := e.Call(t, "DELETE", "/v1/contacts/"+created.ID, nil, nil, nil); status != 200 && status != 204 {
 		t.Fatalf("archive → %d", status)
 	}
 
-	if status, _ := restore(t, e, "person", created.ID, entry.ID, version); status == 200 {
+	if status, _ := restore(t, e, "contact", created.ID, entry.ID, version); status == 200 {
 		t.Error("restoring an archived record answered 200")
 	}
 }
 
 // A restore whose image names a custom field the workspace has since retired
 // cannot be written back. Without this refusal the module's own "unknown field
-// cf_budget" is what a person reads, and that is not an answer to pressing Undo.
+// cf_budget" is what a reader reads, and that is not an answer to pressing Undo.
 func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 	// The schema pool is what lets a custom field actually add its column;
 	// without it the catalog route answers 501 and the case cannot be built.
@@ -416,22 +416,22 @@ func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 		Version    int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
-		"object": "person", "label": "Budget", "type": "text", "source": "manual",
+		"object": "contact", "label": "Budget", "type": "text", "source": "manual",
 	}, nil, &field); status != 201 {
 		t.Fatalf("create custom field → %d", status)
 	}
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Greta Custom", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
-		t.Fatalf("create person → %d", status)
+		t.Fatalf("create contact → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
 		t.Fatalf("patch custom field → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
 	if !entry.Undoable.Undoable {
 		t.Fatalf("a live custom field's change reads as not undoable: %s", reasonOf(entry))
 	}
@@ -441,7 +441,7 @@ func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 		t.Fatalf("retire the field → %d", status)
 	}
 
-	after := theEntryByID(t, readHistory(t, e, "person", created.ID), entry.ID)
+	after := theEntryByID(t, readHistory(t, e, "contact", created.ID), entry.ID)
 	if after.Undoable.Undoable {
 		t.Fatal("a change to a retired custom field still reads as undoable; the write " +
 			"would fail inside the module with a message written for another surface")
@@ -467,22 +467,22 @@ func TestEndToEnd_anUnservedRecordTypeIsRefusedAtTheRoute(t *testing.T) {
 }
 
 // If-Match is required here and must be a version. A restore is decided from a
-// screen the person has been reading, so a missing or unparseable precondition
+// screen the contact has been reading, so a missing or unparseable precondition
 // is a refusal rather than a last-write-wins default.
 func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	path := fmt.Sprintf("/v1/records/person/%s/history/%s/restore", created.ID, entry.ID)
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	path := fmt.Sprintf("/v1/records/contact/%s/history/%s/restore", created.ID, entry.ID)
 
 	if status := e.Call(t, "POST", path, nil, nil, nil); status == 200 {
 		t.Error("a restore with no If-Match answered 200; the precondition is required here")
@@ -512,37 +512,37 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 		ColumnName string `json:"column_name"`
 	}
 	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
-		"object": "person", "label": "Budget", "type": "text", "source": "manual",
+		"object": "contact", "label": "Budget", "type": "text", "source": "manual",
 	}, nil, &field); status != 201 {
 		t.Fatalf("create custom field → %d", status)
 	}
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Greta Dropped", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
-		t.Fatalf("create person → %d", status)
+		t.Fatalf("create contact → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	// The version a person reading the screen would hold, taken while the
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
+	// The version a reader reading the screen would hold, taken while the
 	// field is still live and the entry still reads as undoable.
-	decided := readPerson(t, e, created.ID).Version
+	decided := readContact(t, e, created.ID).Version
 
 	if status := e.Call(t, "POST", "/v1/custom-fields/"+field.ID+"/retire", nil, nil, nil); status != 200 {
 		t.Fatalf("retire → %d", status)
 	}
-	if now := readPerson(t, e, created.ID).Version; now != decided {
+	if now := readContact(t, e, created.ID).Version; now != decided {
 		t.Fatalf("the retire moved the record's version from %d to %d; the window this "+
 			"test exists for is not real any more and the test proves nothing",
 			decided, now)
 	}
 
-	status, _ := restore(t, e, "person", created.ID, entry.ID, decided)
+	status, _ := restore(t, e, "contact", created.ID, entry.ID, decided)
 	if status == 200 {
-		t.Error("a restore of a since-retired field answered 200; the person is told a " +
+		t.Error("a restore of a since-retired field answered 200; the contact is told a " +
 			"change was put back that the write dropped")
 	}
 	if status != 409 {
@@ -550,7 +550,7 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 	}
 }
 
-// Filling a field in and then putting it back to empty — the case a person
+// Filling a field in and then putting it back to empty — the case a contact
 // most often reaches for undo on, and the one a JSON null cannot express.
 //
 // The before-image holds a null, so the restore must ask for the field to be
@@ -561,34 +561,34 @@ func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	// Created with NO title, so the change below records a before-image of null.
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Greta Cleared"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"title": "Typed by mistake"}, nil, nil); status != 200 {
 		t.Fatalf("fill the field → %d", status)
 	}
 
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
 	if !entry.Undoable.Undoable {
 		t.Fatalf("filling an empty field reads as not undoable (%s); this is the case a "+
-			"person reaches for undo on most", reasonOf(entry))
+			"contact reaches for undo on most", reasonOf(entry))
 	}
 
-	status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version)
+	status, _ := restore(t, e, "contact", created.ID, entry.ID, readContact(t, e, created.ID).Version)
 	if status != 200 {
 		t.Fatalf("restore → %d, want 200", status)
 	}
-	if title := readPerson(t, e, created.ID).Title; title != nil && *title != "" {
+	if title := readContact(t, e, created.ID).Title; title != nil && *title != "" {
 		t.Errorf("title after the restore = %q, want it empty again — the restore "+
 			"reported success and left the value standing", *title)
 	}
 	// The trail says what happened, so the clear is auditable rather than a
 	// silent write.
 	// The page is newest first, so the reversal is the FIRST line.
-	page := readHistory(t, e, "person", created.ID)
+	page := readHistory(t, e, "contact", created.ID)
 	reversal := page.Data[0]
 	if reversal.Action != "restore" {
 		t.Fatalf("the newest entry is %q, want restore", reversal.Action)
@@ -638,25 +638,25 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Greta Address",
 		"address":   AnyMap{"city": "Hanoi", "line1": "1 First Street"},
 	}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID, AnyMap{
 		"address": AnyMap{"city": "Da Nang", "line1": "2 Second Street"},
 	}, nil, nil); status != 200 {
 		t.Fatalf("change the address → %d", status)
 	}
 
-	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	entry := theUpdateEntry(t, readHistory(t, e, "contact", created.ID))
 	if !entry.Undoable.Undoable {
 		t.Fatalf("an address change reads as not undoable (%s / %s)",
 			reasonOf(entry), detailOf(entry))
 	}
-	status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version)
+	status, _ := restore(t, e, "contact", created.ID, entry.ID, readContact(t, e, created.ID).Version)
 	if status != 200 {
 		t.Fatalf("restore → %d, want 200", status)
 	}
@@ -667,7 +667,7 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 			Line1 *string `json:"line1"`
 		} `json:"address"`
 	}
-	if status := e.Call(t, "GET", "/v1/people/"+created.ID, nil, nil, &back); status != 200 {
+	if status := e.Call(t, "GET", "/v1/contacts/"+created.ID, nil, nil, &back); status != 200 {
 		t.Fatalf("read back → %d", status)
 	}
 	if back.Address == nil || back.Address.City == nil || *back.Address.City != "Hanoi" {
@@ -677,7 +677,7 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 
 // A -> B -> C, reverted C -> B -> A.
 //
-// This is what a person means by undo: walk back through the record's history
+// This is what a contact means by undo: walk back through the record's history
 // one change at a time. It works only because supersession asks whether the
 // field's VALUE has moved rather than whether anybody wrote it — undoing C
 // writes B and records a reversal row, and a rule that counted writes would see
@@ -687,25 +687,25 @@ func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	for _, value := range []string{"B", "C"} {
-		if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 			AnyMap{"title": value}, nil, nil); status != 200 {
 			t.Fatalf("set title %s → %d", value, status)
 		}
 	}
-	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "C" {
+	if title := readContact(t, e, created.ID).Title; title == nil || *title != "C" {
 		t.Fatalf("title = %v, want C before the walk starts", title)
 	}
 
 	// Walk back twice. Each step takes the newest entry that is undoable, which
 	// is what pressing the top "Put back" does.
 	for _, want := range []string{"B", "A"} {
-		page := readHistory(t, e, "person", created.ID)
+		page := readHistory(t, e, "contact", created.ID)
 		// The newest undoable ORIGINAL change. A reversal row is undoable too,
 		// but pressing its button REDOES the change it reversed — that is the
 		// other direction, not the next step back.
@@ -720,11 +720,11 @@ func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
 			t.Fatalf("no undoable entry while walking back to %s; the walk stopped early:\n%s",
 				want, undoabilityOf(page))
 		}
-		status, _ := restore(t, e, "person", created.ID, target, readPerson(t, e, created.ID).Version)
+		status, _ := restore(t, e, "contact", created.ID, target, readContact(t, e, created.ID).Version)
 		if status != 200 {
 			t.Fatalf("restore toward %s → %d", want, status)
 		}
-		title := readPerson(t, e, created.ID).Title
+		title := readContact(t, e, created.ID).Title
 		if title == nil {
 			t.Fatalf("title after the step is empty, want %s", want)
 		}
@@ -756,31 +756,31 @@ func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"title": nil}, nil, nil); status != 200 {
 		t.Fatalf("clear the title → %d", status)
 	}
-	if title := readPerson(t, e, created.ID).Title; title != nil && *title != "" {
+	if title := readContact(t, e, created.ID).Title; title != nil && *title != "" {
 		t.Errorf("title = %q after an explicit null; the field was not cleared and the "+
 			"caller was told it was", *title)
 	}
 
 	// An absent field is still left alone — the whole point of telling the two
 	// apart. A patch of one field must not wipe the others.
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"title": "Restored By Hand"}, nil, nil); status != 200 {
 		t.Fatalf("set the title again → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"first_name": "Nully"}, nil, nil); status != 200 {
 		t.Fatalf("patch a different field → %d", status)
 	}
-	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "Restored By Hand" {
+	if title := readContact(t, e, created.ID).Title; title == nil || *title != "Restored By Hand" {
 		t.Errorf("title = %v after patching another field; an absent field was treated "+
 			"as a clear", title)
 	}
@@ -791,18 +791,18 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people",
+	var created contactRecord
+	if status := e.Call(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Named Forever"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// full_name is not nullable in the contract and a record with no name is
 	// not a record anybody can find again.
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+created.ID,
 		AnyMap{"full_name": nil}, nil, nil); status != 422 {
 		t.Errorf("clearing full_name → %d, want 422 naming the field", status)
 	}
-	if name := readPerson(t, e, created.ID).FullName; name != "Named Forever" {
+	if name := readContact(t, e, created.ID).FullName; name != "Named Forever" {
 		t.Errorf("full_name = %q; the refused clear wrote anyway", name)
 	}
 }
@@ -813,7 +813,7 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 // Supersession compares the image against the row, and a company's domains and
 // relationship types are not columns on it — so comparing them read every such
 // entry as "somebody changed these fields since" when nobody had. The newest
-// entry on a record refused, which is the one a person is most likely to want.
+// entry on a record refused, which is the one a contact is most likely to want.
 func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

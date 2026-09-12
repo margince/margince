@@ -9,7 +9,7 @@ package integration
 //
 // `open_pipeline_minor_base` is published twice for the same company: the
 // company RECORD computes it in SQL (company_open_pipeline_rollup, read by
-// people/company_computed.go) and the company PAGE computes it in Go
+// contacts/company_computed.go) and the company PAGE computes it in Go
 // (company360's priceOpenDeals over deals.PriceAll). Two implementations of one
 // rule drift, and this one did: the Go side learned to scale both currencies'
 // minor units and the SQL side did not, so a yen deal came out a hundredfold
@@ -51,7 +51,7 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	const wantMinorBase = int64(3_000_000)
 
 	// The SQL side, as the company record publishes it.
-	company, err := e.People.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatalf("reading the company: %v", err)
 	}

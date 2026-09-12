@@ -120,9 +120,9 @@ func TestCaptureStagesAMergeForALeadCollidingWithAnotherTeamsLead(t *testing.T) 
 
 func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t *testing.T) {
 	e := integration.SetupSearch(t)
-	// Capture-private to Rep3: the one state that hides a person from the
+	// Capture-private to Rep3: the one state that hides a contact from the
 	// team1 granting human.
-	foreign := e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+	foreign := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Foreign Private Counterparty', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 
 	fake := &scopeFake{records: []connector.NormalizedRecord{{
@@ -149,8 +149,8 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 		t.Fatal(err)
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activityID, foreign); err != nil {
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activityID, foreign); err != nil {
 		t.Fatal(err)
 	}
 

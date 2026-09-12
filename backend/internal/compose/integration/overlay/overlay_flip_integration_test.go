@@ -75,7 +75,7 @@ import (
 )
 
 // flipEstate is the seeded fixture the flip tests share: a connected
-// overlay workspace whose mirror holds two companies, two persons,
+// overlay workspace whose mirror holds two companies, two contacts,
 // two deals (one open on an unmatched incumbent stage, one closedwon),
 // one lead, and one email activity — plus the association edges the
 // detangling asserts on.
@@ -110,7 +110,7 @@ func flipAdminPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"admin"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": crud, "company": crud, "deal": crud, "lead": crud,
+			"contact": crud, "company": crud, "deal": crud, "lead": crud,
 			"activity": crud, "relationship": crud, "pipeline": crud,
 			"overlay_connection": crud, "import_run": crud, "audit": {Read: true},
 			// The flip closes imported deals, and a close freezes a rate
@@ -193,7 +193,7 @@ func setupFlipEstate(t *testing.T) flipEstate {
 	}
 	// Child fields are seeded as COLLECTIONS carrying the attributes the
 	// mapping declares, the shape overlaymod.Apply actually lands them in
-	// (mapping.go's TargetChild) — a flat "person_email.email" key, or a bare
+	// (mapping.go's TargetChild) — a flat "contact_email.email" key, or a bare
 	// nested object, is a shape the mapper never produces, and seeding one
 	// would let a writer that reads that shape pass while dropping every real
 	// email.
@@ -205,20 +205,20 @@ func setupFlipEstate(t *testing.T) flipEstate {
 		"display_name":   "Gitex",
 		"company_domain": []map[string]any{{"domain": "gitex.test", "is_primary": true, "position": 0}},
 	})
-	seed(overlaymod.IncumbentClassContacts, "person", "p-1", map[string]any{
+	seed(overlaymod.IncumbentClassContacts, "contact", "p-1", map[string]any{
 		"full_name": "Mor Anders", "first_name": "Mor", "last_name": "Anders",
-		"person_email": []map[string]any{{"email": "mor@baer-pharma.test", "email_type": "work", "is_primary": true, "position": 0}},
+		"contact_email": []map[string]any{{"email": "mor@baer-pharma.test", "email_type": "work", "is_primary": true, "position": 0}},
 	})
-	seed(overlaymod.IncumbentClassContacts, "person", "p-2", map[string]any{
-		"full_name":    "Riya Patel",
-		"person_email": []map[string]any{{"email": "riya@gitex.test", "email_type": "work", "is_primary": true, "position": 0}},
+	seed(overlaymod.IncumbentClassContacts, "contact", "p-2", map[string]any{
+		"full_name":     "Riya Patel",
+		"contact_email": []map[string]any{{"email": "riya@gitex.test", "email_type": "work", "is_primary": true, "position": 0}},
 	})
 	// A contact the incumbent left unowned — the common case in a real
 	// portal, and the branch that must inherit the flip operator rather
 	// than landing ownerless (an ownerless native row is workspace-shared
 	// at every tier, while the mirror row was hidden from every seat).
 	unowned := fake.Rec("p-unowned", map[string]any{"full_name": "Unassigned Contact"})
-	unowned.ObjectClass = "person"
+	unowned.ObjectClass = "contact"
 	fakeInc.Seed(overlaymod.IncumbentClassContacts, asCurrentProjection(t, unowned, overlaymod.IncumbentClassContacts))
 	seed(overlaymod.IncumbentClassDeals, "deal", "d-open", map[string]any{
 		"name": "Packaging QA", "stage_id": "appointmentscheduled", "amount_minor": int64(21200000), "currency": "EUR",
@@ -245,12 +245,12 @@ func setupFlipEstate(t *testing.T) flipEstate {
 	}
 
 	// The association edges (canonical vocabulary, the adapter's output
-	// shape): deal→company FK, person→company employment,
-	// activity→person link.
+	// shape): deal→company FK, contact→company employment,
+	// activity→contact link.
 	for _, a := range []overlaymod.Assoc{
 		{FromType: "deal", FromID: "d-open", ToType: "company", ToID: "company-1", TypeID: 5, Category: "HUBSPOT_DEFINED", Direction: "forward"},
-		{FromType: "person", FromID: "p-1", ToType: "company", ToID: "company-1", TypeID: 1, Category: "HUBSPOT_DEFINED", Label: "primary", Direction: "forward"},
-		{FromType: "activity", FromID: "emails:900", ToType: "person", ToID: "p-1", TypeID: 9, Category: "HUBSPOT_DEFINED", Direction: "forward"},
+		{FromType: "contact", FromID: "p-1", ToType: "company", ToID: "company-1", TypeID: 1, Category: "HUBSPOT_DEFINED", Label: "primary", Direction: "forward"},
+		{FromType: "activity", FromID: "emails:900", ToType: "contact", ToID: "p-1", TypeID: 9, Category: "HUBSPOT_DEFINED", Direction: "forward"},
 	} {
 		if err := mirror.UpsertAssoc(adminCtx, a); err != nil {
 			t.Fatalf("seeding association %+v: %v", a, err)
@@ -296,7 +296,7 @@ func (f flipEstate) nativeEstateRows(t *testing.T) map[string]int {
 	t.Helper()
 	counts := map[string]int{}
 	for object, query := range map[string]string{
-		"person":   `SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%'`,
+		"contact":  `SELECT count(*) FROM contact WHERE source LIKE 'mirror:hubspot:%'`,
 		"company":  `SELECT count(*) FROM company WHERE source LIKE 'mirror:hubspot:%'`,
 		"deal":     `SELECT count(*) FROM deal WHERE source LIKE 'mirror:hubspot:%'`,
 		"lead":     `SELECT count(*) FROM lead WHERE source_system = 'mirror:hubspot'`,
@@ -362,8 +362,8 @@ func TestOverlayFlipPreflightBlocksHonestly(t *testing.T) {
 	}
 	// The mirror stays readable on its last state — the estate reads
 	// still serve (fully readable, never partially migrated).
-	if rows, err := f.mirror.FlipRows(f.adminCtx, "person", 0, 10); err != nil || len(rows) != 3 {
-		t.Fatalf("mirror person rows after block = %d (%v), want 3 readable", len(rows), err)
+	if rows, err := f.mirror.FlipRows(f.adminCtx, "contact", 0, 10); err != nil || len(rows) != 3 {
+		t.Fatalf("mirror contact rows after block = %d (%v), want 3 readable", len(rows), err)
 	}
 
 	// The execute op is blocked with the flip-blocked sentinel.
@@ -408,7 +408,7 @@ func TestOverlayFlipPreflightBlocksHonestly(t *testing.T) {
 	for _, p := range *verdict.Parity {
 		parityByObject[p.Object] = p.WillCreate
 	}
-	want := map[string]int{"company": 2, "person": 3, "deal": 2, "lead": 1, "activity": 1}
+	want := map[string]int{"company": 2, "contact": 3, "deal": 2, "lead": 1, "activity": 1}
 	for object, n := range want {
 		if parityByObject[object] != n {
 			t.Errorf("parity will_create[%s] = %d, want %d", object, parityByObject[object], n)
@@ -471,7 +471,7 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 
 	// Counts preserved (AC-OV-10 parity vs the frozen estate).
 	counts := f.nativeEstateRows(t)
-	for object, n := range map[string]int{"person": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
+	for object, n := range map[string]int{"contact": 3, "company": 2, "deal": 2, "lead": 1, "activity": 1} {
 		if counts[object] != n {
 			t.Errorf("native %s rows = %d, want %d", object, counts[object], n)
 		}
@@ -498,22 +498,22 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 		WHERE d.source = 'mirror:hubspot:deal:d-open' AND o.source = 'mirror:hubspot:company:company-1'`)
 	assertOne("primary employment relationship", `
 		SELECT count(*) FROM relationship r
-		JOIN person p ON p.id = r.person_id
-		WHERE r.kind = 'employment' AND r.is_current_primary AND p.source = 'mirror:hubspot:person:p-1'`)
+		JOIN contact p ON p.id = r.contact_id
+		WHERE r.kind = 'employment' AND r.is_current_primary AND p.source = 'mirror:hubspot:contact:p-1'`)
 	assertOne("activity link", `
 		SELECT count(*) FROM activity_link al
 		JOIN activity a ON a.id = al.activity_id
-		JOIN person p ON p.id = al.person_id
-		WHERE a.source_system = 'mirror:hubspot' AND p.source = 'mirror:hubspot:person:p-1'`)
+		JOIN contact p ON p.id = al.contact_id
+		WHERE a.source_system = 'mirror:hubspot' AND p.source = 'mirror:hubspot:contact:p-1'`)
 	assertOne("closed-won deal", `
 		SELECT count(*) FROM deal WHERE source = 'mirror:hubspot:deal:d-won' AND status = 'won'`)
 	// The child rows the mapper nests: a contact's email and a company's
 	// domain. Both were silently dropped by a flat read once, so they
 	// are pinned per-record rather than by count.
-	assertOne("imported person's email", `
-		SELECT count(*) FROM person_email pe
-		JOIN person p ON p.id = pe.person_id
-		WHERE p.source = 'mirror:hubspot:person:p-1' AND pe.email = 'mor@baer-pharma.test'`)
+	assertOne("imported contact's email", `
+		SELECT count(*) FROM contact_email pe
+		JOIN contact p ON p.id = pe.contact_id
+		WHERE p.source = 'mirror:hubspot:contact:p-1' AND pe.email = 'mor@baer-pharma.test'`)
 	assertOne("imported company's domain", `
 		SELECT count(*) FROM company_domain od
 		JOIN company o ON o.id = od.company_id
@@ -523,23 +523,23 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 	var ownedByAdmin int
 	f.inWorkspaceTx(t, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.adminCtx,
-			`SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%' AND owner_id = $1`, f.adminID).Scan(&ownedByAdmin)
+			`SELECT count(*) FROM contact WHERE source LIKE 'mirror:hubspot:%' AND owner_id = $1`, f.adminID).Scan(&ownedByAdmin)
 	})
 	if ownedByAdmin != 3 {
-		t.Errorf("imported persons owned by the admin = %d, want 3 — two by mirror_user_map, and the unowned one inheriting the operator", ownedByAdmin)
+		t.Errorf("imported contacts owned by the admin = %d, want 3 — two by mirror_user_map, and the unowned one inheriting the operator", ownedByAdmin)
 	}
 	// Specifically: the unowned record is NOT ownerless.
 	var ownerless int
 	f.inWorkspaceTx(t, func(tx pgx.Tx) error {
 		return tx.QueryRow(f.adminCtx,
-			`SELECT count(*) FROM person WHERE source LIKE 'mirror:hubspot:%' AND owner_id IS NULL`).Scan(&ownerless)
+			`SELECT count(*) FROM contact WHERE source LIKE 'mirror:hubspot:%' AND owner_id IS NULL`).Scan(&ownerless)
 	})
 	if ownerless != 0 {
-		t.Errorf("%d imported person(s) landed ownerless — an ownerless native row is visible to every seat, which the mirror row was not", ownerless)
+		t.Errorf("%d imported contact(s) landed ownerless — an ownerless native row is visible to every seat, which the mirror row was not", ownerless)
 	}
 
 	// The lifecycle ops fall back to mode_not_overlay, /me reports
-	// native, and the native read serves the imported person.
+	// native, and the native read serves the imported contact.
 	if code := e.Call(t, "GET", "/v1/overlay/sync-status", nil, nil, nil); code != http.StatusNotFound {
 		t.Errorf("sync-status after flip = %d, want 404 mode_not_overlay", code)
 	}
@@ -550,12 +550,12 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 	if sor, ok := me["system_of_record"].(integration.AnyMap); !ok || sor["mode"] != "native" {
 		t.Errorf("/me system_of_record = %v, want native", me["system_of_record"])
 	}
-	var people crmcontracts.PersonListResponse
-	if code := e.Call(t, "GET", "/v1/people", nil, nil, &people); code != http.StatusOK {
-		t.Fatalf("GET /v1/people after flip = %d", code)
+	var contacts crmcontracts.ContactListResponse
+	if code := e.Call(t, "GET", "/v1/contacts", nil, nil, &contacts); code != http.StatusOK {
+		t.Fatalf("GET /v1/contacts after flip = %d", code)
 	}
-	if len(people.Data) != 3 {
-		t.Errorf("native people after flip = %d, want 3", len(people.Data))
+	if len(contacts.Data) != 3 {
+		t.Errorf("native contacts after flip = %d, want 3", len(contacts.Data))
 	}
 
 	// A second execute is refused: the flip is one-way (the lifecycle op
@@ -609,7 +609,7 @@ func TestOverlayFlipEmergencyCutover(t *testing.T) {
 		t.Fatalf("sor_mode after emergency cutover = %s, want native", mode)
 	}
 	counts := f.nativeEstateRows(t)
-	if counts["person"] != 3 || counts["deal"] != 2 {
+	if counts["contact"] != 3 || counts["deal"] != 2 {
 		t.Errorf("estate after emergency cutover = %+v, want the last-known mirror imported", counts)
 	}
 }
@@ -825,7 +825,7 @@ func TestFlipRefusesAMirrorRowNoCurrentDeclarationProduced(t *testing.T) {
 	// The estate's own fixtures all pass through asCurrentProjection; this one
 	// deliberately keeps fake.ProjectionFingerprint.
 	byOlderDeclaration := fake.Rec("p-older-declaration", map[string]any{"full_name": "Older Declaration"})
-	byOlderDeclaration.ObjectClass = "person"
+	byOlderDeclaration.ObjectClass = "contact"
 	byOlderDeclaration.OwnerExternalID = "owner-1"
 	if byOlderDeclaration.ProjectionFingerprint != fake.ProjectionFingerprint {
 		t.Fatalf("fixture fingerprint = %q, want the fake's — the row must be one no hubspot declaration produced",

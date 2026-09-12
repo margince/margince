@@ -4,9 +4,9 @@
 package consent
 
 // The no-login preference-center transport (B-E11.32). The public
-// middleware has already resolved the token to (workspace, person) and
+// middleware has already resolved the token to (workspace, contact) and
 // bound the workspace GUC plus the system principal; each handler
-// re-resolves the token for the person id (the same infra read) and then
+// re-resolves the token for the contact id (the same infra read) and then
 // drives the consent engine. An unknown or revoked token reads as absent
 // (404) — the surface is never a consent-state oracle, and a GET/prefetch
 // on the unsubscribe path never withdraws (only POST is routed to it).
@@ -118,7 +118,7 @@ const withdrawalStoppedPlaceholder = "stopped"
 // one transaction and acted on in another, and a purpose granted in that
 // window would survive the press that reported success.
 func (h Handlers) unsubscribe(
-	ctx context.Context, personID ids.PersonID, params crmcontracts.OneClickUnsubscribeParams,
+	ctx context.Context, contactID ids.ContactID, params crmcontracts.OneClickUnsubscribeParams,
 	viaCredential bool,
 ) ([]string, error) {
 	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
@@ -132,27 +132,27 @@ func (h Handlers) unsubscribe(
 			// for — including business correspondence, which is the thing the
 			// class filter below exists to spare. The scope says marketing,
 			// so a purpose outside that class is beyond the link's authority.
-			return h.store.WithdrawMarketingNamed(ctx, personID, named)
+			return h.store.WithdrawMarketingNamed(ctx, contactID, named)
 		}
-		return h.store.PublicWithdrawAll(ctx, personID, []string{named})
+		return h.store.PublicWithdrawAll(ctx, contactID, []string{named})
 	}
 	if viaCredential {
 		// A withdrawal credential's all_marketing scope stops the MARKETING
 		// classes and nothing else. The legacy sweep below stops everything
 		// except the locked transactional purpose, so a press there also ends
-		// business correspondence — a person who unsubscribed from a
+		// business correspondence — a contact who unsubscribed from a
 		// newsletter stops receiving replies to their own enquiries.
 		//
 		// That is older than this credential and narrowing it changes what
 		// links already sitting in mailboxes do, so it belongs to the slice
 		// that owns the canonical purpose vocabulary. A NEW credential is not
 		// owed the old breadth, and its scope says marketing.
-		return h.store.WithdrawMarketingForCredential(ctx, personID)
+		return h.store.WithdrawMarketingForCredential(ctx, contactID)
 	}
-	return h.store.PublicWithdrawEverything(ctx, personID)
+	return h.store.PublicWithdrawEverything(ctx, contactID)
 }
 
-// oneClickSubject resolves the press to the person it acts for, accepting a
+// oneClickSubject resolves the press to the contact it acts for, accepting a
 // preference token OR a withdrawal credential.
 //
 // BOTH FAMILIES, because the whole point of the credential is that the link in
@@ -167,29 +167,29 @@ func (h Handlers) unsubscribe(
 // beyond the authority the recipient was handed.
 func (h Handlers) oneClickSubject(
 	ctx context.Context, token string, params crmcontracts.OneClickUnsubscribeParams,
-) (ids.PersonID, crmcontracts.OneClickUnsubscribeParams, bool, error) {
+) (ids.ContactID, crmcontracts.OneClickUnsubscribeParams, bool, error) {
 	if ref, err := h.store.ResolvePreferenceToken(ctx, token); err == nil {
-		return ref.PersonID, params, false, nil
+		return ref.ContactID, params, false, nil
 	}
 	ref, err := h.store.ResolveWithdrawalToken(ctx, token)
 	if err != nil {
-		return ids.PersonID{}, params, false, err
+		return ids.ContactID{}, params, false, err
 	}
-	if ref.PersonID.IsZero() {
+	if ref.ContactID.IsZero() {
 		// A lead-only or address-only credential. Withdrawing a per-purpose
-		// consent state needs a person to hold it, and there is none — so the
+		// consent state needs a contact to hold it, and there is none — so the
 		// caller records a stop rather than refusing. Answering 404 here, as
 		// this did first, handed a lead a link that resolved and then said no,
 		// which defeats the mint that issued it.
-		return ids.PersonID{}, params, true, errNoConsentSubject
+		return ids.ContactID{}, params, true, errNoConsentSubject
 	}
 	if ref.Scope == WithdrawalScopeNamedPurpose {
 		named, err := h.store.purposeKeyByID(ctx, ref.PurposeID)
 		if err != nil {
-			return ids.PersonID{}, params, true, err
+			return ids.ContactID{}, params, true, err
 		}
 		if params.Purpose != nil && !strings.EqualFold(strings.TrimSpace(*params.Purpose), named) {
-			return ids.PersonID{}, params, true, &ValidationError{
+			return ids.ContactID{}, params, true, &ValidationError{
 				Field: fieldKeyPurpose,
 				Reason: "this unsubscribe link stops one named subscription, and the request names " +
 					"a different one",
@@ -197,17 +197,17 @@ func (h Handlers) oneClickSubject(
 		}
 		params.Purpose = &named
 	}
-	return ref.PersonID, params, true, nil
+	return ref.ContactID, params, true, nil
 }
 
 // errNoConsentSubject says the credential names nobody who can hold a
 // per-purpose consent state. It is a routing answer inside this package, never
 // a status: the press succeeds, by a different write.
-var errNoConsentSubject = errors.New("consent: this link names no person")
+var errNoConsentSubject = errors.New("consent: this link names no contact")
 
 // stopForCredential records the press for a subject with no consent state.
 //
-// It answers the SAME body a person's press answers, so the mailbox provider
+// It answers the SAME body a contact's press answers, so the mailbox provider
 // posting this cannot tell the two subjects apart and does not learn which it
 // got. The list is empty because a stop is one row rather than a set of
 // purposes — there are no names to count here, and the page says the recipient
@@ -243,7 +243,7 @@ func (h Handlers) UpdatePreferences(w http.ResponseWriter, r *http.Request, toke
 		writeConsentErr(w, r, err)
 		return
 	}
-	refused, err := h.store.PublicSaveChoices(r.Context(), ref.PersonID, choices)
+	refused, err := h.store.PublicSaveChoices(r.Context(), ref.ContactID, choices)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

@@ -10,7 +10,7 @@ package compose
 // None of these readers shows a word of a message. Each of them disclosed one
 // anyway: a strength score that counts a founder's correspondence with their
 // lawyer tells every colleague the relationship is strong, and a review queue
-// that stages a held sender puts their address in front of people who cannot
+// that stages a held sender puts their address in front of contacts who cannot
 // read the mail it came from.
 
 import (
@@ -21,8 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -33,19 +33,19 @@ import (
 )
 
 // TestAHeldMessageIsNotCountedInRelationshipStrength drives the REAL
-// PersonStrength path (people.Store, the one GET /people/{id}/strength and
-// person360 both call) rather than a hand-rolled query — a local copy of the
+// ContactStrength path (contacts.Store, the one GET /contacts/{id}/strength and
+// contact360 both call) rather than a hand-rolled query — a local copy of the
 // audience rule proves the rule is right, not that the code applying it is.
 // A test that calls its own duplicate helper instead of the real
 // strengthInputs query can go green over a leak the query itself still has.
 func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedLinkedPerson(t, e, "anwalt@kanzlei.example")
-	personID := ids.From[ids.PersonKind](person)
+	contact := seedLinkedContact(t, e, "anwalt@kanzlei.example")
+	contactID := ids.From[ids.ContactKind](contact)
 	now := time.Now()
 
-	open := seedLinkedActivity(t, e, person, "workspace")
-	before, err := e.People.PersonStrength(e.Admin(), personID, now)
+	open := seedLinkedActivity(t, e, contact, "workspace")
+	before, err := e.Contacts.ContactStrength(e.Admin(), contactID, now)
 	if err != nil {
 		t.Fatalf("reading strength: %v", err)
 	}
@@ -56,8 +56,8 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 		t.Fatal("the open message's id is not among the contributing ids; the held case below would then prove nothing")
 	}
 
-	held := seedLinkedActivity(t, e, person, "participants")
-	after, err := e.People.PersonStrength(e.Admin(), personID, now)
+	held := seedLinkedActivity(t, e, contact, "participants")
+	after, err := e.Contacts.ContactStrength(e.Admin(), contactID, now)
 	if err != nil {
 		t.Fatalf("reading strength: %v", err)
 	}
@@ -72,16 +72,16 @@ func TestAHeldMessageIsNotCountedInRelationshipStrength(t *testing.T) {
 	}
 }
 
-// TestAHeldMessageDoesNotMoveLastTouch drives the real person360.Service —
-// the composite read GET /people/{id}/360 serves — through lastTouchSection:
+// TestAHeldMessageDoesNotMoveLastTouch drives the real contact360.Service —
+// the composite read GET /contacts/{id}/360 serves — through lastTouchSection:
 // the content gate (auth.ActivityAudienceArm, used correctly by
 // readActivities in the same file) is the wrong tool for an AGGREGATE,
 // which has to answer the same for every colleague and needs
 // auth.AudienceWorkspaceOnly instead.
 func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedLinkedPerson(t, e, "spaet@kanzlei.example")
-	personID := ids.From[ids.PersonKind](person)
+	contact := seedLinkedContact(t, e, "spaet@kanzlei.example")
+	contactID := ids.From[ids.ContactKind](contact)
 
 	// Truncated to microseconds: postgres's timestamptz resolution is
 	// microseconds, so a nanosecond-precision time.Now() compares unequal to
@@ -89,16 +89,16 @@ func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	// storage one, and one this test would otherwise fail on at random
 	// depending on which run drew a nonzero nanosecond remainder.
 	openAt := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
-	seedLinkedActivityAt(t, e, person, "workspace", openAt)
+	seedLinkedActivityAt(t, e, contact, "workspace", openAt)
 
-	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		consent.NewStore(InstallationDB(e.Pool)),
 		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
 		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
 
-	before, err := svc.Assemble(e.Admin(), personID)
+	before, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
-		t.Fatalf("assembling person360: %v", err)
+		t.Fatalf("assembling contact360: %v", err)
 	}
 	if before.LastInboundAt == nil || !before.LastInboundAt.Equal(openAt) {
 		t.Fatalf("last-inbound = %v, want %v; the open message was not read, "+
@@ -110,11 +110,11 @@ func TestAHeldMessageDoesNotMoveLastTouch(t *testing.T) {
 	// merely fail to move — a stronger proof than "the value is unchanged",
 	// which a same-instant tie could also produce for the wrong reason.
 	heldAt := time.Now().Add(time.Hour).Truncate(time.Microsecond)
-	seedLinkedActivityAt(t, e, person, "participants", heldAt)
+	seedLinkedActivityAt(t, e, contact, "participants", heldAt)
 
-	after, err := svc.Assemble(e.Admin(), personID)
+	after, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
-		t.Fatalf("assembling person360: %v", err)
+		t.Fatalf("assembling contact360: %v", err)
 	}
 	if after.LastInboundAt == nil || !after.LastInboundAt.Equal(openAt) {
 		t.Fatalf("last-inbound moved to %v when a HELD message arrived (want it to stay at %v) — "+
@@ -167,7 +167,7 @@ func TestAHeldSenderIsNotStagedForReview(t *testing.T) {
 	}
 }
 
-func seedLinkedActivityAt(t *testing.T, e *integration.Env, person ids.UUID, audience string, occurredAt time.Time) {
+func seedLinkedActivityAt(t *testing.T, e *integration.Env, contact ids.UUID, audience string, occurredAt time.Time) {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -180,42 +180,42 @@ func seedLinkedActivityAt(t *testing.T, e *integration.Env, person ids.UUID, aud
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person); err != nil {
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact); err != nil {
 			return err
 		}
 		// They SENT it, as capture stamps an inbound message's counterparty.
 		// Without this row the mail reaches them with nobody having written it,
 		// and last-inbound is a claim about who wrote.
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_participant (activity_id, person_id, role)
-			VALUES ($1, $2, 'from')`, id, person)
+			INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'from')`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a linked activity: %v", err)
 	}
 }
 
-func seedLinkedPerson(t *testing.T, e *integration.Env, email string) ids.UUID {
+func seedLinkedContact(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, source, captured_by, visibility)
-			VALUES ($1, 'Test Person', 'gmail', 'connector:gmail', 'workspace')`, id); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by, visibility)
+			VALUES ($1, 'Test Contact', 'gmail', 'connector:gmail', 'workspace')`, id); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
 			VALUES ($1, $2, 'gmail', 'connector:gmail')`, id, email)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding a person: %v", err)
+		t.Fatalf("seeding a contact: %v", err)
 	}
 	return id
 }
 
-func seedLinkedActivity(t *testing.T, e *integration.Env, person ids.UUID, audience string) ids.UUID {
+func seedLinkedActivity(t *testing.T, e *integration.Env, contact ids.UUID, audience string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -228,8 +228,8 @@ func seedLinkedActivity(t *testing.T, e *integration.Env, person ids.UUID, audie
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding a linked activity: %v", err)
@@ -269,8 +269,8 @@ func retireUnsure(t *testing.T, e *integration.Env, id ids.UUID) {
 // words, which is where a reader meets it.
 func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
 	e := integration.Setup(t)
-	recipient := seedLinkedPerson(t, e, "recipient@example.test")
-	sender := seedLinkedPerson(t, e, "sender@example.test")
+	recipient := seedLinkedContact(t, e, "recipient@example.test")
+	sender := seedLinkedContact(t, e, "sender@example.test")
 
 	at := time.Now().Add(-time.Hour).Truncate(time.Microsecond)
 	id := ids.NewV7()
@@ -284,35 +284,35 @@ func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
 			id, "thread-"+id.String(), at); err != nil {
 			return err
 		}
-		// Linked to BOTH, which is what a thread naming two people looks like.
+		// Linked to BOTH, which is what a thread naming two contacts looks like.
 		for _, p := range []ids.UUID{recipient, sender} {
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO activity_link (activity_id, entity_type, person_id)
-				VALUES ($1, 'person', $2)`, id, p); err != nil {
+				INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				VALUES ($1, 'contact', $2)`, id, p); err != nil {
 				return err
 			}
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, address, role)
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
 			VALUES ($1, $2, 'sender@example.test', 'from')`, id, sender); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, person_id, address, role)
+			INSERT INTO activity_participant (activity_id, contact_id, address, role)
 			VALUES ($1, $2, 'recipient@example.test', 'to')`, id, recipient)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the two-party thread: %v", err)
 	}
 
-	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		consent.NewStore(InstallationDB(e.Pool)),
 		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
 		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
 
 	// The positive control FIRST: without it, a build that answered nil for
 	// everybody would pass the assertion this test exists to make.
-	wrote, err := svc.Assemble(e.Admin(), ids.From[ids.PersonKind](sender))
+	wrote, err := svc.Assemble(e.Admin(), ids.From[ids.ContactKind](sender))
 	if err != nil {
 		t.Fatalf("assembling the sender's 360: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestLastInboundNamesTheSenderNotEveryoneOnTheThread(t *testing.T) {
 			"so the assertion below would pass for the wrong reason", wrote.LastInboundAt, at)
 	}
 
-	received, err := svc.Assemble(e.Admin(), ids.From[ids.PersonKind](recipient))
+	received, err := svc.Assemble(e.Admin(), ids.From[ids.ContactKind](recipient))
 	if err != nil {
 		t.Fatalf("assembling the recipient's 360: %v", err)
 	}

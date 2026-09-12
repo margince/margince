@@ -14,7 +14,7 @@ package channels
 // so a whole erasure can run between the two. The activity that then lands
 // carries the subject's verbatim message text and their account id, and it is
 // reachable by NEITHER erasure selector afterwards — subjectOnlyActivities
-// walks activity_link.person_id (the post-commit ensure is refused, so there is
+// walks activity_link.contact_id (the post-commit ensure is refused, so there is
 // no link) and unlinkedSubjectMail walks counterparty_email (NULL on a channel
 // record). The suppression row then guarantees the identity is never recreated,
 // so no later erasure, SAR or retention pass can ever find it again, while the
@@ -49,7 +49,7 @@ import (
 
 // sinkConnectorCtx is the principal the ingest worker acts as: a connector
 // acting for no human, permitted to create the activity it captures and the
-// person that activity names.
+// contact that activity names.
 func sinkConnectorCtx(e *integration.Env) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -57,7 +57,7 @@ func sinkConnectorCtx(e *integration.Env) context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"channel"},
 			Objects: map[string]principal.ObjectGrant{
-				"activity": {Create: true}, "person": {Create: true},
+				"activity": {Create: true}, "contact": {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -106,7 +106,7 @@ func inboundChannelRecordAt(account, body string, at time.Time) connector.Normal
 }
 
 // activityBodyCount counts activities holding this exact text, whatever they are
-// linked to. It deliberately does NOT join person or activity_link: the whole
+// linked to. It deliberately does NOT join contact or activity_link: the whole
 // point of the defect is that the surviving row is joined to nothing.
 func activityBodyCount(t *testing.T, e *integration.Env, body string) int {
 	t.Helper()
@@ -118,12 +118,12 @@ func activityBodyCount(t *testing.T, e *integration.Env, body string) int {
 // that certified it gone, permanently beyond every lane that could remove it.
 func TestTheSinkRefusesARecordNamingAnErasedChannelAccount(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Erased Subject", nil)
-	seedChannelIdentity(t, e, person, "20301", "erased")
+	contact := e.SeedContact(t, "Erased Subject", nil)
+	seedChannelIdentity(t, e, contact, "20301", "erased")
 
 	// A real erasure, so the suppression row is armed the way production arms it.
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	const body = "the erased subject's message text"
@@ -142,8 +142,8 @@ func TestTheSinkRefusesARecordNamingAnErasedChannelAccount(t *testing.T) {
 // whole call proves Upsert waits for it.
 func TestTheSinkWaitsForAnErasureHoldingTheRecordsAccount(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Live Subject", nil)
-	seedChannelIdentity(t, e, person, "20302", "live")
+	contact := e.SeedContact(t, "Live Subject", nil)
+	seedChannelIdentity(t, e, contact, "20302", "live")
 
 	sink := capture.NewSink(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
 	ctx := sinkConnectorCtx(e)
@@ -175,8 +175,8 @@ func TestTheSinkWaitsForAnErasureHoldingTheRecordsAccount(t *testing.T) {
 // failure above is the lock, not the bounded pool.
 func TestTheSinkIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Live Subject", nil)
-	seedChannelIdentity(t, e, person, "20303", "live")
+	contact := e.SeedContact(t, "Live Subject", nil)
+	seedChannelIdentity(t, e, contact, "20303", "live")
 
 	sink := capture.NewSink(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
 	ctx := sinkConnectorCtx(e)
@@ -228,7 +228,7 @@ func TestTheSinkRefusesAnUndeclaredCorroboratingAddress(t *testing.T) {
 }
 
 // The residual half of the P0. The Sink commits the activity in ONE transaction
-// and people's ensure writes the person link in a LATER one, so an erasure
+// and contacts's ensure writes the contact link in a LATER one, so an erasure
 // landing in that gap leaves an activity linked to nobody — invisible to the
 // link-walking selector — and with no counterparty_email, so invisible to the
 // mail selector too. Before the channel selector arm existed, that row survived
@@ -236,21 +236,21 @@ func TestTheSinkRefusesAnUndeclaredCorroboratingAddress(t *testing.T) {
 //
 // This test builds exactly that state: a Sink with no channel ensurer wired
 // never writes the link at all, which is the same row the race produces.
-func TestAnErasureReachesAChannelActivityWithNoPersonLink(t *testing.T) {
+func TestAnErasureReachesAChannelActivityWithNoContactLink(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Orphaned Subject", nil)
-	seedChannelIdentity(t, e, person, "20401", "orphaned")
+	contact := e.SeedContact(t, "Orphaned Subject", nil)
+	seedChannelIdentity(t, e, contact, "20401", "orphaned")
 
 	const body = "a message no link points at"
 	if _, err := capture.NewSink(e.DB()).Upsert(sinkConnectorCtx(e), inboundChannelRecord("20401", body)); err != nil {
 		t.Fatalf("Upsert: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE person_id = $1`, person); n != 0 {
-		t.Fatalf("the fixture linked the activity to the person (%d links); this test needs the UNLINKED state", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, contact); n != 0 {
+		t.Fatalf("the fixture linked the activity to the contact (%d links); this test needs the UNLINKED state", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	if n := activityBodyCount(t, e, body); n != 0 {
@@ -268,13 +268,13 @@ func TestAnErasureReachesAChannelActivityWithNoPersonLink(t *testing.T) {
 
 // The guard that makes the arm above safe. An account id is a numeric string,
 // so a match that ignored the provider — or that compared the id anywhere in the
-// row — would redact other people's timelines. This pins that erasing one
+// row — would redact other contacts's timelines. This pins that erasing one
 // subject touches only their own account's rows.
 func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
 	e := integration.Setup(t)
-	erased := e.SeedPerson(t, "Erased Subject", nil)
+	erased := e.SeedContact(t, "Erased Subject", nil)
 	seedChannelIdentity(t, e, erased, "20501", "erased")
-	bystander := e.SeedPerson(t, "Bystander", nil)
+	bystander := e.SeedContact(t, "Bystander", nil)
 	seedChannelIdentity(t, e, bystander, "20502", "bystander")
 
 	sink := capture.NewSink(e.DB())
@@ -287,8 +287,8 @@ func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
 		t.Fatalf("Upsert (bystander): %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), erased, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), erased, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	if n := activityBodyCount(t, e, bystanderBody); n != 1 {
@@ -315,8 +315,8 @@ func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
 // question for the spec, not a change to make here.
 func TestARecentChannelMessageIsShieldedFromErasureByTheStatutoryFloor(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Recent Subject", nil)
-	seedChannelIdentity(t, e, person, "20601", "recent")
+	contact := e.SeedContact(t, "Recent Subject", nil)
+	seedChannelIdentity(t, e, contact, "20601", "recent")
 
 	const body = "a message inside the statutory floor"
 	rec := inboundChannelRecordAt("20601", body, time.Now().UTC())
@@ -327,8 +327,8 @@ func TestARecentChannelMessageIsShieldedFromErasureByTheStatutoryFloor(t *testin
 	// The floor covers correspondence about an actual transaction, so the
 	// message needs one behind it to be shielded at all.
 	e.SeedWonDealLinkedTo(t, ref.ID)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 	if n := activityBodyCount(t, e, body); n != 1 {
 		t.Errorf("got %d retained activities, want 1 — the statutory correspondence floor must outrank the erasure for a recent message", n)

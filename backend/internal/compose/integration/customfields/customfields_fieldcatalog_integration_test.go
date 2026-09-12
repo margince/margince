@@ -10,7 +10,7 @@ package customfields
 // Postgres, and exercises what each promises its consumer.
 //
 // Reader answers the columns a record store may WRITE — active-only,
-// per-object, workspace-scoped — for people and deals. FilterableReader
+// per-object, workspace-scoped — for contacts and deals. FilterableReader
 // answers the columns a FILTER may name, which deliberately includes
 // retired ones so a saved segment keeps evaluating, and which collections
 // consumes. The two invariants are opposites on exactly one axis, so the
@@ -31,7 +31,7 @@ import (
 
 // var _ fieldcatalog.Reader documents the seam at its call site: the
 // compile-time proof that *customfieldsmod.Service satisfies the port
-// people/deals will depend on instead of the concrete module (T2 wires
+// contacts/deals will depend on instead of the concrete module (T2 wires
 // the injection; this line is what would fail to compile first if the
 // two drifted apart).
 var _ fieldcatalog.Reader = (*customfieldsmod.Service)(nil)
@@ -59,13 +59,13 @@ func TestActiveColumns_ActiveOnly_ExcludesRetired(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	stayer, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	toRetire, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Legacy note", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Legacy note", Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -74,13 +74,13 @@ func TestActiveColumns_ActiveOnly_ExcludesRetired(t *testing.T) {
 		t.Fatalf("Retire: %v", err)
 	}
 
-	cols, err := svc.ActiveColumns(ctx, "person")
+	cols, err := svc.ActiveColumns(ctx, "contact")
 	if err != nil {
 		t.Fatalf("ActiveColumns: %v", err)
 	}
 	got := columnNames(cols)
 	if len(got) != 1 || got[0] != *stayer.ColumnName {
-		t.Fatalf("ActiveColumns(person) = %v, want only %q (retired field must be excluded)", got, *stayer.ColumnName)
+		t.Fatalf("ActiveColumns(contact) = %v, want only %q (retired field must be excluded)", got, *stayer.ColumnName)
 	}
 	for _, c := range cols {
 		if c.Type != customfieldsmod.TypeText {
@@ -94,8 +94,8 @@ func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
-	personField, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Person only", Type: customfieldsmod.TypeBoolean, Source: "ui",
+	contactField, err := svc.Create(ctx, customfieldsmod.FieldSpec{
+		Object: "contact", Label: "Contact only", Type: customfieldsmod.TypeBoolean, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -105,12 +105,12 @@ func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	personCols, err := svc.ActiveColumns(ctx, "person")
+	contactCols, err := svc.ActiveColumns(ctx, "contact")
 	if err != nil {
-		t.Fatalf("ActiveColumns(person): %v", err)
+		t.Fatalf("ActiveColumns(contact): %v", err)
 	}
-	if got := columnNames(personCols); len(got) != 1 || got[0] != *personField.ColumnName {
-		t.Fatalf("ActiveColumns(person) = %v, want only %q — a deal field must never leak into person's columns", got, *personField.ColumnName)
+	if got := columnNames(contactCols); len(got) != 1 || got[0] != *contactField.ColumnName {
+		t.Fatalf("ActiveColumns(contact) = %v, want only %q — a deal field must never leak into contact's columns", got, *contactField.ColumnName)
 	}
 
 	dealCols, err := svc.ActiveColumns(ctx, "deal")
@@ -118,7 +118,7 @@ func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
 		t.Fatalf("ActiveColumns(deal): %v", err)
 	}
 	if got := columnNames(dealCols); len(got) != 1 || got[0] != *dealField.ColumnName {
-		t.Fatalf("ActiveColumns(deal) = %v, want only %q — a person field must never leak into deal's columns", got, *dealField.ColumnName)
+		t.Fatalf("ActiveColumns(deal) = %v, want only %q — a contact field must never leak into deal's columns", got, *dealField.ColumnName)
 	}
 }
 
@@ -155,13 +155,13 @@ func TestFilterableColumnsSeesRetiredFieldsAndActiveColumnsDoesNot(t *testing.T)
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	live, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Still live", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Still live", Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	gone, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Long gone", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Long gone", Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -170,11 +170,11 @@ func TestFilterableColumnsSeesRetiredFieldsAndActiveColumnsDoesNot(t *testing.T)
 		t.Fatalf("Retire: %v", err)
 	}
 
-	active, err := svc.ActiveColumns(ctx, "person")
+	active, err := svc.ActiveColumns(ctx, "contact")
 	if err != nil {
 		t.Fatalf("ActiveColumns: %v", err)
 	}
-	filterable, err := svc.FilterableColumns(ctx, "person")
+	filterable, err := svc.FilterableColumns(ctx, "contact")
 	if err != nil {
 		t.Fatalf("FilterableColumns: %v", err)
 	}

@@ -108,7 +108,7 @@ var SharedPostureAllowed = settings.Define[bool](
 // keeps whole MESSAGES out of capture by address or domain, and says nothing
 // about whether captured mail may be read for contact details.
 //
-// Default true: the pass reads only what a person put under their own name in
+// Default true: the pass reads only what a contact put under their own name in
 // mail they sent us, which is the least-surprising enrichment in the product.
 var SignatureEnrich = settings.Define[bool](
 	"capture.signature_enrich",

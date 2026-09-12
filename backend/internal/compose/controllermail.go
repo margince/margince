@@ -11,7 +11,7 @@ package compose
 // sends. They are deliberately siblings rather than one function with a flag:
 // what differs is not a parameter but the whole authority story. A rep's send
 // resolves a connected mailbox and asks whether that rep may write to this
-// person; the installation's own mail has no mailbox and no rep, and asks
+// contact; the installation's own mail has no mailbox and no rep, and asks
 // whether the record shows an obligation it owes them.
 //
 // What they SHARE is the part that must not diverge — the delivery row, the
@@ -86,11 +86,11 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		Body:      &body,
 		Direction: &outbound,
 		// The installation writing to somebody about its own obligations is not
-		// that person engaging, so it stays out of every last_activity_at.
+		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
 		Links: []activities.ActivityLinkInput{{
-			EntityType: string(crmcontracts.ActivityLinkEntityTypePerson),
-			EntityID:   in.PersonID.UUID,
+			EntityType: string(crmcontracts.ActivityLinkEntityTypeContact),
+			EntityID:   in.ContactID.UUID,
 		}},
 	})
 	if err != nil {

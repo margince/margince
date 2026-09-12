@@ -9,7 +9,7 @@ package capture
 // the ordering rules and the wiring guards they rely on live there.
 //
 // What makes editing safe rather than merely convenient: Telegram user ids are
-// global, and person_channel_identity's key omits the bot id, so every identity
+// global, and contact_channel_identity's key omits the bot id, so every identity
 // binding — and all captured history — keeps resolving across a token rotation
 // or even a swap to a different bot.
 
@@ -43,7 +43,7 @@ type channelRow struct {
 // whole change.
 //
 // The connection row itself survives, which is the point: captured activities and
-// every person_channel_identity binding are keyed on the Telegram user, not on
+// every contact_channel_identity binding are keyed on the Telegram user, not on
 // this row or on the bot, so rotating the token — or swapping in a different bot —
 // loses no history.
 //

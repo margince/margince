@@ -156,7 +156,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, out any) err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	// Their administrator reads this traffic in an audit log beside their own
-	// people's, and "some Go program" is not an answer to "what is writing to
+	// contacts's, and "some Go program" is not an answer to "what is writing to
 	// our records".
 	req.Header.Set("User-Agent", outbound.MirrorHeader)
 	if body != nil {

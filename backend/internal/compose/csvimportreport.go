@@ -3,7 +3,7 @@
 
 package compose
 
-// What the dry run TELLS a person before they approve it.
+// What the dry run TELLS a colleague before they approve it.
 //
 // The engine's report counts rows it would touch; this walks the file again and
 // asks the writers what each row would actually do — created, updated, unchanged,
@@ -43,15 +43,15 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 // employer links the file asks for will actually find a company.
 //
 // The engine's own dry run counts edges OFFERED — it has no writer, so it cannot
-// resolve an endpoint. That number alone would tell a person approving a file of
+// resolve an endpoint. That number alone would tell a contact approving a file of
 // 12,000 contacts that 12,000 links are coming, when the truthful answer might be
 // 3,000 and 9,000 companies nobody has imported yet. So the resolvable half is
 // computed here through the SAME resolver the commit will use, and the names that
-// resolve to nothing are listed rather than counted — the answer a person needs
+// resolve to nothing are listed rather than counted — the answer a contact needs
 // is WHICH company was not found, because that is the row they have to go fix.
 //
-// Only the COMPANY end is resolved. At dry-run time no person has landed, so the
-// person end would answer "not imported" for every row, and predicting that would
+// Only the COMPANY end is resolved. At dry-run time no contact has landed, so the
+// contact end would answer "not imported" for every row, and predicting that would
 // be worse than saying nothing. The asymmetry is deliberate: a preview reports
 // what it can honestly know, and claiming more is the preview/commit disagreement
 // this whole pass exists to prevent.
@@ -65,9 +65,9 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 	if len(edges) == 0 {
 		return report, nil
 	}
-	// A row the commit will refuse lands no person, so its employer link cannot
+	// A row the commit will refuse lands no contact, so its employer link cannot
 	// be written either. Counting it as resolvable would promise a link whose
-	// person is never there — preview says "linked", commit says "nobody to link
+	// contact is never there — preview says "linked", commit says "nobody to link
 	// to", which is the disagreement this whole pass exists to prevent.
 	willNotLand := make(map[string]bool, len(absent))
 	for _, id := range absent {
@@ -136,7 +136,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				p.absent = append(p.absent, row.ExternalID)
 				// The run asked to skip duplicates, so this row is a skip and
 				// the preview says so — the commit must not be the first place
-				// a person learns the row did not land.
+				// a contact learns the row did not land.
 				p.duplicates++
 				p.skipped = append(p.skipped, migration.SkippedRow{
 					ExternalID: row.ExternalID,
@@ -168,7 +168,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 // collisionDisclosure is what the report says about a row naming a company the
 // CRM already holds. It is not a refusal: the commit creates the row and files
 // the pair on the dedupe review queue, exactly as a manual create would. The
-// disclosure exists so a person reading "create 3" before approving is not
+// disclosure exists so a reader reading "create 3" before approving is not
 // surprised by a duplicate afterwards.
 const collisionDisclosure = "a company of this name is already in the CRM; " +
 	"importing this row creates a second one and files the pair for review"
@@ -177,22 +177,22 @@ const collisionDisclosure = "a company of this name is already in the CRM; " +
 // leave alone, under `on_duplicate: skip`.
 const duplicateSkipReason = "a company of this name is already in the CRM, and this run was asked to skip duplicates"
 
-// The same two sentences for a person run, which must not tell its reader that a
+// The same two sentences for a contact run, which must not tell its reader that a
 // company was found.
 //
 // The disclosure is not merely the company one with a noun swapped. An address
-// the estate already holds is REFUSED by the store — uq_person_email_dedupe is a
+// the estate already holds is REFUSED by the store — uq_contact_email_dedupe is a
 // real key, where a company name is not — so promising "a second one is created"
 // would be false for the very case a reader is most likely to hit.
-const personCollisionDisclosure = "someone matching this row is already in the CRM; " +
+const contactCollisionDisclosure = "someone matching this row is already in the CRM; " +
 	"a row naming an address already held is refused, and a near match creates and files the pair for review"
 
-const personDuplicateSkipReason = "someone matching this row is already in the CRM, and this run was asked to skip duplicates"
+const contactDuplicateSkipReason = "someone matching this row is already in the CRM, and this run was asked to skip duplicates"
 
 // collisionWordingFor names the sentences that match what this run imports.
 func collisionWordingFor(object string) (disclosure, skipReason string) {
-	if object == migration.ObjectPerson {
-		return personCollisionDisclosure, personDuplicateSkipReason
+	if object == migration.ObjectContact {
+		return contactCollisionDisclosure, contactDuplicateSkipReason
 	}
 	return collisionDisclosure, duplicateSkipReason
 }

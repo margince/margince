@@ -1157,7 +1157,7 @@ jobs:
   # commit of landing — a Dockerfile-only PR matching no scope was an accepted
   # trade against that net. release.yml then became dispatch-only, to stop ~400
   # release runs a week competing for the same 20-concurrent runner ceiling. Right on its
-  # own terms, and it removed the net the trade depended on: the first person to
+  # own terms, and it removed the net the trade depended on: the first contact to
   # notice a broken image became whoever cut the next release, with the offending
   # commit arbitrarily far back.
   #

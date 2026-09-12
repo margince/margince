@@ -12,7 +12,7 @@ package gates
 // Some public routes carry a bearer credential in a path segment, because they
 // are reached with no login: the recipient of an email follows a link, and the
 // token in it IS the authorization. The preference centre's token reads and
-// changes a person's consent state; the confirm-details token opens the
+// changes a contact's consent state; the confirm-details token opens the
 // subject's own record. A log line holding one is a working credential sitting
 // wherever logs go — an ops dashboard, a shipped aggregator, a third-party log
 // service, a support engineer's paste.

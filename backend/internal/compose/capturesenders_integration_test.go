@@ -5,7 +5,7 @@
 
 package compose
 
-// The Senders page, and the rule that makes it worth using: a person's answer
+// The Senders page, and the rule that makes it worth using: a contact's answer
 // about a sender is permanent, and the machine consults it rather than
 // overwriting it.
 
@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestTheMachineNeverOverwritesAPersonsDecision(t *testing.T) {
+func TestTheMachineNeverOverwritesAContactsDecision(t *testing.T) {
 	// The whole reason the page is worth a click. A correction the next message
 	// undoes is a suggestion: the owner would find the same sender wrong again
 	// next week with no way to tell a fresh mistake from one they already
@@ -47,8 +47,8 @@ func TestTheMachineNeverOverwritesAPersonsDecision(t *testing.T) {
 		t.Errorf("the model was asked %d times about a sender the owner already decided — "+
 			"a paid call to be told something we discard", brain.calls)
 	}
-	if got := dispositionKind(t, e, dispositionID); got != capture.KindPerson {
-		t.Fatalf("the ledger says %q, want person — the owner said business", got)
+	if got := dispositionKind(t, e, dispositionID); got != capture.KindContact {
+		t.Fatalf("the ledger says %q, want contact — the owner said business", got)
 	}
 }
 
@@ -60,8 +60,8 @@ func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
 
 	setDecision(t, e, e.Rep1, sender, capture.OverrideKeepOut)
 
-	// A brain that would call them a person. The owner disagrees.
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	// A brain that would call them a contact. The owner disagrees.
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -71,7 +71,7 @@ func TestKeepingASenderOutSurvivesTheClassifier(t *testing.T) {
 		t.Fatalf("the ledger says %q, want spam — the owner said keep out", got)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = $1`, sender); n != 0 {
 		t.Fatalf("%d contacts for a sender the owner kept out, want 0", n)
 	}
@@ -102,7 +102,7 @@ func TestTheSendersPageShowsWhatWasDecidedAndByWhom(t *testing.T) {
 }
 
 func TestASeatSeesOnlyTheirOwnSenders(t *testing.T) {
-	// Whose mail a person keeps out is itself private: a colleague's list is
+	// Whose mail a colleague keeps out is itself private: a colleague's list is
 	// not a thing this product will show, to anyone.
 	e := integration.Setup(t)
 	const mine = "meins@example.test"

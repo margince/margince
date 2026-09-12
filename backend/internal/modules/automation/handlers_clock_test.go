@@ -471,7 +471,7 @@ func TestRenewalReminderIdempotencyKeyIsAnchorDerived(t *testing.T) {
 // the same "prove the contract directly against a hand-built payload"
 // posture every other clock-handler test in this file already takes.
 func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
-	entity := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	entity := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	h := renewalReminder{}
 
 	// A birthday on August 1st: year one's scan projects it onto 2026,
@@ -548,13 +548,13 @@ func TestRenewalReminderRecurringAnchorReArmsEachYear(t *testing.T) {
 // TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor pins the property the
 // claim's UNIQUE (workspace_id, handler, idempotency_key) makes
 // load-bearing: two DIFFERENT records that went quiet at the SAME instant
-// — one captured mail linked to a person and to their employer leaves
+// — one captured mail linked to a contact and to their employer leaves
 // exactly that — must claim two different rows, or only the first of them
 // is ever reminded about.
 func TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor(t *testing.T) {
 	now := time.Date(2026, 7, 16, 9, 0, 0, 0, time.UTC)
 	anchor := now.AddDate(0, 0, -40)
-	person := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	contact := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	employer := datasource.EntityRef{Type: datasource.EntityCompany, ID: ids.NewV7()}
 
 	handlers := map[string]workflow.Handler{
@@ -563,16 +563,16 @@ func TestAnchorKeysSeparateTwoEntitiesSharingOneAnchor(t *testing.T) {
 	}
 	for name, h := range handlers {
 		t.Run(name, func(t *testing.T) {
-			personKey := h.IdempotencyKey(touchEvent(t, now, anchor, person))
+			contactKey := h.IdempotencyKey(touchEvent(t, now, anchor, contact))
 			employerKey := h.IdempotencyKey(touchEvent(t, now, anchor, employer))
-			if personKey == employerKey {
-				t.Fatalf("both entities produced the key %q — the second record's reminder would be absorbed by the first record's claim", personKey)
+			if contactKey == employerKey {
+				t.Fatalf("both entities produced the key %q — the second record's reminder would be absorbed by the first record's claim", contactKey)
 			}
-			if !strings.Contains(personKey, person.ID.String()) {
-				t.Errorf("key %q does not carry the entity id %s", personKey, person.ID)
+			if !strings.Contains(contactKey, contact.ID.String()) {
+				t.Errorf("key %q does not carry the entity id %s", contactKey, contact.ID)
 			}
-			if !strings.Contains(personKey, string(person.Type)) {
-				t.Errorf("key %q does not carry the entity type %s", personKey, person.Type)
+			if !strings.Contains(contactKey, string(contact.Type)) {
+				t.Errorf("key %q does not carry the entity type %s", contactKey, contact.Type)
 			}
 		})
 	}

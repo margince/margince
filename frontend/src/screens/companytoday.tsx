@@ -115,7 +115,7 @@ type TodayReadingInputs = Readonly<{
   onPrepareMeeting?: (activityId: string) => void;
   // Starting a message from the account: opens the composer anchored on the
   // account and its recipient.
-  onDraftTo?: (personId: string) => void;
+  onDraftTo?: (contactId: string) => void;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   // Opens a cited message in the page's email drawer. A suggestion resting on
   // an unanswered mail names that mail, and reading it is the reader's move.
@@ -367,7 +367,7 @@ export function Company360Call({
 }
 
 /**
- * What needs a person: one list, the moment as its lead row, then the agent's
+ * What needs a contact: one list, the moment as its lead row, then the agent's
  * finds, then the manual moves. The foot carries what the list as a whole is
  * counting down to and what the advice could not show.
  */
@@ -531,18 +531,18 @@ function manualMoveRows({
   view: Company360;
   t: ReturnType<typeof useT>;
   onPrepareMeeting?: (activityId: string) => void;
-  onDraftTo?: (personId: string) => void;
+  onDraftTo?: (contactId: string) => void;
   // Whether the advice above already offers a reply to a specific message.
   hasDraftReply: boolean;
 }>): ReactNode[] {
-  const recipient = [...(view.people?.data ?? [])].sort(byStrengthThenId)[0];
+  const recipient = [...(view.contacts?.data ?? [])].sort(byStrengthThenId)[0];
   const meeting = view.next_meeting;
   const rows: ReactNode[] = [];
   // The generic row is dropped when a suggestion already says "answer THIS
   // message". Both rows say "write to them" and only one of them knows which
   // conversation — and the generic one picks the account's strongest contact,
-  // who is frequently not the person waiting on a reply. Two draft rows naming
-  // two different people is the account telling a rep two different things.
+  // who is frequently not the contact waiting on a reply. Two draft rows naming
+  // two different contacts is the account telling a rep two different things.
   if (recipient && onDraftTo && !hasDraftReply) {
     rows.push(
       <TodoRow
@@ -555,14 +555,14 @@ function manualMoveRows({
         title={t("today.draft.new")}
         meta={
           <EntityRef
-            kind="person"
-            id={recipient.person_id}
+            kind="contact"
+            id={recipient.contact_id}
             name={recipient.full_name}
           />
         }
         verb={{
           label: t("today.draft.act"),
-          onAct: () => onDraftTo(recipient.person_id),
+          onAct: () => onDraftTo(recipient.contact_id),
           byMargince: true,
         }}
       />,
@@ -572,11 +572,11 @@ function manualMoveRows({
     const who =
       meeting.participants.length > 0
         ? meeting.participants.map((participant, at) => (
-            <span key={participant.person_id}>
+            <span key={participant.contact_id}>
               {at > 0 && ", "}
               <EntityRef
-                kind="person"
-                id={participant.person_id}
+                kind="contact"
+                id={participant.contact_id}
                 name={participant.display_name}
               />
             </span>
@@ -606,7 +606,7 @@ function omitted(view: Company360, section: string): boolean {
 const TODAY_SOURCES: ReadonlyArray<{ section: string; label: MessageKey }> = [
   { section: "next_steps", label: "today.source.nextSteps" },
   { section: "next_meeting", label: "today.source.nextMeeting" },
-  { section: "people", label: "today.source.people" },
+  { section: "contacts", label: "today.source.contacts" },
   { section: "deals", label: "today.source.deals" },
   { section: "state_strip", label: "today.source.standing" },
   { section: "activities", label: "today.source.activities" },
@@ -663,7 +663,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function byStrengthThenId(a: Company360Contact, b: Company360Contact): number {
   const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
-  return delta !== 0 ? delta : stable(a.person_id, b.person_id);
+  return delta !== 0 ? delta : stable(a.contact_id, b.contact_id);
 }
 
-type Company360Contact = NonNullable<Company360["people"]>["data"][number];
+type Company360Contact = NonNullable<Company360["contacts"]>["data"][number];

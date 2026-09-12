@@ -170,8 +170,8 @@ func assertOverlayOpsGatedInNativeMode(t *testing.T, e *apptest.AppEnv) {
 	// While still native, the shadowed read ops (compose/overlayread.go)
 	// delegate to the native module handlers — the ordinary native page
 	// answers, proving the mode fallthrough side of the dispatch.
-	if code := e.Call(t, "GET", "/v1/people", nil, nil, nil); code != http.StatusOK {
-		t.Fatalf("native-mode GET /v1/people through the shadowed op = %d, want 200", code)
+	if code := e.Call(t, "GET", "/v1/contacts", nil, nil, nil); code != http.StatusOK {
+		t.Fatalf("native-mode GET /v1/contacts through the shadowed op = %d, want 200", code)
 	}
 }
 
@@ -226,7 +226,7 @@ func backfillOneMirroredContact(t *testing.T, pool *pgxpool.Pool, wsID, adminID 
 	// production's hubspot mapping lands first_name/last_name, which is
 	// what the human wire assembly (compose/overlaywire.go) reads.
 	rec := fake.Rec("555000111", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
-	rec.ObjectClass = "person"
+	rec.ObjectClass = "contact"
 	rec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlaymod.IncumbentClassContacts, asCurrentProjection(t, rec, overlaymod.IncumbentClassContacts))
 	if _, err := overlaymod.Backfill(adminCtx, fakeInc, mirror, overlaymod.IncumbentClassContacts, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
@@ -245,22 +245,22 @@ func assertSyncStatusReportsAConvergedBackfill(t *testing.T, e *apptest.AppEnv) 
 	}
 	found := false
 	for _, o := range status.Objects {
-		if o.Object != "person" {
+		if o.Object != "contact" {
 			continue
 		}
 		found = true
 		if o.State != "fresh" {
-			t.Errorf("person sync state = %q, want fresh", o.State)
+			t.Errorf("contact sync state = %q, want fresh", o.State)
 		}
 		if !o.BackfillComplete {
-			t.Error("person sync-status reports backfillComplete=false after a converged single-page backfill")
+			t.Error("contact sync-status reports backfillComplete=false after a converged single-page backfill")
 		}
 		if o.LastSyncedAt == nil {
-			t.Error("person sync-status carries no lastSyncedAt")
+			t.Error("contact sync-status carries no lastSyncedAt")
 		}
 	}
 	if !found {
-		t.Fatalf("sync-status has no person entry: %+v", status)
+		t.Fatalf("sync-status has no contact entry: %+v", status)
 	}
 }
 
@@ -278,19 +278,19 @@ func assertBudgetAnswersOnceConnected(t *testing.T, e *apptest.AppEnv) {
 }
 
 // assertDispatchedReadCarriesExternalTrust is bullet 2: a native-API read of
-// the mirrored person, through the REAL composed dispatcher path
+// the mirrored contact, through the REAL composed dispatcher path
 // (compose.Dispatcher — the exact seam every native GET/read_record call rides
 // in production), carries TrustTier=external + Authoritative=false.
 func assertDispatchedReadCarriesExternalTrust(adminCtx context.Context, t *testing.T, dispatcher *compose.Dispatcher) {
 	t.Helper()
 	searchRes, err := dispatcher.Search(adminCtx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10,
+		EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10,
 	})
 	if err != nil {
 		t.Fatalf("dispatched Search for the mapped admin: %v", err)
 	}
 	if len(searchRes.Records) != 1 {
-		t.Fatalf("expected exactly one mirrored person visible to the mapped admin, got %d", len(searchRes.Records))
+		t.Fatalf("expected exactly one mirrored contact visible to the mapped admin, got %d", len(searchRes.Records))
 	}
 	contractResults := compose.ContractSearchResults(searchRes)
 	tier := contractResults[0].TrustTier
@@ -312,23 +312,23 @@ func assertDispatchedReadCarriesExternalTrust(adminCtx context.Context, t *testi
 // typed, stamped source=overlay, and search-tagged trust_tier=external.
 func assertHumanRestSurfaceServesTheMirror(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	var peoplePage crmcontracts.PersonListResponse
-	if code := e.Call(t, "GET", "/v1/people", nil, nil, &peoplePage); code != http.StatusOK {
-		t.Fatalf("overlay-mode GET /v1/people = %d", code)
+	var contactsPage crmcontracts.ContactListResponse
+	if code := e.Call(t, "GET", "/v1/contacts", nil, nil, &contactsPage); code != http.StatusOK {
+		t.Fatalf("overlay-mode GET /v1/contacts = %d", code)
 	}
-	if len(peoplePage.Data) != 1 {
-		t.Fatalf("overlay-mode people list = %d rows, want exactly the one mirrored person", len(peoplePage.Data))
+	if len(contactsPage.Data) != 1 {
+		t.Fatalf("overlay-mode contacts list = %d rows, want exactly the one mirrored contact", len(contactsPage.Data))
 	}
-	wirePerson := peoplePage.Data[0]
-	if wirePerson.FullName != "Ada Overlay" || wirePerson.Source != "overlay" {
-		t.Fatalf("mirrored person on the wire = %q/source=%q, want Ada Overlay/source=overlay", wirePerson.FullName, wirePerson.Source)
+	wireContact := contactsPage.Data[0]
+	if wireContact.FullName != "Ada Overlay" || wireContact.Source != "overlay" {
+		t.Fatalf("mirrored contact on the wire = %q/source=%q, want Ada Overlay/source=overlay", wireContact.FullName, wireContact.Source)
 	}
-	var gotPerson crmcontracts.Person
-	if code := e.Call(t, "GET", "/v1/people/"+wirePerson.Id.String(), nil, nil, &gotPerson); code != http.StatusOK {
-		t.Fatalf("overlay-mode GET /v1/people/{id} = %d", code)
+	var gotContact crmcontracts.Contact
+	if code := e.Call(t, "GET", "/v1/contacts/"+wireContact.Id.String(), nil, nil, &gotContact); code != http.StatusOK {
+		t.Fatalf("overlay-mode GET /v1/contacts/{id} = %d", code)
 	}
-	if gotPerson.FullName != "Ada Overlay" {
-		t.Fatalf("GET-by-id FullName = %q, want Ada Overlay", gotPerson.FullName)
+	if gotContact.FullName != "Ada Overlay" {
+		t.Fatalf("GET-by-id FullName = %q, want Ada Overlay", gotContact.FullName)
 	}
 	var searchPage crmcontracts.SearchResponse
 	if code := e.Call(t, "GET", "/v1/search?q=Ada", nil, nil, &searchPage); code != http.StatusOK {
@@ -345,18 +345,18 @@ func assertHumanRestSurfaceServesTheMirror(t *testing.T, e *apptest.AppEnv) {
 	}
 	// A list dial the mirror cannot answer is refused with 422 naming the
 	// parameter — never silently ignored (overlayread.go's own contract).
-	if code := e.Call(t, "GET", "/v1/people?sort=-created_at", nil, nil, nil); code != http.StatusUnprocessableEntity {
-		t.Fatalf("overlay-mode sorted people list = %d, want 422 unsupported_in_overlay_mode", code)
+	if code := e.Call(t, "GET", "/v1/contacts?sort=-created_at", nil, nil, nil); code != http.StatusUnprocessableEntity {
+		t.Fatalf("overlay-mode sorted contacts list = %d, want 422 unsupported_in_overlay_mode", code)
 	}
 	// captured_by_kind is the same rule and matters more, because being ignored
 	// would not look like an error: captured_by is OUR provenance column, mirror
 	// rows are the incumbent's records, and answering the whole mirror would
 	// hand back an unfiltered list as the AI-review list.
 	for _, path := range []string{
-		"/v1/people?captured_by_kind=agent",
+		"/v1/contacts?captured_by_kind=agent",
 		"/v1/companies?captured_by_kind=agent",
 		"/v1/leads?captured_by_kind=agent",
-		"/v1/people?ai_written=true",
+		"/v1/contacts?ai_written=true",
 		"/v1/companies?ai_written=true",
 		"/v1/leads?ai_written=true",
 	} {
@@ -398,7 +398,7 @@ func assertUnmappedUserSeesZeroRows(t *testing.T, e *apptest.AppEnv, dispatcher 
 	unmappedID := seedSecondAppUser(t, e, wsID, "unmapped@overlay.test")
 	unmappedCtx := overlayActorCtx(wsID, unmappedID)
 	if _, err := dispatcher.Search(unmappedCtx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10,
+		EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("unmapped user's Search = %v, want apperrors.ErrNotFound (existence-hiding, zero rows)", err)
 	}
@@ -424,7 +424,7 @@ func assertDisconnectPurgesTheMirrorAndRetainsTheAudit(t *testing.T, e *apptest.
 		t.Fatalf("counting overlay_tombstone rows: %v", err)
 	}
 	if tombstoneCount == 0 {
-		t.Error("overlay_tombstone has no rows after disconnect, want at least one (the purged person)")
+		t.Error("overlay_tombstone has no rows after disconnect, want at least one (the purged contact)")
 	}
 
 	var audit struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// e164 is the wire form the schema documents for person_phone: "+",
+// e164 is the wire form the schema documents for contact_phone: "+",
 // a non-zero country digit, 8–15 digits total.
 var e164 = regexp.MustCompile(`^\+[1-9][0-9]{7,14}$`)
 

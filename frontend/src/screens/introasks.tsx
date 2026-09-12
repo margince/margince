@@ -46,23 +46,23 @@ const WITHDRAWABLE = new Set<IntroRequest["status"]>([
  * such page is noise on most of them.
  */
 export function IntroAsksPanel({
-  personId,
-  personName,
-}: Readonly<{ personId: string; personName: string }>) {
+  contactId,
+  contactName,
+}: Readonly<{ contactId: string; contactName: string }>) {
   const t = useT();
   // Which side of the ask the reader is on. Undefined while /me is in flight,
   // and the card then shows state without offering an answer — never the
-  // reverse, which would put the decision in front of the wrong person.
+  // reverse, which would put the decision in front of the wrong contact.
   const viewerUserId = useViewerId();
-  const asks = useIntroRequests(personId);
+  const asks = useIntroRequests(contactId);
   const [deciding, setDeciding] = useState<IntroRequest | undefined>();
   // Shared across the whole card, not per-row — each mutation's own
   // `.variables.id` is what AskRow reads to tell whether ITS row is the one
   // a given pending state or failure belongs to, rather than a separate
   // "which row is active" state that would have to be kept in step with two
   // mutations by hand.
-  const complete = useCompleteIntroRequest(personId);
-  const cancel = useCancelIntroRequest(personId);
+  const complete = useCompleteIntroRequest(contactId);
+  const cancel = useCancelIntroRequest(contactId);
 
   const rows = asks.data ?? [];
   if (rows.length === 0) {
@@ -70,7 +70,10 @@ export function IntroAsksPanel({
   }
 
   return (
-    <Panel title={t("person.intro.asksTitle")} sub={t("person.intro.asksSub")}>
+    <Panel
+      title={t("contact.intro.asksTitle")}
+      sub={t("contact.intro.asksSub")}
+    >
       <PanelBody>
         <ul className="pn-asks">
           {rows.map((ask) => (
@@ -88,8 +91,8 @@ export function IntroAsksPanel({
 
       {deciding ? (
         <IntroDecisionDrawer
-          personId={personId}
-          personName={personName}
+          contactId={contactId}
+          contactName={contactName}
           request={deciding}
           open
           onClose={() => setDeciding(undefined)}
@@ -142,7 +145,7 @@ function AskRow({
     <li className="pn-ask">
       <Badge quiet>{t(STATUS_LABEL[ask.status])}</Badge> {ask.internal_reason}
       {mine && ask.status === "requested" ? (
-        <Button onClick={onAnswer}>{t("person.intro.answerAction")}</Button>
+        <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
       {outcome ? (
         <Button
@@ -160,17 +163,17 @@ function AskRow({
           pending={cancellingThis && cancel.isPending}
           disabled={completingThis && complete.isPending}
         >
-          {t("person.intro.withdrawAction")}
+          {t("contact.intro.withdrawAction")}
         </Button>
       ) : null}
       {completingThis && complete.isError ? (
         <p role="alert">
-          <Badge tone="danger">{t("person.intro.completeFailed")}</Badge>
+          <Badge tone="danger">{t("contact.intro.completeFailed")}</Badge>
         </p>
       ) : null}
       {cancellingThis && cancel.isError ? (
         <p role="alert">
-          <Badge tone="danger">{t("person.intro.withdrawFailed")}</Badge>
+          <Badge tone="danger">{t("contact.intro.withdrawFailed")}</Badge>
         </p>
       ) : null}
     </li>
@@ -187,14 +190,14 @@ function outcomeFor(
   mine: boolean,
   isRequester: boolean,
 ):
-  | "person.intro.completeIntroducedAction"
-  | "person.intro.completeNameDroppedAction"
+  | "contact.intro.completeIntroducedAction"
+  | "contact.intro.completeNameDroppedAction"
   | null {
   if (status === "accepted" && (mine || isRequester)) {
-    return "person.intro.completeIntroducedAction";
+    return "contact.intro.completeIntroducedAction";
   }
   if (status === "name_drop_approved" && isRequester) {
-    return "person.intro.completeNameDroppedAction";
+    return "contact.intro.completeNameDroppedAction";
   }
   return null;
 }
@@ -206,14 +209,14 @@ const STATUS_LABEL: Record<
   IntroRequest["status"],
   Parameters<ReturnType<typeof useT>>[0]
 > = {
-  requested: "person.intro.stateRequested",
-  accepted: "person.intro.stateAccepted",
-  name_drop_approved: "person.intro.stateNameDropApproved",
-  suggest_other: "person.intro.stateSuggestOther",
-  declined: "person.intro.stateDeclined",
-  introduced: "person.intro.stateIntroduced",
-  name_dropped: "person.intro.stateNameDropped",
-  replied: "person.intro.stateReplied",
-  expired: "person.intro.stateExpired",
-  cancelled: "person.intro.stateCancelled",
+  requested: "contact.intro.stateRequested",
+  accepted: "contact.intro.stateAccepted",
+  name_drop_approved: "contact.intro.stateNameDropApproved",
+  suggest_other: "contact.intro.stateSuggestOther",
+  declined: "contact.intro.stateDeclined",
+  introduced: "contact.intro.stateIntroduced",
+  name_dropped: "contact.intro.stateNameDropped",
+  replied: "contact.intro.stateReplied",
+  expired: "contact.intro.stateExpired",
+  cancelled: "contact.intro.stateCancelled",
 };

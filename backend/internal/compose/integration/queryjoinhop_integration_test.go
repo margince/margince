@@ -15,7 +15,7 @@ package integration
 //
 // The row scope is the other half. A hop is a read of the record it lands on,
 // so a caller who cannot see the company must not be able to select a
-// person through it, or the employment table becomes a channel onto rows the
+// contact through it, or the employment table becomes a channel onto rows the
 // scope hides. That is what bounds this read — ADR-0091 retired RLS (core 0217)
 // and dropped workspace_id from both join tables, so row scope and object RBAC
 // are the boundary rather than a tenant predicate.
@@ -29,15 +29,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// employmentFixture is one person at each of two companies owned by
+// employmentFixture is one contact at each of two companies owned by
 // different reps, plus a third whose employment is archived.
 type employmentFixture struct {
-	rep1Company, rep3Company       ids.UUID
-	atRep1Company, atRep3Company   ids.UUID
-	formerlyAtRep1Company          ids.UUID
-	leftRep1Company                ids.UUID
-	servingNoticeAtRep1Company     ids.UUID
-	activityAboutRep1CompanyPerson ids.UUID
+	rep1Company, rep3Company        ids.UUID
+	atRep1Company, atRep3Company    ids.UUID
+	formerlyAtRep1Company           ids.UUID
+	leftRep1Company                 ids.UUID
+	servingNoticeAtRep1Company      ids.UUID
+	activityAboutRep1CompanyContact ids.UUID
 }
 
 func (q *queryEnv) seedEmployments(t *testing.T) employmentFixture {
@@ -53,13 +53,13 @@ func (q *queryEnv) seedEmployments(t *testing.T) employmentFixture {
 	// which is the one the hop compares against. A time computed here would
 	// disagree with it whenever the two machines do.
 	employ := func(name string, owner, company ids.UUID, archivedAt, endedAt string) ids.UUID {
-		person := q.SeedID(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
+		contact := q.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 			VALUES ($1, $2, $3, 'manual', 'human:x')`, name, owner)
 		q.SeedID(t, fmt.Sprintf(`INSERT INTO relationship
-			(id, kind, person_id, company_id, source, captured_by, archived_at, ended_at)
+			(id, kind, contact_id, company_id, source, captured_by, archived_at, ended_at)
 			VALUES ($1, 'employment', $2, $3, 'manual', 'human:x', %s, %s)`, archivedAt, endedAt),
-			person, company)
-		return person
+			contact, company)
+		return contact
 	}
 	f.atRep1Company = employ("Ronny Stuttgart", q.Rep1, f.rep1Company, "NULL", "NULL")
 	f.atRep3Company = employ("Hanna Hamburg", q.Rep3, f.rep3Company, "NULL", "NULL")
@@ -70,26 +70,26 @@ func (q *queryEnv) seedEmployments(t *testing.T) employmentFixture {
 	// Serving out a notice period. Still employed until the date arrives.
 	f.servingNoticeAtRep1Company = employ("Nils Notice", q.Rep1, f.rep1Company, "NULL", "current_date + 30")
 
-	// One activity, linked to the person at rep1's company, so the other
+	// One activity, linked to the contact at rep1's company, so the other
 	// join table is exercised on the same corpus.
 	// An activity carries no owner_id: its row scope is walked from the records
 	// it links, which is the same edge this hop traverses.
-	f.activityAboutRep1CompanyPerson = q.SeedID(t, `INSERT INTO activity
+	f.activityAboutRep1CompanyContact = q.SeedID(t, `INSERT INTO activity
 		(id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'Kickoff notes', now(), 'manual', 'human:x')`)
-	q.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, f.activityAboutRep1CompanyPerson, f.atRep1Company)
+	q.SeedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, f.activityAboutRep1CompanyContact, f.atRep1Company)
 	return f
 }
 
-// The question the grammar could not be asked before: people at a company in a
+// The question the grammar could not be asked before: contacts at a company in a
 // named city. The employment lives in `relationship`, so neither record carries
 // a column that could express it.
-func TestAPersonIsSelectedByTheirEmployersAttributes(t *testing.T) {
+func TestAContactIsSelectedByTheirEmployersAttributes(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
-	answer, err := q.answer(q.admin(), `{"version": "v1", "target": "person",
+	answer, err := q.answer(q.admin(), `{"version": "v1", "target": "contact",
 		"traverse": {"relation": "companies",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	if err != nil {
@@ -100,37 +100,37 @@ func TestAPersonIsSelectedByTheirEmployersAttributes(t *testing.T) {
 		found[row.ID] = true
 	}
 	if !found[f.atRep1Company] {
-		t.Errorf("the person employed in Stuttgart was not selected; got %d rows", len(answer.Rows))
+		t.Errorf("the contact employed in Stuttgart was not selected; got %d rows", len(answer.Rows))
 	}
 	if found[f.atRep3Company] {
-		t.Error("a person employed in Hamburg was selected by a Stuttgart predicate")
+		t.Error("a contact employed in Hamburg was selected by a Stuttgart predicate")
 	}
-	// An archived employment is a job the person no longer holds. It must not
+	// An archived employment is a job the contact no longer holds. It must not
 	// carry the hop, and nothing else in the statement would exclude it — the
 	// hop's own archived_at is the COMPANY's.
 	if found[f.formerlyAtRep1Company] {
-		t.Error("an archived employment still selected its person")
+		t.Error("an archived employment still selected its contact")
 	}
 	// The state archived_at does not cover, and the one that actually happens:
-	// the person left and the row stayed. Filtering only archival is what makes
+	// the contact left and the row stayed. Filtering only archival is what makes
 	// a company somebody left go on reading as where they work.
 	if found[f.leftRep1Company] {
-		t.Error("a person who left still answers as staff of the company they left")
+		t.Error("a contact who left still answers as staff of the company they left")
 	}
 	// A future ended_at is a notice period. They still work there.
 	if !found[f.servingNoticeAtRep1Company] {
-		t.Error("a person serving out their notice was dropped, though their employment has not ended yet")
+		t.Error("a contact serving out their notice was dropped, though their employment has not ended yet")
 	}
 }
 
 // The inverse of the same edge, which is the question the employment table was
 // built to answer.
-func TestACompanyIsSelectedByItsPeople(t *testing.T) {
+func TestACompanyIsSelectedByItsContacts(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
 	answer, err := q.answer(q.admin(), `{"version": "v1", "target": "company",
-		"traverse": {"relation": "persons",
+		"traverse": {"relation": "contacts",
 		             "where": [{"field": "full_name", "op": "eq", "value": "Ronny Stuttgart"}]}}`)
 	if err != nil {
 		t.Fatalf("traversing the inverse employment edge: %v", err)
@@ -140,19 +140,19 @@ func TestACompanyIsSelectedByItsPeople(t *testing.T) {
 	}
 }
 
-// The half nobody had noticed was missing: an activity can name the person it
+// The half nobody had noticed was missing: an activity can name the contact it
 // is about, through `activity_link`.
-func TestAnActivityIsSelectedByThePersonItLinks(t *testing.T) {
+func TestAnActivityIsSelectedByTheContactItLinks(t *testing.T) {
 	q := setupQuery(t)
 	f := q.seedEmployments(t)
 
 	answer, err := q.answer(q.admin(), `{"version": "v1", "target": "activity",
-		"traverse": {"relation": "persons",
+		"traverse": {"relation": "contacts",
 		             "where": [{"field": "full_name", "op": "eq", "value": "Ronny Stuttgart"}]}}`)
 	if err != nil {
 		t.Fatalf("traversing the activity link edge: %v", err)
 	}
-	if len(answer.Rows) != 1 || answer.Rows[0].ID != f.activityAboutRep1CompanyPerson {
+	if len(answer.Rows) != 1 || answer.Rows[0].ID != f.activityAboutRep1CompanyContact {
 		t.Fatalf("the activity about Ronny was not the only answer: %+v", answer.Rows)
 	}
 }
@@ -172,8 +172,8 @@ func TestAJoinHopCannotSelectThroughARecordTheCallerCannotSee(t *testing.T) {
 	}
 
 	// Rep3 owns the Hamburg company and cannot read the private
-	// Stuttgart one, though the person employed there is visible.
-	answer, err := q.answer(q.teamRep(q.Rep3, q.Team2), `{"version": "v1", "target": "person",
+	// Stuttgart one, though the contact employed there is visible.
+	answer, err := q.answer(q.teamRep(q.Rep3, q.Team2), `{"version": "v1", "target": "contact",
 		"traverse": {"relation": "companies",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]}}`)
 	if err != nil {
@@ -181,7 +181,7 @@ func TestAJoinHopCannotSelectThroughARecordTheCallerCannotSee(t *testing.T) {
 	}
 	for _, row := range answer.Rows {
 		if row.ID == f.atRep1Company {
-			t.Error("a rep selected a person through a company outside their row scope")
+			t.Error("a rep selected a contact through a company outside their row scope")
 		}
 	}
 	if len(answer.Rows) != 0 {
@@ -192,14 +192,14 @@ func TestAJoinHopCannotSelectThroughARecordTheCallerCannotSee(t *testing.T) {
 	// the assertion above passes for a rep who can traverse nothing at all —
 	// including one whose fixture never seeded, which is the reading an empty
 	// answer most often has.
-	own, err := q.answer(q.teamRep(q.Rep3, q.Team2), `{"version": "v1", "target": "person",
+	own, err := q.answer(q.teamRep(q.Rep3, q.Team2), `{"version": "v1", "target": "contact",
 		"traverse": {"relation": "companies",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Hamburg"}]}}`)
 	if err != nil {
 		t.Fatalf("the rep's own traversal errored: %v", err)
 	}
 	if len(own.Rows) != 1 || own.Rows[0].ID != f.atRep3Company {
-		t.Fatalf("the rep could not reach the person at their OWN company, so the refusal above "+
+		t.Fatalf("the rep could not reach the contact at their OWN company, so the refusal above "+
 			"proves nothing about row scope: %+v", own.Rows)
 	}
 }
@@ -229,7 +229,7 @@ func TestARoleRefusedTheEdgeObjectCannotTraverseTheEmploymentEdge(t *testing.T) 
 		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
 	})
 
-	if _, err := q.answer(ctx, `{"version": "v1", "target": "person",
+	if _, err := q.answer(ctx, `{"version": "v1", "target": "contact",
 		"traverse": {"relation": "companies"}}`); err == nil {
 		t.Error("a caller refused the relationship object traversed the employment edge anyway")
 	}
@@ -237,25 +237,25 @@ func TestARoleRefusedTheEdgeObjectCannotTraverseTheEmploymentEdge(t *testing.T) 
 	// The hop is absent from the VOCABULARY, not refused at execution — it must
 	// read exactly like a relation that never existed, or the refusal becomes
 	// an oracle for which edges the workspace holds.
-	vocab, err := q.resolver.Resolve(ctx, "person")
+	vocab, err := q.resolver.Resolve(ctx, "contact")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, relation := range vocab.Targets[0].Relations {
 		if relation.Join != nil && relation.Join.Table == "relationship" {
-			t.Errorf("person still publishes %q through relationship", relation.Name)
+			t.Errorf("contact still publishes %q through relationship", relation.Name)
 		}
 	}
 
 	// The other join table is not an RBAC object and its hops must survive: the
 	// gate governs the edge that IS one, not join tables in general.
 	activityHops, err := q.answer(ctx, `{"version": "v1", "target": "activity",
-		"traverse": {"relation": "persons",
+		"traverse": {"relation": "contacts",
 		             "where": [{"field": "full_name", "op": "eq", "value": "Ronny Stuttgart"}]}}`)
 	if err != nil {
 		t.Fatalf("the activity_link hop was taken away with the relationship grant: %v", err)
 	}
-	if len(activityHops.Rows) != 1 || activityHops.Rows[0].ID != f.activityAboutRep1CompanyPerson {
+	if len(activityHops.Rows) != 1 || activityHops.Rows[0].ID != f.activityAboutRep1CompanyContact {
 		t.Errorf("the activity_link hop answered %+v", activityHops.Rows)
 	}
 }

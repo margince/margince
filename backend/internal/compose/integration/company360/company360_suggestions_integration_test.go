@@ -107,7 +107,7 @@ func TestSuggestionsLookPastTheSectionPageCap(t *testing.T) {
 
 // The order the rules run in IS the priority the cap applies, and on a full card
 // that order is the whole product decision: what the rep sees when they do not
-// scroll. A person waiting on us leads; money that stopped moving follows.
+// scroll. A contact waiting on us leads; money that stopped moving follows.
 //
 // It needs an account that produces MORE than the card lists and at least one of
 // each kind, or the ordering never binds and the test passes on an accident.
@@ -140,7 +140,7 @@ func TestTheMostUrgentAdviceLeadsAFullCard(t *testing.T) {
 			view.SuggestionsDropped)
 	}
 	if string(found[0].Kind) != "no_reply" {
-		t.Errorf("the card leads with %q, want the unanswered message — a person is "+
+		t.Errorf("the card leads with %q, want the unanswered message — a contact is "+
 			"waiting on us, and nothing else here is someone else's time", found[0].Kind)
 	}
 	for _, suggestion := range found[1:] {

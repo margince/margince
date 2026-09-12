@@ -9,18 +9,18 @@ import (
 )
 
 func TestTypedIDRoundTrips(t *testing.T) {
-	p := New[PersonKind]()
+	p := New[ContactKind]()
 	if p.IsZero() {
 		t.Fatal("New minted a zero id")
 	}
-	if p.EntityType() != "person" {
-		t.Fatalf("EntityType = %q, want person", p.EntityType())
+	if p.EntityType() != "contact" {
+		t.Fatalf("EntityType = %q, want contact", p.EntityType())
 	}
-	if p.Ref() != (Ref{Type: "person", ID: p.UUID}) {
+	if p.Ref() != (Ref{Type: "contact", ID: p.UUID}) {
 		t.Fatalf("Ref = %+v", p.Ref())
 	}
 
-	parsed, err := ParseAs[PersonKind](p.String())
+	parsed, err := ParseAs[ContactKind](p.String())
 	if err != nil || parsed != p {
 		t.Fatalf("ParseAs(%s) = %v (%v)", p, parsed, err)
 	}
@@ -29,12 +29,12 @@ func TestTypedIDRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var back PersonID
+	var back ContactID
 	if err := json.Unmarshal(raw, &back); err != nil || back != p {
 		t.Fatalf("json round-trip = %v (%v)", back, err)
 	}
 
-	var scanned PersonID
+	var scanned ContactID
 	if err := scanned.Scan(p.String()); err != nil || scanned != p {
 		t.Fatalf("Scan(string) = %v (%v)", scanned, err)
 	}
@@ -47,8 +47,8 @@ func TestTypedIDRoundTrips(t *testing.T) {
 	}
 
 	// Map keys and From: the escape hatch stays explicit and typed.
-	m := map[PersonID]int{p: 1}
-	if m[From[PersonKind](p.UUID)] != 1 {
+	m := map[ContactID]int{p: 1}
+	if m[From[ContactKind](p.UUID)] != 1 {
 		t.Fatal("From did not reproduce the same key")
 	}
 }
@@ -63,7 +63,7 @@ func TestEveryEntityKindReportsItsDiscriminator(t *testing.T) {
 		"workspace":       New[WorkspaceKind]().EntityType(),
 		"user":            New[UserKind]().EntityType(),
 		"team":            New[TeamKind]().EntityType(),
-		"person":          New[PersonKind]().EntityType(),
+		"contact":         New[ContactKind]().EntityType(),
 		"company":         New[CompanyKind]().EntityType(),
 		"lead":            New[LeadKind]().EntityType(),
 		"deal":            New[DealKind]().EntityType(),
@@ -92,15 +92,15 @@ func TestEveryEntityKindReportsItsDiscriminator(t *testing.T) {
 // of the Scan/ParseAs seams — the ones that turn corrupt DB or wire bytes
 // into an honest error instead of a silently-zero id.
 func TestScanAndParseRejectBadInput(t *testing.T) {
-	p := New[PersonKind]()
+	p := New[ContactKind]()
 
 	// []byte carrying the canonical string form (not a raw 16-byte value).
-	var fromText PersonID
+	var fromText ContactID
 	if err := fromText.Scan([]byte(p.String())); err != nil || fromText != p {
 		t.Fatalf("Scan([]byte text) = %v (%v)", fromText, err)
 	}
 
-	var bad PersonID
+	var bad ContactID
 	if err := bad.Scan(1234); err == nil {
 		t.Fatal("Scan(int) should reject an unsupported source type")
 	}
@@ -111,7 +111,7 @@ func TestScanAndParseRejectBadInput(t *testing.T) {
 		t.Fatal("Scan(bad []byte) should reject a malformed uuid")
 	}
 
-	if _, err := ParseAs[PersonKind]("not-a-uuid"); err == nil {
+	if _, err := ParseAs[ContactKind]("not-a-uuid"); err == nil {
 		t.Fatal("ParseAs(malformed) should error")
 	}
 }

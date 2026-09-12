@@ -131,8 +131,8 @@ func TestReplayRecordIDFailsClosedOnAnUnusableBody(t *testing.T) {
 		{"the field is null", `{"id":null}`, "id"},
 		{"the field is a number, not an id", `{"id":42}`, "id"},
 		{"the id is not a UUID", `{"id":"not-a-uuid"}`, "id"},
-		{"a dotted path through a missing parent", `{"lead_id":"x"}`, "person.id"},
-		{"a dotted path through a non-object", `{"person":"x"}`, "person.id"},
+		{"a dotted path through a missing parent", `{"lead_id":"x"}`, "contact.id"},
+		{"a dotted path through a non-object", `{"contact":"x"}`, "contact.id"},
 		{"an empty body", ``, "id"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -152,7 +152,7 @@ func TestReplayRecordIDReadsBothShapes(t *testing.T) {
 		}
 	})
 	t.Run("a body that nests it", func(t *testing.T) {
-		got, err := recordIDAt(`{"merged":true,"person":{"id":"`+id.String()+`"}}`, "person.id")
+		got, err := recordIDAt(`{"merged":true,"contact":{"id":"`+id.String()+`"}}`, "contact.id")
 		if err != nil || got != id {
 			t.Fatalf("got (%v, %v), want (%s, nil)", got, err, id)
 		}
@@ -184,9 +184,9 @@ func TestReplayPolymorphicProbeRefusesWithoutItsTable(t *testing.T) {
 // "cannot tell" is not "allowed".
 func TestReplayRefusesBeforeQueryingWhenTheIDIsUnreadable(t *testing.T) {
 	for _, tc := range []struct{ name, route, body string }{
-		{"the record's own id is unusable", "PATCH /v1/people/{id}", `{"id":"garbage"}`},
+		{"the record's own id is unusable", "PATCH /v1/contacts/{id}", `{"id":"garbage"}`},
 		{"the referenced parent id is unusable", "POST /v1/offers/{id}/send", `{"id":"x","deal_id":"garbage"}`},
-		{"the nested id is unusable", "POST /v1/leads/{id}/promote", `{"person":{"id":"garbage"}}`},
+		{"the nested id is unusable", "POST /v1/leads/{id}/promote", `{"contact":{"id":"garbage"}}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// A nil pool would panic if the gate reached the database, so
@@ -209,18 +209,18 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 	for _, tc := range []struct{ name, route, body string }{
 		{
 			name:  "quick capture names an unreadable employer",
-			route: "POST /v1/people/quick-capture",
-			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":"garbage"}`,
+			route: "POST /v1/contacts/quick-capture",
+			body:  `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":"garbage"}`,
 		},
 		{
 			name:  "a promotion names an unreadable deal",
 			route: "POST /v1/leads/{id}/promote",
-			body:  `{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
+			body:  `{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"deal_id":"garbage"}`,
 		},
 		{
-			name:  "a demotion names an unreadable person",
+			name:  "a demotion names an unreadable contact",
 			route: "POST /v1/leads/{id}/demote",
-			body:  `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"person_id":"garbage"}`,
+			body:  `{"lead":{"id":"01a00000-0000-7000-8000-000000000001"},"contact_id":"garbage"}`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 }
 
 // A companion that is absent, or present and null, names no record — these
-// fields are optional by contract, and a person captured with no employer
+// fields are optional by contract, and a contact captured with no employer
 // carries no company id. Skipping them is not a hole: there is nothing to
 // probe.
 //
@@ -242,7 +242,7 @@ func TestReplayRefusesACompanionItCannotRead(t *testing.T) {
 // verdict. The nil pool is the second half — reaching the database would panic,
 // so nil is proof the loop skipped rather than probed.
 func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
-	const route = "POST /v1/people/quick-capture"
+	const route = "POST /v1/contacts/quick-capture"
 	target := replayableOperations[route]
 	// The companion this case is ABOUT, not merely one: with a different path
 	// both bodies below read as absent and the case passes having exercised
@@ -252,8 +252,8 @@ func TestReplaySkipsACompanionTheBodyDoesNotName(t *testing.T) {
 			route, target.companions, companionCompanyField)
 	}
 	for _, body := range []string{
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":null}`,
+		`{"contact":{"id":"01a00000-0000-7000-8000-000000000001"}}`,
+		`{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":null}`,
 	} {
 		if err := ensureCompanionsVisible(context.Background(), nil, target, body); err != nil {
 			t.Errorf("body %s: err = %v, want nil — an optional companion the body does not name is skipped, not refused", body, err)
@@ -278,9 +278,9 @@ func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
 	}{
 		{
 			name:   "the entry's own table when it names one",
-			target: replayTarget{table: tablePerson, idPath: "id"},
+			target: replayTarget{table: tableContact, idPath: "id"},
 			body:   `{"id":"x"}`,
-			want:   tablePerson,
+			want:   tableContact,
 		},
 		{
 			name:   "a send that went now is its activity",
@@ -341,8 +341,8 @@ func TestReplayTableForPicksTheShapeTheBodyIs(t *testing.T) {
 // reader that "the field is there but says nothing" refuses while "the field is
 // not there" does not.
 func TestReplayRefusesAnEmptyCompanionID(t *testing.T) {
-	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/people/quick-capture",
-		`{"person":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":""}`)
+	err := ensureReplayVisible(context.Background(), nil, nil, "POST /v1/contacts/quick-capture",
+		`{"contact":{"id":"01a00000-0000-7000-8000-000000000001"},"company_id":""}`)
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}

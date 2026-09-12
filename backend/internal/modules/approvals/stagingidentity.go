@@ -59,7 +59,7 @@ const lockOrder = `ORDER BY created_at, id`
 // payload order.
 //
 // EVERY KIND THE ACT STAGES, in ONE statement, which is why kinds is variadic
-// and not a second call. A site read stages the company's facts and the people
+// and not a second call. A site read stages the company's facts and the contacts
 // its team page published, and re-proposing REBUNDLES what it joins — so a
 // bundle holds members of both kinds with different ages, and a decision walks
 // them in one interleaved (created_at, id) sequence. Locking one kind and then
@@ -224,7 +224,7 @@ func (s *Service) WithdrawInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID
 // Both discriminators are scoped by subjectScope for a shape whose proposal is
 // one member's (stagingsubject.go). Unscoped, the memory is the WORKSPACE's: one
 // member's refusal would refuse a colleague's proposal, for exactly the kinds
-// whose own gate says a row is one person's business — and the colleague would
+// whose own gate says a row is one colleague's business — and the colleague would
 // see no offer and no reason for its absence.
 func declinedProbeSQL(byIdentity bool, subject string) string {
 	const prefix = `SELECT status FROM approval

@@ -9,7 +9,7 @@ package licensecheck
 // 885471640ea89785c69942816984953257c83d62, and kept in step with it by hand. It
 // is a copy rather than an import because that package lives in a private
 // module: a public source installation could not resolve the import path, so
-// importing it would make this product unbuildable for exactly the people who
+// importing it would make this product unbuildable for exactly the contacts who
 // need to prove their entitlement.
 //
 // Deliberately a near-verbatim copy, down to MustInstantiate below, because

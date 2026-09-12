@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// RequestDetailsConfirmation serves POST /people/{id}/consent/confirm-request —
-// mint the single-use link and queue it to the person's own address.
+// RequestDetailsConfirmation serves POST /contacts/{id}/consent/confirm-request —
+// mint the single-use link and queue it to the contact's own address.
 //
 // The mail rides the SAME durable lane as every other outbound message: a
 // delivery row, an authorization decision recording why the installation was
@@ -27,7 +27,7 @@ import (
 // only ever mailed, and returning it would hand a caller the capability that the
 // delivered-to-their-own-mailbox claim rests on.
 func (h Handlers) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.PersonKind](id))
+	issued, err := h.store.IssueConfirmToken(r.Context(), pathID[ids.ContactKind](id))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

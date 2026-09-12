@@ -3,7 +3,7 @@
 
 // What is going wrong on this lead's team.
 //
-// The board beside this answers "who is carrying what" and routes to a person.
+// The board beside this answers "who is carrying what" and routes to a contact.
 // It cannot answer "what is going wrong": three counts per teammate cannot say
 // that one customer has waited past the target while another rep's queue is
 // merely long. This is the rows, worst first.
@@ -148,7 +148,7 @@ function TeamExceptions({
                     // name, and nobody at all.
                     //
                     // Falling back to "Nobody yet" on a missing LABEL conflated
-                    // the last two. An exception owned by a real person whose
+                    // the last two. An exception owned by a real contact whose
                     // name the reader cannot resolve was reported as unassigned
                     // work — which is not a display nicety: a lead reads that as
                     // "this is going nowhere" and takes it, when a teammate is

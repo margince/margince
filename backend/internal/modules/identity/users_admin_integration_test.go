@@ -395,7 +395,7 @@ func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
 	e := setupRevocationEnv(t, "invite-activation")
 
 	userID, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
-		Email: "pending@acme.test", DisplayName: "Pending Person", Role: "rep",
+		Email: "pending@acme.test", DisplayName: "Pending Contact", Role: "rep",
 	})
 	if err != nil {
 		t.Fatalf("invite: %v", err)

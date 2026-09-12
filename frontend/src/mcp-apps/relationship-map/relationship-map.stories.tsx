@@ -17,7 +17,10 @@ export const Populated: Story = { args: { data: relationshipMapFixture.data } };
 /** Nobody having spoken to the contact is the answer, not a gap. */
 export const Empty: Story = {
   args: {
-    data: { person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7", colleagues: [] },
+    data: {
+      contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      colleagues: [],
+    },
   },
 };
 
@@ -35,7 +38,7 @@ export const Truncated: Story = {
 export const UnknownBand: Story = {
   args: {
     data: {
-      person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
       colleagues: [
         {
           display_name: "Sam Ferrier",

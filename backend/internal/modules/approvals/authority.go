@@ -87,7 +87,7 @@ const KindScheduledSendHeld = "scheduled_send_held"
 // point of routing one. A rep refused at the keyboard may not hold the
 // authority to override the engine; this card exists so they can ask somebody
 // who does. A kind only its initiator could decide would put the question back
-// in front of the person who could not answer it.
+// in front of the colleague who could not answer it.
 const KindCommunicationReview = "communication_review"
 
 // objectCommunicationException is the RBAC object directing a send answers to,
@@ -109,11 +109,11 @@ var decisionGrants = map[string][]grantRequirement{
 	// grant rather than the send's, because a gate that admitted a decision its
 	// effect then refuses would commit the decision and fail the work: the card
 	// gone, the message still held. selfOnlyKinds narrows it from "anyone
-	// holding that grant" to the one person whose message it is.
+	// holding that grant" to the one contact whose message it is.
 	KindScheduledSendHeld: {{objectActivity, principal.ActionUpdate}},
 	// Committing an import writes the estate in bulk, so deciding one requires
 	// the same grant creating a run does. It is the CREATE grant rather than an
-	// update: an import creates records, and the person releasing it is
+	// update: an import creates records, and the contact releasing it is
 	// authorising those creations, not editing a run.
 	KindImportCommit: {{targetImportRun, principal.ActionCreate}},
 	// A step-up requires NO object grant, and the empty slice is the decision
@@ -121,7 +121,7 @@ var decisionGrants = map[string][]grantRequirement{
 	// does not widen what the agent may read, only how much of what it may
 	// already read it may be handed. There is no object to name, and naming one
 	// would be a fiction that decided the wrong question — a human holding
-	// deal.update is not thereby the person who lent this passport.
+	// deal.update is not thereby the contact who lent this passport.
 	//
 	// What bounds it instead is selfOnlyKinds below: the lender, and nobody
 	// else. Without that entry this empty set would make a step-up decidable by
@@ -140,23 +140,23 @@ var decisionGrants = map[string][]grantRequirement{
 	// progress_deal is advance_deal plus a timeline note; the gated effect
 	// is the deal move, so deciding it needs the same grant.
 	"progress_deal": {{tableDeal, principal.ActionUpdate}},
-	"promote_lead":  {{tableLead, principal.ActionUpdate}, {tablePerson, principal.ActionCreate}},
+	"promote_lead":  {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionCreate}},
 	// Disqualifying retires the lead in place, and the store gates it on
-	// `lead:delete` (people/lead.go DisqualifyLead) as the REST twin's DELETE
+	// `lead:delete` (contacts/lead.go DisqualifyLead) as the REST twin's DELETE
 	// implies. Deciding takes the grant PERFORMING it takes: anything less and
 	// the confirm-first control point sits with someone who could not do the
 	// thing they are releasing.
 	"disqualify_lead": {{tableLead, principal.ActionDelete}},
 	// Demotion reverses a promotion: the lead returns to the open ladder and the
-	// person the promotion created is archived. Both halves are gated where they
-	// are performed (people/demote.go), so deciding takes both — the lead's
-	// update and the person's delete. The person grant is the one that matters:
+	// contact the promotion created is archived. Both halves are gated where they
+	// are performed (contacts/demote.go), so deciding takes both — the lead's
+	// update and the contact's delete. The contact grant is the one that matters:
 	// releasing a demotion is releasing the archival of a contact somebody may
-	// have been working, and an approver who could not archive that person is
-	// not the person to authorise it.
-	"demote_lead": {{tableLead, principal.ActionUpdate}, {tablePerson, principal.ActionDelete}},
+	// have been working, and an approver who could not archive that contact is
+	// not the contact to authorise it.
+	"demote_lead": {{tableLead, principal.ActionUpdate}, {tableContact, principal.ActionDelete}},
 	// A tag merge releases the source's NAME and no later act restores it, which
-	// is why it confirms where a record merge does not: mergePerson archives the
+	// is why it confirms where a record merge does not: mergeContact archives the
 	// source with `merged_into_id` and audit walks it back, and a tag keeps no
 	// such pointer. The store gates it on `tag.update` (collections/tagvocab.go
 	// MergeTags), so deciding takes that grant, for disqualify_lead's reason.
@@ -231,30 +231,30 @@ var decisionGrants = map[string][]grantRequirement{
 	// Accepting a deep site read writes profile fields and category facts
 	// onto the target company — the same update authority enrich needs.
 	"deepread": {{tableCompany, principal.ActionUpdate}},
-	// Accepting a site_lead proposal (a published person from a deep read's
+	// Accepting a site_lead proposal (a published contact from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
 	// effect is a lead create, so deciding it needs that grant.
 	"site_lead": {{tableLead, principal.ActionCreate}},
 	// Approving a LinkedIn match links an imported connection to a contact and
-	// writes that contact's LinkedIn address — a person write, so deciding it
+	// writes that contact's LinkedIn address — a contact write, so deciding it
 	// needs the grant the write itself takes.
-	kindLinkedInMatch: {{tablePerson, principal.ActionUpdate}},
+	kindLinkedInMatch: {{tableContact, principal.ActionUpdate}},
 	// Accepting a capture_counterparty proposal (ADR-0072/A118: a first-time
-	// sender the verdict engine could not judge) creates the person and, unless
+	// sender the verdict engine could not judge) creates the contact and, unless
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
-	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
+	"capture_counterparty": {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
-	// refused to create beside its near-match) creates the person; when the
+	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
-	// plus the person-anchor update that edge takes), and when nobody holds
+	// plus the contact-anchor update that edge takes), and when nobody holds
 	// that employer yet, the company behind them. Deciding needs every
 	// grant the release can spend, exactly as if the approver had typed the
 	// card in — a shorter list would show the card to an approver whose
 	// approval then fails partway.
 	"vcard_create": {
-		{tablePerson, principal.ActionCreate},
-		{tablePerson, principal.ActionUpdate},
+		{tableContact, principal.ActionCreate},
+		{tableContact, principal.ActionUpdate},
 		{tableCompany, principal.ActionCreate},
 		{targetRelationship, principal.ActionCreate},
 	},

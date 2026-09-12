@@ -67,7 +67,7 @@ type runnerEnv struct {
 // action.
 //
 // The verb is `enrich`. It was archive_record until a passport stopped needing
-// a second confirmation from the person who granted it; enrich stays
+// a second confirmation from the contact who granted it; enrich stays
 // confirm-first for a different reason — the MODEL names the URL the server
 // fetches — which is exactly what makes it the verb a scheduled, unattended run
 // must still put in front of a human.
@@ -193,7 +193,7 @@ func (re *runnerEnv) runRow(t *testing.T, trigger string) (status string, trace 
 	return status, trace, approvalID
 }
 
-// runRowWithReason is runRow plus the column the person reads: which failure
+// runRowWithReason is runRow plus the column the reader reads: which failure
 // closed the run, not merely that one did.
 func (re *runnerEnv) runRowWithReason(t *testing.T, trigger string) (status, reason string, approvalID *string) {
 	t.Helper()
@@ -275,16 +275,16 @@ func TestRunnerFullLoopWritesAsGovernedAgent(t *testing.T) {
 func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	re := setupRunner(t)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Unknown Co"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-confirmation-required"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, contact.ID),
 		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -298,7 +298,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var parked struct {
 		ArchivedAt *string `json:"archived_at"`
 	}
-	if got := re.Call(t, "GET", "/v1/companies/"+person.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
+	if got := re.Call(t, "GET", "/v1/companies/"+contact.ID, nil, nil, &parked); got != http.StatusOK || parked.ArchivedAt != nil {
 		t.Fatalf("target mutated while approval pending: GET → %d archived_at=%v", got, parked.ArchivedAt)
 	}
 
@@ -333,16 +333,16 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	re := setupRunner(t)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Keep Me"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-reject"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, contact.ID),
 		`{"final":{"summary":"left the record alone after rejection"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -422,10 +422,10 @@ func decidedEnvelope(wsID ids.UUID, approvalID, verdict string) kevents.Envelope
 func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	re := setupRunner(t)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{"display_name": "Resume Once"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
@@ -434,7 +434,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	// would run past the end of it, so the assertions below catch a
 	// duplicate resume by its outcome as well as by its trace.
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, contact.ID),
 		`{"final":{"summary":"enrich executed after approval"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -497,11 +497,11 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	re := setupRunner(t)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", integration.AnyMap{"full_name": "Stale Duplicate"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := re.Call(t, "POST", "/v1/contacts", integration.AnyMap{"full_name": "Stale Duplicate"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 
 	// Still archive_record: this case is about the SWEEP's own allowlist
@@ -509,7 +509,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	// the tier that verb carries.
 	trigger := "overnight_at_risk_sweep:e2e-archive-refused"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"person","id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"archive_record","args":{"record_type":"contact","id":"%s"}}`, contact.ID),
 		`{"final":{"summary":"could not archive; noted the risk instead"}}`,
 	)
 	re.enqueue(t, "overnight_at_risk_sweep", trigger, &re.passportID)
@@ -536,7 +536,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	var after struct {
 		ArchivedAt *string `json:"archived_at"`
 	}
-	if got := re.Call(t, "GET", "/v1/people/"+person.ID, nil, nil, &after); got != http.StatusOK || after.ArchivedAt != nil {
+	if got := re.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, nil, &after); got != http.StatusOK || after.ArchivedAt != nil {
 		t.Fatalf("the sweep archived a record it may not archive: GET → %d archived_at=%v", got, after.ArchivedAt)
 	}
 }
@@ -552,18 +552,18 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 // nothing to resume and the run is stuck in a state nothing can close.
 func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testing.T) {
 	re := setupRunner(t)
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
 	if status := re.Call(t, "POST", "/v1/companies", integration.AnyMap{
 		"display_name": "Authority Dies Parked",
-	}, nil, &person); status != http.StatusCreated {
+	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 
 	trigger := "overnight_at_risk_sweep:e2e-authority-died"
 	re.brain.Script(
-		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, person.ID),
+		fmt.Sprintf(`{"tool":"enrich","args":{"company_id":"%s"}}`, contact.ID),
 		`{"final":{"summary":"never reached"}}`,
 	)
 	re.enqueue(t, stagingSpecName, trigger, &re.passportID)
@@ -609,7 +609,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 // Driven by failing the write rather than by reading the code: a cancelled
 // context is what a connection drop looks like from inside, and the two states
 // this distinguishes — `awaiting_approval` and `running` — are one word apart in
-// the row and half an hour apart for the person waiting.
+// the row and half an hour apart for the contact waiting.
 func TestATerminalWriteThatFailsLeavesTheRunResumable(t *testing.T) {
 	re := setupRunner(t)
 	var company struct {

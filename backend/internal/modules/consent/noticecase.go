@@ -3,11 +3,11 @@
 
 package consent
 
-// What the installation owes a person it obtained without asking them, and
+// What the installation owes a contact it obtained without asking them, and
 // whether it has told them yet.
 //
-// person_acquisition_evidence records HOW a contact came to exist. The duty
-// that follows is a separate fact: a person acquired from a list, a referral or
+// contact_acquisition_evidence records HOW a contact came to exist. The duty
+// that follows is a separate fact: a contact acquired from a list, a referral or
 // an import never asked to hear from us, and Art. 14 gives the controller one
 // month to say we hold their data and how to object. A case per acquisition
 // makes that duty enumerable — "who have we not told yet" is a query rather
@@ -110,15 +110,15 @@ func unresolvedNoticeStates() []string {
 // OpenNoticeCase is one duty still owed: whose it is, what rule put it there,
 // and by when.
 //
-// PersonID is carried because the duty is discharged on that person's own
+// ContactID is carried because the duty is discharged on that contact's own
 // screen — there is no notice-case screen to route to, so a card naming only the
 // case would prompt a reader with nowhere to go.
 type OpenNoticeCase struct {
-	ID       ids.UUID
-	PersonID ids.PersonID
-	Rule     NoticeRule
-	DueAt    time.Time
-	Blocked  bool
+	ID        ids.UUID
+	ContactID ids.ContactID
+	Rule      NoticeRule
+	DueAt     time.Time
+	Blocked   bool
 }
 
 // openNoticeLaneDefault mirrors the DSR lane's small page for the same reason:
@@ -127,7 +127,7 @@ const openNoticeLaneDefault = 8
 
 // NoticeCaseInput is one duty, as the writer states it.
 type NoticeCaseInput struct {
-	PersonID      ids.PersonID
+	ContactID     ids.ContactID
 	AcquisitionID ids.UUID
 	Rule          NoticeRule
 	DueAt         time.Time
@@ -145,7 +145,7 @@ type NoticeCaseInput struct {
 // OpenNoticeCasesDueSoonest lists the duties nobody has discharged, soonest
 // deadline first.
 //
-// Gated as the subject-request queue is: a notice case says how a named person
+// Gated as the subject-request queue is: a notice case says how a named contact
 // was obtained and whether we have told them, which is the same disclosure the
 // DSR queue makes about who exercised a right. Reusing privacy_request rather
 // than minting an object means an installation that delegated its privacy inbox
@@ -160,7 +160,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 	var out []OpenNoticeCase
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, person_id, rule, due_at, state = 'blocked'
+			SELECT id, contact_id, rule, due_at, state = 'blocked'
 			  FROM privacy_notice_case
 			 WHERE state = ANY($1)
 			 ORDER BY due_at, id
@@ -171,7 +171,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 		defer rows.Close()
 		for rows.Next() {
 			var c OpenNoticeCase
-			if err := rows.Scan(&c.ID, &c.PersonID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
+			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -184,7 +184,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 // OpenNoticeCaseTx records one duty, in the transaction that created the
 // acquisition it is owed for.
 //
-// IDEMPOTENT BY THE DATABASE, not by a check here. The person.created consumer
+// IDEMPOTENT BY THE DATABASE, not by a check here. The contact.created consumer
 // is at-least-once, so a redelivery reaches this a second time; the unique
 // index on acquisition_id refuses the duplicate and ON CONFLICT DO NOTHING
 // makes that refusal the expected outcome rather than an error the caller has
@@ -221,12 +221,12 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 	var caseID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes,
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes,
 		        state, owner_user_id, blocked_reason, completed_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (acquisition_id) DO NOTHING
 		RETURNING id`,
-		in.PersonID, in.AcquisitionID, string(in.Rule), in.DueAt, routes,
+		in.ContactID, in.AcquisitionID, string(in.Rule), in.DueAt, routes,
 		string(in.State), in.OwnerUserID, in.BlockedReason, in.CompletedAt).Scan(&caseID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The duty was already recorded for this acquisition. Nothing happened,
@@ -237,7 +237,7 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 		return fmt.Errorf("record the notice case owed for this acquisition: %w", err)
 	}
 	// Audited because a notice case is a compliance record: "when did this
-	// workspace learn it owed this person a disclosure, and what opened the
+	// workspace learn it owed this contact a disclosure, and what opened the
 	// case" is the question an auditor asks, and audit_log is where the answer
 	// lives. No event: nothing outside this module acts on a case being opened,
 	// and an event no consumer reads is a contract nobody can change later.

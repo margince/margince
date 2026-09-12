@@ -111,7 +111,7 @@ loop your PR will run:
    check. A *genuine* false positive is waived in-source
    with a reason: `//craft:ignore <check> <reason>` — that is the only
    way to stand a finding down, and the reason is read by the next
-   person to touch the line. The gate itself is a checksum-pinned
+   contact to touch the line. The gate itself is a checksum-pinned
    binary that `scripts/craft-pin.sh` fetches on first use, so there is
    nothing to install and nothing in this repo to edit: the verdict you
    get on your laptop is the verdict your pull request gets.

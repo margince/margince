@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -232,7 +232,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 // registry above, and the site_lead accept effect (siteleadaccept.go),
 // which captures through the Sink directly without needing a registry.
 func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
-	ensurer := peopleEnsurer{
+	ensurer := contactsEnsurer{
 		store:  newCounterpartyStore(pool),
 		triage: newDomainTriageTrigger(pool, cfg.logger()),
 		log:    cfg.logger(),
@@ -245,8 +245,8 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		WithStager(mergeStager{svc: approvals.NewService(InstallationDB(pool))}).
 		// The ADR-0063 auto-create pipeline: every captured mail ensures
-		// its counterparty exists, through the people module's ONE dedupe
-		// chokepoint — composed here so capture never imports people. The
+		// its counterparty exists, through the contacts module's ONE dedupe
+		// chokepoint — composed here so capture never imports contacts. The
 		// free-mail (CAP-PARAM-5) and transactional/ESP (CAP-PARAM-6, ADR-0072)
 		// gates decide which senders derive no company / no counterparty.
 		WithEnsurer(ensurer,
@@ -274,11 +274,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// briefly readable before a later pass narrows it has already been
 		// readable.
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
-		// The attendee naming, from the module that owns `person`. Inside the
+		// The attendee naming, from the module that owns `contact`. Inside the
 		// capture transaction for a plainer reason than the audience above: the
 		// name it completes is read off the participant rows this same
 		// transaction has just written.
-		WithParticipantNamer(people.FillParticipantNamesTx).
+		WithParticipantNamer(contacts.FillParticipantNamesTx).
 		// Closing a meeting the calendar says is off — called off by its
 		// organizer, or declined by the seat whose calendar it is. From the
 		// module that owns `activity` and its status history, for the reason

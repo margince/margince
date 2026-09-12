@@ -7,7 +7,7 @@ package integration
 
 // The pre-meeting brief's admission, against a real database.
 //
-// The brief reads a meeting, the people in the room, and what they promised.
+// The brief reads a meeting, the contacts in the room, and what they promised.
 // That is three record types, and a caller who may not read them must not
 // reach any of it through this door — row scope decides WHICH meetings somebody
 // sees, never whether they may see meetings at all.
@@ -22,15 +22,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,9 +47,9 @@ func meetingBriefService(e *Env) *meetingbrief.Service {
 // meetingBriefServiceWithoutTeammates is the same service with no membership
 // seam — the composition a deployment that never wired coaching gets.
 func meetingBriefServiceWithoutTeammates(e *Env) *meetingbrief.Service {
-	view := person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
+	view := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
 		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), func() time.Time { return roomFixedNow })
-	return meetingbrief.NewService(e.Pool, view, e.People, func() time.Time { return roomFixedNow })
+	return meetingbrief.NewService(e.Pool, view, e.Contacts, func() time.Time { return roomFixedNow })
 }
 
 // identityTeammates is the membership reader, in the shape the brief takes.
@@ -66,16 +66,16 @@ func (t identityTeammates) SharesLiveTeamWithCaller(ctx context.Context, other i
 func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Expansion review', $2,
 		        'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", mine)
+	LinkActivity(t, owner, meeting, "contact", mine)
 
 	perms := roomPerms
 	perms.Objects = map[string]principal.ObjectGrant{
 		// Everything the brief touches EXCEPT the activity it is about.
-		"person":       {Read: true},
+		"contact":      {Read: true},
 		"company":      {Read: true},
 		"relationship": {Read: true},
 		"deal":         {Read: true},
@@ -88,15 +88,15 @@ func TestMeetingBriefRefusesACallerWithNoActivityGrant(t *testing.T) {
 	}
 }
 
-// The brief names the people in the room, so it is a person read too.
-func TestMeetingBriefRefusesACallerWithNoPersonGrant(t *testing.T) {
+// The brief names the contacts in the room, so it is a contact read too.
+func TestMeetingBriefRefusesACallerWithNoContactGrant(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	mine := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Expansion review', $2,
 		        'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", mine)
+	LinkActivity(t, owner, meeting, "contact", mine)
 
 	perms := roomPerms
 	perms.Objects = map[string]principal.ObjectGrant{"activity": {Read: true}}
@@ -104,7 +104,7 @@ func TestMeetingBriefRefusesACallerWithNoPersonGrant(t *testing.T) {
 
 	_, err := meetingBriefService(e).Get(rep, meeting)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("brief without a person grant → %v, want ErrPermissionDenied", err)
+		t.Errorf("brief without a contact grant → %v, want ErrPermissionDenied", err)
 	}
 }
 
@@ -119,12 +119,12 @@ func TestMeetingBriefRefusesACallerWithNoPersonGrant(t *testing.T) {
 func TestMeetingBriefRefusesAMeetingItCannotReach(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	theirs := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Their review', $2,
 		        'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", theirs)
+	LinkActivity(t, owner, meeting, "contact", theirs)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 
@@ -145,14 +145,14 @@ func TestMeetingBriefRefusesAMeetingItCannotReach(t *testing.T) {
 func TestMeetingBriefDoesNotReportALastTouchTheCallerCannotRead(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
-	theirs := e.SeedPerson(t, "Their Contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirs, e.Rep3)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Expansion review', $2,
 		        'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 
 	// A conversation this caller may not read, which nonetheless names their
@@ -160,7 +160,7 @@ func TestMeetingBriefDoesNotReportALastTouchTheCallerCannotRead(t *testing.T) {
 	hidden := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Cc: budget', $2,
 		        'manual', 'human:x')`, roomAgo(3*24*time.Hour))
-	LinkActivity(t, owner, hidden, "person", theirs)
+	LinkActivity(t, owner, hidden, "contact", theirs)
 	seatInRoom(t, owner, e.WS, hidden, attendee)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -193,13 +193,17 @@ func TestMeetingBriefDoesNotReportALastTouchTheCallerCannotRead(t *testing.T) {
 	}
 }
 
-// seatInRoom names a person as a participant on an activity — the table the
+// seatInRoom names a contact as a participant on an activity — the table the
 // brief reads its room from, written separately from activity_link.
-func seatInRoom(t *testing.T, owner *pgx.Conn, ws, activity, person ids.UUID) {
+// meeting and the attendee, which is what makes a cross-workspace seeding
+// mistake visible there rather than in this helper.
+//
+//nolint:unparam // the workspace is stated at every call site beside the
+func seatInRoom(t *testing.T, owner *pgx.Conn, ws, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO activity_participant (activity_id, role, person_id)
-		 VALUES ($1, 'attendee', $2)`, activity, person); err != nil {
+		`INSERT INTO activity_participant (activity_id, role, contact_id)
+		 VALUES ($1, 'attendee', $2)`, activity, contact); err != nil {
 		t.Fatalf("seating a participant: %v", err)
 	}
 }
@@ -213,14 +217,14 @@ func TestMeetingBriefNamesTheEngagementItIsFiledUnder(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, company_id, source, captured_by)
 		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, company)
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, meeting, project)
@@ -259,7 +263,7 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	newProject := func(name, key string) ids.UUID {
 		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
@@ -270,7 +274,7 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, meeting, erp)
@@ -279,7 +283,7 @@ func TestMeetingBriefCountsNoLastTouchFromAnotherEngagement(t *testing.T) {
 	// engagement, so within this room's scope they have never been spoken to.
 	other := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'Rack decommissioning', $2, 'manual', 'human:x')`, roomAgo(3*24*time.Hour))
-	LinkActivity(t, owner, other, "person", attendee)
+	LinkActivity(t, owner, other, "contact", attendee)
 	seatInRoom(t, owner, e.WS, other, attendee)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, other, migration)
@@ -315,13 +319,13 @@ func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *test
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	project := SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, phase, company_id, source, captured_by)
 		VALUES ($1, $2, 'ERP rollout', 'ERP-27', 'delivering', $3, 'manual', 'human:x')`, e.Rep1, company)
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, meeting, project)
@@ -353,19 +357,19 @@ func TestMeetingBriefWithholdsTheEngagementFromACallerWithNoProjectGrant(t *test
 	}
 }
 
-// "This room" is the PEOPLE, not the calendar entry. A recurring series that
+// "This room" is the CONTACTS, not the calendar entry. A recurring series that
 // changed its title is still the same conversation; two unrelated meetings on
 // one account are not. Only a real query proves the overlap rule.
 func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
-	stranger := e.SeedPerson(t, "Someone Else", &e.Rep1)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
+	stranger := e.SeedContact(t, "Someone Else", &e.Rep1)
 
 	newMeeting := func(subject string, when time.Duration, who ids.UUID) {
 		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'meeting', $2, $3, 'manual', 'human:x')`, subject, roomAgo(when))
-		LinkActivity(t, owner, id, "person", who)
+		LinkActivity(t, owner, id, "contact", who)
 		seatInRoom(t, owner, e.WS, id, who)
 	}
 	newMeeting("Kickoff", 30*24*time.Hour, ours)
@@ -375,7 +379,7 @@ func TestMeetingBriefRecallsWhenThisRoomLastMet(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", ours)
+	LinkActivity(t, owner, meeting, "contact", ours)
 	seatInRoom(t, owner, e.WS, meeting, ours)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -406,7 +410,7 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
-	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	newProject := func(name, key string) ids.UUID {
 		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
@@ -422,7 +426,7 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 	newMeeting := func(subject string, when time.Duration) ids.UUID {
 		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'meeting', $2, $3, 'manual', 'human:x')`, subject, roomAgo(when))
-		LinkActivity(t, owner, id, "person", ours)
+		LinkActivity(t, owner, id, "contact", ours)
 		seatInRoom(t, owner, e.WS, id, ours)
 		return id
 	}
@@ -471,7 +475,7 @@ func TestMeetingBriefRecallsNoMeetingFromAnotherEngagement(t *testing.T) {
 func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
 
 	// An earlier meeting our attendee sat in, whose author then limited it to
 	// its participants. Rep1 is not one, so the row stays DISCOVERABLE to them
@@ -483,7 +487,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 		activities.LogActivityInput{
 			Kind: "meeting", Subject: strPtr("Board compensation review"),
 			OccurredAt: &when, Source: "manual",
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: ours}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ours}},
 		})
 	if err != nil {
 		t.Fatalf("log the earlier meeting: %v", err)
@@ -498,7 +502,7 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", ours)
+	LinkActivity(t, owner, meeting, "contact", ours)
 	seatInRoom(t, owner, e.WS, meeting, ours)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -524,7 +528,7 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "Northwind", &e.Rep1)
-	attendee := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	newProject := func(name, key string) ids.UUID {
 		return SeedIDRow(t, owner, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, e.Rep1, name, key, company)
@@ -534,7 +538,7 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	mail := func(subject string, within *ids.UUID) ids.UUID {
 		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1, 'email', $2, $3, 'manual', 'human:x')`, subject, roomAgo(2*24*time.Hour))
-		LinkActivity(t, owner, id, "person", attendee)
+		LinkActivity(t, owner, id, "contact", attendee)
 		if within != nil {
 			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id) VALUES ($1, 'project', $2)`, id, *within)
 		}
@@ -542,15 +546,15 @@ func TestMeetingBriefReportsNoCommitmentFromAnotherEngagement(t *testing.T) {
 	}
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", attendee)
+	LinkActivity(t, owner, meeting, "contact", attendee)
 	seatInRoom(t, owner, e.WS, meeting, attendee)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id) VALUES ($1, 'project', $2)`, meeting, erp)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	promise := func(body string, source ids.UUID) {
 		t.Helper()
-		if _, err := e.People.RecordConversationClaim(rep, people.ClaimInput{
-			PersonID: PersonIDOf(attendee), Kind: "commitment_theirs", Body: body,
+		if _, err := e.Contacts.RecordConversationClaim(rep, contacts.ClaimInput{
+			ContactID: ContactIDOf(attendee), Kind: "commitment_theirs", Body: body,
 			ActivityID: source, Quote: body, Source: "manual",
 		}); err != nil {
 			t.Fatalf("record claim %q: %v", body, err)
@@ -602,10 +606,10 @@ func (l *meetingSubjectLane) Complete(ctx context.Context, _ model.Request) (mod
 func TestMeetingBriefNamesTheMeetingToTheRail(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
-	ours := e.SeedPerson(t, "Ana Roth", &e.Rep1)
+	ours := e.SeedContact(t, "Ana Roth", &e.Rep1)
 	meeting := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Cutover review', $2, 'manual', 'human:x')`, roomTomorrow)
-	LinkActivity(t, owner, meeting, "person", ours)
+	LinkActivity(t, owner, meeting, "contact", ours)
 	seatInRoom(t, owner, e.WS, meeting, ours)
 
 	lane := &meetingSubjectLane{}

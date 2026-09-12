@@ -71,7 +71,7 @@ export const company360 = {
   as_of: "2026-06-01T09:00:00Z",
   company: company,
   sections_omitted: [],
-  people: emptySection,
+  contacts: emptySection,
   deals: {
     ...emptySection,
     won_lifetime: { amount_minor: 0, currency: "EUR" },

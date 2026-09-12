@@ -52,7 +52,7 @@ func (h Handlers) WithUndoabilityReader(reader UndoabilityReader) Handlers {
 // a property of the audit ROW, so a field-history page whose entries share an
 // id asks about it once and they all read the same answer.
 //
-// A reader that fails does NOT fail the page: a history a person can read is
+// A reader that fails does NOT fail the page: a history a human can read is
 // more useful than an error. But it is LOGGED, not swallowed — the fallback
 // renders every entry as refused with no reason, which is exactly the
 // greyed-button-with-no-explanation this feature exists to remove, and a page

@@ -37,7 +37,7 @@ const READ: ProfileDigestRead = {
   root_url: "https://acme.example",
   pages: [],
   facts: [],
-  people: [],
+  contacts: [],
 };
 
 function mount(ui: React.ReactNode) {

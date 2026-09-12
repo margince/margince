@@ -3,7 +3,7 @@
 -- Postgres.
 --
 -- What it deletes: every base table in `public` except the preserved set below.
--- What it keeps: the installation itself — its workspace, its people, its roles
+-- What it keeps: the installation itself — its workspace, its contacts, its roles
 -- and sessions, its configuration and its append-only ledgers — so the stack is
 -- usable the moment this finishes. `make seed-dev` runs straight afterwards with
 -- no restart, because the admin it logs in as is still there.
@@ -141,7 +141,7 @@ BEGIN
   -- or expect a consumer to see a handful of not-found records after a reset.
   DELETE FROM event_outbox;
 
-  RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its people and its configuration are untouched — run make seed-dev to fill it', targets;
+  RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its contacts and its configuration are untouched — run make seed-dev to fill it', targets;
 END $$;
 
 COMMIT;

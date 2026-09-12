@@ -7,7 +7,7 @@ package compose
 // that true.
 //
 // Before this, a rule learned on one surface stayed on that surface: the reply
-// drafter alone was told not to claim a personal voice, the person composer
+// drafter alone was told not to claim a personal voice, the contact composer
 // alone was told not to explain itself, and nothing anywhere said what language
 // to write in. Every one of those gaps produced a defect a user reported.
 //
@@ -38,8 +38,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -72,9 +72,9 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 			replyDraftSystemFor(firstDraftSystem, fence),
 			replyDraftSystemFor(voicedSite(firstDraftSystem), fence),
 		},
-		"persondraft/write.go": {
-			persondraft.SystemPromptFor(fence),
-			persondraft.VoicedSystemPromptFor(fence),
+		"contactdraft/write.go": {
+			contactdraft.SystemPromptFor(fence),
+			contactdraft.VoicedSystemPromptFor(fence),
 		},
 		"accountdraft/write.go": {
 			accountdraft.SystemPromptFor(fence),
@@ -304,7 +304,7 @@ func TestTheSharedRulesStillSayTheThingsTheyExistToSay(t *testing.T) {
 //
 // Two shapes, deliberately checked per surface rather than against a union of
 // them all. The reply and first-draft payloads inline the envelope flat, which
-// the certification harness requires; the person and account payloads nest it
+// the certification harness requires; the contact and account payloads nest it
 // under "envelope". A union would let a field missing from one surface pass
 // because another one carries it, which is the failure this is about.
 func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
@@ -317,7 +317,7 @@ func TestTheSharedRulesNameFieldsEverySurfaceActuallySends(t *testing.T) {
 	}
 	payloads := map[string]any{
 		"reply":   replyActivityData{Envelope: envelope},
-		"person":  persondraft.Input{Envelope: envelope},
+		"contact": contactdraft.Input{Envelope: envelope},
 		"account": accountdraft.Input{Envelope: envelope},
 	}
 	// The field each RULE must name, keyed by the block that has to name it.
@@ -468,8 +468,8 @@ func TestADrafterWithNoLoggerSurvivesItsDegradePaths(t *testing.T) {
 func TestEverySurfaceSendsBothNamesAGreetingCanTake(t *testing.T) {
 	payloads := map[string]any{
 		"reply": replyActivityData{Recipient: "Dietmar", RecipientLastName: "Rietsch"},
-		"person": persondraft.Input{
-			Recipient: persondraft.RecipientIn{FirstName: "Dietmar", LastName: "Rietsch"},
+		"contact": contactdraft.Input{
+			Recipient: contactdraft.RecipientIn{FirstName: "Dietmar", LastName: "Rietsch"},
 		},
 		"account": accountdraft.Input{
 			Recipient: accountdraft.RecipientIn{FirstName: "Dietmar", LastName: "Rietsch"},

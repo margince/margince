@@ -48,7 +48,7 @@ func TestARosterIsAcceptedByAccountOrByAddress(t *testing.T) {
 }
 
 // A party identified by nothing is refused HERE rather than dropped later,
-// because a silent drop reports a four-person group as a three-person one and
+// because a silent drop reports a four-contact group as a three-contact one and
 // nothing fails. The unit author reading this refusal learns their mapping lost
 // a field.
 func TestAPartyWithNoIdentityIsRefused(t *testing.T) {
@@ -102,7 +102,7 @@ func TestEveryPublishedRoleIsAdmitted(t *testing.T) {
 }
 
 // At the cap and one past it, because an off-by-one here is the difference
-// between recording a fifty-person group and refusing it.
+// between recording a fifty-contact group and refusing it.
 func TestTheRosterCapIsInclusive(t *testing.T) {
 	full := make([]extension.Participant, 0, extension.MaxParticipants+1)
 	for i := range extension.MaxParticipants {

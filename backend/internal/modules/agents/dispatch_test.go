@@ -55,7 +55,7 @@ func TestExplainKeepsSentinelGuidance(t *testing.T) {
 		err  error
 		want string
 	}{
-		{fmt.Errorf("advance: %w", apperrors.ErrRequiresApproval), "a person answers it"},
+		{fmt.Errorf("advance: %w", apperrors.ErrRequiresApproval), "a contact answers it"},
 		{fmt.Errorf("scope: %w", apperrors.ErrScopeExceeded), "scope"},
 		// "Refused on authority" rather than "not permitted": the same sentinel
 		// now carries two bounds — what the human may do, and what they lent

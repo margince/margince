@@ -84,10 +84,10 @@ func NewCapturePurger(pool *pgxpool.Pool, retention *privacy.RetentionService) *
 func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview bool) (PurgeOutcome, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
-		return PurgeOutcome{}, fmt.Errorf("capture purge: destroying mail is a person's own act")
+		return PurgeOutcome{}, fmt.Errorf("capture purge: destroying mail is a contact's own act")
 	}
 	// A read seat is licensed to look, not to destroy. The object grants inside
-	// privacy answer what this caller may do to an activity or a person; the
+	// privacy answer what this caller may do to an activity or a contact; the
 	// seat tier answers whether they may change anything at all, and the two
 	// are different questions — a read seat can hold grants and still not be
 	// somebody who mutates.
@@ -111,16 +111,16 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		return PurgeOutcome{}, err
 	}
 	// Seat-scoped, and deliberately not run for a workspace rule.
-	// SelectPurgeablePeopleTx answers "which people did THIS seat's capture
+	// SelectPurgeableContactsTx answers "which contacts did THIS seat's capture
 	// mint, that nothing else holds" — a question with no workspace-wide
 	// analogue, because a contact every seat can see is by definition held by
 	// more than the mail one rule matched. Anonymising workspace-wide is the
 	// erasure lane's job and takes a subject request, not an exclusion rule.
-	var people []ids.UUID
+	var contacts []ids.UUID
 	if !workspaceScoped {
 		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 			var err error
-			people, err = capture.SelectPurgeablePeopleTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
+			contacts, err = capture.SelectPurgeableContactsTx(ctx, tx, actor.UserID, rule.Kind, rule.Value)
 			return err
 		}); err != nil {
 			return PurgeOutcome{}, err
@@ -130,7 +130,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 		Destroyed:  len(subject.SoleImports),
 		Released:   len(subject.SharedImports),
 		Skipped:    len(subject.Restricted),
-		Anonymised: len(people),
+		Anonymised: len(contacts),
 		Preview:    preview,
 	}
 	if preview {
@@ -140,7 +140,7 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	if err := p.carryOut(ctx, subject, people, actor.UserID, reason); err != nil {
+	if err := p.carryOut(ctx, subject, contacts, actor.UserID, reason); err != nil {
 		return PurgeOutcome{}, err
 	}
 	return outcome, nil
@@ -159,22 +159,22 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 // them, which is why the claim is safe to make here and would not be safe
 // three packages away — but a third path added elsewhere would go unnoticed.
 func (p *CapturePurger) carryOut(
-	ctx context.Context, subject capture.PurgeSubject, people []ids.UUID,
+	ctx context.Context, subject capture.PurgeSubject, contacts []ids.UUID,
 	seat ids.UUID, reason privacy.PurgeReason,
 ) error {
-	// The PEOPLE first, while their mail still exists to identify them by.
-	// SelectPurgeablePeopleTx matches a person through the activities this seat
+	// The CONTACTS first, while their mail still exists to identify them by.
+	// SelectPurgeableContactsTx matches a contact through the activities this seat
 	// imported, so destroying the mail first would leave nothing to select them
 	// with and the contacts would survive a purge that reported anonymising
 	// them.
 	//
 	// Skipped outright when there are none, rather than called with an empty
-	// slice: AnonymisePeople takes the person/delete grant before it looks at
+	// slice: AnonymiseContacts takes the contact/delete grant before it looks at
 	// its argument, and the personal sweep runs under a system principal that
-	// passes that check by BYPASSING it. A caller with no people to anonymise
+	// passes that check by BYPASSING it. A caller with no contacts to anonymise
 	// should not be asking for the grant at all.
-	if len(people) > 0 {
-		if _, err := p.retention.AnonymisePeople(ctx, people, reason); err != nil {
+	if len(contacts) > 0 {
+		if _, err := p.retention.AnonymiseContacts(ctx, contacts, reason); err != nil {
 			return err
 		}
 	}
@@ -247,9 +247,9 @@ const personalSweepBatch = 500
 // and removing any one of them breaks it:
 //
 //   - SelectPersonalPurgeTx measures the window PER MESSAGE and refuses any
-//     address carrying a live `business` override, which is how a person cancels.
+//     address carrying a live `business` override, which is how a contact cancels.
 //   - A verdict the classifier reached alone waits four times as long as one a
-//     person reached, because nobody has looked at it.
+//     contact reached, because nobody has looked at it.
 //   - The statutory floor is applied as a shield, so correspondence the law
 //     requires kept is reported rather than destroyed.
 //
@@ -274,10 +274,10 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		}); err != nil {
 			return destroyed, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
 		}
-		// No people are anonymised here. A `personal` verdict creates NO
+		// No contacts are anonymised here. A `personal` verdict creates NO
 		// counterparty record in the first place — captureverdict's KindPersonal
 		// arm returns without one — so there is nothing this sweep could match,
-		// and passing a selector that looked for one would either find a person
+		// and passing a selector that looked for one would either find a contact
 		// somebody made for another reason or find nothing while implying it had
 		// looked.
 		if err := p.carryOut(ctx, subject, nil, seat, privacy.PurgePersonalVerdict); err != nil {

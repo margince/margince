@@ -264,7 +264,7 @@ func (w *scheduledSendWorker) scheduler(ctx context.Context, id ids.UUID) (sched
 //
 // The agent's IDENTITY is preserved too, from what core 0260 stored at schedule
 // time. Deriving it from the human's id instead names an actor that never
-// existed and collapses every agent acting for one person into it, which breaks
+// existed and collapses every agent acting for one contact into it, which breaks
 // the attribution ADR-0055 depends on.
 func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (context.Context, string, error) {
 	userID := sched.UserID
@@ -328,7 +328,7 @@ func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (co
 			// name its actor, so this is a row the database says cannot exist.
 			// It refuses rather than deriving `agent:<human-uuid>`, which is
 			// what stood here: that id names an actor that never existed and
-			// collapses every agent acting for one person into one identity,
+			// collapses every agent acting for one human into one identity,
 			// and a message firing under it is worse than a message held.
 			return nil, "", fmt.Errorf(
 				"comms_scheduled_send: an agent-kind scheduled send for %s names no agent", userID)

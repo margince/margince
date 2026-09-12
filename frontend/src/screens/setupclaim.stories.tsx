@@ -16,7 +16,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * assertion: whether the warning that this account is the installation's ROOT
  * reads as a warning, whether the token field reads as something copied from a
  * server log rather than a password, and whether a refusal is legible next to a
- * form the person has just filled in. The three refusals differ in meaning, not
+ * form the contact has just filled in. The three refusals differ in meaning, not
  * just wording — a wrong token, an installation someone else already claimed,
  * and a field to fix are three different next actions — so each is a story.
  */
@@ -38,7 +38,7 @@ export default meta;
 type Story = StoryObj<typeof SetupClaimScreen>;
 
 /**
- * fill drives the form to the state a person reaches before pressing submit.
+ * fill drives the form to the state a contact reaches before pressing submit.
  * Shared by every story below, so the refusals differ only in what the server
  * answers — which is the thing each of them is about.
  */
@@ -86,7 +86,7 @@ export const Ready: Story = {
  * A password below the floor. The refusal takes the field's `error` slot — the
  * danger tone and an `aria-invalid` outline, where it used to ride the same grey
  * `hint` as the neutral rule it replaced — and the button stays disabled, so the
- * refusal happens here rather than as a 422 after a round trip the person has
+ * refusal happens here rather than as a 422 after a round trip the contact has
  * already waited for.
  */
 export const PasswordTooShort: Story = {

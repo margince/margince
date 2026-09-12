@@ -181,7 +181,7 @@ describe("the first-run setup gate", () => {
   });
 
   // The models bound and no app yet: the platform question, asked once of
-  // the person running the cold start. Google is the answer it opens on, with
+  // the contact running the cold start. Google is the answer it opens on, with
   // the two fields an OAuth client has.
   it("asks what the company runs on once the models are bound", async () => {
     mount(setupReport(true, false));
@@ -315,7 +315,7 @@ describe("the first-run setup gate", () => {
   });
 
   // IMAP has no installation-wide app, so the one thing the answer can do is
-  // connect the mailbox of the person on screen: the same standing connect
+  // connect the mailbox of the contact on screen: the same standing connect
   // Settings makes, and the step is done once the server confirms it.
   it("connects the reader's own mailbox on IMAP, through the standing connect", async () => {
     const { container, writes } = mount(setupReport(true, false));

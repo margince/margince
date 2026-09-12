@@ -50,13 +50,13 @@ import {
   RESET_ROUTE,
 } from "./screens/auth";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
+import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import {
   OnboardingScreen,
   useCompany,
   useOnboardingProgress,
 } from "./screens/onboarding";
-import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 import { WriteToHost } from "./screens/writeto";
@@ -196,9 +196,9 @@ const ContactsScreen = lazy(
     import("./screens/contacts").then((m) => ({ default: m.ContactsScreen })),
   ),
 );
-const PersonPageV2 = lazy(
+const ContactPageV2 = lazy(
   routed(() =>
-    import("./screens/personpage").then((m) => ({ default: m.PersonPageV2 })),
+    import("./screens/contactpage").then((m) => ({ default: m.ContactPageV2 })),
   ),
 );
 const BuyerRoomScreen = lazy(() =>
@@ -450,7 +450,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
       id ? (
-        <PersonPageV2 id={id} tab={isPersonTab(id2) ? id2 : "overview"} />
+        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ) : (
         <ContactsScreen />
       ),
@@ -505,7 +505,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
     // #/unsubscribe/<token>/<purpose> — the page the VISIBLE unsubscribe
     // link in a message opens. Anonymous, and it never withdraws on arrival:
-    // a mail scanner following the link is not a person pressing a button.
+    // a mail scanner following the link is not a contact pressing a button.
     unsubscribe: ({ id, id2 }) => (
       <UnsubscribeScreen token={id} purpose={id2} />
     ),
@@ -573,7 +573,7 @@ function ScreenView({
   // deferred, with the same requests on the wire every time.
   //
   // Deferred as one value, never three: a screen that updated while an id lagged
-  // would render a company page against a person's id.
+  // would render a company page against a contact's id.
   const asked = useMemo(() => ({ screen, id, id2 }), [screen, id, id2]);
   const shown = useDeferredValue(asked);
   // One string for the whole displayed address, and it is what the unsaved-edit
@@ -593,7 +593,7 @@ function ScreenView({
           screen carries state about the record it was opened for — an expanded
           section, a half-typed note, a scroll position — and reconciling one
           record's screen into another's keeps all of it, which is how a note
-          begun on person A ends up on the form for person B. And an arrival
+          begun on contact A ends up on the form for contact B. And an arrival
           animation (design-system/enter.css) plays when a block is INSERTED:
           without a key the DOM nodes are reused, so walking from one record to
           the next would be the one navigation in the product where the page
@@ -708,7 +708,7 @@ export function App() {
 
 // UnavailableOrClaimable splits the 503 the boundary already reached into its
 // two product states. "Not ready" is true of both, but only one of them has
-// something the person in front of the browser can do: an installation that
+// something the contact in front of the browser can do: an installation that
 // holds no company and is WAITING to be claimed (ADR-0105) gets the claim
 // screen; anything else keeps the availability message.
 //

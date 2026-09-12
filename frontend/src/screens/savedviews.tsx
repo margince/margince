@@ -30,13 +30,13 @@ type SavedView = components["schemas"]["SavedView"];
 /**
  * The resources whose lists offer saved views, as the contract spells them.
  *
- * Plural here and singular on `/filters/*` — `people` against `person` — because
+ * Plural here and singular on `/filters/*` — `contacts` against `contact` — because
  * the two endpoint families spell their enums differently. That correspondence
  * is written down once, where the two meet (the filters screen's `VIEW_OF`), and
  * nowhere else.
  */
 export type ViewResource =
-  | "people"
+  | "contacts"
   | "companies"
   | "deals"
   | "leads"

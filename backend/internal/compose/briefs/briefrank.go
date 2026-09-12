@@ -4,7 +4,7 @@
 // Package briefs is the Morning-Brief orchestration (E05) — a compose
 // subpackage because it is a cross-module composition, never a module:
 // deal facts (deals),
-// relationship warmth (people §4), and the overnight activity signal
+// relationship warmth (contacts §4), and the overnight activity signal
 // (activities) rank into the persisted run the home surface reads.
 // The deterministic ranker (this file) implements formulas-and-rules
 // §10/§10.1; the pure fold it feeds is briefscore.go, the persisted
@@ -25,8 +25,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -55,9 +55,9 @@ type BriefRanking struct {
 }
 
 // briefStrengthSource is the compose-injected §4 warmth seam —
-// people.Store satisfies it; the brief never reaches into people's SQL.
+// contacts.Store satisfies it; the brief never reaches into contacts's SQL.
 type briefStrengthSource interface {
-	PersonStrength(ctx context.Context, personID ids.PersonID, now time.Time) (people.RelationshipStrength, error)
+	ContactStrength(ctx context.Context, contactID ids.ContactID, now time.Time) (contacts.RelationshipStrength, error)
 }
 
 // BriefEngine ranks a rep's open deals and owns the brief_run/brief_item
@@ -361,7 +361,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	// theirs to act on, and their own work never entered the ranking at all.
 	// One observed morning selected six colleague deals out of seven.
 	//
-	// Applied before the cap, the ranking competes among the deals this person
+	// Applied before the cap, the ranking competes among the deals this contact
 	// can actually move. Access to a colleague's deal is not responsibility for
 	// it; the team view is where breadth belongs.
 	q += fmt.Sprintf(`
@@ -390,7 +390,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 }
 
 // briefEvidenceRows gathers each candidate's overnight activities (the
-// momentum evidence) and stakeholder persons, after the candidate rows
+// momentum evidence) and stakeholder contacts, after the candidate rows
 // are drained (one connection, one active query).
 //
 // It reports whether the seat evidence was READABLE, because that is not the
@@ -445,15 +445,15 @@ func briefEvidenceRows(
 		if !mayReadSeats {
 			continue
 		}
-		persons, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
-			SELECT r.person_id FROM relationship r
+		contacts, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
+			SELECT r.contact_id FROM relationship r
 			WHERE r.kind = 'deal_stakeholder' AND r.deal_id = $1 AND r.archived_at IS NULL
 			  AND (%s)
-			ORDER BY r.person_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
+			ORDER BY r.contact_id`, edgeBound), append([]any{dealID}, edgeArgs...)...))
 		if err != nil {
 			return false, err
 		}
-		stakeholders[dealID] = persons
+		stakeholders[dealID] = contacts
 	}
 	return mayReadSeats, nil
 }

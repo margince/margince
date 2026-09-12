@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -100,7 +100,7 @@ func stageCounterpartyReview(ctx context.Context, svc *approvals.Service, row ca
 // effect — the approvals engine only ever runs the approved branch, which is
 // exactly why an offer whose accept merely ADDS records is safe to leave sitting
 // in an inbox indefinitely.
-func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
+func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 	filer *connectorTagFiler, pending *capture.PendingStore, triage *domainTriageTrigger,
 ) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
@@ -145,7 +145,7 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *people.Store,
 // without the records, nor the records exist under a still-open question.
 // It reports the domain still owed a company verdict, for the caller to
 // queue once the redemption has committed.
-func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *people.Store,
+func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Store,
 	filer *connectorTagFiler, pending *capture.PendingStore, proposal counterpartyProposal,
 ) (string, error) {
 	created, err := createCounterpartyRecords(ctx, tx, store, filer, counterpartyCreation{
@@ -161,17 +161,17 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *people.Store
 		return "", err
 	}
 	// An address erased while the offer sat in the inbox creates nothing, and
-	// the ledger says so rather than reporting `real` for a person who does not
+	// the ledger says so rather than reporting `real` for a contact who does not
 	// exist — the same correction the machine verdict makes.
 	if created.Suppressed {
 		return "", pending.ResolveReviewed(ctx, tx, proposal.DispositionID,
 			capture.PendingStatusSuppressed, "the address was erased before the review was accepted")
 	}
-	// Accepting the offer IS the assertion that a person is behind the address —
+	// Accepting the offer IS the assertion that a contact is behind the address —
 	// the queue's whole question is whether to create this contact — so the
 	// ledger records that kind rather than leaving the model's guess standing.
 	if err := pending.ResolveReviewedAs(ctx, tx, proposal.DispositionID,
-		capture.PendingStatusReal, capture.KindPerson, "accepted in the review queue"); err != nil {
+		capture.PendingStatusReal, capture.KindContact, "accepted in the review queue"); err != nil {
 		return "", err
 	}
 	// The same release the machine verdict makes, because this door settles the

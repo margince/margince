@@ -37,7 +37,7 @@ type AutopilotMode string
 const (
 	// ModePropose is what a transition answers until it has earned otherwise,
 	// and what this file returns whenever it is unsure. A card goes up and a
-	// person decides.
+	// contact decides.
 	ModePropose AutopilotMode = "propose"
 	// ModeAuto means the move applies and the receipt says so afterwards.
 	ModeAuto AutopilotMode = "auto"
@@ -92,7 +92,7 @@ type TransitionPolicy struct {
 // Suspended answers whether the product has turned this rule off itself.
 func (p TransitionPolicy) Suspended() bool { return p.SuspendedAt != nil }
 
-// UndoWindow is how long a person has to take an automatic move back.
+// UndoWindow is how long a contact has to take an automatic move back.
 func (p TransitionPolicy) UndoWindow() time.Duration {
 	return time.Duration(p.UndoWindowHours) * time.Hour
 }
@@ -189,7 +189,7 @@ func (p TransitionPolicy) withholds(r TransitionRates) string {
 			r.ObservationDays, p.MinObservationDays)
 	case r.CleanAcceptanceRate() < p.CleanAcceptanceThreshold:
 		return fmt.Sprintf(
-			"people accept this move as proposed %.0f%% of the time, below the %.0f%% this transition asks for",
+			"contacts accept this move as proposed %.0f%% of the time, below the %.0f%% this transition asks for",
 			r.CleanAcceptanceRate()*100, p.CleanAcceptanceThreshold*100)
 	case r.UnsafeRate() > p.CorrectionReversalThreshold:
 		return fmt.Sprintf(
@@ -351,7 +351,7 @@ func (s *Store) MayAutoApplyStageMove(
 			dealID).Scan(&pipelineID); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				// Archived or gone. A move onto a deal that is not there is not
-				// a move this may make, and the card stays for a person to
+				// a move this may make, and the card stays for a contact to
 				// close.
 				out = refused()
 				return nil

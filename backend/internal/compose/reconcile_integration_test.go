@@ -79,7 +79,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	// The deal owner needs REAL grants, not the harness's in-memory ones: the
 	// drafter composes under the owner's authority resolved from the database,
 	// which is the whole point — a draft is only written under grants that
-	// person actually holds. Without this every deal falls back to the task
+	// contact actually holds. Without this every deal falls back to the task
 	// proposal, which is correct behaviour and would make the draft tests
 	// silently prove nothing.
 	e.grantOwner(t, e.Rep1, reconcileOwnerPolicy)
@@ -106,11 +106,11 @@ func setupReconcileWithOwnerPolicy(t *testing.T, document string) *reconcileEnv 
 }
 
 // reconcileOwnerPolicy mirrors reconcilePerms as a stored role document: an
-// activity-and-deal rep WITH person read, since composing a reply resolves the
+// activity-and-deal rep WITH contact read, since composing a reply resolves the
 // counterparty's address. The suite that proves the gate bites uses the
 // narrower policy below instead.
 const reconcileOwnerPolicy = `{"objects":{"activity":{"create":true,"read":true,"update":true},
-	  "deal":{"read":true,"update":true},"person":{"read":true},
+	  "deal":{"read":true,"update":true},"contact":{"read":true},
 	  "company":{"read":true},"pipeline":{"read":true}},"row_scope":"all"}`
 
 // grantOwner gives a member an actual role row, which is what

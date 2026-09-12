@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse, meRoute } from "./story-utils";
 // An address somebody typed needs no explanation. One the product LEARNED does:
 // a seat scanning this card would otherwise find an address they never entered
 // and have no way to tell whether they forgot adding it or something else did —
-// and they are the person who decides whether it stays.
+// and they are the colleague who decides whether it stays.
 
 afterEach(() => {
   cleanup();

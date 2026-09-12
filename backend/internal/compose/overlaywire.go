@@ -4,7 +4,7 @@
 package compose
 
 // The mirror-record → typed-contract assembly (design.md §4.1/§4.6): the
-// ONE place an overlay datasource.Record becomes a Person/Company/
+// ONE place an overlay datasource.Record becomes a Contact/Company/
 // Deal/Lead/Activity wire struct for the human REST surface. Field-picking
 // out of the mirror's canonical jsonb payload lives in overlaywirefields.go;
 // this file is the struct-shaping on top of it. Every struct is stamped
@@ -12,7 +12,7 @@ package compose
 // mapper landed is dropped just because a typed slot doesn't exist for
 // it), and a timestamp is the incumbent's own wherever the mapping mirrors
 // one: every entity's updated_at is the incumbent's last-modified instant, and
-// a person's and a company's created_at is the incumbent's create
+// a contact's and a company's created_at is the incumbent's create
 // instant — each falling back to the mirror's own last-synced instant, the only
 // time the mirror can claim for itself, where the incumbent stamped none. A
 // deal's, a lead's and an activity's created_at is that fallback throughout,
@@ -73,7 +73,7 @@ func overlayRecordFields(rec datasource.Record) (map[string]any, error) {
 	return fields, nil
 }
 
-// overlayWirePerson assembles the contract Person from a mirror record.
+// overlayWireContact assembles the contract Contact from a mirror record.
 // full_name is the canonical value the mapper assembled (OVA-MAP-3:
 // first+last → email local part → placeholder); it is reused as-is so the
 // wire cannot diverge from the mirror, with a first+last → email → "Unnamed"
@@ -85,10 +85,10 @@ func overlayRecordFields(rec datasource.Record) (map[string]any, error) {
 // mapped address or number means rather than shipping an invalid value — with
 // only the contract-required row id synthesized, since a mirrored child row has
 // no native row of its own to carry one.
-func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts.Person, error) {
+func overlayWireContact(ctx context.Context, rec datasource.Record) (crmcontracts.Contact, error) {
 	fields, err := overlayRecordFields(rec)
 	if err != nil {
-		return crmcontracts.Person{}, err
+		return crmcontracts.Contact{}, err
 	}
 	syncedAt := rec.Freshness.LastSyncedAt
 	// Prefer the canonical full_name the mapping already assembled (OVA-MAP-3:
@@ -100,16 +100,16 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 		fullName = strings.TrimSpace(strings.TrimSpace(fieldString(fields, "first_name")) + " " + strings.TrimSpace(fieldString(fields, "last_name")))
 	}
 	if fullName == "" {
-		fullName = overlayPersonEmail(fields)
+		fullName = overlayContactEmail(fields)
 	}
 	if fullName == "" {
 		fullName = overlayUnnamed
 	}
-	personID := openapi_types.UUID(rec.Ref.ID)
-	mayEdit := overlay.Writable(ctx, datasource.EntityPerson)
-	return crmcontracts.Person{
+	contactID := openapi_types.UUID(rec.Ref.ID)
+	mayEdit := overlay.Writable(ctx, datasource.EntityContact)
+	return crmcontracts.Contact{
 		Writable:   &mayEdit,
-		Id:         personID,
+		Id:         contactID,
 		Source:     overlaySource,
 		CapturedBy: ptrString(overlayCapturedByValue),
 		FullName:   fullName,
@@ -117,8 +117,8 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 		LastName:   fieldStringPtr(fields, "last_name"),
 		Title:      fieldStringPtr(fields, "title"),
 		Address:    overlayAddress(fields),
-		Emails:     overlayPersonEmails(personID, fields),
-		Phones:     overlayPersonPhones(personID, fields),
+		Emails:     overlayContactEmails(contactID, fields),
+		Phones:     overlayContactPhones(contactID, fields),
 		CreatedAt:  overlayTimeOr(fields, "created_at", syncedAt),
 		UpdatedAt:  overlayTimeOr(fields, overlayCanonicalLastModified, syncedAt),
 		Raw:        &fields,
@@ -131,7 +131,7 @@ func overlayWirePerson(ctx context.Context, rec datasource.Record) (crmcontracts
 // an off-enum value stays in raw rather than shipping an invalid enum.
 // The address is the mapper's own address_json assembly, so it is shaped
 // rather than re-derived. The domains collection is the mirrored child rows
-// themselves, carried across whole the way a person's emails and phones are —
+// themselves, carried across whole the way a contact's emails and phones are —
 // the primary flag among them is the mapping's declaration, never this
 // reader's assumption.
 func overlayWireCompany(ctx context.Context, rec datasource.Record) (crmcontracts.Company, error) {
@@ -365,16 +365,16 @@ func overlayWireActivity(ctx context.Context, rec datasource.Record) (crmcontrac
 // same name the typed assembly above would lead with.
 func overlayWireTitle(et datasource.EntityType, fields map[string]any) string {
 	switch et {
-	case datasource.EntityPerson:
+	case datasource.EntityContact:
 		// Prefer the canonical full_name the mapping assembled (OVA-MAP-3), so
-		// a search hit's title matches the person-detail full_name; re-derive
+		// a search hit's title matches the contact-detail full_name; re-derive
 		// only for a pre-mapping mirror row that carries no full_name.
 		if name := strings.TrimSpace(fieldString(fields, "full_name")); name != "" {
 			return name
 		}
 		name := strings.TrimSpace(strings.TrimSpace(fieldString(fields, "first_name")) + " " + strings.TrimSpace(fieldString(fields, "last_name")))
 		if name == "" {
-			name = overlayPersonEmail(fields)
+			name = overlayContactEmail(fields)
 		}
 		return name
 	case datasource.EntityCompany:

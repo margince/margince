@@ -87,7 +87,7 @@ func (l extensionLedger) Record(ctx context.Context, ch extension.Change, ev ext
 
 	// The event type is BUILT here, from the namespace the core derived and the
 	// verb the unit chose. There is no path by which a unit names the left-hand
-	// side, which is why the port needs no check that it did not: `person.created`
+	// side, which is why the port needs no check that it did not: `contact.created`
 	// from a unit is not refused, it is unsayable.
 	return recordExtensionChange(ctx, l.tx, ch, entityID, l.namespace+"."+ev.Verb, ev.Payload)
 }
@@ -95,7 +95,7 @@ func (l extensionLedger) Record(ctx context.Context, ch extension.Change, ev ext
 // ownTable refuses a ledger row against anything outside the invoking unit's
 // namespace.
 //
-// A ledger row is a RECORD's history. One written against `person` would put a
+// A ledger row is a RECORD's history. One written against `contact` would put a
 // line into a core record's trail describing a write the core never made,
 // attributed to a caller who never made it — and the same holds for another
 // unit's table. The check is on the namespace the core derived from the
@@ -193,8 +193,8 @@ func imageOrNil(raw json.RawMessage) any {
 // ledgerFailure reports that a ledger write failed without telling a unit how.
 //
 // The text of a failed audit or outbox write is a relation name, a constraint
-// and a SQL state, written for the people who operate the installation. A unit
-// is other people's code, so what it gets is that the write failed — which is
+// and a SQL state, written for the contacts who operate the installation. A unit
+// is other contacts's code, so what it gets is that the write failed — which is
 // all it can act on, since its own transaction is going back either way. The
 // detail stays where the operators already look.
 func ledgerFailure(ctx context.Context, what string, err error) error {

@@ -5,7 +5,7 @@ package privacy
 
 // The statutory correspondence floor: the boundary below which a destructive
 // retention or erasure action must not touch commercial correspondence. Kept
-// in its own file so both the retention selectors and the person-erase cascade
+// in its own file so both the retention selectors and the contact-erase cascade
 // (erasure.go) share ONE spelling of the floor.
 
 import (
@@ -18,8 +18,8 @@ import (
 // correspondenceFloorPredicate is the WHERE fragment that shields commercial
 // correspondence younger than the jurisdiction floor from a destructive
 // action — spelled ONCE, applied by every destructive activity path: the
-// retention selectors (which pass it $3/$4) AND the person-erase cascade
-// (erasure.go, which passes $2/$3). Without that sharing, erasing the person
+// retention selectors (which pass it $3/$4) AND the contact-erase cascade
+// (erasure.go, which passes $2/$3). Without that sharing, erasing the contact
 // a Handelsbrief hangs off would destroy correspondence the nightly evaluator
 // refuses to touch (a GoBD floor bypass). It filters an activity aliased `a`;
 // intervalArg/anchorArg say where the interval and calendar-year-end anchor
@@ -166,7 +166,7 @@ func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 
 // statutoryFloorArgs resolves the strictest compiled-in correspondence floor
 // into the two positional args correspondenceFloorPredicate reads — the ISO
-// 8601 interval and the calendar-year-end anchor flag. The person-erase
+// 8601 interval and the calendar-year-end anchor flag. The contact-erase
 // cascade (erasure.go) passes these so it shields EXACTLY what the retention
 // activity selectors do, keeping erasure.go free of the jurisdiction seam.
 func statutoryFloorArgs() (interval string, yearEndAnchor bool) {

@@ -10,7 +10,7 @@ package compose
 //
 // A founder's mailbox carries their lawyer and their family alongside their
 // customers. Both were previously answerable only with one of six business
-// kinds, so the engine said `person` and published them — a founder's sister as
+// kinds, so the engine said `contact` and published them — a founder's sister as
 // a workspace contact, and a shareholder negotiation as a colleague's reading.
 
 import (
@@ -44,9 +44,9 @@ func TestAnAdvisorVerdictMakesTheRecordAndKeepsItTheOwnersAlone(t *testing.T) {
 	}
 	// The record IS made. Withholding it would lose the owner their own contact.
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'k.bauer@kanzlei.example'`); n != 1 {
-		t.Fatalf("%d persons for an advisor verdict, want 1 — the owner keeps their own contact", n)
+		t.Fatalf("%d contacts for an advisor verdict, want 1 — the owner keeps their own contact", n)
 	}
 	// And it stays theirs. This is the whole point of the kind: publishing the
 	// record announces to every colleague that the founder has a lawyer.
@@ -76,9 +76,9 @@ func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
 	// No contact, at any visibility. A family member is not a counterparty of
 	// the business and there is nothing here for the CRM to hold.
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 's.renner@webmail.example'`); n != 0 {
-		t.Fatalf("%d persons for a personal verdict, want 0", n)
+		t.Fatalf("%d contacts for a personal verdict, want 0", n)
 	}
 	// The domain is NOT marked company-refused. A refusal is a statement about
 	// a business, and a consumer mail host is not one — nor is the private
@@ -97,15 +97,15 @@ func TestAPersonalVerdictMakesNoRecordAtAll(t *testing.T) {
 	}
 }
 
-// visibilityIn answers how a person record is scoped. It fails when there is no
-// such person, so a test that meant to find one cannot pass on an empty string.
+// visibilityIn answers how a contact record is scoped. It fails when there is no
+// such contact, so a test that meant to find one cannot pass on an empty string.
 func visibilityIn(t *testing.T, e *integration.Env, email string) string {
 	t.Helper()
 	var visibility string
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			SELECT p.visibility FROM person p
-			  JOIN person_email pe ON pe.person_id = p.id
+			SELECT p.visibility FROM contact p
+			  JOIN contact_email pe ON pe.contact_id = p.id
 			 WHERE pe.email = $1 AND p.archived_at IS NULL`, email).Scan(&visibility)
 	})
 	if err != nil {

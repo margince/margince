@@ -97,7 +97,7 @@ export const NotYoursToChange: Story = {
 
 // The server is the one that judges an image: the picker filters on media type
 // and says nothing about whether the bytes behind it decode. This frame is that
-// refusal, rendered where the person is standing — under the slot they used,
+// refusal, rendered where the contact is standing — under the slot they used,
 // and not under the other one.
 export const TheServerRefusesTheImage: Story = {
   args: { profile: WITHOUT_MARK, canEdit: true },

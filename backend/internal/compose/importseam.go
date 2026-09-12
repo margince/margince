@@ -9,7 +9,7 @@ package compose
 // It delegates rather than reimplementing, and that is the whole design. The
 // dry run is the only review a migrate-in flow gets, so two code paths that
 // both "validate a mapping" would be two chances for them to disagree about
-// what an import is going to do — and the one a person read would not be the
+// what an import is going to do — and the one a contact read would not be the
 // one that ran.
 //
 // It holds the Server by pointer rather than copying importHandlers, because

@@ -97,7 +97,7 @@ const restore = { version: 7, onRestored: () => {} };
 describe("a reversal and the change it reversed, as one row", () => {
   it("collapses the pair by default, showing neither entry's diff", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
     expect(
       await screen.findByText("Sam Okafor's change, undone by Tin Nguyen"),
@@ -114,7 +114,7 @@ describe("a reversal and the change it reversed, as one row", () => {
 
   it("carries no action of its own while collapsed", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
     await screen.findByText("Sam Okafor's change, undone by Tin Nguyen");
 
     // One control, and it opens the pair. Two changes with opposite intents
@@ -127,7 +127,7 @@ describe("a reversal and the change it reversed, as one row", () => {
   it("announces the disclosure and toggles it", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
     const trigger = await screen.findByRole("button", {
       name: /Show both changes/,
     });
@@ -150,7 +150,7 @@ describe("a reversal and the change it reversed, as one row", () => {
   it("shows both rows whole when opened, each with its own actor and time", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
     await user.click(
       await screen.findByRole("button", { name: /Show both changes/ }),
     );
@@ -181,7 +181,7 @@ describe("a reversal and the change it reversed, as one row", () => {
   it("offers Redo on the reversal and refuses the row it reversed", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
     await user.click(
       await screen.findByRole("button", { name: /Show both changes/ }),
     );
@@ -211,7 +211,7 @@ describe("a pair that only partly went back", () => {
 
   it("says partly undone and shows the residual on its face", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal, partial]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
     expect(
       await screen.findByText(
@@ -230,7 +230,7 @@ describe("a pair that only partly went back", () => {
   });
 });
 
-describe("one person correcting themselves", () => {
+describe("one contact correcting themselves", () => {
   it("does not name them twice", async () => {
     const ownReversal = {
       ...tinsReversal,
@@ -239,7 +239,7 @@ describe("one person correcting themselves", () => {
       summary: "Sam Okafor restored the record",
     };
     vi.stubGlobal("fetch", servingOnePage([ownReversal, samsChange]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
     expect(
       await screen.findByText("Sam Okafor undid their own change"),
@@ -253,7 +253,7 @@ describe("one person correcting themselves", () => {
 describe("a reversal whose partner is not on the page", () => {
   it("stands alone, saying only what it can prove", async () => {
     vi.stubGlobal("fetch", servingOnePage([tinsReversal]));
-    render(<RecordHistory kind="person" id="p1" restore={restore} />);
+    render(<RecordHistory kind="contact" id="p1" restore={restore} />);
 
     expect(await screen.findByText("undoing an earlier change")).toBeTruthy();
     expect(screen.getByText("Tin Nguyen restored the record")).toBeTruthy();

@@ -28,7 +28,7 @@ version: 1
 workspace:
   name: Demo Workspace
   base_currency: EUR
-  # The language AI writes in for the whole team — en, de or vi. Not a person's
+  # The language AI writes in for the whole team — en, de or vi. Not a contact's
   # display language, which each user picks for themselves.
   base_language: en
   timezone: Europe/Berlin
@@ -41,7 +41,7 @@ bootstrap_admin:
   # repo root the api is launched from.
   #
   # This is the OPERATOR's password, and the admin it creates reaches nothing
-  # but the change-password route until the person using the account replaces
+  # but the change-password route until the colleague using the account replaces
   # it. `make seed-dev` performs that first login and chooses the password the
   # docs name — so the value here is spent once and never signed in with again.
   #

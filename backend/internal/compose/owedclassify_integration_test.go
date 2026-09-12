@@ -59,16 +59,16 @@ func (b *owedBrainStub) Complete(_ context.Context, req model.Request) (model.Re
 	return model.Response{Text: string(payload)}, nil
 }
 
-// seedWaitingMail writes one unanswered inbound message linked to a person, so
+// seedWaitingMail writes one unanswered inbound message linked to a contact, so
 // the waiting query — which is this pass's backlog — returns it.
 func seedWaitingMail(t *testing.T, e *integration.Env, subject string) ids.UUID {
 	t.Helper()
 	activity := ids.NewV7()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, source, captured_by)
-			VALUES ($1, 'Buyer Person', 'seed', 'system')`, person); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Buyer Contact', 'seed', 'system')`, contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
@@ -83,8 +83,8 @@ func seedWaitingMail(t *testing.T, e *integration.Env, subject string) ids.UUID 
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-			VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activity, person)
+			INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+			VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activity, contact)
 		return err
 	})
 	if err != nil {

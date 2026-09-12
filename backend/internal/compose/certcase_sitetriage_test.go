@@ -49,7 +49,7 @@ func TestSiteTriageCaseEvaluateSeparatesARefusedReplyFromAWrongOne(t *testing.T)
 		want   string
 	}{
 		"the expected class": {`{"kind":"company","confidence":0.9,"reason":"sells robots"}`, aitasks.OutcomeAccepted},
-		"a different class":  {`{"kind":"personal","confidence":0.9,"reason":"one person"}`, aitasks.OutcomeWrongAnswer},
+		"a different class":  {`{"kind":"personal","confidence":0.9,"reason":"one contact"}`, aitasks.OutcomeWrongAnswer},
 		"unparseable":        {`not json`, aitasks.OutcomeInvalid},
 		// The gate rewrites these to `unclear`. Reporting them as a WRONG
 		// ANSWER would blame the model for a reply it never got to give, and a

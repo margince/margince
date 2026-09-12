@@ -5,7 +5,7 @@ package meetingbrief
 
 // The read. There is nothing else in this package that touches storage, because
 // the brief is never stored — see doc.go for why this one has no cache when its
-// personbrief sibling does.
+// contactbrief sibling does.
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
-	"github.com/margince/margince/backend/internal/compose/person360"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -38,21 +38,21 @@ type (
 	Evidence = claims.Evidence
 )
 
-// Assembler reads a person exactly as their reader would see them. Injected
+// Assembler reads a contact exactly as their reader would see them. Injected
 // rather than imported so this package composes one seam instead of
 // re-deriving a dozen gated reads that could disagree with the page's own.
 type Assembler interface {
-	AssembleScoped(ctx context.Context, personID ids.PersonID, opts person360.AssembleOptions) (crmcontracts.Person360, error)
+	AssembleScoped(ctx context.Context, contactID ids.ContactID, opts contact360.AssembleOptions) (crmcontracts.Contact360, error)
 }
 
-// ClaimReader reads one person's live conversation claims inside a caller's
-// transaction. It is the people store's own read, injected because a module is
+// ClaimReader reads one contact's live conversation claims inside a caller's
+// transaction. It is the contacts store's own read, injected because a module is
 // never imported across a compose seam by another module.
 type ClaimReader interface {
-	ClaimsForPerson(ctx context.Context, tx pgx.Tx, personID ids.PersonID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error)
+	ClaimsForContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, within *ids.ProjectID, limit int) ([]crmcontracts.ConversationClaim, error)
 }
 
-// briefClaims bounds the commitments the brief reads per attendee. The person
+// briefClaims bounds the commitments the brief reads per attendee. The contact
 // page's commitments card renders them all; this is prep, and past a handful the
 // reader stops reading before the deal sections they came for.
 const briefClaims = 8
@@ -149,10 +149,10 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
-	// The brief names the people in the room and what they promised, so it is
-	// also a person read — and the caller must hold that grant for the same
-	// reason the person page does.
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	// The brief names the contacts in the room and what they promised, so it is
+	// also a contact read — and the caller must hold that grant for the same
+	// reason the contact page does.
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	in, scope, err := s.assembleInput(ctx, activityID, requested)
@@ -281,7 +281,7 @@ func (s *Service) foldRoom(
 //
 // The meeting and its room come from ONE transaction, because they are one
 // consistent answer to "who is in this room". The lead attendee's 360 is
-// assembled after it, in its own transaction, on purpose: it is the person
+// assembled after it, in its own transaction, on purpose: it is the contact
 // page's own read and reusing it whole is what keeps the brief and the page
 // from disagreeing about what this caller may see.
 //
@@ -368,15 +368,15 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
-		// assembling a 360 for a person nobody named would be a read of a
+		// assembling a 360 for a contact nobody named would be a read of a
 		// record this brief has no reason to touch.
 		return in, nil, nil
 	}
 	// Scoped like the claims above: the lead attendee's page read for a
 	// meeting on one engagement must not describe the account's other
 	// engagement as this room's recent history.
-	view, err := s.view.AssembleScoped(ctx, ids.From[ids.PersonKind](room.Attendees[0].PersonID),
-		person360.AssembleOptions{ProjectID: scope})
+	view, err := s.view.AssembleScoped(ctx, ids.From[ids.ContactKind](room.Attendees[0].ContactID),
+		contact360.AssembleOptions{ProjectID: scope})
 	if err != nil {
 		return Input{}, nil, err
 	}
@@ -416,17 +416,17 @@ type scopeChoice struct {
 	project *ids.ProjectID
 }
 
-// claimsPerAttendee reads what each person in the room has promised, asked and
+// claimsPerAttendee reads what each contact in the room has promised, asked and
 // decided. It runs inside the meeting's own transaction so the commitments a
 // reader is shown are the ones that were true when the room was read.
 func (s *Service) claimsPerAttendee(ctx context.Context, tx pgx.Tx, room meeting, scope *ids.ProjectID) (map[ids.UUID][]crmcontracts.ConversationClaim, error) {
 	out := make(map[ids.UUID][]crmcontracts.ConversationClaim, len(room.Attendees))
 	for _, attendee := range room.Attendees {
-		found, err := s.claims.ClaimsForPerson(ctx, tx, ids.From[ids.PersonKind](attendee.PersonID), scope, briefClaims)
+		found, err := s.claims.ClaimsForContact(ctx, tx, ids.From[ids.ContactKind](attendee.ContactID), scope, briefClaims)
 		if err != nil {
 			return nil, err
 		}
-		out[attendee.PersonID] = found
+		out[attendee.ContactID] = found
 	}
 	return out, nil
 }

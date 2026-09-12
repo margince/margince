@@ -88,7 +88,7 @@ Columns:
 - Consequential verbs read 🟢 here because ADR-0055 stopped them staging by
   default: a passport carries the granting human's own seat, grants and row
   scope, so a verb it can spend is one its holder could spend unaided, and a
-  second confirmation from that same person made the surface weaker rather than
+  second confirmation from that same contact made the surface weaker rather than
   safer. The tier a tool RESOLVES to is `agentPolicies` in
   `compose/agentpolicy_gen.go`, generated from `crm.yaml`; this table is
   hand-kept and drifted from it once already (#2432).
@@ -181,7 +181,7 @@ Five rows deserve their footnote:
   fields no human last wrote apply immediately, and the fields a human *did*
   last write are staged for approval and named in the result's
   `staged_approval`, together with the exact replay call that redeems them. A
-  machine does not silently undo a person, and a person does not block the
+  machine does not silently undo a contact, and a contact does not block the
   machine's own fields.
 - **The dynamic pair reads the stage's *semantic*, not its label.** A custom
   pipeline's renamed "Won" column still resolves 🟡, because

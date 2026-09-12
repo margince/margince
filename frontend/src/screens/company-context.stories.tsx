@@ -244,7 +244,7 @@ export const CapabilityDenied: Story = {
 // profile never had), `machine_change` (the site now disagrees with a
 // site_read-sourced field, so no human ever asserted the old value),
 // `human_conflict` (the site disagrees with a HUMAN-sourced field, which
-// only a person may resolve), and `unchanged` (confirms the read actually
+// only a contact may resolve), and `unchanged` (confirms the read actually
 // looked, not just proposed). The pending resolution on the conflict row is
 // what keeps "Apply selected changes" disabled: the honest state for a read
 // nobody has finished reviewing yet.
@@ -290,7 +290,7 @@ const REVIEW_READ: SiteRead = {
       field: "employee_range",
       value: "51-200",
       value_key: "fact/employee_range",
-      evidence_snippet: "Our team of over 120 people spans three ports.",
+      evidence_snippet: "Our team of over 120 contacts spans three ports.",
       evidence_url: "https://nordlicht-logistics.example/about",
       confidence: 0.82,
     },
@@ -332,7 +332,7 @@ const REVIEW_READ: SiteRead = {
       proposed_value: "Nordlicht Logistics GmbH",
     },
   ],
-  people: [],
+  contacts: [],
   legal_entities: [],
   warnings: [],
   draft_version: 1,

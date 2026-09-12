@@ -160,7 +160,7 @@ func (f *routerFixture) row(t *testing.T, task ai.Task) routerRow {
 	return got
 }
 
-// A task no carrier owns still reaches the rail, attributed to the person whose
+// A task no carrier owns still reaches the rail, attributed to the contact whose
 // request made the call, settled the moment it appears — and carrying no lease,
 // because it never claimed to be running.
 func TestARouterReportedTaskReachesTheProjection(t *testing.T) {

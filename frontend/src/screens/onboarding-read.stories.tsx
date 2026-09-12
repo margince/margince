@@ -75,7 +75,7 @@ const reading = {
   ],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 2,
   proposal_hash: "proposal-2",

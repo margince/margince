@@ -86,7 +86,7 @@ func transformMsToSeconds(v any) (any, error) {
 	return ms / 1000, nil
 }
 
-// transformFullName assembles the required, always-present person.full_name
+// transformFullName assembles the required, always-present contact.full_name
 // display field (OVA-MAP-3) from a gathered {firstname, lastname, email}
 // property set: firstname + ' ' + lastname trimmed of surrounding
 // whitespace, falling back to the primary email's local part, and only then

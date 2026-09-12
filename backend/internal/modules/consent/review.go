@@ -174,14 +174,14 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 // THE INITIATOR, because it is their message. They pressed send, they were
 // refused, and the row is the record of what happened to them.
 //
-// THE EXCEPTION HOLDER, because they are the person being asked to decide it.
+// THE EXCEPTION HOLDER, because they are the human being asked to decide it.
 // Until this, a reviewer handed a card could not read the refusal behind it:
 // the approve button worked and the thing it was about was a 404. They
 // acknowledged a warning about a message they had never seen, which is the one
 // thing an acknowledgement must not be.
 //
 // NOBODY ELSE. A review names the recipients of somebody's message and the
-// reason each was refused, which is a fact about those people rather than about
+// reason each was refused, which is a fact about those contacts rather than about
 // the sender — so a seat holding neither door sees nothing, and holding an
 // unrelated grant admits nothing.
 //
@@ -189,11 +189,11 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 // the reason every scoped read here does: "forbidden" tells a caller the id
 // exists, which is itself a disclosure about a message they may not see.
 func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error) {
-	// A PERSON. auth.RequireHuman admits connectors, which run with the
+	// A HUMAN. auth.RequireHuman admits connectors, which run with the
 	// granting human's grants — so on the decider's door it would hand one
 	// seat's refused correspondence to anything holding their credentials.
 	// The initiator's own door is bounded by the seat either way.
-	if err := requireAPersonAtTheKeyboard(ctx); err != nil {
+	if err := requireAHumanAtTheKeyboard(ctx); err != nil {
 		return Review{}, err
 	}
 	seat := initiatingSeat(ctx)
@@ -203,7 +203,7 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 	// time either changed.
 	//
 	// READ, not create. The two verbs on this object are different authorities:
-	// create is who may act against the engine's answer about a person, read is
+	// create is who may act against the engine's answer about a contact, read is
 	// who may SEE the queue of refusals. An installation can hand somebody the
 	// reviewer's view without thereby letting them override anything, and
 	// gating a read on the write grant would take that choice away.
@@ -404,13 +404,13 @@ func (e *SendRefusedError) Unwrap() error { return e.Cause }
 // The reference travels in the message instead, which is where a human reads
 // it and where the MCP surface renders it too.
 
-// ReviewForInitiator reads one review back for the person who pressed send, and
+// ReviewForInitiator reads one review back for the colleague who pressed send, and
 // for nobody else.
 //
 // NARROWER THAN ReviewForReader ON PURPOSE. Reading a review is something a
 // decider must be able to do — they are being asked about it. ROUTING one is
 // not: a seat that could route anybody's review would be raising cards about
-// other people's correspondence, and an exception holder can already direct the
+// other colleagues' correspondence, and an exception holder can already direct the
 // send themselves rather than asking somebody to.
 //
 // So the two doors stay separate, and the narrow one is what routing uses.
@@ -468,7 +468,7 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 // What a reference adds is orthogonal to that: the status and the code are
 // unchanged, and the id appears beside them where a machine can read it. The
 // tool surface is why — an agent handed a sentence can do nothing, and the same
-// refusal naming its review can hand the question to a person.
+// refusal naming its review can hand the question to a human.
 func (e *SendRefusedError) FaultReference() map[string]any {
 	if e.ReviewID.IsZero() {
 		return nil
@@ -484,7 +484,7 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 		// nothing.
 		//
 		// An empty list is the honest answer for a caller with nothing to do
-		// but stop and report: the reference still travels, and a person
+		// but stop and report: the reference still travels, and a human
 		// reading the agent's transcript can pick the review up.
 		"available_actions": e.Actions,
 	}

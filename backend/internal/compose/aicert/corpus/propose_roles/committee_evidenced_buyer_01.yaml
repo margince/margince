@@ -9,7 +9,7 @@ fixture:
     # The contact whose OWN sentence states what they do on the deal. This is
     # the whole of the site's positive case: a role read from what somebody
     # wrote, not from what they are called.
-    - PersonID: p-buyer
+    - ContactID: p-buyer
       FullName: "Ute Sommer"
       Title: "Chief Financial Officer"
       Messages:
@@ -21,7 +21,7 @@ fixture:
     # A contact who talks about scheduling and nothing else. Their title says
     # nothing the model may use, and their words carry no role, so the correct
     # reading of them is silence.
-    - PersonID: p-scheduler
+    - ContactID: p-scheduler
       FullName: "Jan Roth"
       Title: "Head of Operations"
       Messages:
@@ -32,7 +32,7 @@ fixture:
             from Hamburg along.
 expect:
   outcome: accepted
-  # A person-to-role map. The scheduler is deliberately absent: a title as
+  # A contact-to-role map. The scheduler is deliberately absent: a title as
   # senior as Head of Operations is exactly the bait this site must not take,
   # and an entry for them would certify the inference the contract forbids.
   answer:

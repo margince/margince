@@ -140,7 +140,7 @@ function reassertKind(held: RecordGrant, next: DraftFields): ReassertKind {
 }
 
 const RECORD_TYPES: readonly RecordType[] = [
-  "person",
+  "contact",
   "company",
   "deal",
   "lead",
@@ -152,7 +152,7 @@ function isRecordType(value: string): value is RecordType {
 }
 
 // The per-screen "Share" affordance, extracted from four verbatim copies that
-// lived inline in the person/company/deal/lead 360 action clusters
+// lived inline in the contact/company/deal/lead 360 action clusters
 // (mirrors EditAction/ArchiveAction — a thin prop component owning its label
 // and its navigation, nothing else). recordType is the narrow union, so a
 // screen can't wire a share link to a record kind the route can't resolve.
@@ -253,9 +253,9 @@ export function ShareScreen({
   return <ShareScreenBody recordType={recordType} recordId={recordId} />;
 }
 
-// A person-vs-team affordance for every subject this screen names. The picker
+// A contact-vs-team affordance for every subject this screen names. The picker
 // rows and the who-has-access list otherwise show a bare name with no cue to
-// its kind, so a Lucide glyph carries it — a single silhouette for a person, a
+// its kind, so a Lucide glyph carries it — a single silhouette for a contact, a
 // group for a team — labelled for assistive tech (the glyphs alone aren't).
 function SubjectKindIcon({
   kind,
@@ -472,7 +472,7 @@ function ShareScreenBody({
 
   const roster: RosterSubject[] = useMemo(() => {
     // Agent seats carry is_agent (spec §2.1) precisely so the share picker
-    // excludes them — a record is shared with people/teams, never an agent.
+    // excludes them — a record is shared with contacts/teams, never an agent.
     const users = ((usersQuery.data ?? []) as User[])
       .filter((u) => !u.is_agent)
       .map(
@@ -915,7 +915,7 @@ function ShareScreenBody({
       </ConfirmModal>
 
       {/* Mounted only while a downgrade is waiting, because its copy names the
-          person and the two levels — a dialog kept mounted with nothing to ask
+          contact and the two levels — a dialog kept mounted with nothing to ask
           about would have to word that question about nobody. */}
       {downgrade && (
         <ConfirmModal

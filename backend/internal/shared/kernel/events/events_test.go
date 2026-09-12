@@ -22,7 +22,20 @@ import (
 // coreFamilyStreams is the events.md §4.1 stream set, spelled out rather than
 // derived: these tests exist to catch a change to the stream layout, and an
 // expectation computed from the code under test would move with it.
-var coreFamilyStreams = []string{"gw:events:crm:activity", "gw:events:crm:approval", "gw:events:crm:audit", "gw:events:crm:capture", "gw:events:crm:coldstart", "gw:events:crm:company", "gw:events:crm:deal", "gw:events:crm:identity", "gw:events:crm:lead", "gw:events:crm:overlay", "gw:events:crm:person", "gw:events:crm:voice"}
+var coreFamilyStreams = []string{
+	"gw:events:crm:activity",
+	"gw:events:crm:approval",
+	"gw:events:crm:audit",
+	"gw:events:crm:capture",
+	"gw:events:crm:coldstart",
+	"gw:events:crm:company",
+	"gw:events:crm:contact",
+	"gw:events:crm:deal",
+	"gw:events:crm:identity",
+	"gw:events:crm:lead",
+	"gw:events:crm:overlay",
+	"gw:events:crm:voice",
+}
 
 func TestStreamsMatchSpecList(t *testing.T) {
 	// The families, plus the extension tier's one stream — enumerated here
@@ -111,7 +124,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// and a lent name — and naming the type for one of them would leave the
 		// other with no way to be reported.
 		"completed": true,
-		// The contact answered. It is a verb of its own because nothing a person
+		// The contact answered. It is a verb of its own because nothing a contact
 		// presses produces it: the fact is observed from captured activity.
 		"replied": true,
 		// A rep decided what to do about a waiting message and it left the
@@ -136,7 +149,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		"share_issued":  true,
 		"share_revoked": true,
 		// Somebody recorded that we may not write to a subject. It sits beside
-		// "changed" on the same person stream and must not fold into it: a
+		// "changed" on the same contact stream and must not fold into it: a
 		// suppression outranks a grant and a later re-grant does not erase it,
 		// so a consumer that saw only "changed" would resume mail the subject
 		// asked us to stop. The distinction IS the type.
@@ -166,12 +179,12 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 }
 
 func TestStreamForRoutesFamiliesWithoutOwnStream(t *testing.T) {
-	// consent/retention ride the person family, offer rides deal — the
+	// consent/retention ride the contact family, offer rides deal — the
 	// documented routing for §5 types whose entity segment has no §4.1
 	// stream.
 	for typ, want := range map[string]string{ // #nosec G101 -- event-type→stream routing pins, not credentials
-		"consent.changed":          "gw:events:crm:person",
-		"retention.applied":        "gw:events:crm:person",
+		"consent.changed":          "gw:events:crm:contact",
+		"retention.applied":        "gw:events:crm:contact",
 		"offer.accepted":           "gw:events:crm:deal",
 		"deal.updated":             "gw:events:crm:deal",
 		"signal.detected":          "gw:events:crm:capture",
@@ -199,11 +212,11 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 	// TestNoCoreGroupCarriesTheExtensionStream.
 	all := coreFamilyStreams
 	want := map[string][]string{
-		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:company", "gw:events:crm:deal", "gw:events:crm:lead", "gw:events:crm:person"},
+		"cg:context-graph": {"gw:events:crm:activity", "gw:events:crm:company", "gw:events:crm:contact", "gw:events:crm:deal", "gw:events:crm:lead"},
 		// The interaction-edge projection (ADR-0078): activity events move an
-		// edge, person events (merge, archive, restore) move every edge to
+		// edge, contact events (merge, archive, restore) move every edge to
 		// that contact.
-		"cg:graph-edge": {"gw:events:crm:activity", "gw:events:crm:person"},
+		"cg:graph-edge": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// The audience-change corrector: an activity.updated carrying an
 		// audience narrows the derived signals citing the message and drops
 		// the thread's scan watermark.
@@ -211,12 +224,12 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// The LinkedIn ghost matcher (ADR-0078 §8b): a contact appearing is a
 		// chance to attach a ghost, and so is an account appearing — employer
 		// resolution is what most unmatched ghosts are waiting on.
-		"cg:linkedin-match": {"gw:events:crm:company", "gw:events:crm:person"},
-		// The captured-cohort repair: a person's earlier mail is linked when the
-		// person appears or gains an address. Its own group so a slow enrichment
+		"cg:linkedin-match": {"gw:events:crm:company", "gw:events:crm:contact"},
+		// The captured-cohort repair: a contact's earlier mail is linked when the
+		// contact appears or gains an address. Its own group so a slow enrichment
 		// cannot delay a record becoming complete.
-		"cg:cohort-promote":     {"gw:events:crm:person"},
-		"cg:person-auto-enrich": {"gw:events:crm:person"},
+		"cg:cohort-promote":      {"gw:events:crm:contact"},
+		"cg:contact-auto-enrich": {"gw:events:crm:contact"},
 		// The prompt half of captured-company auto-enrich: an
 		// company appearing or changing queues the workspace's enrich
 		// pass now rather than on the next daily sweep.
@@ -226,12 +239,12 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// reads pages already crawled, this one SPENDS credits, and a
 		// consumer whose retries buy data must not share a cursor with one
 		// whose retries are free.
-		"cg:person-data": {"gw:events:crm:person"},
+		"cg:contact-data": {"gw:events:crm:contact"},
 		// Mail landing queues the signature-enrich pass. Its own group for
-		// cg:person-data's reason: this one spends the customer's token budget,
+		// cg:contact-data's reason: this one spends the customer's token budget,
 		// and a consumer whose retries cost money must not share a cursor with
 		// one whose retries are free.
-		"cg:capture-enrich": {"gw:events:crm:activity", "gw:events:crm:person"},
+		"cg:capture-enrich": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// A card attached to captured mail imports itself. Its own group beside
 		// the one above: that one needs a model and this one only parses, so
 		// they run in different deployments and must not share a cursor.
@@ -248,13 +261,13 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// behind an enrichment backlog leaves every introduction reading as
 		// unanswered, which to the rep who asked looks like a refusal.
 		//
-		// BOTH streams. The activity stream is the reply arriving; the person
+		// BOTH streams. The activity stream is the reply arriving; the contact
 		// stream is the repair, because capture promotes an address to a
 		// contact in a transaction AFTER the one that wrote the message — so a
-		// reply captured before its sender was a person names nobody the
+		// reply captured before its sender was a contact names nobody the
 		// activity arm can act on.
-		"cg:intro-advance":    {"gw:events:crm:activity", "gw:events:crm:person"},
-		"cg:notice-case-open": {"gw:events:crm:person"},
+		"cg:intro-advance":    {"gw:events:crm:activity", "gw:events:crm:contact"},
+		"cg:notice-case-open": {"gw:events:crm:contact"},
 		// What happened in a Deal Room, written onto the deal's timeline. Its
 		// own group because a room's traffic is live: a projection backlog must
 		// not delay the note saying the buyer just asked something.
@@ -266,7 +279,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		"cg:overnight-agent": {"gw:events:crm:activity", "gw:events:crm:approval", "gw:events:crm:deal", "gw:events:crm:lead"},
 		"cg:workflows":       all,
 		"cg:capture":         {"gw:events:crm:capture"},
-		"cg:flow-bridge":     {"gw:events:crm:activity", "gw:events:crm:deal", "gw:events:crm:person"},
+		"cg:flow-bridge":     {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal"},
 		"cg:read-model":      all,
 		"cg:audit-stream":    all,
 		"cg:webhooks":        all,
@@ -340,18 +353,18 @@ func TestValidateRejectsTheDishonestEnvelopes(t *testing.T) {
 	valid := func() Envelope {
 		return Envelope{
 			EventID:    ids.NewV7(),
-			Type:       "person.created",
+			Type:       "contact.created",
 			Version:    1,
 			OccurredAt: time.Now().UTC(),
 			Actor:      Actor{Type: "human", ID: "human:x"},
-			Entity:     EntityRef{Type: "person", ID: ids.NewV7()},
+			Entity:     EntityRef{Type: "contact", ID: ids.NewV7()},
 			Trace:      Trace{CorrelationID: ids.NewV7(), AuditLogID: ids.NewV7()},
 		}
 	}
 
 	cases := map[string]func(*Envelope){
 		"zero event_id":       func(e *Envelope) { e.EventID = ids.Nil },
-		"uncataloged type":    func(e *Envelope) { e.Type = "person.exploded" },
+		"uncataloged type":    func(e *Envelope) { e.Type = "contact.exploded" },
 		"wrong version":       func(e *Envelope) { e.Version = 2 },
 		"missing occurred_at": func(e *Envelope) { e.OccurredAt = time.Time{} },
 		"missing actor":       func(e *Envelope) { e.Actor = Actor{} },

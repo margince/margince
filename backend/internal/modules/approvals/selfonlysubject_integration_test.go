@@ -52,7 +52,7 @@ func (e *stagingEnv) secondMember(t *testing.T) ids.UUID {
 }
 
 // nameOnlyCard is the card the ticket's reachable case is about: two members
-// upload a card for two DIFFERENT people who happen to share a name, so the
+// upload a card for two DIFFERENT contacts who happen to share a name, so the
 // logical identity collides while the subjects do not.
 func nameOnlyCard() StageInput {
 	const sharedName = "Jan Mueller"
@@ -162,7 +162,7 @@ func TestOneMembersDeclineDoesNotRefuseAnotherMembersProposal(t *testing.T) {
 	}
 	if !staged {
 		t.Fatal("this member's card was refused by a colleague's decline: the two are different cards for " +
-			"different people who share a name, and this member is never told why theirs never arrived")
+			"different contacts who share a name, and this member is never told why theirs never arrived")
 	}
 	if got := e.subjectOf(t, mine); got == nil || *got != e.rep {
 		t.Errorf("the staged proposal belongs to %v rather than the member who uploaded it", got)

@@ -10,7 +10,7 @@ the machinery — and they are stitched together at the composition root, never 
 ## The authorization engine (`consent`)
 
 `consent` owns two things that are easy to confuse. **Consent** is a subject's answer to a question
-about a purpose — the catalog, each person's current state, an **append-only proof log**.
+about a purpose — the catalog, each contact's current state, an **append-only proof log**.
 **Authorization** is whether one particular message may go, which is a different question and usually
 has a different answer: most legitimate mail is not sent on consent at all, but on a contract, a
 reply the subject started, or a legal duty.
@@ -45,7 +45,7 @@ The engine answers the second. It resolves a **category** from what the send act
   rollout mode softens either.
 - **A restriction is not total, and that is deliberate.** Three categories still reach a restricted
   subject through a registered template — `security_notice`, `privacy_notice` and
-  `optout_confirmation` — because a person is not better off for being unable to hear that their
+  `optout_confirmation` — because a contact is not better off for being unable to hear that their
   account was breached or that their opt-out was recorded. A hard bounce stops even those: no
   template makes a dead address deliverable.
 - **Every category ships enforcing.** `consent.authorization_modes` can move one to `observe` or
@@ -74,12 +74,12 @@ that skips its proof.
 (the `data_subject_request` rows + their HTTP surface); the composition root injects privacy's engines
 into consent's handlers.
 
-- **Art. 17 erasure** (`Eraser.ErasePerson`) — anonymize the normalized rows in place, purge raw
+- **Art. 17 erasure** (`Eraser.EraseContact`) — anonymize the normalized rows in place, purge raw
   capture, embeddings, and attachment bytes, hash the identifiers onto a **suppression list** so
   re-capture can't resurrect the subject, and prove it with a **PII-free audit tombstone** — all in
   **one transaction per record**. Atomicity *is* the guarantee. It refuses a subject under `legal_hold`.
-- **Art. 15 subject access** (`AssembleSAR`) — one *privileged* read (needs the `person.delete` grant
-  **and** an unbounded row scope) gathers everything held about a person — channels, deals, leads,
+- **Art. 15 subject access** (`AssembleSAR`) — one *privileged* read (needs the `contact.delete` grant
+  **and** an unbounded row scope) gathers everything held about a contact — channels, deals, leads,
   activities, attachments, consent + its proof log, raw capture, field origins — into one export
   package, itself audited (`action=export`).
 - **The nightly retention evaluator** (`EvaluateWorkspace`, run as one River job per workspace off
@@ -87,14 +87,14 @@ into consent's handlers.
   workspace's enabled policies and applies the policy's single action to over-age records, **one
   audited transaction per record**, and a tenant whose pass fails fails its own job row.
   `legal_hold` rows are never auto-acted, and an activity is held transitively when any linked
-  person/company/deal is held. A policy whose scope the engine doesn't understand is
+  contact/company/deal is held. A policy whose scope the engine doesn't understand is
   **skipped loudly**, never half-applied.
 
 ## The single-transaction cross-store exception
 
 `privacy` owns exactly one table (`erasure_suppression`) — yet erasure and retention deliberately
-**write tables they do not own**: `person`, `person_email`/`_phone`/`_social`,
-`person_channel_identity`, `lead`, `activity`, `activity_participant`, `graph_interaction_edge`,
+**write tables they do not own**: `contact`, `contact_email`/`_phone`/`_social`,
+`contact_channel_identity`, `lead`, `activity`, `activity_participant`, `graph_interaction_edge`,
 `linkedin_connection`, `comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`,
 `field_provenance`, `preference_token`, `capture_pending_counterparty`, `voice_learning_signal`,
 `ai_call` and `ai_call_payload`. The ratified list is the cross-writer map in
@@ -103,11 +103,11 @@ into consent's handlers.
 Four of those are worth naming for *why* nothing else can reach them. A **channel identity** is the key
 an inbound message would re-bind the subject by, so it must die in the same commit that hashes it onto
 the suppression list. A **LinkedIn ghost** holds the subject's name, employer and address, imported
-from a colleague's export without the subject ever being asked, and is invisible to every person-keyed
-clause because a ghost is not a person row. The **interaction edge** would otherwise be left to a bus
+from a colleague's export without the subject ever being asked, and is invisible to every contact-keyed
+clause because a ghost is not a contact row. The **interaction edge** would otherwise be left to a bus
 consumer, and an Art. 17 obligation discharged by an event is one that fails silently when the bus is
 behind. And a participant's **address arm** exists precisely for a party who never became a record, so
-it survives the `person_email` purge and would keep the erased address re-matchable.
+it survives the `contact_email` purge and would keep the erased address re-matchable.
 
 That is by design: a data-subject
 obligation must reach **every** store that holds the subject, in **one transaction per record** —
@@ -141,7 +141,7 @@ itself the moment they happen rather than re-derived later:
 **The mark is permanent, and moving the record does not remove it.** Relinking an activity away from
 the project, archiving the project, or closing it all leave the classification standing. The evidence
 behind it is frozen too: the project's name is copied at the moment it qualifies, so a later rename
-does not rewrite what the record says. Removing a mark takes a named person giving a written reason,
+does not rewrite what the record says. Removing a mark takes a named contact giving a written reason,
 through the controller's release path. The asymmetry is deliberate — over-retention is an argument to
 have with a supervisory authority, and destruction is irreversible.
 
@@ -152,8 +152,8 @@ have with a supervisory authority, and destruction is irreversible.
 | The authorization engine | `internal/modules/consent/authorize*.go` (`AuthorizeStagingTx`, `AuthorizeTransmit`) |
 | The shared vocabulary | `internal/shared/ports/commsauthz/` (category, basis, phase, verdict, mode) |
 | Per-recipient decisions | `communication_decision`, `communication_basis`, `communication_suppression` |
-| Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `person_consent`, `consent_event`) |
-| Art. 17 erasure | `internal/modules/privacy/erasure.go` (`NewEraser`, `ErasePerson`) |
+| Consent state + proof log | `internal/modules/consent/` (`consent_purpose`, `contact_consent`, `consent_event`) |
+| Art. 17 erasure | `internal/modules/privacy/erasure.go` (`NewEraser`, `EraseContact`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |
 | Retention evaluator | `internal/modules/privacy/retention.go` (`EvaluateWorkspace`), fanned out per workspace by `internal/compose/jobs_privacyretention.go` in `cmd/worker` |
 | Cross-store ratification | `backend/gates/tableownership_test.go` |

@@ -28,20 +28,20 @@ import (
 // decided_by_level is 'subject' as the machinery writes it: an objection and
 // a restriction are legal facts and a bounce is the provider's answer, so
 // none of the three is a user-level decision.
-func seedLiveSuppression(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID, kind, source string) {
+func seedLiveSuppression(ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID, kind, source string) {
 	t.Helper()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO communication_suppression
-		    (person_id, kind, source, captured_by, decided_by_level)
-		VALUES ($1, $2, $3, 'human:x', 'subject')`, person, kind, source); err != nil {
+		    (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, $3, 'human:x', 'subject')`, contact, kind, source); err != nil {
 		t.Fatalf("recording the %s: %v", kind, err)
 	}
 }
 
-// suppress records one live suppression against the env's person.
+// suppress records one live suppression against the env's contact.
 func (e *resolveEnv) suppress(t *testing.T, kind string) {
 	t.Helper()
-	seedLiveSuppression(e.ctx, t, e.owner, e.person, kind, "test")
+	seedLiveSuppression(e.ctx, t, e.owner, e.contact, kind, "test")
 }
 
 // AN ART. 21 OBJECTION IS ABOUT MARKETING, AND BINDS MARKETING.
@@ -66,7 +66,7 @@ func TestAMarketingObjectionStopsMarketing(t *testing.T) {
 //
 // This is the defect the split exists for: the objection was applied before the
 // category was known, so an Art. 21 objection to marketing refused the invoice
-// the same person is owed. An objection to direct marketing says nothing about
+// the same contact is owed. An objection to direct marketing says nothing about
 // a message the law requires us to send.
 func TestAMarketingObjectionDoesNotStopAReply(t *testing.T) {
 	e := setupResolve(t)
@@ -125,8 +125,8 @@ func TestAHardBounceStopsEvenASubjectServingMessage(t *testing.T) {
 // subject_request is the ONLY kind a seat may write, so it is the kind a real
 // installation actually holds. An earlier version of the rules folded it into
 // the statutory restriction and let the five subject-serving categories through
-// — and POST /people/{id}/consent/confirm-request mails record_confirmation
-// with no further consent question, so the person who asked us to stop received
+// — and POST /contacts/{id}/consent/confirm-request mails record_confirmation
+// with no further consent question, so the contact who asked us to stop received
 // an invitation to review their record.
 func TestSomebodyWhoAskedUsToStopIsNotSentARecordConfirmation(t *testing.T) {
 	e := setupResolve(t)
@@ -147,7 +147,7 @@ func TestSomebodyWhoAskedUsToStopIsNotSentARecordConfirmation(t *testing.T) {
 //
 // Resolution now runs before the suppression is applied, so the category is
 // known — but a communication_basis row asserts we hold a lawful ground to
-// write to this person, and writing one about a restricted subject is itself
+// write to this contact, and writing one about a restricted subject is itself
 // processing, disclosed back to them under Art. 15.
 func TestARestrictedSubjectGetsNoNewBasisRow(t *testing.T) {
 	e := setupResolve(t)
@@ -159,7 +159,7 @@ func TestARestrictedSubjectGetsNoNewBasisRow(t *testing.T) {
 	}
 	var rows int
 	if err := e.owner.QueryRow(e.ctx,
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 0 {
@@ -173,7 +173,7 @@ func TestARestrictedSubjectGetsNoNewBasisRow(t *testing.T) {
 // The reader used to take a single row ordered by a fixed strength, which was
 // sound while every kind refused everything. It stopped being sound when reach
 // became category-dependent: a marketing objection sorts first and binds the
-// LEAST, so a person carrying both an objection and a hard bounce had the
+// LEAST, so a contact carrying both an objection and a hard bounce had the
 // bounce masked and their invoice sent to a dead mailbox.
 func TestAnObjectionDoesNotMaskAHardBounce(t *testing.T) {
 	e := setupResolve(t)
@@ -197,7 +197,7 @@ func TestAnObjectionDoesNotMaskAHardBounce(t *testing.T) {
 // A WITHDRAWAL STOPS A THREAD-EVIDENCED SEND.
 //
 // The evidence arms allow on the record's own ground and never read
-// person_consent — that is what makes a reply to a thread the subject started
+// contact_consent — that is what makes a reply to a thread the subject started
 // work without a consent row. But a subject who presses one-click unsubscribe
 // writes a WITHDRAWAL, not a suppression row, so liveSuppression is blind to it
 // and the thread arm would allow the very message they just stopped.
@@ -208,9 +208,9 @@ func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
 
 	// They wrote to us, then took their permission back.
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
+		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
 		SELECT $1, id, 'withdrawn', 'consent', now(), 'preference_centre'
-		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.person); err != nil {
+		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.contact); err != nil {
 		t.Fatalf("recording the withdrawal: %v", err)
 	}
 
@@ -219,26 +219,26 @@ func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
 	})
 	if d.Verdict == commsauthz.VerdictAllow {
 		t.Fatalf("verdict = allow (%s, resolved %s): they took their permission back and the "+
-			"thread arm sent anyway — the evidence arms never read person_consent",
+			"thread arm sent anyway — the evidence arms never read contact_consent",
 			d.ReasonCode, d.Resolved)
 	}
 }
 
-// ARCHIVING A PURPOSE DOES NOT REACTIVATE THE PEOPLE WHO STOPPED IT.
+// ARCHIVING A PURPOSE DOES NOT REACTIVATE THE CONTACTS WHO STOPPED IT.
 //
 // A withdrawal is a thing the subject did; archiving the purpose is a thing the
 // installation did. If the withdrawal read skipped archived purposes, retiring
 // one would silently make everybody who had unsubscribed from it contactable
-// again — on the evidence arms, which never read person_consent otherwise.
+// again — on the evidence arms, which never read contact_consent otherwise.
 func TestArchivingAPurposeKeepsItsWithdrawals(t *testing.T) {
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	anchor := e.inboundFrom(t, "thread-archived", e.address, time.Now().Add(-24*time.Hour))
 
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
+		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
 		SELECT $1, id, 'withdrawn', 'consent', now(), 'preference_centre'
-		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.person); err != nil {
+		  FROM consent_purpose WHERE key = 'business_correspondence'`, e.contact); err != nil {
 		t.Fatalf("recording the withdrawal: %v", err)
 	}
 	if _, err := e.owner.Exec(e.ctx,

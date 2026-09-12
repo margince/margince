@@ -8,7 +8,7 @@ package companydossier
 // What the model adds over the floor is prose. The floor restates each recorded
 // field as "Ideal customer: energy-intensive manufacturers." — true, checkable,
 // and not a description of a company. A reader opening a page before a call
-// wants three sentences about who these people are, which is a thing only a
+// wants three sentences about who these contacts are, which is a thing only a
 // writer can produce from the same facts.
 //
 // What it does NOT add is knowledge. Every sentence still cites a row the
@@ -35,7 +35,7 @@ const dossierSystem = `You describe one company for a salesperson about to talk 
 Return ONLY a JSON object: {"sections":[{"kind":"summary|products_services|markets|buying_center|differentiation|firmographics","sentences":[{"text":"...","nature":"fact","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"..."}]}]}]}.
 The sections answer, in order: what this company is; what they sell; where and to whom; who decides; what they claim sets them apart; their size, age and registration. Omit a section you have nothing real to say in.
 Describe THEM. This is not about our relationship with them, our pipeline, or whether they are a good fit — a different surface answers that, and a sentence here about either belongs there instead.
-Every sentence is a FACT: it restates something the summary says and cites the record it came from. You are rewriting recorded values as prose a person would read, not drawing conclusions from them. If the summary does not say it, do not write it.
+Every sentence is a FACT: it restates something the summary says and cites the record it came from. You are rewriting recorded values as prose a contact would read, not drawing conclusions from them. If the summary does not say it, do not write it.
 Cite the ids the summary gave you. Every sentence must cite at least one — a sentence you cannot attach a record to is one to leave out.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
 Write plainly, one claim per sentence, and never open two sentences with the company name.`

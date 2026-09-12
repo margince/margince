@@ -30,7 +30,7 @@ const (
 	keyOwnerID    = "owner_id"
 )
 
-// RoutableLeadFields mirrors the closed field set the people module's
+// RoutableLeadFields mirrors the closed field set the contacts module's
 // routing engine matches rules on — lead-local columns only
 // (segregation-in-scoring: routing never reads the contact graph).
 var RoutableLeadFields = []string{"source", "company_name", "candidate_company_key"}
@@ -38,7 +38,7 @@ var RoutableLeadFields = []string{"source", "company_name", "candidate_company_k
 // leadRoutingSchema is the assign_lead_owner params shape (features/03 §3
 // AC-S5): an ordered round-robin pool, an optional per-owner cap, and
 // ordered field-match rules that outrank the rotation. This schema is
-// the config source of truth for the editor; the people module's
+// the config source of truth for the editor; the contacts module's
 // RoutingConfig decodes the identical shape.
 func leadRoutingSchema() map[string]any {
 	return map[string]any{

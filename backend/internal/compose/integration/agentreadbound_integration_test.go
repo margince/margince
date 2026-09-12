@@ -77,11 +77,11 @@ func readsCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, pas
 func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 	e, meter := boundedApp(t, "read-bound-rest", 100)
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 2)
+	seedContacts(t, e, 2)
 
 	// Served under the bound first, so the refusal below is the bound firing
 	// rather than the route being closed to agents for some other reason.
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("an agent read under the bound → %d, want 200", status)
 	}
 
@@ -92,7 +92,7 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "GET", "/v1/people", nil, bearer, &problem)
+	status := e.Call(t, "GET", "/v1/contacts", nil, bearer, &problem)
 
 	if status != http.StatusTooManyRequests {
 		t.Errorf("a passport that spent its window → %d, want 429; /v1 is outside the bound", status)
@@ -108,11 +108,11 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 	e, meter := boundedApp(t, "read-bound-human", 100)
 	_, passport := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 2)
+	seedContacts(t, e, 2)
 
 	spendWindow(t, e, meter, passport, 500)
 
-	if status := e.Call(t, "GET", "/v1/people", nil, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, nil, nil); status != http.StatusOK {
 		t.Errorf("a human read → %d after an agent spent its window; humans are outside this bound", status)
 	}
 }
@@ -126,9 +126,9 @@ func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 func TestARestReadChargesTheRecordsItServed(t *testing.T) {
 	e, meter := boundedApp(t, "read-bound-charge", 100)
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 3)
+	seedContacts(t, e, 3)
 
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("an agent read under the bound → %d, want 200", status)
 	}
 
@@ -147,13 +147,13 @@ func TestARestSingleRecordReadChargesOne(t *testing.T) {
 	var created struct {
 		ID ids.UUID `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Single Read",
 	}, nil, &created); status != http.StatusCreated {
-		t.Fatalf("seeding the person → %d", status)
+		t.Fatalf("seeding the contact → %d", status)
 	}
 
-	if status := e.Call(t, "GET", "/v1/people/"+created.ID.String(), nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts/"+created.ID.String(), nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("an agent single read → %d, want 200", status)
 	}
 
@@ -184,7 +184,7 @@ func TestARestSingleRecordReadChargesOne(t *testing.T) {
 func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	e, meter := boundedApp(t, "read-bound-census", 1000)
 	bearer, passport := passportWithID(t, e, "counting agent", "read", "write")
-	seedPeople(t, e, 2)
+	seedContacts(t, e, 2)
 	ctx := asPassport(t, e, passport)
 
 	advance := func(during func()) map[agentvolume.Counter]int {
@@ -202,12 +202,12 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	}
 
 	onRead := advance(func() {
-		if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+		if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 			t.Fatalf("the agent read → %d, want 200", status)
 		}
 	})
 	onWrite := advance(func() {
-		if status := e.Call(t, "POST", "/v1/people", AnyMap{
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 			"full_name": "Charged By The Gate",
 		}, bearer, nil); status != http.StatusCreated {
 			t.Fatalf("the agent write → %d, want 201", status)
@@ -239,18 +239,18 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 func TestRestReadsAloneCanSpendTheWindow(t *testing.T) {
 	e, _ := boundedApp(t, "read-bound-selfspend", 4)
 	bearer, _ := passportWithID(t, e, "reading agent", "read")
-	seedPeople(t, e, 3)
+	seedContacts(t, e, 3)
 
 	// 3 records served takes the window to 3 of 4 — admitted, not yet exceeded.
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("the first agent read → %d, want 200", status)
 	}
 	// Admitted on entry (3 < 4) and serves 3 more, taking it to 6 of 4.
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusOK {
 		t.Fatalf("the second agent read → %d, want 200", status)
 	}
 
-	if status := e.Call(t, "GET", "/v1/people", nil, bearer, nil); status != http.StatusTooManyRequests {
+	if status := e.Call(t, "GET", "/v1/contacts", nil, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("the third agent read → %d, want 429; reading over /v1 never spends the window it is refused on", status)
 	}
 }
@@ -274,15 +274,15 @@ func passportWithID(t *testing.T, e *apptest.AppEnv, label string, scopes ...str
 	return map[string]string{"Authorization": "Bearer " + minted.Token}, minted.ID
 }
 
-// seedPeople gives the list something to return, so the admitted read is a real
+// seedContacts gives the list something to return, so the admitted read is a real
 // one rather than an empty page.
-func seedPeople(t *testing.T, e *apptest.AppEnv, n int) {
+func seedContacts(t *testing.T, e *apptest.AppEnv, n int) {
 	t.Helper()
 	for i := range n {
-		if status := e.Call(t, "POST", "/v1/people", AnyMap{
-			"full_name": "Metered Person " + string(rune('A'+i)),
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+			"full_name": "Metered Contact " + string(rune('A'+i)),
 		}, nil, nil); status != http.StatusCreated {
-			t.Fatalf("seeding person %d → %d", i, status)
+			t.Fatalf("seeding contact %d → %d", i, status)
 		}
 	}
 }

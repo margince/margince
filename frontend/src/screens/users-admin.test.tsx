@@ -66,7 +66,7 @@ const ROSTER = {
       roles: [],
     },
     // An agent identity. Bootstrap no longer seeds one, so a fresh installation
-    // shows a people-only roster — but the roster still LISTS such a row where
+    // shows a contacts-only roster — but the roster still LISTS such a row where
     // one exists (an installation that has not run the retirement migration, or
     // a resident runner later), and this screen's agent-specific branches are
     // what that row renders. The fixture keeps it so those branches stay tested.
@@ -284,7 +284,7 @@ describe("UsersAdminCard", () => {
 
     // Inviting IS the admin's, and the card SAYS it is withheld rather than
     // simply dropping the verb: the page opens for every seat, so a roster with
-    // no explanation reads as "this installation cannot add people".
+    // no explanation reads as "this installation cannot add contacts".
     expect(screen.queryByRole("button", { name: /invite a user/i })).toBeNull();
     // Matched on the KEY's text, not on the words "admins only": the string
     // stopped saying that when these became delegatable grants.
@@ -419,7 +419,7 @@ describe("UsersAdminCard", () => {
   // has to find it — but it is not a colleague, and the row has to say so. Each
   // absence below is a control the server refuses anyway, so offering it could
   // only produce a 409 an admin cannot act on.
-  it("marks the agent seat and offers it no control meant for a person", async () => {
+  it("marks the agent seat and offers it no control meant for a colleague", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend([]));
     render(<UsersAdminCard />);
@@ -430,7 +430,7 @@ describe("UsersAdminCard", () => {
     const agent = rowFor("Margince Agent");
     expect(within(agent).getByText("Agent")).toBeTruthy();
     // No role control at all, not a disabled one: the seat's authority comes
-    // from a passport and the person it names, never from a role of its own. The
+    // from a passport and the contact it names, never from a role of its own. The
     // line stands where the picker would be, as the row's ANSWER.
     expect(
       within(agent).queryByRole("combobox", { name: /set role for/i }),
@@ -443,19 +443,19 @@ describe("UsersAdminCard", () => {
     expect(agentVerbs.queryByText(/set-password link/i)).toBeNull();
     expect(agentVerbs.getByText("Deactivate")).toBeTruthy();
 
-    // A person's row is untouched by any of that — and the link's absence above
+    // A contact's row is untouched by any of that — and the link's absence above
     // has to be about the AGENT rather than about an installation that mints no
     // links at all, so the same verb is asserted PRESENT here.
-    const person = rowFor("Nora None");
-    expect(roleSelect(person, "Nora None")).toBeTruthy();
-    expect(within(person).queryByText("Agent")).toBeNull();
+    const contact = rowFor("Nora None");
+    expect(roleSelect(contact, "Nora None")).toBeTruthy();
+    expect(within(contact).queryByText("Agent")).toBeNull();
     expect(
       (await rowMenu(user, "Nora None")).getByText(/set-password link/i),
     ).toBeTruthy();
   });
 
   // Deactivating the seat stays offered — an operator is entitled to that — and
-  // the body written for a person describes sessions and sign-ins that the seat
+  // the body written for a colleague describes sessions and sign-ins that the seat
   // has none of. What the agent body must NOT say is that scheduled extension
   // jobs stop: a tick acts as the job it is and reads no identity, so that
   // warning would talk an operator out of a safe action for a reason that is
@@ -528,7 +528,7 @@ describe("UsersAdminCard", () => {
     );
     await userEvent.type(
       within(dialog).getByPlaceholderText("Full name"),
-      "New Person",
+      "New Contact",
     );
     await userEvent.click(
       within(dialog).getByRole("button", { name: /^invite$/i }),
@@ -541,7 +541,7 @@ describe("UsersAdminCard", () => {
       expect(post).toBeTruthy();
       expect(post?.body).toEqual({
         email: "new@acme.test",
-        display_name: "New Person",
+        display_name: "New Contact",
         role: "rep",
         team_ids: [],
       });

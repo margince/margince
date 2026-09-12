@@ -10,10 +10,10 @@ package compose
 // declared by consent (ReviewRouter) and bound here.
 //
 // WHAT THE CARD CARRIES is deliberately thin: the review's id, the held
-// message's id, the reason and how many people it names. Not the addresses —
+// message's id, the reason and how many contacts it names. Not the addresses —
 // an approvals queue is read by whoever holds the grant, and a card is a worse
 // place for somebody's contact details than the review it points at, which is
-// scoped to the people who may see it.
+// scoped to the colleagues who may see it.
 //
 // WHO ANSWERS IT is the approvals engine's question, and the grant it checks is
 // communication_exception:create — the same one the direct-send door takes. A
@@ -102,19 +102,19 @@ func (r reviewRouter) RouteForDecisionTx(
 // reviewSummary is the line a decider reads in the queue before opening
 // anything. It says what was refused and how widely, and names no recipient.
 func reviewSummary(in consent.ReviewRouteRequest) string {
-	people := "1 recipient"
+	recipients := "1 recipient"
 	if in.Recipients != 1 {
-		people = fmt.Sprintf("%d recipients", in.Recipients)
+		recipients = fmt.Sprintf("%d recipients", in.Recipients)
 	}
 	return fmt.Sprintf("A send was refused for %s (%s) and somebody is asking whether it may go anyway",
-		people, in.ReasonCode)
+		recipients, in.ReasonCode)
 }
 
 // reviewDecisionEffect is what approving the card does: the directed send
 // itself, under the APPROVER's principal.
 //
 // THE APPROVER IS THE DIRECTOR. That is the whole design — the instruction
-// records who decided, and the person who decided is the one who pressed
+// records who decided, and the human who decided is the one who pressed
 // approve, not the rep who asked. An effect that ran under the initiator's
 // identity would put the rep's name on an override they were not entitled to
 // make.
@@ -167,7 +167,7 @@ func reviewDecisionEffect(svc *approvals.Service, directed directedSendService) 
 //
 // Strictly, for heldDraftReleaseEffect's reason: a human may edit a staged
 // payload, and an unknown field would then be recorded as approved and ignored
-// on execution — what the audit says a person approved would not be what
+// on execution — what the audit says a human approved would not be what
 // happened.
 func decodeReviewDecision(raw json.RawMessage) (reviewDecision, error) {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
@@ -227,7 +227,7 @@ func (r reviewRouter) WithdrawCardTx(
 }
 
 // reviewDecisionDeclined is what saying no does: the review goes back to the
-// person who asked.
+// human who asked.
 //
 // NOT resolved, and not left waiting. The message is still held and still
 // refused — what ended is the asking. The rep can route it to somebody else,

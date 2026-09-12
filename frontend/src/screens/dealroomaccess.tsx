@@ -23,7 +23,7 @@ import "./dealroomaccess.css";
 import { SurfaceState } from "../design-system/surfacestate";
 
 // Who may enter the room, and the verbs that change it: invite, issue a new
-// link, change what a person may do, revoke. Every link a rep is handed here
+// link, change what a contact may do, revoke. Every link a rep is handed here
 // is shown ONCE, with Copy — the server never stores it in clear, and dev has
 // no mail relay, so the rep pasting it into a chat is the normal path, not the
 // fallback.
@@ -53,7 +53,7 @@ export function participantsKey(roomId: string) {
   return ["deal-room-participants", roomId] as const;
 }
 
-// Every read of "who sits where" — the room's roster and the person page's
+// Every read of "who sits where" — the room's roster and the contact page's
 // room list — goes stale together when a seat changes.
 export function refreshSeats(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -170,7 +170,7 @@ export function DealRoomAccess({
   );
 }
 
-// What this person has actually done in the room, under the line that says
+// What this contact has actually done in the room, under the line that says
 // whether they have been here. A seat that has taken nothing says nothing:
 // "0 documents" reads as a judgement about the buyer, and the honest state
 // early in a room's life is simply that there is nothing to report yet.

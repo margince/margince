@@ -39,8 +39,8 @@ func noteFixture() IntroNoteFixture {
 // route candidate and the request body factsFromRoute reads.
 func routeFor(t *testing.T, fixture IntroNoteFixture) noteFacts {
 	t.Helper()
-	bucket := crmcontracts.PersonGraphRouteCandidateStrengthBucket(fixture.Band)
-	route := crmcontracts.PersonGraphRouteCandidate{ViaDisplayName: fixture.Colleague}
+	bucket := crmcontracts.ContactGraphRouteCandidateStrengthBucket(fixture.Band)
+	route := crmcontracts.ContactGraphRouteCandidate{ViaDisplayName: fixture.Colleague}
 	if fixture.Band != "" {
 		route.StrengthBucket = &bucket
 	}
@@ -54,8 +54,8 @@ func routeFor(t *testing.T, fixture IntroNoteFixture) noteFacts {
 	if fixture.Value != "" {
 		body.ValueForTarget = &fixture.Value
 	}
-	graph := &crmcontracts.PersonGraph{Nodes: []crmcontracts.PersonGraphNode{{
-		Group: crmcontracts.PersonGraphNodeGroupAnchor,
+	graph := &crmcontracts.ContactGraph{Nodes: []crmcontracts.ContactGraphNode{{
+		Group: crmcontracts.ContactGraphNodeGroupAnchor,
 		Label: fixture.Contact,
 	}}}
 	return factsFromRoute(graph, route, fixture.Requester, body)
@@ -65,7 +65,7 @@ func routeFor(t *testing.T, fixture IntroNoteFixture) noteFacts {
 //
 // This is the test the seam exists to pass. Equality rather than non-emptiness:
 // a seam that swapped the colleague and the contact would fill every field and
-// certify a note addressed to the wrong person.
+// certify a note addressed to the wrong contact.
 func TestAScenarioBecomesTheFactsTheHandlerAssembles(t *testing.T) {
 	t.Parallel()
 	fixture := noteFixture()
@@ -97,7 +97,7 @@ func TestAScenarioBecomesTheFactsTheHandlerAssembles(t *testing.T) {
 	// And the facts are the FIXTURE's, so a seam that agreed with the handler
 	// on values neither took from the scenario would still be caught.
 	if seam.contact != fixture.Contact || seam.colleague != fixture.Colleague {
-		t.Errorf("the facts do not carry the scenario's own people: %+v", seam)
+		t.Errorf("the facts do not carry the scenario's own contacts: %+v", seam)
 	}
 }
 

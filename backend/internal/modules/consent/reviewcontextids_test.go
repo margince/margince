@@ -5,7 +5,7 @@ package consent
 
 // The context endpoint's own obligation: refuse a subject the caller did not
 // send, rather than letting the zero UUID reach the refusal lookup and come
-// back as 404 — which would tell the caller this review does not name a person
+// back as 404 — which would tell the caller this review does not name a contact
 // they never named, and send them looking for a review that is right there.
 //
 // Probed HERE rather than in the handler, which is where the guard lives:
@@ -33,7 +33,7 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("an omitted subject_id was accepted; the zero UUID would reach the refusal lookup " +
-			"and answer 404 about a person the caller never named")
+			"and answer 404 about a contact the caller never named")
 	}
 	var validation *httperr.DetailedError
 	if !errors.As(err, &validation) {

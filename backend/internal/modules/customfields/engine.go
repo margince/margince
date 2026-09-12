@@ -62,7 +62,7 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 //   - relationship — same two gaps. Custom fields on edges is deliberately its
 //     own future change, because it opens a question no gate here can answer: a
 //     `relationship` row is EXCLUDED from piiTables today, judged against a
-//     closed set of business facts, and an open-ended cf_* column on a person's
+//     closed set of business facts, and an open-ended cf_* column on a contact's
 //     employment edge would change that premise while Art. 17 erasure and
 //     Art. 15 SAR both stay blind to it.
 //
@@ -75,7 +75,7 @@ var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePick
 // read shapes actually declare the additionalProperties bag a cf_* value
 // travels in.
 var FieldObjects = []string{
-	string(datasource.EntityPerson),
+	string(datasource.EntityContact),
 	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityLead),

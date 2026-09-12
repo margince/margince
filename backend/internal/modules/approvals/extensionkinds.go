@@ -90,7 +90,7 @@ func RegisterExtensionKinds(kinds []ExtensionKind) error {
 	registered := make(map[string]ExtensionKind, len(kinds))
 	tables := make(map[string]string, len(kinds))
 	for _, kind := range kinds {
-		// The COLLISIONS first, then the shape. A unit that named `person` gets
+		// The COLLISIONS first, then the shape. A unit that named `contact` gets
 		// told it collided with a core target rather than that its identifier
 		// is not namespaced — the first sentence is the one that explains what
 		// went wrong, and it is also the only order in which the collision

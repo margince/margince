@@ -3,15 +3,15 @@
 
 package consent
 
-// Telling a machine fetching a link from a person opening it.
+// Telling a machine fetching a link from a human opening it.
 //
 // confirm_token.opened_at is evidence. A grant's demonstrability rests partly
 // on the ask-to-click chain a later reader follows from the row: the mail went
-// out at issued_at, the person opened it at opened_at, the answer landed at
+// out at issued_at, the human opened it at opened_at, the answer landed at
 // consumed_at. That sentence has a named data subject as its subject.
 //
 // Every GET of the confirm page used to stamp it, and most GETs of a link in a
-// mail are not people. Mail security products fetch every link before
+// mail are not humans. Mail security products fetch every link before
 // delivering the message; so do link expanders, preview generators, corporate
 // proxies and the recipient's own mail client generating a thumbnail. Each of
 // those wrote a line saying somebody opened their consent link, frequently at a
@@ -33,7 +33,7 @@ package consent
 // So this narrows the defect rather than closing it, and a later change that
 // wants to close it needs a different signal than a request header.
 //
-// A REQUEST THAT SAYS NOTHING IS COUNTED AS A PERSON, which is the deliberate
+// A REQUEST THAT SAYS NOTHING IS COUNTED AS A HUMAN, which is the deliberate
 // direction: over-recording a fetch as an opening is the defect being fixed,
 // and a fix that swung far enough to suppress real openings would replace one
 // untruth with another.
@@ -58,12 +58,12 @@ import "net/http"
 type FetchKind int
 
 const (
-	// FetchByAPerson is a request that presents as a human navigating to the
+	// FetchByAHuman is a request that presents as a human navigating to the
 	// page: a top-level document navigation, or a request that says nothing
 	// either way. The second half is the lenient direction — see the file
 	// comment.
-	FetchByAPerson FetchKind = iota
-	// FetchByAMachine is a request that SAYS it is not a person opening the
+	FetchByAHuman FetchKind = iota
+	// FetchByAMachine is a request that SAYS it is not a human opening the
 	// page: a prefetch, a preview, a subresource load, a non-navigation.
 	FetchByAMachine
 )
@@ -79,12 +79,12 @@ const (
 )
 
 // WhatFetchedThis reads a request and answers whether it may be recorded as a
-// person opening the page.
+// human opening the page.
 //
-// THE DECISION IS ONE-SIDED. Every arm below turns a person into a machine, and
-// none turns a machine into a person: an empty request stays FetchByAPerson.
+// THE DECISION IS ONE-SIDED. Every arm below turns a human into a machine, and
+// none turns a machine into a human: an empty request stays FetchByAHuman.
 // The failure this exists to end is recording openings nobody made, so the
-// question asked is "does this request DENY being a person opening the page",
+// question asked is "does this request DENY being a human opening the page",
 // not "does it prove it is one" — which no request can.
 func WhatFetchedThis(r *http.Request) FetchKind {
 	// A PREFETCH SAYS SO. The Sec-Purpose header is set by the browser, not by
@@ -104,5 +104,5 @@ func WhatFetchedThis(r *http.Request) FetchKind {
 	// file comment: this endpoint is called by the confirm page's own fetch(),
 	// so a genuine opening arrives as cors/empty and judging those would
 	// suppress every one of them.
-	return FetchByAPerson
+	return FetchByAHuman
 }

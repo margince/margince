@@ -258,7 +258,7 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 // relation.
 //
 // Schema-level CREATE is what the checks above pin, and it is not the same
-// question. The gate's refusal of a unit writing rows into public.person rests
+// question. The gate's refusal of a unit writing rows into public.contact rests
 // entirely on PostgreSQL denying the statement, which in turn rests on the role
 // holding no privilege on that table. A single
 // `GRANT INSERT ON ALL TABLES IN SCHEMA public TO PUBLIC` on the cluster would

@@ -9,7 +9,7 @@
 // by the MERGED contract in the composed lane, so a unit calls its own
 // /ext/<unit>/… route with the same `api.POST` a core screen uses — no
 // wrapper, no cast, and a route the installation does not serve is a type
-// error rather than a 404 discovered by a person.
+// error rather than a 404 discovered by a contact.
 //
 // QueryStates and throwProblem are here for the same reason a unit does not
 // write its own loading spinner: an installation should not be able to tell
@@ -17,7 +17,7 @@
 //
 // The other three are one capability, not three, which is why they arrive
 // together. A unit that catches a failed WRITE has to say what went wrong
-// (problemMessageOf), and has to tell the one failure a person can act on
+// (problemMessageOf), and has to tell the one failure a contact can act on
 // from the ones they cannot — a version skew means somebody else edited the
 // record, and the answer is "reload and try again" rather than an error card.
 // isVersionSkew takes the RFC 7807 body, and the only way to reach that body
@@ -30,7 +30,7 @@ export { api } from "../api/client";
 // under it, and the answer — drop every cached answer belonging to the member
 // who is gone, then reset the shared probe so the auth boundary notices — has
 // an ORDER that is wrong in a way nothing catches. A unit spelling it itself
-// gets a cache that outlives its member, and the next person to sign in inside
+// gets a cache that outlives its member, and the next contact to sign in inside
 // the cache lifetime is served the previous one's data.
 export {
   isVersionSkew,

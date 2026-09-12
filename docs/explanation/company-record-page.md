@@ -59,7 +59,7 @@ blank list. The section names are spelled once
 `sections_omitted` enum and the keys the assembly reasons about, so a rename
 cannot leave the two halves disagreeing:
 
-`people` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
+`contacts` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
 `state_strip` · `health` · `next_steps` · `next_meeting` · `tags` ·
 `list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions`
 
@@ -71,7 +71,7 @@ one the caller may not see.
 Two further rules keep the read from lying by construction:
 
 - **Nested collections are summaries, not paging surfaces** — and they are not
-  all the same shape. The *paged* summaries (people, deals, activities, pending
+  all the same shape. The *paged* summaries (contacts, deals, activities, pending
   approvals, next steps) carry at most 25 rows with `page.has_more`, and
   `page.next_cursor` is always null: page two comes from the endpoint that owns
   that collection (`GET /activities`, `GET /deals`, `GET /relationships`,
@@ -96,7 +96,7 @@ exists to prevent. See [overlay-augmentation.md](overlay-augmentation.md).
 
 The overview's lead card is **the account's work in flight**
 (`frontend/src/screens/companywork.tsx`): one line per open deal, one per live
-project, each carrying at most ONE reason it needs a person — an overdue task,
+project, each carrying at most ONE reason it needs a contact — an overdue task,
 or a commitment they made to us that is still open. The reasons are decorated
 server-side (`compose/company360/workattention.go`) in three set-based queries, and
 rendered through i18n templates over typed fields. Nothing on the card is
@@ -163,7 +163,7 @@ model runtime behind it is [ai-runtime.md](ai-runtime.md).
 
 Both the brief and Ask are **human-only** (`x-agent-access: human-only`,
 `security: [{ cookieAuth: [] }]`, and `auth.RequireHuman` at the service): a
-brief is a reading aid for a person, and an agent reading records through a
+brief is a reading aid for a contact, and an agent reading records through a
 passport has the records themselves.
 
 ## Ask
@@ -477,7 +477,7 @@ The icon is a second pair of columns on the same row (`logo_icon_object_key`,
 from `GET /companies/{id}/logo/icon` on exactly the terms above — same
 re-encode, same headers, same 404 for absent, invisible and non-existent alike.
 Two writers reach it: the cold-start website read, and `uploadCompanyLogoIcon`.
-A person's upload outranks the read, under the same provenance check the wide
+A contact's upload outranks the read, under the same provenance check the wide
 mark's writers take, so this slot has a machine writer to hold off and holds it
 off the same way. Every company but the anchor answers 404 for it.
 
@@ -488,7 +488,7 @@ its logo: the schema.org `logo` its JSON-LD declares, then the `<img>` elements
 it labels as one — in the alt text, the class, the id or the file name. That
 harvest deliberately reads the page body, which the icon harvest refuses to,
 because a lockup lives nowhere else and the label is the evidence; the mark is
-shown to the person reviewing the dossier before any record wears it. It is
+shown to the reader reviewing the dossier before any record wears it. It is
 stored aspect-preserved at the upload path's edge, so both writers of the wide
 slot store the same shape. The **badge** comes from the chain above — the
 apple-touch-icon, the favicons, `/favicon.ico`, the `og:image` last — and only
@@ -568,7 +568,7 @@ recorded inline against each entry so the gate is self-contained on a clean
 checkout.
 
 Both `compose` subpackages otherwise obey the composition-layer charter: they
-coordinate modules (company, person, relationship, deal, activity, tag,
+coordinate modules (company, contact, relationship, deal, activity, tag,
 list, approval, signal) and durably own no business entity. See
 [composition-layer.md](composition-layer.md).
 
@@ -596,8 +596,8 @@ list, approval, signal) and durably own no business entity. See
 | The deterministic floor | `backend/internal/compose/companybrief/deterministic.go` |
 | The prepared questions | `backend/internal/compose/companybrief/ask.go` |
 | Logo resolve (candidates, normalize, store; the cold start's lockup and slot decision) | `backend/internal/compose/{sitelogo,sitelogocandidates,sitelockup}.go` |
-| Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/companylogo.go` |
-| Logo streaming handler | `backend/internal/modules/people/handlers_company.go` |
+| Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/contacts/companylogo.go` |
+| Logo streaming handler | `backend/internal/modules/contacts/handlers_company.go` |
 | Contract | `backend/api/crm.yaml` — `/companies/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,scan,logo}` |
 | Table-ownership ruling | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/screens/companies.tsx` (`CompanyScreen`) |

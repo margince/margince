@@ -120,7 +120,7 @@ var seedModifiedAt = time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // seed lands one record both in the fake incumbent's own write-path store
 // (fake.Adapter.Update/Archive look records up by CANONICAL class, exactly
-// the string datasource.EntityType carries — "person", "deal", …, per
+// the string datasource.EntityType carries — "contact", "deal", …, per
 // fake/adapter.go's own doc on why its write methods are canonical-keyed)
 // and in the real mirror DB via Ingest with the IDENTICAL ModifiedAt, so
 // the provider's incumbent-first drift check (the mirror row's
@@ -185,31 +185,31 @@ func TestOverlayUpdateDealWritesBackAndReturnsTheMirroredRow(t *testing.T) {
 
 // Archive reaches the incumbent for the types it supports: the response is
 // the contract's own 200-with-body (never a bare 204 for a domain row,
-// matching every native ArchivePerson/ArchiveCompany/ArchiveDeal), and
+// matching every native ArchiveContact/ArchiveCompany/ArchiveDeal), and
 // the incumbent — not just the mirror — loses the record.
 //
 // The body must describe the record as it is AFTER the call: the contract
 // defines the archive response as one that "now carries a non-null
 // archived_at", and a body reporting the record as live is a write reported
 // as not having happened.
-func TestOverlayArchivePersonWritesBack(t *testing.T) {
+func TestOverlayArchiveContactWritesBack(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9101", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
-	id := firstListedID(t, e.AppEnv, "/v1/people")
+	e.seed(t, "contact", "9101", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
+	id := firstListedID(t, e.AppEnv, "/v1/contacts")
 
-	var person crmcontracts.Person
-	if status := e.Call(t, "DELETE", "/v1/people/"+id, nil, nil, &person); status != http.StatusOK {
-		t.Fatalf("DELETE /v1/people/%s = %d, want 200 (architecture/11 §8: never a bare 204 for a domain row)", id, status)
+	var contact crmcontracts.Contact
+	if status := e.Call(t, "DELETE", "/v1/contacts/"+id, nil, nil, &contact); status != http.StatusOK {
+		t.Fatalf("DELETE /v1/contacts/%s = %d, want 200 (architecture/11 §8: never a bare 204 for a domain row)", id, status)
 	}
-	if person.FullName != "Ada Overlay" {
-		t.Fatalf("archived person body FullName = %q, want the pre-archive %q", person.FullName, "Ada Overlay")
+	if contact.FullName != "Ada Overlay" {
+		t.Fatalf("archived contact body FullName = %q, want the pre-archive %q", contact.FullName, "Ada Overlay")
 	}
-	if person.ArchivedAt == nil {
-		t.Fatal("archived person body carries archived_at: null — the response claims a record the incumbent just archived is still live")
+	if contact.ArchivedAt == nil {
+		t.Fatal("archived contact body carries archived_at: null — the response claims a record the incumbent just archived is still live")
 	}
 
-	if _, err := e.fake.Get(context.Background(), "person", "9101"); err == nil {
-		t.Fatal("the fake incumbent still holds the archived person — the archive never reached the seam")
+	if _, err := e.fake.Get(context.Background(), "contact", "9101"); err == nil {
+		t.Fatal("the fake incumbent still holds the archived contact — the archive never reached the seam")
 	}
 	// The contract also promises an archived row stays fetchable by id. It is
 	// not, on this path: an incumbent archive stops serving the object, so the
@@ -217,8 +217,8 @@ func TestOverlayArchivePersonWritesBack(t *testing.T) {
 	// — the upstream question is what archive means when the system of record
 	// is an incumbent, and this assertion is what will fail loudly the day
 	// that answer lands.
-	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("GET the archived person = %d, want 404 (the mirror row is purged by the archive itself)", status)
+	if status := e.Call(t, "GET", "/v1/contacts/"+id, nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("GET the archived contact = %d, want 404 (the mirror row is purged by the archive itself)", status)
 	}
 }
 
@@ -233,9 +233,9 @@ func TestOverlayUnsupportedWritesStillRefused(t *testing.T) {
 		integration.AnyMap{"to_stage_id": placeholder}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("advance_deal in overlay mode = %d, want 422 unsupported_by_sor", status)
 	}
-	if status := e.Call(t, "POST", "/v1/people",
+	if status := e.Call(t, "POST", "/v1/contacts",
 		integration.AnyMap{"full_name": "Should Never Land"}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("create person in overlay mode = %d, want 422 unsupported_by_sor", status)
+		t.Fatalf("create contact in overlay mode = %d, want 422 unsupported_by_sor", status)
 	}
 	if status := e.Call(t, "DELETE", "/v1/activities/"+placeholder, nil, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("archive activity in overlay mode = %d, want 422 unsupported_by_sor", status)
@@ -250,15 +250,15 @@ func TestOverlayUnsupportedWritesStillRefused(t *testing.T) {
 		t.Fatalf("disqualify lead in overlay mode = %d, want 422 unsupported_by_sor", status)
 	}
 
-	var personCount int
+	var contactCount int
 	if err := e.Owner.QueryRow(
 		context.Background(),
-		`SELECT count(*) FROM person`,
-	).Scan(&personCount); err != nil {
-		t.Fatalf("counting native person rows: %v", err)
+		`SELECT count(*) FROM contact`,
+	).Scan(&contactCount); err != nil {
+		t.Fatalf("counting native contact rows: %v", err)
 	}
-	if personCount != 0 {
-		t.Fatalf("native person table holds %d rows after a refused create — the guard let it through", personCount)
+	if contactCount != 0 {
+		t.Fatalf("native contact table holds %d rows after a refused create — the guard let it through", contactCount)
 	}
 }
 
@@ -284,17 +284,17 @@ func TestOverlayTagWriteStillWorks(t *testing.T) {
 // on this path.
 func TestOverlayUpdateIgnoresIfMatch(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9102", map[string]any{"first_name": "Grace", "last_name": "Overlay"})
-	id := firstListedID(t, e.AppEnv, "/v1/people")
+	e.seed(t, "contact", "9102", map[string]any{"first_name": "Grace", "last_name": "Overlay"})
+	id := firstListedID(t, e.AppEnv, "/v1/contacts")
 
-	var person crmcontracts.Person
-	status := e.Call(t, "PATCH", "/v1/people/"+id, integration.AnyMap{"first_name": "Grace2"},
-		map[string]string{"If-Match": "999"}, &person)
+	var contact crmcontracts.Contact
+	status := e.Call(t, "PATCH", "/v1/contacts/"+id, integration.AnyMap{"first_name": "Grace2"},
+		map[string]string{"If-Match": "999"}, &contact)
 	if status != http.StatusOK {
 		t.Fatalf("PATCH with a stale If-Match = %d, want 200 (If-Match is not evaluated on the overlay path)", status)
 	}
-	if person.FirstName == nil || *person.FirstName != "Grace2" {
-		t.Fatalf("FirstName = %v, want Grace2 — the update itself must still have applied", person.FirstName)
+	if contact.FirstName == nil || *contact.FirstName != "Grace2" {
+		t.Fatalf("FirstName = %v, want Grace2 — the update itself must still have applied", contact.FirstName)
 	}
 }
 
@@ -309,26 +309,26 @@ func TestOverlayUpdateIgnoresIfMatch(t *testing.T) {
 // overlaywriteshadow.go answers the two separately.
 func TestOverlayArchiveIgnoresACallersIfMatch(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9104", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
-	id := firstListedID(t, e.AppEnv, "/v1/people")
+	e.seed(t, "contact", "9104", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
+	id := firstListedID(t, e.AppEnv, "/v1/contacts")
 
-	var person crmcontracts.Person
-	status := e.Call(t, "DELETE", "/v1/people/"+id, nil,
-		map[string]string{"If-Match": "999"}, &person)
+	var contact crmcontracts.Contact
+	status := e.Call(t, "DELETE", "/v1/contacts/"+id, nil,
+		map[string]string{"If-Match": "999"}, &contact)
 	if status != http.StatusOK {
 		t.Fatalf("DELETE with a stale If-Match = %d, want 200 — a caller's precondition is accepted "+
 			"and discarded on the overlay path, the same answer PATCH gives it, and refusing one verb "+
 			"while ignoring the other tells one client two things about one record", status)
 	}
-	if person.ArchivedAt == nil {
+	if contact.ArchivedAt == nil {
 		t.Error("the archive itself did not apply: the header must be ignored, not the request")
 	}
 }
 
 // The write mapping carries only the fields it declares writable — here,
 // observed at the overlay REST surface's OWN honest limit: owner_id is a
-// valid, contract-writable UpdatePersonRequest field, but overlayWirePerson
-// (compose/overlaywire.go) never wires owner_id onto the Person response in
+// valid, contract-writable UpdateContactRequest field, but overlayWireContact
+// (compose/overlaywire.go) never wires owner_id onto the Contact response in
 // overlay mode AT ALL, write or no write. A patch touching it therefore
 // always answers the SAME (absent) owner on the wire, while a
 // simultaneously-patched, wire-mapped field (first_name) visibly changes —
@@ -340,20 +340,20 @@ func TestOverlayArchiveIgnoresACallersIfMatch(t *testing.T) {
 // package level, not here).
 func TestOverlayUpdateDropsUnmappedFields(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9103", map[string]any{"first_name": "Rosalind", "last_name": "Overlay"})
-	id := firstListedID(t, e.AppEnv, "/v1/people")
+	e.seed(t, "contact", "9103", map[string]any{"first_name": "Rosalind", "last_name": "Overlay"})
+	id := firstListedID(t, e.AppEnv, "/v1/contacts")
 
-	var person crmcontracts.Person
-	status := e.Call(t, "PATCH", "/v1/people/"+id,
-		integration.AnyMap{"first_name": "Rosalind2", "owner_id": ids.NewV7().String()}, nil, &person)
+	var contact crmcontracts.Contact
+	status := e.Call(t, "PATCH", "/v1/contacts/"+id,
+		integration.AnyMap{"first_name": "Rosalind2", "owner_id": ids.NewV7().String()}, nil, &contact)
 	if status != http.StatusOK {
 		t.Fatalf("PATCH with an owner_id field = %d, want 200", status)
 	}
-	if person.FirstName == nil || *person.FirstName != "Rosalind2" {
-		t.Fatalf("FirstName = %v, want Rosalind2 — the mapped field must still change", person.FirstName)
+	if contact.FirstName == nil || *contact.FirstName != "Rosalind2" {
+		t.Fatalf("FirstName = %v, want Rosalind2 — the mapped field must still change", contact.FirstName)
 	}
-	if person.OwnerId != nil {
-		t.Fatalf("OwnerId = %v, want nil — overlay mode never wires owner_id onto the Person response", *person.OwnerId)
+	if contact.OwnerId != nil {
+		t.Fatalf("OwnerId = %v, want nil — overlay mode never wires owner_id onto the Contact response", *contact.OwnerId)
 	}
 }
 
@@ -399,12 +399,12 @@ type overlayArchiveCase struct {
 // silently reading or writing the wrong mirror row. One update and one
 // archive per mirrored type here, each asserting the specific patched
 // field actually changed on the response, closes that gap. Deal-update and
-// person-archive are exercised in more depth by their own dedicated tests
+// contact-archive are exercised in more depth by their own dedicated tests
 // above; they are still included here so the table is one complete,
 // uniform proof per type rather than five ad hoc ones.
 func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	updates := []overlayUpdateCase{
-		{"person", "/v1/people", "9301", map[string]any{"first_name": "Marie"}, integration.AnyMap{"first_name": "Marie2"}, "first_name", "Marie2"},
+		{"contact", "/v1/contacts", "9301", map[string]any{"first_name": "Marie"}, integration.AnyMap{"first_name": "Marie2"}, "first_name", "Marie2"},
 		{"company", "/v1/companies", "9302", map[string]any{"display_name": "Acme Company"}, integration.AnyMap{"display_name": "Acme Company 2"}, "display_name", "Acme Company 2"},
 		{"deal", "/v1/deals", "9303", map[string]any{"name": "Widget Deal"}, integration.AnyMap{"name": "Widget Deal 2"}, "name", "Widget Deal 2"},
 		{"lead", "/v1/leads", "9304", map[string]any{"full_name": "Grace Lead"}, integration.AnyMap{"full_name": "Grace Lead 2"}, "full_name", "Grace Lead 2"},
@@ -415,7 +415,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	// that case seeded.
 	//
 	// The archive loop keeps a fixture of its own, and that is not tidiness:
-	// it seeds a SECOND person and a second company, and firstListedID
+	// it seeds a SECOND contact and a second company, and firstListedID
 	// cannot say which of two records at one path it means.
 	updateEnv := setupOverlayWrite(t)
 	for _, tc := range updates {
@@ -435,7 +435,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	}
 
 	archives := []overlayArchiveCase{
-		{"person", "/v1/people", "9311", map[string]any{"first_name": "Isaac"}, "first_name", "Isaac"},
+		{"contact", "/v1/contacts", "9311", map[string]any{"first_name": "Isaac"}, "first_name", "Isaac"},
 		{"company", "/v1/companies", "9312", map[string]any{"display_name": "Beta Company"}, "display_name", "Beta Company"},
 		{"deal", "/v1/deals", "9313", map[string]any{"name": "Small Deal"}, "name", "Small Deal"},
 	}

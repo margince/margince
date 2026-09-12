@@ -66,7 +66,7 @@ var scrubTombstoneWriters = map[string]bool{
 // comment. Adding it here is a product decision about frozen weekly reviews, not
 // a test fix.
 var scrubbedEntityTypes = map[string]bool{
-	"person":                true,
+	"contact":               true,
 	"lead":                  true,
 	"activity":              true,
 	"attachment":            true,

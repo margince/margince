@@ -19,7 +19,7 @@ type TransitionRecord = components["schemas"]["StageTransitionRecord"];
  * What each transition is allowed to do, and the controls for changing it.
  *
  * SEPARATE from the evidence table above it, deliberately. That table is
- * read-only so a person reads the record before touching the switch; this is
+ * read-only so a reader reads the record before touching the switch; this is
  * where they touch it, once they have. Merging the two would put a control in
  * every row of a table somebody is still reading.
  *
@@ -223,7 +223,7 @@ function SuspendedRule({
   const t = useT();
   const { locale } = useLocale();
   // The READER's zone. A suspension stamped at 23:40 UTC happened on a
-  // different day for half the people who will read this, and a date without a
+  // different day for half the contacts who will read this, and a date without a
   // zone shows one of them the wrong one.
   const zone = viewerZone();
   const [asking, setAsking] = useState(false);

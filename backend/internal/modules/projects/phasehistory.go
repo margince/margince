@@ -57,7 +57,7 @@ func (s *Store) ListProjectPhaseHistoryTx(ctx context.Context, tx pgx.Tx, id ids
 	if err := auth.EnsureVisible(ctx, tx, projectObject, id.UUID); err != nil {
 		return nil, err
 	}
-	// changed_by is a principal id, which names a person only under the human
+	// changed_by is a principal id, which names a human only under the human
 	// namespace — the one spelling of that prefix is principal's, bound here
 	// rather than retyped.
 	var args []any

@@ -19,7 +19,7 @@ describe("what survives a save on a form that stays open", () => {
   it("keeps a field the reader changed while the save was in flight", () => {
     const submitted = { full_name: "Dana Quick", title: "VP Finance" };
     const current = { full_name: "Sam Next", title: "VP Finance" };
-    // The name is the NEXT person's and stays; the title still belongs to the
+    // The name is the NEXT contact's and stays; the title still belongs to the
     // record that just saved and goes.
     expect(keepUnsubmitted(current, submitted, defaults)).toEqual({
       kind: "work",

@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // evaluateEdge answers whether one audited change to a LINK can be reversed.
@@ -111,8 +111,8 @@ func edgeScopeRefusal(err error) (Undoability, bool) {
 // keep one company, so a generic reverse of one is a side door around both rules
 // — including on an unlink, where the honest answer names the kind rather than
 // the un-archive it would also have refused.
-func edgeShapeRefusal(action string, facts people.EdgeFacts) (Undoability, bool) {
-	if facts.Kind == people.ProjectCompanyKind {
+func edgeShapeRefusal(action string, facts contacts.EdgeFacts) (Undoability, bool) {
+	if facts.Kind == contacts.ProjectCompanyKind {
 		return refuse(ReasonNotRestorableByThisPath, facts.Kind), true
 	}
 	if action == edgeActionArchive {

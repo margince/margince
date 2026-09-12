@@ -166,7 +166,7 @@ func (s *Store) PrepareSend(ctx context.Context, origin SendOrigin, in SendEmail
 
 	// Who the recipient sees this is from. Resolved here, beside the signature
 	// and before the transaction, because both answer "who is sending this" and
-	// a message whose header and sign-off named different people would be one
+	// a message whose header and sign-off named different contacts would be one
 	// message telling two stories.
 	fromName, err := s.senderDisplayName(ctx)
 	if err != nil {

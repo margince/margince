@@ -128,7 +128,7 @@ func wireRecordTag(t RecordTag) crmcontracts.RecordTag {
 	}
 	// The assigner rides only when the row records one. An assignment written
 	// before the product kept it has no name to give, and inventing one would
-	// put a person's name on a choice they may not have made.
+	// put a contact's name on a choice they may not have made.
 	if t.AssignedByKind != "" {
 		assigner := crmcontracts.RecordTagAssigner{
 			Kind: crmcontracts.RecordTagAssignerKind(t.AssignedByKind),
@@ -203,7 +203,7 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 		UpdatedAt:   &t.UpdatedAt,
 		ArchivedAt:  t.ArchivedAt,
 		Usage: crmcontracts.TagUsage{
-			People:    usage.People,
+			Contacts:  usage.Contacts,
 			Companies: usage.Companies,
 			Deals:     usage.Deals,
 		},

@@ -24,7 +24,7 @@ import (
 
 type consentEnv struct {
 	*apptest.AppEnv
-	personID   string
+	contactID  string
 	activityID string
 	dealID     string
 	purposes   map[string]string // key -> id
@@ -38,21 +38,21 @@ func setupConsent(t *testing.T) *consentEnv {
 	e := apptest.SetupAppWithOptions(t, compose.WithOperatorMail(discardingMailer{}))
 	apptest.BootstrapWorkspaceSession(t, e, "Consent E2E", "dpo@fable.test", "Admin")
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Consent Subject",
 		"emails":    []AnyMap{{"email": "subject@consent.test"}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	var activity struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -74,7 +74,7 @@ func setupConsent(t *testing.T) *consentEnv {
 		purposes["business_correspondence"] == "" {
 		t.Fatalf("bootstrap did not seed the purpose catalog: %+v", purposeList.Data)
 	}
-	return &consentEnv{AppEnv: e, personID: person.ID, activityID: activity.ID, purposes: purposes}
+	return &consentEnv{AppEnv: e, contactID: contact.ID, activityID: activity.ID, purposes: purposes}
 }
 
 // stakeADeal gives the fixture's subject real transactional evidence: an
@@ -88,7 +88,7 @@ func setupConsent(t *testing.T) *consentEnv {
 func (c *consentEnv) stakeADeal(t *testing.T) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, c.AppEnv)
-	c.dealID = apptest.StakeOnOpenDeal(t, c.AppEnv, "Consent E2E opportunity", stages, c.personID)
+	c.dealID = apptest.StakeOnOpenDeal(t, c.AppEnv, "Consent E2E opportunity", stages, c.contactID)
 	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/relink", AnyMap{
 		"entity_type": "deal", "entity_id": c.dealID,
 	}, nil, nil); status != http.StatusOK {
@@ -146,7 +146,7 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 
 	// Withdrawal re-blocks, and it does so through the objection rule that
 	// overrides every other basis.
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
@@ -195,7 +195,7 @@ func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 
 	var before int
 	if err := c.Owner.QueryRow(ctx,
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`, c.personID).Scan(&before); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`, c.contactID).Scan(&before); err != nil {
 		t.Fatal(err)
 	}
 	if before != 0 {
@@ -209,7 +209,7 @@ func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 	var kind, sourceType, source string
 	if err := c.Owner.QueryRow(ctx,
 		`SELECT kind, source_entity_type, source
-		 FROM consent_qualifying_event WHERE person_id = $1`, c.personID).
+		 FROM consent_qualifying_event WHERE contact_id = $1`, c.contactID).
 		Scan(&kind, &sourceType, &source); err != nil {
 		t.Fatalf("the send was allowed on a derived basis that was never recorded: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 	}
 	var after int
 	if err := c.Owner.QueryRow(ctx,
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`, c.personID).Scan(&after); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`, c.contactID).Scan(&after); err != nil {
 		t.Fatal(err)
 	}
 	if after != 1 {
@@ -249,7 +249,7 @@ func TestTheGuardPreviewRecordsNothing(t *testing.T) {
 			Verdict    string `json:"verdict"`
 		} `json:"entries"`
 	}
-	if status := c.Call(t, "GET", "/v1/people/"+c.personID+"/consent/guard", nil, nil, &guard); status != http.StatusOK {
+	if status := c.Call(t, "GET", "/v1/contacts/"+c.contactID+"/consent/guard", nil, nil, &guard); status != http.StatusOK {
 		t.Fatalf("guard → %d", status)
 	}
 	var sawCorrespondence bool
@@ -267,7 +267,7 @@ func TestTheGuardPreviewRecordsNothing(t *testing.T) {
 
 	var recorded int
 	if err := c.Owner.QueryRow(ctx,
-		`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`, c.personID).Scan(&recorded); err != nil {
+		`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`, c.contactID).Scan(&recorded); err != nil {
 		t.Fatal(err)
 	}
 	if recorded != 0 {
@@ -282,14 +282,14 @@ func TestAnArchivedAddressDoesNotAuthorizeItsFormerHolder(t *testing.T) {
 	c := setupConsent(t)
 	ctx := context.Background()
 
-	// Detach the address the fixture's person holds. Nothing else changes: the
-	// person is still live, and their inbound message still sits on the record.
+	// Detach the address the fixture's contact holds. Nothing else changes: the
+	// contact is still live, and their inbound message still sits on the record.
 	if _, err := c.Owner.Exec(ctx,
-		`UPDATE person_email SET archived_at = now() WHERE person_id = $1`, c.personID); err != nil {
+		`UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`, c.contactID); err != nil {
 		t.Fatal(err)
 	}
 
-	// The address now belongs to nobody, so it resolves to no person and no
+	// The address now belongs to nobody, so it resolves to no contact and no
 	// lead — and default-deny refuses rather than reaching the former holder's
 	// qualifying event.
 	if status, code := c.send(t, "business_correspondence"); status != http.StatusConflict || code != "consent_not_granted" {
@@ -307,7 +307,7 @@ func TestAnObjectionOverridesAQualifyingEvent(t *testing.T) {
 	if status, _ := c.send(t, "business_correspondence"); status != http.StatusAccepted {
 		t.Fatal("the fixture's inbound message should allow correspondence before the objection")
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": c.purposes["business_correspondence"], "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record the objection → %d", status)
@@ -340,7 +340,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
 		"wording": "Yes, you may contact me about this.",
 	}, nil, &problem)
@@ -348,7 +348,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 		t.Fatalf("DOI-less marketing grant → %d, want 422", status)
 	}
 	// A fabricated token proves nothing: only a server-issued one confirms.
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "granted",
 		"wording":             "Yes, you may contact me about this.",
 		"double_opt_in_token": "doi-token-forged",
@@ -365,7 +365,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 
 	// The token is single-use: after a withdrawal the consumed token
 	// cannot resurrect the grant.
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 		"purpose_id": c.purposes["marketing_email"], "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
@@ -392,7 +392,7 @@ func TestConsentDoubleOptInNorm(t *testing.T) {
 // shortcut to shorten this helper with.
 func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
@@ -419,7 +419,7 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 	c := setupConsent(t)
 	grant := func() int {
-		return c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
+		return c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
 			"purpose_id": c.purposes["transactional"], "new_state": "granted",
 			"wording": "Yes, you may contact me about this.",
 		}, nil, nil)
@@ -440,7 +440,7 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 			NewState string `json:"new_state"`
 		} `json:"events"`
 	}
-	if status := c.Call(t, "GET", "/v1/people/"+c.personID+"/consent", nil, nil, &state); status != http.StatusOK {
+	if status := c.Call(t, "GET", "/v1/contacts/"+c.contactID+"/consent", nil, nil, &state); status != http.StatusOK {
 		t.Fatalf("get consent → %d", status)
 	}
 	if len(state.Events) != 1 {
@@ -480,7 +480,7 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 // The assertion is that the request is JUDGED rather than rejected as
 // malformed: a 409 naming a consent code is the engine answering, and it is a
 // different outcome from the 422 the contract used to produce before consent
-// was asked at all. The person here has nothing on file, so the answer is a
+// was asked at all. The contact here has nothing on file, so the answer is a
 // refusal — which is the correct one, and the point is who gave it.
 //
 // This is the case that has to work before `transactional` and
@@ -532,7 +532,7 @@ func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
 	status := c.Call(t, "POST", "/v1/emails", AnyMap{
 		"subject": "Something unrelated", "body": "out of the blue",
 		"to":    []string{"subject@consent.test"},
-		"links": []AnyMap{{"entity_type": "person", "entity_id": c.personID}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": c.contactID}},
 	}, nil, &problem)
 	if status != http.StatusConflict {
 		t.Fatalf("an unevidenced account send with no consent_purpose → %d %q, want 409 — omitting the claim is not evidence",
@@ -552,7 +552,7 @@ func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
 func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
 	c := setupConsent(t)
 
-	// The fixture's person has an inbound on file, so correspondence is
+	// The fixture's contact has an inbound on file, so correspondence is
 	// supported and marketing is not. Two cases with opposite answers, because
 	// a preview that always said "allowed" would pass a one-case test.
 	for _, tc := range []struct {

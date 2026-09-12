@@ -27,7 +27,7 @@ import (
 
 // searchEmailStore is the search store wired the way compose wires it: with
 // the activities reader behind an email hit's summary. A test that built the
-// store bare would prove nothing about the surface a person searches.
+// store bare would prove nothing about the surface a contact searches.
 func searchEmailStore(e *Env) *search.Store {
 	return search.NewStore(e.DB()).WithEmailSummaries(activities.EmailSummariesByIDBatch)
 }
@@ -47,12 +47,12 @@ func hitFor(page search.Page, id ids.UUID) *search.Hit {
 func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Rennsteig renewal terms", "The quote is attached, and it holds until Friday."
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -102,12 +102,12 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Rennsteig severance package", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -170,7 +170,7 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	store := searchEmailStore(e)
 
 	for _, kind := range []string{"call", "note", "task", "meeting"} {
@@ -178,7 +178,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 		body := "what we agreed on the " + kind
 		logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 			Kind: kind, Subject: &subject, Body: &body,
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		})
 		if err != nil {
 			t.Fatalf("log %s: %v", kind, err)
@@ -207,7 +207,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	const mails = 12
 	for i := range mails {
@@ -215,7 +215,7 @@ func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 		body := "line one of message"
 		if _, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 			Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("inbound"),
-			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 		}); err != nil {
 			t.Fatalf("log %d: %v", i, err)
 		}
@@ -248,12 +248,12 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Severance figures", "the agreed figure is confidential"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)

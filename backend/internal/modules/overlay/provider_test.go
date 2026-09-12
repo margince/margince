@@ -36,7 +36,7 @@ func TestProviderUnsupportedVerbs(t *testing.T) {
 	})
 
 	t.Run("Merge", func(t *testing.T) {
-		_, err := p.Merge(ctx, datasource.MergeInput{Type: datasource.EntityPerson})
+		_, err := p.Merge(ctx, datasource.MergeInput{Type: datasource.EntityContact})
 		if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 			t.Fatalf("want ErrUnsupportedBySoR, got %v", err)
 		}
@@ -66,19 +66,19 @@ func TestProviderWriteVerbsObjectGateBeforeTheIncumbent(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:no-grants",
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}},
 	})
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	// Create is not gated on the grant at all: the provider declares the verb
 	// unsupported for every type (SupportsWrite), and a capability the mirror
 	// does not have is refused before any principal is consulted.
-	if _, err := p.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityPerson}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+	if _, err := p.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityContact}); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("Create in overlay: err = %v, want ErrUnsupportedBySoR", err)
 	}
 	if _, err := p.Update(ctx, datasource.UpdateInput{Ref: ref}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("Update without a person update grant: err = %v, want ErrPermissionDenied", err)
+		t.Errorf("Update without a contact update grant: err = %v, want ErrPermissionDenied", err)
 	}
 	if _, err := p.Archive(ctx, ref); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("Archive without a person delete grant: err = %v, want ErrPermissionDenied", err)
+		t.Errorf("Archive without a contact delete grant: err = %v, want ErrPermissionDenied", err)
 	}
 }
 
@@ -92,12 +92,12 @@ func TestProviderWriteWithoutIncumbentResolver(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:granted",
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Update: true, Delete: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Update: true, Delete: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 	_, err := p.Update(ctx, datasource.UpdateInput{
-		Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()},
+		Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()},
 	})
 	if err == nil || errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("Update with no resolver: err = %v, want a clear configuration error", err)
@@ -119,23 +119,23 @@ func TestProviderReadVerbsObjectGateBeforeTheMirror(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:no-grants",
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}},
 	})
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	if _, err := p.Read(ctx, ref); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("Read without a person read grant: err = %v, want ErrPermissionDenied", err)
+		t.Errorf("Read without a contact read grant: err = %v, want ErrPermissionDenied", err)
 	}
 	if _, err := p.Search(ctx, datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson},
+		EntityTypes: []datasource.EntityType{datasource.EntityContact},
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("Search without a person read grant: err = %v, want ErrPermissionDenied", err)
+		t.Errorf("Search without a contact read grant: err = %v, want ErrPermissionDenied", err)
 	}
-	if _, err := p.ListFields(ctx, datasource.EntityPerson); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("ListFields without a person read grant: err = %v, want ErrPermissionDenied", err)
+	if _, err := p.ListFields(ctx, datasource.EntityContact); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("ListFields without a contact read grant: err = %v, want ErrPermissionDenied", err)
 	}
 	// Freshness belongs in this list: a force-fresh answer spends a real
 	// incumbent call against the record, so it is as much a read as the three
 	// above and reaches the provider by the same ungated MCP path.
 	if _, err := p.Freshness(ctx, ref); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("Freshness without a person read grant: err = %v, want ErrPermissionDenied", err)
+		t.Errorf("Freshness without a contact read grant: err = %v, want ErrPermissionDenied", err)
 	}
 }
 
@@ -167,7 +167,7 @@ func TestProviderStageSemanticUnsupported(t *testing.T) {
 // Postgres (RLS + the visibility deny-join).
 func TestProviderReadRequiresAMirrorStore(t *testing.T) {
 	p := NewProvider(nil, nil)
-	_, err := p.Read(context.Background(), datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()})
+	_, err := p.Read(context.Background(), datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()})
 	if err == nil {
 		t.Fatal("want an error, got nil")
 	}
@@ -178,7 +178,7 @@ func TestProviderReadRequiresAMirrorStore(t *testing.T) {
 // are nil — NewProvider(nil, nil) must still answer an error, not crash.
 func TestProviderFreshnessRequiresAMirrorStoreOrReader(t *testing.T) {
 	p := NewProvider(nil, nil)
-	_, err := p.Freshness(context.Background(), datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()})
+	_, err := p.Freshness(context.Background(), datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()})
 	if err == nil {
 		t.Fatal("want an error, got nil")
 	}
@@ -253,7 +253,7 @@ func TestProviderSearchRefusesATypeTheMirrorCannotHold(t *testing.T) {
 	p := NewProvider(&MirrorStore{}, nil)
 
 	_, err := p.Search(context.Background(), datasource.SearchQuery{
-		EntityTypes: []datasource.EntityType{datasource.EntityPerson, datasource.EntityProject},
+		EntityTypes: []datasource.EntityType{datasource.EntityContact, datasource.EntityProject},
 	})
 	var unsupported *datasource.UnsupportedEntityError
 	if !errors.As(err, &unsupported) {
@@ -319,7 +319,7 @@ func sweepCursorFor(t *testing.T, et datasource.EntityType) string {
 // still a token this server minted.
 func TestAResumedSweepSurvivesTheWalkChangingUnderIt(t *testing.T) {
 	all := []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityCompany,
+		datasource.EntityContact, datasource.EntityCompany,
 		datasource.EntityDeal, datasource.EntityLead, datasource.EntityActivity,
 	}
 	for _, probe := range []struct {
@@ -332,12 +332,12 @@ func TestAResumedSweepSurvivesTheWalkChangingUnderIt(t *testing.T) {
 		{"no cursor starts at the beginning", all, "", 0},
 		{
 			"the type was narrowed away — resume PAST it, never before",
-			[]datasource.EntityType{datasource.EntityPerson, datasource.EntityLead},
+			[]datasource.EntityType{datasource.EntityContact, datasource.EntityLead},
 			datasource.EntityDeal, 1,
 		},
 		{
 			"everything past the position was narrowed away — the walk is over",
-			[]datasource.EntityType{datasource.EntityPerson},
+			[]datasource.EntityType{datasource.EntityContact},
 			datasource.EntityLead, 1,
 		},
 	} {
@@ -355,12 +355,12 @@ func TestAResumedSweepSurvivesTheWalkChangingUnderIt(t *testing.T) {
 // twice — a cursor names the type, not which of its appearances.
 func TestASweepWalksEachTypeOnceInMirrorOrder(t *testing.T) {
 	walk, err := searchableTypes([]datasource.EntityType{
-		datasource.EntityDeal, datasource.EntityPerson, datasource.EntityDeal,
+		datasource.EntityDeal, datasource.EntityContact, datasource.EntityDeal,
 	})
 	if err != nil {
 		t.Fatalf("resolving the walk: %v", err)
 	}
-	want := []datasource.EntityType{datasource.EntityPerson, datasource.EntityDeal}
+	want := []datasource.EntityType{datasource.EntityContact, datasource.EntityDeal}
 	if !slices.Equal(walk, want) {
 		t.Errorf("walk = %v, want %v — each type once, in the mirror's own order", walk, want)
 	}
@@ -425,7 +425,7 @@ func TestProviderSearchRefusesAnUngrantedCallerBeforeItsFilters(t *testing.T) {
 // guard, mirroring TestProviderReadRequiresAMirrorStore.
 func TestProviderSearchRequiresAMirrorStore(t *testing.T) {
 	p := NewProvider(nil, nil)
-	_, err := p.Search(context.Background(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}})
+	_, err := p.Search(context.Background(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}})
 	if err == nil {
 		t.Fatal("Search with a nil mirror store: want an error, got nil")
 	}
@@ -438,7 +438,7 @@ func TestProviderListObjectsAndListFieldsRequireAMirrorStore(t *testing.T) {
 	if _, err := p.ListObjects(context.Background()); err == nil {
 		t.Fatal("ListObjects with a nil mirror store: want an error, got nil")
 	}
-	if _, err := p.ListFields(context.Background(), datasource.EntityPerson); err == nil {
+	if _, err := p.ListFields(context.Background(), datasource.EntityContact); err == nil {
 		t.Fatal("ListFields with a nil mirror store: want an error, got nil")
 	}
 }
@@ -492,8 +492,8 @@ func TestCapitalize(t *testing.T) {
 	if got := capitalize(""); got != "" {
 		t.Errorf("capitalize(%q) = %q, want empty", "", got)
 	}
-	if got := capitalize("person"); got != "Person" {
-		t.Errorf("capitalize(%q) = %q, want %q", "person", got, "Person")
+	if got := capitalize("contact"); got != "Contact" {
+		t.Errorf("capitalize(%q) = %q, want %q", "contact", got, "Contact")
 	}
 }
 

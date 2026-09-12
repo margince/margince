@@ -24,33 +24,33 @@ import (
 // purgeProviderPurchases removes the purchased values and detaches the runs.
 //
 // The two halves are treated differently on purpose. A CLAIM is the value
-// itself, so nulling it would leave a row asserting something about a person
+// itself, so nulling it would leave a row asserting something about a contact
 // nobody may now assert anything about — it goes. A RUN is what the
 // installation spent, so it is scrubbed rather than deleted: once it names
 // nobody it is an accounting fact about the installation, not the subject's
 // data (PI-AC-8), and that is what keeps a spend history stable across an
 // erasure.
 //
-// Both statements run over every person row that IS this subject, not just
+// Both statements run over every contact row that IS this subject, not just
 // the one named. An ARCHIVED duplicate legitimately holds the same human's
-// address (uq_person_email_dedupe is partial on archived_at IS NULL), and
+// address (uq_contact_email_dedupe is partial on archived_at IS NULL), and
 // with it their purchased email, mobile number and job history — plus a
 // provider_job_id that would let the provider be re-asked for exactly the
 // answer this erasure destroyed. A live duplicate never reaches here:
 // refuseRivalIdentifierHolders refuses the erasure outright.
 func purgeProviderPurchases(ctx context.Context, tx pgx.Tx, subjects []ids.UUID) error {
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM person_provider_claim WHERE person_id = ANY($1)`, subjects); err != nil {
+		`DELETE FROM contact_provider_claim WHERE contact_id = ANY($1)`, subjects); err != nil {
 		return fmt.Errorf("deleting the subject's purchased claims: %w", err)
 	}
 	// What a purchase FILLED on the record, alongside what it said. These rows
 	// carry the subject's own title and profile URL verbatim — the revert needs
 	// the value to tell a bought one from a colleague's later edit — so they are
-	// subject data and go with the claims. The person row is anonymized in
+	// subject data and go with the claims. The contact row is anonymized in
 	// place rather than deleted, so the foreign key's cascade never fires and
 	// this statement is what removes them.
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM provider_applied_field WHERE person_id = ANY($1)`, subjects); err != nil {
+		`DELETE FROM provider_applied_field WHERE contact_id = ANY($1)`, subjects); err != nil {
 		return fmt.Errorf("deleting what the subject's purchases filled: %w", err)
 	}
 	// The SET clause is storekit's, shared with the per-provider delete-data
@@ -59,27 +59,27 @@ func purgeProviderPurchases(ctx context.Context, tx pgx.Tx, subjects []ids.UUID)
 	// cleaned. The statement stays here so the fitness gates that prove
 	// erasure reaches a table can still see which table this erases.
 	if _, err := tx.Exec(ctx,
-		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE person_id = ANY($1)`,
+		`UPDATE provider_run SET`+storekit.ScrubProviderRunColumns+` WHERE contact_id = ANY($1)`,
 		subjects); err != nil {
 		return fmt.Errorf("scrubbing the runs that bought the subject's data: %w", err)
 	}
 	return nil
 }
 
-// subjectPersonIDs resolves every person row that IS this subject: the one
+// subjectContactIDs resolves every contact row that IS this subject: the one
 // being erased, plus any archived duplicate holding one of their addresses.
-// The identifier-scoped statements elsewhere in the cascade (person_email,
-// the lead wipe) already work this way; anything keyed on person_id alone
-// erases one row of a person who exists as two.
-func subjectPersonIDs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string) ([]ids.UUID, error) {
+// The identifier-scoped statements elsewhere in the cascade (contact_email,
+// the lead wipe) already work this way; anything keyed on contact_id alone
+// erases one row of a contact who exists as two.
+func subjectContactIDs(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT p.id FROM person p
+		SELECT DISTINCT p.id FROM contact p
 		 WHERE p.id = $1
-		    OR EXISTS (SELECT 1 FROM person_email pe
-		                WHERE pe.person_id = p.id AND lower(pe.email) = ANY($2))`,
-		personID, lowercased(emails))
+		    OR EXISTS (SELECT 1 FROM contact_email pe
+		                WHERE pe.contact_id = p.id AND lower(pe.email) = ANY($2))`,
+		contactID, lowercased(emails))
 	if err != nil {
-		return nil, fmt.Errorf("resolving the subject's person rows: %w", err)
+		return nil, fmt.Errorf("resolving the subject's contact rows: %w", err)
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

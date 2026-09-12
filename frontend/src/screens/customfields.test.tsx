@@ -208,7 +208,7 @@ describe("FieldTable", () => {
   it("renders an honest empty state for an object with no fields", () => {
     wrap(
       <FieldTable
-        object="person"
+        object="contact"
         fields={[]}
         canEdit
         meUserId="u1"

@@ -325,7 +325,7 @@ export function CommercialPanel({
   // Draw the FIGURES and the contract block without this card's own header
   // band or its list of deals, for a caller that already lists them. The
   // Company 360 card does: its work section names every open deal with the
-  // reason it needs a person, and repeating them underneath would show each
+  // reason it needs a contact, and repeating them underneath would show each
   // deal twice on one screen.
   //
   // The figures are what does not appear there — what the account has won
@@ -606,8 +606,8 @@ export function NextSteps({
                 {step.linked_deal_id && (
                   <EntityRef kind="deal" id={step.linked_deal_id} />
                 )}
-                {step.linked_person_id && (
-                  <EntityRef kind="person" id={step.linked_person_id} />
+                {step.linked_contact_id && (
+                  <EntityRef kind="contact" id={step.linked_contact_id} />
                 )}
                 {step.assignee_id && (
                   <EntityRef kind="user" id={step.assignee_id} />
@@ -832,7 +832,7 @@ export const ENGAGEMENT_TONE: Partial<
   dormant: "warn",
 };
 
-// A reading the caller's grants withheld. Shared with the person record's
+// A reading the caller's grants withheld. Shared with the contact record's
 // readings row and rail rather than spelled per surface: all three state the
 // same fact about the same reader, and a second spelling is exactly the drift
 // that had these rows drawn by two different components in the first place.
@@ -1045,7 +1045,7 @@ function NextStat({
   //
   // History rather than a meetings tab because a company has none
   // (companytab.ts); the contact record, which does, sends the same card to
-  // meetings (personreadings.tsx). Two records answering one question two ways
+  // meetings (contactreadings.tsx). Two records answering one question two ways
   // is what that would otherwise be.
   //
   // This leaves tasks with no door on the strip. That is the honest trade: a
@@ -1611,15 +1611,15 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
  *
  * The writer names a record when it had the name at hand and leaves it out
  * otherwise; nothing invents one. But an account's own 360 is HOLDING its
- * people and its deals, and printing "contact" beside a reason while the
- * roster three sections down says the person's name is the page failing to
+ * contacts and its deals, and printing "contact" beside a reason while the
+ * roster three sections down says the contact's name is the page failing to
  * read itself. Only records this view actually carries — anything else answers
  * undefined and falls back to the kind.
  */
 export function recordNamesIn(view?: Company360) {
   const names = new Map<string, string>();
-  for (const person of view?.people?.data ?? []) {
-    names.set(`person:${person.person_id}`, person.full_name);
+  for (const contact of view?.contacts?.data ?? []) {
+    names.set(`contact:${contact.contact_id}`, contact.full_name);
   }
   for (const deal of view?.deals?.data ?? []) {
     names.set(`deal:${deal.deal_id}`, deal.name);
@@ -1744,7 +1744,7 @@ export function useSuggestionsBody({
   // The merged advice — the rules' rows and the scan's findings as one list
   // — when the page holds a scan. It replaces the 360's own rows rather than
   // joining them: the server merged, deduplicated and capped once, and a
-  // second list here would be a second answer to "what needs a person".
+  // second list here would be a second answer to "what needs a contact".
   advice?: { findings: Suggestion[]; dropped: number };
   // Which advice this caller draws. Absent, all of it — the advice card. The
   // Tasks tab passes a predicate because it shows the steps and not the moves,

@@ -96,7 +96,7 @@ var baselineDomains = sync.OnceValue(func() map[string]struct{} {
 // looksLikeADomain screens a string literal before the baseline is consulted.
 //
 // Membership alone is not the question: an ADDRESS at a provider names a
-// person, not a list, and `jane@gmail.com` in a fixture is not somebody
+// contact, not a list, and `jane@gmail.com` in a fixture is not somebody
 // re-declaring the list. So the literal has to be a bare domain — a dot, no
 // user part, no path, no space — before it counts.
 func looksLikeADomain(value string) bool {
@@ -258,7 +258,7 @@ var f = []string{"gmail.com", "gmail.com"}`,
 			want: 0,
 		},
 		{
-			name: "addresses rather than domains, which name people not a list",
+			name: "addresses rather than domains, which name contacts not a list",
 			code: `package p
 var f = []string{"jane@gmail.com", "otto@web.de"}`,
 			want: 0,

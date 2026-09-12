@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	collectionsmod "github.com/margince/margince/backend/internal/modules/collections"
-	peoplemod "github.com/margince/margince/backend/internal/modules/people"
+	contactsmod "github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,7 +29,7 @@ import (
 func (f fixture) ownedCompany(t *testing.T, name string, owner ids.UUID) ids.UUID {
 	t.Helper()
 	seat := ids.From[ids.UserKind](owner)
-	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
+	company, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{
 		DisplayName: name, OwnerID: &seat, Source: "manual",
 	})
 	if err != nil {
@@ -39,7 +39,7 @@ func (f fixture) ownedCompany(t *testing.T, name string, owner ids.UUID) ids.UUI
 }
 
 // "Owned by my team" is the form a manager's saved view actually takes, and the
-// engine had only the person half of the dial until now. The team is walked
+// engine had only the contact half of the dial until now. The team is walked
 // through team_membership, so this is the whole membership edge under test and
 // not just a column comparison.
 func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
@@ -79,7 +79,7 @@ func TestATeamFilterSelectsEveryMembersRecords(t *testing.T) {
 func TestAnUnownedRecordIsCoveredByNoTeam(t *testing.T) {
 	f := setupFixture(t)
 	inATeam := f.ownedCompany(t, "Held by Rep1", f.e.Rep1)
-	unowned, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
+	unowned, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{
 		DisplayName: "Nobody's account", Source: "manual",
 	})
 	if err != nil {
@@ -228,7 +228,7 @@ func (f fixture) customerAndSupplier(t *testing.T, name string) ids.UUID {
 
 func (f fixture) withRelationshipTypes(t *testing.T, name string, types []string) ids.UUID {
 	t.Helper()
-	company, err := f.people.CreateCompany(f.ctx, peoplemod.CreateCompanyInput{
+	company, err := f.contacts.CreateCompany(f.ctx, contactsmod.CreateCompanyInput{
 		DisplayName: name, Source: "manual",
 	})
 	if err != nil {
@@ -243,10 +243,10 @@ func (f fixture) withRelationshipTypes(t *testing.T, name string, types []string
 // withdrawal depends on.
 func (f fixture) setRelationshipTypes(t *testing.T, company ids.UUID, types []string) {
 	t.Helper()
-	if _, err := f.people.UpdateCompany(
+	if _, err := f.contacts.UpdateCompany(
 		f.ctx,
 		ids.From[ids.CompanyKind](company),
-		peoplemod.UpdateCompanyInput{RelationshipTypes: &types},
+		contactsmod.UpdateCompanyInput{RelationshipTypes: &types},
 	); err != nil {
 		t.Fatalf("set relationship types %v: %v", types, err)
 	}

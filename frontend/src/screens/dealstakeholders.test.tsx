@@ -18,18 +18,18 @@ import { RelationshipsTab } from "./relationships";
 
 // A deal's stakeholders were readable on three surfaces — the rail's seats, the
 // committee map, the coverage findings — and writable on none: the edge was
-// creatable only from the PERSON's side, so seating a champion meant knowing
+// creatable only from the CONTACT's side, so seating a champion meant knowing
 // which contact to open first. This is the generic relationships panel under a
 // deal scope, which is what keeps create/edit/remove at one implementation.
 
 const DEAL = "01a02e25-a5ac-7099-8099-581cbf001a99";
-const PERSON = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
+const CONTACT = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
 
 const stakeholder = {
   id: "rel-1",
   kind: "deal_stakeholder",
   deal_id: DEAL,
-  person_id: PERSON,
+  contact_id: CONTACT,
   role: "champion",
   is_current_primary: false,
   source: "manual",
@@ -71,19 +71,19 @@ function stubFetch(
         return json({ ...stakeholder, id: "rel-new" }, 201);
       }
       if (url.includes("/relationships")) {
-        // The panel must ask by deal, not by person: a person_id read would
+        // The panel must ask by deal, not by contact: a contact_id read would
         // answer with a different deal's seats.
         expect(url).toContain(`deal_id=${DEAL}`);
         return json({ data: seats, page: { next_cursor: null } });
       }
       // The by-id read first: EntityRef resolves the far end that way, and the
       // list branch below would answer it with a page.
-      if (url.includes(`/people/${PERSON}`)) {
-        return json({ id: PERSON, full_name: "Mai Trần" });
+      if (url.includes(`/contacts/${CONTACT}`)) {
+        return json({ id: CONTACT, full_name: "Mai Trần" });
       }
-      if (url.includes("/people")) {
+      if (url.includes("/contacts")) {
         return json({
-          data: [{ id: PERSON, full_name: "Mai Trần" }],
+          data: [{ id: CONTACT, full_name: "Mai Trần" }],
           page: { next_cursor: null },
         });
       }
@@ -142,7 +142,7 @@ describe("the stakeholders on a deal", () => {
     renderPanel();
 
     expect(await screen.findByText("Stakeholders")).toBeTruthy();
-    // "People & companies" is the person and company panel's heading, and it
+    // "People & companies" is the contact and company panel's heading, and it
     // sends a reader on a deal looking for a control this page does not have.
     expect(screen.queryByText("People & companies")).toBeNull();
   });
@@ -162,7 +162,7 @@ describe("the stakeholders on a deal", () => {
     ).toBeNull();
   });
 
-  it("seats a person on THIS deal, naming both ends", async () => {
+  it("seats a contact on THIS deal, naming both ends", async () => {
     const user = setup();
     const posted: unknown[] = [];
     stubFetch([], (body) => posted.push(body));
@@ -180,7 +180,7 @@ describe("the stakeholders on a deal", () => {
     expect(posted[0]).toMatchObject({
       kind: "deal_stakeholder",
       deal_id: DEAL,
-      person_id: PERSON,
+      contact_id: CONTACT,
       role: "economic_buyer",
       source: "manual",
     });

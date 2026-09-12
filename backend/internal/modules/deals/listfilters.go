@@ -4,7 +4,7 @@
 package deals
 
 // What an enumeration of this module's records may be narrowed by — the deal
-// and project halves of the same rule people/listfilters.go states: the names
+// and project halves of the same rule contacts/listfilters.go states: the names
 // are the contract's list-operation parameters, and this file says which of
 // them this store answers and what each one narrows.
 

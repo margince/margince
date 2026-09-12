@@ -8,8 +8,8 @@ package compose_test
 // Who a hand-logged conversation says was in it.
 //
 // A LINK IS NOT A CONVERSATION. The links say which records a message is
-// about; the participants say two people spoke, and everything network-shaped
-// — the interaction and contact edges, the person graph's arms, who-knows, the
+// about; the participants say two contacts spoke, and everything network-shaped
+// — the interaction and contact edges, the contact graph's arms, who-knows, the
 // decay lane — derives from the second. The capture path's stamping has its own
 // suite (participants_integration_test.go); this is the hand-logged half, which
 // is the one every seeded and manually recorded conversation rides.
@@ -30,9 +30,9 @@ import (
 )
 
 type loggedParty struct {
-	role   string
-	user   *ids.UUID
-	person *ids.UUID
+	role    string
+	user    *ids.UUID
+	contact *ids.UUID
 }
 
 // partiesOn reads the participant rows one activity carries, in a stable order.
@@ -41,16 +41,16 @@ func partiesOn(t *testing.T, e *integration.Env, activity ids.UUID) []loggedPart
 	var out []loggedParty
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT role, user_id, person_id FROM activity_participant
+			SELECT role, user_id, contact_id FROM activity_participant
 			 WHERE activity_id = $1
-			 ORDER BY role, coalesce(user_id, person_id)`, activity)
+			 ORDER BY role, coalesce(user_id, contact_id)`, activity)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var party loggedParty
-			if err := rows.Scan(&party.role, &party.user, &party.person); err != nil {
+			if err := rows.Scan(&party.role, &party.user, &party.contact); err != nil {
 				return err
 			}
 			out = append(out, party)
@@ -62,11 +62,11 @@ func partiesOn(t *testing.T, e *integration.Env, activity ids.UUID) []loggedPart
 	return out
 }
 
-// logMail records one hand-logged email against the named people, as the API
+// logMail records one hand-logged email against the named contacts, as the API
 // does: the request shape is the contract's, mapped through the same
 // LogActivityInputFrom every transport uses.
 func logMail(ctx context.Context, t *testing.T, e *integration.Env, kind crmcontracts.CreateActivityRequestKind,
-	direction crmcontracts.CreateActivityRequestDirection, people ...ids.UUID,
+	direction crmcontracts.CreateActivityRequestDirection, contacts ...ids.UUID,
 ) ids.UUID {
 	t.Helper()
 	subject := "Renewal terms"
@@ -78,11 +78,11 @@ func logMail(ctx context.Context, t *testing.T, e *integration.Env, kind crmcont
 		EntityId   openapi_types.UUID                                `json:"entity_id"` //nolint:staticcheck // mirrors the generated inline struct, whose field is spelled EntityId
 		EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
 	}
-	links := make([]mailLink, 0, len(people))
-	for _, person := range people {
+	links := make([]mailLink, 0, len(contacts))
+	for _, contact := range contacts {
 		links = append(links, mailLink{
-			EntityId:   openapi_types.UUID(person),
-			EntityType: crmcontracts.CreateActivityRequestLinksEntityTypePerson,
+			EntityId:   openapi_types.UUID(contact),
+			EntityType: crmcontracts.CreateActivityRequestLinksEntityTypeContact,
 		})
 	}
 	in, err := activities.LogActivityInputFrom(crmcontracts.CreateActivityRequest{
@@ -103,21 +103,21 @@ func loggingRep(e *integration.Env) context.Context {
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
 			"activity": {Create: true, Read: true},
-			"person":   {Read: true},
+			"contact":  {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	})
 }
 
-// EVERY person on the message, not the first. A thread with two contacts on it
-// is where the contact-to-contact edge and the person graph's peer arm come
+// EVERY contact on the message, not the first. A thread with two contacts on it
+// is where the contact-to-contact edge and the contact graph's peer arm come
 // from, and a stamping that took one counterparty would draw neither while
 // every other surface still looked right.
 func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
-	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
-	bob := e.SeedPerson(t, "Bob Schmidt", &e.Rep1)
+	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)
+	bob := e.SeedContact(t, "Bob Schmidt", &e.Rep1)
 
 	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		crmcontracts.CreateActivityRequestDirectionOutbound, alice, bob)
@@ -127,17 +127,17 @@ func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
 		t.Fatalf("a mail to two contacts carries %d parties, want 3 (the rep and both of them): %+v",
 			len(parties), parties)
 	}
-	// BOTH, BY NAME. Counting two person rows would pass a stamping that wrote
+	// BOTH, BY NAME. Counting two contact rows would pass a stamping that wrote
 	// one contact twice, or one of them and somebody else — and the pair is the
-	// whole reason a thread carries two people.
+	// whole reason a thread carries two contacts.
 	var ours int
 	named := map[ids.UUID]string{}
 	for _, party := range parties {
 		switch {
 		case party.user != nil && *party.user == e.Rep1 && party.role == "from":
 			ours++
-		case party.person != nil:
-			named[*party.person] = party.role
+		case party.contact != nil:
+			named[*party.contact] = party.role
 		}
 	}
 	if ours != 1 {
@@ -162,7 +162,7 @@ func TestAHandLoggedMailNamesTheRepAndEveryContactOnIt(t *testing.T) {
 func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
-	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
+	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)
 
 	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		crmcontracts.CreateActivityRequestDirectionInbound, alice)
@@ -178,7 +178,7 @@ func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
 	var contact, rep *loggedParty
 	for i := range parties {
 		switch {
-		case parties[i].person != nil && *parties[i].person == alice:
+		case parties[i].contact != nil && *parties[i].contact == alice:
 			contact = &parties[i]
 		case parties[i].user != nil && *parties[i].user == e.Rep1:
 			rep = &parties[i]
@@ -202,7 +202,7 @@ func TestAnInboundMailPutsTheContactOnItAsTheSender(t *testing.T) {
 func TestANoteAboutSomebodyNamesNobodyAsHavingSpoken(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := loggingRep(e)
-	alice := e.SeedPerson(t, "Alice Müller", &e.Rep1)
+	alice := e.SeedContact(t, "Alice Müller", &e.Rep1)
 
 	activity := logMail(ctx, t, e, crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		crmcontracts.CreateActivityRequestDirectionOutbound, alice)

@@ -7,7 +7,7 @@ package projects
 //
 // A project is work several companies do together — a customer, a partner, a
 // subcontractor — so the companies are edges rather than one anchor column. The
-// edges are `relationship` rows, and `people` owns that table, so this module
+// edges are `relationship` rows, and `contacts` owns that table, so this module
 // asks rather than writes (ADR-0054 §3: a module never imports a sibling).
 //
 // Every seam here runs INSIDE the caller's transaction. That is what makes the
@@ -107,5 +107,5 @@ func refusingProjectCompanies() ProjectCompanies {
 // operator reading the log is told the fix rather than only the symptom.
 func errCompanySeamUnwired(seam string) error {
 	return errors.New("projects: " + seam + " seam was not injected; construct this " +
-		"store through compose, which binds modules/people's relationship edges to it")
+		"store through compose, which binds modules/contacts's relationship edges to it")
 }

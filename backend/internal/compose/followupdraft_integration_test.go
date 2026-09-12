@@ -25,30 +25,30 @@ import (
 )
 
 // seedAnswerableThread plants the inbound email a reply can be drafted to: a
-// person with an address, that address on the thread, and the consent purpose
+// contact with an address, that address on the thread, and the consent purpose
 // the send is gated against. It returns the anchor activity.
 // The address is derived from the subject so two threads on one deal are two
-// counterparties: person_email is unique per address, and a helper that always
+// counterparties: contact_email is unique per address, and a helper that always
 // seeded the same one could only ever be called once per test.
 func (e *reconcileEnv) seedAnswerableThread(t *testing.T, dealID ids.UUID, subject string) ids.UUID {
 	t.Helper()
 	to := strings.ToLower(strings.ReplaceAll(subject, " ", ".")) + "@example.test"
-	person := e.SeedPerson(t, "Anna Weber ("+subject+")", nil)
+	contact := e.SeedContact(t, "Anna Weber ("+subject+")", nil)
 	anchor := e.seedInteraction(t, dealID, "email", subject, 1)
 	e.WsExec(t, `UPDATE activity SET direction = 'inbound' WHERE id = $1`, anchor)
-	e.attachReachableCounterpartyAs(t, anchor, person, to)
+	e.attachReachableCounterpartyAs(t, anchor, contact, to)
 	return anchor
 }
 
-// attachReachableCounterparty puts a person with a real address on the
+// attachReachableCounterparty puts a contact with a real address on the
 // activity, which is what makes a reply address resolvable.
 func (e *reconcileEnv) attachReachableCounterparty(t *testing.T, activityID ids.UUID, address string) {
 	t.Helper()
-	e.attachReachableCounterpartyAs(t, activityID, e.SeedPerson(t, "Counterparty "+address, nil), address)
+	e.attachReachableCounterpartyAs(t, activityID, e.SeedContact(t, "Counterparty "+address, nil), address)
 }
 
 func (e *reconcileEnv) attachReachableCounterpartyAs(
-	t *testing.T, activityID, person ids.UUID, address string,
+	t *testing.T, activityID, contact ids.UUID, address string,
 ) {
 	t.Helper()
 	// The purpose the send is gated against. Its class is the one that is never
@@ -59,14 +59,14 @@ func (e *reconcileEnv) attachReachableCounterpartyAs(
 		VALUES ('business_correspondence', 'Business correspondence', false, 'business_correspondence')
 		ON CONFLICT (key) DO NOTHING`)
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'test', 'human:seed')`, person, address)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'test', 'human:seed')`, contact, address)
 	e.WsExec(t, `
-		INSERT INTO activity_participant (id, activity_id, role, person_id, address)
-		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), activityID, person, address)
+		INSERT INTO activity_participant (id, activity_id, role, contact_id, address)
+		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), activityID, contact, address)
 	e.WsExec(t, `
-		INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), activityID, person)
+		INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), activityID, contact)
 }
 
 // heldDraftFor reads the drafted reply the pass staged on this deal.
@@ -263,7 +263,7 @@ func TestACallWithNoNextStepStillStagesTheTaskProposal(t *testing.T) {
 func TestAThreadWithNoReplyAddressFallsBackToTheTaskProposal(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "No address", e.pipeline, e.open, &e.Rep1)
-	// An inbound email with no participant and no person behind it.
+	// An inbound email with no participant and no contact behind it.
 	anchor := e.seedInteraction(t, deal, "email", "From a stranger", 1)
 	e.WsExec(t, `UPDATE activity SET direction = 'inbound' WHERE id = $1`, anchor)
 	if err := e.reconcile(); err != nil {
@@ -404,12 +404,12 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 // The reply is composed under the DEAL OWNER's authority, never the sweep's.
 //
 // This is the security argument for the whole drafting path. ReplyAddressFor
-// opens with a person-read gate whose own comment forbids exactly this — "a
-// caller who may read activities but not people must not be told through this
-// door what the people surface withholds" — and auth.Require passes a system
+// opens with a contact-read gate whose own comment forbids exactly this — "a
+// caller who may read activities but not contacts must not be told through this
+// door what the contacts surface withholds" — and auth.Require passes a system
 // principal unconditionally, so the overnight pass walked straight past it. The
 // address it resolved was stored in proposed_change, where reading the card
-// back needs only activity:create plus deal visibility, and person:read is not
+// back needs only activity:create plus deal visibility, and contact:read is not
 // in that set.
 //
 // The message the draft answers is already safe by a different rule: the
@@ -417,13 +417,13 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 // subject and body are readable by every decider. The address is the one field
 // with no such filter behind it.
 //
-// An owner who lacks person:read gets the TASK proposal: the rep is still told
+// An owner who lacks contact:read gets the TASK proposal: the rep is still told
 // the deal has no next step, and no address reaches the card.
-func TestADraftIsNotComposedForAnOwnerWhoMayNotReadPeople(t *testing.T) {
+func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
 	e := setupReconcileWithOwnerPolicy(t, `{"objects":{"activity":{"create":true,"read":true,"update":true},
 		  "deal":{"read":true,"update":true},"company":{"read":true},
 		  "pipeline":{"read":true}},"row_scope":"all"}`)
-	deal := e.SeedDeal(t, "No person read", e.pipeline, e.open, &e.Rep1)
+	deal := e.SeedDeal(t, "No contact read", e.pipeline, e.open, &e.Rep1)
 	e.seedAnswerableThread(t, deal, "Kickoff")
 
 	if err := e.reconcile(); err != nil {
@@ -432,7 +432,7 @@ func TestADraftIsNotComposedForAnOwnerWhoMayNotReadPeople(t *testing.T) {
 
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
 		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
-		t.Errorf("staged %d drafts for an owner without person:read, want 0 — "+
+		t.Errorf("staged %d drafts for an owner without contact:read, want 0 — "+
 			"the address on that card is one they may not look up", n)
 	}
 	if got := e.pendingFollowUps(t, deal); got != 1 {

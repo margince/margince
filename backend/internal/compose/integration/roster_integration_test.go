@@ -105,7 +105,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// (a) The roster lists the installation's members: the bootstrap admin and
 	// the two seeded reps, and nothing else.
 	//
-	// THREE, and every one of them a person. `is_agent` stays on the wire and the
+	// THREE, and every one of them a contact. `is_agent` stays on the wire and the
 	// roster lists such a row where one exists — that flag is what tells a picker
 	// of humans to leave it out. What is asserted here is that no PRODUCT PATH
 	// creates one, which is why this counts rather than filtering.

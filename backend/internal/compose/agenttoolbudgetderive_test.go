@@ -7,7 +7,7 @@ package compose
 //
 // It lives in the test lane, like mcp-info's renderers beside it, because
 // nothing in the product reads these numbers — they are published for the
-// person deciding whether to attach a tool. A derivation with no production
+// contact deciding whether to attach a tool. A derivation with no production
 // caller does not belong in the binary.
 //
 // The listing rides in every step of a tool-fed window, so attaching a tool

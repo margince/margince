@@ -45,7 +45,7 @@ must_mention:
   # number, an id or a date — the same defect case 10 fixed and case 7 deleted
   # its own bare digit for. What this criterion is about is how many rows the
   # dry run would write, so the number has to be beside the noun.
-  - "(?:creat\w*|import\w*|add\w*|anleg\w*)[^.]{0,20}\(?\*{0,2}\b(?:3|three|drei)\b\)?(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|people|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\b[^.]{0,20}(?:creat\w*|import\w*|new\b|angelegt)(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|people|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\s+(?:\w+\s+){0,3}(?:rows?|records?|companies|organi[sz]ations?|contacts?|people|Zeilen|Datensätze)"
+  - "(?:creat\w*|import\w*|add\w*|anleg\w*)[^.]{0,20}\(?\*{0,2}\b(?:3|three|drei)\b\)?(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\b[^.]{0,20}(?:creat\w*|import\w*|new\b|angelegt)(?:[^.]{0,20}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)|\s*[:\-*•—|]|\s*\n)|\b(?:3|three|drei)\s+(?:\w+\s+){0,3}(?:rows?|records?|companies|organi[sz]ations?|contacts?|contacts|Zeilen|Datensätze)"
   # And the unusable row is REPORTED, not merely a sentence containing the
   # word "row". Anchored to the row being left out, in either order.
   - "(?:skip\w*|left out|not imported|unusable|rejected|übersprung\w*)[^.]{0,60}(?:row|record|line|name|Zeile|Datensatz)|(?:row|record|line|Zeile)[^.]{0,60}(?:skip\w*|left out|no name|blank|unusable|leer|fehlt|could not be (?:used|imported))"

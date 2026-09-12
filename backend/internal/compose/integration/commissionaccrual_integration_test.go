@@ -24,8 +24,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -66,7 +66,7 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
 
 	partnerCompany := companyIDOf(e.SeedCompany(t, "Northgate Partners", nil))
-	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
+	if _, err := e.Contacts.UpsertPartner(admin, contacts.UpsertPartnerInput{
 		CompanyID:   partnerCompany,
 		PartnerRole: "consulting",
 		MarginTier:  &tier,
@@ -89,7 +89,7 @@ func seedAccrualFixture(t *testing.T, e *Env, tier string) accrualFixture {
 	return accrualFixture{
 		deal: deal, partner: partnerCompany, won: won, open: open, ledger: ledger,
 		gen: compose.NewCommissionGen(e.Pool, ledger,
-			people.NewStore(e.DB()), slog.New(slog.DiscardHandler)),
+			contacts.NewStore(e.DB()), slog.New(slog.DiscardHandler)),
 	}
 }
 
@@ -239,7 +239,7 @@ func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
 	partnerCompany := companyIDOf(e.SeedCompany(t, "Untiered Partners", nil))
-	if _, err := e.People.UpsertPartner(admin, people.UpsertPartnerInput{
+	if _, err := e.Contacts.UpsertPartner(admin, contacts.UpsertPartnerInput{
 		CompanyID: partnerCompany, PartnerRole: "consulting",
 	}); err != nil {
 		t.Fatalf("making the company a partner with no tier: %v", err)
@@ -253,7 +253,7 @@ func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
 		t.Fatalf("pricing the deal: %v", err)
 	}
 	ledger := commissions.NewStore(e.DB())
-	gen := compose.NewCommissionGen(e.Pool, ledger, people.NewStore(e.DB()), slog.New(slog.DiscardHandler))
+	gen := compose.NewCommissionGen(e.Pool, ledger, contacts.NewStore(e.DB()), slog.New(slog.DiscardHandler))
 
 	if _, err := e.Deals.AdvanceDeal(admin, deal, deals.AdvanceDealInput{
 		ToStageID: won, WonWithoutContractReason: WonByImport(),

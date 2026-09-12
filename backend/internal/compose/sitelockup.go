@@ -6,7 +6,7 @@ package compose
 // The cold start's second mark. The installation's own company is the one
 // record the chrome draws at two widths — the wide lockup an expanded sidebar
 // has room for, and the square badge a collapsed 56px rail draws — and one
-// picture cannot serve both (people/companylogowrite.go). The chain in sitelogo.go
+// picture cannot serve both (contacts/companylogowrite.go). The chain in sitelogo.go
 // finds the badge: it prefers the icons a site declares, which are square by
 // construction. This file finds the lockup, from the pictures the page itself
 // calls its logo (webread.Page.Logos), and decides which slot each picture
@@ -21,7 +21,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
 )
 
@@ -158,18 +158,18 @@ func chooseSlots(lockup resolvedLogo, lockupAttempts []logoAttempt, mark resolve
 
 // resolveDossierMarks resolves the anchor's two marks and parks each on the
 // dossier for the confirmation to bind, on the terms resolveLogo states.
-func (w *siteDeepReadWorker) resolveDossierMarks(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, crawl siteCrawl) {
+func (w *siteDeepReadWorker) resolveDossierMarks(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl) {
 	// claim.SeedURL is the spelling that ANSWERED — the deep read replaces it
 	// with the crawl's own once the crawl returns, so /favicon.ico is never
 	// guessed under a host that served nothing.
 	marks := resolveCompanyMarks(ctx, w.fetch, claim.SeedURL, crawl.SeedAssets)
-	w.parkDossierMark(ctx, args, claim, people.LogoWide, marks.Wide, marks.WideAttempts)
-	w.parkDossierMark(ctx, args, claim, people.LogoIcon, marks.Icon, marks.IconAttempts)
+	w.parkDossierMark(ctx, args, claim, contacts.LogoWide, marks.Wide, marks.WideAttempts)
+	w.parkDossierMark(ctx, args, claim, contacts.LogoIcon, marks.Icon, marks.IconAttempts)
 }
 
 // parkDossierMark stores one slot's mark and points the dossier at it, or
 // says which slot stays empty and why.
-func (w *siteDeepReadWorker) parkDossierMark(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, slot people.LogoSlot, logo resolvedLogo, attempts []logoAttempt) {
+func (w *siteDeepReadWorker) parkDossierMark(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, slot contacts.LogoSlot, logo resolvedLogo, attempts []logoAttempt) {
 	if logo.PNG == nil {
 		w.log.InfoContext(ctx, "site read resolved no mark for the slot",
 			"read", args.SiteReadID.String(), "slot", slot.String(), "seed", claim.SeedURL,

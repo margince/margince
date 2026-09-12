@@ -25,8 +25,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -84,13 +84,13 @@ func TestALinksDateGoesBackWhereItWas(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 
-	personID := e.SeedPerson(t, "Ada Dated", nil)
+	contactID := e.SeedContact(t, "Ada Dated", nil)
 	companyID := e.SeedCompany(t, "Dated GmbH", nil)
-	person := ids.From[ids.PersonKind](personID)
+	contact := ids.From[ids.ContactKind](contactID)
 	company := ids.From[ids.CompanyKind](companyID)
 	role := "cto"
-	edge, err := e.People.CreateRelationship(ctx, people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &person, CompanyID: &company,
+	edge, err := e.Contacts.CreateRelationship(ctx, contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company,
 		Role: &role, Source: "manual",
 	})
 	if err != nil {
@@ -98,19 +98,19 @@ func TestALinksDateGoesBackWhereItWas(t *testing.T) {
 	}
 
 	was := time.Date(2024, 5, 6, 0, 0, 0, 0, time.UTC)
-	if _, err := e.People.UpdateRelationship(ctx, edge.ID,
-		people.UpdateRelationshipInput{StartedAt: &was}); err != nil {
+	if _, err := e.Contacts.UpdateRelationship(ctx, edge.ID,
+		contacts.UpdateRelationshipInput{StartedAt: &was}); err != nil {
 		t.Fatalf("set the link's start date: %v", err)
 	}
 	moved := time.Date(2025, 1, 20, 0, 0, 0, 0, time.UTC)
-	if _, err := e.People.UpdateRelationship(ctx, edge.ID,
-		people.UpdateRelationshipInput{StartedAt: &moved}); err != nil {
+	if _, err := e.Contacts.UpdateRelationship(ctx, edge.ID,
+		contacts.UpdateRelationshipInput{StartedAt: &moved}); err != nil {
 		t.Fatalf("move the link's start date: %v", err)
 	}
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge.ID, "update")
 
-	if _, err := restoreSeamFor(e).Restore(ctx, "person", personID, auditID,
-		currentVersion(t, e, "person", personID)); err != nil {
+	if _, err := restoreSeamFor(e).Restore(ctx, "contact", contactID, auditID,
+		currentVersion(t, e, "contact", contactID)); err != nil {
 		t.Fatalf("putting the link's start date back answered %v — nothing moved "+
 			"under it, the image and the live row are spelling the same day differently", err)
 	}

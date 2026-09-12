@@ -10,7 +10,7 @@ package compose
 // The contract's update SHAPE is wider than a module's mapper. A key in that gap
 // is accepted, ignored, and answers success — the silent drop this feature's
 // whole refusal set exists to prevent, and the one failure worse than refusing,
-// because the person reads the confirmation and stops looking.
+// because the reader reads the confirmation and stops looking.
 //
 // namedByTheShapeButNotWrittenByThePatch (undoability.go) is the declared gap.
 // This holds it against behaviour rather than against a reading of the mappers:
@@ -27,7 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -79,24 +79,24 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 	ctx := e.Admin()
 
 	first, second := "CTO", "CEO"
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Greta Shape", Title: &first, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seed through the real writer: %v", err)
 	}
-	id := ids.UUID(person.Id)
-	if _, err := e.People.UpdatePerson(ctx, ids.From[ids.PersonKind](id),
-		people.UpdatePersonInput{Title: &second, Source: "manual"}); err != nil {
+	id := ids.UUID(contact.Id)
+	if _, err := e.Contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id),
+		contacts.UpdateContactInput{Title: &second, Source: "manual"}); err != nil {
 		t.Fatalf("change the field through the real writer: %v", err)
 	}
 
-	// The entry a person would press Undo on.
-	auditID := latestAuditRowID(t, e, "person", id, "update")
-	version := currentVersion(t, e, "person", id)
+	// The entry a contact would press Undo on.
+	auditID := latestAuditRowID(t, e, "contact", id, "update")
+	version := currentVersion(t, e, "contact", id)
 
 	// The image the reversal WILL send, read from the entry the executor reads.
-	patch, _, err := filterImage("person", json.RawMessage(`{"title":"CTO"}`))
+	patch, _, err := filterImage("contact", json.RawMessage(`{"title":"CTO"}`))
 	if err != nil {
 		t.Fatalf("filter the image: %v", err)
 	}
@@ -107,14 +107,14 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 	// Through the EXECUTOR, not through a hand-built module input: the silent
 	// drop this test exists to catch happens in dispatcher.Update, where the
 	// patch travels as a JSON body and a key the mapper ignores is accepted and
-	// forgotten. A test that assembles UpdatePersonInput itself never reaches
+	// forgotten. A test that assembles UpdateContactInput itself never reaches
 	// that step and would pass with the drop in place.
 	seam := restoreSeamFor(e)
-	if _, err := seam.Restore(ctx, "person", id, auditID, version); err != nil {
+	if _, err := seam.Restore(ctx, "contact", id, auditID, version); err != nil {
 		t.Fatalf("put it back through the executor: %v", err)
 	}
 
-	if missed := fieldsSentButNotHeld(t, e, "person", id, patch); len(missed) > 0 {
+	if missed := fieldsSentButNotHeld(t, e, "contact", id, patch); len(missed) > 0 {
 		t.Errorf("the restore sent %v and the record does not hold them; a key the "+
 			"update shape names and the mapper ignores answers success and writes "+
 			"nothing — declare it in namedByTheShapeButNotWrittenByThePatch or make "+
@@ -135,22 +135,22 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 	ctx := e.Admin()
 
 	title := "CTO"
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 		FullName: "Greta Scoped", Title: &title, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seed through the real writer: %v", err)
 	}
-	id := ids.UUID(person.Id)
+	id := ids.UUID(contact.Id)
 	changed := "CEO"
-	if _, err := e.People.UpdatePerson(ctx, ids.From[ids.PersonKind](id),
-		people.UpdatePersonInput{Title: &changed, Source: "manual"}); err != nil {
+	if _, err := e.Contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id),
+		contacts.UpdateContactInput{Title: &changed, Source: "manual"}); err != nil {
 		t.Fatalf("change it: %v", err)
 	}
 
 	// A REAL audit row on that record. An id naming nothing would answer 404
 	// for the wrong reason and prove nothing about row scope.
-	auditID := latestAuditRowID(t, e, "person", id, "update")
+	auditID := latestAuditRowID(t, e, "contact", id, "update")
 
 	// The record and its entry both exist and are readable by THIS caller. What
 	// is varied is the row-scope gate alone, because that is the property under
@@ -162,7 +162,7 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 		return apperrors.ErrNotFound
 	}
 
-	_, err = seam.Restore(ctx, "person", id, auditID, 1)
+	_, err = seam.Restore(ctx, "contact", id, auditID, 1)
 	if err == nil {
 		t.Fatal("a restore of a record the caller may not see succeeded")
 	}
@@ -177,7 +177,7 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 }
 
 // latestAuditRowID is the newest audit row of one action on one record — the
-// entry a person would press Undo on.
+// entry a contact would press Undo on.
 func latestAuditRowID(t *testing.T, e *integration.Env, entityType string, id ids.UUID, action string) ids.UUID {
 	t.Helper()
 	admin := e.Admin()

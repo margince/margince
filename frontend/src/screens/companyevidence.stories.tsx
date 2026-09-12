@@ -73,7 +73,7 @@ export const SiteReadUnconfirmed: Story = {
   ),
 };
 
-// human: a person's own assertion, so `last_verified_at` is set and no
+// human: a contact's own assertion, so `last_verified_at` is set and no
 // confidence prints (a human value never carries a model score). Also the
 // story that exercises the prev/next steps — the ordering belongs to the
 // citing card, not the drawer, so `onStep` is the only thing that turns the
@@ -192,7 +192,7 @@ export const Pending: Story = {
 // it. The component treats "the server had nothing" and "the request
 // failed" identically here (both leave `shown?.source_kind` unset), so one
 // story stands for both — a claim that was told to be checkable and turns
-// out uncheckable either way should read the same to the person checking it.
+// out uncheckable either way should read the same to the contact checking it.
 export const Unavailable: Story = {
   render: () => (
     <Drawer

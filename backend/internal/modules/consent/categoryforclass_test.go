@@ -17,9 +17,9 @@ func TestBlockedReasonCodeNamesTheSuppressionThatBound(t *testing.T) {
 }
 
 // categoryForClass and resolutionForClass are two spellings of the same
-// mapping, read from two different call sites (VerdictForPerson's new
+// mapping, read from two different call sites (VerdictForContact's new
 // suppression check and the transmit path's own category resolution). A
-// caller that trusts the coarser one — VerdictForPerson has to, since it
+// caller that trusts the coarser one — VerdictForContact has to, since it
 // answers before any message is resolved — relies on the two never
 // disagreeing; this is the test that would fail the day they do.
 func TestCategoryForClassAgreesWithResolutionForClass(t *testing.T) {
@@ -29,7 +29,7 @@ func TestCategoryForClassAgreesWithResolutionForClass(t *testing.T) {
 		got := categoryForClass(class)
 		want := resolutionForClass(class).Category
 		if got != want {
-			t.Errorf("categoryForClass(%s) = %s, resolutionForClass(%s).Category = %s — VerdictForPerson's suppression check would bind a different category than the transmit path resolves", class, got, class, want)
+			t.Errorf("categoryForClass(%s) = %s, resolutionForClass(%s).Category = %s — VerdictForContact's suppression check would bind a different category than the transmit path resolves", class, got, class, want)
 		}
 	}
 }

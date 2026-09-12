@@ -24,7 +24,7 @@ type Handlers struct {
 }
 
 // NewHandlers wires the transport over the store. strength is the §4
-// relationship-strength seam (implemented by the people module, injected
+// relationship-strength seam (implemented by the contacts module, injected
 // by the composition layer — never a sibling import).
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
 func NewHandlers(db *database.DB, strength StrengthSource) Handlers {

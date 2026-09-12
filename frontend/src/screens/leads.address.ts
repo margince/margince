@@ -3,7 +3,7 @@
 
 // The lead record's own address dials.
 //
-// Its own file for the reason `personpage.address.ts` is one: a caller that
+// Its own file for the reason `contactpage.address.ts` is one: a caller that
 // builds a link to this screen must not import the screen to learn what the
 // address is called, and a parameter spelled twice is a link that works from
 // one surface and not the other.

@@ -8,7 +8,7 @@ package compose
 // `operationSpec` applies the tighten-only floor (A34/ADR-0026) to a REST call,
 // because a REST call names its operation. A tools/call names a VERB, and a verb
 // serving seven record types has one tier for all of them — so `createProject`
-// being confirm-first while `createPerson` is not was a decision only one of the
+// being confirm-first while `createContact` is not was a decision only one of the
 // two doors could act on, and the write a route staged for a human ran unattended
 // through the tool that performs it (#982).
 //
@@ -80,7 +80,7 @@ var contractTierFloors = func() map[toolRecordType]mcp.RiskTier {
 // Applying the filter to every route silently dropped six verbs from the floor
 // table. `promote_lead` lives at `POST /v1/leads/{id}/promote`, `send_email` at
 // `POST /v1/activities/{id}/send-email`, `merge_records` at
-// `POST /v1/people/{id}/merge` — three segments each, so none of them could be
+// `POST /v1/contacts/{id}/merge` — three segments each, so none of them could be
 // floored at all. That was invisible while those verbs were statically
 // confirm-first, and became load-bearing the moment they started executing
 // directly, because the floor is the whole of what an installation has to
@@ -117,7 +117,7 @@ func ambiguousPairs() map[toolRecordType]bool {
 // Read off the route pattern rather than listed, so a sidecar route added later is
 // excluded by being what it is. The deeper shapes this rejects are real and
 // current: `/v1/companies/{id}/facts/{factKey}` writes a fact row,
-// `/v1/projects/{id}/stakeholders/{person_id}` a membership, and
+// `/v1/projects/{id}/stakeholders/{contact_id}` a membership, and
 // `/v1/custom-fields/{id}/retire` performs an action — none of them a field patch
 // of the routed record, and none of them reachable through `update_record`.
 func isCanonicalRecordRoute(route string) bool {

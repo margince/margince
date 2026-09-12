@@ -11,7 +11,7 @@ import (
 // ID is one entity's identifier: the UUID plus a phantom kind tag. Two
 // entities' IDs are distinct types — assignment AND conversion between
 // them are compile errors (the zero-size [0]K field blocks conversion),
-// so MergePerson(companyID, personID) stops compiling instead of silently
+// so MergeContact(companyID, contactID) stops compiling instead of silently
 // merging the wrong records. Embedding keeps the UUID's String/IsZero/
 // text-marshalling; Value/Scan below carry it through pgx (pgtype falls
 // back to driver.Valuer / sql.Scanner for wrapper structs).
@@ -77,13 +77,13 @@ func (id *ID[K]) Scan(src any) error {
 }
 
 // The entity vocabulary: one 4-line block per entity. The kind types
-// are exported so signatures can name ID[PersonKind] generically, and
+// are exported so signatures can name ID[ContactKind] generically, and
 // the aliases are the everyday spelling.
 type (
 	WorkspaceKind  struct{}
 	UserKind       struct{}
 	TeamKind       struct{}
-	PersonKind     struct{}
+	ContactKind    struct{}
 	CompanyKind    struct{}
 	LeadKind       struct{}
 	DealKind       struct{}
@@ -106,7 +106,7 @@ type (
 func (WorkspaceKind) kind() string  { return "workspace" }
 func (UserKind) kind() string       { return "user" }
 func (TeamKind) kind() string       { return "team" }
-func (PersonKind) kind() string     { return "person" }
+func (ContactKind) kind() string    { return "contact" }
 func (CompanyKind) kind() string    { return "company" }
 func (LeadKind) kind() string       { return "lead" }
 func (DealKind) kind() string       { return "deal" }
@@ -125,19 +125,21 @@ func (AutomationKind) kind() string { return "automation" }
 func (PassportKind) kind() string   { return "passport" }
 func (PurposeKind) kind() string    { return "consent_purpose" }
 
+// The typed id of every record this product has. Aliases rather than
+// definitions, so ID[K]'s methods are theirs without restating any of them.
 type (
 	// WorkspaceID identifies the installation's one tenant. One per install.
 	WorkspaceID = ID[WorkspaceKind]
-	// UserID identifies a person who signs in — a seat, not a record.
+	// UserID identifies a human who signs in — a seat, not a record.
 	UserID = ID[UserKind]
 	// TeamID identifies a group of seats a record can be shared with.
 	TeamID = ID[TeamKind]
-	// PersonID identifies a human the workspace knows.
-	PersonID = ID[PersonKind]
+	// ContactID identifies a human the workspace knows.
+	ContactID = ID[ContactKind]
 	// CompanyID identifies a company — the record every deal, contract and
 	// employment hangs off.
 	CompanyID = ID[CompanyKind]
-	// LeadID identifies a thin, segregated prospect, before it is a person.
+	// LeadID identifies a thin, segregated prospect, before it is a contact.
 	LeadID = ID[LeadKind]
 	// DealID identifies one opportunity moving through a pipeline.
 	DealID = ID[DealKind]
@@ -234,7 +236,7 @@ type DealRoomParticipantKind struct{}
 func (DealRoomParticipantKind) kind() string { return "deal_room_participant" }
 
 // DealRoomParticipantID names one deal_room_participant row — one outside
-// person admitted to one room.
+// contact admitted to one room.
 type DealRoomParticipantID = ID[DealRoomParticipantKind]
 
 // DealRoomDocumentKind is the room-document entity tag. Declared out-of-line

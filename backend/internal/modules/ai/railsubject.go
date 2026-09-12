@@ -14,7 +14,7 @@ import (
 )
 
 // Subject is the record a model call is ABOUT, as the site that made the call
-// names it: the company a brief describes, the person a relationship brief is
+// names it: the company a brief describes, the contact a relationship brief is
 // written for, the meeting a plan prepares.
 //
 // The router cannot know this on its own. It sees a task and a request, and
@@ -25,7 +25,7 @@ import (
 // through the context so the occurrence carries them to the rail.
 type Subject struct {
 	// Ref is the record, typed by the kernel's own entity vocabulary
-	// ("company", "person", "activity"), which is the vocabulary the
+	// ("company", "contact", "activity"), which is the vocabulary the
 	// projection stores as subject_type.
 	Ref ids.Ref
 	// Label is what the product calls that record elsewhere, already cut to

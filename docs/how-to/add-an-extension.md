@@ -226,7 +226,7 @@ Copy `extensions/openchannel/api/crm.yaml`. The rules that will otherwise bite:
   ```
 
   A confirm-first call is refused and **parked** as an approval, and an approval is a judgment about a
-  *thing*: the inbox shows the row, the decision authority is derived from it, and the person answering
+  *thing*: the inbox shows the row, the decision authority is derived from it, and the contact answering
   has to be someone who may see it. Core verbs answer that from the record they name; your operation
   names nothing the core knows about, so you say which argument carries the subject's id and which of
   your own tables the row is in. `arg` must be a property your own request schema declares, and `table`
@@ -323,7 +323,7 @@ and custom fields are refused rather than dropped. Grants are the other thing to
 caller to hold your unit's object AND the core `activity` one, and nothing declares that pairing yet.
 
 **And what your migrations may CREATE is what your SQL may NAME — in your tests too.** `rt.Tx()` runs
-on the shared `margince_app` role, so a statement naming `person` would work, which is why
+on the shared `margince_app` role, so a statement naming `contact` would work, which is why
 `TestExtensionSQLNamesOnlyTheUnitsOwnTables` (`backend/gates/extensionsqlscope_test.go`) reads **every `.go`
 file your unit ships**, folds the string constants a table name is usually spelled through, and refuses
 a table outside `ext.ext_<name>_…`. A unit test that seeds a core table fails it exactly as a handler
@@ -417,7 +417,7 @@ Settings instead, on the page that already holds the kind of credential you aske
 | no `Secrets` at all | nowhere | nothing to manage, so nothing to list; `#/ext/<name>` still routes |
 
 Two consequences worth knowing before you declare. **A unit declares ONE scope** — secrets spanning
-both are refused at `make gen`, because a unit that is half a person's own account and half the
+both are refused at `make gen`, because a unit that is half a contact's own account and half the
 installation's has no honest page, and either tie-break hides one half from whoever holds the other.
 Split the unit if you genuinely need both. And **the settings row is not a permission**: it carries no
 grant of its own, exactly as the rail row it replaced did not. Your screen still gates itself on the
@@ -472,7 +472,7 @@ Jobs: []extension.Job{{Name: "heartbeat", Handle: heartbeat}},
 A job handler takes `(ctx, rt)` and no arguments — a tick has no caller. It cannot be confirm-first and
 it cannot request an outbound scope; both are refused at boot.
 
-> **Know before you ship a cadence:** a tick answers as the JOB, not as a person. Its principal
+> **Know before you ship a cadence:** a tick answers as the JOB, not as a contact. Its principal
 > names your dispatcher kind, carries the one scope your manifest declared, and holds **no
 > permissions at all** — so every governed core write is refused to it, twice over. That is not a
 > gap to work around: land records through `rt.Ingest(ctx, member, …)`, which resolves that
@@ -546,7 +546,7 @@ becomes of it. The rules that will otherwise bite:
 - **Both dispositions advance your cursor.** `Skipped` means the core deliberately kept nothing and
   logged why (a wholly-internal message). Treating it as a failure retries a deliberate drop forever.
 - **`Merges` is what your source VOUCHES for**, and it is empty by default. Declare
-  `MergeKeyEmail` only if your provider's address for a person is authoritative — a directory your
+  `MergeKeyEmail` only if your provider's address for a contact is authoritative — a directory your
   administrator maintains, not a string the user typed about themselves. It lets an address carried
   alongside a channel account be *matched* on, so a colleague already captured from mail is recognised
   instead of becoming a second contact. Without the declaration, a record carrying both is refused at
@@ -583,7 +583,7 @@ workspace-readable, because there is no member such a message could be held for 
 would leave a row no human can open.
 
 So a wrong value is wrong in one of two directions, and neither announces itself: a per-member
-account read as the company's publishes one person's private chats to their colleagues, and a
+account read as the company's publishes one colleague's private chats to their colleagues, and a
 company account read as per-member hands a shared inbox to whoever connected it. Both produce a row
 that reads perfectly well to whoever it wrongly belongs to.
 

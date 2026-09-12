@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package promptvoice is the one spelling of how Margince sounds when it
-// writes prose a person reads.
+// writes prose a reader reads.
 //
 // Held by: TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot
 // (backend/gates/promptvoice_test.go)

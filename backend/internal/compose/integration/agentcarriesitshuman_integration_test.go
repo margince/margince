@@ -13,15 +13,15 @@ package integration
 //	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() { ... }
 //
 // It asks "is anybody behind this call", which an agent answers YES to using
-// the id of the person who minted it. Each read then went on to return that
-// person's own standing — what they dismissed, who refused them — to a
+// the id of the contact who minted it. Each read then went on to return that
+// contact's own standing — what they dismissed, who refused them — to a
 // credential acting on their behalf. auth.RequireHuman is what tells the two
 // apart, and each site now says so where the check is.
 //
-// introductions/routestate.go named getPersonGraph's human-only annotation as
+// introductions/routestate.go named getContactGraph's human-only annotation as
 // its protection, which made the answer depend on which door a read arrived
 // through rather than on what it discloses. That protection was also narrower
-// than it looked: an agent already assembles a Person360 today, through
+// than it looked: an agent already assembles a Contact360 today, through
 // prep_for_meeting → the meeting brief → AssembleScoped, so the dismissal guard
 // is live behaviour rather than defence in depth.
 //
@@ -46,7 +46,7 @@ import (
 var routeStatePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":       {Read: true},
+		"contact":      {Read: true},
 		"introduction": {Read: true},
 		"relationship": {Read: true},
 	},
@@ -62,7 +62,7 @@ var routeStatePerms = principal.Permissions{
 // test chose, so the refusal cannot be a grant the agent was never given.
 func TestTheIntroductionLedgerRefusesAnAgentCarryingItsHumansID(t *testing.T) {
 	e := Setup(t)
-	contact := e.SeedPerson(t, "Marit Vermittelt", &e.Rep1)
+	contact := e.SeedContact(t, "Marit Vermittelt", &e.Rep1)
 	store := introductions.NewStore(e.DB(), time.Now)
 
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, routeStatePerms)
@@ -70,11 +70,11 @@ func TestTheIntroductionLedgerRefusesAnAgentCarryingItsHumansID(t *testing.T) {
 
 	// The positive control comes first: a fixture that refuses everybody would
 	// pass the agent assertion below while proving nothing.
-	if _, err := store.RouteStates(human, ids.From[ids.PersonKind](contact)); err != nil {
+	if _, err := store.RouteStates(human, ids.From[ids.ContactKind](contact)); err != nil {
 		t.Fatalf("the granting human's own read = %v, want the ledger", err)
 	}
 
-	_, err := store.RouteStates(agent, ids.From[ids.PersonKind](contact))
+	_, err := store.RouteStates(agent, ids.From[ids.ContactKind](contact))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("an agent read the introduction ledger → %v, want ErrPermissionDenied — "+
 			"it reports which introductions its human has open and which they were "+
@@ -129,20 +129,20 @@ func TestRequireHumanIsWhatSeparatesAnAgentFromItsHuman(t *testing.T) {
 //
 // companyName's doc says a name the caller cannot read "is simply absent",
 // and its statement selected on id and archived_at alone — so a caller holding
-// person and relationship but no company grant read employer names through
+// contact and relationship but no company grant read employer names through
 // the edge. The edge itself still shows: an employment they may see is a true
 // fact, and only the company on the far side of it is a separate question.
 func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Vertraulich GmbH", &e.Rep1)
-	contact := e.SeedPerson(t, "Pia Angestellt", &e.Rep1)
+	contact := e.SeedContact(t, "Pia Angestellt", &e.Rep1)
 	e.WsExec(t, `
-		INSERT INTO relationship (id, kind, person_id, company_id, is_current_primary, source, captured_by)
+		INSERT INTO relationship (id, kind, contact_id, company_id, is_current_primary, source, captured_by)
 		VALUES ($1, 'employment', $2, $3, true, 'manual', 'human:x')`, ids.NewV7(), contact, company)
 
 	grants := func(withCompany bool) principal.Permissions {
 		objects := map[string]principal.ObjectGrant{
-			"person": {Read: true}, "relationship": {Read: true}, "activity": {Read: true},
+			"contact": {Read: true}, "relationship": {Read: true}, "activity": {Read: true},
 		}
 		if withCompany {
 			objects["company"] = principal.ObjectGrant{Read: true}
@@ -155,7 +155,7 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 	employer := func(withCompany bool) (string, bool) {
 		t.Helper()
 		ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, grants(withCompany))
-		page, err := personRoomService(e).Assemble(ctx, ids.From[ids.PersonKind](contact))
+		page, err := contactRoomService(e).Assemble(ctx, ids.From[ids.ContactKind](contact))
 		if err != nil {
 			t.Fatalf("assembling the page (company grant=%v): %v", withCompany, err)
 		}
@@ -186,35 +186,35 @@ func TestAnEmployerNameNeedsTheCompanyGrant(t *testing.T) {
 // TestAnAgentDoesNotConsumeItsHumansDismissal drives momentDismissed through
 // the real assembly rather than asserting auth.RequireHuman in isolation.
 //
-// This is the arm that matters: an agent CAN already assemble a person page
-// today, through prep_for_meeting → the meeting brief → Person360. So the guard
+// This is the arm that matters: an agent CAN already assemble a contact page
+// today, through prep_for_meeting → the meeting brief → Contact360. So the guard
 // is live behaviour and not defence in depth, and a test that only proved
 // RequireHuman refuses agents would leave the assembly free to stop calling it.
 //
 // The fixture dismisses as the HUMAN and then reads the same page twice. The
 // human's moment is gone; the agent's is still there, because a dismissal is
-// one person's screen and a passport reading on their behalf is not them.
+// one contact's screen and a passport reading on their behalf is not them.
 func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 	e := Setup(t)
-	contact := e.SeedPerson(t, "Rune Verstummt", &e.Rep1)
+	contact := e.SeedContact(t, "Rune Verstummt", &e.Rep1)
 
 	perms := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true}, "activity": {Read: true, Create: true},
+			"contact": {Read: true}, "activity": {Read: true, Create: true},
 			"relationship": {Read: true}, "company": {Read: true},
 		},
 		RowScope: principal.RowScopeAll,
 	}
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 	agent := e.AgentFor(t, e.Rep1, []ids.UUID{e.Team1}, perms)
-	svc := personRoomService(e)
+	svc := contactRoomService(e)
 
 	// A moment has to FIRE before a dismissal of it means anything. Whatever
 	// the ladder picks is fine — the test is about the dismissal, not about
 	// which rung won — so the fixture reads the moment rather than asserting a
 	// particular kind.
-	first, err := svc.Assemble(human, ids.From[ids.PersonKind](contact))
+	first, err := svc.Assemble(human, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the page: %v", err)
 	}
@@ -225,11 +225,11 @@ func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 	claim, fingerprint := first.Moment.ClaimKey, first.Moment.EvidenceFingerprint
 
 	e.WsExec(t, `
-		INSERT INTO person_moment_dismissal (user_id, person_id, claim_key, evidence_fingerprint)
+		INSERT INTO contact_moment_dismissal (user_id, contact_id, claim_key, evidence_fingerprint)
 		VALUES ($1, $2, $3, $4)`, e.Rep1, contact, claim, fingerprint)
 
 	// The human put it away, so their own page must not still offer it.
-	mine, err := svc.Assemble(human, ids.From[ids.PersonKind](contact))
+	mine, err := svc.Assemble(human, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("re-assembling the human's page: %v", err)
 	}
@@ -239,13 +239,13 @@ func TestAnAgentDoesNotConsumeItsHumansDismissal(t *testing.T) {
 	}
 
 	// The agent's is untouched: it never had a screen to put anything away on.
-	theirs, err := svc.Assemble(agent, ids.From[ids.PersonKind](contact))
+	theirs, err := svc.Assemble(agent, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the agent's page: %v", err)
 	}
 	if theirs.Moment == nil || theirs.Moment.ClaimKey != claim {
 		t.Errorf("an agent's page lost the moment its granting human dismissed "+
-			"(got %+v, want claim %q) — a dismissal belongs to a person's screen, "+
+			"(got %+v, want claim %q) — a dismissal belongs to a contact's screen, "+
 			"and a passport reading on their behalf consumed it", theirs.Moment, claim)
 	}
 }

@@ -32,8 +32,8 @@ import (
 //
 // It DOES offer the brief, where the meeting names somebody. The brief is not a
 // page either, which is why this read as unreachable for so long: it opens as
-// `?prep=<activity>` on a PERSON's record, so the move needs both ids and the
-// row already carried only one. The person rides in the move's arguments rather
+// `?prep=<activity>` on a CONTACT's record, so the move needs both ids and the
+// row already carried only one. The contact rides in the move's arguments rather
 // than as the row's subject, because the subject names what the row is ABOUT
 // and this row is about the meeting.
 //
@@ -56,12 +56,12 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		DueAt:   &starts,
 		Actions: []crmcontracts.AttentionItemActions{},
 	}
-	// Only where a person is named. A meeting with no attendee this reader may
+	// Only where a contact is named. A meeting with no attendee this reader may
 	// see has no page to read the brief on, so the field stays absent and the
 	// classifier below offers no way in — rather than one that opens nothing.
-	if !meeting.PersonID.IsZero() {
-		with := openapi_types.UUID(meeting.PersonID)
-		item.WithPerson = &with
+	if !meeting.ContactID.IsZero() {
+		with := openapi_types.UUID(meeting.ContactID)
+		item.WithContact = &with
 	}
 	// `kind` is the producer's own sub-type, for the icon and the label and
 	// never for authority — which is exactly what "nobody has written anything
@@ -128,18 +128,18 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		reasons = append(reasons, reason("meeting_unprepared", nil))
 	}
 	row := base(item, level, "meetings", "meeting_unprepared")
-	// The way into the brief, where the row named a person to read it on. Both
+	// The way into the brief, where the row named a contact to read it on. Both
 	// ids travel because neither names it alone: the activity says WHICH
-	// meeting, the person says WHOSE page it opens on.
+	// meeting, the contact says WHOSE page it opens on.
 	// The meeting id comes off the SUBJECT rather than being parsed back out of
 	// item.Id: the subject already holds it as a uuid, and re-parsing the
 	// string form would introduce a failure case where there is none.
-	if item.WithPerson != nil && item.Subject != nil {
+	if item.WithContact != nil && item.Subject != nil {
 		meetingID := item.Subject.Id
 		row.Move = &crmcontracts.WorklistMove{
 			Action:     crmcontracts.WorklistMoveActionOpenMeetingBrief,
 			ActivityId: &meetingID,
-			Arguments:  &map[string]any{"person_id": item.WithPerson.String()},
+			Arguments:  &map[string]any{"contact_id": item.WithContact.String()},
 		}
 	}
 	// A meeting's start time IS a deadline the reader is racing, so it counts
@@ -173,7 +173,7 @@ func hostOf(item crmcontracts.AttentionItem) ids.UUID {
 // meetingAwaitingOutcomeItem draws one meeting that happened and owes an answer.
 //
 // The counterpart of meetingItem, and deliberately thinner. That row is about
-// preparing, so it carries a person to read the brief on and a prep tri-state;
+// preparing, so it carries a contact to read the brief on and a prep tri-state;
 // this one is about closing off, which needs the meeting and nothing else.
 //
 // `OccurredAt` and no `DueAt`. The lane above races a start time, so its rows
@@ -237,7 +237,7 @@ func classifyUnansweredMeeting(item crmcontracts.AttentionItem, asOf time.Time) 
 		// The host, exactly as classifyMeeting names one — the two lanes are the
 		// same meetings asked about from either side of their start time, and an
 		// owner on one but not the other would file the same appointment under
-		// two different people as the day goes past it.
+		// two different contacts as the day goes past it.
 		ownerRef: ownerFrom(hostOf(item)),
 	}
 }

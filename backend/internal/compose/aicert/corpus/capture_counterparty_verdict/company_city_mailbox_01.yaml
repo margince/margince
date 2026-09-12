@@ -1,4 +1,4 @@
-name: a_trade_offices_city_mailbox_names_a_place_not_a_person
+name: a_trade_offices_city_mailbox_names_a_place_not_a_contact
 task: capture_counterparty_verdict
 site: verdict
 source: hand_authored
@@ -26,7 +26,7 @@ expect:
     A trade office's shared mailbox, named after the CITY it sits in. This is
     the case a deterministic word list cannot reach and the model must:
     "singapore" is not a role word — no vocabulary of functions can hold every
-    place name without also refusing people called Paris or Milan — so nothing
+    place name without also refusing contacts called Paris or Milan — so nothing
     upstream catches it and the answer here is the only defence.
     Both halves are present. The correspondence is genuine: it cites an
     agreement this business signed and asks for a reply. And nobody is named
@@ -36,7 +36,7 @@ expect:
     "role_mailbox" is a near miss and scores nearly as high — the effect is the
     same, real correspondence with no contact invented, and whether a city
     office is a function or the company speaking is a thin line.
-    "person" is the failure this exists to catch and scores zero above the
+    "contact" is the failure this exists to catch and scores zero above the
     floor: it files a contact called "Singapore AC", which is what a founder
     actually found in his CRM. "spam" scores zero — hiding a counterparty's
     letter about a live contract is the expensive mistake in the other

@@ -13,7 +13,7 @@ import (
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -94,7 +94,7 @@ func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id c
 // did send.
 func introRequestFrom(body crmcontracts.DraftIntroRequestJSONRequestBody) (IntroRequest, error) {
 	for field, id := range map[string]ids.UUID{
-		"person_id":   ids.UUID(body.PersonId),
+		"contact_id":  ids.UUID(body.ContactId),
 		"via_user_id": ids.UUID(body.ViaUserId),
 	} {
 		if err := httperr.RequireBodyID(field, id); err != nil {
@@ -102,7 +102,7 @@ func introRequestFrom(body crmcontracts.DraftIntroRequestJSONRequestBody) (Intro
 		}
 	}
 	req := IntroRequest{
-		PersonID:  ids.From[ids.PersonKind](ids.UUID(body.PersonId)),
+		ContactID: ids.From[ids.ContactKind](ids.UUID(body.ContactId)),
 		ViaUserID: ids.From[ids.UserKind](ids.UUID(body.ViaUserId)),
 	}
 	// A null deal_id means "the account in general" and is an ordinary case. A
@@ -202,7 +202,7 @@ func (h Handlers) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id
 				"status is waiting, answered, no_reply or untried"))
 			return
 		}
-		status := people.Engagement(*params.Status)
+		status := contacts.Engagement(*params.Status)
 		q.Status = &status
 	}
 	if params.Sort != nil {

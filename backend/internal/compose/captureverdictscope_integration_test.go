@@ -7,7 +7,7 @@ package compose
 
 // HOW WIDELY a judged sender's contact record is visible.
 //
-// A `person` verdict says the sender is a named human. It does not say the
+// A `contact` verdict says the sender is a named human. It does not say the
 // workspace should be told, and three situations turn on that difference: mail
 // we sent to somebody who never answered, a thread under a confidentiality
 // hold, and a message under a legal restriction. Each keeps the record — the
@@ -42,7 +42,7 @@ func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
 	const email = "desk@citygarden.example"
 	activity := seedOutboundMail(t, e, email, "Access card")
 	id := seedPendingDisposition(t, e, email, "citygarden.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -52,12 +52,12 @@ func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
 	// The record exists: the positive control, without which this test would
 	// pass over a verdict that created nothing at all.
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1`, email); n != 1 {
-		t.Fatalf("%d persons for an address we wrote to, want the record to be made", n)
+		t.Fatalf("%d contacts for an address we wrote to, want the record to be made", n)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 0 {
 		t.Error("an address we wrote to that never answered was published to the workspace")
 	}
@@ -76,7 +76,7 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 	activity := seedThreadedMail(t, e, email, "Our proposal", "outbound", "thr-answered")
 	seedThreadedMail(t, e, email, "Re: Our proposal", "inbound", "thr-answered")
 	id := seedPendingDisposition(t, e, email, "prospect.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -84,9 +84,9 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 1 {
-		t.Errorf("%d workspace-visible persons for an address that answered us, want 1", n)
+		t.Errorf("%d workspace-visible contacts for an address that answered us, want 1", n)
 	}
 }
 
@@ -122,14 +122,14 @@ func seedThreadedMail(t *testing.T, e *integration.Env, counterparty, subject, d
 // The hold is a statement about who may read the correspondence. A
 // workspace-visible contact minted off that thread announces the counterparty
 // the hold exists to keep quiet: the mail stays shut while a row on a surface
-// everybody reads names the person it was shut about.
+// everybody reads names the contact it was shut about.
 func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
 	e := integration.Setup(t)
 	const email = "partner@confidential.example"
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-held")
 	seedThreadHold(t, e, "thr-held", "held")
 	id := seedPendingDisposition(t, e, email, "confidential.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -137,12 +137,12 @@ func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1`, email); n != 1 {
-		t.Fatalf("%d persons for a held thread's sender, want the record to be made", n)
+		t.Fatalf("%d contacts for a held thread's sender, want the record to be made", n)
 	}
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 0 {
 		t.Error("the counterparty of a held thread was announced to the workspace")
 	}
@@ -156,7 +156,7 @@ func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
 	activity := seedThreadedMail(t, e, email, "The matter", "inbound", "thr-cleared")
 	seedThreadHold(t, e, "thr-cleared", "cleared")
 	id := seedPendingDisposition(t, e, email, "ordinary.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -164,9 +164,9 @@ func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 1 {
-		t.Errorf("%d workspace-visible persons on a cleared thread, want 1", n)
+		t.Errorf("%d workspace-visible contacts on a cleared thread, want 1", n)
 	}
 }
 
@@ -187,7 +187,7 @@ func seedThreadHold(t *testing.T, e *integration.Env, threadKey, status string) 
 // A RESTRICTED message never announces its counterparty either.
 //
 // The restriction and the thread hold are different mechanisms and the same
-// obligation: the correspondence may not be republished, so the person on the
+// obligation: the correspondence may not be republished, so the contact on the
 // far end of it may not be named on a surface everybody reads. Held separately
 // because a restriction can land on a message whose thread carries no verdict
 // row at all.
@@ -218,7 +218,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 		t.Fatalf("placing the message under a hold: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "restricted.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -226,7 +226,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 0 {
 		t.Error("a restricted message's counterparty was announced to the workspace")
 	}
@@ -260,7 +260,7 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 		t.Fatalf("holding the message: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "marked.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -268,39 +268,39 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 0 {
 		t.Error("a held message's counterparty was announced to the workspace")
 	}
 }
 
 // A withheld contact stays withheld: the ledger says so, and the readers that
-// treat a person verdict as permission to publish honour it.
+// treat a contact verdict as permission to publish honour it.
 //
-// This is the half that was missing. The decision was recorded on the person
+// This is the half that was missing. The decision was recorded on the contact
 // row, and two readers ask the LEDGER instead — the sweep that reopens held
 // mail, and the birth decision that shares a future message from a sender
-// already judged a person. Both matched a contact deliberately kept private, so
+// already judged a contact. Both matched a contact deliberately kept private, so
 // the next pass republished what this one withheld.
 func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T) {
 	e := integration.Setup(t)
 	const email = "desk@withheld.example"
 	activity := seedThreadedMail(t, e, email, "Access card", "outbound", "thr-withheld")
 	id := seedPendingDisposition(t, e, email, "withheld.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
 
-	// The verdict IS person — the positive control. Without it this test would
-	// pass over a row that was never judged a person at all, which is a
+	// The verdict IS contact — the positive control. Without it this test would
+	// pass over a row that was never judged a contact at all, which is a
 	// different reason for the readers to skip it.
 	if n := countIn(t, e, `
 		SELECT count(*) FROM capture_pending_counterparty
-		 WHERE id = $1 AND status = 'real' AND kind = 'person'`, id); n != 1 {
-		t.Fatalf("the ledger does not record a person verdict, so this proves nothing about withholding")
+		 WHERE id = $1 AND status = 'real' AND kind = 'contact'`, id); n != 1 {
+		t.Fatalf("the ledger does not record a contact verdict, so this proves nothing about withholding")
 	}
 	if n := countIn(t, e, `
 		SELECT count(*) FROM capture_pending_counterparty
@@ -317,7 +317,7 @@ func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
 	const email = "buyer@published.example"
 	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-published")
 	id := seedPendingDisposition(t, e, email, "published.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -426,7 +426,7 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 		t.Fatalf("holding the message pending its verdict: %v", err)
 	}
 	id := seedPendingDisposition(t, e, email, "waiting.example", activity)
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -434,9 +434,9 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 	}
 
 	if n := countIn(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = $1 AND p.visibility = 'workspace'`, email); n != 1 {
-		t.Errorf("%d workspace-visible persons for a sender whose mail was merely awaiting "+
+		t.Errorf("%d workspace-visible contacts for a sender whose mail was merely awaiting "+
 			"this verdict, want 1 — waiting for an answer is not a hold", n)
 	}
 }

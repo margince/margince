@@ -5,7 +5,7 @@ package compose
 
 // A change in what a company runs, as a signal on its account.
 //
-// This is the seam between the people module, which owns the company record and
+// This is the seam between the contacts module, which owns the company record and
 // notices the change while writing it, and the signals module, which owns the
 // row. Neither imports the other; the edge is spelled here, which is the same
 // arrangement every other cross-module producer uses.
@@ -22,7 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/techprofile"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -40,11 +40,11 @@ const (
 	technicalPreviousKey = "previous"
 )
 
-// technicalChangeRecorder builds the recorder the people module calls inside
+// technicalChangeRecorder builds the recorder the contacts module calls inside
 // its own write transaction, so the record change and the company event commit
 // together or not at all.
-func technicalChangeRecorder() people.TechnicalChangeRecorder {
-	return func(ctx context.Context, tx pgx.Tx, change people.TechnicalChange, at time.Time) error {
+func technicalChangeRecorder() contacts.TechnicalChangeRecorder {
+	return func(ctx context.Context, tx pgx.Tx, change contacts.TechnicalChange, at time.Time) error {
 		summary, ok := technicalChangeSummary(baseLanguageForSummary(ctx, tx), change)
 		if !ok {
 			// A change in a field nobody would act on. The record still holds
@@ -203,7 +203,7 @@ var technicalSummaryByLang = map[textlang.Lang]technicalSummaryCopy{
 // four different pieces of news: a mail system moving is an IT decision worth a
 // call, a careers page appearing is a hiring signal, and a shared phrasing
 // would flatten both into "a technical signal changed".
-func technicalChangeSummary(lang textlang.Lang, change people.TechnicalChange) (string, bool) {
+func technicalChangeSummary(lang textlang.Lang, change contacts.TechnicalChange) (string, bool) {
 	said, ok := technicalSummaryByLang[lang]
 	if !ok {
 		// Unreachable for a language the product ships — the census holds that
@@ -212,27 +212,27 @@ func technicalChangeSummary(lang textlang.Lang, change people.TechnicalChange) (
 		said = technicalSummaryByLang[textlang.English]
 	}
 	switch change.Field {
-	case people.FactMailProvider:
+	case contacts.FactMailProvider:
 		// The fallback mail labels are prose and follow the language; a real
 		// provider's key misses the map and its vendor name passes through.
 		value := nameOr(said.mailNames, change.ValueKey, change.Value)
-		if change.Kind == people.TechnicalMoved {
+		if change.Kind == contacts.TechnicalMoved {
 			return fmt.Sprintf(said.mailMoved, value, nameOr(said.mailNames, change.PreviousKey, change.Previous)), true
 		}
 		return fmt.Sprintf(said.mailSet, value), true
-	case people.FactOperatedService:
+	case contacts.FactOperatedService:
 		value := nameOr(said.serviceNames, change.ValueKey, change.Value)
-		if change.Kind == people.TechnicalGone {
+		if change.Kind == contacts.TechnicalGone {
 			return fmt.Sprintf(said.serviceGone, value), true
 		}
 		return fmt.Sprintf(said.serviceNew, value), true
-	case people.FactHostingProvider:
-		if change.Kind == people.TechnicalMoved {
+	case contacts.FactHostingProvider:
+		if change.Kind == contacts.TechnicalMoved {
 			return fmt.Sprintf(said.hostingMoved, change.Value, change.Previous), true
 		}
 		return fmt.Sprintf(said.hostingSet, change.Value), true
-	case people.FactTechnology:
-		if change.Kind == people.TechnicalGone {
+	case contacts.FactTechnology:
+		if change.Kind == contacts.TechnicalGone {
 			return fmt.Sprintf(said.technologyGone, change.Value), true
 		}
 		return fmt.Sprintf(said.technologyNew, change.Value), true

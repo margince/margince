@@ -28,7 +28,7 @@ func TestSendInputMergesEveryAddresseeForTheConsentGate(t *testing.T) {
 	cc := emails("boss@example.test")
 	in := sendInputFrom(emails("buyer@example.test"), &cc, nil, "Pricing", "As discussed.", nil, nil, "transactional", nil)
 
-	// The gate answers on Recipients, so a cc'd person must appear there or
+	// The gate answers on Recipients, so a cc'd contact must appear there or
 	// they receive mail nobody asked consent for.
 	want := []string{"buyer@example.test", "boss@example.test"}
 	if len(in.Recipients) != len(want) {
@@ -77,7 +77,7 @@ func TestSendInputResolvesNoDraftWhenNoneWasServed(t *testing.T) {
 
 // A blind copy is blind to the RECIPIENTS and never to the consent gate. The
 // gate answers on Recipients, so a bcc'd address missing from that list is a
-// person who receives mail nobody asked consent for — which is the same defect
+// contact who receives mail nobody asked consent for — which is the same defect
 // as an unconsented To, with the added property that nobody can see it happened.
 func TestSendInputMergesBlindCopiesForTheConsentGate(t *testing.T) {
 	cc := emails("boss@example.test")

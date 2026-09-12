@@ -7,7 +7,7 @@ package agents
 // has one.
 //
 // The tool used to compose its own picture for every anchor, beside a written
-// brief only a person could read. The routing below is what ended that, so it
+// brief only a contact could read. The routing below is what ended that, so it
 // is what has to stay proved: a meeting gets the brief, everything else gets
 // what it always got, and a failure is never dressed up as an answer.
 
@@ -79,20 +79,20 @@ func TestAMeetingAnchorIsAnsweredWithTheWrittenBrief(t *testing.T) {
 }
 
 func TestARecordThatIsNotAMeetingIsNeverBriefed(t *testing.T) {
-	// A person names a record, not a room. Asking for a brief would be a read
+	// A contact names a record, not a room. Asking for a brief would be a read
 	// the caller did not request and an answer there is no meeting for.
 	stub := &briefStub{answer: aBrief(ids.NewV7())}
 	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read}
 
-	got, err := callPrep(t, tool, string(datasource.EntityPerson), ids.NewV7())
+	got, err := callPrep(t, tool, string(datasource.EntityContact), ids.NewV7())
 	if err != nil {
 		t.Fatalf("prep_for_meeting: %v", err)
 	}
 	if got.Brief != nil {
-		t.Error("a person anchor was briefed")
+		t.Error("a contact anchor was briefed")
 	}
 	if !stub.askedFor.IsZero() {
-		t.Errorf("the brief was read for a person anchor (%s); it should never have been asked", stub.askedFor)
+		t.Errorf("the brief was read for a contact anchor (%s); it should never have been asked", stub.askedFor)
 	}
 }
 
@@ -141,12 +141,12 @@ func TestARealFailureIsNeverDressedUpAsAnAnswer(t *testing.T) {
 
 func TestEveryRecordTheBriefNamesIsChargedToTheReadBound(t *testing.T) {
 	// Naming a record to an agent is handing that record over, which is why
-	// noteEvidence charges rather than only recording. The brief names people
+	// noteEvidence charges rather than only recording. The brief names contacts
 	// and conversations the walk beside it never touched, so left uncharged
 	// the richest read on this surface would be its cheapest.
 	meeting, contact, thread := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	stub := &briefStub{answer: aBrief(meeting,
-		MeetingBriefCite{RecordType: "person", RecordID: contact},
+		MeetingBriefCite{RecordType: "contact", RecordID: contact},
 		MeetingBriefCite{RecordType: "activity", RecordID: thread},
 	)}
 	tool := prepForMeeting{retriever: inertRetriever{}, brief: stub.read}

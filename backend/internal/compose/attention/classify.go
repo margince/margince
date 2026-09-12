@@ -104,7 +104,7 @@ func base(
 		// Whose page a meeting's brief opens on. Forwarded rather than derived
 		// here: the lane already decided whether the reader may see anybody on
 		// the meeting, and an absent value is that decision rather than a gap.
-		WithPerson: item.WithPerson,
+		WithContact: item.WithContact,
 		// Forwarded, never re-derived here. The lane already applied the
 		// both-sides-visible rule and set `merge` only where it held, so
 		// carrying the payload keeps the verb and the records it acts on
@@ -154,7 +154,7 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 	return ranked{
 		item:       row,
 		occurredAt: occurredOf(item, asOf),
-		// Carried back to the person who APPROVED it, by a lane bound to them.
+		// Carried back to the contact who APPROVED it, by a lane bound to them.
 		ownerRef: ownedByWhoeverIsReading(),
 	}
 }
@@ -164,7 +164,7 @@ func classifyFailedApproval(item crmcontracts.AttentionItem, asOf time.Time) ran
 // levelBlocking, which is "a decision that holds up customer work", because
 // that is precisely what it is: a rep's deal is stopped until this colleague
 // says yes, no, or ask somebody else. It is a DECISION rather than system news
-// — a person must choose, and only this person can.
+// — a contact must choose, and only this contact can.
 //
 // The deadline is stamped like the DSR's, because both are somebody else's
 // clock running and the queue orders by it. An ask that lapses reads to the
@@ -331,8 +331,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	switch {
 	case !waiting.DealID.IsZero():
 		row.Subject = subjectOf(subjectDeal, waiting.DealID)
-	case !waiting.PersonID.IsZero():
-		row.Subject = subjectOf("person", waiting.PersonID)
+	case !waiting.ContactID.IsZero():
+		row.Subject = subjectOf("contact", waiting.ContactID)
 	case !waiting.CompanyID.IsZero():
 		row.Subject = subjectOf("company", waiting.CompanyID)
 	}
@@ -390,7 +390,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.
-		person: waiting.PersonID,
+		contact: waiting.ContactID,
 	}
 }
 

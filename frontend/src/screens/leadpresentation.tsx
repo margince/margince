@@ -100,7 +100,7 @@ const LEAD_BOARD_STAGES = [
 // the leads-by-status report instead.
 //
 // They are not statuses a card can simply be MOVED to. Qualifying promotes the
-// lead into a person (and maybe a deal) and disqualifying records a reason, so
+// lead into a contact (and maybe a deal) and disqualifying records a reason, so
 // each drop opens the dialog that collects what the transition needs — the
 // server refuses a bare status PATCH into either, and rightly.
 const LEAD_TERMINAL_STAGES = [
@@ -351,7 +351,7 @@ export function LeadBoard({
   // WHERE a dropped card lands, as one decision.
   //
   // A terminal column FIRST. Neither of those transitions is a status change:
-  // qualifying promotes the lead into a person and maybe a deal, disqualifying
+  // qualifying promotes the lead into a contact and maybe a deal, disqualifying
   // records a reason, and the server refuses a bare status PATCH into either.
   // The drop opens the dialog that collects what the transition needs; only an
   // open stage is a move.

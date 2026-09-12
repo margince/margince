@@ -57,13 +57,13 @@ func TestSearchContextRefusesAnEmptyQuery(t *testing.T) {
 func TestEverySearchHitIsReadBackThroughTheSeam(t *testing.T) {
 	first, second := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		first:  recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		first:  recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		second: recordAt(datasource.EntityDeal, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), false),
 	}}
 	found := retrieval.Result{SemanticRanking: true, Hits: []retrieval.Hit{
 		{
-			Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: first}, Score: 0.91,
-			Evidence: []retrieval.Evidence{{Source: "person:" + first.String(), Snippet: "pilot stalled after Q2"}},
+			Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: first}, Score: 0.91,
+			Evidence: []retrieval.Evidence{{Source: "contact:" + first.String(), Snippet: "pilot stalled after Q2"}},
 		},
 		{Ref: datasource.EntityRef{Type: datasource.EntityDeal, ID: second}, Score: 0.4},
 	}}
@@ -101,13 +101,13 @@ func TestAnUnreadableHitIsDroppedAndCounted_ToNobody(t *testing.T) {
 	readable, hidden := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
-			readable: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			readable: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		},
 		fail: map[ids.UUID]error{hidden: apperrors.ErrPermissionDenied},
 	}
 	found := retrieval.Result{SemanticRanking: true, Hits: []retrieval.Hit{
-		{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: hidden}, Score: 0.99},
-		{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: readable}, Score: 0.5},
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: hidden}, Score: 0.99},
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: readable}, Score: 0.5},
 	}}
 
 	result := handleContextSearch(t, provider, found)
@@ -135,15 +135,15 @@ func TestAWithheldHitIsNotChargedAgainstTheReadBound(t *testing.T) {
 	readable, hidden := ids.NewV7(), ids.NewV7()
 	provider := &queryProbeProvider{
 		records: map[ids.UUID]datasource.Record{
-			readable: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+			readable: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 		},
 		fail: map[ids.UUID]error{hidden: apperrors.ErrNotFound},
 	}
 	tool := searchContext{p: provider, retriever: fixedRetriever{result: retrieval.Result{
 		SemanticRanking: true,
 		Hits: []retrieval.Hit{
-			{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: hidden}},
-			{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: readable}},
+			{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: hidden}},
+			{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: readable}},
 		},
 	}}}
 	registry, charger, ctx := chargingRegistry(t, tool)
@@ -165,8 +165,8 @@ func TestASearchIsChargedPerRecord(t *testing.T) {
 	found := retrieval.Result{SemanticRanking: true}
 	for range 4 {
 		id := ids.NewV7()
-		provider.records[id] = recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
-		found.Hits = append(found.Hits, retrieval.Hit{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: id}})
+		provider.records[id] = recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true)
+		found.Hits = append(found.Hits, retrieval.Hit{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: id}})
 	}
 	registry, charger, ctx := chargingRegistry(t, searchContext{p: provider, retriever: fixedRetriever{result: found}})
 
@@ -188,10 +188,10 @@ func TestASearchIsChargedPerRecord(t *testing.T) {
 func TestALexicallyRankedPageSaysSo(t *testing.T) {
 	id := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		id: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		id: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	found := retrieval.Result{SemanticRanking: false, Hits: []retrieval.Hit{
-		{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: id}},
+		{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: id}},
 	}}
 
 	result := handleContextSearch(t, provider, found)
@@ -253,12 +253,12 @@ func TestTheSearchLimitIsResolvedAgainstThePublishedCeiling(t *testing.T) {
 func TestAnEmptyExcerptIsNotServedAsEvidence(t *testing.T) {
 	id := ids.NewV7()
 	provider := &queryProbeProvider{records: map[ids.UUID]datasource.Record{
-		id: recordAt(datasource.EntityPerson, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
+		id: recordAt(datasource.EntityContact, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), true),
 	}}
 	found := retrieval.Result{SemanticRanking: true, Hits: []retrieval.Hit{{
-		Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: id},
+		Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: id},
 		Evidence: []retrieval.Evidence{
-			{Source: "person:" + id.String(), Snippet: ""},
+			{Source: "contact:" + id.String(), Snippet: ""},
 			{Source: "gmail:msg-1", Snippet: "they mentioned the pilot"},
 		},
 	}}}
@@ -278,7 +278,7 @@ func TestAnUnreachableStoreFailsTheSearchRatherThanShorteningIt(t *testing.T) {
 	provider := &queryProbeProvider{fail: map[ids.UUID]error{id: errors.New("the pool is exhausted")}}
 	tool := searchContext{p: provider, retriever: fixedRetriever{result: retrieval.Result{
 		SemanticRanking: true,
-		Hits:            []retrieval.Hit{{Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: id}}},
+		Hits:            []retrieval.Hit{{Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: id}}},
 	}}}
 
 	if _, err := tool.Handle(t.Context(), json.RawMessage(`{"query":"anything"}`)); err == nil {

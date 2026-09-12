@@ -244,7 +244,7 @@ The rules that decide whether a scenario is worth having:
   rubric scoring a field the schema does not declare measures nothing: the model
   cannot produce it however well it answers, so the clause can only mark a
   correct reply down. Read the request builder and the answer schema first.
-- **Fixtures are synthetic.** No real company, deal or person data under this
+- **Fixtures are synthetic.** No real company, deal or contact data under this
   tree.
 
 Aim a scenario at one thing that can go wrong. The scenarios that have earned

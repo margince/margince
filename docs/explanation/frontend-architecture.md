@@ -150,7 +150,7 @@ the splash) use the same rail-less frame.
 
 ### A nav label is presentation and never a route id
 
-This is the convention most likely to be got wrong by the next person adding a
+This is the convention most likely to be got wrong by the next contact adding a
 destination, so it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id** — the stable English name in the hash, in
 `App.tsx`'s switch, and in every `href`. `NavItem.labelKey` is a **catalog key**
@@ -245,7 +245,7 @@ than brand colour, and a literal anywhere else fails the gate.
 ## Provenance
 
 **`EvidenceMark` is THE provenance affordance.** A value that came from
-somewhere other than a person typing it carries a dotted underline; opening the
+somewhere other than a contact typing it carries a dotted underline; opening the
 mark says where it came from, how sure the system was, the text it was read
 from, when — and offers a way through to that field's full history.
 

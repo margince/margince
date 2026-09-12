@@ -42,7 +42,7 @@ import "./brief.feed.css";
 // now" row ranked below a "move revenue" one — which is ordinary and correct,
 // because a customer waiting an hour does not outrank a deal closing today.
 
-/** At most this many cards. A morning a person can finish, not a list. */
+/** At most this many cards. A morning a contact can finish, not a list. */
 const FEED = 8;
 
 /**
@@ -100,7 +100,7 @@ export function BriefFeed({
                     position={index + 1}
                     // The reader's OWN day. A row is handed to somebody else
                     // only from a page that is already about somebody else,
-                    // and this page is about the person reading it.
+                    // and this page is about the reader reading it.
                     owner=""
                     onOpenEmail={setOpenEmail}
                   />

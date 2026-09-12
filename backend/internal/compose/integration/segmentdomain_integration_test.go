@@ -46,7 +46,7 @@ func TestASegmentSelectsAccountsByTheirDomain(t *testing.T) {
 	owner := OwnerConn(t)
 	store := collections.NewStore(e.DB())
 	// The segment is over ACCOUNTS, so the caller needs the account read the
-	// person-shaped fixture perms do not carry.
+	// contact-shaped fixture perms do not carry.
 	perms := collectionsPerms()
 	grants := map[string]principal.ObjectGrant{}
 	for object, grant := range perms.Objects {

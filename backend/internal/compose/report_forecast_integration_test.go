@@ -358,9 +358,9 @@ func TestForecastByOwnerCountsAMultiStakeholderDealOnce(t *testing.T) {
 	e := setupForecast(t)
 	dealID := e.seedOpenDeal(t, "Two champions", 60, &e.Rep1, int64p(50000), stringp("commit"))
 	for _, role := range []string{"champion", "economic_buyer"} {
-		personID := e.seedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, "Stakeholder "+role)
-		e.seedID(t, `INSERT INTO relationship (id, kind, deal_id, person_id, role, source, captured_by)
-			VALUES ($1, 'deal_stakeholder', $2, $3, $4, 'manual', 'human:x')`, dealID, personID, role)
+		contactID := e.seedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, "Stakeholder "+role)
+		e.seedID(t, `INSERT INTO relationship (id, kind, deal_id, contact_id, role, source, captured_by)
+			VALUES ($1, 'deal_stakeholder', $2, $3, $4, 'manual', 'human:x')`, dealID, contactID, role)
 	}
 
 	result := e.runReport(e.Admin(), t, "forecast", `{"group_by":["owner_id","currency"]}`)

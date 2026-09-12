@@ -63,7 +63,7 @@ func TestCatchMeUpOnScopedToAProjectDropsTheOtherEngagement(t *testing.T) {
 	f := seedTwoEngagementAccount(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
-	anchor := fmt.Sprintf(`"record_type":"person","record_id":%q,"max_items":20`, f.person.String())
+	anchor := fmt.Sprintf(`"record_type":"contact","record_id":%q,"max_items":20`, f.contact.String())
 
 	scoped := contextIDs(t, toolData(ctx, t, registry, "catch_me_up_on",
 		fmt.Sprintf(`{%s,"project_id":%q}`, anchor, f.erp.String())))
@@ -158,7 +158,7 @@ func TestAProjectScopeTheCallerCannotSeeIsRefusedThroughTheToolSurface(t *testin
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
 	noProjectGrant := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "project"))
-	anchor := fmt.Sprintf(`"record_type":"person","record_id":%q`, f.person.String())
+	anchor := fmt.Sprintf(`"record_type":"contact","record_id":%q`, f.contact.String())
 
 	for _, call := range []struct{ tool, args string }{
 		{"catch_me_up_on", `{` + anchor + `,"project_id":%q}`},

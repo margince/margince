@@ -17,7 +17,7 @@ package compose
 //     with a new id. A block whose numbers moved underneath it would be a
 //     sentence that changed meaning after somebody approved it.
 //   - A saved run is NOT a cache. The rows were narrowed and floored for the
-//     person who asked, so they are never replayed for a second reader. Read
+//     contact who asked, so they are never replayed for a second reader. Read
 //     re-asks the stored question under the caller's own grants and serves
 //     THAT answer.
 //
@@ -114,7 +114,7 @@ func SaveReportRun(
 	}
 
 	// The audit records that an answer was saved and what was asked. It does
-	// not record the ANSWER: an audit row is read by people who did not ask the
+	// not record the ANSWER: an audit row is read by contacts who did not ask the
 	// question, and the rows were narrowed for somebody who did.
 	if _, err := storekit.AuditEvent(ctx, tx, "create", tableReportRun, id,
 		map[string]any{

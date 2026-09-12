@@ -246,7 +246,7 @@ func TestConfirmingATranscriptProposalCreatesTheTaskExactlyOnce(t *testing.T) {
 // A task the rep types names no meeting, and must not borrow one.
 func TestATaskNobodyReadOutOfAMeetingNamesNone(t *testing.T) {
 	e := setupTranscript(t)
-	subject := "Typed by a person"
+	subject := "Typed by a contact"
 	if _, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "task", Subject: &subject, Source: "manual",
 	}); err != nil {
@@ -596,7 +596,7 @@ func TestAStatedDeadlineBecomesTheTasksDueDate(t *testing.T) {
 	}
 	// The day the REVIEWER approved, spelled the way the approval card spells
 	// it. The card renders the proposal's `due_date` string with no conversion
-	// at all, so this is literally what the person clicking Accept was looking
+	// at all, so this is literally what the contact clicking Accept was looking
 	// at; asserting the task against the same string is what makes "the
 	// approved day survives acceptance" a checkable claim rather than two
 	// separate ones about a stamp and a render. A proposal for the 8th came
@@ -701,7 +701,7 @@ func TestTheNamedColleagueGetsTheTask(t *testing.T) {
 //
 // A promise given to the wrong colleague is worse than one given to nobody: the
 // wrong colleague does not do it, and the right one never learns it was theirs.
-// The body still names who promised, so a person can route it.
+// The body still names who promised, so a contact can route it.
 func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
 	e := setupTranscript(t)
 	// The harness's three humans all display as "Rep".
@@ -724,7 +724,7 @@ func TestAnAmbiguousOwnerLeavesTheTaskUnassigned(t *testing.T) {
 }
 
 // A name nobody answers to assigns to nobody, and does not fall back to the
-// person who approved it. Approving a proposal is answering a question about
+// contact who approved it. Approving a proposal is answering a question about
 // somebody else's commitment, not volunteering for it.
 func TestAnOutsidersPromiseIsNotGivenToTheApprover(t *testing.T) {
 	e := setupTranscript(t)
@@ -779,7 +779,7 @@ func TestAFirstNameAloneDoesNotResolveToAColleague(t *testing.T) {
 		WHERE kind = 'task' AND assignee_id IS NOT NULL`)
 	if assigned != 0 {
 		t.Errorf("%d task(s) were assigned on a first name — the one match a "+
-			"substring search finds is not the one a person meant", assigned)
+			"substring search finds is not the one a contact meant", assigned)
 	}
 }
 
@@ -834,7 +834,7 @@ func (b erasingBrain) Complete(context.Context, model.Request) (model.Response, 
 // and only then discovered its own record was gone. Nothing revisits those
 // rows: the erasure set archived_at so the retention selector can never pick
 // the activity up, the body is NULL so the transcript selector cannot either,
-// and a subject-only activity is redacted by no other person's erasure. The
+// and a subject-only activity is redacted by no other contact's erasure. The
 // quotations stayed in the approvals inbox permanently.
 //
 // It is not an error the job should retry, either: asking the same question of

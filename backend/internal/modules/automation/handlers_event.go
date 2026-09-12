@@ -27,7 +27,7 @@ import (
 
 // StarterWorkflows returns the shipped handler set over the injected
 // executor seams. assign_lead_owner is NOT here: its engine is
-// lead-store SQL, so the people module provides that handler (under
+// lead-store SQL, so the contacts module provides that handler (under
 // its own honest name — AUTO-NOTE-2, §3.5) and compose registers it
 // beside these. ex is the seam bundle every handler's Apply threads
 // into ApplyActions, whether or not this particular starter's own
@@ -126,7 +126,7 @@ func (stageChangeCreateTask) IdempotencyKey(ev workflow.Event) string {
 // (AUTO-NOTE-2, §3.5): "route a new lead to a task", the CREATE_TASK
 // reading of those words — never confused with the OWNER-assignment
 // reading of the same phrase, which lives under its own honest name,
-// assign_lead_owner (people.LeadRoutingWorkflow), because the two are
+// assign_lead_owner (contacts.LeadRoutingWorkflow), because the two are
 // genuinely different acts, not two names for one automation.
 const routeLeadName = "route_lead"
 
@@ -157,7 +157,7 @@ func (routeLeadCreateTask) Spec() workflow.Spec {
 
 // Match declines a lead nobody asked us for.
 //
-// Every lead that came from a person — a form, a reply, a referral, a hand
+// Every lead that came from a contact — a form, a reply, a referral, a hand
 // typed row — needs its first follow-up, and unlike stage_change_create_task
 // there is no "wrong direction" one could have arrived from. What does not need
 // one is a name the product READ off a public web page: nobody wrote in and
@@ -183,7 +183,7 @@ func (routeLeadCreateTask) Match(_ context.Context, ev workflow.Event) (bool, er
 // Plan mints the follow-up ASSIGNED to whoever answers for the lead.
 //
 // The owner is read off the lead through the same provider stage_change_notify
-// reads its deal through, rather than imported from the people module: this
+// reads its deal through, rather than imported from the contacts module: this
 // module reaches no sibling, and the record is already in front of it.
 //
 // A lead nobody owns yet mints an unassigned task, which is the honest answer —
@@ -374,9 +374,9 @@ func (postMeetingRecap) Plan(_ context.Context, ev workflow.Event) (workflow.Eff
 	// business_correspondence is NAMED here rather than left to a default, and
 	// naming it is not this code choosing a lawful basis: the purpose exists
 	// for exactly this case. ADR-0098 D1 added it because ADR-0011's blanket
-	// default-deny "overshoots on one class: replying to a person who wrote to
+	// default-deny "overshoots on one class: replying to a contact who wrote to
 	// us" — individual business correspondence is not advertising under UWG §7
-	// and rests on Art 6(1)(b)/(f), not consent. A recap to the person you just
+	// and rests on Art 6(1)(b)/(f), not consent. A recap to the contact you just
 	// met with is that and nothing else.
 	//
 	// A user-configured draft_email instance declares its own purpose and is

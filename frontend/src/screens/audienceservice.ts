@@ -38,7 +38,7 @@ export type ThreadAudienceResult = {
  *
  * The decision releases only the CALLER's hold. A thread two colleagues
  * imported opens when both allow it, so the outcome reports how many other
- * seats still hold it — a count and never a name, because whose mail a person
+ * seats still hold it — a count and never a name, because whose mail a colleague
  * keeps private is itself private. A caller that does not say so renders a
  * control that looks broken when it in fact did exactly what it said.
  *

@@ -565,7 +565,7 @@
 .auth-purpose {
   animation-delay: 110ms;
 }
-/* (b) the greeting, in the first person: the system saying its own name. Not a
+/* (b) the greeting, in the first contact: the system saying its own name. Not a
    heading — the h1 belongs to the task (§6.4), and this is a paragraph however
    large it is set. */
 .auth-statement {

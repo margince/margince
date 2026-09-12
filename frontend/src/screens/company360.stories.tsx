@@ -75,10 +75,10 @@ const populated = {
       evidence: [{ entity_type: "activity", entity_id: "a-1" }],
     },
   ],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -96,7 +96,7 @@ const populated = {
         },
       },
       {
-        person_id: "p-2",
+        contact_id: "p-2",
         full_name: "Kim Ops",
         title: "Operations",
         deal_roles: [],
@@ -195,7 +195,7 @@ const populated = {
         due_at: "2026-07-01T09:00:00Z",
         overdue: true,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
       {
@@ -204,7 +204,7 @@ const populated = {
         due_at: "2026-08-04T09:00:00Z",
         overdue: false,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
     ],
@@ -274,7 +274,7 @@ const populated = {
   },
 } as unknown as View;
 
-// The same account read by someone whose role cannot see deals, people or
+// The same account read by someone whose role cannot see deals, contacts or
 // the state strip: each card says so rather than reading as an account with
 // no pipeline, no contacts and no standing. This is the state no seeded demo
 // account can reach — every one of them grants the viewer full RBAC — so
@@ -282,9 +282,9 @@ const populated = {
 const withheld = {
   ...populated,
   deals: undefined,
-  people: undefined,
+  contacts: undefined,
   state_strip: undefined,
-  sections_omitted: ["deals", "people", "state_strip"],
+  sections_omitted: ["deals", "contacts", "state_strip"],
   // The reasons are a separate grant from the rows: this reader can list the
   // projects and cannot read the conversations behind them, so the card shows
   // the rows and says the statuses are incomplete.
@@ -294,7 +294,7 @@ const withheld = {
 // An account nobody has worked yet — every card in its own empty state.
 const empty = {
   ...populated,
-  people: { data: [], page },
+  contacts: { data: [], page },
   deals: {
     data: [],
     page,
@@ -485,7 +485,7 @@ const connectedFinance: FinanceSummary = {
 // The two lookups below are keyed on the real wire enums (Lifecycle,
 // RelationshipType), but StateStrip's own label props take a bare `string` —
 // StateStrip: the record's own readings row, above the tabs — FIVE slots on
-// every account, drawn by the shared StatStrip the person record uses.
+// every account, drawn by the shared StatStrip the contact record uses.
 //
 // Three of the four stories are states nothing seeded reaches. Withheld is the
 // whole-strip permission boundary, which no demo account carries. Connected is

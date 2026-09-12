@@ -111,7 +111,7 @@ export const WithFiledPaper: Story = {
 // Its own story because a focus ring is invisible in every other capture, and
 // this one regressed silently: the link moved to .link-button for its colour
 // and inherited that class's 9%-opacity shadow ring, which on the modal's
-// elevated surface is not a focus state a person can see. A tab stop nobody
+// elevated surface is not a focus state a contact can see. A tab stop nobody
 // can locate is the whole defect, and a screenshot is the only thing that
 // shows it.
 export const DownloadFocused: Story = {

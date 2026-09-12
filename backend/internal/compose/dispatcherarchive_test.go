@@ -44,7 +44,7 @@ func TestArchivableTypesAnswersForTheRoutedMode(t *testing.T) {
 	}
 
 	want := []datasource.EntityType{
-		datasource.EntityCompany, datasource.EntityDeal, datasource.EntityPerson,
+		datasource.EntityCompany, datasource.EntityContact, datasource.EntityDeal,
 	}
 	if !slices.Equal(types, want) {
 		t.Errorf("the dispatcher archives %v, want the overlay set %v — answering the native six "+
@@ -75,10 +75,10 @@ func TestRefuseArchiveRoutesByTheSameModeRead(t *testing.T) {
 			Type: principal.PrincipalHuman, ID: "archive-probe", SeatType: principal.SeatFull,
 			UserID: ids.NewV7(),
 			Permissions: principal.Permissions{
-				Objects: map[string]principal.ObjectGrant{"person": {Delete: true}},
+				Objects: map[string]principal.ObjectGrant{"contact": {Delete: true}},
 			},
 		})
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	err := d.RefuseArchive(ctx, ref)
 
@@ -122,7 +122,7 @@ func TestRefuseArchiveRefusesATypeTheMirrorDoesNotArchive(t *testing.T) {
 	// that would hold if the type check were deleted outright.
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("staging a project archive against an overlay workspace answered %v, want the "+
-			"unsupported-by-SoR refusal — overlay archives person, company and deal, so this "+
+			"unsupported-by-SoR refusal — overlay archives contact, company and deal, so this "+
 			"approval could never be carried out", err)
 	}
 	if *calls == 0 {

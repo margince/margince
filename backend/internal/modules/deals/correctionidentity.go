@@ -77,7 +77,7 @@ func EvidenceOf(proposal CloseDateCorrection, standing *time.Time) CorrectionEvi
 //
 // The same judgment RefusalProbe makes about a refused approval, asked of a
 // correction instead: the stage count and the question must match, and the deal
-// must still be standing where that correction left it. A deal a person has
+// must still be standing where that correction left it. A deal a contact has
 // re-dated since is a different situation and may be asked about again.
 func (e CorrectionEvidence) SameQuestionAs(earlier CorrectionEvidence) bool {
 	if e.RemainingOpenStages == "" || earlier.RemainingOpenStages == "" {
@@ -178,7 +178,7 @@ func (s *Store) CorrectionForAudit(ctx context.Context, tx pgx.Tx, auditID ids.U
 }
 
 // reversedCorrections is the memory an Undo leaves behind: the questions a
-// person has already answered by taking a correction back.
+// contact has already answered by taking a correction back.
 //
 // The gap this closes is the whole reason the row exists. Existing rejection
 // memory reads REFUSED APPROVALS, and a reversal writes no approval — a rep
@@ -207,7 +207,7 @@ func reversedCorrections(ctx context.Context, tx pgx.Tx, dealID ids.DealID) ([]C
 	return out, rows.Err()
 }
 
-// ReversalAnsweredThis reports whether a person has already taken back a
+// ReversalAnsweredThis reports whether a contact has already taken back a
 // correction answering this same question.
 //
 // Exported for the approval path, which is a SECOND door onto the same write:
@@ -272,13 +272,13 @@ func movedFields(patch *storekit.Patch) []string {
 	return fields
 }
 
-// reversedSameQuestion reports whether a person has already taken back a
+// reversedSameQuestion reports whether a contact has already taken back a
 // correction that answered this same question.
 //
 // The comparison is CorrectionEvidence's, not the date's: a reversal is an
 // answer to the reasoning ("this deal has N stages left, so push it out by a
 // stage-worth of the usual pace"), and that reasoning is the same tomorrow. It
-// stops being the same when the deal advances a stage or a person puts their
+// stops being the same when the deal advances a stage or a contact puts their
 // own date on it — then the situation is genuinely different, and asking again
 // is right.
 func (c *CloseDateCorrector) reversedSameQuestion(

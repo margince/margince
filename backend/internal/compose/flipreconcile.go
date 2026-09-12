@@ -143,10 +143,10 @@ func (w *flipWriters) orphanedIdentities(ctx context.Context, object string) ([]
 }
 
 // liveClause is the per-class liveness predicate the adoption scan adds.
-// Only person and company carry a merge pointer; every scanned
+// Only contact and company carry a merge pointer; every scanned
 // class carries archived_at. A tombstone must never be adopted.
 func liveClause(object string) string {
-	if object == flipObjectPerson || object == flipObjectCompany {
+	if object == flipObjectContact || object == flipObjectCompany {
 		return "n.archived_at IS NULL AND n.merged_into_id IS NULL"
 	}
 	return "n.archived_at IS NULL"

@@ -71,20 +71,20 @@ export function useInteractionLabel(): (
     }
     switch (kind) {
       case "email":
-        return t("person.memory.channelEmail");
+        return t("contact.memory.channelEmail");
       case "meeting":
-        return t("person.memory.channelMeeting");
+        return t("contact.memory.channelMeeting");
       case "call":
-        return t("person.memory.channelCall");
+        return t("contact.memory.channelCall");
       case "note":
-        return t("person.memory.channelNote");
+        return t("contact.memory.channelNote");
       case "task":
-        return t("person.memory.channelTask");
+        return t("contact.memory.channelTask");
       case "message":
         // A message the contract says must name a transport, arriving without
         // one. Naming it plainly is the honest read; inventing a transport for
         // it would be the defect this module exists to stop.
-        return t("person.memory.channelMessage");
+        return t("contact.memory.channelMessage");
       default:
         return kind ?? "";
     }

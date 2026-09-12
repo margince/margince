@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,8 +35,8 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 
 	company := e.SeedCompany(t, "Imported Ltd", nil)
 	companyID := ids.From[ids.CompanyKind](company)
-	person := e.SeedPerson(t, "Imported Contact", nil)
-	personID := ids.From[ids.PersonKind](person)
+	contact := e.SeedContact(t, "Imported Contact", nil)
+	contactID := ids.From[ids.ContactKind](contact)
 
 	// The instant the import landed the row, taken AFTER the seed and never
 	// before it: the undo's own reference is import_record_map.created_at, and
@@ -48,31 +48,31 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 	// A human acts on both — any human-actor audit row counts, which is the
 	// point: somebody who independently archived an imported row is exactly
 	// who this protects, and a narrower filter would reverse their act too.
-	name := "Imported Ltd (renamed by a person)"
-	if _, err := e.People.UpdateCompany(admin, companyID, people.UpdateCompanyInput{
+	name := "Imported Ltd (renamed by a contact)"
+	if _, err := e.Contacts.UpdateCompany(admin, companyID, contacts.UpdateCompanyInput{
 		DisplayName: &name,
 	}); err != nil {
 		t.Fatalf("the human edit: %v", err)
 	}
 	title := "Head of Something"
-	if _, err := e.People.UpdatePerson(admin, personID, people.UpdatePersonInput{Title: &title}); err != nil {
+	if _, err := e.Contacts.UpdateContact(admin, contactID, contacts.UpdateContactInput{Title: &title}); err != nil {
 		t.Fatalf("the human edit: %v", err)
 	}
 
-	var touched *people.HumanTouchedError
-	if _, err := e.People.ArchiveCompany(admin, companyID, nil,
-		people.NotTouchedByHumanSince(imported)); !errors.As(err, &touched) {
-		t.Errorf("archiving a company a person edited → %v, want the touched refusal — an undo "+
+	var touched *contacts.HumanTouchedError
+	if _, err := e.Contacts.ArchiveCompany(admin, companyID, nil,
+		contacts.NotTouchedByHumanSince(imported)); !errors.As(err, &touched) {
+		t.Errorf("archiving a company a contact edited → %v, want the touched refusal — an undo "+
 			"reversing it would take away the edit they made", err)
 	}
-	if _, err := e.People.ArchivePerson(admin, personID, nil,
-		people.NotTouchedByHumanSince(imported)); !errors.As(err, &touched) {
-		t.Errorf("archiving a contact a person edited → %v, want the touched refusal", err)
+	if _, err := e.Contacts.ArchiveContact(admin, contactID, nil,
+		contacts.NotTouchedByHumanSince(imported)); !errors.As(err, &touched) {
+		t.Errorf("archiving a contact a contact edited → %v, want the touched refusal", err)
 	}
 
 	// The record survives the refusal: a precondition that failed must leave
-	// the row exactly as the person left it.
-	after, err := e.People.GetCompany(admin, companyID, storekit.LiveOnly)
+	// the row exactly as the contact left it.
+	after, err := e.Contacts.GetCompany(admin, companyID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("reading the company back: %v", err)
 	}
@@ -90,13 +90,13 @@ func TestAnArchiveWithNoPreconditionOrAnUnbrokenOneStillLands(t *testing.T) {
 
 	untouched := e.SeedCompany(t, "Untouched Ltd", nil)
 	imported := seedInstant(t)
-	if _, err := e.People.ArchiveCompany(admin, ids.From[ids.CompanyKind](untouched), nil,
-		people.NotTouchedByHumanSince(imported)); err != nil {
+	if _, err := e.Contacts.ArchiveCompany(admin, ids.From[ids.CompanyKind](untouched), nil,
+		contacts.NotTouchedByHumanSince(imported)); err != nil {
 		t.Errorf("archiving a company nobody touched → %v, want it to land", err)
 	}
 
 	plain := e.SeedCompany(t, "Plain Ltd", nil)
-	if _, err := e.People.ArchiveCompany(admin, ids.From[ids.CompanyKind](plain), nil); err != nil {
+	if _, err := e.Contacts.ArchiveCompany(admin, ids.From[ids.CompanyKind](plain), nil); err != nil {
 		t.Errorf("archiving with no precondition at all → %v, want the behaviour every other caller "+
 			"of this verb has always had", err)
 	}

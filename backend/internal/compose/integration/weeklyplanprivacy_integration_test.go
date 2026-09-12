@@ -5,7 +5,7 @@
 
 package integration_test
 
-// What a commitment may NAME, and what happens to that name when the person it
+// What a commitment may NAME, and what happens to that name when the contact it
 // names exercises erasure.
 //
 // A file of its own beside weeklyplan_integration_test.go, because these ask a
@@ -46,9 +46,9 @@ import (
 var planRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":      {Create: true, Read: true, Update: true},
+		"contact":     {Create: true, Read: true, Update: true},
 		"weekly_plan": {Create: true, Read: true, Update: true},
-		// A person read resolves the basis it reports money in, so every
+		// A contact read resolves the basis it reports money in, so every
 		// seeded role holds this one; integration.RepPerms carries it for the
 		// same reason.
 		"installation_settings": {Read: true},
@@ -67,15 +67,15 @@ func boundedRep(e *planEnv) context.Context {
 // The row survives and stops naming them, which is the ruling this cascade
 // makes: the commitment is the REP's record of having worked, and the erasure
 // request is the CONTACT's. What must not survive is the label a rep typed
-// about a person, the help they asked for, the answer their lead gave, and the
-// link that says which person it was.
+// about a contact, the help they asked for, the answer their lead gave, and the
+// link that says which contact it was.
 func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 	e := setupPlan(t)
-	subject := e.SeedPerson(t, "Anna Weber", &e.Rep1)
+	subject := e.SeedContact(t, "Anna Weber", &e.Rep1)
 
 	commitment, err := e.store.AddCommitment(e.rep1Ctx, planClock, weeklyplan.NewCommitment{
 		Label:            "Chase Anna Weber about the renewal",
-		LinkedRecordType: "person",
+		LinkedRecordType: "contact",
 		LinkedRecordID:   subject,
 	})
 	if err != nil {
@@ -88,7 +88,7 @@ func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -116,7 +116,7 @@ func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 		t.Errorf("the lead's answer still reads %q", got.ManagerResponse)
 	}
 	if got.LinkedRecordType != "" || !got.LinkedRecordID.IsZero() {
-		t.Errorf("the link still points at %s %s — the row still says WHICH person it was, "+
+		t.Errorf("the link still points at %s %s — the row still says WHICH contact it was, "+
 			"which re-identifies a label the erasure just cleared",
 			got.LinkedRecordType, got.LinkedRecordID)
 	}
@@ -125,20 +125,20 @@ func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 // The other direction, and without it the test above passes on an eraser that
 // blanks every commitment in the installation.
 //
-// A rep's plan is full of promises about deals and people who never asked for
+// A rep's plan is full of promises about deals and contacts who never asked for
 // anything. One subject's erasure must leave every one of them untouched.
 func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 	e := setupPlan(t)
-	subject := e.SeedPerson(t, "Anna Weber", &e.Rep1)
-	bystander := e.SeedPerson(t, "Tomas Ricci", &e.Rep1)
+	subject := e.SeedContact(t, "Anna Weber", &e.Rep1)
+	bystander := e.SeedContact(t, "Tomas Ricci", &e.Rep1)
 
 	if _, err := e.store.AddCommitment(e.rep1Ctx, planClock, weeklyplan.NewCommitment{
-		Label: "Chase Anna Weber", LinkedRecordType: "person", LinkedRecordID: subject,
+		Label: "Chase Anna Weber", LinkedRecordType: "contact", LinkedRecordID: subject,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	kept, err := e.store.AddCommitment(e.rep1Ctx, planClock, weeklyplan.NewCommitment{
-		Label: "Send Tomas Ricci the pricing", LinkedRecordType: "person", LinkedRecordID: bystander,
+		Label: "Send Tomas Ricci the pricing", LinkedRecordType: "contact", LinkedRecordID: bystander,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), subject, "subject request"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -166,7 +166,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 	}
 	if got := byID[kept.ID]; got.Label != "Send Tomas Ricci the pricing" {
 		t.Errorf("the bystander's commitment reads %q — one subject's erasure took another "+
-			"person's row with it", got.Label)
+			"contact's row with it", got.Label)
 	}
 	if got := byID[kept.ID]; got.LinkedRecordID != bystander {
 		t.Errorf("the bystander's link was cleared, so the erasure is selecting on more than " +
@@ -179,7 +179,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 
 // A commitment may only link a record the rep can already open.
 //
-// The case that makes this real is CAPTURE PRIVACY, not row scope. Person,
+// The case that makes this real is CAPTURE PRIVACY, not row scope. Contact,
 // company, lead, deal and project are identity tables: workspace-readable
 // by design, so their owner arm renders TRUE for every seat and a colleague's
 // contact is not hidden from anybody. What IS hidden is an unpromoted row a
@@ -193,15 +193,15 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 func TestACommitmentCannotLinkAnUnpromotedContact(t *testing.T) {
 	e := setupPlan(t)
 	// The state a connector leaves a contact in: rep3's alone until promoted.
-	private := e.SeedPerson(t, "A stranger's contact", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", private, e.Rep3)
+	private := e.SeedContact(t, "A stranger's contact", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep3)
 
 	rep := boundedRep(e)
 	_, err := e.store.AddCommitment(rep, planClock, weeklyplan.NewCommitment{
-		Label: "Find out who this is", LinkedRecordType: "person", LinkedRecordID: private,
+		Label: "Find out who this is", LinkedRecordType: "contact", LinkedRecordID: private,
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("linking an unreadable person got %v, wanted not found — 403 would confirm "+
+		t.Fatalf("linking an unreadable contact got %v, wanted not found — 403 would confirm "+
 			"the record exists, which is the half the probe is for", err)
 	}
 
@@ -221,17 +221,17 @@ func TestACommitmentCannotLinkAnUnpromotedContact(t *testing.T) {
 // green — the shape three security tests in this tree have already taken.
 //
 // A promoted contact of the rep's own, so the pair differs in exactly the
-// property under test: both are people, both are seeded the same way, and only
+// property under test: both are contacts, both are seeded the same way, and only
 // visibility separates them.
 func TestACommitmentLinksARecordTheRepCanSee(t *testing.T) {
 	e := setupPlan(t)
-	mine := e.SeedPerson(t, "My own contact", &e.Rep1)
+	mine := e.SeedContact(t, "My own contact", &e.Rep1)
 
 	out, err := e.store.AddCommitment(boundedRep(e), planClock, weeklyplan.NewCommitment{
-		Label: "Call them Thursday", LinkedRecordType: "person", LinkedRecordID: mine,
+		Label: "Call them Thursday", LinkedRecordType: "contact", LinkedRecordID: mine,
 	})
 	if err != nil {
-		t.Fatalf("linking a person the rep owns was refused: %v", err)
+		t.Fatalf("linking a contact the rep owns was refused: %v", err)
 	}
 	if out.LinkedRecordID != mine {
 		t.Errorf("the link came back as %s, wanted %s", out.LinkedRecordID, mine)
@@ -259,16 +259,16 @@ func TestAnUnknownLinkTypeIsRefused(t *testing.T) {
 	}
 }
 
-// The retention sweep's person/anonymize reaches a commitment too.
+// The retention sweep's contact/anonymize reaches a commitment too.
 //
-// The gate personscrub_test.go proves the two acts clear the same TABLES; it
+// The gate contactscrub_test.go proves the two acts clear the same TABLES; it
 // reads statements, not results, so it cannot tell that the anonymize path
 // actually runs this one. That gap matters here more than usual: an operator
 // told a record was anonymized has been told the subject's data is gone, and
-// this table is reached by neither a schema cascade nor any person-keyed clause.
+// this table is reached by neither a schema cascade nor any contact-keyed clause.
 //
 // Driven through the REAL retention engine and the seeded
-// person/no_consent_no_deal policy rather than by calling the action directly,
+// contact/no_consent_no_deal policy rather than by calling the action directly,
 // so what is proven is the path an installation actually runs.
 func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 	e := setupPlan(t)
@@ -277,13 +277,13 @@ func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 	// Past the 730-day window, with no consent and no deal role — the
 	// selector's whole definition of an unattached contact.
 	subject := ids.NewV7()
-	e.WsExec(t, `INSERT INTO person (id, full_name, first_name, last_name, source, captured_by, created_at)
+	e.WsExec(t, `INSERT INTO contact (id, full_name, first_name, last_name, source, captured_by, created_at)
 		VALUES ($1, 'Old Contact', 'Old', 'Contact', 'manual', 'human:x', now() - interval '800 days')`,
 		subject)
 
 	commitment, err := e.store.AddCommitment(e.rep1Ctx, planClock, weeklyplan.NewCommitment{
 		Label:            "Ask Old Contact whether they ever signed",
-		LinkedRecordType: "person",
+		LinkedRecordType: "contact",
 		LinkedRecordID:   subject,
 	})
 	if err != nil {
@@ -295,7 +295,7 @@ func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 		t.Fatalf("retention pass: %v", err)
 	}
 
-	// Read under the owner connection rather than through the store: the person
+	// Read under the owner connection rather than through the store: the contact
 	// row is archived by now, and the point is what the TABLE holds.
 	var label, linkType string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -311,6 +311,6 @@ func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
 			"was anonymized while a colleague's plan went on naming them", label)
 	}
 	if linkType != "" {
-		t.Errorf("the link still points at a %s, so the row still says which person it was", linkType)
+		t.Errorf("the link still points at a %s, so the row still says which contact it was", linkType)
 	}
 }

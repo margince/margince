@@ -24,14 +24,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Reason names why one audited change cannot be put back. Every reason is a
-// sentence the product says to a person, so each is separately named, separately
+// sentence the product says to a contact, so each is separately named, separately
 // reachable and separately tested — a greyed button with no reason is the shape
 // this feature exists to avoid.
 //
@@ -55,7 +55,7 @@ const (
 	// Anything else is honestly unsupported here rather than silently absent.
 	ReasonUnsupportedRecordType Reason = "unsupported_record_type"
 	// ReasonSuperseded — a later audit row wrote one of these fields. The
-	// product refuses; it never clobbers. Where another person edited in
+	// product refuses; it never clobbers. Where another contact edited in
 	// between, the result is ambiguous and saying so IS the behaviour.
 	ReasonSuperseded Reason = "superseded"
 	// ReasonBehindErasureBoundary — a scrub tombstone is newer than this row, so
@@ -86,7 +86,7 @@ const (
 	// indistinguishable from omitting the field; activity's columns are
 	// additionally coalesce-guarded in SQL, which would swallow a null even if
 	// one arrived. The write would report success and change nothing, which is
-	// worse than a refusal — the person reads the confirmation and stops
+	// worse than a refusal — the reader reads the confirmation and stops
 	// looking.
 	ReasonNullUnwritableByModule Reason = "null_unwritable_by_module"
 	// ReasonEdgeRelinkUnsupported — the entry REMOVED a link between two records.
@@ -171,7 +171,7 @@ const (
 //
 //nolint:goconst // the six this path serves, listed once
 var undoableRecordTypes = []string{
-	"person", "company", "deal", "lead", "project", "activity",
+	"contact", "company", "deal", "lead", "project", "activity",
 }
 
 // replayableVerbs are the two an image replay can reverse.
@@ -209,7 +209,7 @@ type Evaluator struct {
 	// the row cannot say, because it was written before whatever happened next.
 	// Nil where no edge is served, which answers every edge row as unjudged
 	// rather than as undoable.
-	EdgeFacts func(ctx context.Context, tx pgx.Tx, edgeID ids.UUID) (people.EdgeFacts, error)
+	EdgeFacts func(ctx context.Context, tx pgx.Tx, edgeID ids.UUID) (contacts.EdgeFacts, error)
 	// EdgeWritable answers the authority the inverse of one edge change asks for
 	// — the edge's own grant, and its ANCHOR's, which is not either endpoint the
 	// history page was read from. It returns the refusal unchanged so a caller
@@ -218,7 +218,7 @@ type Evaluator struct {
 	// entryAction is what the audited entry DID, because the inverse's verb
 	// follows it: reversing a create archives the link and asks the delete grant,
 	// where reversing an update asks update.
-	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error
+	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error
 	// ExternallyGoverned reports whether this workspace's records live in an
 	// incumbent system rather than here. A reversal there is a write-back, and
 	// the write-back path records its own verb and its own evidence — so the
@@ -301,7 +301,7 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 		if err := e.Writable(ctx, tx, row.EntityType, row.EntityID); err != nil {
 			if !isWriteScopeRefusal(err) {
 				// The port queries, so it can also fail. Reporting a database
-				// fault as a permission decision tells the person a retry is
+				// fault as a permission decision tells the contact a retry is
 				// pointless when a retry is the whole answer.
 				return Undoability{}, false, err
 			}

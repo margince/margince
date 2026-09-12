@@ -5,7 +5,7 @@ package attention
 
 // The two lanes that report a SILENCE, and what each one says it is worth.
 //
-// A deal nobody is moving and a person nobody is talking to. They rest on
+// A deal nobody is moving and a contact nobody is talking to. They rest on
 // different records and warn about different things, but they render as one
 // concept: neither is a deadline anybody agreed to, so neither carries a verb
 // that decides, and both have to say how long the silence has run AND why that
@@ -72,7 +72,7 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 
 // lapsedItem renders one relationship this reader has stopped talking to.
 //
-// The contact's NAME travels as the title because a person's name is a
+// The contact's NAME travels as the title because a contact's name is a
 // sentence in every language, and the silence rides as a typed count, the way
 // the risk card carries its idle days — so the client writes "quiet 63 days"
 // and the server implies no window it did not apply.
@@ -82,14 +82,14 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 // as a list of numbers.
 //
 // It offers no verb that DECIDES, exactly as the risk card does not: what to do
-// about a lapsed relationship is a judgement about that person, and a queue
+// about a lapsed relationship is a judgement about that contact, and a queue
 // answering it here would be deciding rather than warning.
 //
 // It does offer `open`, which decides nothing — the same verb the quiet deal
 // carries and for the same reason. Naming a contact as gone quiet and then
 // leaving the rep to go and find them by hand is a warning they cannot act on,
-// and the card had no way through to the one page where reaching that person is
-// possible. The subject is the PERSON, so the destination is their record and
+// and the card had no way through to the one page where reaching that contact is
+// possible. The subject is the CONTACT, so the destination is their record and
 // the composer lives on it.
 func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 	name := quiet.Name
@@ -97,7 +97,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 	lastAt := quiet.LastAt
 	funded := quiet.HasOpenDeal
 	return crmcontracts.AttentionItem{
-		Id:     quiet.PersonID.String(),
+		Id:     quiet.ContactID.String(),
 		Source: crmcontracts.AttentionItemSource("relationship_decay"),
 		Title:  &name,
 		// Typed, for the reason riskItem's is: `detail` is a sentence on every
@@ -112,7 +112,7 @@ func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
 			Strength:    relationshipBand(quiet.Strength.Bucket),
 			HasOpenDeal: &funded,
 		},
-		Subject:    subjectOf(subjectPerson, quiet.PersonID),
+		Subject:    subjectOf(subjectContact, quiet.ContactID),
 		OccurredAt: &lastAt,
 		// Open the contact, or set them aside. The second is the verb this lane
 		// has needed since it shipped: nobody is waiting on a quiet contact, so

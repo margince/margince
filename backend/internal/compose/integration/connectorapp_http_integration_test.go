@@ -282,7 +282,7 @@ func setupGoogleAppWithEnvApp(t *testing.T) *apptest.AppEnv {
 }
 
 // The whole point of storing an app: once one is set in Settings, it is the app
-// the consent flow uses — the environment's is no longer what a person is sent
+// the consent flow uses — the environment's is no longer what a contact is sent
 // to Google with. Asserted on the authorize URL, because the client id in it is
 // the only place the choice becomes visible from outside.
 //
@@ -504,7 +504,7 @@ func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.
 // The contract calls `steps` "every setup step, in the order a reader should
 // complete them", so the sequence is the SERVER's to decide and a client that
 // sorted them itself would be re-deciding it. Pinned because the order is a
-// product decision rather than an accident of how the slice was typed: a person
+// product decision rather than an accident of how the slice was typed: a contact
 // who has bound no model cannot be shown a cold start at all, while the Gmail
 // step is the one they can leave until later. Swapping the two would walk them
 // into configuring a mailbox for a product that cannot yet think.

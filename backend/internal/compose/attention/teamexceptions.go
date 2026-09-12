@@ -5,7 +5,7 @@ package attention
 
 // What is going wrong on a lead's team.
 //
-// The team board answers "who is carrying what" and routes a lead to a person.
+// The team board answers "who is carrying what" and routes a lead to a contact.
 // This answers "what is going wrong", which is the question they open the page
 // for and which counts structurally cannot reach: three numbers per teammate
 // cannot say that one customer has waited past the target while another rep's
@@ -35,7 +35,7 @@ import (
 //
 // A page a lead cannot finish is a page they stop opening. Twenty-five is the
 // queue's own page size, which is the number this product has already decided
-// a person reads in one sitting — and `truncated` says when it was reached, so
+// a reader reads in one sitting — and `truncated` says when it was reached, so
 // a bounded page is never read as a clear team.
 const exceptionsBound = 25
 
@@ -136,7 +136,7 @@ func exceptionRank(kind crmcontracts.TeamExceptionKind) int {
 // it was judged against.
 //
 // FOUR KINDS, and each is a thing a lead can DO something about: talk to the
-// person, protect the revenue, give the work an owner, or fix what keeps
+// contact, protect the revenue, give the work an owner, or fix what keeps
 // failing. A row that is merely urgent for the rep is not an exception — the
 // rep's own queue already ranks it, and repeating it here would make this page
 // a second copy of theirs with a different heading.

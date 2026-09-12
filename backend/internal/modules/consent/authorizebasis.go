@@ -13,7 +13,7 @@ package consent
 //
 // WHAT IS WRITTEN IS BOUNDED, which is the difference from the qualifying-event
 // row this sits beside. A qualifying event never expires: one inbound message
-// makes a person permanently correspondable-with, which is the shape that turns
+// makes a contact permanently correspondable-with, which is the shape that turns
 // a single reply into an open licence. A basis row carries valid_until, so the
 // ground it records runs out the way the evidence behind it does.
 
@@ -61,9 +61,9 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 		return nil
 	}
 	validUntil := time.Now().Add(basisLifetime(res.Category, w))
-	var personID, leadID *string
-	if subject.Kind == entityPerson {
-		personID = &subject.ID
+	var contactID, leadID *string
+	if subject.Kind == entityContact {
+		contactID = &subject.ID
 	} else {
 		leadID = &subject.ID
 	}
@@ -74,16 +74,16 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_basis
-		  (person_id, lead_id, kind, thread_key, source_activity_id, valid_until, captured_by)
+		  (contact_id, lead_id, kind, thread_key, source_activity_id, valid_until, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		personID, leadID, string(res.Basis), nullableText(threadKey),
+		contactID, leadID, string(res.Basis), nullableText(threadKey),
 		sourceActivity, validUntil, by); err != nil {
 		return fmt.Errorf("consent: record the ground this message relied on: %w", err)
 	}
 	// AUDITED, like every other consent-basis write beside it
 	// (RecordQualifyingEvent). The row is served to a data subject as "the
 	// ground we relied on", so a trail saying when it was written and who
-	// caused it is part of the same obligation. Against the PERSON, because
+	// caused it is part of the same obligation. Against the CONTACT, because
 	// that is the record a later reader asks about.
 	//
 	// Audit without an event: there is no public event type for a lawful basis,
@@ -104,13 +104,13 @@ func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolut
 }
 
 // subjectAuditEntity names the table an audit row hangs off. A lead and a
-// person are different records, and an entry pointing at the wrong one is a
+// contact are different records, and an entry pointing at the wrong one is a
 // trail nobody finds.
 func subjectAuditEntity(subject subjectRef) string {
 	if subject.Kind == entityLead {
 		return entityLead
 	}
-	return entityPerson
+	return entityContact
 }
 
 // basisLifetime is how long the ground a category rests on stays good.
@@ -137,7 +137,7 @@ func basisAlreadyLive(ctx context.Context, tx pgx.Tx, subject subjectRef, basis 
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM communication_basis
-			 WHERE ($1 = 'person' AND person_id = $2::uuid
+			 WHERE ($1 = 'contact' AND contact_id = $2::uuid
 			        OR $1 = 'lead' AND lead_id = $2::uuid)
 			   AND kind = $3
 			   AND revoked_at IS NULL

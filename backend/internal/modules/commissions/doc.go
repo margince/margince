@@ -24,7 +24,7 @@
 // every time it was read. An entry says what the arrangement WAS the day the
 // deal was won.
 //
-// WHY IT IS ITS OWN MODULE. people owns the partner extension and deals owns
+// WHY IT IS ITS OWN MODULE. contacts owns the partner extension and deals owns
 // the deal, but a module never imports a sibling and neither of those owns a
 // financial ledger. finance is a READ-ONLY mirror of an accounting source whose
 // no-write posture is the absence of a grant, so a writable ledger cannot live

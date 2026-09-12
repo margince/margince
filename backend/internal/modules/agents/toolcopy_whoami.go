@@ -10,5 +10,5 @@ var whoamiCopy = toolCopy{
 	Retain: "acting_user_id is what owner_id and assignee_id take for \"me\". prose_language is " +
 		"the language every stored sentence is written in — a note, a description, a summary — " +
 		"whatever language the conversation itself is in; it is always answered, where locale is " +
-		"absent until this person chooses one.",
+		"absent until this contact chooses one.",
 }

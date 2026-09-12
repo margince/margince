@@ -184,14 +184,14 @@ describe("RecordPicker", () => {
 
   // The disclosure this control used to make. `auth.Require` composes a
   // refusal's detail from the RBAC object and the verb, so rendering a caught
-  // error's own text told the person who was just refused which permission
+  // error's own text told the contact who was just refused which permission
   // they lack and on what — the shape of the authority model, handed to
   // whoever probed it.
   it("answers a refusal in the reader's words, never the server's", async () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
       code: "permission_denied",
-      detail: "person.update: permission denied",
+      detail: "contact.update: permission denied",
     });
     rtlRender(
       <LocaleProvider initial="en">
@@ -208,7 +208,7 @@ describe("RecordPicker", () => {
     await waitFor(() =>
       expect(screen.getByText(/do not have permission/)).toBeTruthy(),
     );
-    expect(screen.queryByText(/person\.update/)).toBeNull();
+    expect(screen.queryByText(/contact\.update/)).toBeNull();
     expect(screen.queryByText(/permission denied/)).toBeNull();
   });
 
@@ -276,14 +276,18 @@ describe("RecordPicker", () => {
   // round trip, and a caller that changed the space — notes' filing control
   // changes it with the record TYPE — would take a pick of the wrong kind.
   it("drops the rendered candidates when the search space changes", async () => {
-    const people = vi
+    const contacts = vi
       .fn()
       .mockResolvedValue([{ id: "p-1", name: "Anna Weber" }]);
     const companies = vi
       .fn()
       .mockResolvedValue([{ id: "o-1", name: "Weber GmbH" }]);
     const { rerender } = rtlRender(
-      <RecordPicker label="Search…" searchTargets={people} onPick={vi.fn()} />,
+      <RecordPicker
+        label="Search…"
+        searchTargets={contacts}
+        onPick={vi.fn()}
+      />,
     );
 
     await userEvent.type(screen.getByRole("searchbox"), "weber");
@@ -298,7 +302,7 @@ describe("RecordPicker", () => {
     );
 
     // Gone immediately — before the new search has answered, which is the
-    // window a person can click in.
+    // window a contact can click in.
     expect(screen.queryByText("Anna Weber")).toBeNull();
     expect(companies).not.toHaveBeenCalled();
 

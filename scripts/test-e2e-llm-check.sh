@@ -247,7 +247,7 @@ JSONL
 # failure an any-of must not excuse — otherwise widening the tool half would
 # quietly take the argument half with it.
 anyof_is "a door reached with the wrong value still fails" 1 "record_type=company" <<'JSONL'
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"person"}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__search_records","input":{"record_type":"contact"}}]}}
 {"type":"result","subtype":"success","is_error":false,"result":"Four companies."}
 JSONL
 
@@ -707,7 +707,7 @@ judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forb
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
 
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
-# ("Bruno is now a contact") and a queue routed elsewhere with no person as its
+# ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
 # subject.
 judges case40-sort-the-queue.yaml case40 calls-bruno-a-contact-now 1 "Bruno is now a contact"
 judges case8-whats-waiting.yaml case8 routes-approvals-to-the-app 1 "Approvals have to be decided in the web app"
@@ -764,7 +764,7 @@ judges case10-finish-the-import.yaml case10 maps-a-column-and-never-says-so 1 "s
 
 # CASE 2 — the denial half is judged, because a flat pattern over the answer
 # cannot tell WHICH record it denies. This prompt creates two, and only one of
-# them has a duplicate: the person does, the company does not, so "Terralogic is
+# them has a duplicate: the contact does, the company does not, so "Terralogic is
 # new and nothing matched it" is true and the pattern that stood here red it.
 #
 # One fixture per claim, all three about HER; the spared one says "no duplicate
@@ -856,7 +856,7 @@ c32_capability="the judge says NO to: Criterion 2, the capability."
 judges "$c32" case32 names-the-losing-word-without-a-fold-verb 0 "!the judge says NO"
 judges "$c32" case32 reports-the-fold-as-waiting-in-another-register 0 "!the judge says NO"
 # The fold described as done, which is what the user will act on: merge_tags is
-# confirm-first and nothing has moved until a person releases it.
+# confirm-first and nothing has moved until a contact releases it.
 judges "$c32" case32 reports-the-fold-as-finished 1 "$c32_waiting" "!$c32_choice"
 # The fold the wrong way round. It reports the same counts as the correct answer
 # and keeps the word on THREE accounts — so the count regex passes it, and only

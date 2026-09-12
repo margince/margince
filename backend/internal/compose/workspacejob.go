@@ -50,7 +50,7 @@ func workspaceJobCtx(ctx context.Context, args jobs.WorkspaceScoped) (context.Co
 //
 // The binding is NOT vestigial while any store still reads the workspace off
 // the context: storekit.MustWorkspace reads it, sixteen deals sites and a
-// handful in people, capture, ai and activities call it, and an agent tool
+// handful in contacts, capture, ai and activities call it, and an agent tool
 // reaches several of them — as an audit entity id, a blob storage key or an
 // advisory-lock name, never as a column any of those stores writes. Unbound,
 // those calls would silently carry a zero uuid into whichever of those it

@@ -13,7 +13,7 @@ package deals
 // THE FOUR OUTCOMES ARE A LADDER OF WHO DECIDES. Observe means the product
 // says nothing and the deal stays where it is. Propose puts a card in front of
 // a human. ProposeConfirmFirst puts the same card up but says out loud that
-// this one needs a person's judgement rather than their assent. AutoApply
+// this one needs a contact's judgement rather than their assent. AutoApply
 // moves the deal. Nothing in this file can reach AutoApply on its own — the
 // caller has to have measured the transition first, which is what
 // FactsAutopilot carries.
@@ -86,7 +86,7 @@ type StageMoveFacts struct {
 	// SamePipeline is false where the move would cross pipelines.
 	SamePipeline bool
 	// Protected marks a deal a human has recently steered: a stage move by a
-	// person in the protection window, a reversal on the record, or a proposal
+	// contact in the protection window, a reversal on the record, or a proposal
 	// for this same target already rejected with no newer evidence since.
 	Protected bool
 	// ProtectedReason names which of those it was, so the Reason can say so.
@@ -117,7 +117,7 @@ type AutopilotFacts struct {
 }
 
 // ambiguousConfidence is where a model's reading stops being objective enough
-// to move a deal without a person looking.
+// to move a deal without a contact looking.
 //
 // HIGHER than the extraction floor (0.7) on purpose. That floor answers "is
 // this worth recording at all"; this one answers "is this worth acting on
@@ -233,7 +233,7 @@ func surfacedException(facts StageMoveFacts) string {
 // errors a rep would rather catch on a card than find later in a forecast.
 func needsAJudgement(facts StageMoveFacts) string {
 	if facts.FromTerminal || facts.ToTerminal {
-		return "this move enters or leaves a closing stage, which is always a person's call"
+		return "this move enters or leaves a closing stage, which is always a contact's call"
 	}
 	if !facts.SamePipeline {
 		return "this move would cross into another pipeline"
@@ -245,7 +245,7 @@ func needsAJudgement(facts StageMoveFacts) string {
 		if !c.Met {
 			// An unmet OPTIONAL criterion does not block the move — the stage
 			// said it was optional — but it is not nothing either: a stage
-			// carrying an unsettled criterion of any kind is one a person
+			// carrying an unsettled criterion of any kind is one a contact
 			// should glance at before the deal moves itself.
 			return c.Key + " is not settled, and the stage lists it"
 		}
@@ -269,6 +269,6 @@ func needsAJudgement(facts StageMoveFacts) string {
 //
 // A fortnight, because a rep who moved a deal by hand has said where they
 // think it is, and a proposal contradicting them a day later is the product
-// arguing with the person it works for. Long enough to cover a sales cycle's
+// arguing with the contact it works for. Long enough to cover a sales cycle's
 // natural pause; short enough that a deal does not go unread for a quarter.
 const ProtectionWindow = 14 * 24 * time.Hour

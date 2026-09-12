@@ -97,7 +97,7 @@ internal/compose/commsjobs.go#type deliveryDispatcher
 internal/compose/commsjobs.go#type mailboxSenders
 internal/compose/commsjobs.go#type seatResolver
 internal/compose/commsjobs_test.go#func TestSendEmailJobDeclaresAUsableLadder
-internal/compose/company360/assemble.go#const block at const sectionPeople
+internal/compose/company360/assemble.go#const block at const sectionContacts
 internal/compose/company360/deals.go#func openDealsWhere
 internal/compose/company360/graph.go#const block at const graphGroupContacts
 internal/compose/company360/graphplace.go#const block at const graphRelationParent
@@ -118,6 +118,12 @@ internal/compose/companydossier/input.go#func KnownRecords
 internal/compose/companydossier/service.go#var knownNature
 internal/compose/companynamepromotion_integration_test.go#func seedDossierName
 internal/compose/companyrollupread.go#type fxConverter
+internal/compose/contact360/commercial.go#const scopeAll
+internal/compose/contact360/sections.go#method Service.relationshipChangesSection
+internal/compose/contact360/sectionstimeline.go#func projectScope
+internal/compose/contactbrief/doc.go#package contactbrief
+internal/compose/contactdraft/deterministic.go#type Draft
+internal/compose/contactdraft/fold.go#func ConversationState
 internal/compose/costestimate/estimator.go#func expectedUnits
 internal/compose/costestimate/rules.go#type unitRule
 internal/compose/csvfields.go#const fieldFullName
@@ -209,15 +215,9 @@ internal/compose/overlay.go#const incumbentHubSpot
 internal/compose/overlayincumbent_refusing_integration_test.go#func refusals
 internal/compose/overlayread.go#const block at const paramSort
 internal/compose/overlaysearch.go#var overlayMirroredTypes
-internal/compose/overlaywire.go#func overlayWirePerson
+internal/compose/overlaywire.go#func overlayWireContact
 internal/compose/overlaywire_test.go#func TestOverlayAddressCarriesEveryMemberAndOmitsAnEmptyOne
 internal/compose/overlaywirefields.go#func overlayAddress
-internal/compose/person360/commercial.go#const scopeAll
-internal/compose/person360/sections.go#method Service.relationshipChangesSection
-internal/compose/person360/sectionstimeline.go#func projectScope
-internal/compose/personbrief/doc.go#package personbrief
-internal/compose/persondraft/deterministic.go#type Draft
-internal/compose/persondraft/fold.go#func ConversationState
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
 internal/compose/queryseam.go#func queryRunner
@@ -398,6 +398,37 @@ internal/modules/consent/dsr.go#const dsrSelectByID
 internal/modules/consent/dsr.go#func validateDSRUpdate
 internal/modules/consent/gate.go#func grantedForRecipient
 internal/modules/consent/gate.go#type Gate
+internal/modules/contacts/anchorcompany.go#const block at const fieldOfferSummary
+internal/modules/contacts/company_profile_field_write.go#const block at const auditKeyValue
+internal/modules/contacts/companysitereadcomparison.go#func PrintedSiteReadValue
+internal/modules/contacts/contactarchive.go#func archiveContactRows
+internal/modules/contacts/domainadmission.go#func reopenAdmittedDomainTx
+internal/modules/contacts/employmentedge.go#const relationshipOriginCapture
+internal/modules/contacts/ensure.go#const block at const evidenceFieldKey
+internal/modules/contacts/geocode.go#var companyAddressColumns
+internal/modules/contacts/handlers_projectstakeholder.go#const block at const ProjectStakeholderKind
+internal/modules/contacts/lead_list.go#const block at const leadNameColumn
+internal/modules/contacts/lead_read.go#const liveOnlyClause
+internal/modules/contacts/leadmanualsignal.go#func manualSignalImage
+internal/modules/contacts/leadstatus.go#method LeadStatus.Open
+internal/modules/contacts/linkedincompanyplace.go#func companyKeys
+internal/modules/contacts/linkedinmatch.go#method Store.MatchLinkedInConnections
+internal/modules/contacts/linkedinmatch.go#var suggestNameEmployerMatchSQL
+internal/modules/contacts/linkedinrenormalize.go#func matchRank
+internal/modules/contacts/linkedinrenormalize.go#var matchRankOrder
+internal/modules/contacts/listfilters.go#const block at const filterOwnerID
+internal/modules/contacts/listpage.go#func aiWrittenClause
+internal/modules/contacts/merge.go#const targetIDField
+internal/modules/contacts/partner.go#method Store.MarginTierOf
+internal/modules/contacts/projectstakeholder.go#method Store.ContactNames
+internal/modules/contacts/provider.go#func pageOf
+internal/modules/contacts/relationship_conflict_test.go#func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint
+internal/modules/contacts/resolve.go#func exactCompanyOwners
+internal/modules/contacts/resolve.go#func exactContactOwners
+internal/modules/contacts/resolvecreate.go#type CompanySpec
+internal/modules/contacts/resolvecreate.go#type ContactSpec
+internal/modules/contacts/store.go#type Store.consumerMail
+internal/modules/contacts/strength.go#func contactScopePredicate
 internal/modules/contracts/contract_write.go#func contractPatch
 internal/modules/contracts/contract_write.go#func ensureLinksVisible
 internal/modules/contracts/store.go#const contractColumns
@@ -470,37 +501,6 @@ internal/modules/overlay/teardown.go#func RevertToNative
 internal/modules/overlay/usermapadmin.go#func auditRevokedMappings
 internal/modules/overlay/usermapadmin.go#method MirrorStore.SetManualUserMap
 internal/modules/overlay/usermapservice.go#func requireUserMapAdmin
-internal/modules/people/anchorcompany.go#const block at const fieldOfferSummary
-internal/modules/people/company_profile_field_write.go#const block at const auditKeyValue
-internal/modules/people/companysitereadcomparison.go#func PrintedSiteReadValue
-internal/modules/people/domainadmission.go#func reopenAdmittedDomainTx
-internal/modules/people/employmentedge.go#const relationshipOriginCapture
-internal/modules/people/ensure.go#const block at const evidenceFieldKey
-internal/modules/people/geocode.go#var companyAddressColumns
-internal/modules/people/handlers_projectstakeholder.go#const block at const ProjectStakeholderKind
-internal/modules/people/lead_list.go#const block at const leadNameColumn
-internal/modules/people/lead_read.go#const liveOnlyClause
-internal/modules/people/leadmanualsignal.go#func manualSignalImage
-internal/modules/people/leadstatus.go#method LeadStatus.Open
-internal/modules/people/linkedincompanyplace.go#func companyKeys
-internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
-internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
-internal/modules/people/linkedinrenormalize.go#func matchRank
-internal/modules/people/linkedinrenormalize.go#var matchRankOrder
-internal/modules/people/listfilters.go#const block at const filterOwnerID
-internal/modules/people/listpage.go#func aiWrittenClause
-internal/modules/people/merge.go#const targetIDField
-internal/modules/people/partner.go#method Store.MarginTierOf
-internal/modules/people/personarchive.go#func archivePersonRows
-internal/modules/people/projectstakeholder.go#method Store.PersonNames
-internal/modules/people/provider.go#func pageOf
-internal/modules/people/relationship_conflict_test.go#func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint
-internal/modules/people/resolve.go#func exactCompanyOwners
-internal/modules/people/resolve.go#func exactPersonOwners
-internal/modules/people/resolvecreate.go#type CompanySpec
-internal/modules/people/resolvecreate.go#type PersonSpec
-internal/modules/people/store.go#type Store.consumerMail
-internal/modules/people/strength.go#func personScopePredicate
 internal/modules/privacy/auditfilter_test.go#func TestEveryPublishedAuditFilterReachesTheStore
 internal/modules/privacy/auditlog.go#const auditContentStateKey
 internal/modules/privacy/auditlog.go#func ScrubNewerThanRowSQL
@@ -527,13 +527,13 @@ internal/modules/projects/project.go#const projectObject
 internal/modules/search/binding.go#const systemPrincipalID
 internal/modules/search/binding.go#func releaseReembeddingTx
 internal/modules/search/binding.go#method Store.SeedBinding
-internal/modules/search/embedgen.go#const block at const entityPerson
+internal/modules/search/embedgen.go#const block at const entityContact
 internal/modules/search/graphedge.go#const audienceWorkspaceOnly
 internal/modules/search/graphtrust.go#var block at var humanWriterPrefix
 internal/modules/search/querybudget.go#func NewQueryExecutorWithBudget
 internal/modules/search/queryjoins.go#const block at const columnArchivedAt
+internal/modules/search/queryjoins.go#const contactRef
 internal/modules/search/queryjoins.go#const objectRelationship
-internal/modules/search/queryjoins.go#const personRef
 internal/modules/search/queryjoins.go#func pluralRelationName
 internal/modules/search/queryjoins_test.go#func TestEveryJoinTableThatIsAnRBACObjectDeclaresIt
 internal/modules/search/queryplan.go#const block at const memberValue
@@ -557,7 +557,7 @@ internal/platform/auth/fieldmask.go#func StampWritable
 internal/platform/auth/inheritedscope.go#func probeExistsLive
 internal/platform/auth/inheritedscope.go#func relationshipEndpoints
 internal/platform/auth/inheritedscope.go#var relationshipEndpointColumns
-internal/platform/auth/linkscope.go#const block at const tablePerson
+internal/platform/auth/linkscope.go#const block at const tableContact
 internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables

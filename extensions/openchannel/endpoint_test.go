@@ -57,7 +57,7 @@ func TestOpeningStampsTheOwnerFromTheInvocation(t *testing.T) {
 	}
 }
 
-// The whole reason the ref exists: one declared edge, one endpoint per person.
+// The whole reason the ref exists: one declared edge, one endpoint per contact.
 // A second member opening is an ordinary open, not a refusal — that refusal was
 // the symptom of resolving arrivals by the declared slug.
 func TestASecondMemberOpensTheirOwnEndpointOnTheSameEdge(t *testing.T) {

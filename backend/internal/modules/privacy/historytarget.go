@@ -37,7 +37,7 @@ import (
 //
 // The record's own erasure boundary is deliberately NOT applied. A row behind it
 // is served by this admission and refused by the evaluator's own
-// behind_erasure_boundary branch, which is the answer a person can act on;
+// behind_erasure_boundary branch, which is the answer a contact can act on;
 // answering "no such entry" would say the row does not exist when it does.
 //
 // That division of labour holds for a LINK's row only because the evaluator asks

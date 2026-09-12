@@ -19,9 +19,9 @@ describe("which reads a timeline write has to invalidate", () => {
       ["activities", "company", "o1"],
       ["company360", "o1"],
     ]);
-    expect(entityTimelineKeys("person", "p1")).toEqual([
-      ["activities", "person", "p1"],
-      ["person360", "p1"],
+    expect(entityTimelineKeys("contact", "p1")).toEqual([
+      ["activities", "contact", "p1"],
+      ["contact360", "p1"],
     ]);
     expect(entityTimelineKeys("project", "j1")).toEqual([
       ["activities", "project", "j1"],
@@ -87,7 +87,7 @@ describe("which reads a write to the record itself invalidates", () => {
   });
 
   it("names nothing for a record kind with no derived read", () => {
-    expect(derivedRecordKeys("person", "p1")).toEqual([]);
+    expect(derivedRecordKeys("contact", "p1")).toEqual([]);
   });
 });
 
@@ -101,17 +101,17 @@ describe("which reads could be showing a message", () => {
 
   it("matches every record's timeline, not only the one on screen", () => {
     expect(matches(["activities", "deal", "d1"])).toBe(true);
-    expect(matches(["activities", "person", "p1"])).toBe(true);
+    expect(matches(["activities", "contact", "p1"])).toBe(true);
     // Narrowed and paged reads hang further keys off the same prefix, and they
     // draw the same messages.
-    expect(matches(["activities", "person", "p1", { kind: "email" }])).toBe(
+    expect(matches(["activities", "contact", "p1", { kind: "email" }])).toBe(
       true,
     );
   });
 
   it("matches the composite reads that carry a timeline's first page", () => {
     expect(matches(["company360", "o1"])).toBe(true);
-    expect(matches(["person360", "p1"])).toBe(true);
+    expect(matches(["contact360", "p1"])).toBe(true);
     expect(matches(["project", "j1", "360"])).toBe(true);
   });
 

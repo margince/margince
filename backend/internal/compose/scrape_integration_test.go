@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -76,7 +76,7 @@ func TestScrapeStagesEnrichmentBoundToCompany(t *testing.T) {
 	e := integration.Setup(t)
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	fake := ai.NewFakeClient().Script(acmeExtraction)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 
 	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {
@@ -126,7 +126,7 @@ func TestScrapeHidesAnInvisibleCompany(t *testing.T) {
 	hidden := insertCompany(t, e, e.Rep3, "hidden.example", "")
 	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
 	fake := ai.NewFakeClient().Script(acmeExtraction)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 
 	// Both the domain path and the override path must 404 a company the caller
 	// cannot see — existence-hiding, before any egress on their behalf.
@@ -148,7 +148,7 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "")
 	allHallucinated := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, contacts: e.Contacts, approvals: approvals.NewService(e.DB())}
 	var unreadable *unreadableError
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, ""); !errors.As(err, &unreadable) {
 		t.Fatalf("all-hallucinated extraction → %v, want unreadable", err)
@@ -156,7 +156,7 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 
 	// (b) A visible company with NO domain and no override → no target to read.
 	noDomain := insertCompany(t, e, e.Rep1, "", "")
-	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), noDomain, ""); !errors.Is(err, people.ErrNoEnrichTarget) {
+	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), noDomain, ""); !errors.Is(err, contacts.ErrNoEnrichTarget) {
 		t.Fatalf("company without a domain → %v, want ErrNoEnrichTarget", err)
 	}
 }
@@ -168,8 +168,8 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	fake := ai.NewFakeClient().Script(acmeExtraction, acmeExtraction)
 
 	svc := approvals.NewService(e.DB())
-	svc.WithEffect("enrich", scrapeAcceptEffect(svc, e.People))
-	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, people: e.People, approvals: svc}
+	svc.WithEffect("enrich", scrapeAcceptEffect(svc, e.Contacts))
+	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, contacts: e.Contacts, approvals: svc}
 
 	proposal, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), companyID, "")
 	if err != nil {

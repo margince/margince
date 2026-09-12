@@ -38,7 +38,7 @@ const ROOM = {
 
 // One buyer who has been through the door, and one whose seat was taken back.
 // The revoked row is what separates "invited" from "rows in the list": counting
-// the list would say two people may enter a room only one may.
+// the list would say two contacts may enter a room only one may.
 const SIGNED_IN = {
   id: "part-1",
   room_id: ROOM.id,

@@ -13,17 +13,17 @@ package capture
 // timeline, and nothing that reads through activity_link could see it.
 //
 // It cost more than a missing row. Ordinary business correspondence is lawful
-// under Art 6(1)(f) when the person has written to us, and consent reads that
+// under Art 6(1)(f) when the contact has written to us, and consent reads that
 // from an INBOUND activity linked to them (consent.inboundQualifyingEvent). A
 // cc'd contact's inbound mail therefore qualified nobody: the send gate refused
-// mail to a person whose replies were sitting in the workspace, unlinked. The
+// mail to a contact whose replies were sitting in the workspace, unlinked. The
 // two repair sweeps could not reach it either — one keys on counterparty_email,
 // which names somebody else on these messages, and the other is gated on
 // meetings.
 //
 // So this is the meeting arm's rule (sinkmeetinglinks.go) applied to the
 // transports that carry a counterparty, and it is deliberately the SAME rule:
-// people already resolved on the participant rows, nobody created, the merge
+// contacts already resolved on the participant rows, nobody created, the merge
 // redirect settled, the visibility probe made, the 25-link ceiling respected.
 //
 // TWO DIFFERENCES, both load-bearing:
@@ -57,7 +57,7 @@ import (
 const postCommitLinkReservation = 2
 
 // linkResolvedMailParticipants files a captured message under every participant
-// the workspace already has a live person for.
+// the workspace already has a live contact for.
 //
 // It answers nothing, and that is the point. The meeting arm returns a count
 // because the audience limiter reads it: a meeting filed under an attendee has
@@ -73,7 +73,7 @@ const postCommitLinkReservation = 2
 func (s *Sink) linkResolvedMailParticipants(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
 ) error {
-	people, err := mailParticipantsWithPeople(ctx, tx, activityID)
+	contacts, err := mailParticipantsWithContacts(ctx, tx, activityID)
 	if err != nil {
 		return err
 	}
@@ -91,25 +91,25 @@ func (s *Sink) linkResolvedMailParticipants(
 		budget = 0
 	}
 	written := 0
-	for _, person := range people {
+	for _, contact := range contacts {
 		if written >= budget {
 			break
 		}
 		// A connector may not plant a link to a record its granting human could
 		// not see (H1). Not-found and denied are skipped rather than failed: the
-		// message happened, the participant row already records that this person
+		// message happened, the participant row already records that this contact
 		// was on it, and refusing the capture over a filing decision would throw
 		// away a message we read successfully.
-		if err := auth.EnsureLinkTarget(ctx, tx, "person", person.UUID); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "contact", contact.UUID); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 				continue
 			}
-			return fmt.Errorf("capture: mail link target %s: %w", person, err)
+			return fmt.Errorf("capture: mail link target %s: %w", contact, err)
 		}
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)
-			ON CONFLICT DO NOTHING`, activityID, person)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)
+			ON CONFLICT DO NOTHING`, activityID, contact)
 		if err != nil {
 			return fmt.Errorf("capture: filing a message under its participant: %w", err)
 		}
@@ -118,7 +118,7 @@ func (s *Sink) linkResolvedMailParticipants(
 	return nil
 }
 
-// mailParticipantsWithPeople answers the people this message's participant rows
+// mailParticipantsWithContacts answers the contacts this message's participant rows
 // resolved to, ordered by id.
 //
 // No role ordering, unlike the meeting arm: a meeting's organizer is the most
@@ -129,32 +129,32 @@ func (s *Sink) linkResolvedMailParticipants(
 //
 // The id is settled against a merge here, for the reason every writer of
 // activity_link settles it: no reader walks merged_into_id, so a link written
-// to a retired person leaves the message on a record nobody opens. The redirect
+// to a retired contact leaves the message on a record nobody opens. The redirect
 // is followed BEFORE liveness is judged, because a merge archives the source and
 // points it at the survivor in one write — testing the source's own archived_at
 // would drop a participant whose record simply moved.
-func mailParticipantsWithPeople(
+func mailParticipantsWithContacts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-) ([]ids.PersonID, error) {
+) ([]ids.ContactID, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT survivor.id AS person_id
+		SELECT DISTINCT survivor.id AS contact_id
 		  FROM activity_participant ap
-		  JOIN person p ON p.id = ap.person_id
-		  JOIN person survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
-		 WHERE ap.activity_id = $1 AND ap.person_id IS NOT NULL
+		  JOIN contact p ON p.id = ap.contact_id
+		  JOIN contact survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
+		 WHERE ap.activity_id = $1 AND ap.contact_id IS NOT NULL
 		   AND survivor.archived_at IS NULL
-		 ORDER BY person_id`, activityID)
+		 ORDER BY contact_id`, activityID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)
 	}
 	defer rows.Close()
-	var out []ids.PersonID
+	var out []ids.ContactID
 	for rows.Next() {
-		var person ids.PersonID
-		if err := rows.Scan(&person); err != nil {
+		var contact ids.ContactID
+		if err := rows.Scan(&contact); err != nil {
 			return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)
 		}
-		out = append(out, person)
+		out = append(out, contact)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)

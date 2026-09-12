@@ -37,7 +37,7 @@ var tagFields = map[string]Field{
 	"tag": {
 		Expr: "tg.tag_id",
 		Type: FieldID,
-		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 			" AND tg.entity_id = t.id AND %s)",
 	},
 }
@@ -263,7 +263,7 @@ func TestCompileNeverInlinesValues(t *testing.T) {
 // carry this tag" is NOT EXISTS(… = …), where EXISTS(… <> …) would answer the
 // different question "carries some other tag" — true for almost every record.
 func TestLinkLeafGoldenSQLPerOperator(t *testing.T) {
-	const wrapper = "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+	const wrapper = "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND %s)"
 	cases := []struct {
 		name     string
@@ -354,9 +354,9 @@ func TestLinkLeafNestsInsideAGroup(t *testing.T) {
 		leaf("tag", OpEq, tagUUID),
 		leaf("tag", OpExists, false),
 	}})
-	want := "(EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+	want := "(EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND tg.tag_id = $1)" +
-		" OR NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+		" OR NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND tg.tag_id IS NOT NULL))"
 	if sql != want {
 		t.Errorf("sql = %q, want %q", sql, want)

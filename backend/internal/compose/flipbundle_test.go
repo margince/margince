@@ -49,11 +49,11 @@ func TestParseBundleReadsTheEstateAndItsOwnerMap(t *testing.T) {
 			"objects": map[string]any{
 				"overlay_mirror": []any{
 					map[string]any{
-						"object_class": "person", "external_id": "p-2",
+						"object_class": "contact", "external_id": "p-2",
 						"fields": map[string]any{"full_name": "Second"}, "owner_external_id": "owner-1",
 					},
 					map[string]any{
-						"object_class": "person", "external_id": "p-1",
+						"object_class": "contact", "external_id": "p-1",
 						"fields": map[string]any{"full_name": "First"},
 					},
 					map[string]any{
@@ -63,7 +63,7 @@ func TestParseBundleReadsTheEstateAndItsOwnerMap(t *testing.T) {
 				},
 				"overlay_association": []any{
 					map[string]any{
-						"from_type": "person", "from_id": "p-1",
+						"from_type": "contact", "from_id": "p-1",
 						"to_type": "company", "to_id": "company-1", "category": "employment",
 					},
 				},
@@ -86,30 +86,30 @@ func TestParseBundleReadsTheEstateAndItsOwnerMap(t *testing.T) {
 
 	// Rows page in a stable external_id order — the engine's checkpoint
 	// is positional, so a shuffled source would resume onto a different row.
-	people, err := contents.source.Rows(t.Context(), "person", 0, 10)
+	contacts, err := contents.source.Rows(t.Context(), "contact", 0, 10)
 	if err != nil {
 		t.Fatalf("Rows: %v", err)
 	}
-	if len(people) != 2 || people[0].ExternalID != "p-1" || people[1].ExternalID != "p-2" {
-		t.Fatalf("person rows = %+v, want p-1 then p-2", people)
+	if len(contacts) != 2 || contacts[0].ExternalID != "p-1" || contacts[1].ExternalID != "p-2" {
+		t.Fatalf("contact rows = %+v, want p-1 then p-2", contacts)
 	}
 	// The owner rides beside the payload, not inside it — see Row.
-	if people[1].OwnerExternalID != "owner-1" {
-		t.Errorf("p-2 lost its incumbent owner: %v", people[1].Fields)
+	if contacts[1].OwnerExternalID != "owner-1" {
+		t.Errorf("p-2 lost its incumbent owner: %v", contacts[1].Fields)
 	}
 	// And it stays out of Fields: the engine reads Fields' emptiness to
 	// decide the empty_payload skip, so an owner folded in there would
 	// make every owned-but-blank system entry land as a nameless row.
-	if _, leaked := people[1].Fields["_owner_external_id"]; leaked || len(people[1].Fields) != 1 {
-		t.Errorf("p-2 payload = %v, want the mapped fields alone", people[1].Fields)
+	if _, leaked := contacts[1].Fields["_owner_external_id"]; leaked || len(contacts[1].Fields) != 1 {
+		t.Errorf("p-2 payload = %v, want the mapped fields alone", contacts[1].Fields)
 	}
 
 	counts, err := contents.source.Counts(t.Context())
 	if err != nil {
 		t.Fatalf("Counts: %v", err)
 	}
-	if counts["person"] != 2 || counts["company"] != 1 {
-		t.Errorf("counts = %v, want 2 persons and 1 company", counts)
+	if counts["contact"] != 2 || counts["company"] != 1 {
+		t.Errorf("counts = %v, want 2 contacts and 1 company", counts)
 	}
 	assocs, err := contents.source.Associations(t.Context())
 	if err != nil || len(assocs) != 1 || assocs[0].FromID != "p-1" {
@@ -169,8 +169,8 @@ func TestBundleRowsPageAndRunOut(t *testing.T) {
 	raw := bundleZip(t, map[string]any{"canonical_data_resides_in": "hubspot"},
 		map[string]any{"format": exportFormat, "objects": map[string]any{
 			"overlay_mirror": []any{
-				map[string]any{"object_class": "person", "external_id": "p-1", "fields": map[string]any{"full_name": "A"}},
-				map[string]any{"object_class": "person", "external_id": "p-2", "fields": map[string]any{"full_name": "B"}},
+				map[string]any{"object_class": "contact", "external_id": "p-1", "fields": map[string]any{"full_name": "A"}},
+				map[string]any{"object_class": "contact", "external_id": "p-2", "fields": map[string]any{"full_name": "B"}},
 			},
 		}})
 	contents, err := parseBundle(raw)
@@ -179,14 +179,14 @@ func TestBundleRowsPageAndRunOut(t *testing.T) {
 	}
 	// limit truncates: a source that ignored it would break the engine's
 	// positional checkpoint without failing any other assertion here.
-	if capped, err := contents.source.Rows(t.Context(), "person", 0, 1); err != nil || len(capped) != 1 || capped[0].ExternalID != "p-1" {
+	if capped, err := contents.source.Rows(t.Context(), "contact", 0, 1); err != nil || len(capped) != 1 || capped[0].ExternalID != "p-1" {
 		t.Fatalf("limited page = %+v (err %v), want exactly p-1", capped, err)
 	}
-	page, err := contents.source.Rows(t.Context(), "person", 1, 10)
+	page, err := contents.source.Rows(t.Context(), "contact", 1, 10)
 	if err != nil || len(page) != 1 || page[0].ExternalID != "p-2" {
 		t.Fatalf("offset page = %+v (err %v), want just p-2", page, err)
 	}
-	if page, err := contents.source.Rows(t.Context(), "person", 5, 10); err != nil || len(page) != 0 {
+	if page, err := contents.source.Rows(t.Context(), "contact", 5, 10); err != nil || len(page) != 0 {
 		t.Fatalf("past-the-end page = %+v (err %v), want empty", page, err)
 	}
 	if page, err := contents.source.Rows(t.Context(), "deal", 0, 10); err != nil || len(page) != 0 {

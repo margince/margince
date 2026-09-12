@@ -9,7 +9,7 @@ package consent
 // The transmit decision beside this one answers "may this go out now" and is
 // the last word. It cannot be the only word: it runs in a worker, minutes or
 // days later, and its refusal reaches a parked row and an operator's lane
-// rather than the person who typed the message. A staging decision is what
+// rather than the contact who typed the message. A staging decision is what
 // makes a refusal answerable — the rep is still there, and the message has not
 // yet been promised to anybody.
 //
@@ -196,7 +196,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// updated (migration 1788529047), and a row that had to be corrected
 		// later would be a proof the application can edit.
 		//
-		// Named on the REFUSED rows only. A message to three people may be
+		// Named on the REFUSED rows only. A message to three contacts may be
 		// allowed for two of them and directed for the third, and saying all
 		// three went out on somebody's decision would overstate what was
 		// decided — the human was shown one refusal and signed for that one.

@@ -25,8 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// sourceHuman is what a person acting in the UI writes. Connectors and imports
-// would name themselves; nothing writes assignments but people today.
+// sourceHuman is what a human acting in the UI writes. Connectors and imports
+// would name themselves; nothing writes assignments but humans today.
 const sourceHuman = "human"
 
 // assignmentSelect reads an assignment with the role and subject it names. The
@@ -270,7 +270,7 @@ func roleLookupError(err error) error {
 // between this check and the insert would leave somebody newly responsible for
 // work on the day they left. A share lock rather than an exclusive one because
 // this transaction only needs the row to hold still — it writes nothing to it,
-// and two assignments naming the same person must not queue behind each other.
+// and two assignments naming the same colleague must not queue behind each other.
 func ensureSubjectAssignable(
 	ctx context.Context, tx pgx.Tx, kind crmcontracts.AssignmentSubjectKind, id ids.UUID,
 ) error {
@@ -309,7 +309,7 @@ func ensureSubjectAssignable(
 	if status == "suspended" || status == "deactivated" || archivedAt != nil {
 		return &values.ParseError{
 			Field: fieldSubjectID, Code: "inactive_user",
-			Message: "that person is deactivated and cannot take on new responsibilities",
+			Message: "that colleague is deactivated and cannot take on new responsibilities",
 		}
 	}
 	return nil

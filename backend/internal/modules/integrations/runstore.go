@@ -31,13 +31,13 @@ func (s *Store) insertRun(ctx context.Context, tx pgx.Tx, conn admittedConnectio
 	var id string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO provider_run
-		  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+		  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 		   external_correlation_id, connection_version, connection_epoch,
 		   configuration_snapshot, requested_categories, requested_by)
-		VALUES ('person', $1, $2, $3, 'queued', $4, gen_random_uuid(), $5, $6, $7, $8, $9)
+		VALUES ('contact', $1, $2, $3, 'queued', $4, gen_random_uuid(), $5, $6, $7, $8, $9)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text`,
-		in.PersonID, in.Provider, string(in.Trigger), fingerprint,
+		in.ContactID, in.Provider, string(in.Trigger), fingerprint,
 		conn.version, conn.epoch, snapJSON, categoryStrings(cats), nullableUUID(in.RequestedBy)).Scan(&id)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -47,9 +47,9 @@ func (s *Store) insertRun(ctx context.Context, tx pgx.Tx, conn admittedConnectio
 		var existing string
 		if err := tx.QueryRow(ctx, `
 			SELECT id::text FROM provider_run
-			 WHERE person_id = $1 AND provider = $2 AND input_fingerprint = $3
+			 WHERE contact_id = $1 AND provider = $2 AND input_fingerprint = $3
 			   AND state IN ('queued','submitting','in_progress','submission_unknown')`,
-			in.PersonID, in.Provider, fingerprint).Scan(&existing); err != nil {
+			in.ContactID, in.Provider, fingerprint).Scan(&existing); err != nil {
 			return "", false, fmt.Errorf("integrations: resolving the live run: %w", err)
 		}
 		return existing, true, nil
@@ -75,14 +75,14 @@ func (s *Store) insertSkipped(ctx context.Context, tx pgx.Tx, conn admittedConne
 	// must not block the next legitimate attempt.
 	err = tx.QueryRow(ctx, `
 		INSERT INTO provider_run
-		  (subject_kind, person_id, provider, trigger, state, skip_reason,
+		  (subject_kind, contact_id, provider, trigger, state, skip_reason,
 		   input_fingerprint, external_correlation_id, connection_version,
 		   connection_epoch, configuration_snapshot, requested_categories,
 		   requested_by, completed_at)
-		VALUES ('person', $1, $2, $3, 'skipped', $4, 'skipped:' || gen_random_uuid()::text,
+		VALUES ('contact', $1, $2, $3, 'skipped', $4, 'skipped:' || gen_random_uuid()::text,
 		        gen_random_uuid(), $5, $6, $7, $8, $9, now())
 		RETURNING id::text`,
-		in.PersonID, in.Provider, string(in.Trigger), string(reason),
+		in.ContactID, in.Provider, string(in.Trigger), string(reason),
 		conn.version, conn.epoch, snapJSON, categoryStrings(cats),
 		nullableUUID(in.RequestedBy)).Scan(&id)
 	if err != nil {
@@ -107,16 +107,16 @@ func (s *Store) markSkipped(ctx context.Context, tx pgx.Tx, runID string, reason
 // readRun loads one run and its reservations.
 func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.Run, error) {
 	var r provider.Run
-	var personID, skipReason, safeCode *string
+	var contactID, skipReason, safeCode *string
 	var snapJSON []byte
 	var cats []string
 	err := tx.QueryRow(ctx, `
-		SELECT id::text, subject_kind, person_id::text, provider, trigger, state,
+		SELECT id::text, subject_kind, contact_id::text, provider, trigger, state,
 		       skip_reason, claims_unwritten, applied_at IS NOT NULL, connection_version,
 		       configuration_snapshot, requested_categories, last_safe_status_code,
 		       submitted_at, completed_at, created_at, updated_at
 		  FROM provider_run WHERE id = $1`, runID).
-		Scan(&r.ID, &r.SubjectKind, &personID, &r.Provider, &r.Trigger, &r.State,
+		Scan(&r.ID, &r.SubjectKind, &contactID, &r.Provider, &r.Trigger, &r.State,
 			&skipReason, &r.ClaimsUnwritten, &r.Applied, &r.ConnectionVersion,
 			&snapJSON, &cats, &safeCode,
 			&r.SubmittedAt, &r.CompletedAt, &r.CreatedAt, &r.UpdatedAt)
@@ -126,8 +126,8 @@ func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.
 	if err != nil {
 		return provider.Run{}, fmt.Errorf("integrations: reading the run: %w", err)
 	}
-	if personID != nil {
-		r.PersonID = *personID
+	if contactID != nil {
+		r.ContactID = *contactID
 	}
 	if skipReason != nil {
 		r.SkipReason = provider.SkipReason(*skipReason)
@@ -160,24 +160,24 @@ func (s *Store) readRun(ctx context.Context, tx pgx.Tx, runID string) (provider.
 	return r, nil
 }
 
-// GetRun reads one run for a subject. The person gate is what authorizes it:
-// a run is a fact about that person, so seeing it requires seeing them.
-func (s *Store) GetRun(ctx context.Context, personID, runID string) (provider.Run, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+// GetRun reads one run for a subject. The contact gate is what authorizes it:
+// a run is a fact about that contact, so seeing it requires seeing them.
+func (s *Store) GetRun(ctx context.Context, contactID, runID string) (provider.Run, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return provider.Run{}, err
 	}
 	var out provider.Run
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Existence-hiding: a run belonging to a person this caller cannot
+		// Existence-hiding: a run belonging to a contact this caller cannot
 		// see answers 404, never 403.
-		if err := auth.EnsureVisible(ctx, tx, "person", uuidOf(&personID)); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "contact", uuidOf(&contactID)); err != nil {
 			return err
 		}
 		run, err := s.readRun(ctx, tx, runID)
 		if err != nil {
 			return err
 		}
-		if run.PersonID != personID {
+		if run.ContactID != contactID {
 			return apperrors.ErrNotFound
 		}
 		out = run

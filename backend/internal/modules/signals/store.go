@@ -18,7 +18,7 @@ import (
 
 // RelationshipStrength is the slice of the §4 explainable strength score
 // the warm room consumes: the 0–100 value and its display bucket. The
-// full decomposition lives with its owner (the people module); this seam
+// full decomposition lives with its owner (the contacts module); this seam
 // carries only what the warm/cold ranking needs.
 type RelationshipStrength struct {
 	Strength int
@@ -26,10 +26,10 @@ type RelationshipStrength struct {
 }
 
 // StrengthSource is the cross-module seam to the §4 relationship-strength
-// computation (B-E13.16). The people module implements it; the
+// computation (B-E13.16). The contacts module implements it; the
 // composition layer injects it — signals never imports a sibling.
 type StrengthSource interface {
-	PersonStrength(ctx context.Context, personID ids.PersonID, now time.Time) (RelationshipStrength, error)
+	ContactStrength(ctx context.Context, contactID ids.ContactID, now time.Time) (RelationshipStrength, error)
 }
 
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
@@ -69,11 +69,11 @@ func (e *NoWarmthError) Error() string { return e.Reason }
 
 // signalEntityTables is the store-side spelling of the schema's
 // signal_entity_type CHECK: a signal's subject is a deal, company,
-// person or project. The client-supplied type flows on to a table-name seam
+// contact or project. The client-supplied type flows on to a table-name seam
 // (the link-target probe), so the store pins the set itself instead of
 // leaning on transport enum validation alone.
 // TestSignalEntityTablesMatchTheSchemaCheck holds it to the constraint.
-var signalEntityTables = map[string]bool{"deal": true, "company": true, "person": true, "project": true}
+var signalEntityTables = map[string]bool{"deal": true, "company": true, "contact": true, "project": true}
 
 // SignalEntityTables lists the subject types a signal may carry, sorted —
 // the same set the schema CHECK admits, for a reader that has to spell it.

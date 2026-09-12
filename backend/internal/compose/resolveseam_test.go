@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -18,21 +18,21 @@ import (
 // change the answer over.
 //
 // `Exact` is what turns a single surviving match into `matched` rather than
-// `ambiguous`. A translation that forgot it would compile, pass every people
+// `ambiguous`. A translation that forgot it would compile, pass every contacts
 // test and every agents test — and quietly downgrade every key hit on the
-// surface to "a person decides", which reads as caution rather than as a bug.
+// surface to "a human decides", which reads as caution rather than as a bug.
 // Neither module can see the other, so this is the only place the two ends meet.
 func TestTheSeamCarriesWhetherAKeyOrASimilarityNamedTheRecord(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		ref   people.ResolveRef
+		ref   contacts.ResolveRef
 		exact bool
 	}{
-		{"an exact lane", people.ResolveRef{Kind: people.ResolvePerson, ID: ids.NewV7(), Exact: true, Confidence: 1}, true},
-		{"a name similarity", people.ResolveRef{Kind: people.ResolvePerson, ID: ids.NewV7(), Confidence: 0.8}, false},
+		{"an exact lane", contacts.ResolveRef{Kind: contacts.ResolveContact, ID: ids.NewV7(), Exact: true, Confidence: 1}, true},
+		{"a name similarity", contacts.ResolveRef{Kind: contacts.ResolveContact, ID: ids.NewV7(), Confidence: 0.8}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := resolveOutcomesFor([]people.ResolveOutcome{{Refs: []people.ResolveRef{tc.ref}}})
+			got := resolveOutcomesFor([]contacts.ResolveOutcome{{Refs: []contacts.ResolveRef{tc.ref}}})
 			if len(got) != 1 || len(got[0].Refs) != 1 {
 				t.Fatalf("the adapter answered %+v, want the one ref carried through", got)
 			}
@@ -48,7 +48,7 @@ func TestTheSeamCarriesWhetherAKeyOrASimilarityNamedTheRecord(t *testing.T) {
 }
 
 // The mode guard is why this tool is composed here rather than registered beside
-// its ladder: the ladder reads the native person and company tables, which
+// its ladder: the ladder reads the native contact and company tables, which
 // hold none of an overlay workspace's records. `unresolved` is the answer that
 // leaves a caller free to create, so the unguarded call would turn the duplicate
 // guard into a duplicate factory.
@@ -60,7 +60,7 @@ func TestAnOverlayWorkspaceIsRefusedRatherThanResolvedAgainstEmptyTables(t *test
 			return nil, nil
 		})
 
-	_, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "person", Name: "Anna Weber"}})
+	_, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact", Name: "Anna Weber"}})
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("err = %v, want the declared unsupported-by-SoR refusal", err)
 	}
@@ -79,7 +79,7 @@ func TestANativeWorkspaceReachesTheResolver(t *testing.T) {
 			return []agents.ResolveOutcome{{}}, nil
 		})
 
-	out, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "person"}})
+	out, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact"}})
 	if err != nil {
 		t.Fatalf("a native workspace was refused: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestAnUnresolvedModeRefusesRatherThanAssumingNative(t *testing.T) {
 			return nil, nil
 		})
 
-	if _, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "person"}}); err == nil {
+	if _, err := guarded(t.Context(), []agents.ResolveCandidate{{Kind: "contact"}}); err == nil {
 		t.Error("an unreadable mode was treated as native")
 	}
 }

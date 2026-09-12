@@ -37,7 +37,7 @@ describe("the Brief's address", () => {
     }
   });
 
-  // An address is something a person types, a link carries from an older build,
+  // An address is something a human types, a link carries from an older build,
   // and a colleague sends from a seat with wider reach. None of those may
   // produce a broken page.
   it("falls back rather than breaking on a value it does not know", () => {

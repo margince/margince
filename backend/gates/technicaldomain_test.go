@@ -38,7 +38,7 @@ import (
 var technicalDomainReaders = regexp.MustCompile(`(?s)SELECT\s+domain\s`)
 
 // TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone holds the claim in
-// people.Store.TechnicalDomain's doc comment.
+// contacts.Store.TechnicalDomain's doc comment.
 //
 // It asserts the narrow thing that is actually true: within the technical
 // lookup's own files, exactly one function reads the domain. Other paths in
@@ -46,10 +46,10 @@ var technicalDomainReaders = regexp.MustCompile(`(?s)SELECT\s+domain\s`)
 // the dedupe — and this says nothing about those.
 func TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone(t *testing.T) {
 	t.Parallel()
-	const technicalFiles = "internal/modules/people"
+	const technicalFiles = "internal/modules/contacts"
 	entries, err := os.ReadDir(technicalFiles)
 	if err != nil {
-		t.Fatalf("reading the people module: %v", err)
+		t.Fatalf("reading the contacts module: %v", err)
 	}
 	readers := 0
 	for _, entry := range entries {
@@ -100,7 +100,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 }
 
 // TestEveryTechnicalLaneIsDerivedFromItsFields holds the claim on
-// people.technicalLanes: it is every lane, derived rather than written twice.
+// contacts.technicalLanes: it is every lane, derived rather than written twice.
 //
 // A hand-written second list would fall out of step with laneFields, and the
 // sweep would then treat a company as fully looked at while one lane had never
@@ -108,7 +108,7 @@ func TestTheTechnicalLookupTakesNoDomainFromACaller(t *testing.T) {
 // nothing of what that lane reads.
 func TestEveryTechnicalLaneIsDerivedFromItsFields(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("internal/modules/people/companytechnical.go")
+	body, err := os.ReadFile("internal/modules/contacts/companytechnical.go")
 	if err != nil {
 		t.Fatalf("reading the technical apply: %v", err)
 	}

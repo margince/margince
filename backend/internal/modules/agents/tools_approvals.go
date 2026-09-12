@@ -6,10 +6,10 @@ package agents
 // The confirm-first queue read from the side of whoever is waiting on it.
 //
 // The 🟡 loop had a hole where its other half should be: a staged call told the
-// agent to wait for a person, and neither party could reach the queue from the
+// agent to wait for a contact, and neither party could reach the queue from the
 // conversation they were both already in. The agent could not see that a send
 // was already staged — so it composed a second, worse copy of it — and the
-// person who wanted to release it had to leave for the web app.
+// contact who wanted to release it had to leave for the web app.
 //
 // The decision itself is unchanged and is not this file's: it demands the RBAC
 // the staged effect needs, row-scope visibility of its target, the granting
@@ -220,8 +220,8 @@ func (t readApprovalTool) Handle(ctx context.Context, in json.RawMessage) (json.
 // would stage an approval in order to approve an approval, and the regress has
 // no fixed point — there is no human the second card could reach that the first
 // one could not. What stands in place of a tier here is the credential: a
-// passport decides on the authority of the person who minted it, spends the
-// caps the release spends, and reaches nothing that person could not decide
+// passport decides on the authority of the colleague who minted it, spends the
+// caps the release spends, and reaches nothing that colleague could not decide
 // themselves in the app.
 type decideApprovalTool struct{ inbox ApprovalInbox }
 
@@ -240,7 +240,7 @@ func (t decideApprovalTool) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["staged_action_id","decision"],"properties":{
 			"staged_action_id":{"type":"string","format":"uuid","description":"From list_approvals."},
 			"decision":{"type":"string","enum":["approve","reject"]},
-			"reason":{"type":"string","description":"Why, in the deciding person's words. Recorded with the decision."}},
+			"reason":{"type":"string","description":"Why, in the deciding contact's words. Recorded with the decision."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[StagedApproval](),
 	}
@@ -285,7 +285,7 @@ func (t decideBundleTool) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["bundle_id","decision"],"properties":{
 			"bundle_id":{"type":"string","format":"uuid"},
 			"decision":{"type":"string","enum":["approve","reject"]},
-			"reason":{"type":"string","description":"Why, in the deciding person's words. Recorded against every member."}},
+			"reason":{"type":"string","description":"Why, in the deciding contact's words. Recorded against every member."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[decideBundleAnswer](),
 	}

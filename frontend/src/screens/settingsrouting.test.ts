@@ -56,7 +56,7 @@ describe("the six ids that did change resolve and say so", () => {
   it.each([
     ["general", "company"],
     ["users", "members"],
-    ["people", "members"],
+    ["contacts", "members"],
     ["data-model", "fields"],
     ["ai", "models"],
     ["maintenance", "system-health"],
@@ -176,7 +176,7 @@ describe("every address the product used to mint still resolves", () => {
   const everyOldAdminId = [
     "general",
     "users",
-    "people",
+    "contacts",
     "integrations",
     "extensions",
     "capture",

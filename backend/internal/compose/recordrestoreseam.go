@@ -17,8 +17,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -32,10 +32,10 @@ import (
 // correction-aware reversal, every row falling through to the generic
 // evaluator exactly as before this seam knew corrections existed.
 func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher, corrections *deals.Store) RestoreSeam {
-	// The edge's rules are the people module's, and so is its table. This seam
+	// The edge's rules are the contacts module's, and so is its table. This seam
 	// reaches them through that module's own store rather than restating any of
 	// them, which is also why it owns no relationship SQL.
-	edges := people.NewStore(InstallationDB(pool))
+	edges := contacts.NewStore(InstallationDB(pool))
 	return RestoreSeam{
 		pool:        pool,
 		dispatcher:  dispatcher,
@@ -128,19 +128,19 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 }
 
 // edgeIsWritableByCaller asks both halves of an edge write's authority: the
-// OBJECT grants the people store asks at its own entry, and the ROW scope on the
+// OBJECT grants the contacts store asks at its own entry, and the ROW scope on the
 // ANCHOR the edge annotates.
 //
 // The anchor and not the record whose history was open, and the two are not
-// symmetric: an employment anchors the PERSON, so a seat holding
-// company-write and not person-write is refused the button on the company's
+// symmetric: an employment anchors the CONTACT, so a seat holding
+// company-write and not contact-write is refused the button on the company's
 // page. Asking the record instead would light a button the write then refuses.
 //
 // The entry's action travels with it because the object grant the inverse asks
-// for is the people store's own to decide — reversing a create is an archive
+// for is the contacts store's own to decide — reversing a create is an archive
 // there, and the archive asks delete.
-func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
-	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error {
+func edgeIsWritableByCaller(edges *contacts.Store) func(context.Context, pgx.Tx, contacts.EdgeFacts, string) error {
+	return func(ctx context.Context, tx pgx.Tx, facts contacts.EdgeFacts, entryAction string) error {
 		if err := edges.RefuseEdgeWrite(ctx, facts.Kind, entryAction); err != nil {
 			return err
 		}
@@ -224,7 +224,7 @@ func rowIsAlreadyUndone(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, err
 
 // valuesNoLongerWritable names patch keys the update path could not write
 // today. A cf_* key whose catalog entry was retired is the case that reaches a
-// person as "unknown field cf_budget", which is not an answer to pressing Undo.
+// contact as "unknown field cf_budget", which is not an answer to pressing Undo.
 func valuesNoLongerWritable(ctx context.Context, tx pgx.Tx, entityType string, _ ids.UUID, patch map[string]json.RawMessage) ([]string, error) {
 	var custom []string
 	for key := range patch {

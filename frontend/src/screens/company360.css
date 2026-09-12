@@ -246,7 +246,7 @@
   color: var(--textMeta);
   cursor: pointer;
   /* Indigo, because the sentence above it was written by the agent and this
-     is where its working is. Green here would say a person cited it. */
+     is where its working is. Green here would say a contact cited it. */
   text-decoration: underline dotted var(--aiMed);
   text-underline-offset: 3px;
 }
@@ -577,7 +577,7 @@
    The value, a warning about its shape, who vouched for it and the verbs that
    change it are separate elements of unlike kinds — a mark, a badge, a chip, a
    button — and inline with no rule between them they simply abutted: a fact
-   nobody has to confirm read as "1998Set by a person", because it is the one
+   nobody has to confirm read as "1998Set by a contact", because it is the one
    row where no button follows the value to force a gap. The row owns the
    spacing, so it holds for every combination of the four. */
 .co-fact-line {
@@ -1186,7 +1186,7 @@
   width: 100%;
 }
 
-.co-person-routes-list {
+.co-contact-routes-list {
   list-style: none;
   margin: var(--space-1) 0 0;
   padding: 0;
@@ -1194,12 +1194,12 @@
 /* The stack reads as information, not as a verb: the aside still opens on
    hover, click and focus, but a pointer cursor would promise a navigation
    the trigger does not make. */
-.co-person-routes .popover-trigger {
+.co-contact-routes .popover-trigger {
   cursor: default;
 }
 
 /* A signal row: a coloured dot the row's severity comes from, the finding,
-   then when it was seen. Mirrors person360.css's own .pe-signal/.pe-dot pair,
+   then when it was seen. Mirrors contact360.css's own .pe-signal/.pe-dot pair,
    the same shape under this screen's own prefix. */
 .co-signal-row {
   display: grid;

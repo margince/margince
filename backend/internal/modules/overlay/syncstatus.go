@@ -29,7 +29,7 @@ import (
 // shape GetOverlaySyncStatus (handlers.go) maps onto the wire
 // crmcontracts.OverlaySyncStatus.Objects entry. Object carries the
 // CANONICAL entity type (overlay_mirror's own object_class column, e.g.
-// "person"), not the incumbent's class name — the same vocabulary
+// "contact"), not the incumbent's class name — the same vocabulary
 // datasource.EntityType and every other overlay read verb already uses.
 type ObjectSyncStatus struct {
 	Object       string

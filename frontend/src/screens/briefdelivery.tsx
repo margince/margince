@@ -1,7 +1,7 @@
 // What the product may send this reader about their day and their week.
 //
 // The brief and the weekly are on their screen either way; these rows are about
-// the NUDGE toward them, which is the one part a person is entitled to switch
+// the NUDGE toward them, which is the one part a contact is entitled to switch
 // off. So they sit under the account's own settings beside the display
 // language, not under anything an admin configures for the team.
 

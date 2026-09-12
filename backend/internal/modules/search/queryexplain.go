@@ -75,7 +75,7 @@ func explainUnavailable(plan ValidatedPlan) string {
 }
 
 // article picks the indefinite article a record type's name takes. It is a
-// sentence a person reads, and "a company" is the kind of seam that makes
+// sentence a reader reads, and "a company" is the kind of seam that makes
 // a generated explanation read as machine output rather than as an answer.
 func article(word string) string {
 	if word == "" || !strings.ContainsRune("aeiou", rune(word[0])) {

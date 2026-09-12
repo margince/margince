@@ -105,7 +105,7 @@ func linkScope(ctx context.Context, alias string, arg func(any) int) (string, er
 // nextStepsSection reads the account's open tasks in the order a rep works
 // them: overdue first, then dated, then undated, and among tasks sharing a
 // date the one that has waited longest. That last tie-break is what makes
-// this list agree with the contact page's (person360's byUrgency): the same
+// this list agree with the contact page's (contact360's byUrgency): the same
 // two promises must not swap places depending on which record you opened
 // them from, and without it each list fell back to its own id order. A task reaches the
 // account through any of its links — the task itself, its deal, or the
@@ -165,7 +165,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
-	personVisible, err := linkScope(ctx, "pl", arg)
+	contactVisible, err := linkScope(ctx, "pl", arg)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
@@ -174,15 +174,15 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
-		       (SELECT pl.person_id FROM activity_link pl
-		         WHERE pl.activity_id = a.id AND pl.entity_type = 'person' AND %[4]s
+		       (SELECT pl.contact_id FROM activity_link pl
+		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
 		         ORDER BY pl.id LIMIT 1)
 		FROM activity a
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s
 		ORDER BY (a.due_at IS NULL), a.due_at, a.occurred_at, a.id
 		LIMIT %[5]d`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, personVisible, limit+1,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
 		opts.projectScope(arg)), args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
@@ -191,7 +191,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 	steps, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (crmcontracts.Company360NextStep, error) {
 		var step crmcontracts.Company360NextStep
 		var id ids.UUID
-		var assignee, dealID, personID *ids.UUID
+		var assignee, dealID, contactID *ids.UUID
 		// Read only to order by: the account's task list does not show when a
 		// task was filed, but two tasks due the same day have to rank the same
 		// here as on the contact page, and there the older one leads.
@@ -202,14 +202,14 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		// and the version it found could already be the wrong one.
 		var version int64
 		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &version,
-			&dealID, &personID); err != nil {
+			&dealID, &contactID); err != nil {
 			return step, err
 		}
 		step.ActivityId = openapi_types.UUID(id)
 		step.Version = &version
 		step.AssigneeId = uuidPtr(assignee)
 		step.LinkedDealId = uuidPtr(dealID)
-		step.LinkedPersonId = uuidPtr(personID)
+		step.LinkedContactId = uuidPtr(contactID)
 		step.Overdue = deadline.Passed(step.DueAt, now)
 		filed = append(filed, occurredAt)
 		return step, nil

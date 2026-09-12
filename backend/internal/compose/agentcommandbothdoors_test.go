@@ -172,14 +172,14 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 		},
 	},
 
-	"archivePerson":       archiveDoors("people", "person"),
+	"archiveContact":      archiveDoors("contacts", "contact"),
 	"archiveCompany":      archiveDoors("companies", "company"),
 	"archiveDeal":         archiveDoors("deals", "deal"),
 	"archiveProject":      archiveDoors("projects", "project"),
 	"archiveRelationship": archiveDoors("relationships", "relationship"),
 	"archiveActivity":     archiveDoors("activities", "activity"),
 
-	"createPerson":  createDoors("people", "person", `{"full_name":"Ada Lovelace"}`),
+	"createContact": createDoors("contacts", "contact", `{"full_name":"Ada Lovelace"}`),
 	"createCompany": createDoors("companies", "company", `{"display_name":"Acme"}`),
 	"createDeal": createDoors("deals", "deal", `{"name":"Acme renewal",`+
 		`"pipeline_id":"019ff000-0000-7000-8000-000000000011","stage_id":"019ff000-0000-7000-8000-000000000012"}`),
@@ -187,9 +187,9 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"createProject": createDoors("projects", "project",
 		`{"name":"Acme rollout","company_id":"019ff000-0000-7000-8000-000000000013"}`),
 	"createRelationship": createDoors("relationships", "relationship",
-		`{"kind":"employment","person_id":"019ff000-0000-7000-8000-000000000014"}`),
+		`{"kind":"employment","contact_id":"019ff000-0000-7000-8000-000000000014"}`),
 
-	"updatePerson":       updateDoors("people", "person", `{"title":"CTO"}`),
+	"updateContact":      updateDoors("contacts", "contact", `{"title":"CTO"}`),
 	"updateCompany":      updateDoors("companies", "company", `{"industry":"payments"}`),
 	"updateDeal":         updateDoors("deals", "deal", `{"forecast_category":"commit"}`),
 	"updateLead":         updateDoors("leads", "lead", `{"status":"contacted"}`),
@@ -197,7 +197,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"updateProject":      updateDoors("projects", "project", `{"description":"Rollout"}`),
 	"updateRelationship": updateDoors("relationships", "relationship", `{"role":"champion"}`),
 
-	"mergePerson":  mergeDoors("people", "person"),
+	"mergeContact": mergeDoors("contacts", "contact"),
 	"mergeCompany": mergeDoors("companies", "company"),
 
 	// The tag merge does NOT reuse mergeDoors: that one is a record merge typed
@@ -321,7 +321,7 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 // of the surface shares a verb with operations the verb cannot express —
 // confirmCompanyFact is an `update_record` operation no update_record call
 // can spell — and a set built from the verb alone would demand a tool fixture
-// for an act the tool door has no way to ask for. A composed entry (`getPerson
+// for an act the tool door has no way to ask for. A composed entry (`getContact
 // + listActivities`) matches no operationId and drops out on its own.
 //
 // OpenAPIOp is hand-written prose beside each registration, so what it leaves
@@ -373,7 +373,7 @@ var notExpressibleByItsVerb = gatekit.Waive(map[string]string{
 		"updateCompany — with no provenance flip and no sidecar history, which no argument can ask for",
 	"setProjectStakeholder": "the stakeholder is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
-	"removeProjectStakeholder": "the person is a second path parameter naming the edge to drop, and " +
+	"removeProjectStakeholder": "the contact is a second path parameter naming the edge to drop, and " +
 		"update_record has no argument for a record other than the one it patches",
 	"setProjectCompany": "the company is an edge to a second record carrying its own role, which " +
 		"update_record's fields cannot spell — they write columns of the project the route names",
@@ -506,9 +506,9 @@ type bothDoorsTags struct{ agents.Tags }
 // RecordTagTypes and TaggableTypes are read at REGISTRATION, before any call —
 // they build the apply/remove schemas — so the stub answers them even though
 // this gate never exercises those two verbs.
-func (bothDoorsTags) RecordTagTypes() []string { return []string{"person"} }
+func (bothDoorsTags) RecordTagTypes() []string { return []string{"contact"} }
 
-func (bothDoorsTags) TaggableTypes() []string { return []string{"person"} }
+func (bothDoorsTags) TaggableTypes() []string { return []string{"contact"} }
 
 func (bothDoorsTags) GetTag(_ context.Context, tagID ids.UUID) (agents.TagDetail, error) {
 	return agents.TagDetail{Tag: agents.Tag{TagID: tagID, Name: "tag-" + tagID.String()}}, nil
@@ -663,7 +663,7 @@ var dynamicTierVerbs = gatekit.Waive(map[string]string{
 		"AdvanceDealCommand{DealID, ToStageID} (advanceDealCommand in agentcommandlifecycle.go, " +
 		"advanceDeal.StageInfo in tools.go), which no test compares door-to-door today",
 	"relink_activity": "the tier turns on the DESTINATION TYPE in the arguments, not on any record, so a " +
-		"person relink executes where a project relink stages and this lane's fixture would compare a " +
+		"contact relink executes where a project relink stages and this lane's fixture would compare a " +
 		"staged row only one destination produces. Unlike the deal move, both doors ARE compared, each " +
 		"against the shape it actually receives: TestRelinkingOntoAProjectReachesAHumanAndOtherDestinationsDoNot " +
 		"(agentgate_dealreopen_test.go) drives the REST door through tierInput, and " +

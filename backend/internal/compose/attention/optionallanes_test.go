@@ -58,7 +58,7 @@ func (s *stubCommitments) DueBy(_ context.Context, by time.Time, _ int) ([]Commi
 func promise(body string, due time.Time) Commitment {
 	return Commitment{
 		ID:          ids.NewV7(),
-		PersonID:    ids.NewV7(),
+		ContactID:   ids.NewV7(),
 		Body:        body,
 		Quote:       "Ich schicke Ihnen die Referenzliste bis Dienstag.",
 		SourceLabel: "Rückfragen zum Angebot",
@@ -96,8 +96,8 @@ func TestACommitmentCarriesThePromiseAndTheWordsItWasReadFrom(t *testing.T) {
 	if item.Detail == nil || *item.Detail != "Ich schicke Ihnen die Referenzliste bis Dienstag." {
 		t.Errorf("detail = %v, want the verbatim quote", item.Detail)
 	}
-	if item.Subject == nil || item.Subject.Type != "person" {
-		t.Errorf("subject = %v, want the person it was promised to", item.Subject)
+	if item.Subject == nil || item.Subject.Type != "contact" {
+		t.Errorf("subject = %v, want the contact it was promised to", item.Subject)
 	}
 	if item.Source != "conversation_claim" {
 		t.Errorf("source = %q, want conversation_claim", item.Source)

@@ -3,11 +3,11 @@
 
 package capture
 
-// Whether an address could name a person at all, asked before the ladder mints
+// Whether an address could name a contact at all, asked before the ladder mints
 // a record for it.
 //
 // The tier ladder's T1 evidence is that the workspace WROTE to an address. That
-// is honest evidence of intent and a poor answer to "is there a person here",
+// is honest evidence of intent and a poor answer to "is there a contact here",
 // because the mail a founder sends from their own mailbox includes expense
 // reports, itineraries, invoices and password resets. Every one of those is an
 // address the workspace demonstrably wrote to, and each one became a contact.
@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// recordWorthy reports whether an address could name a person a CRM should
+// recordWorthy reports whether an address could name a contact a CRM should
 // hold, ignoring everything about the message it arrived on.
 //
 // It is a method on the Sink because the operator's `transactional_never`
@@ -34,12 +34,12 @@ import (
 // genuinely sells to one of these companies declares it, and a refusal that
 // ignored the declaration would turn the escape hatch into a suppression.
 //
-// It refuses exactly two shapes, both of which say "no person is reachable
-// here" rather than "this person is uninteresting":
+// It refuses exactly two shapes, both of which say "no contact is reachable
+// here" rather than "this contact is uninteresting":
 //
 //   - a machine local part, wherever it sends from. `noreply@`, `receipts@`,
 //     `calendar-notification@`: a reply to one of these reaches nobody, so a
-//     record naming it promises a person who does not exist.
+//     record naming it promises a contact who does not exist.
 //   - registrable mail infrastructure. Mail from a bulk-send relay names the
 //     relay, never the company that hired it.
 //
@@ -59,7 +59,7 @@ import (
 //
 // The two consult different domain lists on purpose. transactionalBaseline is
 // also read by IsMachineAddress, which the attention queue uses to drop rows, so
-// a product company with real salespeople must not go in it — a hidden human
+// a product company with real salescontacts must not go in it — a hidden human
 // waiting on a reply is not recoverable by that queue's reader.
 // personalServiceDomains is the list only this gate and T2 see.
 func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
@@ -68,7 +68,7 @@ func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
 		return false
 	}
 	// The local part is asked FIRST, and no allowlist overrules it. An operator
-	// vouches for a DOMAIN — that its people are real counterparties — and says
+	// vouches for a DOMAIN — that its contacts are real counterparties — and says
 	// nothing about `noreply@` on it, where still nobody answers.
 	if machineLocalpart(address) {
 		return false
@@ -81,7 +81,7 @@ func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
 	base := freemail.Registrable(cp.Domain)
 	if base == "" {
 		// Not a hostname. Nothing that cannot be a domain names a company, and
-		// a person may still be reachable at it, so this is not a refusal.
+		// a contact may still be reachable at it, so this is not a refusal.
 		return true
 	}
 	if _, infra := transactionalBaseline[base]; infra {
@@ -95,7 +95,7 @@ func (s *Sink) recordWorthy(cp connector.Counterparty) bool {
 }
 
 // machineLocalpart reports whether the local part of an address names a sending
-// system rather than a person, by both vocabularies the registry keeps.
+// system rather than a contact, by both vocabularies the registry keeps.
 func machineLocalpart(address string) bool {
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
@@ -110,9 +110,9 @@ func machineLocalpart(address string) bool {
 // of it, so its domain settles the COMPANY question on its own — no
 // company is named by a consumer mail domain.
 //
-// It settles nothing about the person. A customer writing from their private
+// It settles nothing about the contact. A customer writing from their private
 // address and a family member writing from theirs are the same shape here, so
-// the ladder suppresses the company and leaves the person to the verdict.
+// the ladder suppresses the company and leaves the contact to the verdict.
 //
 // The workspace's own additions and carve-outs are read on the CALLER's
 // transaction, not cached at composition time: an admin correcting a wrong

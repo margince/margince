@@ -14,7 +14,7 @@ describe("recordRoute", () => {
       screen: "companies",
       id: "o1",
     });
-    expect(recordRoute("person", "p1")).toEqual({
+    expect(recordRoute("contact", "p1")).toEqual({
       screen: "contacts",
       id: "p1",
     });

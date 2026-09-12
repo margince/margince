@@ -9,7 +9,7 @@ import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 
 // The shared archive/disqualify affordance (P-3): a human-direct DELETE that
-// soft-archives a person/company/lead (sets archived_at; leads also
+// soft-archives a contact/company/lead (sets archived_at; leads also
 // flip to status=disqualified). There is NO restore endpoint in the
 // contract, so this hook and action are archive-only — never wire a restore
 // control against them. Mirrors useUpdateRecord/EditAction (edit.tsx): the

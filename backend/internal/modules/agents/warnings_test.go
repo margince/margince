@@ -19,7 +19,7 @@ import (
 // here. The second is that it may be BELIEVED, and its absence was measured: a
 // note dated December saying a complaint was raised "im Oktober", against a
 // record carrying one dated 18 September, and two runs in three telling the
-// person about to walk into that meeting that the customer escalated in
+// contact about to walk into that meeting that the customer escalated in
 // October. The clause asks for the disagreement to be REPORTED rather than
 // resolved, because harmonising the two invents the event that makes both
 // sources right.

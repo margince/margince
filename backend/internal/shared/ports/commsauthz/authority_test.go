@@ -39,7 +39,7 @@ func TestWhoMayOverruleWhom(t *testing.T) {
 //
 // An Art. 21 objection to direct marketing is absolute. A product that let an
 // administrator lift one would be offering a control that cannot lawfully be
-// used, and the person who pressed it would believe the send was permitted.
+// used, and the contact who pressed it would believe the send was permitted.
 func TestNobodyOverrulesTheSubject(t *testing.T) {
 	t.Parallel()
 
@@ -97,7 +97,7 @@ func TestAnUnknownLevelIsTreatedAsStrongerThanAnyKnownOne(t *testing.T) {
 // rolling frequency window permanently unliftable by anybody.
 //
 // A refusal can bind absolutely and still be nobody's decision. A dead mailbox
-// is corrected, not overruled. Two people sharing an address are merged. A
+// is corrected, not overruled. Two contacts sharing an address are merged. A
 // volume window clears itself. Each of those is a human act on the CRM, and a
 // model that forbade them would leave an admin looking at a dead button for a
 // problem they could fix in one click.

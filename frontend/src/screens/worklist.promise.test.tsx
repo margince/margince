@@ -31,7 +31,7 @@ function aPromise(over = {}) {
     band: "now",
     destination: "today",
     actions: ["complete", "open"],
-    subject: { type: "person", id: "01a05500-0000-7000-8000-0000000000f2" },
+    subject: { type: "contact", id: "01a05500-0000-7000-8000-0000000000f2" },
     ...over,
   });
 }

@@ -37,9 +37,9 @@ import (
 )
 
 // claimProbeOwner is the file that may ask the question. Keyed to the FILE, not
-// the package: a second file in `people` writing its own probe is the same
+// the package: a second file in `contacts` writing its own probe is the same
 // defect wearing the right import path.
-const claimProbeOwner = "internal/modules/people/company_domains.go"
+const claimProbeOwner = "internal/modules/contacts/company_domains.go"
 
 // readsDomainClaim matches a statement that reads company_domain to learn
 // WHO holds a domain — the shape of the probe, not every read of the table.
@@ -70,8 +70,8 @@ var readsDomainClaim = regexp.MustCompile(
 // it silently. A reason a reviewer can disagree with is worth more than a
 // regular expression nobody can see the edge of.
 var domainResolvers = gatekit.Waive(map[string]string{
-	"internal/modules/people/dedupecompany.go": "exactCompanyByDomain is dedupe tier 1: it resolves which live company a candidate's domains already belong to so the record LANDS on it. The id goes to the merge, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
-	"internal/modules/signals/resolver.go":     "the signal resolver scores which companies a domain points at, joining company to skip anchors. Its ids become ranked candidates inside the resolution, not an answer any client receives.",
+	"internal/modules/contacts/dedupecompany.go": "exactCompanyByDomain is dedupe tier 1: it resolves which live company a candidate's domains already belong to so the record LANDS on it. The id goes to the merge, never to a caller, so there is no 409 and nothing to gate the disclosure of.",
+	"internal/modules/signals/resolver.go":       "the signal resolver scores which companies a domain points at, joining company to skip anchors. Its ids become ranked candidates inside the resolution, not an answer any client receives.",
 })
 
 func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {

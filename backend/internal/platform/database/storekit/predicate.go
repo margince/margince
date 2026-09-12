@@ -15,7 +15,7 @@ package storekit
 // identifier that reaches the query text comes from the vocabulary map;
 // every value travels as a bind parameter.
 //
-// It lives in storekit because modules (people, deals, …) and compose
+// It lives in storekit because modules (contacts, deals, …) and compose
 // both consume it, and the DAG only lets platform sit under both.
 //
 // This file COMPILES a filter and nothing else, which is why it reaches

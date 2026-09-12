@@ -16,7 +16,7 @@ type Relationship = components["schemas"]["Relationship"];
 // required" 422. Interactive coverage of the picker lives in contacts.test.tsx
 // / companies.test.tsx; this file is the invariant itself.
 
-const personScope: RelationshipScope = { person_id: "p-1" };
+const contactScope: RelationshipScope = { contact_id: "p-1" };
 const companyScope: RelationshipScope = { company_id: "o-1" };
 const dealScope: RelationshipScope = { deal_id: "d-1" };
 
@@ -35,25 +35,25 @@ function baseRel(over: Partial<Relationship>): Relationship {
 }
 
 describe("edgeOptions — creatable kinds per scope", () => {
-  it("a person anchors employment (→company) and deal_stakeholder (→deal), nothing company↔company", () => {
-    expect(edgeOptions(personScope)).toEqual([
+  it("a contact anchors employment (→company) and deal_stakeholder (→deal), nothing company↔company", () => {
+    expect(edgeOptions(contactScope)).toEqual([
       { kind: "employment", entity: "company", field: "company_id" },
       { kind: "deal_stakeholder", entity: "deal", field: "deal_id" },
     ]);
   });
 
   // A deal had no scope of its own, so a stakeholder was creatable only from
-  // the PERSON's side: adding a champion meant knowing which contact to open
+  // the CONTACT's side: adding a champion meant knowing which contact to open
   // first, and a deal nobody had linked from a contact page had no way in.
   it("a deal anchors its stakeholders and nothing else", () => {
     expect(edgeOptions(dealScope)).toEqual([
-      { kind: "deal_stakeholder", entity: "person", field: "person_id" },
+      { kind: "deal_stakeholder", entity: "contact", field: "contact_id" },
     ]);
   });
 
-  it("a company anchors employment (→person) and the three company↔company kinds (→counterparty), never deal_stakeholder", () => {
+  it("a company anchors employment (→contact) and the three company↔company kinds (→counterparty), never deal_stakeholder", () => {
     expect(edgeOptions(companyScope)).toEqual([
-      { kind: "employment", entity: "person", field: "person_id" },
+      { kind: "employment", entity: "contact", field: "contact_id" },
       {
         kind: "partner_of",
         entity: "company",
@@ -81,7 +81,7 @@ describe("endpointBody — the picked id lands on exactly one field", () => {
     expect(endpointBody("company_id", "x")).toEqual({
       company_id: "x",
     });
-    expect(endpointBody("person_id", "x")).toEqual({ person_id: "x" });
+    expect(endpointBody("contact_id", "x")).toEqual({ contact_id: "x" });
     expect(endpointBody("counterparty_company_id", "x")).toEqual({
       counterparty_company_id: "x",
     });
@@ -92,28 +92,28 @@ describe("endpointBody — the picked id lands on exactly one field", () => {
 describe("counterpartyRef — the other end of an existing edge, typed for EntityRef", () => {
   it("a deal edge resolves to the deal regardless of scope", () => {
     const rel = baseRel({ kind: "deal_stakeholder", deal_id: "d-1" });
-    expect(counterpartyRef(rel, personScope)).toEqual({
+    expect(counterpartyRef(rel, contactScope)).toEqual({
       kind: "deal",
       id: "d-1",
     });
   });
 
-  // From the deal, the far end is the PERSON — the deal is the anchor, not the
+  // From the deal, the far end is the CONTACT — the deal is the anchor, not the
   // counterparty, so returning the deal here would point every row at the page
   // the reader is already on.
-  it("a stakeholder edge resolves to the person when the deal is the scope", () => {
+  it("a stakeholder edge resolves to the contact when the deal is the scope", () => {
     const rel = baseRel({
       kind: "deal_stakeholder",
       deal_id: "d-1",
-      person_id: "p-1",
+      contact_id: "p-1",
     });
     expect(counterpartyRef(rel, dealScope)).toEqual({
-      kind: "person",
+      kind: "contact",
       id: "p-1",
     });
   });
 
-  it("names no far end for a deal edge that carries no person", () => {
+  it("names no far end for a deal edge that carries no contact", () => {
     expect(counterpartyRef(baseRel({ deal_id: "d-1" }), dealScope)).toBeNull();
   });
 
@@ -146,23 +146,23 @@ describe("counterpartyRef — the other end of an existing edge, typed for Entit
   it("an employment edge resolves to whichever endpoint the scope is NOT", () => {
     const rel = baseRel({
       kind: "employment",
-      person_id: "p-1",
+      contact_id: "p-1",
       company_id: "o-1",
     });
-    // From the person's 360 the counterparty is the company; from the company's, the person.
-    expect(counterpartyRef(rel, personScope)).toEqual({
+    // From the contact's 360 the counterparty is the company; from the company's, the contact.
+    expect(counterpartyRef(rel, contactScope)).toEqual({
       kind: "company",
       id: "o-1",
     });
     expect(counterpartyRef(rel, companyScope)).toEqual({
-      kind: "person",
+      kind: "contact",
       id: "p-1",
     });
   });
 
   it("returns null when no counterparty endpoint is present", () => {
     expect(
-      counterpartyRef(baseRel({ person_id: "p-1" }), personScope),
+      counterpartyRef(baseRel({ contact_id: "p-1" }), contactScope),
     ).toBeNull();
   });
 });

@@ -15,21 +15,21 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // scrapeAcceptEffect builds the approvals.ApprovedEffect compose injects for
 // kind "enrich".
-func scrapeAcceptEffect(svc *approvals.Service, store *people.Store) approvals.ApprovedEffect {
+func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed.
 		if _, _, err := svc.Redeem(ctx, approvalID, enrichProposalKind, diffHash); err != nil {
 			return err
 		}
-		companyID, sourceURL, fields, err := people.UnmarshalEnrichment(proposedChange)
+		companyID, sourceURL, fields, err := contacts.UnmarshalEnrichment(proposedChange)
 		if err != nil {
 			return err
 		}
@@ -47,7 +47,7 @@ func scrapeAcceptEffect(svc *approvals.Service, store *people.Store) approvals.A
 			UserID:     decider.UserID,
 			OnBehalfOf: decider.UserID,
 		})
-		return store.ApplyEnrichment(execCtx, companyID, people.ApplyColdStartProfileInput{
+		return store.ApplyEnrichment(execCtx, companyID, contacts.ApplyColdStartProfileInput{
 			SourceURL: sourceURL,
 			Fields:    fields,
 		})

@@ -28,11 +28,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A role with NO person grant gets no person hits — search must not
+// A role with NO contact grant gets no contact hits — search must not
 // out-see the entity lists (object RBAC before row scope).
 func TestSearchHonorsObjectRBAC(t *testing.T) {
 	e := SetupSearch(t)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Rostock Person', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Rostock Contact', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Werft', 'manual', 'human:x')`)
 
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -52,7 +52,7 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 	}
 	// Explicitly requesting only the denied type answers an empty page,
 	// not an error — nothing to disclose.
-	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"person"}})
+	page, err = e.Store.Search(companyOnly, search.Input{Query: "rostock", Types: []string{"contact"}})
 	if err != nil || len(page.Hits) != 0 {
 		t.Fatalf("denied-type search → %v %+v, want an empty page", err, page.Hits)
 	}
@@ -60,11 +60,11 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 
 func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 	e := SetupSearch(t)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Heike Hamburg', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Heike Hamburg', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Hamburg Logistics GmbH', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO lead (id, company_name, email, source, captured_by) VALUES ($1, 'Hamburg Freight', 'lead@hamburg.test', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, source, captured_by) VALUES ($1, 'note', 'Hamburg visit', 'Met the Hamburg team at the Hamburg office in Hamburg', 'manual', 'human:x')`)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Unrelated Munich', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unrelated Munich', 'manual', 'human:x')`)
 
 	page, err := e.Store.Search(e.Admin(), search.Input{Query: "hamburg"})
 	if err != nil {
@@ -80,7 +80,7 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 			t.Fatalf("non-matching row surfaced: %+v", hit)
 		}
 	}
-	for _, want := range []string{"person", "company", "lead", "activity"} {
+	for _, want := range []string{"contact", "company", "lead", "activity"} {
 		if !types[want] {
 			t.Errorf("no %s hit in %+v", want, page.Hits)
 		}
@@ -94,10 +94,10 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 
 func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
 	e := SetupSearch(t)
-	// A person is readable by every seat with the grant; a capture-private
+	// A contact is readable by every seat with the grant; a capture-private
 	// one is readable by its owner alone, and a search hit IS a read.
-	e.SeedID(t, `INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Scoped Bremen', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Shared Bremen', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Scoped Bremen', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Shared Bremen', 'manual', 'human:x')`)
 
 	// rep1 must not see rep3's private capture — but the ownerless row is
 	// workspace-shared.
@@ -120,7 +120,7 @@ func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
 
 func TestSearchExcludesArchivedRows(t *testing.T) {
 	e := SetupSearch(t)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by, archived_at) VALUES ($1, 'Archived Kiel', 'manual', 'human:x', now())`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by, archived_at) VALUES ($1, 'Archived Kiel', 'manual', 'human:x', now())`)
 	page, err := e.Store.Search(e.Admin(), search.Input{Query: "kiel"})
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestSearchExcludesArchivedRows(t *testing.T) {
 	}
 }
 
-// Search is how people find ACCOUNTS, and the company running the CRM is not
+// Search is how contacts find ACCOUNTS, and the company running the CRM is not
 // one to find (ADR-0082/A127). It stays an ordinary row, readable by id — what
 // narrows is discovery.
 func TestSearchExcludesTheOwnCompany(t *testing.T) {
@@ -151,7 +151,7 @@ func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
 	e := SetupSearch(t)
 	want := map[string]bool{}
 	for i := 0; i < 5; i++ {
-		id := e.SeedID(t, fmt.Sprintf(`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Dresden Contact %d', 'manual', 'human:x')`, i))
+		id := e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Dresden Contact %d', 'manual', 'human:x')`, i))
 		want[id.String()] = false
 	}
 	got := 0
@@ -327,15 +327,15 @@ func hasType(hits []search.Hit, want string) bool {
 // the product.
 func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
 	e := SetupSearch(t)
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Rostock Person', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Rostock Contact', 'manual', 'human:x')`)
 
 	status, body := callSearch(t, e, database.CallerPredicateBudget, "Rostock")
 
 	if status != http.StatusOK {
 		t.Fatalf("status = %d, want 200 under the ceiling compose arms: %s", status, body)
 	}
-	if !strings.Contains(body, "Rostock Person") {
-		t.Errorf("the seeded person did not come back — the ceiling is refusing work it should "+
+	if !strings.Contains(body, "Rostock Contact") {
+		t.Errorf("the seeded contact did not come back — the ceiling is refusing work it should "+
 			"serve: %s", body)
 	}
 }
@@ -360,7 +360,7 @@ func searchAs(e *SearchEnv) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true}, "company": {Read: true},
+				"contact": {Read: true}, "company": {Read: true},
 				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

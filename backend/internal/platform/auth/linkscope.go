@@ -36,7 +36,7 @@ import (
 // one beside it — spell the same five, and two lists of literals are two
 // chances to spell one of them wrong.
 const (
-	personIDColumn  = "person_id"
+	contactIDColumn = "contact_id"
 	companyIDColumn = "company_id"
 	dealIDColumn    = "deal_id"
 	leadIDColumn    = "lead_id"
@@ -46,12 +46,12 @@ const (
 // LinkTargetVisibleClause answers, for ONE activity_link row, whether the
 // record it points at is visible under the caller's row scope. An empty
 // string means a caller for whom every target is visible — which, since
-// person and company carry capture privacy, is the system principal
+// contact and company carry capture privacy, is the system principal
 // alone.
 //
 // It exists because "may I read this activity" and "may I be told what this
 // activity is about" are different questions. The activity gate above is an
-// ANY-link rule: an activity reachable through one visible person is
+// ANY-link rule: an activity reachable through one visible contact is
 // readable in full. Projecting its link rows back to the client would then
 // hand over the ids of the OTHER records it touches — a colleague's deal,
 // say — which the caller may not read. So the projection carries its own
@@ -74,7 +74,7 @@ func LinkTargetVisibleClause(ctx context.Context, alias string, arg func(any) in
 // half a dozen table-name positions across the package, and a typo in any
 // of them silently renders a predicate that matches nothing.
 const (
-	tablePerson  = "person"
+	tableContact = "contact"
 	tableCompany = "company"
 	tableDeal    = "deal"
 	tableLead    = "lead"
@@ -86,14 +86,14 @@ const (
 // activity gate (ActivityDiscoverClause, inheritedscope.go) decide whether they
 // may skip their clause by asking UnboundedFor (rowscope.go) over this set, so
 // a record type that gains capture privacy tightens both at once.
-var linkTargetTables = []string{tablePerson, tableCompany, tableDeal, tableLead, tableProject}
+var linkTargetTables = []string{tableContact, tableCompany, tableDeal, tableLead, tableProject}
 
 // linkTargetVisible renders the per-arm "this link's target is visible"
 // disjunction over activity_link's polymorphic columns.
 func linkTargetVisible(p principal.Principal, alias string, arg func(any) int) string {
 	arms := make([]string, 0, len(linkTargetTables))
 	for _, t := range []struct{ column, table, probe string }{
-		{personIDColumn, tablePerson, "sp"},
+		{contactIDColumn, tableContact, "sp"},
 		{companyIDColumn, tableCompany, "so"},
 		{dealIDColumn, tableDeal, "sd"},
 		{leadIDColumn, tableLead, "sl"},
@@ -142,7 +142,7 @@ func linkTargetArm(alias, column, table, probe, predicate string) string {
 //
 // FOR SHARE, and the pairing is the point. It conflicts with the archive, which
 // UPDATEs the row, while two references onto one record do not conflict and have
-// no reason to queue behind each other — a person mid-ingest is referenced by
+// no reason to queue behind each other — a contact mid-ingest is referenced by
 // every message captured for them. The same pairing the activity_link trigger
 // takes on the activity it is about (migration 1788000100).
 //

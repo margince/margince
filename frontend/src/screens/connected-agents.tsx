@@ -72,7 +72,7 @@ async function fetchConnectorState(): Promise<ConnectorState> {
 }
 
 // One command per client, because "point your agent at the URL" is exactly the
-// instruction people cannot act on. All four reach the same place: the client
+// instruction contacts cannot act on. All four reach the same place: the client
 // registers itself, and the consent screen asks which of the five scopes to
 // grant.
 //

@@ -13,7 +13,7 @@
 //
 // The order is the whole rule and it is invisible. `created_at` is never
 // absent, so a fallback written the other way round answers "created" for
-// every record while reading, to a person, exactly like this one.
+// every record while reading, to a contact, exactly like this one.
 
 /** The two timestamps a record carries, as the wire sends them. */
 export type IdleBaseRecord = {

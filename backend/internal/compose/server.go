@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
@@ -37,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -56,7 +56,7 @@ import (
 // New wires the modules and returns the ready http.Handler: contract
 // routes under /v1, health probe, session middleware, panic recovery.
 func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
-	// The fieldcatalog seam for deals (newPeopleHandlers carries the full
+	// The fieldcatalog seam for deals (newContactsHandlers carries the full
 	// note): active cf_* deal columns ride deal payloads on both surfaces.
 	dealsH := deals.NewHandlers(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil))
 	// Bootstrap happens at boot from deployment configuration
@@ -131,7 +131,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		httpMetrics:         httpserver.NewHTTPMetrics(),
 		uploadLimits:        limits,
 		authHandlers:        authH,
-		peopleHandlers:      newPeopleHandlers(pool).WithUploadLimit(limits.LinkedInImport),
+		contactsHandlers:    newContactsHandlers(pool).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:       dealsH,
 		projectsHandlers:    projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers:   contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool)),
@@ -164,7 +164,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		consentHandlers:     newConsentHandlers(pool),
 		collectionsHandlers: newCollectionsHandlers(pool),
 		// The warm room ranks its contact edges by the §4 relationship
-		// strength owned by people; injected through the adapter below so
+		// strength owned by contacts; injected through the adapter below so
 		// signals never imports its sibling.
 		financeHandlers: finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf),
 		// No adapter is registered by default, which is the supported
@@ -172,7 +172,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// answers honestly and nothing can reach the network. WithProvider
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
-		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{people: people.NewStore(InstallationDB(pool))}),
+		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{contacts: contacts.NewStore(InstallationDB(pool))}),
 		// The reversal seam is wired at construction rather than as an option:
 		// undoability is part of what the history surface MEANS, and a server
 		// that served the history without it would render buttons that answer
@@ -198,7 +198,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithRetryEngine(NewWorkflowEngine(InstallationDB(pool))),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)),
-		// The names seam is the WEB surface's: a person reading "explain this
+		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.
 		reportHandlers: reportHandlers{
@@ -206,7 +206,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		},
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
-		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
+		Handlers: briefs.NewHandlers(briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))),
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
@@ -233,10 +233,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// tab greys out a route the duplicate guard would refuse, so the rep
 		// learns the door is taken before writing the ask rather than from the
 		// 409 after it.
-		Reads:                 NewPersonGraphReads(pool, InstallationDB(pool)),
+		Reads:                 NewContactGraphReads(pool, InstallationDB(pool)),
 		companyRollupHandlers: companyRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers: strengthHandlers{
-			people: people.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
+			contacts: contacts.NewStore(InstallationDB(pool)), pool: pool, now: time.Now,
 		},
 		// The schema-change pool is boot-optional; nil
 		// here means Create/SetOptions stay their generated 501 until the

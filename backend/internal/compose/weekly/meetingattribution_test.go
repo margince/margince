@@ -7,7 +7,7 @@ package weekly
 //
 // Two panels ask it — the headline count and the lead funnel — and they sit on
 // one page. Spelled separately they drift, and a meeting credited to different
-// people by two panels is the page contradicting itself about the same week,
+// contacts by two panels is the page contradicting itself about the same week,
 // which is the defect the shared predicate was extracted to end.
 
 import (
@@ -46,7 +46,7 @@ func TestTheMeetingAttributionHasOneSpelling(t *testing.T) {
 		}
 		if hit := handWritten.FindString(string(body)); hit != "" {
 			t.Errorf("%s writes the meeting attribution by hand (%q) — call "+
-				"meetingIsTheirsSQL so both panels credit one meeting to one person",
+				"meetingIsTheirsSQL so both panels credit one meeting to one contact",
 				name, strings.Join(strings.Fields(hit), " "))
 		}
 	}

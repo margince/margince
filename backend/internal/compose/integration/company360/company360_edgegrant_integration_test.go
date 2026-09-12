@@ -11,7 +11,7 @@ package company360
 // its endpoints AS A PAIR — a fact neither endpoint's own grant covers. Before
 // #1846 the account page answered that fact anyway: an operator who zeroed the
 // grant got 403 from GET /v1/relationships/{id}, 403 from the employment list
-// and an empty employment section on the person page, so the restriction looked
+// and an empty employment section on the contact page, so the restriction looked
 // enforced everywhere they would check, while the connections graph, the
 // contact roster and the per-contact deal roles quietly went on answering.
 //
@@ -58,11 +58,11 @@ func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *test
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	pipeline, stage, _ := integration.DealFixture(t, e)
-	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employee := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, employee, company, "cto")
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, employee, deal)
 
 	companyID := ids.From[ids.CompanyKind](company)
@@ -77,10 +77,10 @@ func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *test
 	if err != nil {
 		t.Fatalf("graph as a rep holding the edge grant: %v", err)
 	}
-	if kinds := graphNodeKinds(full); kinds[crmcontracts.CompanyGraphNodeKindPerson] != 1 {
-		t.Fatalf("person nodes = %d for a rep holding the edge grant, want 1 — the fixture did not "+
+	if kinds := graphNodeKinds(full); kinds[crmcontracts.CompanyGraphNodeKindContact] != 1 {
+		t.Fatalf("contact nodes = %d for a rep holding the edge grant, want 1 — the fixture did not "+
 			"seed the employment, so nothing below would prove a withholding",
-			kinds[crmcontracts.CompanyGraphNodeKindPerson])
+			kinds[crmcontracts.CompanyGraphNodeKindContact])
 	}
 	if edges := graphEdgeKinds(full); edges[crmcontracts.CompanyGraphEdgeKindDealStakeholder] != 1 {
 		t.Fatalf("stakeholder edges = %d for a rep holding the edge grant, want 1",
@@ -95,9 +95,9 @@ func TestARoleRefusedTheEdgeSeesTheAccountPageWithoutItsEdgesAndIsToldSo(t *test
 	if err != nil {
 		t.Fatalf("graph without the edge grant should be assembled and NAMED as partial, not fail: %v", err)
 	}
-	if kinds := graphNodeKinds(graph); kinds[crmcontracts.CompanyGraphNodeKindPerson] != 0 {
-		t.Errorf("person nodes = %d without the edge grant, want 0 — an employment edge is what puts "+
-			"a contact on this card", kinds[crmcontracts.CompanyGraphNodeKindPerson])
+	if kinds := graphNodeKinds(graph); kinds[crmcontracts.CompanyGraphNodeKindContact] != 0 {
+		t.Errorf("contact nodes = %d without the edge grant, want 0 — an employment edge is what puts "+
+			"a contact on this card", kinds[crmcontracts.CompanyGraphNodeKindContact])
 	}
 	if edges := graphEdgeKinds(graph); edges[crmcontracts.CompanyGraphEdgeKindDealStakeholder] != 0 {
 		t.Error("a stakeholder seat was drawn without the edge grant — the seat IS the edge, and both " +
@@ -147,11 +147,11 @@ func TestTheContactRosterAndItsDealRolesAreWithheldWithTheEdgeGrant(t *testing.T
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	pipeline, stage, _ := integration.DealFixture(t, e)
-	employee := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	employee := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	employ(t, e, employee, company, "cto")
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
-	e.WsExec(t, `INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'champion', 'manual', 'human:x')`, employee, deal)
 
 	companyID := ids.From[ids.CompanyKind](company)
@@ -161,11 +161,11 @@ func TestTheContactRosterAndItsDealRolesAreWithheldWithTheEdgeGrant(t *testing.T
 	if err != nil {
 		t.Fatalf("the account page as a rep holding the edge grant: %v", err)
 	}
-	if full.People == nil || len(full.People.Data) != 1 {
+	if full.Contacts == nil || len(full.Contacts.Data) != 1 {
 		t.Fatalf("the roster held %v contacts for a granted rep, want 1 — the fixture did not seed",
-			full.People)
+			full.Contacts)
 	}
-	if roles := full.People.Data[0].DealRoles; len(roles) != 1 {
+	if roles := full.Contacts.Data[0].DealRoles; len(roles) != 1 {
 		t.Fatalf("deal_roles = %v for a granted rep, want the champion seat", roles)
 	}
 
@@ -176,12 +176,12 @@ func TestTheContactRosterAndItsDealRolesAreWithheldWithTheEdgeGrant(t *testing.T
 	// The roster is drawn from employment edges, so it goes with them — named
 	// in sections_omitted, which is the contract's own stated shape for a
 	// section the caller's grants refuse.
-	if page.People != nil && len(page.People.Data) != 0 {
+	if page.Contacts != nil && len(page.Contacts.Data) != 0 {
 		t.Errorf("the roster listed %d contacts without the edge grant — the employment edge is what "+
-			"says they work here", len(page.People.Data))
+			"says they work here", len(page.Contacts.Data))
 	}
-	if !slices.Contains(page.SectionsOmitted, "people") {
-		t.Errorf("sections_omitted = %v without the edge grant, want it to name \"people\"",
+	if !slices.Contains(page.SectionsOmitted, "contacts") {
+		t.Errorf("sections_omitted = %v without the edge grant, want it to name \"contacts\"",
 			page.SectionsOmitted)
 	}
 	// contact_count follows the same rule on the account record itself: absent,

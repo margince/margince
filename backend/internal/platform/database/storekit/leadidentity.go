@@ -3,7 +3,7 @@
 
 package storekit
 
-// The lead identity probes (ADR-0008 keeps leads out of person matching, so
+// The lead identity probes (ADR-0008 keeps leads out of contact matching, so
 // they carry exact keys of their own: a live email and a LinkedIn profile
 // URL). Two write shapes create leads — the direct create and the
 // evidence-backed capture — and they answer a hit with deliberately
@@ -15,7 +15,7 @@ package storekit
 // before (a LinkedIn URL was probed by neither).
 //
 // This is the same seam EmailSuppressed already occupies — a tx-carrying
-// predicate that both people and capture call.
+// predicate that both contacts and capture call.
 
 import (
 	"context"
@@ -47,7 +47,7 @@ func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *Lead
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
-// caller normalizes first (people.NormalizeLinkedInURL) — a profile URL has
+// caller normalizes first (contacts.NormalizeLinkedInURL) — a profile URL has
 // no SQL-side normalization to fall back on, so an unnormalized argument
 // finds nothing rather than matching loosely.
 //

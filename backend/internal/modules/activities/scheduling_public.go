@@ -6,10 +6,10 @@ package activities
 // The anonymous booking surface (feedback/14 — B-EP09.14 book.html):
 // an unguessable slug resolves to (workspace, host) with no session and
 // no workspace header, the availability read answers free/busy slots
-// only, and the booking POST captures the booker as a person
+// only, and the booking POST captures the booker as a contact
 // (idempotent on email), records the MANDATORY consent passthrough, and
 // books the slot — three governed writes in sequence, each audited on
-// its own path. A 409 after person+consent stands: the subject DID
+// its own path. A 409 after contact+consent stands: the subject DID
 // submit the form and the consent (capture semantics, recorded in the
 // batch decision file).
 
@@ -78,10 +78,10 @@ func SeedBookingPageTx(ctx context.Context, tx pgx.Tx, hostUserID ids.UserID) (s
 	return slug, nil
 }
 
-// PersonEnsurer is the people seam of the public capture path (compose
+// ContactEnsurer is the contacts seam of the public capture path (compose
 // injects it — activities never imports a sibling).
-type PersonEnsurer interface {
-	EnsurePersonByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error)
+type ContactEnsurer interface {
+	EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error)
 }
 
 // BookingConsent is the CaptureConsent passthrough: the purpose and the
@@ -116,24 +116,24 @@ type BookingMarketing struct {
 	// the capturer can refuse to mail the link somewhere else.
 	//
 	// It is not the address the link goes to. The mint derives that from the
-	// person's own record, which is the security property — a caller who could
+	// contact's own record, which is the security property — a caller who could
 	// name the destination could name a stranger's. But an email resolves to an
-	// EXISTING person whenever one holds it, including on a NON-primary
-	// address, and the mint then posts to that person's primary instead. So a
+	// EXISTING contact whenever one holds it, including on a NON-primary
+	// address, and the mint then posts to that contact's primary instead. So a
 	// tick submitted from somebody's old address reaches their current one,
 	// asking them to confirm a subscription requested from an address they did
 	// not use. Verified: posting a secondary address delivered the link to the
 	// primary.
 	//
 	// Empty when the door has no submitted address to compare — the
-	// authenticated booking names a linked person rather than typing an email,
+	// authenticated booking names a linked contact rather than typing an email,
 	// so there is no second address for the two to disagree about.
 	TickedFrom string
 }
 
 // ConsentCapturer records the booker's consent grant (the consent
 // module behind a seam). ValidatePurpose runs BEFORE any write so a
-// bogus purpose refuses the whole capture — no person row without a
+// bogus purpose refuses the whole capture — no contact row without a
 // recordable consent.
 //
 // ValidateMarketingPurpose is the same before-any-write probe for the marketing
@@ -154,7 +154,7 @@ type ConsentCapturer interface {
 	// that cannot be asked is not — the tick was optional, the subject can be
 	// asked again, and refusing the booking for it takes away the thing they
 	// actually came for.
-	CaptureBookingConsent(ctx context.Context, personID ids.UUID, consent BookingConsent) (MarketingOutcome, error)
+	CaptureBookingConsent(ctx context.Context, contactID ids.UUID, consent BookingConsent) (MarketingOutcome, error)
 }
 
 // MarketingOutcome says what became of a booking form's newsletter tick.
@@ -178,8 +178,8 @@ const (
 )
 
 // WithPublicBooking wires the public capture seams.
-func (h Handlers) WithPublicBooking(people PersonEnsurer, consent ConsentCapturer) Handlers {
-	h.publicPeople = people
+func (h Handlers) WithPublicBooking(contacts ContactEnsurer, consent ConsentCapturer) Handlers {
+	h.publicContacts = contacts
 	h.publicConsent = consent
 	return h
 }
@@ -208,12 +208,12 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 
 // bookingRequestIsWritable refuses a request before anything is written.
 //
-// Every check here precedes EnsurePersonByEmail, which COMMITS a person row, so
+// Every check here precedes EnsureContactByEmail, which COMMITS a contact row, so
 // a refusal after it would leave one behind — and this door is unauthenticated,
 // which is what makes that expensive: a caller omitting a field in a loop grows
-// the person table one rejected request at a time. Consent is mandatory for the
+// the contact table one rejected request at a time. Consent is mandatory for the
 // same reason rather than left to the consent writer: a public capture surface
-// may not create a person it cannot attach a recordable consent to.
+// may not create a contact it cannot attach a recordable consent to.
 //
 // Its own function because the handler crossed the length ceiling, and this is
 // the concept that came out whole — what the request must carry, asked once at
@@ -241,10 +241,10 @@ func (h Handlers) bookingRequestIsWritable(
 }
 
 // BookPublicMeeting implements (POST /public/booking/{host_slug}):
-// consent-shape check → person (idempotent on email) → consent grant →
+// consent-shape check → contact (idempotent on email) → consent grant →
 // booking. The 201 discloses nothing beyond the slot itself.
 func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, _ crmcontracts.BookPublicMeetingParams) {
-	if h.publicPeople == nil || h.publicConsent == nil {
+	if h.publicContacts == nil || h.publicConsent == nil {
 		// Fail closed: a process role composed without the capture seams
 		// must refuse, not book without consent.
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
@@ -269,19 +269,19 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 	// Probed here for the reason the operational half above is: the ensure
-	// below commits a person row, so a refusal after it would leave one behind
+	// below commits a contact row, so a refusal after it would leave one behind
 	// on an unauthenticated door.
 	marketing, ok := h.admitBookingMarketing(w, r, req.Consent, string(req.Booker.Email))
 	if !ok {
 		return
 	}
 
-	personID, err := h.publicPeople.EnsurePersonByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
+	marketingOutcome, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: req.Consent.PolicyVersion,
 		Wording:       req.Consent.Wording,
@@ -301,7 +301,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		Start:   req.Start,
 		End:     req.End,
 		Subject: subject,
-		Links:   []ActivityLinkInput{{EntityType: "person", EntityID: personID}},
+		Links:   []ActivityLinkInput{{EntityType: "contact", EntityID: contactID}},
 		Source:  "public_booking",
 	})
 	if err != nil {
@@ -325,7 +325,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 
 // admitBookingMarketing settles the marketing tick BEFORE any write: it refuses
 // a malformed one and probes the purpose, so a form carrying a bad tick never
-// reaches the person-ensure that would otherwise leave a row behind.
+// reaches the contact-ensure that would otherwise leave a row behind.
 //
 // Both booking doors call it, and that is the point. The public form and the
 // authenticated one carry the same passthrough schema, so a check living in one
@@ -396,7 +396,7 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 			"the consent wording shown to the subject is required"))
 		return false
 	}
-	personID, ok := consentSubjectLink(w, r, links)
+	contactID, ok := consentSubjectLink(w, r, links)
 	if !ok {
 		return false
 	}
@@ -405,7 +405,7 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		writeStoreErr(w, r, err)
 		return false
 	}
-	// No submitted address: this door names a linked person instead of typing
+	// No submitted address: this door names a linked contact instead of typing
 	// an email, so there is no second address the link could disagree with.
 	marketing, ok := h.admitBookingMarketing(w, r, *c, "")
 	if !ok {
@@ -418,7 +418,7 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	// change of its own. What matters is the same on both doors and is settled
 	// in the adapter: a question that cannot be asked no longer costs the
 	// meeting.
-	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), personID, BookingConsent{
+	if _, err := h.publicConsent.CaptureBookingConsent(r.Context(), contactID, BookingConsent{
 		PurposeID:     purposeID,
 		PolicyVersion: c.PolicyVersion,
 		Wording:       c.Wording,

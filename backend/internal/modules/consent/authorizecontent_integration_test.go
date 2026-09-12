@@ -254,7 +254,7 @@ func TestARefusedSendKeepsItsOwnReason(t *testing.T) {
 	}
 	// ...then the link is spent, so the recipient no longer authorizes anything.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE confirm_token SET consumed_at = now() WHERE person_id = $1`, e.person); err != nil {
+		`UPDATE confirm_token SET consumed_at = now() WHERE contact_id = $1`, e.contact); err != nil {
 		t.Fatalf("spending the link: %v", err)
 	}
 

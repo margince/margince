@@ -11,20 +11,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // reportRead records the outcome of a crawl that succeeded. A read whose lanes
 // all died before evidencing anything has nothing honest to report but the
 // failure; everything else — down to zero surviving findings — is a read.
-func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, crawl siteCrawl, extraction siteExtraction) error {
+func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction siteExtraction) error {
 	if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, extraction.err); deferred {
 		return deferErr
 	}
 	mergedFields, legalWarning := w.gateLegalCensus(ctx, args, claim, crawl, &extraction)
 	factCount := len(mergedFields) + len(extraction.merged.facts)
-	if extraction.err != nil && factCount == 0 && len(extraction.merged.people) == 0 && len(extraction.merged.entities) == 0 {
+	if extraction.err != nil && factCount == 0 && len(extraction.merged.contacts) == 0 && len(extraction.merged.entities) == 0 {
 		// Every lane died before anything was evidenced: nothing honest
 		// to report but the failure itself.
 		return w.fail(ctx, args.SiteReadID, extraction.err)
@@ -33,22 +33,22 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 	readPages := crawl.Pages
 	status := w.dossierStatus(ctx, args.SiteReadID, crawl, extraction.err)
 
-	proposalIDs, err := w.landFindings(ctx, args, claim, mergedFields, extraction.merged, len(readPages))
+	proposalIDs, err := w.landFindings(ctx, args, claim, mergedFields, extraction.merged)
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
 	}
 	warnings := readWarnings(legalWarning, extraction.err, seedIsJSShell(readPages))
 	draftFields := deepReadFields(mergedFields)
-	draftPeople := siteReadPeople(extraction.merged.people)
+	draftContacts := siteReadContacts(extraction.merged.contacts)
 	draftEntities := siteReadLegalEntities(extraction.merged.entities)
-	proposalHash, err := siteReadProposalHash(draftFields, extraction.merged.facts, draftPeople, draftEntities)
+	proposalHash, err := siteReadProposalHash(draftFields, extraction.merged.facts, draftContacts, draftEntities)
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: hashing the draft: %w", args.SiteReadID, err))
 	}
 	// Zero surviving findings is an honest empty read — done, fact_count 0,
 	// no proposal — not an error: the site simply evidenced nothing.
 	return w.finish(ctx, args.SiteReadID, claim, status, readPages, crawl, factCount, proposalIDs,
-		draftFields, extraction.merged.facts, draftPeople, draftEntities,
+		draftFields, extraction.merged.facts, draftContacts, draftEntities,
 		warnings, proposalHash)
 }
 
@@ -58,7 +58,7 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 // abstention is both logged and carried to the dossier as the warning naming the
 // cause that fired — a read that could not settle WHICH entity the company is
 // and a read whose legal page never came back are different things to be told.
-func (w *siteDeepReadWorker) gateLegalCensus(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, crawl siteCrawl, extraction *siteExtraction) ([]evidencedField, string) {
+func (w *siteDeepReadWorker) gateLegalCensus(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction *siteExtraction) ([]evidencedField, string) {
 	// The gate answers THAT it abstained; a human is owed WHY, so the cause is
 	// read from the same census the gate votes on.
 	warning := legalAbstentionOf(extraction.merged.entities, extraction.legalCensusIncomplete).warning()
@@ -98,7 +98,7 @@ func (w *siteDeepReadWorker) dossierStatus(ctx context.Context, readID ids.UUID,
 // landFindings puts the gated findings where the requesting lane says they
 // belong, and answers the proposal ids the dossier records. An onboarding draft
 // still unbound to a company has nothing to land them against.
-func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, mergedFields []evidencedField, merged pageFactsResult, pagesRead int) ([]ids.UUID, error) {
+func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, mergedFields []evidencedField, merged pageFactsResult) ([]ids.UUID, error) {
 	if claim.CompanyID == nil {
 		return nil, nil
 	}
@@ -106,21 +106,21 @@ func (w *siteDeepReadWorker) landFindings(ctx context.Context, args SiteDeepRead
 		// The auto-enrich lane applies the company's fields + facts directly
 		// (fill-empty, human-precedence) instead of staging a confirm-first
 		// proposal — the system chose to enrich this company, so there is no
-		// human to confirm. Site people still stage as leads (strangers stay
+		// human to confirm. Site contacts still stage as leads (strangers stay
 		// staged, NEVER-8). Applied under the worker's PrincipalSystem ctx,
 		// which ApplyDeepReadTx's auth.Require accepts.
-		return w.autoApply(ctx, args, claim, mergedFields, merged.facts, merged.people)
+		return w.autoApply(ctx, args, claim, mergedFields, merged.facts, merged.contacts)
 	}
 	// A read a human ASKED for applies its findings directly too: pressing
 	// "read the full site" is the decision, and staging what was just
-	// requested asks the same person the same question twice. Starting the
+	// requested asks the same contact the same question twice. Starting the
 	// read already required company:update on this row
 	// (createOrJoinSiteRead), so the authority the apply needs was checked
 	// when it was commissioned. The findings stay marked as model-derived and
-	// reversible — direct is not unattributed. Site people still stage as
-	// leads: a stranger is a new record about a PERSON, which is a different
+	// reversible — direct is not unattributed. Site contacts still stage as
+	// leads: a stranger is a new record about a CONTACT, which is a different
 	// question from filling in the company the human named.
-	return w.applyForRequester(ctx, args, claim, mergedFields, merged.facts, merged.people)
+	return w.applyForRequester(ctx, args, claim, mergedFields, merged.facts, merged.contacts)
 }
 
 // readWarnings are the caveats the dossier shows a human: what this read could
@@ -133,14 +133,14 @@ func readWarnings(legalWarning string, extractErr error, jsShell bool) []string 
 		warnings = append(warnings, legalWarning)
 	}
 	if extractErr != nil {
-		warnings = append(warnings, people.SiteReadPartialExtractionWarning)
+		warnings = append(warnings, contacts.SiteReadPartialExtractionWarning)
 	}
 	if jsShell {
 		// Said out loud, because the dossier otherwise looks like a thin
 		// company rather than a thin READ: this site assembles its words in
 		// the browser, so what was found came from what the pages declare
 		// about themselves and not from their content.
-		warnings = append(warnings, "This site builds its pages in the browser, so only what they declare about themselves could be read. A person opening it will see more.")
+		warnings = append(warnings, "This site builds its pages in the browser, so only what they declare about themselves could be read. A contact opening it will see more.")
 	}
 	return warnings
 }

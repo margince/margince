@@ -31,11 +31,11 @@ func TestEveryVerdictKindIsJudgedByTheReconnectLane(t *testing.T) {
 			"census that reads a shorter list passes over what it cannot see", len(all))
 	}
 
-	// The kinds a reconnect lane may show: a real person, and the two shapes of
+	// The kinds a reconnect lane may show: a real contact, and the two shapes of
 	// company that correspond under their own name. Everything else is
 	// private life or noise.
 	business := map[string]bool{
-		KindPerson:        true,
+		KindContact:       true,
 		KindRoleMailbox:   true,
 		KindCompanySender: true,
 	}

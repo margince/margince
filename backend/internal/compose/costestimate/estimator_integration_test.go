@@ -148,13 +148,13 @@ func (e *estEnv) seedConnection(t *testing.T, user ids.UserID, provider string) 
 
 // seedBackfill inserts a completed capture_backfill run — the connection's
 // representative yields.
-func (e *estEnv) seedBackfill(t *testing.T, connID ids.UUID, windowMonths int, scanned, captured, people, companies int) {
+func (e *estEnv) seedBackfill(t *testing.T, connID ids.UUID, windowMonths int, scanned, captured, contacts, companies int) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO capture_backfill (connection_id, window_months, after_date, status,
-		  scanned, captured, people_created, companies_created, started_at, completed_at)
+		  scanned, captured, contacts_created, companies_created, started_at, completed_at)
 		VALUES ($1, $2, $3, 'done', $4, $5, $6, $7, now(), now())`,
-		connID, windowMonths, rateDay, scanned, captured, people, companies); err != nil {
+		connID, windowMonths, rateDay, scanned, captured, contacts, companies); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -210,10 +210,10 @@ func (e *estEnv) insertRate(t *testing.T, model string, in, out int64) {
 // priced at cloud-model, embeddings at embed-model, enrich at a real $0
 // local-model — every task observed and priced, yields present, over real PG.
 //
-// The fixture's people_created=10 / companies_created=2 is what a completed
+// The fixture's contacts_created=10 / companies_created=2 is what a completed
 // run that minted counterparties leaves behind; the zero-yield case, which
 // floors the enrich estimate instead of pricing it, is
-// TestEstimatorEnrichFloorsWhenPeopleCreatedZero.
+// TestEstimatorEnrichFloorsWhenContactsCreatedZero.
 func TestEstimatorPricesObservedHistory(t *testing.T) {
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
@@ -265,17 +265,17 @@ func TestEstimatorPricesObservedHistory(t *testing.T) {
 	}
 }
 
-// TestEstimatorEnrichFloorsWhenPeopleCreatedZero covers a completed run that
+// TestEstimatorEnrichFloorsWhenContactsCreatedZero covers a completed run that
 // minted no counterparty of its own — its senders already known, suppressed,
 // internal, or deferred to the verdict engine. Classify and embeddings price
-// observed from that run; the zero-people enrich must force the whole estimate
+// observed from that run; the zero-contacts enrich must force the whole estimate
 // heuristic while leaving it priced.
-func TestEstimatorEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
+func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 	e := setupEstimator(t)
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
 	connID := e.seedConnection(t, user, "gmail")
-	e.seedBackfill(t, connID, 6, 100, 80, 0, 0) // people/companies 0: the run minted no counterparty
+	e.seedBackfill(t, connID, 6, 100, 80, 0, 0) // contacts/companies 0: the run minted no counterparty
 
 	e.insertRate(t, "cloud-model", 1_000_000, 2_000_000)
 	e.insertRate(t, "embed-model", 500_000, 0)
@@ -293,12 +293,12 @@ func TestEstimatorEnrichFloorsWhenPeopleCreatedZero(t *testing.T) {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
 	if got.Quality != QualityHeuristic {
-		t.Fatalf("Quality = %s, want heuristic (people_created=0 floors enrich)", got.Quality)
+		t.Fatalf("Quality = %s, want heuristic (contacts_created=0 floors enrich)", got.Quality)
 	}
 	// A floored enrich still leaves the ESTIMATE priced — the whole preview never
 	// falls to the suppressed-cost path because one task lost its ratio. That the
 	// floor UNITS are the priced ones is pinned by the unit-lane sibling,
-	// TestEstimateEnrichFloorsWhenPeopleCreatedZero.
+	// TestEstimateEnrichFloorsWhenContactsCreatedZero.
 	if !got.HasCost {
 		t.Fatal("HasCost = false, want true (a floored enrich must not suppress the whole estimate's cost)")
 	}
@@ -384,10 +384,10 @@ func TestEstimatorCountsMeteringFailedRows(t *testing.T) {
 }
 
 // TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator (#4): for a
-// call-based denominator (enrich per person) a metering_failed retry spent
-// provider tokens — carried in the token sums — but completed no fresh person.
+// call-based denominator (enrich per contact) a metering_failed retry spent
+// provider tokens — carried in the token sums — but completed no fresh contact.
 // The SQL splits the two: Calls counts both served rows, CompletedCalls counts
-// only the clean one. So an enrich person with one clean call + one
+// only the clean one. So an enrich contact with one clean call + one
 // metering_failed retry projects the FULL doubled spend over ONE completed call,
 // never dividing the retry cost back out. Enrich is isolated on cheap_cloud
 // (the only rated model) so classify/embeddings floor unpriced and add no cost.
@@ -396,7 +396,7 @@ func TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator(t *testing.
 	ws, wsCtx := e.seedWorkspace(t)
 	user := e.seedUser(t, ws)
 	connID := e.seedConnection(t, user, "gmail")
-	e.seedBackfill(t, connID, 6, 100, 100, 50, 0) // people_created=50 → observed enrich ratio
+	e.seedBackfill(t, connID, 6, 100, 100, 50, 0) // contacts_created=50 → observed enrich ratio
 
 	// ONLY cloud-model is rated: enrich (served on cheap_cloud) prices; classify's
 	// and embeddings' floor heads (local-model, embed-model) stay unrated → $0.

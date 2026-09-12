@@ -16,7 +16,7 @@ import "./linkedin-reach.css";
 // Which accounts a member's imported network reaches (ADR-0078 §2.1b) — the
 // answer the whole import is for.
 //
-// It is the half that works on a one-person workspace: asking which COLLEAGUE
+// It is the half that works on a one-contact workspace: asking which COLLEAGUE
 // knows an account has no content when there is one member, while asking
 // whether your own network reaches it has content immediately.
 //
@@ -208,7 +208,7 @@ function ReachTable({
         },
         {
           key: "onFile",
-          // The GAP is the finding: people you know there who are not
+          // The GAP is the finding: contacts you know there who are not
           // contacts. Rendering only the total would hide it.
           header: t("linkedinReach.onFile"),
           render: (account: ReachAccount) => (

@@ -3,10 +3,10 @@
 
 package capture
 
-// Recording that a `person` verdict did NOT publish its contact.
+// Recording that a `contact` verdict did NOT publish its contact.
 //
 // The verdict and the withholding are two facts and only the first was stored.
-// Two readers ask this ledger whether a sender is a judged person and treat the
+// Two readers ask this ledger whether a sender is a judged contact and treat the
 // answer as permission — the widening sweep reopens the mail a classified
 // mailbox held, and the birth decision shares a future message from the same
 // sender. Both matched a contact that had deliberately been kept owner-scoped,

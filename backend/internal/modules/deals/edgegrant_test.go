@@ -37,8 +37,8 @@ func dealReaderWithoutTheEdgeGrant() context.Context {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"deal":   {Read: true},
-				"person": {Read: true},
+				"deal":    {Read: true},
+				"contact": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

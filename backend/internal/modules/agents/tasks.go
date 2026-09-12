@@ -7,7 +7,7 @@ package agents
 // surface that genuinely waits: a human decision.
 //
 // WHAT IT IS FOR. A confirm-first (🟡) call is refused and told to come back
-// with an approval_id. The agent is never told when — or whether — the person
+// with an approval_id. The agent is never told when — or whether — the contact
 // decided, so it either gives up on an effect the human released or re-issues
 // the call on a guess. A task turns that dead end into a durable handle: the
 // call answers with a taskId, and the client polls until the decision lands.
@@ -198,7 +198,7 @@ type TaskApprovals interface {
 	// A caller rebuilding a released call reads it HERE rather than remembering
 	// what it staged. An edit rewrites both the payload and the hash that opens
 	// it (ADR-0036 §4), so a call rebuilt from the original arguments would
-	// perform what the agent asked for instead of what the person allowed — and
+	// perform what the agent asked for instead of what the contact allowed — and
 	// would be refused for the mismatch, which is the only reason that bug would
 	// ever be noticed.
 	ProposedChange(ctx context.Context, approvalID ids.ApprovalID) (json.RawMessage, error)
@@ -207,7 +207,7 @@ type TaskApprovals interface {
 	//
 	// retracted reports whether there was still an offer to take. It is FALSE
 	// for an approval a human already decided, which is not an error — what a
-	// person answered is not the agent's to take back — but it is a different
+	// contact answered is not the agent's to take back — but it is a different
 	// fact, and a task that reported "withdrawn" either way would say the
 	// proposal was gone while it sat approved in the inbox.
 	Withdraw(ctx context.Context, approvalID ids.ApprovalID) (retracted bool, err error)
@@ -242,7 +242,7 @@ const (
 	ApprovalPending ApprovalDecision = "pending"
 	// ApprovalApproved means the effect may now be performed, once.
 	ApprovalApproved ApprovalDecision = "approved"
-	// ApprovalRejected means a person said no. It is remembered so a task does
+	// ApprovalRejected means a contact said no. It is remembered so a task does
 	// not report a refusal as though the tool had merely failed.
 	ApprovalRejected ApprovalDecision = "rejected"
 	// ApprovalExpired means the window closed undecided — which is also what a
@@ -255,20 +255,20 @@ const (
 // that reads "needs approval" and stops has stranded the very effect the human
 // is about to release.
 const (
-	taskCreatedMessage = "A person must approve this before it takes effect. Nothing has changed yet. " +
+	taskCreatedMessage = "A human must approve this before it takes effect. Nothing has changed yet. " +
 		"Poll tasks/get with this taskId; it completes when they decide."
-	taskRejectedMessage = "A person declined this. Nothing was changed, and repeating the call will be " +
+	taskRejectedMessage = "A contact declined this. Nothing was changed, and repeating the call will be " +
 		"declined the same way — tell the user rather than retrying."
 	taskExpiredMessage = "Nobody decided this before the approval window closed, so it will never take " +
 		"effect. Nothing was changed. Ask the user whether to propose it again."
 	taskCancelledMessage = "This task was cancelled and its pending approval withdrawn. Nothing was changed."
 	// taskCancelledLateMessage is the same cancellation over an approval a
-	// person had ALREADY decided. Saying "withdrawn" there would claim a
+	// contact had ALREADY decided. Saying "withdrawn" there would claim a
 	// retraction that did not happen — the decision stands, and only the
 	// agent's handle to it is gone.
-	taskCancelledLateMessage = "This task was cancelled. A person had already decided the approval behind it, " +
+	taskCancelledLateMessage = "This task was cancelled. A contact had already decided the approval behind it, " +
 		"so that decision stands and was not withdrawn. Nothing was carried out through this task."
-	taskCompletedMessage = "A person approved this and it has now been carried out."
+	taskCompletedMessage = "A human approved this and it has now been carried out."
 	// taskWithheldMessage is what a completed task answers when the records its
 	// recorded result hands over can no longer be read by this caller — the
 	// access was narrowed, the row was archived, or an erasure reached it. The

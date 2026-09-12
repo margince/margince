@@ -205,11 +205,11 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 // RowEmailSummary is the email row's fields, for the kind that has them.
 //
-// Exported because compose/person360 assembles its own Activity from a
+// Exported because compose/contact360 assembles its own Activity from a
 // hand-written twin of this projection and cannot reach record(). That twin is
 // why this is exported rather than private: it has gone missing a column twice
 // before, and a summary it did not carry would make the contract's "present
-// exactly when kind=email" false on the person page alone.
+// exactly when kind=email" false on the contact page alone.
 //
 // Present exactly when kind=email, so a reader branches on the field rather
 // than on the kind word: a call and a note are activities too, and neither has

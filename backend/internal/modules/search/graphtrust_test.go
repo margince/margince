@@ -25,7 +25,7 @@ func TestTheTrustLadderReadsTheWriterNotTheChannel(t *testing.T) {
 		capturedBy string
 		want       float64
 	}{
-		{"a person said it", human, trustHumanStatement},
+		{"a human said it", human, trustHumanStatement},
 		{"an agent wrote it", agent, trustAgentWrite},
 		{"a connector brought it in", "connector:gmail", trustCapturedExternal},
 		{"nobody is named", "", trustCapturedExternal},
@@ -42,7 +42,7 @@ func TestTheTrustLadderReadsTheWriterNotTheChannel(t *testing.T) {
 // Two notes of the same age rank by who wrote them: the human statement first.
 //
 // This is the property case 6 rests on — asking what happened with a client
-// must surface what a person recorded ahead of what an agent inferred.
+// must surface what a contact recorded ahead of what an agent inferred.
 func TestAHumanNoteOutranksAnAgentNoteOfTheSameAge(t *testing.T) {
 	now := time.Now()
 	when := now.Add(-72 * time.Hour)

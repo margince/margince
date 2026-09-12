@@ -172,7 +172,7 @@ Opens with the customer's number.
 Short paragraphs; one ask per message.
 
 ## Punctuation / emoji / POV
-No emoji; first person singular.
+No emoji; first contact singular.
 
 ## Vocabulary
 ship, land, decide

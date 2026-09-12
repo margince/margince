@@ -33,7 +33,7 @@ const record = {
 
 const fields = [
   { key: "full_name", label: "create.fullName" as const, required: true },
-  { key: "title", label: "create.personTitle" as const },
+  { key: "title", label: "create.contactTitle" as const },
 ];
 
 export const Prefilled: Story = {

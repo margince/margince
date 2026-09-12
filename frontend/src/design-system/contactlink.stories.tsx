@@ -29,7 +29,7 @@ export default meta;
 
 type Story = StoryObj<typeof ContactLink>;
 
-const dana = { entityType: "person", entityId: "p-1" } as const;
+const dana = { entityType: "contact", entityId: "p-1" } as const;
 
 export const Email: Story = {
   args: { kind: "email", value: "dana@brandt.example", record: dana },

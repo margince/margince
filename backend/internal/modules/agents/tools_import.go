@@ -9,7 +9,7 @@ package agents
 // Every import operation was human-only, so an assistant handed a CSV could
 // describe what to do with it and do none of it. The whole migrate-in flow —
 // the one a customer runs once, on their first day, with the most data at
-// stake — was reachable only by a person clicking through four screens.
+// stake — was reachable only by a contact clicking through four screens.
 //
 // THE FILE ARRIVES AS TEXT, not as an upload. uploadImportSource is multipart
 // and stays human-only, because an assistant holding a spreadsheet's contents
@@ -21,7 +21,7 @@ package agents
 // THE DRY RUN IS NOT OPTIONAL AND CANNOT BE SKIPPED. preview_import writes no
 // domain rows by construction (AC-M5) — it validates the mapping against the
 // live estate and produces a report. commit_import is confirm-first and takes
-// a run id, so the thing a person approves is the run whose report they read.
+// a run id, so the thing a human approves is the run whose report they read.
 // There is no verb that imports without producing a report first, and adding
 // one would defeat the only review this flow has.
 
@@ -87,10 +87,10 @@ func RegisterImportTools(r *Registry, imports Imports) {
 // TestEveryToolEnumMatchesTheContractItMirrors caught it, which is what that
 // gate is for.
 //
-// `lead` and `person` are BOTH here and the caller picks per run: a
+// `lead` and `contact` are BOTH here and the caller picks per run: a
 // machine-sourced list lands as leads for a human to promote, a file the
-// business already knows lands as people. Neither skips the identity ladder.
-var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectPerson}
+// business already knows lands as contacts. Neither skips the identity ladder.
+var importObjectEnum = []string{importObjectCompany, importObjectLead, importObjectContact}
 
 // The three things a file's rows may be, spelled once. They mirror the
 // contract's ImportObject enum, and the tool's schema is built from them so
@@ -98,7 +98,7 @@ var importObjectEnum = []string{importObjectCompany, importObjectLead, importObj
 const (
 	importObjectCompany = "company"
 	importObjectLead    = "lead"
-	importObjectPerson  = "person"
+	importObjectContact = "contact"
 )
 
 // maxImportCSVBytes caps the pasted file.
@@ -112,7 +112,7 @@ const (
 // by default) and under the MCP transport's own 8 MiB body: text travelling
 // inside a JSON tool argument rides the same request as the rest of the
 // conversation, and a file large enough to matter belongs on the upload door
-// with a person at it.
+// with a contact at it.
 const maxImportCSVBytes = 1_000_000
 
 // importConnectorCSV is the connector a pasted file is: the same one the
@@ -213,7 +213,7 @@ func (t commitImport) Spec() mcp.ToolSpec {
 }
 
 // StageInfo describes the approval a commit asks for, through the SAME
-// command the REST door builds — so the sentence a person decides on is
+// command the REST door builds — so the sentence a human decides on is
 // identical whichever door staged it.
 func (t commitImport) StageInfo(ctx context.Context, in json.RawMessage) (StageInfo, error) {
 	id, err := importRunArg(in)
@@ -241,7 +241,7 @@ func (t commitImport) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	// Checked again on the approved retry. StageInfo's check is the courtesy
 	// that avoids spending an approval; this one is the rule, because Handle
 	// is what a granted approval re-enters and the run's state can have moved
-	// while the person was deciding.
+	// while the contact was deciding.
 	run, err := t.imports.ReadRun(ctx, id)
 	if err != nil {
 		return nil, err

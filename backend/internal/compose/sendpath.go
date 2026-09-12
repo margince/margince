@@ -34,8 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -194,7 +194,7 @@ func (s *Server) applySendPath(pool *pgxpool.Pool) {
 //
 // Every send in this process must ask the same gate the same way: a second
 // construction that differed — a different store, a different db handle — would
-// be a second answer to "may this person be written to", and the surface that
+// be a second answer to "may this contact be written to", and the surface that
 // got the wrong one would look identical to the one that got the right one.
 //
 // The concrete gate rather than the activities.ConsentGate seam it satisfies:
@@ -311,7 +311,7 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 		// makes one a REST credential too) must not lose their signature merely
 		// because the request arrived on the tool surface. An agent principal
 		// still signs nothing — signedBody decides that, not this wiring.
-		WithSignature(people.NewStore(InstallationDB(pool))).
+		WithSignature(contacts.NewStore(InstallationDB(pool))).
 		WithBaseLanguage(activities.BaseLanguageFunc(func(ctx context.Context) string {
 			return identity.BaseLanguageForPrompt(ctx, pool)
 		})).

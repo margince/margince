@@ -8,7 +8,7 @@ package agents
 // the report engine. See toolcopy.go for what each field answers.
 
 var catchMeUpOnCopy = toolCopy{
-	Purpose: "Answer \"what has been going on with this?\" for one person, company, deal, lead, " +
+	Purpose: "Answer \"what has been going on with this?\" for one contact, company, deal, lead, " +
 		"project or meeting: the recent activity and related records in one picture, with the " +
 		"evidence each part rests on.",
 	Limits: "Built around ONE record you name; everything it reports carries a source, and what " +
@@ -22,7 +22,7 @@ var catchMeUpOnCopy = toolCopy{
 
 var prepForMeetingCopy = toolCopy{
 	Purpose: "Get ready for a specific meeting: given the meeting, the same written brief a " +
-		"person reads; given any other record, the assembled picture a catch-up gives, plus " +
+		"human reads; given any other record, the assembled picture a catch-up gives, plus " +
 		"the open items pulled out as the things to raise.",
 	// Deliberately silent about anchoring on the meeting record itself. The
 	// input schema advertises it, and prose that also recommended it cost more
@@ -94,19 +94,19 @@ var readProject360Copy = toolCopy{
 		"stakeholders, contracts, documents, open commitments, timeline, filing coverage, totals.",
 	Limits:  "Each section is cut at 25 rows and carries a truncated flag; sections_omitted names what your grants withhold.",
 	Instead: "prepare_handoff for the delivery gaps, read_record for the project's stored fields alone.",
-	Retain:  "The project_id, and the deal, person and task ids a follow-up acts on.",
+	Retain:  "The project_id, and the deal, contact and task ids a follow-up acts on.",
 }
 
 var whoKnowsCopy = toolCopy{
-	Purpose: "Answer \"who here knows this person?\": the colleagues with a relationship to one " +
+	Purpose: "Answer \"who here knows this contact?\": the colleagues with a relationship to one " +
 		"contact, warmest first, with the interaction counts that ground the warmth.",
 	Limits: "It reports relationships this workspace can evidence from its own recorded " +
 		"interactions, so a genuine relationship nobody has logged does not appear. Never spoken " +
 		"is reported as no relationship rather than a score of zero.",
-	Instead: "Use intro_path_to when you want a route into a COMPANY rather than the people who " +
+	Instead: "Use intro_path_to when you want a route into a COMPANY rather than the contacts who " +
 		"know one contact.",
 	Retain: "Each colleague comes back with a user_id; the strength bucket, not the raw score, " +
-		"is what a person should be asked about.",
+		"is what a contact should be asked about.",
 }
 
 var accountCoverageCopy = toolCopy{
@@ -117,8 +117,8 @@ var accountCoverageCopy = toolCopy{
 	Instead: "Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when " +
 		"the answer is that a gap needs a warm route filling it.",
 	Retain: "Keep the deal_id and the named gaps; they are what a follow-up plan is built from. " +
-		"Each stakeholder carries `person_name` beside its role — say WHO the uncovered seat is " +
-		"rather than reporting the role alone, because the answer a rep acts on is a person to " +
+		"Each stakeholder carries `contact_name` beside its role — say WHO the uncovered seat is " +
+		"rather than reporting the role alone, because the answer a rep acts on is a contact to " +
 		"bring into the room. A seat with no name is one this caller may not read: report the " +
 		"gap, and do not guess who fills it.",
 }
@@ -129,7 +129,7 @@ var introPathToCopy = toolCopy{
 	Limits: "It walks the relationships this workspace has recorded. An account nobody here has " +
 		"ever spoken to has no warm path, and saying so is the correct answer rather than a " +
 		"failure.",
-	Instead: "Use who_knows when you already have the specific person and want the colleagues " +
+	Instead: "Use who_knows when you already have the specific contact and want the colleagues " +
 		"who know THEM, and search_records when you are still looking for the account itself.",
 	Retain: "The path names the colleague and the contact by id; both are needed to ask anyone " +
 		"for the introduction.",
@@ -138,14 +138,14 @@ var introPathToCopy = toolCopy{
 var atRiskRelationshipsCopy = toolCopy{
 	Purpose: "Answer \"where are our relationships thin?\": across the caller's OPEN deals, the " +
 		"ones resting on a single contact, missing an engaged champion, or carried almost " +
-		"entirely by one person on our side.",
+		"entirely by one contact on our side.",
 	Limits: "It sweeps open deals — a deal already won or lost is not at risk and is left out — " +
 		"and it takes no arguments, because the caller's own visibility already decides which " +
 		"deals these are. It is about the shape of the relationships around a deal, not about " +
 		"the deal's own momentum.",
 	Instead: "Use whats_slipping_this_week when the question is about deals losing momentum, and " +
 		"account_coverage when the question is about one deal rather than the whole book.",
-	Retain: "Each finding names its deal_id and the people it is about; those are what " +
+	Retain: "Each finding names its deal_id and the contacts it is about; those are what " +
 		"intro_path_to and who_knows take next.",
 }
 
@@ -179,8 +179,8 @@ var annotateBriefCopy = toolCopy{
 	Purpose: "Write what you found onto the morning brief you just read: one sentence about " +
 		"the night as a whole, and for each deal you looked at, why it is on the list, what " +
 		"changed, and the one next move you would make.",
-	Limits: "It writes onto that person's own brief for today and nothing else — it cannot be " +
-		"pointed at another person, another day, or a deal that is not already in their " +
+	Limits: "It writes onto that contact's own brief for today and nothing else — it cannot be " +
+		"pointed at another contact, another day, or a deal that is not already in their " +
 		"queue, and it cannot change the ranking. Every evidence id you cite must be one the " +
 		"brief already recorded for that item; citing anything else refuses the whole write, " +
 		"so cite from what read_brief gave you rather than from memory.",
@@ -191,11 +191,11 @@ var annotateBriefCopy = toolCopy{
 }
 
 var readBriefCopy = toolCopy{
-	Purpose: "Read the ranked queue the person you act for sees when they open their morning " +
+	Purpose: "Read the ranked queue the contact you act for sees when they open their morning " +
 		"brief — the deals the workspace decided are worth their attention today, in order, " +
 		"with the rows behind each ranking.",
 	Limits: "It re-reads the last assembled run rather than building a new one, so its as_of " +
-		"says how current it is, and it is that person's own queue: it cannot be asked for " +
+		"says how current it is, and it is that contact's own queue: it cannot be asked for " +
 		"anyone else's. Acting on, dismissing or snoozing an item is theirs alone.",
 	Instead: "Use whats_slipping_this_week when the question is which deals are losing momentum " +
 		"regardless of what today's brief chose, and read_record for what one of these deals " +

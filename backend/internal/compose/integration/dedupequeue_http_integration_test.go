@@ -9,7 +9,7 @@ package integration
 // fuzzy company create leaves the pair in GET /dedupe/candidates, the
 // evidence snapshot rides through verbatim, dismissal/undo/merge answer
 // the DH-EXT-2 contract, and the refusals are typed 422/404/409 — the
-// store's own behaviour is proved in the people package; this suite owns
+// store's own behaviour is proved in the contacts package; this suite owns
 // the transport.
 
 import (

@@ -38,7 +38,7 @@ type qualifyingEnv struct {
 	owner          *pgx.Conn
 	ctx            context.Context
 	ws, user       ids.UUID
-	person         ids.PersonID
+	contact        ids.ContactID
 	correspondence PurposeRow
 }
 
@@ -66,7 +66,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 		t.Fatal(err)
 	}
 
-	e := &qualifyingEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7(), person: ids.New[ids.PersonKind]()}
+	e := &qualifyingEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7(), contact: ids.New[ids.ContactKind]()}
 	purposeID := ids.New[ids.PurposeKind]()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -83,8 +83,8 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Dana Metatrade', 'manual', 'human:x')`, e.person); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Dana Metatrade', 'manual', 'human:x')`, e.contact); err != nil {
 		t.Fatal(err)
 	}
 	e.correspondence = PurposeRow{
@@ -106,7 +106,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -114,7 +114,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 	return e
 }
 
-// verdict reads what business correspondence to this person would answer now.
+// verdict reads what business correspondence to this contact would answer now.
 func (e *qualifyingEnv) verdict(t *testing.T) Verdict {
 	t.Helper()
 	return e.verdictSince(t, time.Now().Add(-defaultReplyWindow))
@@ -129,7 +129,7 @@ func (e *qualifyingEnv) verdictSince(t *testing.T, since time.Time) Verdict {
 	var out Verdict
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = VerdictForPerson(e.ctx, tx, e.person.String(), e.correspondence, since, MarketingContext{})
+		out, err = VerdictForContact(e.ctx, tx, e.contact.String(), e.correspondence, since, MarketingContext{})
 		return err
 	}); err != nil {
 		t.Fatalf("reading the verdict: %v", err)
@@ -137,7 +137,7 @@ func (e *qualifyingEnv) verdictSince(t *testing.T, since time.Time) Verdict {
 	return out
 }
 
-// inbound files a message the PERSON wrote, the way capture files one: an
+// inbound files a message the CONTACT wrote, the way capture files one: an
 // activity, a link putting it on their record, and a participant row naming
 // them as the author. All three, because the derivation requires all three —
 // seeding only the link would test a shape the product never produces and pass
@@ -152,14 +152,14 @@ func (e *qualifyingEnv) inbound(t *testing.T, at time.Time) {
 		t.Fatalf("seeding the inbound activity: %v", err)
 	}
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`,
-		activityID, e.person); err != nil {
+		INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+		activityID, e.contact); err != nil {
 		t.Fatalf("filing the inbound activity: %v", err)
 	}
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO activity_participant (activity_id, role, person_id, address)
+		INSERT INTO activity_participant (activity_id, role, contact_id, address)
 		VALUES ($1, 'from', $2, 'dana@metatrade.test')`,
-		activityID, e.person); err != nil {
+		activityID, e.contact); err != nil {
 		t.Fatalf("naming the author of the inbound activity: %v", err)
 	}
 }
@@ -174,7 +174,7 @@ func TestAnInPersonExchangeMakesCorrespondenceLawful(t *testing.T) {
 	}
 
 	met := time.Now().Add(-48 * time.Hour).Truncate(time.Second)
-	recorded, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	recorded, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       "in_person",
 		Note:       "Handed me their card at the Frankfurt trade fair, stand B12.",
 		OccurredAt: met,
@@ -213,7 +213,7 @@ func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
 	}
 
 	rang := time.Now().Add(-3 * time.Hour).Truncate(time.Second)
-	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       KindRequestedBySubject,
 		Note:       "Rang about the March order and asked me to send the quote by email.",
 		OccurredAt: rang,
@@ -229,10 +229,10 @@ func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
 		t.Fatalf("the verdict cites %+v, want the request the subject made", after.Qualifying)
 	}
 	// THE REASON SAYS WHOSE MOVE IT WAS. A rep reading why this send is lawful
-	// needs to see that the person asked, not merely that "an exchange" is on
+	// needs to see that the contact asked, not merely that "an exchange" is on
 	// file — which is what the generic arm would have said.
 	if !strings.Contains(after.Reason, "asked you to write") {
-		t.Errorf("the reason reads %q, which does not say the person asked", after.Reason)
+		t.Errorf("the reason reads %q, which does not say the contact asked", after.Reason)
 	}
 	if !strings.Contains(after.Reason, "March order") {
 		t.Errorf("the reason reads %q and does not carry the note, which IS the evidence",
@@ -249,7 +249,7 @@ func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
 func TestARequestTheSubjectMadeStillNeedsItsNote(t *testing.T) {
 	e := setupQualifying(t)
 
-	_, err := e.store.RecordQualifyingEvent(e.ctx, e.person, RecordQualifyingEventInput{
+	_, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
 		Kind:       KindRequestedBySubject,
 		Note:       "   ",
 		OccurredAt: time.Now().Add(-time.Hour),
@@ -290,7 +290,7 @@ func TestRecordingAnExchangeRefusesWhatItCannotStandBehind(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, tc.in); err == nil {
+			if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, tc.in); err == nil {
 				t.Fatal("the claim was recorded, want a refusal")
 			}
 		})
@@ -312,7 +312,7 @@ func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
 		OccurredAt: time.Now().Add(-24 * time.Hour).Truncate(time.Second),
 	}
 	for i := 0; i < 3; i++ {
-		if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, in); err != nil {
+		if _, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, in); err != nil {
 			t.Fatalf("recording pass %d: %v", i+1, err)
 		}
 	}
@@ -320,8 +320,8 @@ func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
 	var rows int
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx,
-			`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`,
-			e.person).Scan(&rows)
+			`SELECT count(*) FROM consent_qualifying_event WHERE contact_id = $1`,
+			e.contact).Scan(&rows)
 	}); err != nil {
 		t.Fatalf("counting the rows: %v", err)
 	}
@@ -343,13 +343,13 @@ func TestRecordingAnExchangeNeedsAuthorityOverTheSubject(t *testing.T) {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			// Read but not update: asserting a lawful basis changes what may be
-			// SENT to this person, which is the authority to write their record.
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+			// SENT to this contact, which is the authority to write their record.
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
 
-	_, err := e.store.RecordQualifyingEvent(readOnly, e.person, RecordQualifyingEventInput{
+	_, err := e.store.RecordQualifyingEvent(readOnly, e.contact, RecordQualifyingEventInput{
 		Kind: "in_person", Note: "met them", OccurredAt: time.Now(),
 	})
 	if err == nil {

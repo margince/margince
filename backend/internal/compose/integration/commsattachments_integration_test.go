@@ -39,7 +39,7 @@ func sendWorkerCtx(ws ids.UUID) context.Context {
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
 
-// grantOwnScopeRepRole gives a user a real role row granting person:read at
+// grantOwnScopeRepRole gives a user a real role row granting contact:read at
 // own row scope, and assigns it.
 //
 // It has to be a real row. This authority deliberately ignores whatever
@@ -54,7 +54,7 @@ func grantOwnScopeRepRole(t *testing.T, e *Env, user ids.UUID) {
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
 		VALUES ($1, 'Send Rep', $2::jsonb)`,
 		roleKey,
-		`{"objects":{"person":{"read":true}},"row_scope":"own"}`)
+		`{"objects":{"contact":{"read":true}},"row_scope":"own"}`)
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
 		SELECT r.id, $1 FROM role r WHERE r.key = $2`,
 		user, roleKey)
@@ -66,10 +66,10 @@ func TestEnsureTransmittableAdmitsAFileTheSenderCanStillRead(t *testing.T) {
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	grantOwnScopeRepRole(t, e, e.Rep1)
-	person := e.SeedPerson(t, "Rep1's Person", &e.Rep1)
+	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "offer.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "offer.pdf", Content: bytes.NewReader([]byte("PDF")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment through the real writer: %v", err)
@@ -100,15 +100,15 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 	// what this proves.
 	grantOwnScopeRepRole(t, e, e.Rep3)
 	// Capture-private to Rep1 once the file is on it; Rep3 never had access.
-	person := e.SeedPerson(t, "Rep1's Person", &e.Rep1)
+	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	ok, reason, err := authority.EnsureTransmittable(
@@ -124,14 +124,14 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 	}
 
 	// VISIBILITY is what refused this, not a missing grant. Rep3 holds
-	// person:read — the same object grant the admitted sender holds — so
+	// contact:read — the same object grant the admitted sender holds — so
 	// without this the case would pass against a sender who simply holds
 	// nothing, and would keep passing if the visibility clause were deleted.
-	// The proof is that the SAME sender, asked about a person they own,
+	// The proof is that the SAME sender, asked about a contact they own,
 	// is admitted.
-	ownPerson := e.SeedPerson(t, "Rep3's Own Person", &e.Rep3)
+	ownContact := e.SeedContact(t, "Rep3's Own Contact", &e.Rep3)
 	ownAtt, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "person", EntityID: ownPerson, Filename: "mine.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: ownContact, Filename: "mine.pdf", Content: bytes.NewReader([]byte("PDF")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the sender's own attachment: %v", err)
@@ -160,14 +160,14 @@ func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisible
 	store, blob := attachmentStore(e)
 	grantOwnScopeRepRole(t, e, e.Rep3)
 	// A real file on a contact capture-private to Rep1, which Rep3 cannot see.
-	person := e.SeedPerson(t, "Rep1's Person", &e.Rep1)
+	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	sender := ids.From[ids.UserKind](e.Rep3)

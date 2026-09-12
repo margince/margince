@@ -1,0 +1,283 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// The identity chokepoint: the ONE place a contact row and the ONE place an
+// company row is minted. Four contact paths and four company paths
+// used to each own their own INSERT, and they drifted — capture asked PO-F-2
+// about a domain and never about a name, cold start never asked at all, lead
+// promotion probed one column by hand. Two companies in a real workspace ended
+// up doubled because of it.
+//
+// Both functions take the PO-F ladder's verdict as an ARGUMENT, and that is
+// the point: a create that never consulted dedupe.go cannot be written,
+// because there is no verdict to hand over. The verdict is not decoration
+// either — an exact-key collision means the record already exists, and these
+// functions refuse to mint a second one rather than trusting every caller to
+// remember.
+//
+// What stays with the caller: the RBAC gate, the audit row and the outbox
+// event (a promotion audits as `promote`, not `create`), the review-trail
+// recording with its per-lane evidence, and the read-back. The write shape is
+// unchanged — these run on the caller's transaction, so domain row, audit and
+// outbox still commit together.
+//
+// `backend/gates/dedupespine_test.go` is what keeps this the only door.
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+)
+
+// The two row visibilities a create path writes.
+//
+// A contact a HUMAN creates belongs to the workspace the moment they exist —
+// somebody typed them in, and that is the decision. A contact CAPTURE mints from
+// a message nothing has judged yet belongs to the mailbox owner until something
+// does: a mailbox with a year of history names correspondents the workspace has
+// no business reading, and one email is not a reason to publish a contact.
+//
+// platform/auth reads `owner` as capture privacy, so an owner-scoped row is
+// invisible to colleagues, an admin included.
+const (
+	visibilityWorkspace = "workspace"
+	visibilityOwner     = "owner"
+)
+
+// visibilityFor answers which of the two a create path writes.
+func visibilityFor(ownerScoped bool) string {
+	if ownerScoped {
+		return visibilityOwner
+	}
+	return visibilityWorkspace
+}
+
+// ownerFromUUID adapts the storage-level owner id the capture and triage paths
+// carry to the typed one the specs take.
+func ownerFromUUID(u *ids.UUID) *ids.UserID {
+	if u == nil {
+		return nil
+	}
+	id := ids.From[ids.UserKind](*u)
+	return &id
+}
+
+// ContactSpec is every column a contact create writes, across all four paths.
+// A field left zero writes the column's default — the specs are unions on
+// purpose, so a caller's columns are visible at its call site rather than
+// hidden behind a policy enum.
+type ContactSpec struct {
+	FullName  string
+	FirstName *string
+	LastName  *string
+	Title     *string
+	OwnerID   *ids.UserID
+	Address   *crmcontracts.Address
+	Social    map[string]any
+	Emails    []ContactEmailInput
+	Phones    []ContactPhoneInput
+
+	// Visibility is "" for the column default; capture mints 'owner' rows
+	// until a human promotes them, the channel bot mints 'workspace' ones.
+	Visibility string
+	// Acquisition says why this contact exists — what the contact did, or what
+	// was done to obtain them. Distinct from Source, which says which surface
+	// typed it in. The zero value records unknown_legacy rather than nothing.
+	Acquisition Acquisition
+	// Quarantined flags the impersonation tells capture screens for; the row
+	// is still created, because hiding suspicious mail is worse than labeling
+	// it.
+	Quarantined bool
+	// ConvertedFromLeadID is set only by promotion — the origin pointer that
+	// makes a promoted contact traceable to the lead it graduated from.
+	ConvertedFromLeadID *ids.UUID
+
+	Source       string
+	CapturedBy   string
+	CustomFields map[string]any
+	// Active is the custom-field catalog for `contact`; nil on the capture
+	// paths, which carry no request body to source extra columns from.
+	Active []fieldcatalog.Column
+}
+
+// createContact is the one INSERT INTO contact.
+//
+// It refuses an exact collision on a lane that names ONE human — a claimed
+// address, an established channel binding — because that record already
+// exists and the caller was supposed to land on it. The phone lane is
+// deliberately not such a lane: a household line and a switchboard belong to
+// several real contacts, so a shared number creates and the caller records the
+// pair for review (creatededupe.go states the same policy per lane).
+func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) (ids.ContactID, error) {
+	if match.Decision == DecisionExactCollision && match.MatchedLane != lanePhone {
+		return ids.ContactID{}, refusedContactCreate(ctx, tx, match, spec)
+	}
+	wsID := workspaceID(ctx)
+	id := ids.New[ids.ContactKind]()
+	addr := addressColumns(spec.Address)
+	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, []any{
+		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
+		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
+		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
+	})
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+		         coalesce(NULLIF($15, ''), 'workspace'),
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17`+cfHolders+`)`,
+		args...); err != nil {
+		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
+	}
+	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
+		return ids.ContactID{}, err
+	}
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails); err != nil {
+		return ids.ContactID{}, err
+	}
+	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
+		return ids.ContactID{}, err
+	}
+	// Why this contact exists, written beside the contact itself.
+	//
+	// Here rather than at each door, because every production creation path
+	// comes through this function: a new door gets the record without knowing
+	// it exists, and a door that says nothing still leaves a row saying nobody
+	// knows. Leaving it to callers is how three of four doors would record it
+	// and the fourth would be discovered by an auditor.
+	if err := recordAcquisition(ctx, tx, id, spec.Acquisition, spec.CapturedBy); err != nil {
+		return ids.ContactID{}, err
+	}
+	return id, nil
+}
+
+// refusedContactCreate answers the refusal in the CONTRACT's language, not the
+// chokepoint's.
+//
+// The manual create probes for a claimed address before the ladder runs, so
+// reaching here means the address was claimed in between — a race, whose
+// answer is still the 409 the create contract promises with the incumbent's
+// id (data-model §3.2), never an opaque failure just because a different guard
+// caught it. Every other lane has no such contract and stays a conflict.
+//
+// The id is echoed ONLY when the caller could have read that record. The
+// resolver deliberately matches across the whole workspace — a duplicate the
+// caller cannot see is still a duplicate — so the answer would otherwise
+// confirm the existence of a record outside their row scope, and confirm it
+// by a chosen address at that. The refusal still stands either way; only the
+// pointer is withheld.
+func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) error {
+	if match.MatchedLane == LaneEmail && len(spec.Emails) > 0 {
+		dup := &DuplicateEmailError{Email: spec.Emails[0].Email}
+		visible, err := auth.VisibleTo(ctx, tx, entityContact, match.ContactID.UUID)
+		if err != nil {
+			return err
+		}
+		if visible {
+			dup.ExistingID = match.ContactID
+		}
+		return dup
+	}
+	// Other lanes name no record: the message says which key collided, never
+	// whose row it was.
+	return fmt.Errorf(
+		"contacts: an exact %q collision already claims this identity: %w",
+		match.MatchedLane, apperrors.ErrConflict)
+}
+
+// CompanySpec is every column a company create writes, across all four
+// paths.
+type CompanySpec struct {
+	DisplayName     string
+	LegalName       *string
+	Description     *string
+	Industry        *string
+	SizeBand        *string
+	OwnerID         *ids.UserID
+	ParentCompanyID *ids.CompanyID
+	Address         *crmcontracts.Address
+	Domains         []CompanyDomainInput
+
+	// NameSource is the ADR-0072/A118 authority ladder entry for the name
+	// being written ("" writes the column default, 'human'). A row named from
+	// its mail domain is provisional and a richer source may overwrite it; a
+	// human's name is never clobbered.
+	NameSource string
+	// Visibility is "" for the column default; capture mints 'owner' rows.
+	Visibility string
+	// IsAnchor marks the workspace's own company; there is exactly one, and
+	// uq_company_anchor is what decides a race between two first saves.
+	IsAnchor bool
+
+	Source       string
+	CapturedBy   string
+	CustomFields map[string]any
+	Active       []fieldcatalog.Column
+}
+
+// refusedCompanyCreate is refusedContactCreate's twin, with the same disclosure
+// rule: the manual path refuses a claimed domain before the ladder, so
+// arriving here is a race that still owes the caller the domain 409 — but the
+// incumbent's id only when they could have read that record.
+func refusedCompanyCreate(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) error {
+	if len(spec.Domains) == 0 {
+		return fmt.Errorf(
+			"contacts: an exact domain collision already claims this identity: %w",
+			apperrors.ErrConflict)
+	}
+	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}
+	visible, err := auth.VisibleTo(ctx, tx, entityCompany, match.CompanyID.UUID)
+	if err != nil {
+		return err
+	}
+	if visible {
+		dup.ExistingID = match.CompanyID
+	}
+	return dup
+}
+
+// createCompany is the one INSERT INTO company.
+//
+// It refuses an exact collision outright: PO-F-2's exact tier is the domain,
+// and a domain already mapped to a live company names that same company
+// (this is the capture employer-inference path — a hit lands the contact on the
+// existing company rather than minting a rival).
+func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) (ids.CompanyID, error) {
+	if match.Decision == DecisionExactCollision {
+		return ids.CompanyID{}, refusedCompanyCreate(ctx, tx, match, spec)
+	}
+	id := ids.New[ids.CompanyKind]()
+	addr := addressColumns(spec.Address)
+	cfCols, cfHolders, args := storekit.InsertFragments(spec.Active, spec.CustomFields, []any{
+		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
+		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
+		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
+	})
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+		         coalesce(NULLIF($17, ''), 'human'),
+		         coalesce(NULLIF($18, ''), 'workspace'), $19`+cfHolders+`)`,
+		args...); err != nil {
+		return ids.CompanyID{}, fmt.Errorf("insert company: %w", err)
+	}
+	// A new company has no primary yet, so the election has nothing to
+	// preserve and fills the caller's silence. Here rather than in the HTTP
+	// mapping because every producer of a company converges on this call — the
+	// API, the tool surface, CSV import, cold start, domain triage and the
+	// overlay flip — and a rule spelled at one of those doors binds only that
+	// door.
+	if err := insertCompanyDomains(ctx, tx, id, spec.Source, spec.CapturedBy, electPrimary(spec.Domains, "")); err != nil {
+		return ids.CompanyID{}, err
+	}
+	return id, nil
+}

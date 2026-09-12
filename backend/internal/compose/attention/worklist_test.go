@@ -565,7 +565,7 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 	}
 }
 
-// The longer somebody has waited, the higher they sit — among people who are
+// The longer somebody has waited, the higher they sit — among contacts who are
 // all waiting, the forgotten one is the one at risk.
 //
 // Both waits are inside the ordering ceiling. Past it every wait ties on age by

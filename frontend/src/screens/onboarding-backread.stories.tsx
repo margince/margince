@@ -127,7 +127,7 @@ export const Running: Story = {
       messages_scanned: 1960,
       captured: 730,
       skipped: 1230,
-      people_created: 214,
+      contacts_created: 214,
       companies_created: 58,
     },
     updated_at: "2026-07-31T09:20:00Z",
@@ -163,7 +163,7 @@ export const Done: Story = {
       messages_scanned: 4820,
       captured: 1804,
       skipped: 3016,
-      people_created: 512,
+      contacts_created: 512,
       companies_created: 143,
     },
     completed_at: "2026-07-31T09:41:00Z",
@@ -181,7 +181,7 @@ export const Failed: Story = {
 export const Cancelled: Story = {
   render: backreadStory({
     state: "cancelled",
-    counts: { messages_scanned: 300, captured: 96, people_created: 31 },
+    counts: { messages_scanned: 300, captured: 96, contacts_created: 31 },
   }),
 };
 

@@ -49,14 +49,14 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &steppedUp):
 		// A step-up that reached a human. It is its own branch rather than a
 		// wording variant of the one below because the INSTRUCTION differs: wait
-		// for the person who connected this agent, then repeat the call
+		// for the contact who connected this agent, then repeat the call
 		// unchanged — and specifically do not present an approval_id, which is
 		// the 🟡 loop's move and cannot work for a kind no tool redeems.
 		// The approval id is deliberately NOT quoted. It is the one identifier a
 		// caller told "do not send an approval_id" would reach for, and it opens
 		// nothing here: a step-up is released by the human, not redeemed by the
 		// agent. The human finds it in their own inbox.
-		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the person " +
+		return "This agent has reached its " + string(steppedUp.Counter) + " limit for this window, and the contact " +
 			"who connected it has been asked whether it may continue. Do not send an approval_id: once they approve, " +
 			"repeat this call unchanged."
 	case errors.As(err, &overQuota) && overQuota.Releasable():
@@ -67,7 +67,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// the refusal quoted beside it, which correctly says a release WOULD end
 		// this. What is true of both is that nothing is pending.
 		return "This agent has reached a volume limit for this window, and no request to continue is open: " +
-			"the person who connected it has already declined one, or cannot be asked from here. Stop calling this " +
+			"the contact who connected it has already declined one, or cannot be asked from here. Stop calling this " +
 			"tool and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
 	case errors.As(err, &overQuota):
@@ -97,7 +97,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// An approval is required and nothing was staged to carry it — a surface
 		// with no inbox, or a tool that cannot describe its own staging target.
 		// There is no proposal to point at, so the answer says what it can.
-		return "This is a confirm-first (🟡) action: a person answers it before it runs, and not the " +
+		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
 			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
 	case errors.Is(err, apperrors.ErrScopeExceeded):
@@ -328,7 +328,7 @@ const maxRemedyBudget = 4 * httperr.MaxFaultText
 // stagedExplanation is what a caller is told about a 🟡 call now sitting in a
 // human's inbox: what it would do, and which of the two moves to make.
 //
-// The summary is the sentence the human's own card carries, so the person and
+// The summary is the sentence the human's own card carries, so the colleague and
 // the agent are waiting on one described thing.
 //
 // IT ALSO SAYS WHAT IS NOT BLOCKED, AND TO REPORT WHAT ALREADY HAPPENED,
@@ -352,11 +352,11 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 			echoSafe(staged.Summary, workflow.MaxStagedSummary) + "."
 	}
 	if staged.AlreadyApproved {
-		return "A person has ALREADY approved this exact call. " + what +
+		return "A contact has ALREADY approved this exact call. " + what +
 			" Do not stage another: repeat this call with \"approval_id\": \"" +
 			staged.ApprovalID.String() + "\"."
 	}
-	return "Confirm-first (🟡): a person answers this before it runs, and it is not yours to answer. " +
+	return "Confirm-first (🟡): a contact answers this before it runs, and it is not yours to answer. " +
 		what +
 		" Put what it would do in front of them and wait for their word. They can release it in the " +
 		"CRM, or you can relay the answer they give you with decide_approval — list_approvals is the " +

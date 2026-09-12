@@ -59,12 +59,12 @@ function mount(
     "GET /tags/t-1": () =>
       jsonResponse({
         ...KEY_ACCOUNT,
-        usage: { people: 4, companies: 2, deals: 1 },
+        usage: { contacts: 4, companies: 2, deals: 1 },
       }),
     "GET /tags/t-2": () =>
       jsonResponse({
         ...RETIRED,
-        usage: { people: 0, companies: 0, deals: 0 },
+        usage: { contacts: 0, companies: 0, deals: 0 },
       }),
     ...extra,
   });
@@ -173,7 +173,7 @@ describe("the tag vocabulary card", () => {
     const detail = vi.fn(() =>
       jsonResponse({
         ...KEY_ACCOUNT,
-        usage: { people: 4, companies: 2, deals: 1 },
+        usage: { contacts: 4, companies: 2, deals: 1 },
       }),
     );
     mount([KEY_ACCOUNT], ADMIN, { "GET /tags/t-1": detail });

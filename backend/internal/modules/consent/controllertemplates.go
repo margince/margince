@@ -30,7 +30,7 @@ import (
 
 // Template keys. Each names one thing the installation may say for itself.
 const (
-	// TemplateRecordConfirmation asks a person to check what is held about them.
+	// TemplateRecordConfirmation asks a contact to check what is held about them.
 	TemplateRecordConfirmation = "record_confirmation"
 	// TemplateConsentConfirmation carries the double-opt-in link.
 	TemplateConsentConfirmation = "consent_confirmation"
@@ -46,7 +46,7 @@ type Rendered struct {
 
 // ConfirmationSend is one confirmation message, ready to stage.
 type ConfirmationSend struct {
-	PersonID  ids.PersonID
+	ContactID ids.ContactID
 	Recipient string
 	// Category is what the engine is asked about. It is set from the template
 	// rather than by a caller: the whole point of the lane is that these

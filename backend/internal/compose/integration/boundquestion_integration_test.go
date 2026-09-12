@@ -53,7 +53,7 @@ func readGrantedProof(t *testing.T, c *consentEnv, source string) grantedProof {
 // mintAConfirmLink has the workspace mail a record-confirmation link.
 func mintAConfirmLink(t *testing.T, c *consentEnv) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
@@ -119,7 +119,7 @@ func TestADedicatedConsentLinkBindsTheQuestionToo(t *testing.T) {
 	c := setupConsent(t)
 
 	// A double-opt-in link is minted for one purpose and asks only about that.
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/double-opt-in",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/double-opt-in",
 		AnyMap{"purpose_id": c.purposes["marketing_email"]}, nil, nil); status >= 400 {
 		t.Fatalf("minting the double-opt-in link → %d", status)
 	}

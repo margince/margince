@@ -145,8 +145,8 @@
       "reported_abstained": 0
     },
     {
-      "scenario": "person_first_touch_in_german",
-      "site": "person",
+      "scenario": "contact_first_touch_in_german",
+      "site": "contact",
       "stamp": "c444872c8799991c08a650a61bcf3469586cd16e5f495c1c5e074372f6fd4467e414b84f28cf1883aee725ff82dd5518cfa7201e0c4bb79bdbfaa0066120a7c1ee7b61ec1f9da5e5aa7b4b155ef1f90b1133969db3dd74822c59149bafc8b9b6",
       "verdict": "supported_degraded",
       "runs": 3,

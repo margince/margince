@@ -16,7 +16,7 @@ func fhRow(actorType string, before, after map[string]any) auditDiffRow {
 	return auditDiffRow{
 		id:         ids.NewV7(),
 		action:     "update",
-		entityType: "person",
+		entityType: "contact",
 		entityID:   ids.NewV7(),
 		actorType:  actorType,
 		actorID:    "user-1",

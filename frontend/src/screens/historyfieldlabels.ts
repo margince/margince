@@ -92,7 +92,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // field would suggest (`suppress.go`'s wire request names its kind `kind`,
 // not `suppression_kind`): this lookup carries no entity context, so a key
 // this generic would also answer for an unrelated writer's field of the same
-// name on the SAME projected entity type (`person`) — `kind` already belongs
+// name on the SAME projected entity type (`contact`) — `kind` already belongs
 // to every activity's own audited create
 // (backend/internal/modules/activities/activity.go), and reusing it here
 // mislabelled every activity in history as a suppression.

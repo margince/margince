@@ -224,7 +224,7 @@ func TestAPastMeetingTheBuyerAttendedRecordsEventHeld(t *testing.T) {
 	e.assertClaim(t, deals.SourceActivity, deals.ExtractedByDeterministic)
 }
 
-// A transcript is a recording of people talking, so it cannot exist for a
+// A transcript is a recording of contacts talking, so it cannot exist for a
 // meeting that did not happen — it settles event_held on its own, and the row
 // cites the lines a human can open and read.
 func TestAMeetingWithATranscriptRecordsEventHeldAndCitesIt(t *testing.T) {
@@ -347,15 +347,15 @@ func TestAnUnrelatedActivityEditDoesNotWriteEvidence(t *testing.T) {
 	}
 }
 
-// A colleague logged through the manual path is a person-linked row with a
+// A colleague logged through the manual path is a contact-linked row with a
 // NULL user_id, so counting "not a seat" as the buyer would let a meeting only
-// our own people attended settle a criterion about the buyer turning up.
-func TestAnInternalMeetingWithAPersonLinkedColleagueSettlesNothing(t *testing.T) {
+// our own contacts attended settle a criterion about the buyer turning up.
+func TestAnInternalMeetingWithAContactLinkedColleagueSettlesNothing(t *testing.T) {
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
 	activityID := e.seedMeeting(t, meetingSeed{
 		linked: true, occurredAt: time.Now().Add(-time.Hour), status: "held",
 	})
-	e.replaceAttendeeWithPersonLink(t, activityID)
+	e.replaceAttendeeWithContactLink(t, activityID)
 
 	env := evidenceEnvelope("activity.captured", "activity", activityID,
 		crmcontracts.PublicEventActivityCaptured{Kind: "meeting"})
@@ -363,12 +363,12 @@ func TestAnInternalMeetingWithAPersonLinkedColleagueSettlesNothing(t *testing.T)
 		t.Fatalf("handling an internal meeting: %v", err)
 	}
 	if got := e.ledger(t); got != 0 {
-		t.Fatalf("a meeting whose only non-seat attendee is a person link "+
+		t.Fatalf("a meeting whose only non-seat attendee is a contact link "+
 			"wrote %d rows; nobody from their side was on it", got)
 	}
 }
 
-// An attendee on one of OUR OWN domains is our own person, whatever the
+// An attendee on one of OUR OWN domains is our own contact, whatever the
 // participant row does or does not carry as a seat.
 func TestAnAttendeeOnOurOwnDomainIsNotTheBuyer(t *testing.T) {
 	e := newEvidenceTriggerEnv(t, "acme-sales.example")
@@ -472,7 +472,7 @@ func TestAReplayedBacklogEventWritesNothing(t *testing.T) {
 // An event this consumer does not care about keeps the group flowing.
 func TestAnUnrelatedEventIsIgnored(t *testing.T) {
 	e := newEvidenceTriggerEnv(t)
-	env := evidenceEnvelope("person.updated", "person", ids.NewV7(), map[string]any{})
+	env := evidenceEnvelope("contact.updated", "contact", ids.NewV7(), map[string]any{})
 	if err := e.trigger.HandleEvent(context.Background(), env); err != nil {
 		t.Fatalf("an unrelated event errored and would wedge the group: %v", err)
 	}
@@ -603,25 +603,25 @@ func (e *evidenceTriggerEnv) markHeld(t *testing.T, activityID ids.UUID) {
 	}
 }
 
-// replaceAttendeeWithPersonLink rewrites the outside attendee as the manual
-// logging path writes a colleague: a person link with no address and no seat.
-func (e *evidenceTriggerEnv) replaceAttendeeWithPersonLink(t *testing.T, activityID ids.UUID) {
+// replaceAttendeeWithContactLink rewrites the outside attendee as the manual
+// logging path writes a colleague: a contact link with no address and no seat.
+func (e *evidenceTriggerEnv) replaceAttendeeWithContactLink(t *testing.T, activityID ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		var personID ids.UUID
+		var contactID ids.UUID
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO person (first_name, last_name, full_name, source, captured_by)
+			INSERT INTO contact (first_name, last_name, full_name, source, captured_by)
 			VALUES ('Kim', 'Colleague', 'Kim Colleague', 'manual', 'human:test')
-			RETURNING id`).Scan(&personID); err != nil {
+			RETURNING id`).Scan(&contactID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			UPDATE activity_participant SET address = NULL, person_id = $2
-			 WHERE activity_id = $1 AND user_id IS NULL`, activityID, personID)
+			UPDATE activity_participant SET address = NULL, contact_id = $2
+			 WHERE activity_id = $1 AND user_id IS NULL`, activityID, contactID)
 		return err
 	}); err != nil {
-		t.Fatalf("rewriting the attendee as a person link: %v", err)
+		t.Fatalf("rewriting the attendee as a contact link: %v", err)
 	}
 }
 

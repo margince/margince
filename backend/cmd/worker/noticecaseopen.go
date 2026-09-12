@@ -6,7 +6,7 @@ package main
 // Wiring the consumer that records what the installation owes a new contact.
 //
 // A consumer rather than a step inside the creation transaction, because every
-// door that mints a person reaches the outbox through the write shape — the web
+// door that mints a contact reaches the outbox through the write shape — the web
 // form, an import, a capture, a promotion — and a duty opened here is opened for
 // all of them without each remembering to.
 //

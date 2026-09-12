@@ -64,7 +64,7 @@ function read(over: Partial<CompanySiteRead> = {}): CompanySiteRead {
     profile_fields: [],
     facts: [],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "hash",

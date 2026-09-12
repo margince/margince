@@ -36,7 +36,7 @@ function readRow(status: CompanySiteRead["status"]): CompanySiteRead {
     ],
     facts: [],
     comparisons: [],
-    people: [],
+    contacts: [],
     legal_entities: [],
     warnings: [],
     draft_version: 2,

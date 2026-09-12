@@ -604,7 +604,7 @@ export function CompanyContextCard() {
  * floating under each. Now every fact a reader can change is a ROW — named on
  * the left, what it currently says on the right, and the editing behind one
  * verb, because ONE PUT writes all of them. Where the site read a value rather
- * than a person typing it, the value carries the design system's own provenance
+ * than a contact typing it, the value carries the design system's own provenance
  * mark instead of a chip of its own.
  */
 function CompanyFactsCard({
@@ -881,10 +881,10 @@ function CompanyFactRow({
 }
 
 /**
- * Where a value came from, when a person did not type it.
+ * Where a value came from, when a contact did not type it.
  *
  * A human-entered value gets no mark, which is the record page's rule and the
- * reason the mark means anything: this profile is mostly typed by people, and
+ * reason the mark means anything: this profile is mostly typed by contacts, and
  * underlining all of it would say only "this is a value". What the mark carries
  * is deliberately not a date — the surrounding surface is a settings page with
  * no record zone of its own, and a timestamp rendered in some other zone is

@@ -165,7 +165,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)
-		s.peopleHandlers = s.peopleHandlers.WithBlobstore(store)
+		s.contactsHandlers = s.contactsHandlers.WithBlobstore(store)
 		// A corpus document is object bytes like any other; without a store the
 		// upload refuses rather than accepting a file it cannot keep.
 		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
@@ -189,7 +189,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		if s.siteReadHandlers.engine != nil {
 			s.siteReadHandlers.engine.blob = store
 		}
-		// A company mark a person uploads is object bytes like any other. A role
+		// A company mark a contact uploads is object bytes like any other. A role
 		// with no store answers 501 on that route rather than accepting an image
 		// it cannot keep — the same refusal the endpoint that serves the bytes
 		// already gives.
@@ -429,7 +429,7 @@ func WithPublicBaseURL(base string) Option {
 		// A Deal Room invitation carries the same kind of credential and is
 		// bound to the same canonical origin for the same reason.
 		s.dealroomsHandlers = s.WithInviteLinkBase(base)
-		// So does the confirm-details link, which opens one person's own record
+		// So does the confirm-details link, which opens one contact's own record
 		// to whoever holds it.
 		s.confirmLinkBase = base
 		s.rewireConfirmationLane(pool)

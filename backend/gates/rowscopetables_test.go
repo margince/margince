@@ -82,7 +82,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	// The edge conjunction bounds the relationship by its ENDPOINTS: each
 	// endpoint column is tested with VisiblePredicate over its own table, so a
-	// person or company id projected from an edge that passed it is
+	// contact or company id projected from an edge that passed it is
 	// bounded as surely as one from a direct scope clause. Reading it as
 	// "relationship only" would report those projections unscoped and send the
 	// next author to add a second clause over a column the conjunction covers.
@@ -101,7 +101,7 @@ type scopeSpelling struct {
 	argument int
 	// endpoints marks the spellings whose clause is the endpoint conjunction:
 	// every endpoint column is bounded by VisiblePredicate over its own table,
-	// so a person id projected from an edge that passed it IS bounded.
+	// so a contact id projected from an edge that passed it IS bounded.
 	endpoints bool
 }
 
@@ -349,8 +349,8 @@ const (
 	// written out below rather than left as a number.
 	//
 	// THE FIRST RISE, and why it is not a widening anybody should copy.
-	// people.RetractMisattributedSignatureFields takes back the profile fields
-	// an earlier build wrote off a message the person never sent. It is a
+	// contacts.RetractMisattributedSignatureFields takes back the profile fields
+	// an earlier build wrote off a message the contact never sent. It is a
 	// repair pass, chosen by DATA — the same SenderPredicate that decides what
 	// may be written decides what may still stand — and run by the enrichment
 	// job's own system principal, which has no seat for a scope to narrow to.
@@ -362,7 +362,7 @@ const (
 	// auth.ScopeClauseFor answers about visibility, so a manual read-share
 	// would have admitted a caller who may not edit the record —
 	// TestEveryMutationOfAShareableRecordProbesForWriteAuthority says so and is
-	// right. The authority it takes instead is auth.Require(person, update),
+	// right. The authority it takes instead is auth.Require(contact, update),
 	// and its confinement is stated beside it in writesWithoutARowProbe.
 	//
 	// THE SECOND RISE, and the same shape as the first. deals.nextMembers reads
@@ -395,21 +395,21 @@ const (
 	// visibility answer follows it and refuses everything a row scope would.
 	//
 	// THE FOURTH RISE, +1, and it is bounded the same way the Undo path above
-	// is. consent.survivingSubject reads person.merged_into_id to answer "which
+	// is. consent.survivingSubject reads contact.merged_into_id to answer "which
 	// record survives this one", so a stop recorded moments after a merge lands
 	// on the survivor instead of on a record no send evaluates. It is reached
 	// from exactly one caller, suppressAdmittedTx, which has already run
 	// auth.EnsureWritable on the id being resolved, in the same transaction,
 	// one statement earlier — so the caller has been shown to reach that row
 	// before this read follows its pointer, and a caller who cannot see the
-	// person never gets here. The read hands back no row: it returns one uuid,
+	// contact never gets here. The read hands back no row: it returns one uuid,
 	// which is either the id the caller already named or the survivor that id
 	// now resolves to.
 	//
 	// THE FIFTH RISE, +3, and all three are the public withdrawal resolve.
-	// consent.resolveWithdrawalTokenTx projects person_id and lead_id off
+	// consent.resolveWithdrawalTokenTx projects contact_id and lead_id off
 	// withdrawal_credential, and legacyPreferenceTokenAsWithdrawal projects
-	// person_id off preference_token, so a one-click unsubscribe can act.
+	// contact_id off preference_token, so a one-click unsubscribe can act.
 	//
 	// There is NO row scope to reach on this edge and there cannot be: the
 	// surface is anonymous by construction — RFC 8058 requires the POST to work
@@ -422,7 +422,7 @@ const (
 	// business correspondence.
 	//
 	// THE SIXTH RISE, +1, and it is the same public edge again.
-	// consent.bindWithdrawalSubject reads person_email and lead to attach the
+	// consent.bindWithdrawalSubject reads contact_email and lead to attach the
 	// record holding the address a withdrawal link is being minted for. It runs
 	// on the SEND path, under the system principal that composes outbound mail,
 	// which holds no seat to narrow to — the same posture every send-path read

@@ -24,16 +24,16 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // pageMenu is what one page kind is asked for: the fact fields it may
-// answer, and whether its call carries the people or legal-entity lanes.
+// answer, and whether its call carries the contacts or legal-entity lanes.
 type pageMenu struct {
 	factFields []string
-	people     bool
+	contacts   bool
 	entities   bool
 }
 
@@ -41,31 +41,31 @@ type pageMenu struct {
 // makes NO call (boilerplate and unclassified pages state few facts and
 // their calls would dominate cost, not quality).
 func menuForKind(kind crmcontracts.SiteReadPageKind) (pageMenu, bool) {
-	company := people.CompanyFactFields[companyWord]
+	company := contacts.CompanyFactFields[companyWord]
 	offeringAndMarket := factFields("offering", "market")
 	switch kind {
 	case crmcontracts.SiteReadPageKindImpressum:
-		// The imprint carries the people lane because German law puts the
+		// The imprint carries the contacts lane because German law puts the
 		// board on it: §5 TMG requires a company to name its
 		// Vertretungsberechtigte, so adesso.de/impressum prints five board
 		// members and the supervisory board chair. That page is often the
 		// ONLY place a large firm names anyone -- adesso publishes no team
 		// directory the crawl reaches, and read without this lane it
-		// yielded a hundred facts and zero people.
+		// yielded a hundred facts and zero contacts.
 		//
 		// The testimonial risk that shaped the About lane does not exist
 		// here: an imprint quotes no customers.
-		return pageMenu{factFields: company, entities: true, people: true}, true
+		return pageMenu{factFields: company, entities: true, contacts: true}, true
 	case crmcontracts.SiteReadPageKindContact:
 		return pageMenu{factFields: company}, true
 	case crmcontracts.SiteReadPageKindServices, crmcontracts.SiteReadPageKindProducts:
-		return pageMenu{factFields: append(offeringAndMarket, people.FactTechnology)}, true
+		return pageMenu{factFields: append(offeringAndMarket, contacts.FactTechnology)}, true
 	case crmcontracts.SiteReadPageKindHome, crmcontracts.SiteReadPageKindAbout:
-		// These pages keep the people lane: an about page's founders and
+		// These pages keep the contacts lane: an about page's founders and
 		// named staff are exactly the contacts worth having. What they must
 		// not yield is the testimonial wall, and the published-email floor
 		// is what separates the two — a company prints an address for the
-		// person you should talk to, and never for the customer it is
+		// contact you should talk to, and never for the customer it is
 		// quoting.
 		//
 		// They also carry the COMPANY category, and the omission was costly.
@@ -81,9 +81,9 @@ func menuForKind(kind crmcontracts.SiteReadPageKind) (pageMenu, bool) {
 		// contact_email and phone ride along, which is right for these pages
 		// too — a home page footer carries both as often as a contact page.
 		// location comes with the category and is no longer appended by hand.
-		return pageMenu{factFields: factFields(companyWord, "offering", "market", "signal"), people: true}, true
+		return pageMenu{factFields: factFields(companyWord, "offering", "market", "signal"), contacts: true}, true
 	case crmcontracts.SiteReadPageKindTeam:
-		return pageMenu{people: true}, true
+		return pageMenu{contacts: true}, true
 	default:
 		return pageMenu{}, false
 	}
@@ -92,7 +92,7 @@ func menuForKind(kind crmcontracts.SiteReadPageKind) (pageMenu, bool) {
 func factFields(categories ...string) []string {
 	var out []string
 	for _, category := range categories {
-		out = append(out, people.CompanyFactFields[category]...)
+		out = append(out, contacts.CompanyFactFields[category]...)
 	}
 	return out
 }
@@ -104,7 +104,7 @@ var factCategoryByField = invertFactFields()
 
 func invertFactFields() map[string]string {
 	byField := map[string]string{}
-	for category, fields := range people.CompanyFactFields {
+	for category, fields := range contacts.CompanyFactFields {
 		for _, field := range fields {
 			byField[field] = category
 		}
@@ -113,9 +113,9 @@ func invertFactFields() map[string]string {
 }
 
 // pageFactsReply is the compact JSON shape every page call answers in.
-// pageFactsPerson is one claimed person in a page-facts reply: name, stated
+// pageFactsContact is one claimed contact in a page-facts reply: name, stated
 // role, optional published email and LinkedIn, and the passage cited for it.
-type pageFactsPerson struct {
+type pageFactsContact struct {
 	N string `json:"n"`
 	R string `json:"r"`
 	Q string `json:"q"`
@@ -131,7 +131,7 @@ type pageFactsReply struct {
 		V string `json:"v"`
 		E string `json:"e"`
 	} `json:"facts"`
-	People   []pageFactsPerson `json:"people"`
+	Contacts []pageFactsContact `json:"contacts"`
 	Entities []struct {
 		N string `json:"n"`
 		A string `json:"a"`
@@ -145,7 +145,7 @@ type pageFactsReply struct {
 func pageFactsShapeValid(text string) error {
 	var parsed pageFactsReply
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &parsed); err != nil {
-		return fmt.Errorf("output must be {\"facts\":[...]} (+people/entities where asked): %w", err)
+		return fmt.Errorf("output must be {\"facts\":[...]} (+contacts/entities where asked): %w", err)
 	}
 	return nil
 }
@@ -154,8 +154,8 @@ func pageFactsShapeValid(text string) error {
 type pageFactsResult struct {
 	url      string
 	kind     crmcontracts.SiteReadPageKind
-	facts    []people.DeepReadFact
-	people   []sitePerson
+	facts    []contacts.DeepReadFact
+	contacts []siteContact
 	entities []corpusLegalEntity
 }
 
@@ -269,7 +269,7 @@ func pageFactsRequest(menu pageMenu, idx snippetIndex) model.Request {
 // claim the company never made. Only quantified_outcome is affected:
 // zero is meaningless for a stat and meaningful nowhere else.
 func zeroedStat(field, value string) bool {
-	if field != people.FactQuantifiedOutcome {
+	if field != contacts.FactQuantifiedOutcome {
 		return false
 	}
 	digits := strings.IndexFunc(value, unicode.IsDigit)
@@ -286,7 +286,7 @@ func zeroedStat(field, value string) bool {
 
 // gatePageFacts is the no-guess gate for one page's compact reply:
 // closed vocabulary (schema-enforced, re-checked), resolvable citation,
-// the value's NAME in the cited passage (±1 same-page join), people
+// the value's NAME in the cited passage (±1 same-page join), contacts
 // published-only, entities only from shallow legal pages. The stored
 // evidence is the resolved passage — our own text, never the model's.
 func gatePageFacts(modelText string, page crawlPage, menu pageMenu, idx snippetIndex) (pageFactsResult, []droppedFinding) {
@@ -300,8 +300,8 @@ func gatePageFacts(modelText string, page crawlPage, menu pageMenu, idx snippetI
 		dropped = append(dropped, droppedFinding{Lane: lane, Field: field, Value: value, Reason: reason})
 	}
 	out.facts = gatePageFactList(parsed, page, menu, idx, drop)
-	if menu.people {
-		out.people = gatePagePeople(parsed, page, idx, drop)
+	if menu.contacts {
+		out.contacts = gatePageContacts(parsed, page, idx, drop)
 	}
 	if menu.entities {
 		out.entities = gatePageEntities(parsed, page, idx, drop)
@@ -309,12 +309,12 @@ func gatePageFacts(modelText string, page crawlPage, menu pageMenu, idx snippetI
 	return out, dropped
 }
 
-func gatePageFactList(parsed pageFactsReply, page crawlPage, menu pageMenu, idx snippetIndex, drop func(lane, field, value, reason string)) []people.DeepReadFact {
+func gatePageFactList(parsed pageFactsReply, page crawlPage, menu pageMenu, idx snippetIndex, drop func(lane, field, value, reason string)) []contacts.DeepReadFact {
 	allowed := map[string]bool{}
 	for _, f := range menu.factFields {
 		allowed[f] = true
 	}
-	var out []people.DeepReadFact
+	var out []contacts.DeepReadFact
 	factIndex := map[string]int{}
 	for _, f := range parsed.Facts {
 		category := factCategoryByField[f.F]
@@ -343,14 +343,14 @@ func gatePageFactList(parsed pageFactsReply, page crawlPage, menu pageMenu, idx 
 		// to know that.
 		value := strings.TrimSpace(f.V)
 		valueKey := ""
-		if people.CompanyFactMultiValue[f.F] {
-			valueKey = people.NormalizeFactValueKey(value)
+		if contacts.CompanyFactMultiValue[f.F] {
+			valueKey = contacts.NormalizeFactValueKey(value)
 			if valueKey == "" {
 				drop(lanePageFacts, f.F, f.V, dropEmptyValueKey)
 				continue
 			}
 		}
-		fact := people.DeepReadFact{
+		fact := contacts.DeepReadFact{
 			Category: category, Field: f.F, Value: value, ValueKey: valueKey,
 			EvidenceSnippet: evidence, SourceURL: page.URL, Confidence: gatedConfidence,
 		}
@@ -374,7 +374,7 @@ func factName(value string) string {
 	return strings.TrimSpace(name)
 }
 
-// factValueSeparator mirrors the people module's value spelling
+// factValueSeparator mirrors the contacts module's value spelling
 // ("Name — short description").
 const factValueSeparator = " — "
 

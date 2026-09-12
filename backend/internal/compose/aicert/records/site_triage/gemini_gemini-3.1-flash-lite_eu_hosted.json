@@ -32,7 +32,7 @@
   "ran_at": "2026-09-06T15:57:04Z",
   "scenarios": [
     {
-      "scenario": "a_one_person_consultancy_is_still_a_company",
+      "scenario": "a_one_contact_consultancy_is_still_a_company",
       "site": "triage",
       "stamp": "4e3feba2780c39c41d2a330ca72d86f43c6b22227b30c85d738ce34456b507aa3b2b9d544468d9fefcc0d44acd96655a2560c65cdd189a160e77113ca637db17aac7bd280be42feb8df39d1d10bf5332f908adfb193405cbfdbd850b42f98cff",
       "verdict": "certified",

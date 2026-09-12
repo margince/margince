@@ -384,7 +384,7 @@ export function CreateAction<Created extends { id: string }>({
   startOpen?: boolean;
   // `keepOpen` turns one save into "saved, next": the modal stays open and
   // empties itself instead of closing. It is for capture done in a run —
-  // somebody reading a list of profiles in another window types six people
+  // somebody reading a list of profiles in another window types six contacts
   // without reopening the form six times. It implies `stay`, because opening
   // the record just created would be the opposite of staying to type the next
   // one.
@@ -945,7 +945,7 @@ export function CreateRecordModal({
       // A form that stays open to take the next record clears only what the
       // save it just made carried. Nothing disables the fields during the
       // round trip, so a reader who kept typing while it was in flight has
-      // words on screen that belong to the NEXT person — and blanking the
+      // words on screen that belong to the NEXT contact — and blanking the
       // whole form would take them with it. `submitted` is what went; anything
       // typed after it stays exactly where the reader put it.
       setValues((current) =>

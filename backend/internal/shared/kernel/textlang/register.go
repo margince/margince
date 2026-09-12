@@ -10,7 +10,7 @@ package textlang
 // unless the correspondence shows both sides already using du", which is
 // correct and unusable: the model re-decides it on every call, and on a real
 // thread carrying four du-forms and four Sie-forms it answers differently each
-// time. Two consecutive drafts to the same person, one du and one Sie, is worse
+// time. Two consecutive drafts to the same contact, one du and one Sie, is worse
 // than either — it reads as a machine that does not know who it is writing to.
 //
 // So the register is resolved once, from the correspondence, and travels in the
@@ -66,7 +66,7 @@ func DetectRegister(text string) Register {
 		return RegisterUnknown
 	}
 	// The quoted thread counts here, unlike in language detection. Which
-	// register two people are on is a property of the RELATIONSHIP, and the
+	// register two contacts are on is a property of the RELATIONSHIP, and the
 	// history is where the evidence for it lives — a single reply may contain
 	// neither form while the exchange behind it is unmistakably du.
 	du := len(duForms.FindAllString(text, -1))

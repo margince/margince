@@ -83,7 +83,7 @@ func mailSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"capture"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true},
-				"person":   {Create: true},
+				"contact":  {Create: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -285,7 +285,7 @@ func TestAMessageReportingNoAddressesIsCaptured(t *testing.T) {
 }
 
 // A subdomain of a registered domain is internal. The workspace registered
-// acme.com; mail among people at mail.acme.com is still colleague mail.
+// acme.com; mail among contacts at mail.acme.com is still colleague mail.
 func TestMailAmongSubdomainsOfARegisteredDomainIsInternal(t *testing.T) {
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)

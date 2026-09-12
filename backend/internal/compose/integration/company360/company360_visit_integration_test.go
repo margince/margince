@@ -24,8 +24,8 @@ import (
 	company360svc "github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -46,7 +46,7 @@ func TestCompanyViewAckIsMonotonicAndPerUser(t *testing.T) {
 
 	// A second tab whose clock lags must not rewind the mark: the upsert
 	// keeps the later of the two.
-	lagging := company360svc.NewService(e.DB().Pool(), people.NewStore(e.DB()), e.Deals, e.Projects, approvals.NewService(e.DB()),
+	lagging := company360svc.NewService(e.DB().Pool(), contacts.NewStore(e.DB()), e.Deals, e.Projects, approvals.NewService(e.DB()),
 		func() time.Time { return company360Clock.Add(-time.Hour) })
 	second, err := lagging.Acknowledge(rep1, company)
 	if err != nil {
@@ -102,7 +102,7 @@ func TestCompany360DoesNotAdvanceTheVisitBaseline(t *testing.T) {
 //
 // What it may do is READ, and the staged proposals are part of that. They are
 // filtered by the same decidability rule the inbox applies for whoever is
-// asking (ADR-0055), so an agent sees exactly what the person it acts for could
+// asking (ADR-0055), so an agent sees exactly what the contact it acts for could
 // answer, and the section is present rather than omitted — which is the whole
 // point of a briefing that says what is waiting.
 func TestCompany360RefusesTheVisitBaselineToAnAgentAndStillShowsWhatIsWaiting(t *testing.T) {
@@ -118,7 +118,7 @@ func TestCompany360RefusesTheVisitBaselineToAnAgentAndStillShowsWhatIsWaiting(t 
 		t.Fatalf("assemble as an agent: %v", err)
 	}
 	if view.PendingApprovals == nil {
-		t.Error("pending_approvals omitted for an agent — the person it acts for can answer these, so the " +
+		t.Error("pending_approvals omitted for an agent — the contact it acts for can answer these, so the " +
 			"briefing that leaves them out is the one that reads as nothing waiting")
 	}
 	if slices.Contains(view.SectionsOmitted, "pending_approvals") {

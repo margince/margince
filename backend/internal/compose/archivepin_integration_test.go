@@ -33,7 +33,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -125,7 +125,7 @@ type archivePinCase struct {
 }
 
 // archivePinCases seeds one record of every type the native provider archives
-// through a pin — person, company and deal.
+// through a pin — contact, company and deal.
 //
 // project and relationship are deliberately absent, and the reason is worth
 // stating: both are reached by a create this harness does not have a one-line
@@ -134,7 +134,7 @@ type archivePinCase struct {
 // would be new about covering them is the seeding, not the guard.
 func archivePinCases(as context.Context, t *testing.T, e *integration.Env, p *Provider) []archivePinCase {
 	t.Helper()
-	person := seedForArchivePin(as, t, p, datasource.EntityPerson,
+	contact := seedForArchivePin(as, t, p, datasource.EntityContact,
 		`{"full_name":"Pin Probe","owner_id":"`+e.AdminUser.String()+`"}`)
 	company := seedForArchivePin(as, t, p, datasource.EntityCompany,
 		`{"display_name":"Pin Probe GmbH","owner_id":"`+e.AdminUser.String()+`"}`)
@@ -145,7 +145,7 @@ func archivePinCases(as context.Context, t *testing.T, e *integration.Env, p *Pr
 			`","pipeline_id":"`+pipeline.String()+`","stage_id":"`+open.String()+`"}`)
 
 	return []archivePinCase{
-		{ref: person, table: "person", version: versionOf(t, e, "person", person.ID)},
+		{ref: contact, table: "contact", version: versionOf(t, e, "contact", contact.ID)},
 		{ref: company, table: "company", version: versionOf(t, e, "company", company.ID)},
 		{ref: deal, table: "deal", version: versionOf(t, e, "deal", deal.ID)},
 	}
@@ -168,7 +168,7 @@ func seedForArchivePin(as context.Context, t *testing.T, p *Provider,
 // provider, which moves the row's version exactly as a racing human would.
 //
 // The version is read either side and the MOVE is asserted, which is not
-// belt-and-braces: this test caught itself passing for person and company
+// belt-and-braces: this test caught itself passing for contact and company
 // because the patch named `job_title` and `website`, fields those update
 // requests do not carry. Neither errored — both requests carry an
 // AdditionalProperties map, so an unknown field is absorbed rather than
@@ -181,7 +181,7 @@ func bumpVersion(as context.Context, t *testing.T, e *integration.Env, p *Provid
 	t.Helper()
 	before := versionOf(t, e, table, ref.ID)
 	patch := map[datasource.EntityType]string{
-		datasource.EntityPerson:  `{"title":"changed under the approval"}`,
+		datasource.EntityContact: `{"title":"changed under the approval"}`,
 		datasource.EntityCompany: `{"description":"changed under the approval"}`,
 		datasource.EntityDeal:    `{"name":"changed under the approval"}`,
 	}[ref.Type]
@@ -236,19 +236,19 @@ func TestTheRESTArchiveHonoursAStaleIfMatch(t *testing.T) {
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
 
-	person := seedForArchivePin(admin, t, native, datasource.EntityPerson,
+	contact := seedForArchivePin(admin, t, native, datasource.EntityContact,
 		`{"full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
-	stale := versionOf(t, e, "person", person.ID)
-	bumpVersion(admin, t, e, native, "person", person)
+	stale := versionOf(t, e, "contact", contact.ID)
+	bumpVersion(admin, t, e, native, "contact", contact)
 
-	rec := archiveOverREST(admin, t, e, person.ID, stale)
+	rec := archiveOverREST(admin, t, e, contact.ID, stale)
 
 	if rec.Code != http.StatusConflict {
-		t.Fatalf("DELETE /v1/people/{id} with a stale If-Match answered %d, want 409 — an archive "+
+		t.Fatalf("DELETE /v1/contacts/{id} with a stale If-Match answered %d, want 409 — an archive "+
 			"released against a version the record has left must not land", rec.Code)
 	}
-	if archivedAt(t, e, "person", person.ID) {
-		t.Error("the person was archived anyway: the 409 is a message, not a guard")
+	if archivedAt(t, e, "contact", contact.ID) {
+		t.Error("the contact was archived anyway: the 409 is a message, not a guard")
 	}
 }
 
@@ -259,34 +259,34 @@ func TestTheRESTArchiveAcceptsACurrentIfMatch(t *testing.T) {
 	native := NewProvider(e.Pool)
 	admin := e.Admin()
 
-	person := seedForArchivePin(admin, t, native, datasource.EntityPerson,
+	contact := seedForArchivePin(admin, t, native, datasource.EntityContact,
 		`{"full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
 
-	rec := archiveOverREST(admin, t, e, person.ID, versionOf(t, e, "person", person.ID))
+	rec := archiveOverREST(admin, t, e, contact.ID, versionOf(t, e, "contact", contact.ID))
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("DELETE /v1/people/{id} with the current If-Match answered %d, want 200", rec.Code)
+		t.Fatalf("DELETE /v1/contacts/{id} with the current If-Match answered %d, want 200", rec.Code)
 	}
-	if !archivedAt(t, e, "person", person.ID) {
-		t.Error("the person reports no archived_at after an accepted archive")
+	if !archivedAt(t, e, "contact", contact.ID) {
+		t.Error("the contact reports no archived_at after an accepted archive")
 	}
 }
 
-// archiveOverREST drives the real people handler the router binds, carrying
+// archiveOverREST drives the real contacts handler the router binds, carrying
 // If-Match as the agent gate would.
 func archiveOverREST(as context.Context, t *testing.T, e *integration.Env,
-	person ids.UUID, ifVersion int64,
+	contact ids.UUID, ifVersion int64,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodDelete, "/v1/people/"+person.String(), nil)
+	req := httptest.NewRequest(http.MethodDelete, "/v1/contacts/"+contact.String(), nil)
 	req.Header.Set("If-Match", strconv.FormatInt(ifVersion, 10))
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", person.String())
+	rctx.URLParams.Add("id", contact.String())
 	req = req.WithContext(context.WithValue(as, chi.RouteCtxKey, rctx))
 
 	rec := httptest.NewRecorder()
-	people.NewHandlers(e.DB()).ArchivePerson(rec, req, crmcontracts.Id(person),
-		crmcontracts.ArchivePersonParams{})
+	contacts.NewHandlers(e.DB()).ArchiveContact(rec, req, crmcontracts.Id(contact),
+		crmcontracts.ArchiveContactParams{})
 	return rec
 }
 

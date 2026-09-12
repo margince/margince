@@ -134,7 +134,7 @@ export const Buttons: Story = {
         <div style={row}>
           <Button variant="primary">
             <Plus aria-hidden />
-            Add person
+            Add contact
           </Button>
           <Button variant="ghost">
             <RefreshCw aria-hidden />
@@ -151,7 +151,7 @@ export const Buttons: Story = {
           Icon only — square, and named for a reader
         </span>
         <div style={row}>
-          <Button variant="primary" iconOnly aria-label="Add person">
+          <Button variant="primary" iconOnly aria-label="Add contact">
             <Plus aria-hidden />
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
@@ -395,7 +395,7 @@ export const Avatars: Story = {
         </span>
         <div style={row}>
           <AvatarStack
-            people={[
+            contacts={[
               { name: "Alice Müller" },
               { name: "Bob Schmidt" },
               { name: "Carol Wagner" },
@@ -624,7 +624,7 @@ export const ReadingsWithADoor: Story = {
       }}
     >
       <StatCard
-        label="The people"
+        label="The contacts"
         value="1 of 3 engaged"
         detail="a champion is named"
         meter={{ filled: 1, total: 3 }}
@@ -734,7 +734,7 @@ export const ReadingsAtOneSize: Story = {
 // Loading and empty in one story: they are the same moment of a screen's life
 // seen twice, and the pair is where the honest failure shows up — a skeleton
 // that outlives the request and an empty state that says nothing useful both
-// read as "broken" to the person waiting.
+// read as "broken" to the contact waiting.
 export const Placeholders: Story = {
   render: () => (
     <div style={stack}>
@@ -793,7 +793,7 @@ export const Sections: Story = {
       <Card>
         {/* As the card's first child, which is the pairing atoms.css styles.
             Equivalent to passing title/sub to Card — that is what it renders. */}
-        <SectionHeader title="Contacts" sub="Three people at this company" />
+        <SectionHeader title="Contacts" sub="Three contacts at this company" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
       {/* level={3} is a section INSIDE a section — a group of fields under the
@@ -1029,7 +1029,7 @@ function ModalDemo() {
         </h2>
         <p className="t-caption">
           Globex GmbH keeps its record; the duplicate's activities, deals and
-          people move onto it. This cannot be undone.
+          contacts move onto it. This cannot be undone.
         </p>
         <div className="actions">
           <Button onClick={() => setOpen(false)}>Cancel</Button>

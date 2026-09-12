@@ -49,7 +49,7 @@ func TestTheDirectoryReadsThroughTheSeam(t *testing.T) {
 	for _, a := range box.Accounts {
 		if a.CompanyID == company.String() {
 			found = true
-			if len(a.People) == 0 {
+			if len(a.Contacts) == 0 {
 				t.Error("the account carries no contacts, so the generator writes to nobody")
 			}
 			if a.Now.IsZero() {
@@ -92,7 +92,7 @@ func TestTheDirectoryOnlyReturnsThisSeatsAccounts(t *testing.T) {
 	}
 }
 
-// seedOfflineDemoAccount writes one owned company with a contactable person,
+// seedOfflineDemoAccount writes one owned company with a contactable contact,
 // which is the minimum the generator needs to write a thread.
 func seedOfflineDemoAccount(t *testing.T, e *integration.Env, owner ids.UUID, slug string) ids.UUID {
 	t.Helper()
@@ -105,21 +105,21 @@ func seedOfflineDemoAccount(t *testing.T, e *integration.Env, owner ids.UUID, sl
 	if err != nil {
 		t.Fatalf("seeding a company: %v", err)
 	}
-	var personID ids.UUID
+	var contactID ids.UUID
 	err = e.Pool.QueryRow(ctx, `
-		INSERT INTO person (full_name, source, captured_by)
-		VALUES ($1, 'test', 'human:test') RETURNING id`, "Petra "+slug).Scan(&personID)
+		INSERT INTO contact (full_name, source, captured_by)
+		VALUES ($1, 'test', 'human:test') RETURNING id`, "Petra "+slug).Scan(&contactID)
 	if err != nil {
-		t.Fatalf("seeding a person: %v", err)
+		t.Fatalf("seeding a contact: %v", err)
 	}
 	if _, err := e.Pool.Exec(ctx, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'test', 'human:test')`, personID, "petra@"+slug+".example"); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'test', 'human:test')`, contactID, "petra@"+slug+".example"); err != nil {
 		t.Fatalf("seeding an address: %v", err)
 	}
 	if _, err := e.Pool.Exec(ctx, `
-		INSERT INTO relationship (kind, person_id, company_id, role, source, captured_by)
-		VALUES ('employment', $1, $2, 'Head of IT', 'test', 'human:test')`, personID, companyID); err != nil {
+		INSERT INTO relationship (kind, contact_id, company_id, role, source, captured_by)
+		VALUES ('employment', $1, $2, 'Head of IT', 'test', 'human:test')`, contactID, companyID); err != nil {
 		t.Fatalf("seeding an employment: %v", err)
 	}
 	return companyID

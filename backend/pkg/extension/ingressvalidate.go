@@ -97,12 +97,12 @@ func (r Record) validateAddresses() error {
 // can absorb — it is a row that would say somebody unnameable was present, and
 // the core drops it silently. A unit reading its own refusal here learns that
 // its mapping lost the field, which is the bug; a silent drop reports a
-// four-person group as a three-person one and nothing fails.
+// four-contact group as a three-contact one and nothing fails.
 //
 // Over the cap is a refusal of the RECORD rather than a truncation, for the
 // reason the cap exists: half a broadcast list reads like a small conversation,
 // and a unit told which bound it crossed can decide what its provider sent,
-// where a silent trim leaves it believing a sixty-person group landed whole.
+// where a silent trim leaves it believing a sixty-contact group landed whole.
 func (r Record) validateParticipants() error {
 	if len(r.Participants) > MaxParticipants {
 		return fmt.Errorf("extension: the record names %d participants, over the cap of %d — past it a roster is a broadcast list rather than a conversation, and the record is refused rather than trimmed to look like a small one",

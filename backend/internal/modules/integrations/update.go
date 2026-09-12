@@ -151,7 +151,7 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 	// to it: deleting the claims and the ledger before reading that map would
 	// leave the values on the records with nothing left to identify them by.
 	//
-	// One transaction per contact because this reaches every person a purchase
+	// One transaction per contact because this reaches every contact a purchase
 	// touched, and the eraser locks those rows subject-first — a single
 	// transaction over all of them is a deadlock against somebody's Art. 17
 	// request, with an unbounded lock set on top.
@@ -162,7 +162,7 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The claims belong to the owning domain, so the domain deletes them:
 		// integrations does not write another module's table. compose supplies
-		// this callback from people (see doc.go); with no domain bound there
+		// this callback from contacts (see doc.go); with no domain bound there
 		// are no claims to delete either.
 		if s.deleteClaims != nil {
 			if _, err := s.deleteClaims(ctx, tx, name); err != nil {
@@ -170,8 +170,8 @@ func (s *Store) DeleteProviderData(ctx context.Context, name string) error {
 			}
 		}
 		// The run rows stay as the spend ledger, but they must stop naming
-		// anybody: a row saying "we bought data about this person on this
-		// date" is data about that person, and leaving it while deleting the
+		// anybody: a row saying "we bought data about this contact on this
+		// date" is data about that contact, and leaving it while deleting the
 		// values would be a scrub in name only.
 		//
 		// The SET clause is storekit's because the Art. 17 erasure performs

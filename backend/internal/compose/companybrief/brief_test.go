@@ -311,19 +311,19 @@ func TestParseBriefRefusesACitationToAnotherAccount(t *testing.T) {
 }
 
 // A citation is a TYPE and an id, and both must match. Keying on the id alone
-// accepted a real deal id cited as a person, which routes the reader to the
+// accepted a real deal id cited as a contact, which routes the reader to the
 // wrong screen — or to a record of a kind they were never shown.
 func TestParseBriefRefusesARealIDUnderTheWrongType(t *testing.T) {
 	in := inputFixture()
 	dealID := in.OpenDeals[0].ID
 	kept, err := ParseBrief(
-		`{"sentences":[{"text":"Dana is the champion.","evidence":[{"entity_type":"person","entity_id":"`+dealID+`"}]}]}`,
+		`{"sentences":[{"text":"Dana is the champion.","evidence":[{"entity_type":"contact","entity_id":"`+dealID+`"}]}]}`,
 		briefCompanyID, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if len(kept) != 0 {
-		t.Errorf("kept a sentence citing a deal id as a person: %+v", kept)
+		t.Errorf("kept a sentence citing a deal id as a contact: %+v", kept)
 	}
 }
 
@@ -336,7 +336,7 @@ func TestParseBriefDropsASentenceWithAnyUngroundedCitation(t *testing.T) {
 	kept, err := ParseBrief(
 		`{"sentences":[{"text":"The retrofit stalled after the buyer left.","evidence":[
 		  {"entity_type":"deal","entity_id":"`+in.OpenDeals[0].ID+`"},
-		  {"entity_type":"person","entity_id":"55555555-5555-4555-8555-555555555555"}]}]}`,
+		  {"entity_type":"contact","entity_id":"55555555-5555-4555-8555-555555555555"}]}]}`,
 		briefCompanyID, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
@@ -347,7 +347,7 @@ func TestParseBriefDropsASentenceWithAnyUngroundedCitation(t *testing.T) {
 }
 
 // A contact or an open task can be written about, so both must be citable —
-// the prompt invites a person citation, and an input that could not ground one
+// the prompt invites a contact citation, and an input that could not ground one
 // meant the sentence was silently dropped and the reader lost a true fact.
 func TestParseBriefGroundsContactsAndTasks(t *testing.T) {
 	in := inputFixture()
@@ -356,7 +356,7 @@ func TestParseBriefGroundsContactsAndTasks(t *testing.T) {
 
 	kept, err := ParseBrief(
 		`{"sentences":[
-		  {"text":"Dana Buyer is your contact.","evidence":[{"entity_type":"person","entity_id":"`+in.Contacts[0].ID+`"}]},
+		  {"text":"Dana Buyer is your contact.","evidence":[{"entity_type":"contact","entity_id":"`+in.Contacts[0].ID+`"}]},
 		  {"text":"One task is open.","evidence":[{"entity_type":"activity","entity_id":"`+in.OpenTasks[0].ID+`"}]}]}`,
 		briefCompanyID, in)
 	if err != nil {

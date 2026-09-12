@@ -5,7 +5,7 @@ package compose
 
 // The flip's migration.Writers over the native stores — the injected
 // seam that keeps the migration module blind to the record modules it
-// feeds (people/deals/activities each own their write shape; every
+// feeds (contacts/deals/activities each own their write shape; every
 // create below rides their audited, event-emitting entry points).
 //
 // Idempotency: the flip's source is a FROZEN snapshot, so a re-imported
@@ -35,10 +35,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/overlay"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -53,13 +53,13 @@ var errFlipReplayed = errors.New("flip import: the record replayed under its nat
 // flipWriters implements migration.Writers for the overlay→native flip.
 type flipWriters struct {
 	pool       *pgxpool.Pool
-	people     *people.Store
+	contacts   *contacts.Store
 	deals      *deals.Store
 	activities *activities.Store
 	ms         *overlay.MirrorStore
 	identities *migration.RunStore
 	// incumbent names the source system in provenance stamps
-	// ("hubspot:person:123" — UC-E11-03's <source>:<object>:<id>) and
+	// ("hubspot:contact:123" — UC-E11-03's <source>:<object>:<id>) and
 	// keys the engine-owned identity map.
 	incumbent string
 	// runID attributes each identity-map row to the run that landed it.
@@ -77,7 +77,7 @@ type flipWriters struct {
 	// assocs are the estate's edges, set before the run: activity links
 	// must ride LogActivity's insert (links are write-once with the row),
 	// so EnsureActivity reads its own edges here while Associate applies
-	// the person/company/deal edges after every endpoint exists.
+	// the contact/company/deal edges after every endpoint exists.
 	assocs []migration.Assoc
 	// stages is the native stage catalog, loaded lazily on the first deal.
 	stages *flipStageCatalog
@@ -104,7 +104,7 @@ func newFlipWriters(db *database.DB, ms *overlay.MirrorStore, incumbent string) 
 	pool := db.Pool()
 	return &flipWriters{
 		pool:       pool,
-		people:     people.NewStore(db),
+		contacts:   contacts.NewStore(db),
 		deals:      deals.NewStore(db, DealsInstallation()),
 		activities: activities.NewStore(db),
 		ms:         ms,
@@ -136,7 +136,7 @@ func (w *flipWriters) provenance(object, ext string) string {
 // importSourceSystem namespaces the source_system the flip writes on the
 // two objects whose stores key their own idempotent replay on
 // (source_system, source_id). The prefix is refused at the WIRE
-// MAPPERS — people.leadCreateInput and activities.LogActivityInputFrom —
+// MAPPERS — contacts.leadCreateInput and activities.LogActivityInputFrom —
 // so a caller cannot pre-plant a row under a guessed incumbent id and
 // have the store hand it back as already existing. The stores
 // themselves accept the namespace, which is how this in-process writer
@@ -150,7 +150,7 @@ func (w *flipWriters) importSourceSystem() string {
 // because something else already holds its natural key.
 const skipReasonNaturalKeyTaken = "natural_key_already_taken"
 
-// skipReasonDuplicateEmail marks an estate contact whose email a native person
+// skipReasonDuplicateEmail marks an estate contact whose email a native contact
 // already holds — a merge candidate the flip discloses rather than resolves.
 const skipReasonDuplicateEmail = "duplicate_email"
 
@@ -196,7 +196,7 @@ func (w *flipWriters) lookup(ctx context.Context, object, ext string) (ids.UUID,
 // ensure — the allowlist the identity map's own writes rely on.
 func flipImportable(object string) bool {
 	switch object {
-	case flipObjectPerson, flipObjectCompany, flipObjectDeal, flipObjectLead, flipObjectActivity:
+	case flipObjectContact, flipObjectCompany, flipObjectDeal, flipObjectLead, flipObjectActivity:
 		return true
 	default:
 		return false
@@ -263,8 +263,8 @@ func (w *flipWriters) Ensure(ctx context.Context, object string, row migration.R
 	switch object {
 	case flipObjectCompany:
 		return w.ensureCompany(ctx, row)
-	case flipObjectPerson:
-		return w.ensurePerson(ctx, row)
+	case flipObjectContact:
+		return w.ensureContact(ctx, row)
 	case flipObjectLead:
 		return w.ensureLead(ctx, row)
 	case flipObjectDeal:
@@ -285,7 +285,7 @@ func (w *flipWriters) ensureCompany(ctx context.Context, row migration.Row) (mig
 	if name == "" {
 		name = overlayUnnamed
 	}
-	in := people.CreateCompanyInput{
+	in := contacts.CreateCompanyInput{
 		DisplayName: name,
 		Industry:    fieldStringPtr(row.Fields, "industry"),
 		OwnerID:     owner,
@@ -298,7 +298,7 @@ func (w *flipWriters) ensureCompany(ctx context.Context, row migration.Row) (mig
 		in.SizeBand = &s
 	}
 	if _, err := w.landRecord(ctx, flipObjectCompany, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		company, err := w.people.CreateCompanyTx(ctx, tx, in)
+		company, err := w.contacts.CreateCompanyTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("flip import: creating company %s: %w", row.ExternalID, err)
 		}
@@ -309,8 +309,8 @@ func (w *flipWriters) ensureCompany(ctx context.Context, row migration.Row) (mig
 	return migration.EnsureResult{Created: true, Disclosure: disclosure}, nil
 }
 
-func (w *flipWriters) ensurePerson(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
-	owner, disclosure, err := w.resolveOwner(ctx, row, flipObjectPerson)
+func (w *flipWriters) ensureContact(ctx context.Context, row migration.Row) (migration.EnsureResult, error) {
+	owner, disclosure, err := w.resolveOwner(ctx, row, flipObjectContact)
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
@@ -318,35 +318,35 @@ func (w *flipWriters) ensurePerson(ctx context.Context, row migration.Row) (migr
 	if fullName == "" {
 		fullName = overlayUnnamed
 	}
-	in := people.CreatePersonInput{
+	in := contacts.CreateContactInput{
 		// Recorded as the import it is. unknown_legacy is the honest answer
 		// where a door cannot say why a contact exists; here the door knows,
 		// and letting it default would make the same import, arriving through the flip writer
 		// indistinguishable from a rep typing a name in.
-		Acquisition: people.Acquisition{Kind: people.AcquiredPurchasedOrImported},
+		Acquisition: contacts.Acquisition{Kind: contacts.AcquiredPurchasedOrImported},
 		FullName:    fullName,
 		FirstName:   fieldStringPtr(row.Fields, "first_name"),
 		LastName:    fieldStringPtr(row.Fields, "last_name"),
 		Title:       fieldStringPtr(row.Fields, "title"),
 		OwnerID:     owner,
 		Address:     overlayAddress(row.Fields),
-		Emails:      flipPersonEmails(row.Fields),
-		Source:      w.provenance(flipObjectPerson, row.ExternalID),
+		Emails:      flipContactEmails(row.Fields),
+		Source:      w.provenance(flipObjectContact, row.ExternalID),
 	}
-	if _, err := w.landRecord(ctx, flipObjectPerson, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
-		person, err := w.people.CreatePersonTx(ctx, tx, in)
+	if _, err := w.landRecord(ctx, flipObjectContact, row.ExternalID, func(tx pgx.Tx) (ids.UUID, error) {
+		contact, err := w.contacts.CreateContactTx(ctx, tx, in)
 		if err != nil {
-			return ids.UUID{}, fmt.Errorf("flip import: creating person %s: %w", row.ExternalID, err)
+			return ids.UUID{}, fmt.Errorf("flip import: creating contact %s: %w", row.ExternalID, err)
 		}
-		return ids.UUID(person.Id), nil
+		return ids.UUID(contact.Id), nil
 	}); err != nil {
-		var dup *people.DuplicateEmailError
+		var dup *contacts.DuplicateEmailError
 		if errors.As(err, &dup) {
 			// An estate contact whose email already belongs to a native
-			// person is a merge candidate, never auto-merged (AC-M9's
+			// contact is a merge candidate, never auto-merged (AC-M9's
 			// posture) — disclosed as a skip, not silently dropped. Nothing
 			// of it is left behind: the landing rolled back, so no identity
-			// row names a person this run did not create.
+			// row names a contact this run did not create.
 			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
 		}
 		return migration.EnsureResult{}, err
@@ -354,32 +354,32 @@ func (w *flipWriters) ensurePerson(ctx context.Context, row migration.Row) (migr
 	return migration.EnsureResult{Created: true, Disclosure: disclosure}, nil
 }
 
-// flipPersonEmails shapes the mirrored contact's addresses into the people
+// flipContactEmails shapes the mirrored contact's addresses into the contacts
 // store's input. The mapper lands a TargetChild under its PARENT key, as rows
 // of a collection, never under the dotted To — so this reads it with the same
 // helper the wire projection uses; a flat lookup silently returns "" and drops
-// every contact's email, and with it the duplicate-email skip ensurePerson
+// every contact's email, and with it the duplicate-email skip ensureContact
 // depends on. The WHOLE collection is carried, as the read wire publishes it
-// (overlayPersonEmails): the flip writes durable rows and freezes the mirror,
+// (overlayContactEmails): the flip writes durable rows and freezes the mirror,
 // so an address the wire shows but the import drops is lost for good. Type,
 // primary flag and position are each row's own declared attributes, so the
 // native rows inherit what the mapping said rather than an assumption. Every
 // row's type is held to the contract's enum before it is forwarded:
-// person_email.email_type is CHECK-constrained, so a mapping declaring a type
+// contact_email.email_type is CHECK-constrained, so a mapping declaring a type
 // outside that set would abort the whole import with a raw constraint error
 // where the read wire falls back — the work address one mapped address means.
-func flipPersonEmails(fields map[string]any) []people.PersonEmailInput {
-	var out []people.PersonEmailInput
-	for _, row := range overlayChildRows(fields, "person_email") {
+func flipContactEmails(fields map[string]any) []contacts.ContactEmailInput {
+	var out []contacts.ContactEmailInput
+	for _, row := range overlayChildRows(fields, "contact_email") {
 		address := strings.TrimSpace(fieldString(row, "email"))
 		if address == "" {
 			continue
 		}
-		emailType := crmcontracts.PersonEmailEmailType(strings.TrimSpace(fieldString(row, "email_type")))
+		emailType := crmcontracts.ContactEmailEmailType(strings.TrimSpace(fieldString(row, "email_type")))
 		if !emailType.Valid() {
-			emailType = crmcontracts.PersonEmailEmailTypeWork
+			emailType = crmcontracts.ContactEmailEmailTypeWork
 		}
-		out = append(out, people.PersonEmailInput{
+		out = append(out, contacts.ContactEmailInput{
 			Email:     address,
 			EmailType: string(emailType),
 			IsPrimary: childRowIsPrimary(row),
@@ -389,19 +389,19 @@ func flipPersonEmails(fields map[string]any) []people.PersonEmailInput {
 	return out
 }
 
-// flipCompanyDomains shapes the mirrored company's domains the way flipPersonEmails
+// flipCompanyDomains shapes the mirrored company's domains the way flipContactEmails
 // shapes the contact's addresses — the same child collection, carried across
-// whole rather than reduced to its leading row (the people store normalizes the
+// whole rather than reduced to its leading row (the contacts store normalizes the
 // host, so no pre-cleaning here). A domain row declares no type, so there is no
 // enum to hold it to.
-func flipCompanyDomains(fields map[string]any) []people.CompanyDomainInput {
-	var out []people.CompanyDomainInput
+func flipCompanyDomains(fields map[string]any) []contacts.CompanyDomainInput {
+	var out []contacts.CompanyDomainInput
 	for _, row := range overlayChildRows(fields, "company_domain") {
 		domain := strings.TrimSpace(fieldString(row, "domain"))
 		if domain == "" {
 			continue
 		}
-		out = append(out, people.CompanyDomainInput{Domain: domain, IsPrimary: childRowIsPrimary(row)})
+		out = append(out, contacts.CompanyDomainInput{Domain: domain, IsPrimary: childRowIsPrimary(row)})
 	}
 	return out
 }
@@ -413,7 +413,7 @@ func (w *flipWriters) ensureLead(ctx context.Context, row migration.Row) (migrat
 	}
 	ext := row.ExternalID
 	sourceSystem := w.importSourceSystem()
-	in := people.CreateLeadInput{
+	in := contacts.CreateLeadInput{
 		FullName:     fieldStringPtr(row.Fields, "full_name"),
 		Email:        fieldStringPtr(row.Fields, "email"),
 		CompanyName:  fieldStringPtr(row.Fields, "company_name"),
@@ -424,7 +424,7 @@ func (w *flipWriters) ensureLead(ctx context.Context, row migration.Row) (migrat
 		Source:       w.provenance(flipObjectLead, ext),
 	}
 	if _, err := w.landRecord(ctx, flipObjectLead, ext, func(tx pgx.Tx) (ids.UUID, error) {
-		lead, created, err := w.people.CreateLeadTx(ctx, tx, in)
+		lead, created, err := w.contacts.CreateLeadTx(ctx, tx, in)
 		if err != nil {
 			return ids.UUID{}, fmt.Errorf("flip import: creating lead %s: %w", ext, err)
 		}

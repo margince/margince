@@ -112,7 +112,7 @@ func readToolOver(records ...datasource.Record) recordTool {
 	return recordTool{spec: spec, records: records}
 }
 
-// recordAt is a row a person typed, which is the only provenance that earns T1.
+// recordAt is a row a human typed, which is the only provenance that earns T1.
 func recordAt(entity datasource.EntityType, syncedAt time.Time, authoritative bool) datasource.Record {
 	return recordWrittenBy(entity, syncedAt, authoritative, "human:"+ids.NewV7().String())
 }
@@ -120,7 +120,7 @@ func recordAt(entity datasource.EntityType, syncedAt time.Time, authoritative bo
 func recordWrittenBy(entity datasource.EntityType, syncedAt time.Time, authoritative bool, capturedBy string) datasource.Record {
 	return datasource.Record{
 		Ref:       datasource.EntityRef{Type: entity, ID: ids.NewV7()},
-		Fields:    json.RawMessage(`{"source":"ui:person-form","captured_by":"` + capturedBy + `"}`),
+		Fields:    json.RawMessage(`{"source":"ui:contact-form","captured_by":"` + capturedBy + `"}`),
 		Freshness: datasource.FreshnessInfo{LastSyncedAt: syncedAt, Authoritative: authoritative},
 	}
 }
@@ -204,7 +204,7 @@ func TestFreshnessReportsTheOldestContributingRecord(t *testing.T) {
 	newest := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
-		recordAt(datasource.EntityPerson, newest, true),
+		recordAt(datasource.EntityContact, newest, true),
 		recordAt(datasource.EntityDeal, oldest, true),
 	)))
 
@@ -224,7 +224,7 @@ func TestFreshnessReportsTheOldestContributingRecord(t *testing.T) {
 // believing it came from the workspace.
 func TestOneMirrorBackedRecordTaintsTheAnswer(t *testing.T) {
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
-		recordAt(datasource.EntityPerson, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), true),
+		recordAt(datasource.EntityContact, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), true),
 		recordAt(datasource.EntityCompany, time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC), false),
 	)))
 
@@ -285,7 +285,7 @@ func TestACapturedRecordIsUntrustedEvenWhenItIsOurs(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
-				recordWrittenBy(datasource.EntityPerson, time.Now(), true, capturedBy))))
+				recordWrittenBy(datasource.EntityContact, time.Now(), true, capturedBy))))
 
 			if env.Trust != trustExternal {
 				t.Errorf("trust = %q for a record written by %s, want %q — reporting it as first-party "+
@@ -305,7 +305,7 @@ func TestACapturedRecordIsUntrustedEvenWhenItIsOurs(t *testing.T) {
 // absent one, and the tempting reading of both is "probably fine".
 func TestARecordWhoseProvenanceCannotBeReadIsUntrusted(t *testing.T) {
 	unreadable := datasource.Record{
-		Ref:       datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()},
+		Ref:       datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()},
 		Fields:    json.RawMessage(`["not an object"]`),
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}
@@ -321,7 +321,7 @@ func TestARecordWhoseProvenanceCannotBeReadIsUntrusted(t *testing.T) {
 // than take it.
 func TestEvidenceCarriesTheProvenanceTheRowWasStampedWith(t *testing.T) {
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
-		recordWrittenBy(datasource.EntityPerson, time.Now(), true, "connector:gmail"))))
+		recordWrittenBy(datasource.EntityContact, time.Now(), true, "connector:gmail"))))
 
 	if len(env.Evidence) != 1 {
 		t.Fatalf("evidence = %v, want the one record that was read", env.Evidence)
@@ -353,7 +353,7 @@ func TestAZeroIDIsNotEvidence(t *testing.T) {
 // served is in the list — that is what "no unsourced element" means at this
 // granularity.
 func TestEvidenceNamesEveryRecordOnceAndOnlyOnce(t *testing.T) {
-	twice := recordAt(datasource.EntityPerson, time.Time{}, true)
+	twice := recordAt(datasource.EntityContact, time.Time{}, true)
 
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver(
 		twice, twice, recordAt(datasource.EntityDeal, time.Time{}, true),
@@ -362,8 +362,8 @@ func TestEvidenceNamesEveryRecordOnceAndOnlyOnce(t *testing.T) {
 	if len(env.Evidence) != 2 {
 		t.Fatalf("evidence = %v, want the two distinct records", env.Evidence)
 	}
-	if env.Evidence[0].RecordID != twice.Ref.ID || env.Evidence[0].RecordType != datasource.EntityPerson {
-		t.Errorf("evidence[0] = %v, want the person that was read", env.Evidence[0])
+	if env.Evidence[0].RecordID != twice.Ref.ID || env.Evidence[0].RecordType != datasource.EntityContact {
+		t.Errorf("evidence[0] = %v, want the contact that was read", env.Evidence[0])
 	}
 }
 
@@ -402,7 +402,7 @@ func TestABoundedCallerIsWarnedWhateverScopeTheToolAsksFor(t *testing.T) {
 	spec := objectSpec("write_probe", principal.ScopeWrite)
 	spec.OutputSchema = schemaFor[SearchRecordsResult]()
 	env := sealedEnvelope(t, invokeSealed(scopedAgentCtx(principal.ScopeWrite), t, fullSeatAuthority{},
-		recordTool{spec: spec, records: []datasource.Record{recordAt(datasource.EntityPerson, time.Time{}, true)}}))
+		recordTool{spec: spec, records: []datasource.Record{recordAt(datasource.EntityContact, time.Time{}, true)}}))
 
 	if _, present := warningNamed(env, warningRowScopeFiltered); !present {
 		t.Errorf("a bounded caller's write-scoped answer claims no bound: %v", env.Warnings)

@@ -5,8 +5,8 @@ package consent
 
 // Carrying a retiring subject's stops onto the record that survives them.
 //
-// people owns the merge and calls this inside its transaction (people's
-// StopCarrier seam, wired in compose). It owns person_consent and carries that
+// contacts owns the merge and calls this inside its transaction (contacts's
+// StopCarrier seam, wired in compose). It owns contact_consent and carries that
 // itself; communication_suppression is ours, and until this existed a merge
 // moved the grants and left the stops behind — pointing at an id no send
 // evaluates any more, so marketing resumed against somebody who had refused it
@@ -14,7 +14,7 @@ package consent
 //
 // COPY, NEVER MOVE. The predecessor's row stays exactly as written:
 //
-//   - It is evidence. "This person objected on 2 September" is a fact about
+//   - It is evidence. "This contact objected on 2 September" is a fact about
 //     that record, and rewriting its subject to point at the survivor would
 //     make the history say the objection was made about somebody else.
 //   - The predecessor may be un-merged, or read in an export, long after.
@@ -37,8 +37,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// LockStopsTx implements people.StopCarrier: it takes this module's lock on
-// every named subject, so a merge can acquire it BEFORE it locks any person
+// LockStopsTx implements contacts.StopCarrier: it takes this module's lock on
+// every named subject, so a merge can acquire it BEFORE it locks any contact
 // row. See the interface for why the order matters.
 //
 // Ungated on purpose. Taking a lock reveals nothing and writes nothing; the
@@ -53,7 +53,7 @@ func (s *Store) LockStopsTx(ctx context.Context, tx pgx.Tx, subjects ...commsaut
 	return lockSubjectsInOrder(ctx, tx, keys...)
 }
 
-// CarryStopsTx implements people.StopCarrier.
+// CarryStopsTx implements contacts.StopCarrier.
 //
 // IDEMPOTENT ON KIND. A survivor who already holds a live stop of the same
 // kind keeps their own — theirs is at least as recent and may carry a
@@ -74,16 +74,16 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// THE GATE ADMITS ANY OF THE THREE GRANTS ITS THREE CALLERS RUN UNDER,
 	// rather than naming one and refusing the others. The three doors are:
 	//
-	//   MergePerson   person:update
+	//   MergeContact   contact:update
 	//   MergeLeads    lead:update
-	//   PromoteLead   lead:update + person:create, and NEVER person:update
+	//   PromoteLead   lead:update + contact:create, and NEVER contact:update
 	//
 	// so a rule of "update on whichever subject survives" refused promotion
 	// outright — a rep entitled to turn a lead into a contact does not thereby
 	// hold the right to edit contacts, and the promotion rolled back on a
 	// permission the caller was never required to have.
 	//
-	// The point of this gate is to keep a caller who holds NO people grant at
+	// The point of this gate is to keep a caller who holds NO contacts grant at
 	// all from writing suppressions through a seam meant for merges. It is not
 	// to re-decide the merge's own entitlement, which each door already checked
 	// before opening its transaction.
@@ -121,18 +121,18 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// made current.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		  (person_id, lead_id, address, kind, source, decided_by_level,
+		  (contact_id, lead_id, address, kind, source, decided_by_level,
 		   captured_by, carried_from)
 		SELECT DISTINCT ON (live.kind)
 		       $3, $4, live.address, live.kind, live.source, live.decided_by_level,
 		       $5, live.id
 		  FROM communication_suppression live
-		 WHERE (($1::uuid IS NOT NULL AND live.person_id = $1)
+		 WHERE (($1::uuid IS NOT NULL AND live.contact_id = $1)
 		     OR ($2::uuid IS NOT NULL AND live.lead_id = $2))
 		   AND live.revoked_at IS NULL
 		   AND NOT EXISTS (
 		         SELECT 1 FROM communication_suppression held
-		          WHERE (($3::uuid IS NOT NULL AND held.person_id = $3)
+		          WHERE (($3::uuid IS NOT NULL AND held.contact_id = $3)
 		              OR ($4::uuid IS NOT NULL AND held.lead_id = $4))
 		            AND held.kind = live.kind
 		            AND held.revoked_at IS NULL
@@ -140,8 +140,8 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		                >= coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1))
 		 ORDER BY live.kind, coalesce(array_position($6::text[], live.decided_by_level), array_length($6::text[], 1) + 1) DESC, live.recorded_at DESC
 		RETURNING kind, decided_by_level`,
-		zeroAsNull(from.PersonID.UUID), zeroAsNull(from.LeadID.UUID),
-		zeroAsNull(to.PersonID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
+		zeroAsNull(from.ContactID.UUID), zeroAsNull(from.LeadID.UUID),
+		zeroAsNull(to.ContactID.UUID), zeroAsNull(to.LeadID.UUID), by, authorityLadder())
 	if err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}
@@ -163,14 +163,14 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}
 	if len(moved) == 0 {
-		// Nothing to carry is the ordinary case — most people have no stop —
+		// Nothing to carry is the ordinary case — most contacts have no stop —
 		// and it is not worth an audit row.
 		return nil
 	}
 	// Audited against the SURVIVOR, which is the record whose sending
-	// behaviour just changed. A reader asking "why is this person suppressed"
+	// behaviour just changed. A reader asking "why is this contact suppressed"
 	// finds the merge that brought it.
-	entity, entityID := entityPerson, to.PersonID.UUID
+	entity, entityID := entityContact, to.ContactID.UUID
 	if entityID.IsZero() {
 		entity, entityID = entityLead, to.LeadID.UUID
 	}
@@ -187,13 +187,13 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// recorded one ships — a consumer cannot tell the two apart, and should
 	// not: the survivor is suppressed either way.
 	//
-	// FOR A PERSON SURVIVOR ONLY, and that is the contract's own rule rather
+	// FOR A CONTACT SURVIVOR ONLY, and that is the contract's own rule rather
 	// than a shortcut. public-events.yaml declares consent.suppressed with
-	// `x-entity-type: person` and says why: "the subject is a person and only
-	// a person ... so this is a static entity whose delivery scope the fan-out
+	// `x-entity-type: contact` and says why: "the subject is a contact and only
+	// a contact ... so this is a static entity whose delivery scope the fan-out
 	// gate proves mechanically rather than by hand-ratification". The
-	// generated payload's EntityType() returns "person" unconditionally, so a
-	// lead survivor would ship an envelope naming person:<lead uuid> — an id
+	// generated payload's EntityType() returns "contact" unconditionally, so a
+	// lead survivor would ship an envelope naming contact:<lead uuid> — an id
 	// of the wrong kind, scoped by a gate that was told it could trust the
 	// type. Webhook consumers would then be handed, or refused, the wrong
 	// thing.
@@ -204,7 +204,7 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	// to leads is a contract change with its own fan-out question to answer,
 	// and it belongs in the slice that asks it — not smuggled in behind a
 	// merge.
-	if to.PersonID.IsZero() {
+	if to.ContactID.IsZero() {
 		return nil
 	}
 	for _, c := range moved {
@@ -221,22 +221,22 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 // actions, and this rule spans two objects, so it is spelled out here rather
 // than by widening the platform primitive for a single call site.
 //
-// A refusal names person.update, because that is the grant an ordinary person
+// A refusal names contact.update, because that is the grant an ordinary contact
 // merge is missing and the one an operator will go and grant.
 func admitAMergingCaller(ctx context.Context) error {
 	for _, g := range []struct {
 		object string
 		action principal.Action
 	}{
-		{entityPerson, principal.ActionUpdate},
+		{entityContact, principal.ActionUpdate},
 		{entityLead, principal.ActionUpdate},
-		{entityPerson, principal.ActionCreate},
+		{entityContact, principal.ActionCreate},
 	} {
 		if err := auth.Require(ctx, g.object, g.action); err == nil {
 			return nil
 		}
 	}
-	return auth.Require(ctx, entityPerson, principal.ActionUpdate)
+	return auth.Require(ctx, entityContact, principal.ActionUpdate)
 }
 
 // authorityLadder renders commsauthz's own rank order for SQL, weakest first,
@@ -254,7 +254,7 @@ func authorityLadder() []string {
 }
 
 // zeroAsNull sends a zero uuid as SQL NULL, so the WHERE arms above can ask
-// "is this side a person or a lead" with an IS NOT NULL rather than comparing
+// "is this side a contact or a lead" with an IS NOT NULL rather than comparing
 // against a sentinel value that is also a legal-looking uuid.
 func zeroAsNull(id ids.UUID) *ids.UUID {
 	if id.IsZero() {

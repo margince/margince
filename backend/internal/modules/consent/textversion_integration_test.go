@@ -146,11 +146,11 @@ func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO consent_event (person_id, purpose_id, new_state, source,
+		INSERT INTO consent_event (contact_id, purpose_id, new_state, source,
 		                           policy_text, policy_version, consent_text_version_id,
 		                           captured_at, captured_by)
 		VALUES ($1, $2, 'granted', 'test', 'Yes, email me.', 'v1', $3, now(), 'test')`,
-		e.person, e.newsletter, versionID); err != nil {
+		e.contact, e.newsletter, versionID); err != nil {
 		t.Fatalf("recording a proof row naming its wording: %v", err)
 	}
 
@@ -158,8 +158,8 @@ func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT v.body FROM consent_event e
 		  JOIN consent_text_version v ON v.id = e.consent_text_version_id
-		 WHERE e.person_id = $1 AND e.consent_text_version_id IS NOT NULL`,
-		e.person).Scan(&body); err != nil {
+		 WHERE e.contact_id = $1 AND e.consent_text_version_id IS NOT NULL`,
+		e.contact).Scan(&body); err != nil {
 		t.Fatalf("reading the wording a proof row names: %v", err)
 	}
 	if body != "Yes, email me." {
