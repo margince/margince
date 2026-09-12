@@ -327,8 +327,14 @@ deps:
     # that snapshot are one item. Nothing in Go connects them — the way back is
     # an unmarshal, which reports no error for a key it does not recognise — and
     # neither module may import the other to notice. Only gates sees both.
+    # runtimeddlwholerow_test.go reads customfields.FieldObjects: the tables an
+    # administrator can ALTER while the app pool holds cached plans, held
+    # against every SQL statement in the tree. The prohibition's corpus is the
+    # whole module and its banned set is one module's vocabulary, so only gates
+    # can see both — and deriving the set from the engine that alters them is
+    # what stops the gate becoming a second copy of the list.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, forecasting, comms]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
     mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
