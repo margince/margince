@@ -442,13 +442,19 @@ func TestADecisionPastItsWindowSaysSoRatherThanLoopingTheCaller(t *testing.T) {
 	// A decision is recorded against this review and then left to go stale.
 	// Written directly because the route records and sends in one action, and
 	// what is under test is the door's answer once the window has closed.
+	// Directed by THIS SESSION'S seat, read from the app. The subselect here
+	// used to be `FROM app_user u WHERE NOT u.is_agent LIMIT 1`, which is the
+	// session's seat only while the installation holds exactly one contact —
+	// and what is under test is whether the door refuses a decision that has
+	// gone stale, which is a question about the caller's own decision. Same
+	// defect as demoteToRep's, same fix — #1180, #1074.
 	if _, err := c.Owner.Exec(context.Background(), `
 		INSERT INTO communication_instruction
 		  (review_id, directed_by, reason_code, explanation, warning_version,
 		   acknowledged_at, facts_as_of, valid_until)
-		SELECT $1, u.id, 'contractual_necessity', 'decided a while ago', 'override-v1',
-		       now() - interval '2 days', now() - interval '2 days', now() - interval '1 day'
-		  FROM app_user u WHERE NOT u.is_agent LIMIT 1`, review); err != nil {
+		VALUES ($1, $2, 'contractual_necessity', 'decided a while ago', 'override-v1',
+		        now() - interval '2 days', now() - interval '2 days', now() - interval '1 day')`,
+		review, sessionUserID(t, c.AppEnv)); err != nil {
 		t.Fatalf("recording the stale decision: %v", err)
 	}
 

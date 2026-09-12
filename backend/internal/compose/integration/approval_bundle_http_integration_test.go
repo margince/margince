@@ -68,11 +68,15 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ..
 	t.Helper()
 	ctx := context.Background()
 	bundle, readID := ids.NewV7(), ids.NewV7()
-	var adminID string
-	if err := e.Owner.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&adminID); err != nil {
-		t.Fatalf("admin lookup: %v", err)
-	}
+	// THIS SESSION'S seat, read from the app rather than picked out of app_user.
+	// The pick here used to be `is_agent = false ORDER BY created_at LIMIT 1`,
+	// which names the session's seat only while the installation holds exactly
+	// one contact: rows inserted in one transaction share now(), so a second
+	// contact makes it arbitrary. These rows are what the session then decides,
+	// so an arbitrary seat stages an inbox belonging to somebody else and the
+	// suite asserts against a bundle its caller never proposed. Same defect as
+	// demoteToRep's, same fix — #1180, #1074.
+	adminID := sessionUserID(t, e)
 	for i, kind := range kinds {
 		payload := siteReadPayload(kind, companyID, readID.String(), fmt.Sprintf("contact%d", i))
 		if _, err := e.Owner.Exec(ctx, `
