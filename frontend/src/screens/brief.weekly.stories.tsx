@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
 import { userEvent, within } from "storybook/test";
-import { useLocale } from "../i18n";
+import { Panel, PanelBody } from "../design-system/panel";
+import { useLocale, useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
 import {
   firstWeek,
@@ -21,6 +22,7 @@ import { OutlookPanel } from "./brief.waterfall";
 import { WeeklySection } from "./brief.weekly";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
+import { WeeklyWorkings } from "./brief.weekly.workings";
 import {
   installFetchStub,
   jsonResponse,
@@ -38,10 +40,15 @@ import {
 // the week, a pass ran and found it unremarkable, and there is no review at
 // all. Two of them are the same blank space unless the panel says which.
 //
-// The three panels that hang off the same review — the landing, the scorecard
+// The three blocks that hang off the same review — the landing, the scorecard
 // and the lessons — are documented here too, each from a review already in
 // hand. Each of them is drawn only when the snapshot carries its lane, so the
 // section's own frames above show none of them.
+//
+// The scorecard and the lessons are GROUPS inside the week's panel rather than
+// panels of their own, so their frames stand them in one: a titled boxed
+// surface inside another panel's column reads as a second product, and a frame
+// that drew one bare would document a shape the product never renders.
 //
 // NO SESSION ROUTE ANYWHERE BELOW, and the absence is the deliberate kind: this
 // panel consults no grant and no seat, so nothing here asks for `GET /me`. A
@@ -92,6 +99,13 @@ function frozen(node: ReactNode) {
     installFetchStub({});
     return <StoryProviders>{node}</StoryProviders>;
   };
+}
+
+/** The pane a group lives in. `PanelGroupHead` names a group one level under
+ *  the panel's own title, so it has no meaning outside one. */
+function InTheWeeksPanel({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return <Panel title={t("brief.panel.weekly")}>{children}</Panel>;
 }
 
 /**
@@ -274,14 +288,22 @@ export const OutlookNotForecast: Story = {
 // "multi-threaded" and "close date sound" are all read against the same open
 // count, which is what makes the three comparable at a glance.
 export const Scorecard: Story = {
-  render: frozen(<ScorecardPanel scorecard={weeklyScorecard} />),
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel scorecard={weeklyScorecard} />
+    </InTheWeeksPanel>,
+  ),
 };
 
 // A rep who carried no leads. The lead block is ABSENT rather than zeroed —
 // zeros here would read as failure at something nobody asked of them, and that
 // is the one mistake this panel must not make.
 export const ScorecardDealsOnly: Story = {
-  render: frozen(<ScorecardPanel scorecard={{ deal: weeklyScorecard.deal }} />),
+  render: frozen(
+    <InTheWeeksPanel>
+      <ScorecardPanel scorecard={{ deal: weeklyScorecard.deal }} />
+    </InTheWeeksPanel>,
+  ),
 };
 
 // ── What the week taught ────────────────────────────────────────────────────
@@ -290,7 +312,11 @@ export const ScorecardDealsOnly: Story = {
 // citations are drawn rather than folded away: a claim about cause is the one
 // thing on this page a reader cannot check against anything else on it.
 export const Learnings: Story = {
-  render: frozen(<LearningsPanel learnings={weeklyLearnings} />),
+  render: frozen(
+    <InTheWeeksPanel>
+      <LearningsPanel learnings={weeklyLearnings} />
+    </InTheWeeksPanel>,
+  ),
 };
 
 // NOBODY LOOKED, which is not the same as FOUND NOTHING. A rep whose lane was
@@ -298,6 +324,24 @@ export const Learnings: Story = {
 // lesson — and the sentence says so instead of leaving the panel blank.
 export const LearningsNotRun: Story = {
   render: frozen(
-    <LearningsPanel learnings={{ state: "not_run", items: [] }} />,
+    <InTheWeeksPanel>
+      <LearningsPanel learnings={{ state: "not_run", items: [] }} />
+    </InTheWeeksPanel>,
+  ),
+};
+
+// ── The week's workings ─────────────────────────────────────────────────────
+
+// The five figures that are NOT the outcomes: how the queue was worked, how
+// proposals were decided, what moved without closing. One meta-sized row read a
+// pair at a time — the opposite of the strip's read-across claim, which is why
+// it is a list and not five more cards.
+export const Workings: Story = {
+  render: frozen(
+    <InTheWeeksPanel>
+      <PanelBody>
+        <WeeklyWorkings counts={narratedWeek.counts} />
+      </PanelBody>
+    </InTheWeeksPanel>,
   ),
 };

@@ -15,6 +15,7 @@ import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import { overnightRow, readingsDay } from "./brief.fixtures";
 import { BriefGlance } from "./brief.glance";
+import { leadOf } from "./brief.sentence";
 import {
   fleetDeal,
   jsonResponse,
@@ -28,6 +29,7 @@ import {
   writes,
 } from "./brief.testkit";
 import type { BriefView } from "./brief.view";
+import { rowHref } from "./worklist.copy";
 import type { Worklist } from "./worklist.queries";
 
 afterEach(() => {
@@ -129,6 +131,12 @@ describe("BriefScreen — the deck stages, and only the commit sends", () => {
     expect(document.querySelector(".approval-headline")?.textContent).toBe(
       "Publish the acme.example facts",
     );
+    // Brief draws a LINE per decision, so what is being proposed is behind one
+    // control rather than on the row: the page opens with the decisions and
+    // goes on to the day's own work, and a reader is passing through.
+    await user.click(
+      screen.getByRole("button", { name: en["brief.deck.rowDetail"] }),
+    );
     expect(screen.getByText("Show the 3 items")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Accept" }));
@@ -203,6 +211,11 @@ describe("BriefScreen — the deck stages, and only the commit sends", () => {
     render(<BriefScreen />);
 
     await screen.findByText("Send the Weber follow-up");
+    // Accept and reject are on the line; the rarer verdicts are folded into a
+    // menu, because a dense row has no space to spell four of them.
+    await user.click(
+      screen.getByRole("button", { name: en["brief.deck.rowMore"] }),
+    );
     await user.click(screen.getByRole("button", { name: "Edit" }));
     await user.click(
       screen.getByRole("button", { name: "Send staged decisions" }),
@@ -304,7 +317,7 @@ describe("BriefScreen — the order of the page follows the day", () => {
     render(<BriefScreen />);
 
     await screen.findByText("Send the Weber follow-up");
-    expect(workOrder()).toEqual(["brief-decisions", "brief-feed"]);
+    expect(workOrder()).toEqual(["brief-decisions", "brief-today"]);
   });
 
   it("leads with the ranked queue once the deck is clear", async () => {
@@ -319,7 +332,7 @@ describe("BriefScreen — the order of the page follows the day", () => {
     render(<BriefScreen />);
 
     await screen.findByRole("region", { name: en["brief.feed.title"] });
-    expect(workOrder()).toEqual(["brief-feed", "brief-decisions"]);
+    expect(workOrder()).toEqual(["brief-today", "brief-decisions"]);
   });
 });
 
@@ -461,11 +474,21 @@ describe("BriefGlance — the weekly's sentence comes from the closed week", () 
   });
 });
 
-// ── The eyebrow dates the morning's reading, and only the morning's ──
+// ── The opening block is two lines, and one of them is a control ──
 
-describe("BriefGlance — the eyebrow says when the queue was read", () => {
-  function eyebrowOf(view: BriefView, day: Worklist | undefined): string {
-    const rendered = rtlRender(
+describe("BriefGlance — the greeting and the sentence, and nothing between", () => {
+  // Two rows that each carry a record of their own, so the sentence has a lead
+  // to link and a tail to count. The strip's default day is two meetings with
+  // no subject between them, which is a sentence with nothing to open.
+  function linkedDay(): Worklist {
+    return readingsDay({}, [
+      overnightRow("o1", "d-aster"),
+      overnightRow("o2", "d-fleet"),
+    ]);
+  }
+
+  function drawGlance(view: BriefView, day: Worklist | undefined) {
+    return rtlRender(
       <LocaleProvider initial="en">
         <BriefGlance
           view={view}
@@ -476,31 +499,108 @@ describe("BriefGlance — the eyebrow says when the queue was read", () => {
         />
       </LocaleProvider>,
     );
-    const text =
-      screen.getByTestId("brief-glance").firstChild?.textContent ?? "";
-    rendered.unmount();
-    return text;
   }
 
-  // Derived from the fixture and the runner's own zone. A literal time here
-  // would pin the test to whichever machine wrote it.
-  it("names the moment the morning's queue was read", () => {
+  // WHAT THIS BLOCK NO LONGER DRAWS, and the three things are one rule: a
+  // reader already knew them. The view is the dial's own state, drawn beside
+  // this block; the date is the shell's; and an as-of that ticked every sixty
+  // seconds re-rendered the page's opening for a digit nobody was reading.
+  //
+  // Asserted on the block's SHAPE rather than on the absence of three strings:
+  // an absence check passes on any rewording of the same three lines, while a
+  // heading plus one paragraph is the whole claim.
+  it("draws the greeting and one line under it, and nothing else", () => {
     const day = readingsDay({});
-    expect(eyebrowOf("morning", day)).toBe(
-      `Your morning · as of ${formatTimeOfDay(day.as_of, "en", viewerZone())}`,
+    drawGlance("morning", day);
+
+    const glance = screen.getByTestId("brief-glance");
+    expect(glance.children).toHaveLength(2);
+    expect(glance.firstElementChild?.tagName).toBe("H1");
+    // No uppercase kicker above the greeting, and no clock anywhere: the moment
+    // the queue was read was the one thing here that moved on its own.
+    expect(glance.querySelector(".t-eyebrow")).toBeNull();
+    expect(glance.textContent).not.toContain(
+      formatTimeOfDay(day.as_of, "en", viewerZone()),
     );
+    // And no date line. Today's date under a greeting that already says which
+    // part of today it is tells a reader what their own machine tells them.
+    expect(glance.textContent).not.toContain("July");
   });
 
-  // The weekly's numbers were frozen when the week closed. A time of day
-  // against them dates the reading rather than the week.
-  it("gives the weekly no as-of at all", () => {
-    expect(eyebrowOf("weekly", readingsDay({}))).toBe("Your week");
+  // The weekly draws the SAME two lines. Two views drawn alike need no kicker
+  // to tell them apart, and one of them wearing one would be the odd page.
+  it("draws the same two lines over the weekly", () => {
+    drawGlance("weekly", readingsDay({}));
+
+    expect(screen.getByTestId("brief-glance").children).toHaveLength(2);
   });
 
-  // A queue still in flight has no moment to name, and inventing one would
-  // date a reading that has not happened.
-  it("says the scope alone while the morning's queue is unread", () => {
-    expect(eyebrowOf("morning", undefined)).toBe("Your morning");
+  // THE LEAD IS THE WAY INTO THE ROW IT DESCRIBES. The sentence names one row
+  // and the section below draws it; before this the reader had to find it again
+  // down the page. The href is the row's OWN, through the same helper the feed's
+  // rows are linked by, so the two cannot send a reader to two places.
+  it("opens the named lead's own record from the sentence", () => {
+    const day = linkedDay();
+    drawGlance("morning", day);
+
+    const lead = leadOf(day);
+    if (lead === undefined) {
+      throw new Error("the fixture has no lead for the sentence to name");
+    }
+    const link = screen.getByTestId("glance-sentence").querySelector("a[href]");
+    if (!(link instanceof HTMLAnchorElement)) {
+      throw new Error("the sentence names no lead to open");
+    }
+    expect(link.getAttribute("href")).toBe(rowHref(lead));
+  });
+
+  // AND THE TAIL REACHES THE DAY'S OWN ORDER. "Then 4 more" is where a reader
+  // goes next, and the whole clause is the control — a bare numeral is a
+  // two-character press target that reads as a figure rather than as a way
+  // anywhere.
+  //
+  // A button rather than an anchor, and the address bar is the reason: every
+  // href in this product is a route, so a fragment link would replace `#/brief`
+  // and send the reader off the page the tail is pointing at.
+  // ONE SENTENCE, not a sentence with a control dropped into it.
+  //
+  // Two halves, and only one of them is a test. The DOM half: no text node
+  // between the control and the stop, so the sentence is not assembled with a
+  // separator somebody could widen. The CSS half — `.link-button` is an
+  // inline-flex box with side padding, which printed "Then 24 more ." with a
+  // space before the stop and raised the line the clamp then reserved two of —
+  // is held by `glance-rest` being ON the control, because jsdom computes
+  // nothing from a stylesheet and an assertion about the rendered gap here
+  // would pass whatever the sheet said. `brief.css` carries the rule and says
+  // why; this is the hook it keys on.
+  it("closes the sentence with no gap before the stop", () => {
+    drawGlance("morning", linkedDay());
+
+    const sentence = screen.getByTestId("glance-sentence");
+    const tail = within(sentence).getByRole("button");
+    expect(tail.className).toContain("glance-rest");
+    expect(tail.nextSibling?.textContent).toBe(".");
+    expect(sentence.textContent).toMatch(/\d+ more\.$/);
+  });
+
+  it("reaches the day's own order from the tail of the sentence", async () => {
+    const day = linkedDay();
+    const section = document.createElement("section");
+    section.id = "brief-today";
+    section.scrollIntoView = vi.fn();
+    document.body.append(section);
+    try {
+      drawGlance("morning", day);
+      const tail = within(screen.getByTestId("glance-sentence")).getByRole(
+        "button",
+      );
+
+      await userEvent.setup().click(tail);
+
+      expect(section.scrollIntoView).toHaveBeenCalled();
+    } finally {
+      section.remove();
+    }
   });
 });
 

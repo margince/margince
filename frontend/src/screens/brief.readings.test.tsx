@@ -72,6 +72,20 @@ function labels(): string[] {
     .filter((text) => text !== "");
 }
 
+/** Every figure the strip drew, as text. */
+function strippedFigures(): string[] {
+  return [
+    ...screen
+      .getByTestId("brief-readings")
+      .querySelectorAll(".stat-card-value"),
+  ].map((value) => value.textContent ?? "");
+}
+
+/** The ones wearing the floor mark. */
+function markedFigures(): string[] {
+  return strippedFigures().filter((text) => text.endsWith("+"));
+}
+
 function meetingsCard(): HTMLElement {
   const card = screen
     .getByText(en["brief.readings.meetings"])
@@ -122,7 +136,7 @@ describe("the brief readings strip", () => {
     expect(screen.getByText(en["brief.readings.urgent"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.meetings"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.leads"])).toBeTruthy();
-    expect(screen.getByText(en["brief.readings.pipeline"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.pipelinePlain"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.decisions"])).toBeTruthy();
   });
 
@@ -286,19 +300,23 @@ describe("the brief readings strip", () => {
     );
     draw();
 
-    // COMPACT for the headline figure — the slot is ~110px and a full euro
-    // amount wraps mid-number. The weighted figure keeps its exact form on the
-    // detail line, where there is room for it.
+    // COMPACT for both figures — the slot is ~110px and a full euro amount
+    // wraps mid-number. The basis line has no more room than the headline does.
     expect(await screen.findByText(/420k/i)).toBeTruthy();
-    // The weighted figure and the priced-of-eligible completeness ride the same
-    // line: a weighted number over a partly priced population is a floor, and a
-    // reader who cannot see the second cannot judge the first.
-    expect(screen.getByText(/168,000/)).toBeTruthy();
-    expect(screen.getByText(/11 of 12 priced/)).toBeTruthy();
-    // THE WINDOW the money covers. €420k of open pipeline means nothing without
-    // it: the same page carries a by-currency total of everything open, and a
-    // reader with no period cannot tell why the two disagree.
-    expect(screen.getByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+    // The weighted figure and how much of the population carries a price ride
+    // the same line: a weighted number over a partly priced population is a
+    // floor, and a reader who cannot see the second cannot judge the first.
+    expect(screen.getByText(/168k weighted · 11 priced/i)).toBeTruthy();
+    // THE WINDOW the money covers, in the title. €420k of open pipeline means
+    // nothing without it: the same page carries a by-currency total of
+    // everything open, and a reader with no period cannot tell why the two
+    // disagree. A quarter is all a dense title has room for, so the full range
+    // is on the cell's hover line and asserted where that is.
+    expect(
+      screen.getByText(
+        en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
+      ),
+    ).toBeTruthy();
     // Never a target word. The quota table was dropped by founder decision.
     const strip = screen.getByTestId("brief-readings");
     expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
@@ -335,9 +353,21 @@ describe("the brief readings strip", () => {
     );
     draw();
 
-    expect(
-      await screen.findByText(en["brief.readings.pipelineWorkspace"]),
-    ).toBeTruthy();
+    // The title has room for a quarter and nothing else, so the scope rides the
+    // cell's hover line. Reached through the card's own DOOR, because that is
+    // the one focusable thing on the cell and a focus event bubbles up to the
+    // wrapper the tip hangs off — a pointer tip waits on hover intent, and a
+    // reader who tabbed here has said what they want outright.
+    const door = await screen.findByRole("button", {
+      name: en["stat.open"],
+      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
+    });
+    door.focus();
+    const tip = await screen.findByRole("tooltip");
+    expect(tip.textContent).toContain(
+      en["brief.readings.pipelineTipWorkspace"].replace("{period} · ", ""),
+    );
+    expect(tip.textContent).toContain("1 Jul 2026 – 30 Sept 2026");
   });
 
   // The first card a rep reads, at a REAL figure.
@@ -365,23 +395,76 @@ describe("the brief readings strip", () => {
     expect(card.querySelector(".stat-card-warn")).toBeTruthy();
   });
 
-  // The caveat belongs under the whole strip, the way the Worklist's strip
-  // states it: put on one figure, it invites the reading where the rest are
-  // exact.
-  it("qualifies the whole row when a source was read to its limit", () => {
-    draw({ more_available: true });
+  // A BOUNDED READ IS A `+`, NOT A SENTENCE. The row used to carry a line
+  // saying a source had been read to its limit, so every figure above was a
+  // floor — a whole sentence of footnote under a plate whose argument is that
+  // five readings are taken in at one glance. The fact belongs ON the figures.
+  //
+  // Every figure the flag covers wears the mark, and that is the contract's own
+  // claim rather than a choice: `more_available` is set once for the readings
+  // block, over four populations, so attributing it to one slot would invite
+  // the reading where the other three are exact.
+  it("marks every figure it covers as a floor when a source was read to its limit", () => {
+    // Every worklist-derived figure non-zero, so the mark is asked of all four.
+    draw(
+      { more_available: true, prospecting: 2, review: 8 },
+      undefined,
+      undefined,
+      {
+        urgent: 4,
+      },
+    );
 
-    const caveat = screen.getByText(en["brief.readings.truncated"]);
-    expect(caveat).toBeTruthy();
-    // Outside the strip, not in a slot. Inside one, it reads as a caveat on that
-    // figure alone and invites the reading where the other four are exact.
-    expect(screen.getByTestId("brief-readings").contains(caveat)).toBe(false);
+    // Four of the five: the pipeline slot is a read of its own and this flag
+    // says nothing about it.
+    expect(markedFigures()).toHaveLength(4);
   });
 
-  it("says nothing about limits on a day it read whole", () => {
+  // A FLOOR OF NONE IS NOT A FLOOR. "0+" says "at least nothing", which is true
+  // of every number there has ever been — so a bounded read that found none of
+  // a kind draws a plain zero, and the mark stays on the figures that count
+  // something. It shipped as `0+` on a day with no meetings.
+  it("leaves a zero unmarked even where the read was bounded", () => {
+    draw({ more_available: true, prospecting: 0, review: 8 }, [], [], {
+      urgent: 0,
+    });
+
+    const figures = strippedFigures();
+    expect(figures).toContain("0");
+    expect(
+      figures.some((text) => text.startsWith("0") && text.endsWith("+")),
+    ).toBe(false);
+    // The positive control: the day's non-zero reading still wears it, or this
+    // would pass over a build that stopped marking anything at all.
+    expect(markedFigures()).toContain("8+");
+  });
+
+  // Why the `+` is there, on the cell rather than beside the three characters
+  // that carry it — a mark that explains itself only to a pointer resting on a
+  // figure is one most readers never read.
+  it("says on the cell why a marked figure is a floor", async () => {
+    // A non-zero urgent count, because a zero draws no mark and so owes no
+    // explanation — the cell this asks would have nothing to say.
+    draw({ more_available: true }, undefined, undefined, { urgent: 4 });
+
+    // Through the reading's own door: it is the cell's only focusable element,
+    // and a focus event bubbles to the wrapper carrying the tip.
+    screen
+      .getByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.urgent"],
+      })
+      .focus();
+
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      en["brief.readings.floorTip"],
+    );
+  });
+
+  it("marks nothing on a day it read whole", () => {
     draw();
 
-    expect(screen.queryByText(en["brief.readings.truncated"])).toBeNull();
+    expect(markedFigures()).toHaveLength(0);
   });
 });
 
@@ -507,12 +590,27 @@ describe("the pipeline period", () => {
       return { ...resolved.call(this), timeZone: "America/Los_Angeles" };
     });
 
-    drawInZone("Europe/Berlin");
-    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+    // The range is on the CELL's hover line — a dense title has room for a
+    // quarter and nothing more — so it is reached by focus, which reveals a tip
+    // outright where a pointer waits on hover intent.
+    async function rangeSaid(zone: string): Promise<string> {
+      drawInZone(zone);
+      const door = await screen.findByRole("button", {
+        name: en["stat.open"],
+        description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
+      });
+      door.focus();
+      return (await screen.findByRole("tooltip")).textContent ?? "";
+    }
+
+    expect(await rangeSaid("Europe/Berlin")).toContain(
+      "1 Jul 2026 – 30 Sept 2026",
+    );
     cleanup();
 
-    drawInZone("Asia/Tokyo");
-    expect(await screen.findByText(/1 Jul 2026 – 30 Sept 2026/)).toBeTruthy();
+    expect(await rangeSaid("Asia/Tokyo")).toContain(
+      "1 Jul 2026 – 30 Sept 2026",
+    );
   });
   // ONE WORD, ONE DOOR PER READING. Every door on this strip is named "Open"
   // and nothing more. Sighted, the card above each one says open WHAT — a
@@ -520,13 +618,13 @@ describe("the pipeline period", () => {
   // cannot tell the lanes apart, unless each door's DESCRIPTION carries its own
   // reading's label.
   //
-  // Asserted as a SET rather than card by card: the defect is duplication, and a
-  // per-card check passes on four doors described identically.
+  // Asserted as a SET rather than card by card: the defect is duplication, and
+  // a per-card check passes on four doors described identically.
   it("describes every reading's door by its own reading", async () => {
     drawInZone("Europe/Berlin");
 
     await screen.findByText(en["brief.readings.urgent"]);
-    const doors = screen.getAllByRole("button", { name: "Open" });
+    const doors = screen.getAllByRole("button", { name: en["stat.open"] });
     const descriptions = doors.map((door) =>
       (door.getAttribute("aria-describedby") ?? "")
         .split(/\s+/)
@@ -574,8 +672,8 @@ describe("the pipeline period", () => {
     await screen.findByText(/420k|420,000/i);
 
     const door = screen.getByRole("button", {
-      name: "Open",
-      description: en["brief.readings.pipeline"],
+      name: en["stat.open"],
+      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
     });
     try {
       await userEvent.setup().click(door);
@@ -594,8 +692,8 @@ describe("the pipeline period", () => {
     await screen.findByText(en["brief.readings.pipelineNoRead"]);
     expect(
       screen.queryByRole("button", {
-        name: "Open",
-        description: en["brief.readings.pipeline"],
+        name: en["stat.open"],
+        description: en["brief.readings.pipelinePlain"],
       }),
     ).toBeNull();
   });

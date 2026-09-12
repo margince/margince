@@ -123,3 +123,123 @@ export const QualifiedRow: Story = {
     </StatStrip>
   ),
 };
+
+// A READING WITH A DOOR, inside the row. The way out is a word in the card's
+// own foot — one spelling for every reading in the product — and the tile
+// stretches that button over itself, so the whole cell answers a press while
+// the words are what name the destination.
+//
+// A slot wrapped in an ANCHOR was tried here and taken out. It read as five
+// green underlined hyperlinks: base.css draws the product's prose links through
+// `a:not([class])`, which scores exactly what `.stat-strip > a` does, so which
+// sheet painted a door came down to bundler order. The frame is kept because
+// what it documents is still true — a row of readings that each open something
+// has to read as a row of panes and not a list of links.
+export const SlotsWithDoors: Story = {
+  name: "Readings that open something",
+  render: () => (
+    <StatStrip>
+      <StatCard
+        label="Urgent"
+        value="4"
+        tone="warn"
+        detail="somebody waiting or a promise breaking"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Meetings today"
+        value="4"
+        detail="1 needs prep"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Leads owed a reply"
+        value="3"
+        detail="owed a first answer"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Pipeline · Q3"
+        value="€420k"
+        detail="€168k weighted · 11 priced"
+        density="compact"
+        onOpen={() => {}}
+      />
+      {/* A figure the read could not finish counting: the `+` is the caveat, on
+          the figure it qualifies rather than in a sentence under the row. */}
+      <StatCard
+        label="Decisions waiting"
+        value="8+"
+        detail="somebody is blocked until you answer"
+        density="compact"
+        onOpen={() => {}}
+      />
+    </StatStrip>
+  ),
+};
+
+// THE NARROW SHAPE: one full-width ROW per reading, and only for a strip whose
+// slots are `compact`.
+//
+// Five 190px boxes two-up is 600px of readings before a phone reader reaches
+// what the page is for. As rows the same five facts are ~60px each, the eye
+// runs down one column of figures instead of hunting two, and the plate draws
+// one hairline between them rather than five borders — a column of bordered
+// panes reads as cards to swipe rather than a list to scan.
+//
+// Read off the CHILDREN with `:has(.stat-card-compact)`, not taken as a second
+// prop, so the plate and its slots cannot disagree about which shape this is.
+// Nineteen other strips in the product keep their 2-column fold at this width,
+// and `SixSlots` above is one of them — open both at the phone viewport and the
+// difference is the whole contract.
+//
+// The card's foot stacks under the figure on the trailing edge rather than
+// riding the label's line: a door beside a figure would be the widest thing on
+// the row and push the reading's own name to a second line.
+export const CompactFoldsToRows: Story = {
+  name: "Compact slots — the narrow shape",
+  globals: { viewport: { value: "phone" } },
+  render: () => (
+    <StatStrip>
+      <StatCard
+        label="Urgent"
+        value="8+"
+        tone="warn"
+        detail="somebody waiting or a promise breaking"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Meetings today"
+        value="0"
+        detail="on today's calendar"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Leads owed a reply"
+        value="19+"
+        detail="owed a first answer"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Pipeline · Q3"
+        value="€5m"
+        detail="€3.7m weighted · 33 priced"
+        density="compact"
+        onOpen={() => {}}
+      />
+      <StatCard
+        label="Decisions waiting"
+        value="4+"
+        detail="somebody is blocked until you answer"
+        density="compact"
+        onOpen={() => {}}
+      />
+    </StatStrip>
+  ),
+};

@@ -3,8 +3,6 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
 import {
   approvalDotTier,
   KIND_TO_VERB,
@@ -23,8 +21,8 @@ import {
   DecisionDeck,
   type DecisionDeckItem,
   type DecisionDeckLabels,
-  type StagedDecision,
 } from "../design-system/decisiondeck";
+import { Panel, PanelBody } from "../design-system/panel";
 import type { SectionState } from "../design-system/surfacestate";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -44,14 +42,9 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "./approvalkind";
-import {
-  isAlreadyDecided,
-  ProblemError,
-  problemMessageOf,
-  provenanceOf,
-  throwProblem,
-  useViewerId,
-} from "./common";
+import { commitTray } from "./brief.decisions.commit";
+import { problemMessageOf, provenanceOf, useViewerId } from "./common";
+import { worklistLaneHref } from "./worklist.header";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.
@@ -60,13 +53,6 @@ import {
 // than a flourish: `approvals/service.go` states that a committed decision is
 // deliberately un-undoable, and rejecting is not an undo either, so the tray IS
 // the undo a swipe would otherwise not have.
-
-type Approval = components["schemas"]["Approval"];
-
-/** Every approval one deck item answers for. */
-function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
-  return item.kind === "single" ? [item.approval] : item.members;
-}
 
 // The status chip's words, in this surface's own voice. Spelled here rather
 // than shared with the Decisions row for the same reason `deckLabels` is: what a
@@ -136,161 +122,21 @@ function deckLabels(
       t("brief.deck.bundleSummary", { count: formatNumber(members, locale) }),
     bundleMembers: (members) =>
       t("brief.deck.bundleMembers", { count: formatNumber(members, locale) }),
+    // The words are the switch: Brief's list is a LINE per decision, because
+    // this page opens with the decisions and goes on to the day's own work — a
+    // reader is passing through, not working a queue to its end.
+    compactRow: {
+      detail: t("brief.deck.rowDetail"),
+      more: t("brief.deck.rowMore"),
+    },
   };
 }
 
-/** What a commit sent, and what came back for each item in it. */
-type CommitResult = Readonly<{
-  /** At least one item had already been decided by somebody else. */
-  alreadyDecided: boolean;
-  /** Items the reader staged for editing: the deck cannot edit, the queue can. */
-  edits: number;
-  /**
-   * The first item that could not be sent, if any.
-   *
-   * Carried in the RESULT rather than thrown: the items before the failure were
-   * decided, and their effects have already executed. A throw would report the
-   * failure and lose that, leaving the reader to guess which half of their tray
-   * landed.
-   */
-  failure: unknown | null;
-}>;
-
-/**
- * One approval's verdict, sent.
- *
- * An already-decided 409 is not a failure of the commit: somebody else answered
- * this one first, which is news the reader is owed, and the rest of the tray
- * still deserves to go.
- */
-async function sendOne(
-  approval: Approval,
-  verdict: "accept" | "reject",
-): Promise<{ alreadyDecided: boolean }> {
-  const path =
-    verdict === "accept" ? "/approvals/{id}/approve" : "/approvals/{id}/reject";
-  try {
-    const { error } = await api.POST(path, {
-      params: { path: { id: approval.id } },
-      ...(verdict === "reject" ? { body: { reason: "" } } : {}),
-    });
-    if (error) {
-      throwProblem(error);
-    }
-    return { alreadyDecided: false };
-  } catch (error) {
-    if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
-      return { alreadyDecided: true };
-    }
-    throw error;
-  }
-}
-
-/**
- * Every approval one deck item answers for, sent one at a time.
- *
- * Sequential on purpose. These are outbound effects — a staged send goes when it
- * is approved — and firing a dozen at once makes the failure of the fourth
- * unattributable.
- */
-async function sendVerdict(
-  approvals: readonly Approval[],
-  verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "alreadyDecided">> {
-  let alreadyDecided = false;
-  for (const approval of approvals) {
-    const outcome = await sendOne(approval, verdict);
-    alreadyDecided = alreadyDecided || outcome.alreadyDecided;
-  }
-  return { alreadyDecided };
-}
-
-/**
- * A bundle is decided as a unit, through its own endpoint: every still-pending
- * member, one call, one outcome per member.
- */
-async function sendBundle(
-  bundleId: string,
-  verdict: "accept" | "reject",
-): Promise<{ alreadyDecided: boolean }> {
-  const path =
-    verdict === "accept"
-      ? "/approval-bundles/{bundle_id}/approve"
-      : "/approval-bundles/{bundle_id}/reject";
-  // No body at all on a rejection: the deck takes no reason, and an empty
-  // string would be recorded as one the reader gave.
-  const { data, error } = await api.POST(path, {
-    params: { path: { bundle_id: bundleId } },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  // Deciding a bundle is not all-or-nothing: the response reports each member,
-  // and a member somebody else answered first comes back `already_decided`
-  // rather than as an error. Reading `false` here regardless — which this did —
-  // meant the deck reported a conflict for a single proposal and said nothing
-  // about the same conflict inside a bundle. The full per-outcome report is the
-  // Decisions screen's; what Brief needs from it is whether anything was already
-  // settled.
-  const members = data?.data ?? [];
-  return {
-    alreadyDecided: members.some(
-      (member) => member.outcome === "already_decided",
-    ),
-  };
-}
-
-/** One staged verdict, sent the way its item is decided. */
-async function sendStaged(
-  item: DecisionDeckItem,
-  verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "alreadyDecided">> {
-  if (item.kind === "bundle") {
-    const outcome = await sendBundle(item.bundleId, verdict);
-    return { alreadyDecided: outcome.alreadyDecided };
-  }
-  return sendVerdict(approvalsOf(item), verdict);
-}
-
-/**
- * Send the tray.
- *
- * A `skip` sends nothing: later means later, and the item is offered again next
- * time. An `edit` sends nothing either — an edited payload re-enters the
- * admission gate on the server, which is a form rather than a swipe — and is
- * counted so the caller can take the reader to where that form lives.
- */
-async function commitTray(input: {
-  staged: readonly StagedDecision[];
-  items: readonly DecisionDeckItem[];
-}): Promise<CommitResult> {
-  const byId = new Map(input.items.map((item) => [item.id, item]));
-  let alreadyDecided = false;
-  let edits = 0;
-  let failure: unknown | null = null;
-  for (const decision of input.staged) {
-    const item = byId.get(decision.id);
-    if (!item || decision.verdict === "skip") {
-      continue;
-    }
-    if (decision.verdict === "edit") {
-      edits += 1;
-      continue;
-    }
-    try {
-      const outcome = await sendStaged(item, decision.verdict);
-      alreadyDecided = alreadyDecided || outcome.alreadyDecided;
-    } catch (error) {
-      // The FIRST failure is kept and the loop stops: these are outbound
-      // effects, and carrying on after one refusal sends the rest against
-      // whatever made this one fail. What already went, went, and the result
-      // says so rather than the throw erasing it.
-      failure = error;
-      break;
-    }
-  }
-  return { alreadyDecided, edits, failure };
-}
+// How many decisions the line-per-row list draws before it hands over to the
+// approvals lane. Three is what fits above the day's own work without becoming
+// the page: this is the block that says what is blocked ON somebody, and the
+// morning underneath it is what they can get on with.
+const LISTED = 3;
 
 /** The deck and its tray: the staged verdicts, and the one act that sends them. */
 export function DecisionsSection({
@@ -357,14 +203,48 @@ export function DecisionsSection({
   const notice = commit.isError ? problemMessageOf(commit.error, t) : failure;
 
   return (
-    <section id="brief-decisions" aria-label={t("brief.panel.decisions")}>
-      {/* The title goes THROUGH the deck: it shares the row the Deck/List
-          toggle is on, so the column's first block says what it is on the same
-          line that says how it is drawn. */}
+    // No `aria-label` here. The panel inside is a titled region and names
+    // itself; a wrapper repeating that name puts one zone in a screen reader's
+    // list twice. The id is the page's — the head's counts link to it.
+    <section id="brief-decisions">
+      {/* A PANEL, with the same header band Today wears: one band, one height,
+          one interval down the column, so the page reads as zones rather than
+          as a heading here and a card there. The Deck/List toggle is the band's
+          `titleAction`, which is where a zone keeps the control that changes
+          how it is drawn. */}
       <DecisionDeck
         items={items}
         now={nowMs}
-        title={t("brief.panel.decisions")}
+        frame={({ toggle, content, tray }) => (
+          <Panel
+            title={t("brief.panel.decisions")}
+            titleAction={toggle}
+            // THE TRAY IS THE PANEL'S FOOT. It belongs to the whole zone rather
+            // than to the queue — one line saying what is held and the two
+            // controls that answer it — so it takes the band that is the
+            // panel's own chrome: edge to edge, a hairline over it, the panel's
+            // inset. In the body it drew its floating shape and read as a
+            // second card overlapping the pane's bottom corners.
+            footer={tray}
+          >
+            {/* PanelBody, because these rows are cards rather than `PanelRow`s:
+                without it the deck's plate ran to the pane's own edges and the
+                count behind it and the keyboard legend hung at x=0. Null while
+                every card is staged, so the panel is its head and its foot
+                rather than a band of empty padding. */}
+            {content === null ? null : <PanelBody>{content}</PanelBody>}
+          </Panel>
+        )}
+        listCap={LISTED}
+        listRest={(hidden) => (
+          <p className="ddeck-list-rest">
+            <a className="entity-link" href={worklistLaneHref("decisions")}>
+              {plural("brief.deck.rest", hidden, {
+                count: formatNumber(hidden, locale),
+              })}
+            </a>
+          </p>
+        )}
         labels={deckLabels(t, plural, locale)}
         state={state}
         loadingLabel={t("brief.panel.decisions")}

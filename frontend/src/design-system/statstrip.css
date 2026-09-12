@@ -63,7 +63,12 @@
  * reader is choosing between the same readings they are comparing — so the
  * press target is the slot itself rather than something inside it. The button
  * brings no chrome of its own: the card inside it is the whole of what a
- * reader sees, and the state lands on that card. */
+ * reader sees, and the state lands on that card.
+ *
+ * A reading that OPENS something is NOT this: its door is a word in the card's
+ * own foot (`StatCard onOpen`), which is one spelling for every reading in the
+ * product and stretches its own press target over the tile. A slot wrapped in
+ * an anchor was tried on the Brief and taken out. */
 .stat-strip > button {
   font: inherit;
   color: inherit;
@@ -74,7 +79,11 @@
   border-radius: var(--r-lg);
   cursor: pointer;
 }
-.stat-strip > button > .stat-card {
+/* The slot stretches to the row's height, so a card inside a WRAPPER has to
+   stretch with it — a filter's button, and equally a plain span a screen puts
+   round a tile to hang a tooltip on. `> *` rather than `> button`, because the
+   property belongs to being a wrapper and not to being pressable. */
+.stat-strip > * > .stat-card {
   block-size: 100%;
 }
 
@@ -90,12 +99,96 @@
   outline-offset: 2px;
 }
 
-/* NOTHING here says how a reading DRAWS. The tile owns its own type, tone and
-   interval (atoms.css) and every stat card in the product draws the same,
-   whichever row shape holds it — this sheet had carried a size of its own for
-   a slot and the Brief a third for a hero, which is one card in three
-   spellings. The strip owns the ROW: how many slots, the air between them, and
-   where it folds. */
+/* NOTHING here says how a reading is TYPESET. The tile owns its type, its tone
+   and its intervals (atoms.css) and every stat card in the product reads the
+   same, whichever row shape holds it — this sheet had carried a figure size of
+   its own for a slot and the Brief a third for a hero, which is one card in
+   three spellings. That is the line, and it is about the SCALE: the strip owns
+   the row's geometry, which includes the slot's box at the width where a row of
+   boxes stops being a row (below). Nothing here sets a family, a size or a
+   weight, and nothing here may. */
+
+/* THE NARROW SHAPE: one full-width ROW per reading, not a grid of boxes.
+ *
+ * Only for a strip whose slots declare `density="compact"` — a row read as ONE
+ * glance. Read off the children with `:has()` rather than taken as a second
+ * prop, so the plate and its slots cannot disagree about which shape this is;
+ * every other strip in the product keeps its 2-column fold, and there are
+ * nineteen of them.
+ *
+ * Five 190px boxes two-up is 600px of readings before a phone reader reaches
+ * the day's own work. As rows — label and basis leading, figure trailing, one
+ * hairline between — the same five facts are ~60px each and the eye runs down a
+ * single column of figures instead of hunting two.
+ *
+ * 26rem is where two compact slots stop clearing the width a figure and its
+ * clause need side by side; below it the grid's own 2-column fold is what was
+ * making the boxes tall.
+ */
+@container (max-width: 26rem) {
+  .stat-strip:has(.stat-card-compact) {
+    grid-template-columns: 1fr;
+    /* The hairline IS the divider now, so the air between slots would be a
+       second one. Each row carries its own padding instead. */
+    gap: 0;
+    /* ONE column means no tail to stretch. `tailSpan` computes this against the
+       column count the sheet's own 2-up fold reserves, and five slots over two
+       columns answers `2` — which in a one-column grid conjures an implicit
+       second column and puts the last reading half off the screen. */
+    --stat-strip-tail: 1;
+  }
+  /* No boxes: a column of five bordered panes reads as five cards to swipe
+     rather than one list to scan. The plate draws the single rule between
+     rows, which is the seam rule every other row shape here follows. */
+  .stat-strip:has(.stat-card-compact) .stat-card-compact {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    padding: var(--space-3) 0;
+    min-block-size: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    /* The reading's own words lead, the figure and its door stack on the
+       trailing edge. Two rows rather than one so the door keeps its 24px AA
+       target without setting the row's height: a foot beside a figure on one
+       line would be the widest thing on the row and push the label to a
+       second. */
+    grid-template-areas:
+      "label figure"
+      "basis foot";
+    align-items: center;
+    column-gap: var(--space-4);
+    row-gap: 0;
+  }
+  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-label {
+    grid-area: label;
+  }
+  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-value {
+    grid-area: figure;
+    /* Trailing edge, so a column of figures lines up whatever the label beside
+       it runs to. `tabular-nums` is the tile's own and does the rest. */
+    text-align: right;
+  }
+  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-foot {
+    grid-area: foot;
+    justify-self: end;
+  }
+  .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-detail {
+    grid-area: basis;
+    /* ONE line in a row this short: at two it doubles the row's height, and a
+       basis that needs two lines has a receipt for the rest of it. */
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+  .stat-strip:has(.stat-card-compact) > * + * {
+    border-block-start: 1px solid var(--paneEdge);
+  }
+  /* A wrapper's own corner goes with its box: a radius on a full-bleed row
+     clips the hairline it sits against. */
+  .stat-strip:has(.stat-card-compact) > button {
+    border-radius: 0;
+  }
+}
 
 /* A strip of figures where one is selectable: the selected slot arrived with
    its wash in a single frame. */

@@ -33,22 +33,25 @@
     transform: none;
   }
 }
+/* The SLOT arrives, not the tile inside it: every reading's cell is now the
+   link or button that opens it, so a delay keyed on `.stat-card` landed on an
+   only child and every slot arrived at once. */
 .arrive,
-.brief-readings .stat-card,
+.brief-readings .stat-strip > *,
 .brief-main > *,
 .brief-rail > * {
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
 }
-.brief-readings .stat-card:nth-child(2) {
+.brief-readings .stat-strip > *:nth-child(2) {
   animation-delay: calc(var(--dur-tap) * 0.5);
 }
-.brief-readings .stat-card:nth-child(3) {
+.brief-readings .stat-strip > *:nth-child(3) {
   animation-delay: var(--dur-tap);
 }
-.brief-readings .stat-card:nth-child(4) {
+.brief-readings .stat-strip > *:nth-child(4) {
   animation-delay: calc(var(--dur-tap) * 1.5);
 }
-.brief-readings .stat-card:nth-child(5) {
+.brief-readings .stat-strip > *:nth-child(5) {
   animation-delay: calc(var(--dur-tap) * 2);
 }
 .brief-main > * {
@@ -65,7 +68,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .arrive,
-  .brief-readings .stat-card,
+  .brief-readings .stat-strip > *,
   .brief-main > *,
   .brief-rail > * {
     animation: none;
@@ -112,11 +115,6 @@
   text-wrap: balance;
 }
 
-/* The day under the greeting: `t-sub` sets its type, this only places it. */
-.glance-date {
-  margin: 0 0 var(--space-2);
-}
-
 /* ── The readings plate ────────────────────────────────────────────────────
  * `StatStrip` owns the plate; this only places it. It sits between the
  * briefing and the work, which is the reading order the sentences promise.
@@ -128,16 +126,17 @@
   margin-bottom: var(--space-6);
 }
 
-/* A notice about the page as a whole — a source withheld, a row that moved
- * since the night looked — and the strip it qualifies are sibling surfaces, so
- * the interval between them is `--gapCards` and moves when that role is
- * retuned. It is declared on the JOIN rather than as a margin either surface
- * owns: on a morning with nothing to disclose neither notice renders, and a top
- * margin belonging to the strip would open a gap under the greeting for a
- * callout that is not there. */
-.brief-wrap > .brief-notice + .brief-notice,
-.brief-wrap > .brief-notice + .brief-readings {
-  margin-block-start: var(--gapCards);
+/* The strip's own footnote: what the page could not read, under the figures it
+ * qualifies. The register change to the work below belongs to whichever of the
+ * two comes LAST, so the plate hands its gap over on the mornings the footnote
+ * renders and keeps it on the mornings it does not — which is most of them.
+ * Declared as a join rather than as a margin the line owns, because a margin of
+ * its own would be a gap nothing sits in on a silent morning. */
+.brief-wrap > .brief-readings:has(+ .brief-coverage) {
+  margin-bottom: var(--space-2);
+}
+.brief-coverage {
+  margin: 0 0 var(--space-6);
 }
 
 /* ── The work column ───────────────────────────────────────────────────────
@@ -278,33 +277,47 @@
  * learned anything. */
 
 @media (max-width: 720px) {
+  /* NO PADDING UNDER THE GREETING BLOCK once the dials have wrapped beneath
+     it: what follows is the next thing to READ rather than the next register,
+     and `.brief-head`'s own row gap is then the whole interval. */
   .glance {
-    padding: var(--space-4) 0 var(--space-4);
+    padding: var(--space-4) 0 0;
   }
 
   .glance-greeting {
     font-size: var(--fs-h2);
   }
 
-  .glance-lines {
-    margin-top: var(--space-3);
+  /* THE DIALS HAVE WRAPPED, so the offset that aligned them with the
+     greeting's own first line is now dead space under the sentence — the
+     greeting's padding, the sentence's margin and this offset stacked to most
+     of a phone's first screen before a reader learned anything. On one line
+     with the greeting it is an alignment; under it, it is a gap.
+     FOUR things reserved that space and all four had to go, which is why
+     removing one of them changed nothing a reader could see: this offset,
+     the sentence's own bottom margin, the block's bottom padding above, and
+     the tail control's inline-flex box, which raised the line height the
+     clamp then reserved two of (`.glance-rest`). */
+  .brief-head > .brief-dials {
+    margin-top: 0;
   }
 
-  .glance-line {
-    font-size: var(--fs-body);
-  }
-
-  .glance-count {
-    font-size: var(--fs-body);
+  .glance-sentence {
+    margin-bottom: 0;
   }
 }
 
-/* Scope and, for the morning, the moment the queue below was read — the label
-   over the greeting rather than a heading of its own. */
-.glance-eyebrow {
-  color: var(--textMeta);
-  display: block;
-  margin-bottom: var(--space-1);
+/* The sentence's own tail control, back INSIDE the sentence. `.link-button`
+   is an inline-flex box with side padding — right for a verb standing alone in
+   a footer, wrong for a clause with a full stop after it: the padding printed
+   as a space before the stop, and the box raised the line height that the
+   sentence's two-line clamp then reserved two of. Only the BOX is refused —
+   the accent ink, the weight and the hover underline are the shared
+   affordance and stay, because this is the same kind of control it is
+   everywhere else. */
+.glance-rest {
+  display: inline;
+  padding: 0;
 }
 
 /* The Brief's opening block: the greeting, then the day in one sentence. The
@@ -318,4 +331,13 @@
   color: var(--textContent);
   margin: 0 0 var(--space-3);
   max-width: 62ch;
+  /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user
+     data of unbounded length and it is embedded in this sentence, so a long
+     one pushed the readings strip and everything under it down the page. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-wrap: pretty;
 }

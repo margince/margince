@@ -8,7 +8,7 @@ import { Panel } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
 import type { Worklist, WorklistItem } from "./worklist.queries";
@@ -42,8 +42,8 @@ import "./brief.feed.css";
 // now" row ranked below a "move revenue" one — which is ordinary and correct,
 // because a customer waiting an hour does not outrank a deal closing today.
 
-/** At most this many cards. A morning a contact can finish, not a list. */
-const FEED = 8;
+/** At most this many rows. A morning a contact can finish, not a list. */
+const FEED = 5;
 
 /**
  * The morning's work, in the order the server ranked it.
@@ -51,21 +51,71 @@ const FEED = 8;
 export function BriefFeed({
   day,
   state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
+  changed,
+}: Readonly<{
+  day: Worklist | undefined;
+  state: SectionState;
+  /**
+   * What has MOVED since the brief was written, and where to see it.
+   *
+   * The count is the page's to derive and not this panel's: the same read that
+   * knows when the brief was cut knows how much has changed since, and a second
+   * derivation here would be a second answer to it. Absent draws no badge,
+   * which is the honest state of a page that has not been told.
+   */
+  changed?: Readonly<{ count: number; href: string }>;
+}>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const all = waitingRows(day);
   const drawn = all.slice(0, FEED);
   const rest = all.length - drawn.length;
+  // WHETHER THE LABELS SAY ANYTHING. A run-length label over a single section
+  // names the whole panel a second time — "Today", then "Respond now" over
+  // every row in it — and a heading that is true of everything under it tells a
+  // reader nothing about where they are.
+  const sections = new Set(
+    drawn.map((item) => item.brief_section).filter(Boolean),
+  );
+  // The chain reaches the FIELD, for the reason `waitingRows` does: an answer
+  // that carried no summary must draw no count line rather than take the page
+  // down with it. No figure is a real state — "nothing was read" — and a zero
+  // over it would claim a clear morning nobody measured.
+  const urgent = day?.summary?.urgent;
   return (
-    <section id="brief-feed">
+    // The Today panel is an ADDRESS: the head's counts link here, so the id is
+    // part of the page's contract rather than decoration.
+    <section id="brief-today">
       <Panel
         title={t("brief.feed.title")}
-        sub={t("brief.feed.sub")}
+        // WHAT IS ON SCREEN, out of what the day holds — the panel's own count
+        // line rather than a motto. `urgent` is the SUMMARY's figure, the same
+        // one the readings strip above draws, so the panel and the strip cannot
+        // disagree about how much of the morning is urgent.
+        sub={
+          urgent === undefined
+            ? undefined
+            : t("brief.feed.counts", {
+                items: formatNumber(all.length, locale),
+                urgent: formatNumber(urgent, locale),
+              })
+        }
+        titleAction={
+          changed ? (
+            <a className="entity-link" href={changed.href}>
+              <Badge>
+                {plural("brief.feed.changedBadge", changed.count, {
+                  count: formatNumber(changed.count, locale),
+                })}
+              </Badge>
+            </a>
+          ) : undefined
+        }
         footer={
-          // The way to the rest. A page showing eight of nineteen rows that did
-          // not say where the other eleven are has hidden them.
+          // The way to the rest. A page showing five of nineteen rows that did
+          // not say where the other fourteen are has hidden them.
           day && rest > 0 ? (
             // The SAME cut this footer counted. `rest` comes off waitingRows,
             // which drops the approvals the Decisions deck above already draws,
@@ -88,16 +138,24 @@ export function BriefFeed({
           loadingLabel={t("brief.feed.loading")}
         >
           {day && drawn.length > 0 && (
-            // An ordered list, because the order IS the claim. A screen reader
-            // gets it from the element; everybody else gets it from the rank
-            // the row prints.
+            // An ordered list, because the order IS the claim — and at this
+            // density the element is the ONLY thing carrying it: the rows draw
+            // no rank, so a bare `<ul>` here would drop the page's central
+            // claim for a reader hearing it.
             <ol className="brief-feed-list">
               {drawn.map((item, index) => (
                 <li key={item.id}>
-                  <SectionLabel item={item} above={drawn[index - 1]} />
+                  {sections.size > 1 && (
+                    <SectionLabel item={item} above={drawn[index - 1]} />
+                  )}
                   <WorklistRow
                     item={item}
-                    position={index + 1}
+                    // ONE LINE PER ROW. Five of these open the morning and the
+                    // page goes on to the rest of it, so the reader is
+                    // SCANNING here — the rank is the list element's claim
+                    // already, and everything a row cannot say on its line is
+                    // one press away on it.
+                    density="compact"
                     // The reader's OWN day. A row is handed to somebody else
                     // only from a page that is already about somebody else,
                     // and this page is about the reader reading it.
@@ -139,6 +197,10 @@ export function BriefFeed({
  * Absent where the server sent no section, which is a real state rather than a
  * gap: a category this build does not place carries none, and a heading invented
  * for it would put the row under a part of the morning nobody chose.
+ *
+ * WHETHER there are headings at all is the caller's: a label over a panel whose
+ * rows are all one section names the panel a second time, so the feed draws
+ * these only once a second part of the morning is on screen.
  */
 function SectionLabel({
   item,

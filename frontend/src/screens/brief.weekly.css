@@ -2,7 +2,7 @@
    for the deal lines under it. */
 .brief-weekly-deals {
   list-style: none;
-  margin: var(--space-4) 0 0;
+  margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -34,7 +34,7 @@
 /* The week's sentence, above its numbers. The indigo edge and the badge in the
    panel head come from `Panel tone="ai"`; what is left here is where it sits. */
 .brief-weekly-narrative {
-  margin: 0 0 var(--space-4);
+  margin: 0;
 }
 
 /* Who wrote it, over what they wrote. */
@@ -54,6 +54,7 @@
    the remark, and giving it equal weight would let "nobody looked" compete
    with the week's own numbers for the reader's eye. */
 .brief-weekly-narrative-absent {
+  margin: 0;
   color: var(--textMeta);
 }
 
@@ -71,7 +72,12 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-6);
-  margin: var(--space-4) 0 0;
+  /* The block above pays the interval, not this list: the outcomes body is a
+     stack and a margin here would be a second gap on top of its one. */
+  margin: 0;
+  /* ONE row at the meta rung. Label and value used to carry two different
+     rungs, which read as two lines of type sharing a baseline. */
+  font-size: var(--fs-meta);
 }
 
 .brief-weekly-working {
@@ -84,9 +90,12 @@
   color: var(--textMeta);
 }
 
-/* The browser's own indent on a `dd` would stagger every pair by 40px. */
+/* The browser's own indent on a `dd` would stagger every pair by 40px. The
+   value keeps the reading ink while the label beside it stays grey, so the row
+   still reads label-then-figure at one size. */
 .brief-weekly-working dd {
   margin: 0;
+  color: var(--textContent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -106,5 +115,69 @@
 /* Quieter than the badge beside it: the badge is the claim, this is its
    footnote, and a reader who wants the moment goes looking for it. */
 .brief-weekly-written {
+  color: var(--textMeta);
+}
+
+/* ── The blocks inside the week's panel ────────────────────────────────────
+ * The panel's sections are its own children, so the interval between two of
+ * them is the pane's — a body's padding and, where two bodies meet, the
+ * panel's seam. What is left for this sheet is the interval INSIDE a block,
+ * and each block declares it once rather than every paragraph carrying a
+ * margin of its own. */
+
+/* The week's sentence and where it was landing: two readings of one week, so
+   one stack at a paragraph's interval. */
+.brief-weekly-week {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* `.panel-body > .empty` pays a body's interval for an empty state that is the
+   body's WHOLE content; here the outlook's absence arm is one paragraph of two
+   and the stack above already owns the gap, so its own would be a second one. */
+.panel-body.brief-weekly-week > .empty {
+  /* ds:ignore the empty state shares this body, so the stack sets its interval */
+  padding-block: 0;
+}
+
+/* The outcome strip and the workings list under it. */
+.brief-weekly-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Two strips, one block: the lead block and the deal block are read one after
+   the other and touched without this. */
+.brief-weekly-scorecard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* One lesson per card, and the cards are read one at a time — so they are
+   spaced as cards rather than run together into a single grey column. */
+.brief-weekly-learnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+/* The absence, as the prose it is: the body's own gutter is the interval. */
+.weekly-learnings-empty {
+  margin: 0;
+  color: var(--textMeta);
+}
+
+/* What a lesson RESTS ON, beside the claim: a set of references rather than a
+   bulleted list, so the browser's disc and its 40px indent both go. */
+.weekly-learnings-citations {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
   color: var(--textMeta);
 }

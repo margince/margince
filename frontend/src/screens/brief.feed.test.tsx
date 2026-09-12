@@ -139,6 +139,119 @@ describe("the morning feed", () => {
     ).toHaveLength(2);
   });
 
+  // A label that is true of EVERY row under it says nothing about where the
+  // reader is — it names the panel a second time. So the headings arrive only
+  // once the morning has more than one part on screen.
+  it("draws no group heading while the rows are all one group", () => {
+    const { container } = render(
+      <BriefFeed
+        day={day([
+          item({ id: "a", brief_section: "review_and_repair" }),
+          item({ id: "b", brief_section: "review_and_repair" }),
+        ])}
+        state="ready"
+      />,
+    );
+
+    expect(container.querySelector(".brief-feed-section")).toBeNull();
+    expect(titles(container)).toHaveLength(2);
+  });
+
+  // The same two rows with a third from another part: now the headings say
+  // which is which, and both groups get one.
+  it("draws the group headings as soon as a second group is on screen", () => {
+    render(
+      <BriefFeed
+        day={day([
+          item({ id: "a", brief_section: "review_and_repair" }),
+          item({ id: "b", brief_section: "review_and_repair" }),
+          item({ id: "c", brief_section: "respond_now" }),
+        ])}
+        state="ready"
+      />,
+    );
+
+    expect(
+      screen.getAllByText(en["brief.feed.section.review_and_repair"]),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByText(en["brief.feed.section.respond_now"]),
+    ).toHaveLength(1);
+  });
+
+  // WHAT IS ON SCREEN, out of what the day holds. The motto that stood here
+  // told a reader nothing they could act on; the urgent figure is the summary's
+  // own, so this line and the readings strip above cannot disagree.
+  it("says how much is waiting and how much of it is urgent", () => {
+    render(
+      <BriefFeed
+        day={
+          {
+            ...day([item({ id: "a" }), item({ id: "b" })]),
+            summary: { total: 2, urgent: 1 },
+          } as unknown as Worklist
+        }
+        state="ready"
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        en["brief.feed.counts"]
+          .replace("{items}", "2")
+          .replace("{urgent}", "1"),
+      ),
+    ).toBeTruthy();
+  });
+
+  // A count line over a read that landed on no summary would report a figure
+  // nobody measured. The panel says nothing instead.
+  it("says nothing about a count when the answer carried no summary", () => {
+    const { container } = render(
+      <BriefFeed day={{ queue: [] } as unknown as Worklist} state="ready" />,
+    );
+
+    expect(container.querySelector(".panel-head-sub")).toBeNull();
+  });
+
+  // The head's counts link INTO this panel, so the id is part of the page's
+  // contract rather than decoration.
+  it("carries the address the page's counts link to", () => {
+    const { container } = render(
+      <BriefFeed day={day([item()])} state="ready" />,
+    );
+
+    expect(container.querySelector("#brief-today")).toBeTruthy();
+  });
+
+  // What has MOVED since the brief was cut, in the header band, as a way
+  // through to the rows that moved. Absent when the page has not been told —
+  // a zero badge would claim a measurement nobody made.
+  it("badges what changed since the brief, and links to it", () => {
+    render(
+      <BriefFeed
+        day={day([item()])}
+        state="ready"
+        changed={{ count: 4, href: "#/worklist?filter=changed_since_brief" }}
+      />,
+    );
+
+    const link = screen.getByRole("link", {
+      name: en["brief.feed.changedBadge_other"].replace("{count}", "4"),
+    });
+    expect(link.getAttribute("href")).toBe(
+      "#/worklist?filter=changed_since_brief",
+    );
+  });
+
+  it("draws no changed badge when the page has not been told", () => {
+    const { container } = render(
+      <BriefFeed day={day([item()])} state="ready" />,
+    );
+
+    expect(container.querySelector(".panel-head .badge")).toBeNull();
+  });
+
   // A row the server did not place carries no section, and the feed invents no
   // heading for it: a label chosen here would put the row under a part of the
   // morning nobody decided.
@@ -151,8 +264,8 @@ describe("the morning feed", () => {
     expect(titles(container)).toHaveLength(1);
   });
 
-  // Eight is a morning somebody can finish. The ninth row is on the worklist.
-  it("draws at most eight cards", () => {
+  // Five is a morning somebody can finish. The sixth row is on the worklist.
+  it("draws at most five rows", () => {
     const { container } = render(
       <BriefFeed
         day={day(
@@ -164,14 +277,14 @@ describe("the morning feed", () => {
       />,
     );
 
-    // The BOUNDARY, both sides: the eighth row is drawn and the ninth is not.
+    // The BOUNDARY, both sides: the fifth row is drawn and the sixth is not.
     // Asserting only the length restates the cap rather than locating it.
-    expect(container.querySelectorAll(".brief-feed-list > li")).toHaveLength(8);
-    expect(container.textContent).toContain("Row 7");
-    expect(container.textContent).not.toContain("Row 8");
+    expect(container.querySelectorAll(".brief-feed-list > li")).toHaveLength(5);
+    expect(container.textContent).toContain("Row 4");
+    expect(container.textContent).not.toContain("Row 5");
   });
 
-  // A page showing eight of eleven rows that did not say where the other three
+  // A page showing five of eleven rows that did not say where the other six
   // are has hidden them.
   it("says how many rows it left out, and where they are", () => {
     render(
@@ -184,7 +297,7 @@ describe("the morning feed", () => {
     );
 
     const link = screen.getByText(
-      en["brief.feed.rest"].replace("{count}", "3"),
+      en["brief.feed.rest"].replace("{count}", "6"),
     );
     // The door narrows to the same population the count was taken over. The
     // test below proves the count drops approvals; a bare `#/worklist` would
@@ -208,14 +321,14 @@ describe("the morning feed", () => {
       <BriefFeed
         day={day([
           item({ id: "decision", source: "approval" }),
-          ...Array.from({ length: 9 }, (_, at) => item({ id: `row-${at}` })),
+          ...Array.from({ length: 6 }, (_, at) => item({ id: `row-${at}` })),
         ])}
         state="ready"
       />,
     );
 
-    // Nine drawable rows, eight shown: ONE remains, not the two a count over
-    // the whole ten-row queue would report.
+    // Six drawable rows, five shown: ONE remains, not the two a count over the
+    // whole seven-row queue would report.
     expect(
       screen.getByText(en["brief.feed.rest"].replace("{count}", "1")),
     ).toBeTruthy();
@@ -250,15 +363,60 @@ describe("the morning feed", () => {
     expect(container.textContent).toContain("Aster is waiting");
   });
 
-  // Brief has no second column to open a row INTO. A rank button that answered
-  // nothing is a dead control.
-  it("draws the rank as a number, not as a control that opens nothing", () => {
+  // THE ORDINAL IS GONE. The ordered list carries the order for a reader
+  // hearing the page, so a digit per row spent a column saying again what the
+  // page says once — and Brief has no second column to open a row INTO, so the
+  // rank could never even be the control it is on the Worklist.
+  it("draws no rank column, and no control on one", () => {
     const { container } = render(
       <BriefFeed day={day([item()])} state="ready" />,
     );
 
-    expect(container.querySelector(".worklist-rank")).toBeTruthy();
+    expect(container.querySelector("ol.brief-feed-list")).toBeTruthy();
+    expect(container.querySelector(".worklist-rank")).toBeNull();
     expect(container.querySelector(".worklist-rank-select")).toBeNull();
+  });
+
+  // ONE LINE per row, which is what the density is. The row's own suite holds
+  // what that line says; what is held here is that the Brief asks for it.
+  it("draws the rows at list density", () => {
+    const { container } = render(
+      <BriefFeed
+        day={day([item({ id: "a" }), item({ id: "b" })])}
+        state="ready"
+      />,
+    );
+
+    expect(container.querySelectorAll(".worklist-row-compact")).toHaveLength(2);
+    expect(container.querySelectorAll(".worklist-row-line")).toHaveLength(2);
+  });
+
+  // THE TITLE IS THE LINK, so the verb that only reached the record is gone:
+  // two controls on one line opening the same page ask the reader to choose
+  // between the same thing twice.
+  it("lets the title carry the link and draws no second way to the record", () => {
+    const { container } = render(
+      <BriefFeed
+        day={day([
+          item({
+            id: "a",
+            source: "task",
+            actions: ["open"],
+            subject: {
+              type: "deal",
+              id: "018f3a1b-0000-7000-8000-00000000d001",
+            },
+          }),
+        ])}
+        state="ready"
+      />,
+    );
+
+    const title = container.querySelector(".worklist-row-title a");
+    expect(title).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: en["worklist.verb.open"] }),
+    ).toBeNull();
   });
 
   // A payload with no queue at all. The optional chain has to reach the FIELD:

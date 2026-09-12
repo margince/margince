@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { Panel } from "../design-system/panel";
 import { PlanSection } from "./brief.plan";
+import { AddCommitment } from "./brief.plan.add";
 import {
   installFetchStub,
   jsonResponse,
@@ -85,7 +87,11 @@ export const NotStarted: Story = {
 
 /** Opened and still bare. The sentence is the same one the section's own empty
  *  arm says, in the same voice — a card's answer to "there is none" is card
- *  body text wherever it is drawn. */
+ *  body text wherever it is drawn.
+ *
+ *  NO FOOTER BAND under it: a week with nothing staged and nothing refused has
+ *  nothing to put in one, and a bordered strip with neither a figure nor a verb
+ *  in it is a rule drawn under an empty card. */
 export const Empty: Story = {
   render: () => frame(() => jsonResponse(plan({ commitments: [] }))),
 };
@@ -129,4 +135,21 @@ export const Planned: Story = {
 export const Refused: Story = {
   render: () =>
     frame(() => jsonResponse({ title: "Forbidden", code: "forbidden" }, 403)),
+};
+
+/** The form a new commitment is typed into. Its own frame because it is the
+ *  one place in the panel where something comes into being rather than being
+ *  read or settled, and because a `PanelBody` outside a pane has no ground of
+ *  its own to be judged on. */
+export const AddingACommitment: Story = {
+  render: () => {
+    installFetchStub(routes(() => jsonResponse(plan())));
+    return (
+      <StoryProviders>
+        <Panel title="Plan your week">
+          <AddCommitment onDone={() => {}} />
+        </Panel>
+      </StoryProviders>
+    );
+  },
 };

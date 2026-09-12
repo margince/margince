@@ -43,7 +43,7 @@
 1200 frontend/src/screens/privacy.test.tsx
 1208 frontend/src/screens/contactprovider.test.tsx
 1208 frontend/src/screens/worklist.row.tsx
-1209 frontend/src/design-system/atoms.stories.tsx
+1075 frontend/src/design-system/atoms.stories.tsx
 1245 frontend/src/screens/privacy.tsx
 1278 frontend/src/screens/connectors.tsx
 1302 frontend/src/screens/analytics.test.tsx
@@ -61,7 +61,7 @@
 1728 frontend/src/screens/onboarding-facts.test.tsx
 1917 frontend/src/screens/contactpage.stories.tsx
 1913 frontend/src/screens/analytics.tsx
-2003 frontend/src/design-system/atoms.tsx
+2002 frontend/src/design-system/atoms.tsx
 2062 frontend/src/screens/company360.tsx
 2182 frontend/src/design-system/composed.tsx
 2185 frontend/src/screens/leads.tsx
@@ -88,7 +88,6 @@
 528 frontend/src/screens/contractlifecycle.tsx
 531 frontend/src/screens/voice-versions.tsx
 533 frontend/src/screens/companywork.tsx
-535 frontend/src/screens/brief.plan.tsx
 542 frontend/src/screens/leadpresentation.tsx
 547 frontend/src/screens/connected-agents.tsx
 547 frontend/src/screens/scheduledsends.tsx
@@ -146,10 +145,10 @@
 941 frontend/src/screens/contactprovider.tsx
 948 frontend/src/screens/share.tsx
 965 frontend/src/screens/integrations-provider.tsx
-981 frontend/src/design-system/decisiondeck.tsx
+546 frontend/src/design-system/decisiondeck.tsx
 982 frontend/src/screens/ai-routing.tsx
 982 frontend/src/screens/create.tsx
-983 frontend/src/design-system/decisioncard.tsx
+822 frontend/src/design-system/decisioncard.tsx
 984 frontend/src/screens/overlay-usermap.tsx
 989 frontend/src/screens/companyheader.tsx
 995 frontend/src/screens/onboarding-read.tsx

@@ -571,9 +571,9 @@ describe("BriefScreen — the week against the one before", () => {
   // near-synonym, and the likely reading of a leading 0 of 0 is "I kept
   // nothing" rather than "I never wrote a plan".
   //
-  // "Promise" is the wrong word for either. The Morning rail reserves it for
-  // something the product does not track yet and says so on screen, so a
-  // headline figure wearing it names a third thing again.
+  // "Promise" is the wrong word for either. A promise made in conversation is
+  // not something this product tracks — only tasks are — so a headline figure
+  // wearing the word names a third thing again.
   it("names the plan and the task figures apart, and neither as a promise", async () => {
     await mount(withPrior);
 
@@ -583,10 +583,6 @@ describe("BriefScreen — the week against the one before", () => {
     expect(screen.getByText(planned)).toBeTruthy();
     expect(screen.getByText(delivered)).toBeTruthy();
 
-    // Asserted rather than assumed: the reservation is what makes "promise"
-    // wrong here, so if the rail ever starts tracking them this rule wants
-    // rereading instead of quietly continuing to hold.
-    expect(en["brief.promises.untracked"]).toContain("not tracked yet");
     for (const label of [planned, delivered]) {
       expect(label.toLowerCase()).not.toContain("promise");
     }

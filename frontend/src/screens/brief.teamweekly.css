@@ -1,18 +1,88 @@
 /* A team's frozen week. The headline states two readings against the bars they
    were measured by; everything under it is the figures those readings came from. */
 .teamweekly-headline {
-  margin: 0 0 var(--space-2);
+  /* The block around it is a stack and owns the interval; a margin here would
+     be a second gap on top of its one. */
+  margin: 0;
   color: var(--textPrimary);
-}
-
-.teamweekly-subhead {
-  margin: 0 0 var(--space-2);
-  color: var(--textMeta);
 }
 
 .teamweekly-coverage {
   margin: 0;
   color: var(--textMeta);
+}
+
+/* The panel's opening block: the verdict, what the agenda holds and how much
+   of the team the snapshot covers. Three sentences of one reading, so one
+   stack owns the interval rather than each paragraph carrying a margin. */
+.teamweekly-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── What the week did ─────────────────────────────────────────────────────
+ * One row per dimension: the name on the leading edge, the bar taking the room
+ * between, the count on the trailing one. `Meter` draws the bar and nothing
+ * else — its label is an aria-label — so a column of bare bars was an
+ * unlabelled grey band to every reader who could see it. */
+
+.teamweekly-movement {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.teamweekly-movement-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* The name sized to itself and the count to itself, so the bars between them
+   all start and end at one x and the column reads as one comparison. */
+.teamweekly-movement-name {
+  flex: 0 0 9rem;
+  color: var(--textContent);
+}
+
+.teamweekly-movement-row > .meterbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.teamweekly-movement-count {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  text-align: right;
+  color: var(--textContent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── The team's week, as a page ────────────────────────────────────────────
+ * The picker, then the week. Two registers, so the interval between them is
+ * the page's own rather than the gap between two cards. */
+.teamweekly-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* A dropdown is as wide as the answers it offers, not as wide as the column it
+   stands in: across 1400px its face carried three words and the page under it
+   read as a toolbar. */
+.teamweekly-pick {
+  max-width: 24rem;
+}
+
+/* The week's three cards — the readings, the landing, the agenda — spaced as
+   cards. The landing's "no forecast was composed" arm stands between two of
+   them, and without this it touched both. */
+#brief-team-weekly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
 }
 
 .teamweekly-rep {

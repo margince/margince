@@ -475,6 +475,21 @@ describe("DecisionDeck — the states it can honestly be in", () => {
     expect(screen.getByText("2 more behind")).toBeInTheDocument();
   });
 
+  // AND SAYS NOTHING AT ZERO. On the last card there is nothing behind it to
+  // count, and the plate already says so by having no edges peeking out from
+  // under it — "0 more behind" is a line of furniture over the one card the
+  // reader is being asked to answer.
+  it("says nothing about what is behind the last card", async () => {
+    const user = userEvent.setup();
+    render(deck({ items: [THREE[0]] }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+
+    expect(
+      screen.getByText("Arrow keys decide, Enter commits"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("0 more behind")).not.toBeInTheDocument();
+  });
+
   // The cleared plate is the deck REMEMBERING what it watched leave: a staged
   // verdict whose item is gone from `items` was decided, which is a better signal
   // than a success callback because it cannot claim a decision the list still
@@ -624,6 +639,213 @@ describe("DecisionDeck — the head", () => {
     expect(
       screen.queryByRole("button", { name: "Deck" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// A surface that owns the chrome: the toggle goes where that surface keeps its
+// controls, and the deck claims no region of its own. What is held here is that
+// the deck gives up its `<section>` and its name — two names for one zone put it
+// in a screen reader's landmark list twice.
+describe("DecisionDeck — framed by its surface", () => {
+  it("hands the toggle and the content to the frame", () => {
+    render(
+      deck({
+        frame: ({ toggle, content }) => (
+          <div data-testid="surface">
+            <header data-testid="band">{toggle}</header>
+            {content}
+          </div>
+        ),
+      }),
+    );
+
+    const band = screen.getByTestId("band");
+    expect(band.contains(screen.getByRole("button", { name: "Deck" }))).toBe(
+      true,
+    );
+    // The queue is in the content half, not in the band.
+    expect(band.querySelector(".ddeck-list")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Accept" })).toHaveLength(3);
+  });
+
+  it("claims no region of its own once a surface names one", () => {
+    render(
+      deck({
+        frame: ({ content }) => (
+          <section aria-label="Named once">{content}</section>
+        ),
+      }),
+    );
+
+    expect(
+      screen.queryByRole("group", { name: "Decisions waiting on you" }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The frame is handed `null` where the toggle would be a control with nothing
+  // behind it, so a surface cannot draw one over a cleared plate by accident.
+  it("hands the frame no toggle once nothing is waiting", () => {
+    render(
+      deck({
+        items: [],
+        frame: ({ toggle, content }) => (
+          <div>
+            <header data-testid="band">{toggle}</header>
+            {content}
+          </div>
+        ),
+      }),
+    );
+
+    expect(screen.getByTestId("band")).toBeEmptyDOMElement();
+  });
+});
+
+// THE TRAY IS THE SURFACE'S TO PLACE, apart from the queue: it belongs to the
+// whole zone rather than to the list, and a surface that holds it in the body
+// draws it as a second box inside its own pane.
+describe("DecisionDeck — the tray the frame is handed", () => {
+  function framed(over: Partial<Parameters<typeof DecisionDeck>[0]> = {}) {
+    return deck({
+      frame: ({ toggle, content, tray }) => (
+        <div>
+          <header data-testid="band">{toggle}</header>
+          <div data-testid="body">{content}</div>
+          <footer data-testid="foot">{tray}</footer>
+        </div>
+      ),
+      ...over,
+    });
+  }
+
+  it("hands the frame no tray while nothing is staged", () => {
+    render(framed());
+
+    expect(screen.getByTestId("foot")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("body")).not.toBeEmptyDOMElement();
+  });
+
+  it("hands the tray to the foot once a verdict is staged", async () => {
+    const user = userEvent.setup();
+    render(framed());
+
+    const [accept] = screen.getAllByRole("button", { name: "Accept" });
+    await user.click(accept);
+
+    const foot = screen.getByTestId("foot");
+    expect(foot).not.toBeEmptyDOMElement();
+    expect(foot.textContent).toContain("1 staged");
+    // And the queue keeps the rest: two of the three are still to answer.
+    expect(screen.getByTestId("body")).not.toBeEmptyDOMElement();
+  });
+
+  // WITH EVERY CARD STAGED the queue has nothing to draw — and must not draw
+  // the empty arm, which says nothing is waiting over the reader's own unsent
+  // verdicts. The tray is what says what is true, by counting them.
+  it("draws no queue at all while every card is staged, and never says nothing is waiting", async () => {
+    const user = userEvent.setup();
+    render(framed({ items: [THREE[0]] }));
+
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+
+    expect(screen.getByTestId("body")).toBeEmptyDOMElement();
+    expect(
+      screen.queryByText("Nothing is waiting on you."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("foot").textContent).toContain("1 staged");
+  });
+
+  // A refused commit keeps the tray AND says what stopped, in the same band:
+  // the notice is about the press the tray started.
+  it("keeps the notice with the tray", async () => {
+    const user = userEvent.setup();
+    render(
+      framed({
+        commitState: "failed",
+        notice: <p>The send was refused.</p>,
+      }),
+    );
+
+    const [accept] = screen.getAllByRole("button", { name: "Accept" });
+    await user.click(accept);
+
+    expect(screen.getByTestId("foot").textContent).toContain(
+      "The send was refused.",
+    );
+  });
+});
+
+// A capped list: three questions a reader can answer on the way past, and the
+// rest where every one of them is.
+describe("DecisionDeck — a list the surface caps", () => {
+  function rows(): HTMLElement[] {
+    return [...document.querySelectorAll<HTMLElement>(".ddeck-list > li")];
+  }
+
+  async function showList(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: "List" }));
+  }
+
+  it("draws the cap and says how many it left out", async () => {
+    const user = userEvent.setup();
+    render(
+      deck({
+        listCap: 2,
+        listRest: (hidden) => <p>{`${hidden} more on the worklist`}</p>,
+      }),
+    );
+    await showList(user);
+
+    expect(rows()).toHaveLength(2);
+    expect(screen.getByText("1 more on the worklist")).toBeInTheDocument();
+  });
+
+  it("says nothing about a remainder when the cap does not bite", async () => {
+    const user = userEvent.setup();
+    render(
+      deck({
+        listCap: 9,
+        listRest: (hidden) => <p>{`${hidden} more on the worklist`}</p>,
+      }),
+    );
+    await showList(user);
+
+    expect(rows()).toHaveLength(3);
+    expect(screen.queryByText(/more on the worklist/)).not.toBeInTheDocument();
+  });
+
+  // The cap is the LIST's. A stack already hides what is behind the live card,
+  // and capping it would leave the count claiming cards the pile does not hold.
+  it("never reaches the deck's own count of what is behind", async () => {
+    const user = userEvent.setup();
+    render(deck({ listCap: 1 }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+
+    expect(screen.getByText("2 more behind")).toBeInTheDocument();
+  });
+
+  // The words are the switch: a surface that named the row's control and its
+  // menu asked for the dense line, and one that did not keeps the full row.
+  it("draws dense lines only where the surface named their controls", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(deck());
+    await showList(user);
+    expect(document.querySelector("[data-density='compact']")).toBeNull();
+    unmount();
+
+    render(
+      deck({
+        labels: {
+          ...LABELS,
+          compactRow: { detail: "What is proposed", more: "Other answers" },
+        },
+      }),
+    );
+    await showList(user);
+
+    expect(document.querySelectorAll("[data-density='compact']")).toHaveLength(
+      3,
+    );
   });
 });
 

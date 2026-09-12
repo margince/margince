@@ -2,13 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Card } from "../design-system/atoms";
-import { Panel, PanelBody } from "../design-system/panel";
+import { PanelBody, PanelGroupHead } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { WeeklyReview } from "./brief.queries";
 import { EntityRef } from "./entityref";
 
+// The interval between two lessons is declared beside the week's own, in the
+// sheet the panel that holds this one imports.
+import "./brief.weekly.css";
+
 // What the week taught, beside what it was.
+//
+// A GROUP inside the week's panel rather than a panel of its own: a titled
+// boxed surface inside another panel's column reads as a second product, and
+// the pane already has one head.
 //
 // EVERY LEARNING SHOWS WHAT IT RESTS ON. The narrative above this describes a
 // week the reader can already see; a learning is a claim about cause that they
@@ -38,8 +46,9 @@ export function LearningsPanel({
   if (!learnings) return null;
 
   return (
-    <Panel title={t("brief.weekly.learnings.title")}>
-      <PanelBody>
+    <>
+      <PanelGroupHead title={t("brief.weekly.learnings.title")} level="h3" />
+      <PanelBody className="brief-weekly-learnings">
         {learnings.items.length === 0 ? (
           <EmptyLearnings state={learnings.state} />
         ) : (
@@ -56,7 +65,7 @@ export function LearningsPanel({
           ))
         )}
       </PanelBody>
-    </Panel>
+    </>
   );
 }
 

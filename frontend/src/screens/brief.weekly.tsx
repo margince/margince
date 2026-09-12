@@ -29,6 +29,7 @@ import {
 import { OutlookPanel } from "./brief.waterfall";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
+import { WeeklyWorkings } from "./brief.weekly.workings";
 
 import "./brief.weekly.css";
 
@@ -125,74 +126,13 @@ export function WeeklySection() {
           </span>
         }
       >
-        <PanelBody>
-          <WeeklyBody review={review.data ?? null} state={readState(review)} />
-        </PanelBody>
+        {/* No body around the whole week: the panel's sections are its own
+            direct children, so each one takes the pane's interval and the seam
+            between two of them is the panel's rather than a margin a screen
+            picked. */}
+        <WeeklyBody review={review.data ?? null} state={readState(review)} />
       </Panel>
     </section>
-  );
-}
-
-/**
- * The week's workings, under the strip.
- *
- * Five readings that answer "how did the week go" rather than "what did the week
- * produce" — how much of the queue was worked, how proposals were decided, how
- * many deals moved without closing. They were slots six to ten of a ten-slot
- * strip, where they made the row fold into two ranks and cost the outcomes their
- * one-comparison reading.
- *
- * A definition list, not more cards: these are looked up one at a time by
- * somebody who already read the strip, which is the opposite of the strip's
- * read-across claim.
- */
-function WeeklyWorkings({
-  counts,
-}: Readonly<{ counts: WeeklyReview["counts"] }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const n = (value: number) => formatNumber(value, locale);
-  return (
-    <dl className="brief-weekly-workings">
-      <Working
-        label={t("brief.weekly.tasksDelivered")}
-        value={t("brief.weekly.ofDue", {
-          done: n(counts.tasks_done),
-          due: n(counts.tasks_due),
-        })}
-      />
-      <Working
-        label={t("brief.weekly.dealsMoved")}
-        value={n(counts.deals_moved)}
-      />
-      <Working
-        label={t("brief.weekly.dealsLost")}
-        value={n(counts.deals_lost)}
-      />
-      <Working
-        label={t("brief.weekly.decided")}
-        value={t("brief.weekly.acceptedRejected", {
-          accepted: n(counts.proposals_accepted),
-          rejected: n(counts.proposals_rejected),
-        })}
-      />
-      <Working
-        label={t("brief.weekly.queueWorked")}
-        value={t("brief.weekly.actedDismissed", {
-          acted: n(counts.brief_items_acted),
-          dismissed: n(counts.brief_items_dismissed),
-        })}
-      />
-    </dl>
-  );
-}
-
-function Working({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <div className="brief-weekly-working">
-      <dt className="t-caption">{label}</dt>
-      <dd className="t-body">{value}</dd>
-    </div>
   );
 }
 
@@ -376,17 +316,24 @@ function WeeklyBody({
   };
   return (
     <>
-      <WeeklyNarrative review={review} />
-      {/* Where the week was landing, before what the rep did about it: a
-          retrospective is read outcome-first, and the counts below answer
-          "what did I do" against the figure this answers "about what". */}
-      <OutlookPanel
-        outlook={review.outlook ?? []}
-        locale={locale}
-        horizon={horizon}
-        onHorizon={setHorizon}
-        onOpenForecast={() => openAnalyticsSection("forecast")}
-      />
+      {/* The week SAID, in one block: the sentence about it and where it was
+          landing. Two readings of the same week, so they share a body and the
+          body's own stack sets the interval — before this each paid a browser
+          margin and an empty state's padding on top of it, which put two
+          sentences 40px apart with nothing between them. */}
+      <PanelBody className="brief-weekly-week">
+        <WeeklyNarrative review={review} />
+        {/* Where the week was landing, before what the rep did about it: a
+            retrospective is read outcome-first, and the counts below answer
+            "what did I do" against the figure this answers "about what". */}
+        <OutlookPanel
+          outlook={review.outlook ?? []}
+          locale={locale}
+          horizon={horizon}
+          onHorizon={setHorizon}
+          onOpenForecast={() => openAnalyticsSection("forecast")}
+        />
+      </PanelBody>
       {/* How well the week went, after where it was landing and before the
           outcome strip's tallies. Absent blocks draw nothing at all — the
           panel never substitutes zeros for work the rep did not have. */}
@@ -405,91 +352,104 @@ function WeeklyBody({
           — how the queue was worked, how proposals were decided — and they
           read as a list under the strip, where they are still available to
           anyone who wants them and no longer compete with the outcomes. */}
-      <StatStrip testId="weekly-strip">
-        <StatCard
-          label={t("brief.weekly.planCommitmentsKept")}
-          value={t("brief.weekly.ofDue", {
-            done: formatNumber(c.commitments_kept, locale),
-            due: formatNumber(c.commitments_due, locale),
-          })}
-          detail={since(c.commitments_kept, prior?.commitments_kept)}
-        />
-        <StatCard
-          label={t("brief.weekly.dealsWon")}
-          value={formatNumber(c.deals_won, locale)}
-          // What those wins were WORTH, at each deal's own close-time rate.
-          //
-          // The count alone says a week of five small renewals and a week of
-          // one company-making deal are the same week. The money was computed,
-          // FX-converted, stored with the currency it is in, and served — and
-          // read by nothing until now.
-          //
-          // It rides the won slot rather than taking a sixth: five is what a
-          // strip can be read across as one comparison, and a tenth slot folded
-          // the row into two ranks at 1280 (#3709). The one detail line carries
-          // the value AND its change against the week before, which is the
-          // pace reading — it belongs here rather than on the morning, whose
-          // strip is bound to one same-set population.
-          detail={
-            wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
-          }
-        />
-        <StatCard
-          label={t("brief.weekly.leadsAnswered")}
-          value={t("brief.weekly.ofRouted", {
-            answered: formatNumber(c.leads_answered_in_target, locale),
-            routed: formatNumber(c.leads_routed, locale),
-          })}
-          detail={since(
-            c.leads_answered_in_target,
-            prior?.leads_answered_in_target,
-          )}
-        />
-        <StatCard
-          label={t("brief.weekly.meetingsHeld")}
-          value={t("brief.weekly.ofMeetings", {
-            withStep: formatNumber(c.meetings_with_next_step, locale),
-            held: formatNumber(c.meetings_held, locale),
-          })}
-          detail={since(c.meetings_held, prior?.meetings_held)}
-        />
-        <StatCard
-          label={t("brief.weekly.carriedOver")}
-          value={formatNumber(c.tasks_carried_over, locale)}
-          detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
-        />
-      </StatStrip>
-      <WeeklyWorkings counts={c} />
+      <PanelBody className="brief-weekly-outcomes">
+        {/* `compact` because this row is read as ONE glance rather than a
+            reading at a time: the roomy tile's floor put half of it below the
+            fold on a laptop and left a band of dead space under every figure.
+            The scale is untouched — a compact reading is the same reading. */}
+        <StatStrip testId="weekly-strip">
+          <StatCard
+            density="compact"
+            label={t("brief.weekly.planCommitmentsKept")}
+            value={t("brief.weekly.ofDue", {
+              done: formatNumber(c.commitments_kept, locale),
+              due: formatNumber(c.commitments_due, locale),
+            })}
+            detail={since(c.commitments_kept, prior?.commitments_kept)}
+          />
+          <StatCard
+            density="compact"
+            label={t("brief.weekly.dealsWon")}
+            value={formatNumber(c.deals_won, locale)}
+            // What those wins were WORTH, at each deal's own close-time rate.
+            //
+            // The count alone says a week of five small renewals and a week of
+            // one company-making deal are the same week. The money was
+            // computed, FX-converted, stored with the currency it is in, and
+            // served — and read by nothing until now.
+            //
+            // It rides the won slot rather than taking a sixth: five is what a
+            // strip can be read across as one comparison, and a tenth slot
+            // folded the row into two ranks at 1280 (#3709). The one detail
+            // line carries the value AND its change against the week before,
+            // which is the pace reading — it belongs here rather than on the
+            // morning, whose strip is bound to one same-set population.
+            detail={
+              wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
+            }
+          />
+          <StatCard
+            density="compact"
+            label={t("brief.weekly.leadsAnswered")}
+            value={t("brief.weekly.ofRouted", {
+              answered: formatNumber(c.leads_answered_in_target, locale),
+              routed: formatNumber(c.leads_routed, locale),
+            })}
+            detail={since(
+              c.leads_answered_in_target,
+              prior?.leads_answered_in_target,
+            )}
+          />
+          <StatCard
+            density="compact"
+            label={t("brief.weekly.meetingsHeld")}
+            value={t("brief.weekly.ofMeetings", {
+              withStep: formatNumber(c.meetings_with_next_step, locale),
+              held: formatNumber(c.meetings_held, locale),
+            })}
+            detail={since(c.meetings_held, prior?.meetings_held)}
+          />
+          <StatCard
+            density="compact"
+            label={t("brief.weekly.carriedOver")}
+            value={formatNumber(c.tasks_carried_over, locale)}
+            detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
+          />
+        </StatStrip>
+        <WeeklyWorkings counts={c} />
+      </PanelBody>
       {review.deals.length > 0 && (
-        <ul className="brief-weekly-deals">
-          {review.deals.map((deal) => (
-            <li key={`${deal.deal_id}-${deal.occurred_at}`}>
-              {/* The LABEL, not a lookup. It was frozen when the review was
-                  written, so a deal renamed or deleted since still reads as it
-                  did that week — which is why this is a plain anchor and not
-                  `EntityRef`: resolving the name would undo the freeze. The
-                  ADDRESS is safe to build from the frozen id either way; a deal
-                  that has since gone answers 404, which is the honest outcome
-                  for a week that is over. */}
-              <a
-                className="brief-weekly-deal-name link-button"
-                href={routeHash({ screen: "deals", id: deal.deal_id })}
-              >
-                {deal.label}
-              </a>
-              <span className="brief-weekly-deal-outcome t-caption">
-                {outcomeWord(t, deal.outcome)}
-                {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
-              </span>
-              <time
-                className="brief-weekly-deal-when t-caption"
-                dateTime={deal.occurred_at}
-              >
-                {formatDate(deal.occurred_at, locale, recordZone)}
-              </time>
-            </li>
-          ))}
-        </ul>
+        <PanelBody>
+          <ul className="brief-weekly-deals">
+            {review.deals.map((deal) => (
+              <li key={`${deal.deal_id}-${deal.occurred_at}`}>
+                {/* The LABEL, not a lookup. It was frozen when the review was
+                    written, so a deal renamed or deleted since still reads as
+                    it did that week — which is why this is a plain anchor and
+                    not `EntityRef`: resolving the name would undo the freeze.
+                    The ADDRESS is safe to build from the frozen id either way;
+                    a deal that has since gone answers 404, which is the honest
+                    outcome for a week that is over. */}
+                <a
+                  className="brief-weekly-deal-name link-button"
+                  href={routeHash({ screen: "deals", id: deal.deal_id })}
+                >
+                  {deal.label}
+                </a>
+                <span className="brief-weekly-deal-outcome t-caption">
+                  {outcomeWord(t, deal.outcome)}
+                  {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
+                </span>
+                <time
+                  className="brief-weekly-deal-when t-caption"
+                  dateTime={deal.occurred_at}
+                >
+                  {formatDate(deal.occurred_at, locale, recordZone)}
+                </time>
+              </li>
+            ))}
+          </ul>
+        </PanelBody>
       )}
     </>
   );
