@@ -18,8 +18,10 @@ package compose
 // claims.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -204,30 +206,54 @@ func TestAReleasedRetryTakesTheServersPinOverTheCallersIfMatch(t *testing.T) {
 	}
 }
 
-// The released pin and the pin the tier gate read disagreeing is a DEFENSIVE
-// assertion, not a case this door meets.
+// The released pin and the pin the tier gate read disagreeing is REPORTED, and
+// the write goes through on the released one.
 //
 // Through the real stager it is unreachable: approvals pins server-side only for
 // a concrete, version-checkable target, versions are monotonic, and the gate's
 // read precedes the redemption's — so admitted ≤ current = released, and a row
 // that really moved fails validateRedemptionTarget inside the redemption first.
 // This reaches the branch only because countingRedeemer answers a pin without
-// the target re-check production performs. Whether refusing is even the right
-// answer for a disagreement both doors could only discover after the approval is
-// consumed is margince/margince#1069; what this pins meanwhile is that
-// the branch is live and fails closed rather than picking a version.
-func TestADisagreementBetweenTheTwoServerPinsFailsClosed(t *testing.T) {
+// the target re-check production performs, which is why the case is stated here
+// rather than driven through the engine: a fixture that supplies its own version
+// of production proves nothing about production, and saying so is better than a
+// double pretending otherwise.
+//
+// It used to fail closed. That was settled the other way (#1069) on the order of
+// events: consumePresentedToken has already spent the approval by the time this
+// runs, so a 409 destroys a human's one-shot yes on a call that never ran and
+// can never be redeemed again — the agent is told to re-read and retry with
+// nothing left to retry with. The file argued against itself, eighteen lines
+// below, where an approval carrying no pin says "the approval is already spent,
+// so a refusal here would destroy it".
+//
+// Forwarding concedes nothing: the store re-checks the pin inside the
+// transaction that mutates and refuses there, without consuming anything. What
+// is not conceded is silence — an unreachable case that quietly becomes
+// reachable is the failure mode with no witness.
+func TestADisagreementBetweenTheTwoServerPinsIsForwardedAndReported(t *testing.T) {
+	var logged bytes.Buffer
+	restore := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	t.Cleanup(func() { slog.SetDefault(restore) })
+
 	// versionedDeal reports 12 to the tier gate; the approval was granted at 9.
 	staging := &countingRedeemer{pin: 9, pinned: true}
 
 	saw, status := autoExecutedMove(t, staging, ids.New[ids.ApprovalKind]().String(), "")
 
-	if status != http.StatusConflict {
-		t.Errorf("status = %d, want 409 — picking either version would run the write against a state "+
-			"nothing authorized", status)
+	if status != http.StatusOK || !saw.ran {
+		t.Fatalf("the released retry answered %d and ran=%v — refusing it burns the approval it just "+
+			"consumed on a call that never happened", status, saw.ran)
 	}
-	if saw.ran {
-		t.Errorf("the handler ran with If-Match %q despite the two pins naming different records", saw.ifMatch)
+	if saw.ifMatch != "9" {
+		t.Errorf("forwarded If-Match = %q, want \"9\" — the store re-checks the APPROVED version inside "+
+			"the transaction that mutates, which is where a genuine disagreement refuses without "+
+			"destroying anything", saw.ifMatch)
+	}
+	if line := logged.String(); !strings.Contains(line, "did not read") {
+		t.Errorf("the disagreement was not recorded anywhere: a case the system believes cannot happen "+
+			"and no longer refuses has nothing else to say it happened.\n  logged: %q", line)
 	}
 }
 

@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -192,21 +193,50 @@ func ApprovalRedeemed(ctx context.Context) bool {
 //nolint:nilnil // no pin IS an answer here: a write with nothing to condition it on is the ordinary case for a static tier and an unapproved call, and a sentinel for it would make every call site branch on a condition none of them act on
 func pinForWrite(ctx context.Context, callerPin *int64) (*int64, error) {
 	admitted, gateRead := auth.AutoExecutePin(ctx)
-	if callerPin != nil {
-		if gateRead && *callerPin != admitted {
-			return nil, fmt.Errorf(
-				"if_version %d is not the version this record was read at (%d) — re-read it and retry: %w",
-				*callerPin, admitted, apperrors.ErrVersionSkew)
-		}
-		return callerPin, nil
-	}
+	var releasedPin *int64
 	if released, pinned := ctx.Value(releasedPinKey{}).(int64); pinned {
-		return &released, nil
+		releasedPin = &released
 	}
-	if gateRead {
-		return &admitted, nil
+	pin, err := auth.ResolveWritePin(auth.WritePinInputs{
+		CallerPin:     callerPin,
+		ReleasedPin:   releasedPin,
+		Admitted:      admitted,
+		GateRead:      gateRead,
+		ApprovalSpent: ApprovalRedeemed(ctx),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return nil, nil
+	reportWritePinDisagreement(ctx, pin, admitted)
+	if pin.Source == auth.PinNone {
+		return nil, nil
+	}
+	version := pin.Version
+	return &version, nil
+}
+
+// reportWritePinDisagreement leaves the witness for a condition the system
+// believes cannot happen.
+//
+// Unreachable through the real stager — a pin is taken server-side only for a
+// concrete, version-checkable target, versions are monotonic, and the gate's
+// read precedes the redemption's — and an unreachable case that quietly becomes
+// reachable is the failure mode with no witness. The write is not refused (the
+// approval is already spent by the time this runs), so a log line is the only
+// thing that would say it happened.
+//
+// slog.Default() because this sits below every seam that carries a logger:
+// pinForWrite is reached from eight tool handlers and takes a context alone,
+// and threading a logger through all eight to reach a branch nothing can enter
+// would be a worse trade than the package default compose already installs.
+func reportWritePinDisagreement(ctx context.Context, pin auth.WritePin, admitted int64) {
+	if !pin.DisagreedWithAdmitted {
+		return
+	}
+	slog.Default().WarnContext(ctx,
+		"an agent write was pinned at a version the tier gate did not read",
+		"pinned", pin.Version, "admitted", admitted, "source", pin.Source,
+		"approval_spent", ApprovalRedeemed(ctx))
 }
 
 // archiveAt performs one archive conditioned on the version the caller's
