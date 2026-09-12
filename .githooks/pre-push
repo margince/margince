@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Diff-scoped code-craftsmanship gate (ADR-0045, `craft static`).
+# The pre-push gates: diff-scoped craftsmanship (ADR-0045, `craft static`), the
+# sub-second whole-tree greps, and — for a push that changes backend Go — the
+# integration lane. Everything but the lane answers in seconds; the lane is the
+# one deliberate exception and the tail of this file says what buys it.
 #
 # Runs the deterministic craftsmanship linter on the Go files that THIS push
 # changes vs origin/main — backend/, extensions/, fixtures/ and desktop/ alike,
@@ -31,6 +34,59 @@ if [[ -n "$(git diff --name-only "$base"...HEAD -- backend/migrations)" ]]; then
 	"$root/scripts/check-migration-versions.sh"
 fi
 
+# The integration lane. It is the ONE expensive thing this hook runs, and it
+# earns that because it is the only lane that sees a whole class of defect:
+# `make check` compiles every integration file into nothing (they carry
+# `//go:build integration`), so a green check says nothing at all about them.
+#
+# It sits HERE, above the Go-file check, for the reason the migration gate
+# above does: that check exits early when a push changes no Go, and a push that
+# adds only a `.sql` migration is exactly a push this lane is for. A migration
+# is the single likeliest thing to redden it.
+#
+# Scoped to backend/ for the reason the craft gate is scoped to a file list — a
+# docs or frontend push must not pay minutes for a lane that cannot fail on it.
+#
+# WHY THIS IS WORTH MINUTES. Three separate defects reached main on 2026-09-12
+# that no other local gate could see: a rule that broke two pre-existing tests,
+# reference rows registered in the harness's preserved-table list but not the
+# product's, and an index addition that pushed an empty table past the slack
+# deciding DELETE vs TRUNCATE. Every one passed `make check-backend`. All three
+# were found by running this lane by hand, twice by accident.
+#
+# NOT the objection the Makefile's check-all comment used to raise about
+# parallel sessions sharing one test template: scripts/lib-testdb.sh derives a
+# template per LINKED worktree (_testdb_worktree_slug), so two worktrees cannot
+# rebuild each other's schema. Two shells in the SAME worktree still share one,
+# and so does the primary checkout — which is why a failure here is worth
+# reading before believing, if somebody else is mid-run beside you.
+lane_paths="$(git diff --name-only --diff-filter=d "$base"...HEAD -- backend \
+	| grep -E '\.(go|sql)$' | grep -v '_gen\.go$' || true)"
+if [[ -n "$lane_paths" ]]; then
+	# A probe, not a run: the lane fails loudly without Postgres rather than
+	# skipping (a skipped security gate looks exactly like a passing one), and
+	# that is right for a deliberate `make test-integration` and wrong here. A
+	# push with the stack down would be blocked on the stack rather than on the
+	# code, and a hook nobody can push past is a hook that gets turned off. So
+	# the absence is reported at the same volume and the push continues.
+	if nc -z localhost 15432 >/dev/null 2>&1; then
+		echo "integration lane: backend changed — running (minutes; the only lane that sees it)…"
+		if ! make -C "$root" -s test-integration; then
+			echo ""
+			echo "The integration lane BLOCKED the push. This lane is the one"
+			echo "\`make check\` cannot reach, so a green check does not clear it."
+			echo "If the failure is somebody else's red on main, claim it per"
+			echo "AGENTS.md rather than pushing past it."
+			exit 1
+		fi
+	else
+		echo "integration lane: SKIPPED — nothing answers on localhost:15432."
+		echo "  This push changed backend Go or SQL, which is what the lane checks."
+		echo "  Start it with \`make db-up\` and push again, or accept that CI is"
+		echo "  the first thing to run these tests."
+	fi
+fi
+
 # Changed-and-still-present Go files, excluding generated code. extensions/,
 # fixtures/ and desktop/ are each their own module and would otherwise escape the
 # bar entirely — a first-party unit ships the same product as backend/, and the
@@ -59,6 +115,7 @@ fi
 # The whole-tree deterministic gates that are cheap enough to run on every
 # push (sub-second greps): catch an RLS-bypassing store statement or a
 # jurisdiction string in core locally, before CI does. The heavier gates
-# (build, lint, tests, drift) stay in `make check` / CI.
+# (build, lint, drift) stay in `make check` / CI.
 "$root/scripts/check-rls-store-path.sh"
 "$root/scripts/check-no-jurisdiction.sh"
+
