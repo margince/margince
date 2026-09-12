@@ -156,7 +156,13 @@ func (r *Reader) readPages(ctx context.Context, raw []byte, maxChars int) (strin
 	if err := r.started(); err != nil {
 		return "", err
 	}
-	instance, err := r.pool.GetInstance(instanceWait)
+	// Under the CALLER's context, not a bare timeout. A bare one waits its full
+	// length even for a reading whose caller has already given up — so a
+	// cancelled job would hold a queue slot for thirty seconds it no longer
+	// wants, behind which the next reading waits.
+	queued, release := context.WithTimeout(ctx, instanceWait)
+	defer release()
+	instance, err := r.pool.GetInstanceWithContext(queued)
 	if err != nil {
 		return "", fmt.Errorf("pdftext: no engine instance free: %w", err)
 	}
@@ -186,8 +192,11 @@ func (r *Reader) readPages(ctx context.Context, raw []byte, maxChars int) (strin
 	for page := range count.PageCount {
 		// Checked per page rather than once: this is the caller's own deadline,
 		// and a long document is exactly the case where it expires mid-read.
+		// The context's own error is kept so a caller can tell a deadline from a
+		// broken file — the job runtime classifies a timeout as retryable and a
+		// malformed document as not.
 		if err := ctx.Err(); err != nil {
-			return "", fmt.Errorf("%w: the reading did not finish in time", ErrUnreadable)
+			return "", fmt.Errorf("%w: the reading did not finish in time: %w", ErrUnreadable, err)
 		}
 		text, err := instance.GetPageText(&requests.GetPageText{
 			Page: requests.Page{ByIndex: &requests.PageByIndex{Document: doc.Document, Index: page}},
@@ -200,6 +209,12 @@ func (r *Reader) readPages(ctx context.Context, raw []byte, maxChars int) (strin
 		// costs the pages it took to fill the budget and not the other 990.
 		// Counted incrementally rather than over the accumulated string, which
 		// would re-walk everything read so far on every page.
+		//
+		// The page's text is counted as the engine returns it, which is already
+		// the document's words: pdfium collapses the whitespace that positions
+		// them, so a cover page of forty blank lines measures ONE character
+		// here. A budget spent on positioning is a hazard of a raw parser and
+		// not of this one — measured, rather than guarded against speculatively.
 		held += utf8.RuneCountInString(text.Text)
 		if held > maxChars {
 			break
