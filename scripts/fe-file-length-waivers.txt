@@ -96,7 +96,6 @@
 571 frontend/src/screens/capture-activity.tsx
 573 frontend/src/screens/project360.tsx
 583 frontend/src/screens/companycontracts.tsx
-587 frontend/src/screens/companyfinance.tsx
 589 frontend/src/app/palette.tsx
 591 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx
