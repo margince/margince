@@ -57,17 +57,27 @@ var picksOneSeat = regexp.MustCompile(`(?is)\bfrom\s+app_user\b.*\blimit\s+1\b`)
 // carrying one is answering a question its caller already settled.
 //
 // TWO SHAPES, because the tree names a seat two ways. A bound id or email is a
-// caller naming the row. A correlated predicate — `a.captured_by = 'human:' ||
-// u.id::text` inside a LATERAL — names it from the row being joined, which
-// decides the pick exactly as a bind would; the `LIMIT 1` there bounds a
-// union's classes rather than choosing between seats.
+// caller naming the row. A correlated COMPARISON against the joined row —
+// `a.captured_by = 'human:' || u.id::text` inside a LATERAL, and the LIKE form
+// beside it — names it from the row being joined, which decides the pick
+// exactly as a bind would; the `LIMIT 1` there bounds a union's classes rather
+// than choosing between seats.
+//
+// The comparison is matched and not the expression: `u.id::text` alone appears
+// in a PROJECTION too, and `SELECT u.id::text FROM app_user u LIMIT 1` is this
+// defect wearing the shape that excuses it. The operator and the prefix are
+// left open — `=` or `LIKE`, any literal — because what makes it a pin is being
+// compared to a column of the other row, not which prefix the tree happens to
+// use today.
 //
 // `id <> $1` is deliberately NOT one of them. It says which seat the pick is
 // not, and leaves the ordering to choose among the rest — which is this defect
 // with one row excluded from it. A statement meaning "the colleague" says so in
 // a waiver, because "any of the others" is a claim about the fixture and not
 // about the SQL.
-var pinsTheRow = regexp.MustCompile(`(?is)\b(id|email)\s*=\s*\$\d|\bu\.id::text\b`)
+var pinsTheRow = regexp.MustCompile(
+	`(?is)\b(id|email)\s*=\s*\$\d` +
+		`|\b[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*\s*(=|like)\s*'[^']*'\s*\|\|\s*u\.id::text\b`)
 
 // seatPickWaivers ratifies a single-row pick that is NOT resolving the session's
 // own seat. Each says which seat it means instead.
