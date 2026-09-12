@@ -122,7 +122,17 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, contactID ids.Con
 	if _, err := tx.Exec(ctx, `DELETE FROM communication_basis WHERE contact_id = $1`, contactID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's communication bases: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM communication_suppression WHERE contact_id = $1`, contactID); err != nil {
+	// BY ADDRESS AS WELL AS BY CONTACT. A machine-written stop — the hard
+	// bounce consent/bouncesuppress.go records — deliberately carries no
+	// contact_id, because the engine matches the contact arm before the address
+	// arm and a contact-scoped row would refuse every address that record has.
+	// Keyed only on contact_id this delete walks straight past those rows, and
+	// an erased subject's address survives in plaintext in a table nothing will
+	// ever clean.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM communication_suppression
+		 WHERE contact_id = $1 OR lower(address) = ANY($2)`,
+		contactID, lowerAll(emails)); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's suppressions: %w", err)
 	}
 	return nil

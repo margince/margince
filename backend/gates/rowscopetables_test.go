@@ -430,5 +430,19 @@ const (
 	// choose an id, it hands over the address the message is already going to,
 	// and a match on two records resolves to no subject at all rather than
 	// picking one.
-	modulesTierUnscopedCeiling = 104
+	//
+	// THE SEVENTH RISE, +1, and it is the send path's own shape once more.
+	// consent.RecordHardBounceTx reads contact_email to learn which record, if
+	// any, owns the address a delivery report just declared dead. It runs under
+	// the CONNECTOR principal that carried the report — no seat, nothing to
+	// narrow to — which is the posture every capture-side read has.
+	//
+	// What bounds it is the address, and more narrowly than the entry above:
+	// the caller chooses no id at all. The address arrives from a delivery
+	// report that had to name a message this installation actually sent to that
+	// address before anything got this far, and the read's whole output is one
+	// nullable contact id used to decide which entity an audit row hangs from.
+	// A match on two records takes the first and the stop is unaffected either
+	// way, because the suppression itself deliberately names no contact.
+	modulesTierUnscopedCeiling = 105
 )

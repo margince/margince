@@ -15,11 +15,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type consentEnv struct {
@@ -687,4 +694,117 @@ func TestThePreviewRecordsNothing(t *testing.T) {
 	if afterDecisions != beforeDecisions {
 		t.Errorf("the preview wrote %d decision row(s) — a preview authorizes nothing", afterDecisions-beforeDecisions)
 	}
+}
+
+// TestADeadAddressRefusesTheNextSend is what the bounce stop is FOR.
+//
+// Writing the suppression is only half the control: the half that matters is
+// that the send path then refuses. Before the writer existed, `hard_bounce` sat
+// in the table's kind CHECK and in the engine's reason map with nothing to
+// produce one, so this refusal was reachable in the code and unreachable in
+// production — the shape that reads as though the product handles dead
+// addresses while it sends to them.
+//
+// Business correspondence is the purpose deliberately, not marketing. ADR-0098
+// classes correspondence as never consent-gated, so it is the case that would
+// go out if the stop did not bind — and hard_bounce is meant to bind EVERY
+// category, because no template makes a dead mailbox accept mail.
+//
+// EACH SEND GETS ITS OWN INBOUND. The first version of this reused the
+// fixture's single anchor and passed with the stop pointing at a completely
+// different address — the second send was refused because one inbound supports
+// one reply, not because of anything this slice built. A test that cannot tell
+// its own subject from an unrelated rule proves nothing about either.
+func TestADeadAddressRefusesTheNextSend(t *testing.T) {
+	c := setupConsent(t)
+
+	// Correspondence goes, which is what makes the refusal below meaningful:
+	// without this the test could pass against a fixture refusing everything.
+	if status, code, _ := c.sendFrom(t, c.inbound(t), "business_correspondence"); status != http.StatusAccepted {
+		t.Fatalf("correspondence to a live address → %d %q, want 202", status, code)
+	}
+
+	// A SECOND inbound, so the send below is refused only by the stop. Proved
+	// by the control case: with no stop written, this send is accepted.
+	fresh := c.inbound(t)
+	if status, code, _ := c.sendFrom(t, fresh, "business_correspondence"); status != http.StatusAccepted {
+		t.Fatalf("a second inbound supports its own reply → %d %q, want 202 — if this "+
+			"refuses, the test below cannot tell the stop from the anchor rule", status, code)
+	}
+
+	// The address dies. Written through the real writer under the CONNECTOR
+	// principal that carries a delivery report in production, so the stop is
+	// captured by the same actor the observer runs as.
+	wsID := apptest.InstallationWorkspaceUUID(context.Background(), t, c.Pool)
+	reporter := principal.WithWorkspaceID(context.Background(), wsID)
+	reporter = principal.WithCorrelationID(reporter, ids.NewV7())
+	reporter = principal.WithActor(reporter, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:gmail",
+	})
+	if err := database.WithWorkspaceTx(reporter, c.Pool, func(tx pgx.Tx) error {
+		return consent.RecordHardBounceTx(reporter, tx, consent.HardBounceFact{
+			Address: "subject@consent.test", DeliveryID: ids.NewV7(),
+		})
+	}); err != nil {
+		t.Fatalf("stopping the dead address: %v", err)
+	}
+
+	status, code, detail := c.sendFrom(t, c.inbound(t), "business_correspondence")
+	if status == http.StatusAccepted {
+		t.Fatal("the send went to an address that refused delivery permanently: the stop is " +
+			"written and the engine reads it, so a message going out here means the two are " +
+			"not connected — which is the exact state before this writer existed")
+	}
+	if status != http.StatusConflict || code != "consent_not_granted" {
+		t.Errorf("send to a dead address → %d %q, want 409 consent_not_granted", status, code)
+	}
+	// THE REASON, not only the refusal, and this is the assertion that carries
+	// the test. Several rules refuse a correspondence send under the same
+	// problem code, so a status check alone cannot tell this slice's stop from
+	// an unrelated one — an earlier version of this test passed with the stop
+	// written against a completely different address, because something else
+	// was refusing and nothing checked what.
+	if !strings.Contains(detail, "hard_bounce") {
+		t.Errorf("the refusal reads %q and does not name hard_bounce: the send was stopped "+
+			"by some other rule, so this says nothing about whether a dead address stops mail",
+			detail)
+	}
+}
+
+// inbound logs one fresh inbound message from the subject and answers its id.
+// A reply is anchored to the message it answers, so a test making several sends
+// needs several anchors.
+func (c *consentEnv) inbound(t *testing.T) string {
+	t.Helper()
+	var activity struct {
+		ID string `json:"id"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "email", "subject": "Inbound question", "direction": "inbound",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": c.contactID}},
+	}, nil, &activity); status != http.StatusCreated {
+		t.Fatalf("log an inbound → %d", status)
+	}
+	return activity.ID
+}
+
+// sendFrom is c.send with the anchor named and the DETAIL returned, for a test
+// that has to tell one refusal from another.
+//
+// The detail matters because several rules refuse a correspondence send and the
+// problem code is the same for all of them. A staging refusal names the reason
+// code of the first denied recipient in its message, which is the only place
+// the engine's actual reason reaches a caller — the per-recipient decision rows
+// are written at TRANSMIT, and a send refused at staging never gets that far.
+func (c *consentEnv) sendFrom(t *testing.T, activityID, purpose string) (int, string, string) {
+	t.Helper()
+	var problem struct {
+		Code   string `json:"code"`
+		Detail string `json:"detail"`
+	}
+	status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": purpose,
+	}, nil, &problem)
+	return status, problem.Code, problem.Detail
 }
