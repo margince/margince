@@ -2698,12 +2698,6 @@ export const vi = {
   "decision.status.rejected": "Đã từ chối",
   "decision.status.expired": "Đã hết hạn",
 
-  "brief.pipelinePartial":
-    "{count} deal không nằm trong các số này — quyền của bạn không bao gồm chúng.",
-  "brief.pipelineUnavailable": "Không tải được số liệu này.",
-  "brief.pipelineBasis_one": "{weighted} theo trọng số · {count} deal đang mở",
-  "brief.pipelineBasis_other":
-    "{weighted} theo trọng số · {count} deal đang mở",
   "brief.panel.weekly": "Tuần trước",
   "brief.weekly.weekOf": "Tuần từ {day}",
   "brief.weekly.learnings.title": "Tuần này dạy điều gì",
@@ -2989,7 +2983,6 @@ export const vi = {
   "brief.glance.intro": "Đây là ngày của bạn.",
   "brief.panel.decisions": "Đang chờ bạn",
   "brief.panel.overnight": "Qua đêm",
-  "brief.panel.pipeline": "Pipeline đang mở",
   "brief.panel.tasks": "Việc đến hạn",
   "brief.panel.quiet": "Hôm nay yên ắng",
   "brief.rail.quietSchedule": "Không có lịch nào",

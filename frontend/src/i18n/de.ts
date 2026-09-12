@@ -2727,11 +2727,6 @@ export const de = {
   "decision.status.rejected": "Abgelehnt",
   "decision.status.expired": "Abgelaufen",
 
-  "brief.pipelinePartial":
-    "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
-  "brief.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
-  "brief.pipelineBasis_one": "{weighted} gewichtet · {count} offener Deal",
-  "brief.pipelineBasis_other": "{weighted} gewichtet · {count} offene Deals",
   "brief.panel.weekly": "Letzte Woche",
   "brief.weekly.weekOf": "Woche ab {day}",
   "brief.weekly.learnings.title": "Was diese Woche gelehrt hat",
@@ -3022,7 +3017,6 @@ export const de = {
   "brief.glance.intro": "Das ist dein Tag.",
   "brief.panel.decisions": "Wartet auf dich",
   "brief.panel.overnight": "Über Nacht",
-  "brief.panel.pipeline": "Offene Pipeline",
   "brief.panel.tasks": "Fällige Aufgaben",
   "brief.panel.quiet": "Heute ruhig",
   "brief.rail.quietSchedule": "Nichts gebucht",

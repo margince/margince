@@ -15,12 +15,7 @@ import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
 import { quietDeals, useBriefDeals, useWeeklyReview } from "./brief.queries";
-import {
-  OvernightPanel,
-  PositionPanel,
-  RailQuiet,
-  WatchPanel,
-} from "./brief.rail";
+import { OvernightPanel, RailQuiet, WatchPanel } from "./brief.rail";
 import { BriefReadingsStrip } from "./brief.readings";
 import { PromisesPanel, SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
@@ -380,7 +375,6 @@ export function BriefScreen() {
                 state={readState(worklistQuery)}
               />
               <OvernightPanel />
-              <PositionPanel />
               <WatchPanel
                 deals={quiet}
                 more={beyondPage}
