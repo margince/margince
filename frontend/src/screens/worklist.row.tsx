@@ -47,7 +47,7 @@ import {
 } from "./worklist.copy";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { eyebrowKeyFor } from "./worklist.eyebrow";
+import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { PairDecision } from "./worklist.pair";
 import {
   useApproval,
@@ -215,6 +215,7 @@ export function WorklistRow({
     sample,
     zone,
   };
+  const named = conditionOf(item);
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and
@@ -258,10 +259,11 @@ export function WorklistRow({
             carrying one per row: the tone survives as a dot and the label as
             plain text, where a filled pill down a queue reads as decoration a
             reader learns to skip. The span is PLACEMENT — the grid cell and the
-            width the kinds share — and draws nothing itself. */}
-        <span className="worklist-row-kind">
+            width the kinds share; `conditionOf` says what a system row
+            draws there instead. */}
+        <span className={kindClass(named)} title={named ?? undefined}>
           <Badge quiet tone={item.band === "now" ? "warn" : undefined}>
-            {t(eyebrowKeyFor(item))}
+            {named ?? t(eyebrowKeyFor(item))}
           </Badge>
         </span>
         <div className="worklist-row-text">

@@ -96,6 +96,21 @@
   min-width: 0;
 }
 
+/* A named condition is longer than a category word and the badge is `nowrap`,
+   so it ran out of its cell and under the title. Clipped, never wrapped — see
+   `eyebrowClass` for why the column cannot grow a second line. */
+.worklist-row-kind-named {
+  overflow: hidden;
+}
+
+.worklist-row-kind-named > * {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .worklist-row-text {
   display: flex;
   flex-direction: column;
