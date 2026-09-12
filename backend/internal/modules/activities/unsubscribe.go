@@ -130,6 +130,11 @@ const redactedToken = "token-redacted"
 type sendDeliverability struct {
 	// listUnsubscribe is the RFC 8058 header value.
 	listUnsubscribe string
+	// disclosures are the obligations this message carries, kept so the MARKUP
+	// alternative renders the same ones. Two alternatives of one message that
+	// disagreed about what was disclosed would be two messages, and which one
+	// the recipient reads is their client's decision rather than ours.
+	disclosures []DisclosureLine
 	// transmitted is the body that goes on the wire. It carries the live
 	// token, because the recipient's one-click link IS that token.
 	transmitted string
@@ -262,6 +267,28 @@ func surfaceFor(category commsauthz.Category, marketingPurpose, consentPurpose s
 // predates the category — an MCP tool, a stored scheduled send — keeps the
 // behaviour it was written against rather than silently losing or gaining a
 // footer.
+// disclosureCategory answers which category the DISCLOSURE rules should be
+// resolved under.
+//
+// The category when there is one. When there is not — an older caller naming
+// only the deprecated consent key — it falls back to marketing exactly when the
+// legacy surface says this message carries an unsubscribe link, because that is
+// the same question: a send offering somebody a way to stop receiving it is
+// advertising by this product's own reckoning.
+//
+// It never answers marketing for a message with an explicit non-marketing
+// category. The fallback exists for callers that said nothing, not to overrule
+// one that did.
+func (u unsubscribeSurface) disclosureCategory() commsauthz.Category {
+	if u.category != "" {
+		return u.category
+	}
+	if u.carries() {
+		return commsauthz.CategoryMarketing
+	}
+	return ""
+}
+
 func (u unsubscribeSurface) carries() bool {
 	if u.category != "" {
 		return u.category.CarriesUnsubscribe()
@@ -293,10 +320,42 @@ func lockedPurposeKey(key string) bool {
 // recipients is the MERGED addressee list, every To and Cc address, because
 // the refusal above counts who RECEIVES the rendered message rather than how
 // they were addressed.
+// THE DISCLOSURES GO ON FIRST, before the unsubscribe surface is even asked
+// about. What a jurisdiction demands a message disclose — who is writing, who
+// answers about the data — binds a first contact whatever it is about, while an
+// unsubscribe surface belongs to advertising alone. A disclosure appended
+// inside the marketing arm below would appear on advertising and be absent from
+// the correspondence Art. 13 actually covers.
+//
+// It also has to survive every early return in this function. A send with no
+// linker wired, no recipients, or a category carrying no unsubscribe surface
+// still owes its disclosures, so they are folded into the body BEFORE the
+// branching starts rather than added to each arm.
 func (s *Store) deliverability(
 	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface,
 ) (sendDeliverability, error) {
-	untokenized := sendDeliverability{transmitted: body, recorded: body}
+	// THE SURFACE decides whether this is advertising, not the category alone.
+	// A caller that names only the deprecated consent key carries no category,
+	// and asking about an empty one drops every marketing-only obligation — the
+	// German objection route and the Vietnamese advertiser contact — from
+	// exactly the sends that carry an unsubscribe surface and are therefore
+	// advertising by the product's own reckoning.
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()))
+	if err != nil {
+		return sendDeliverability{}, err
+	}
+	// REFUSED, not shipped short. A line the installation never stated is left
+	// out of the body by appendDisclosures — printing "unknown" where the
+	// controller's name belongs discloses nothing — and this is where that
+	// omission stops being silent. It runs before the early returns below for
+	// the same reason the append does: every arm owes the same disclosures.
+	if kinds := unmeetable(owed); len(kinds) > 0 {
+		return sendDeliverability{}, &UndisclosableError{Kinds: kinds}
+	}
+	body = appendDisclosures(body, owed)
+	untokenized := sendDeliverability{
+		transmitted: body, recorded: body, disclosures: owed,
+	}
 	if s.unsubscribe == nil || len(recipients) == 0 {
 		return untokenized, nil
 	}
@@ -351,6 +410,7 @@ func (s *Store) deliverability(
 		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
 		links:           live,
 		words:           words,
+		disclosures:     owed,
 		transmitted:     appendUnsubscribeFooter(body, live, words),
 		recorded:        appendUnsubscribeFooter(body, redacted, words),
 	}, nil

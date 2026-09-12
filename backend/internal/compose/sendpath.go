@@ -297,6 +297,14 @@ func sendStore(pool *pgxpool.Pool, send SendPath) *activities.Store {
 	send = send.withPoolDefaults(pool)
 	return activities.NewStore(InstallationDB(pool)).
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		// The disclosures a jurisdiction demands, put into the body that owes
+		// them. See compose/disclosurefooter.go.
+		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
+			// WITH THE COUNTRY READER, which decides which pack applies. A bare
+			// store answers no country, so applicableRules finds no pack and
+			// every message silently owes nothing — the failure this seam
+			// exists to end, arriving through the wiring instead.
+			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
 		WithPublicBaseURL(send.PublicBaseURL).
 		WithRuntimeEnvironment(send.Environment).
 		WithSendAuthority(send.SendAuthority).

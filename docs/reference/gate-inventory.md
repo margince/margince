@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (110)
+## Parity (111)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -54,6 +54,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealroominvitelink_test.go` | H3 | The address a buyer invitation MAILS is an address this app serves. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `deexceptionmirror_test.go` | H3 | The engine's test fixture for the German exception is the pack's declaration, or the tests prove nothing about what ships. |
+| `disclosureseam_test.go` | H1 | The two halves of the disclosure seam describe the same thing. |
 | `dsrqueueishumanonly_test.go` | H2 | The subject-request queue is human-only in the contract because it is human-only in the store. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |

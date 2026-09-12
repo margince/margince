@@ -38,6 +38,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -88,7 +89,6 @@ var unappliedRules = gatekit.Waive(map[string]string{
 		"activities.SendEmailInput.Subject is caller-supplied text — and no step " +
 		"between that and the provider consults the applicable rules, so an " +
 		"advertising message leaves unmarked whatever a pack declares",
-	"Disclosures": "nothing puts a rendered disclosure INTO a message. consent's DisclosuresFor turns each declared obligation into the words that meet it and reports one the installation cannot meet rather than inventing it \u2014 so the particulars exist, an operator can state them, and the mapping from obligation to text is written. What is missing is the consumer: activities/sendcore.go composes the body and comms/sendseam.go hands it to the provider, and neither asks. Until one does, an advertising mail still leaves without the controller identity a pack demands",
 	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
 		"one that may write to somebody who has just suppressed themselves, and it " +
 		"registers no template for this",
@@ -136,10 +136,14 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 //
 // An entry leaves this map when a send path calls the reader, which is the same
 // moment its register line goes.
-var unreachedReaders = map[string]bool{"Disclosures": true}
+var unreachedReaders = map[string]bool{}
 
-// ruleReaderCallers names each function that reads a declared obligation, and
-// the send path that calls it.
+// ruleReaderCallers maps a rules FIELD to the file where the seam is crossed.
+//
+// The key names the field (Rules.Disclosures); the value names the file whose
+// call reaches the reader. The check below asks whether that file calls a
+// function of the key's name, which is what catches an adapter gutted while its
+// wiring stays in place.
 //
 // An EMPTY value means not yet reached, and the field stays in unappliedRules
 // with the matching reason. The two entries are the same gap seen from two
@@ -147,7 +151,17 @@ var unreachedReaders = map[string]bool{"Disclosures": true}
 // function is waiting for a caller.
 //
 // gatekit:fixture the rule readers and the send paths that call them
-var ruleReaderCallers = map[string]string{"DisclosuresFor": ""}
+var ruleReaderCallers = map[string]string{
+	// The compose adapter, which is where the seam is actually crossed.
+	// activities/unsubscribe.go calls its own store helper, which calls the
+	// injected resolver — so naming the module file would pass on a call that
+	// never reaches consent if the wiring were removed.
+	//
+	// The KEY is the field's reader (DisclosuresFor reads Rules.Disclosures);
+	// the value names the function the adapter calls to get there, which opens
+	// its own transaction around it.
+	"Disclosures": "backend/internal/compose/disclosurefooter.go",
+}
 
 // TestEveryRuleReaderIsReachableFromASend closes this gate's own blind spot.
 //
@@ -181,14 +195,97 @@ func TestEveryRuleReaderIsReachableFromASend(t *testing.T) {
 	}
 }
 
-// sendPathCalls reports whether the named file calls the named function.
+// composedWithoutDisclosures are the send paths that build a message body
+// without asking what it must disclose.
+//
+// Each is a FIRST CONTACT that plainly owes an Art. 13 disclosure, and each
+// composes its own body rather than going through activities' send path — so
+// the append that covers the ordinary send cannot reach them.
+//
+// The register above cannot hold this: its question is whether any engine code
+// reads the obligation, and the answer is now yes. This is the narrower one it
+// cannot ask — whether every path that sends reaches that reader.
+//
+// gatekit:fixture the send paths that compose a body without disclosures
+var composedWithoutDisclosures = map[string]string{
+	"backend/internal/compose/controllermail.go": "the installation's own mail — a privacy " +
+		"notice, a confirm link — is rendered by consent.RenderControllerTemplate and staged " +
+		"straight onto a delivery. It never reaches activities' send path, so a notice that " +
+		"exists to discharge an Art. 14 duty leaves without the controller identity the same " +
+		"pack demands on every first contact",
+	"backend/internal/modules/activities/channelsend.go": "a channel message builds its own " +
+		"outbound row from the caller's body and sends it unchanged. Nothing here is " +
+		"email-specific about the obligation — a first message over Telegram is as much a " +
+		"first contact as one over mail",
+	"backend/internal/modules/dealrooms/invitemail.go": "a buyer invitation goes out through " +
+		"the raw mailer, which adds headers rather than composing anything. " +
+		"gates/directmailbypass_test.go already ratifies this mailer's existence; what it " +
+		"does not say is that an invitation is often the first contact with its recipient",
+}
+
+// TestEverySendPathThatComposesABodyAsksWhatItOwes keeps the register above
+// honest: every entry names a file that still exists and still says why.
+//
+// WHAT IT DOES NOT DO, stated plainly because an earlier version of this
+// comment claimed otherwise: it does not DISCOVER a new undisclosed send path.
+// It reads the map and nothing else, so a path added tomorrow that composes a
+// body and asks nothing passes here in silence.
+//
+// Discovery was tried and withdrawn. Every anchor wide enough to catch these
+// three — a Body field in a struct literal, a call named Stage — matches
+// dozens of unrelated writers, and the allowlist needed to quiet them would be
+// longer than the register it guards. A waived gate reads as coverage, which is
+// worse than a register that admits its own limit.
+//
+// So the register is a RECORD, not a fence: three paths that owe an Art. 13
+// disclosure and do not carry it, written down where the next reader finds them
+// instead of rediscovering them. Removing an entry by closing its gap is the
+// point; the fence that would stop a fourth appearing does not exist yet.
+func TestEverySendPathThatComposesABodyAsksWhatItOwes(t *testing.T) {
+	t.Parallel()
+	for path, reason := range composedWithoutDisclosures {
+		if strings.TrimSpace(reason) == "" {
+			t.Errorf("%s is recorded as composing without disclosures and says no reason. "+
+				"A path here ships a message owing an obligation it does not carry, which "+
+				"is a decision somebody has to make rather than inherit.", path)
+		}
+		if _, err := os.Stat(filepath.Join(repoRoot, path)); err != nil {
+			t.Errorf("%s no longer exists — this record names a send path that is gone. "+
+				"Point it at what replaced the file, or delete the entry if the gap closed "+
+				"with it: %v", path, err)
+		}
+	}
+}
+
+// sendPathCalls reports whether the named file CALLS the named function, as
+// opposed to merely mentioning it.
+//
+// A substring match was the first version and it was too weak: gutting the call
+// while leaving the type name in a variable declaration still matched, so the
+// gate passed over a seam that no longer crossed. This walks the syntax and
+// looks for a call expression, which a comment or a type reference is not.
 func sendPathCalls(t *testing.T, file, fn string) bool {
 	t.Helper()
-	src, err := os.ReadFile(filepath.Join(repoRoot, file))
+	parsed, err := parser.ParseFile(token.NewFileSet(),
+		filepath.Join(repoRoot, file), nil, 0)
 	if err != nil {
-		t.Fatalf("reading %s: %v", file, err)
+		t.Fatalf("parsing %s: %v", file, err)
 	}
-	return strings.Contains(string(src), fn+"(")
+	var called bool
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			called = called || fun.Name == fn
+		case *ast.SelectorExpr:
+			called = called || fun.Sel.Name == fn
+		}
+		return true
+	})
+	return called
 }
 
 // TestTheEngineReadsAtLeastOneRuleField is the positive control for the reader

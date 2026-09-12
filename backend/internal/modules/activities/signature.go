@@ -108,6 +108,14 @@ func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDel
 	if sign != "" {
 		out += "\n<p>" + htmlLines(sign) + "</p>"
 	}
+	// The DISCLOSURES before the unsubscribe footer, matching the plain-text
+	// order: what the law requires the message to say, then the capability it
+	// offers. A markup alternative that omitted them would disclose nothing to
+	// every recipient whose client prefers HTML, while the recorded text copy
+	// looked compliant.
+	if disclosures := htmlDisclosures(derived.disclosures); disclosures != "" {
+		out += "\n" + disclosures
+	}
 	if footer := derived.htmlFooter(); footer != "" {
 		out += "\n" + footer
 	}

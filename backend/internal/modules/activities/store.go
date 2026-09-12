@@ -48,6 +48,10 @@ type Store struct {
 	// calls the store directly — deliverability on one transport only is
 	// deliverability the other transport silently drops.
 	unsubscribe UnsubscribeLinker
+	// disclosures answers which legally required disclosures a message must
+	// carry. Nil means none are appended, which is what every send did before
+	// the seam existed (WithDisclosures).
+	disclosures DisclosureResolver
 	// publicBaseURL is the canonical scheme+host the tokenized unsubscribe
 	// link resolves to — configured at boot, never taken from the request
 	// (WithPublicBaseURL wires it).
