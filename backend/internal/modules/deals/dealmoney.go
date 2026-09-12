@@ -181,9 +181,14 @@ func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64, moved a
 }
 
 // arrEditMove says which of the two moves that can invalidate an
-// offer-derived ARR the request made. Named rather than two bare bools at the
-// call site, where `(true, false)` says nothing about which field moved and a
-// transposed pair reads exactly like a correct one.
+// offer-derived ARR the PATCH records — unlike moneyRestatement above, whose
+// fields answer on the REQUEST. This lock has no restatement escape (an
+// offer-derived figure cannot be resaved back into legality the way an
+// ordinary one can), so there is no request/patch distinction to preserve
+// here; the patch is what the caller already has to hand at the call site.
+// Named rather than two bare bools at the call site, where `(true, false)`
+// says nothing about which field moved and a transposed pair reads exactly
+// like a correct one.
 type arrEditMove struct {
 	Arr      bool
 	Currency bool
