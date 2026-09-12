@@ -2536,6 +2536,19 @@ export const de = {
   "outcomeReview.noAnswer": "Nicht beantwortet",
   "outcomeReview.notes": "Sonstiges",
   "deal.commercialContext": "Kaufmännischer Kontext",
+  "deal.commercialEdit": "Bearbeiten",
+  "deal.commercialAdd": "Kontext festhalten",
+  "deal.commercialEditTitle": "Kommerzieller Kontext",
+  "deal.commercialSave": "Kontext speichern",
+  "deal.commercialEmpty": "Noch nichts festgehalten",
+  "deal.commercialEmptyDetail":
+    "Warum es diesen Deal gibt, wie wichtig er ist, woher er kam und was er pro Jahr wert ist.",
+  "deal.arrHint": "Der wiederkehrende Wert für ein Jahr, in {currency}.",
+  "deal.arrNeedsCurrency":
+    "Erwarteter ARR braucht eine Währung. Legen Sie Wert und Währung zuerst unter „Deal bearbeiten“ fest.",
+  "deal.arrClear": "Entfernen",
+  "deal.arrFromOffer":
+    "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Briefing",
   "deal.briefHint": "Kundenbedarf, Umfang und angestrebtes Ergebnis.",
   "deal.briefMore": "Mehr lesen",

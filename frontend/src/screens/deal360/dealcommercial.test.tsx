@@ -63,11 +63,33 @@ describe("DealCommercial recurring revenue", () => {
     // The read mask withholds the money reading as one unit, so an ARR with no
     // code is a field the caller may not see — not a figure to guess a unit for.
     const { container } = show(deal({ expected_arr_minor: 1_200_000 }));
-    expect(container.innerHTML).toBe("");
+    expect(container.textContent).not.toMatch(/1,200,000|12,000/);
+    // The panel itself still stands and says the fields are empty. What must
+    // not appear is the figure, not the card.
+    expect(screen.getByText(/Nothing recorded yet/)).toBeTruthy();
   });
 
-  it("renders nothing when nobody has recorded any commercial context", () => {
-    const { container } = show(deal({}));
-    expect(container.innerHTML).toBe("");
+  it("names the fields when nobody has recorded any commercial context", () => {
+    // It rendered NOTHING here until #5526, on the reasoning that an empty
+    // panel would claim the deal has no commercial context. But a reader
+    // cannot tell "nobody recorded this" from "no such field exists" when the
+    // page is blank, and the second is what they concluded.
+    show(deal({}));
+    expect(screen.getByText(/Nothing recorded yet/)).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Record the context" }),
+    ).toBeTruthy();
+  });
+
+  it("offers no way in on a deal this reader cannot write", () => {
+    render(
+      <StoryProviders>
+        <DealCommercial deal={deal({})} readOnly />
+      </StoryProviders>,
+    );
+    expect(screen.getByText(/Nothing recorded yet/)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Record the context" }),
+    ).toBeNull();
   });
 });

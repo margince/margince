@@ -545,7 +545,7 @@ function stubBackend(
         page: { next_cursor: null },
       });
     }
-    if (url.includes("/deals")) {
+    if (url.includes("/deals") && !url.includes("/outcome-reviews")) {
       opts.onDealsUrl?.(url);
       if (opts.nextPage) {
         return url.includes("cursor=")

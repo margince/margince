@@ -127,5 +127,13 @@ export const RecurringOnlyInAZeroDigitCurrency: Story = {
   },
 };
 
-// Renders nothing at all when no one has recorded any of them.
+// Nobody has recorded any of them. The panel used to render NOTHING here, so
+// a reader could not tell an unrecorded deal from a product with no such
+// fields — which is what a reviewer opening an ordinary deal concluded.
 export const Unset: Story = { args: { deal: deal({}), sources } };
+
+// A deal this reader may not write: archived, somebody else's, or a mirror.
+// The panel still names the fields; only the verb goes.
+export const ReadOnly: Story = {
+  args: { deal: deal({}), sources, readOnly: true },
+};

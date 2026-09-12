@@ -4429,7 +4429,11 @@ function DealContext({
   return (
     <>
       {/* Before the seats: what the deal IS commercially, then who is on it. */}
-      <DealCommercial deal={deal} sources={acquisitionSources} />
+      <DealCommercial
+        deal={deal}
+        sources={acquisitionSources}
+        readOnly={overlay || !canWrite}
+      />
       <RecordTeam
         recordType="deal"
         recordId={deal.id}

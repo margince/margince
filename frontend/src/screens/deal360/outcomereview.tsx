@@ -155,7 +155,12 @@ function ReviewCard({
         )}
       </div>
       <dl className="firmo">
-        {review.questions.map((question) => (
+        {/* Guarded like `answers` beside it. The contract makes both required,
+            so a review arriving without its frozen questions is a server or a
+            fixture that is wrong — but reading `undefined.map` here unmounts
+            the whole DEAL page over one malformed row, which is a far worse
+            answer than a card with nothing in it. */}
+        {(review.questions ?? []).map((question) => (
           <div key={question.key}>
             <dt className="t-eyebrow">{question.label}</dt>
             {/* An unanswered optional question shows as a stated blank rather

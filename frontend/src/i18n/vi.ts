@@ -2510,6 +2510,19 @@ export const vi = {
   "outcomeReview.noAnswer": "Chưa trả lời",
   "outcomeReview.notes": "Nội dung khác",
   "deal.commercialContext": "Bối cảnh thương mại",
+  "deal.commercialEdit": "Sửa",
+  "deal.commercialAdd": "Ghi nhận bối cảnh",
+  "deal.commercialEditTitle": "Bối cảnh thương mại",
+  "deal.commercialSave": "Lưu bối cảnh",
+  "deal.commercialEmpty": "Chưa ghi nhận gì",
+  "deal.commercialEmptyDetail":
+    "Vì sao có thương vụ này, nó quan trọng đến đâu, đến từ đâu, và mỗi năm đáng giá bao nhiêu.",
+  "deal.arrHint": "Giá trị định kỳ cho một năm, tính bằng {currency}.",
+  "deal.arrNeedsCurrency":
+    "ARR dự kiến cần một loại tiền tệ. Hãy đặt giá trị và tiền tệ trong phần sửa thương vụ trước.",
+  "deal.arrClear": "Gỡ bỏ",
+  "deal.arrFromOffer":
+    "ARR dự kiến đến từ báo giá đã được chấp nhận và không sửa ở đây.",
   "deal.brief": "Tóm tắt thương vụ",
   "deal.briefHint": "Nhu cầu khách hàng, phạm vi và kết quả mong muốn.",
   "deal.briefMore": "Xem thêm",
