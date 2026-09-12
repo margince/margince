@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -165,13 +166,34 @@ func TestExtractSurvivesACorruptedDocumentInsteadOfPanicking(t *testing.T) {
 			corrupted++
 		}
 	}
-	// The corpus has to actually reach the parser, or this test passes by
-	// testing nothing — the census-of-zero failure mode. Some mutations land in
-	// the header and are refused early; enough must land deeper.
 	if corrupted == 0 {
-		t.Fatal("no mutation was rejected, so this test never exercised the parser it exists to guard")
+		t.Fatal("no mutation was rejected at all, so the corpus is not corrupt")
 	}
 	t.Logf("%d of 600 mutations were refused without panicking", corrupted)
+}
+
+// The corpus above proves breadth; this proves DEPTH, and it is the one that
+// holds the recover.
+//
+// A refusal count cannot tell a document turned away at the header from one the
+// parser opened and choked on, so a corpus that stopped reaching the page reader
+// would keep passing. This fixture is a specific file measured to panic inside
+// the parser — `unexpected keyword "841.8\x97" parsing object` — so if the
+// recover is ever removed or narrowed, this test does not fail politely: it
+// crashes, which is the failure mode being guarded.
+//
+// Committed rather than generated: it is one mutant out of hundreds, and a test
+// that re-derived it would be asserting that the generator still happens to find
+// one.
+func TestADocumentThatPanicsTheParserIsRefusedInstead(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "panics-the-parser.pdf"))
+	if err != nil {
+		t.Fatalf("reading the committed fixture: %v", err)
+	}
+
+	if _, err := pdftext.Extract(t.Context(), raw, generous); !errors.Is(err, pdftext.ErrUnreadable) {
+		t.Fatalf("a document that panics the parser must come back as ErrUnreadable, got %v", err)
+	}
 }
 
 // Truncation is also refused rather than survived, and it is a different corpus
@@ -197,9 +219,10 @@ func TestExtractStopsAtTheCallersBound(t *testing.T) {
 		lines = append(lines, "Contract value: EUR 148,500.00 for the packaging line retrofit")
 	}
 	raw := invoicePDF(t, lines...)
-	// Many PAGES, not one long one, which is what makes this a memory assertion
-	// rather than a string-length one: the walk must stop early instead of
-	// materialising every page and trimming the result.
+	// Many PAGES, not one long one. That is the SETUP the bound has to hold
+	// against — an implementation that materialised every page and trimmed the
+	// result would satisfy the length check below too, so what this pins is the
+	// bound, not the early exit.
 	if pages := bytes.Count(raw, []byte("/Type /Page\n")); pages < 5 {
 		t.Fatalf("the fixture spans %d page(s); this test needs enough that stopping early matters", pages)
 	}
@@ -279,30 +302,75 @@ func TestARealGeneratorsDocumentReadsBackAsItsWords(t *testing.T) {
 	}
 }
 
-// `/Count` is a number the DOCUMENT chooses, and the parser returns it from
-// NumPage without checking it against anything. Honouring it walks the page tree
-// that many times — and the library keeps no object cache, so each walk re-parses
-// — which turns a 1.5 KB file into an unbounded amount of work.
+// pdfClaimingPages hand-writes a one-page PDF whose `/Count` says whatever it is
+// told, with a correct cross-reference table.
 //
-// The walk is bounded by what the FILE could really hold instead. This test
-// hands the parser a document that claims a hundred million pages and asserts it
-// answers anyway, which it cannot do unless the claim was ignored.
-func TestALyingPageCountIsBoundedByTheFileItself(t *testing.T) {
-	honest := invoicePDF(t, "Contract value: EUR 148,500.00")
-	lying := bytes.Replace(honest, []byte("/Count 1"), []byte("/Count 99999999"), 1)
-	if bytes.Equal(honest, lying) {
-		t.Fatal("the fixture carries no /Count to falsify, so this test never exercised the bound")
+// Hand-written because the alternative does not work: rewriting `/Count` inside
+// a file some writer produced changes the file's length, every later object
+// offset in its xref is then wrong, and the parser refuses the document before
+// it ever reads a page count. A test built that way passes on the refusal and
+// never reaches the bound it claims to check.
+func pdfClaimingPages(t *testing.T, claimed int, line string) []byte {
+	t.Helper()
+	content := fmt.Sprintf("BT /F1 12 Tf 72 720 Td (%s) Tj ET\n", line)
+	objects := []string{
+		"<</Type/Catalog/Pages 2 0 R>>",
+		fmt.Sprintf("<</Type/Pages/Kids[3 0 R]/Count %d>>", claimed),
+		"<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R" +
+			"/Resources<</Font<</F1 5 0 R>>>>>>",
+		fmt.Sprintf("<</Length %d>>stream\n%sendstream", len(content), content),
+		"<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>",
 	}
 
-	// No deadline: the point is that the WALK is bounded, not that a timeout
-	// rescues it. A test that passed only because ctx fired would prove nothing
-	// about the arithmetic.
-	text, err := pdftext.Extract(t.Context(), lying, generous)
-	if err != nil && !errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
-		t.Fatalf("a lying page count must not change WHICH answer comes back, got %v", err)
+	var out bytes.Buffer
+	out.WriteString("%PDF-1.4\n")
+	offsets := make([]int, len(objects))
+	for i, body := range objects {
+		offsets[i] = out.Len()
+		fmt.Fprintf(&out, "%d 0 obj%s endobj\n", i+1, body)
 	}
-	if err == nil && !strings.Contains(text, "148,500.00") {
-		t.Errorf("the real page was not read; got %q", text)
+	startxref := out.Len()
+	fmt.Fprintf(&out, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for _, at := range offsets {
+		fmt.Fprintf(&out, "%010d 00000 n \n", at)
+	}
+	fmt.Fprintf(&out, "trailer<</Size %d/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n",
+		len(objects)+1, startxref)
+	return out.Bytes()
+}
+
+// `/Count` is a number the DOCUMENT chooses, and the parser returns it from
+// NumPage without checking it against anything. Honouring it walks the page tree
+// that many times — and the library keeps no object cache, so each walk
+// re-parses — which turns a sub-kilobyte file into unbounded work.
+//
+// The walk is bounded by what the FILE could really hold instead, and this
+// asserts the arithmetic rather than the survival: the fixture is small enough
+// that len/minBytesPerPage is far below the claim, so the claim must be the
+// thing discarded. No deadline, because a timeout rescuing it would prove
+// nothing about the bound.
+func TestALyingPageCountIsBoundedByTheFileItself(t *testing.T) {
+	const claimed = 99999999
+	lying := pdfClaimingPages(t, claimed, "Contract value: EUR 148,500.00")
+
+	// The premise, checked rather than assumed: the file's own length has to cap
+	// the walk well below what the document claims, or this test is measuring
+	// nothing. 64 is minBytesPerPage; naming it here rather than importing it
+	// keeps the production constant unexported.
+	if affordable := len(lying) / 64; affordable >= claimed {
+		t.Fatalf("the fixture is %d bytes and could afford %d pages, which is not below its claim of %d",
+			len(lying), affordable, claimed)
+	}
+
+	text, err := pdftext.Extract(t.Context(), lying, generous)
+	// Unconditional: a document that parses must still be READ. Accepting
+	// ErrUnreadable here is what let an earlier version of this test pass while
+	// the parser refused the file before the page count was ever consulted.
+	if err != nil {
+		t.Fatalf("a lying page count must not change the answer, got %v", err)
+	}
+	if !strings.Contains(text, "148,500.00") {
+		t.Errorf("the one real page was not read; got %q", text)
 	}
 }
 

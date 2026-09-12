@@ -112,14 +112,28 @@ func Extract(ctx context.Context, raw []byte, maxChars int) (string, error) {
 // ctx does.
 //
 // The goroutine is ABANDONED rather than stopped, because the parser takes no
-// context and cannot be interrupted. That is the honest trade: a leaked
-// goroutine that will end when its page does, against a worker slot held for the
-// life of the process. The job that owns ctx gets its answer either way, which
-// is what stops one document from blocking every later reading of any document.
+// context and cannot be interrupted. That frees the JOB, and it does not free
+// the goroutine: a page tree whose `/Kids` points back at itself sends the
+// parser round a loop with no visited set, and that loop has no exit —
+// measured, from a 224-byte file. So an abandoned reader can hold a core for the
+// life of the process, and enough of them starve the worker.
+//
+// This is a known hole, not a trade: it is why this package is not yet safe to
+// point at an untrusted upload, and closing it needs a bound INSIDE the parser
+// (a visited set on the page walk, and a cross-reference table sized from the
+// file rather than from a number the file chooses) rather than anything
+// reachable from here.
 func readUnderContext(ctx context.Context, raw []byte, maxChars int) (string, error) {
 	type result struct {
 		text string
 		err  error
+	}
+	// Answered BEFORE the goroutine starts. Launching first leaves an
+	// already-cancelled context racing a completed read, and `select` picks
+	// between two ready cases at random — so a caller that cancelled would
+	// sometimes get an answer anyway.
+	if err := ctx.Err(); err != nil {
+		return "", fmt.Errorf("%w: the reading was cancelled before it began", ErrUnreadable)
 	}
 	done := make(chan result, 1) // buffered: an abandoned goroutine must not block on send
 	go func() {
