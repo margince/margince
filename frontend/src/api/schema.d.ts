@@ -22935,7 +22935,7 @@ export interface components {
             rollups?: components["schemas"]["Project360Rollups"];
         };
         /**
-         * @description How a project is going, as a person judged it.
+         * @description How a project is going, as somebody judged it.
          * @enum {string}
          */
         ProjectHealthState: "on_track" | "at_risk" | "off_track";
@@ -22955,7 +22955,7 @@ export interface components {
             assessed_at: string;
             /** @description What recorded this assessment. */
             readonly source: string;
-            /** @description Who is on record as having judged it, when that is not the person who typed it in. */
+            /** @description Who is on record as having judged it, when that is not whoever typed it in. */
             readonly source_author?: string;
             /** @description True when a later correction replaced this reading. */
             readonly superseded: boolean;

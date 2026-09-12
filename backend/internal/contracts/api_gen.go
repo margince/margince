@@ -25877,7 +25877,7 @@ type CreateProjectHealthAssessmentRequest struct {
 	// SourceAuthor Who judged it, when that is not the caller.
 	SourceAuthor *string `json:"source_author,omitempty"`
 
-	// State How a project is going, as a person judged it.
+	// State How a project is going, as somebody judged it.
 	State ProjectHealthState `json:"state"`
 }
 
@@ -25886,7 +25886,7 @@ type CreateProjectHealthCorrectionRequest struct {
 	Note         *string `json:"note,omitempty"`
 	SourceAuthor *string `json:"source_author,omitempty"`
 
-	// State How a project is going, as a person judged it.
+	// State How a project is going, as somebody judged it.
 	State ProjectHealthState `json:"state"`
 }
 
@@ -32048,10 +32048,10 @@ type ProjectHealthAssessment struct {
 	// Source What recorded this assessment.
 	Source *string `json:"source,omitempty"`
 
-	// SourceAuthor Who is on record as having judged it, when that is not the person who typed it in.
+	// SourceAuthor Who is on record as having judged it, when that is not whoever typed it in.
 	SourceAuthor *string `json:"source_author,omitempty"`
 
-	// State How a project is going, as a person judged it.
+	// State How a project is going, as somebody judged it.
 	State ProjectHealthState `json:"state"`
 
 	// Superseded True when a later correction replaced this reading.
@@ -32070,7 +32070,7 @@ type ProjectHealthAssessmentListResponse struct {
 	Page PageInfo                  `json:"page"`
 }
 
-// ProjectHealthState How a project is going, as a person judged it.
+// ProjectHealthState How a project is going, as somebody judged it.
 type ProjectHealthState string
 
 // ProjectListResponse defines model for ProjectListResponse.

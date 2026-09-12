@@ -3,7 +3,7 @@
 
 package projects
 
-// How a project is going, as a person judged it on a day.
+// How a project is going, as somebody judged it on a day.
 //
 // Append-only. A `health` column on project would answer "how is it now" and
 // destroy the answer to "how was it in March", which is the question a delivery
@@ -140,7 +140,7 @@ func (s *Store) CorrectHealth(
 			return err
 		}
 		// FOR UPDATE, and it is what keeps the chain linear. Read without it,
-		// two people correcting the same reading both find it uncorrected, both
+		// two colleagues correcting the same reading both find it uncorrected, both
 		// insert a successor, and the unique index refuses the loser at commit
 		// with nothing to say why. The lock makes them take turns, so the
 		// second sees the first's correction and is told the row is already
@@ -220,7 +220,7 @@ func checkHealthJudgement(
 		}
 	}
 	// Anything but on_track owes a reason: a risk nobody explained is an alarm
-	// nobody can act on, and the person who could say why is the one filing it.
+	// nobody can act on, and whoever could say why is the one filing it.
 	if state != crmcontracts.ProjectHealthStateOnTrack && trimmed == nil {
 		return nil, &values.ParseError{
 			Field: healthNoteColumn, Code: "note_required",

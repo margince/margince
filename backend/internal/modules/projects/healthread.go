@@ -27,8 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sourceHuman is what a person acting in the UI writes. Connectors and imports
-// would name themselves; nothing but people judge a project today.
+// sourceHuman is what somebody acting in the UI writes. Connectors and imports
+// would name themselves; nothing automated judges a project today.
 const sourceHuman = "human"
 
 // healthColumns is what a health read returns, shared by the list and the
