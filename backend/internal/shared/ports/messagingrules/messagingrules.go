@@ -35,6 +35,8 @@ type (
 	Disclosure = pub.Disclosure
 	// FrequencyCap bounds advertising to one address in a window.
 	FrequencyCap = pub.FrequencyCap
+	// Instrument is one law a rule set states, and when it took effect.
+	Instrument = pub.Instrument
 	// ExceptionKind names a route to lawful advertising without consent.
 	ExceptionKind = pub.ExceptionKind
 	// DisclosureKind names something a first message must carry.
@@ -90,6 +92,8 @@ func clone(r Rules) Rules {
 	out := r
 	out.MarketingExceptions = slices.Clone(r.MarketingExceptions)
 	out.Disclosures = slices.Clone(r.Disclosures)
+	out.Instruments = slices.Clone(r.Instruments)
+
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
 		out.FrequencyCap = &copied

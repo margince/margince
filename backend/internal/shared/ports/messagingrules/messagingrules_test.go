@@ -154,6 +154,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 		Jurisdiction: "qa", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
+		Instruments:         []Instrument{{Name: "Decree 1/2020"}},
 	})
 
 	got, ok := For("qa")
@@ -162,6 +163,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	}
 	got.MarketingExceptions[0].RequiresSimilarity = false
 	got.FrequencyCap.Messages = 1000
+	got.Instruments[0].Name = "something else entirely"
 
 	again, _ := For("qa")
 	if !again.MarketingExceptions[0].RequiresSimilarity {
@@ -170,19 +172,34 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 	if again.FrequencyCap.Messages != 3 {
 		t.Errorf("a caller rewrote the registered cap to %d", again.FrequencyCap.Messages)
 	}
+	// The citation a decision is read back against. A caller rewriting it would
+	// leave every later decision recorded under a law the pack never stated.
+	if again.Instruments[0].Name != "Decree 1/2020" {
+		t.Errorf("a caller rewrote the registered citation to %q", again.Instruments[0].Name)
+	}
 }
 
 // Registering is a copy too, so a caller that keeps its literal and mutates it
 // afterwards does not reach in.
 func TestRegisteringTakesACopy(t *testing.T) {
 	exceptions := []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}}
-	Register(Rules{Jurisdiction: "qb", Version: 1, MarketingExceptions: exceptions})
+	instruments := []Instrument{{Name: "Decree 1/2020"}}
+	Register(Rules{
+		Jurisdiction: "qb", Version: 1,
+		MarketingExceptions: exceptions,
+		Instruments:         instruments,
+	})
 
 	exceptions[0].RequiresSaleEvidence = false
+	instruments[0].Name = "something else entirely"
 
 	got, _ := For("qb")
 	if !got.MarketingExceptions[0].RequiresSaleEvidence {
 		t.Error("mutating the caller's own slice reached into the registry")
+	}
+	if got.Instruments[0].Name != "Decree 1/2020" {
+		t.Errorf("mutating the caller's own citation reached into the registry: %q",
+			got.Instruments[0].Name)
 	}
 }
 

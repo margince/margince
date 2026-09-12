@@ -71,7 +71,13 @@ const (
 // below carried it until consent.rulesetStamp began writing it onto every
 // staging and transmit row, so it is an applied obligation now and belongs in
 // neither list.
-var rulesIdentityFields = []string{"Jurisdiction"}
+// Instruments names the LAWS the version stands for and binds nothing. It is
+// the citation a subject's decision is read back against — "Decree 91/2020/ND-CP",
+// not an obligation the engine could discharge — so demanding an engine reader
+// for it would be asking the engine to apply a footnote. The obligations those
+// instruments carry are the other fields, and each answers to this gate on its
+// own.
+var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 
 // unappliedRules are the obligations the engine does not read yet, each with
 // the reason it cannot.

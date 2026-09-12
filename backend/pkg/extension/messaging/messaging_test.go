@@ -4,6 +4,7 @@
 package messaging
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -87,6 +88,47 @@ func TestRulesCarryAVersion(t *testing.T) {
 	r.Version = 1
 	if err := r.Validate(); err != nil {
 		t.Errorf("an ordinary rule set was refused: %v", err)
+	}
+}
+
+// TestAVersionTooLargeToRecordIsRefusedAtBoot.
+//
+// A decision records the version on a Postgres int. A pack declaring a larger
+// number registered happily and then failed at the INSERT, refusing every send
+// under an otherwise valid pack — at the send rather than at boot, which is the
+// wrong end. The preflight is where a pack the engine cannot apply is refused.
+func TestAVersionTooLargeToRecordIsRefusedAtBoot(t *testing.T) {
+	r := Rules{Jurisdiction: "de", Version: math.MaxInt32}
+	if err := r.Validate(); err != nil {
+		t.Errorf("the largest recordable version was refused: %v", err)
+	}
+	// Built by arithmetic on a variable, not written as a constant: the untyped
+	// constant math.MaxInt32+1 does not fit an int on a 32-bit build and would
+	// fail to COMPILE there rather than exercising the guard. On such a build
+	// this addition wraps negative, which the positive check refuses — the same
+	// refusal, for the same reason.
+	tooLarge := r.Version
+	r.Version = tooLarge + 1
+	if err := r.Validate(); err == nil {
+		t.Error("a version too large for the column it is recorded on was accepted — " +
+			"every send under this pack would fail at the insert")
+	}
+}
+
+// TestAnInstrumentWithoutANameIsRefused. A commencement date with nothing to
+// commence names no law, and the instruments exist to be read.
+func TestAnInstrumentWithoutANameIsRefused(t *testing.T) {
+	r := Rules{
+		Jurisdiction: "de", Version: 1,
+		Instruments: []Instrument{{EffectiveFrom: time.Now()}},
+	}
+	if err := r.Validate(); err == nil {
+		t.Error("an instrument with no name was accepted")
+	}
+	r.Instruments = []Instrument{{Name: "Gesetz gegen den unlauteren Wettbewerb"}}
+	if err := r.Validate(); err != nil {
+		t.Errorf("a named instrument with no stated date was refused: %v — a pack that "+
+			"does not know a commencement date should say less, not be refused", err)
 	}
 }
 
