@@ -330,10 +330,13 @@ func (d *DocumentExtractor) extractedSource(
 	// that fits from one that was cut off, and a reading of the first 60,000
 	// characters of a contract reported as `done` is the outcome maxDocumentBytes'
 	// own comment refuses: nothing on the panel would say which part it saw.
-	if utf8.RuneCountInString(text) > maxDocumentTextChars {
+	if chars := utf8.RuneCountInString(text); chars > maxDocumentTextChars {
+		// Counted and REPORTED in the same unit. The comparison was always
+		// runes; a byte count in the sentence would tell a rep a German
+		// document was half again as long as it is.
 		return documentSource{}, fmt.Sprintf(
-			"this document is longer than the %d characters one reading addresses",
-			maxDocumentTextChars)
+			"this document is %d characters, and one reading addresses at most %d",
+			chars, maxDocumentTextChars)
 	}
 	return documentSource{Text: text, Filename: meta.Filename, ExtractedFrom: documentPDFMIME}, ""
 }

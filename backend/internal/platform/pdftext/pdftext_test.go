@@ -266,12 +266,30 @@ func fixture(t *testing.T, name string) []byte {
 func TestExtractSurvivesATruncatedDocument(t *testing.T) {
 	valid := invoicePDF(t, "Contract value: EUR 148,500.00")
 
+	recovered := 0
 	for cut := 1; cut < len(valid); cut += max(1, len(valid)/60) {
-		if _, err := reader.Read(t.Context(), valid[:cut], generous); err != nil &&
-			!errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer) {
+		text, err := reader.Read(t.Context(), valid[:cut], generous)
+		switch {
+		case err != nil && !errors.Is(err, pdftext.ErrUnreadable) && !errors.Is(err, pdftext.ErrNoTextLayer):
 			t.Fatalf("truncation at %d reported %v, which is not a sentinel a caller can route on", cut, err)
+		case err == nil:
+			// A prefix CAN read: the engine recovers a document whose trailer
+			// is missing by rebuilding the cross-reference table, and the last
+			// ~20 bytes of this fixture are exactly that trailer. Measured: 21
+			// of 1081 byte-prefixes are readable, all of them at the very end.
+			//
+			// So a successful reading is not a failure — but it must be a
+			// reading OF THIS DOCUMENT. Recovering a file into confident
+			// nonsense is the outcome that would matter, and this is what
+			// separates the two.
+			recovered++
+			if !strings.Contains(text, "148,500.00") {
+				t.Fatalf("truncation at %d was accepted and read as %q, "+
+					"which is not what the document says", cut, text)
+			}
 		}
 	}
+	t.Logf("%d sampled prefixes were recovered and read correctly", recovered)
 }
 
 // The bound exists because a PDF's text streams are COMPRESSED: a file inside
