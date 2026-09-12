@@ -107,6 +107,26 @@ function meetingsCard(): HTMLElement {
   return card;
 }
 
+function leadsCard(): HTMLElement {
+  const card = screen
+    .getByText(en["brief.readings.leads"])
+    .closest(".stat-card");
+  if (!(card instanceof HTMLElement)) {
+    throw new Error("the leads reading is not on the page");
+  }
+  return card;
+}
+
+function decisionsCard(): HTMLElement {
+  const card = screen
+    .getByText(en["brief.readings.decisions"])
+    .closest(".stat-card");
+  if (!(card instanceof HTMLElement)) {
+    throw new Error("the decisions reading is not on the page");
+  }
+  return card;
+}
+
 /**
  * The two reads the pipeline card makes: the scope the server names for this
  * reader, and the forecast under it.
@@ -489,6 +509,60 @@ describe("the brief readings strip", () => {
     expect(markedFigures()).toEqual([each.marked]);
   });
 
+  // A DOOR INTO NOTHING IS A TRIP, not reassurance. A slot whose read finished
+  // and found none has no rows behind it, and its door lands the reader in an
+  // empty lane surrounded by the other slots' urgent counts — which reads as a
+  // filter they broke rather than as a morning with none of that kind.
+  it("gives a confirmed zero no door", () => {
+    draw({ prospecting: 0, review: 4 }, [], [wholeLeads(0)], { urgent: 0 });
+
+    // The POSITIVE CONTROL beside it: decisions counted four on the same
+    // render, so a build that stopped drawing doors at all would fail here
+    // rather than pass the assertion above.
+    expect(leadsCard().querySelector(".stat-card-open")).toBeNull();
+    expect(decisionsCard().querySelector(".stat-card-open")).toBeTruthy();
+  });
+
+  // THE BOUNDED ZERO KEEPS ITS DOOR, which is the whole distinction. "None so
+  // far, and the read stopped early" is a question the worklist can still
+  // answer; "none" is not.
+  //
+  // BOTH HALVES ON ONE RENDER, because either alone passes a build with no rule
+  // at all: the bounded zero keeps its door under `openable = true`, and the
+  // confirmed zero loses it under a blanket "no door on a zero". Only the pair
+  // holds the distinction this change exists for.
+  it("keeps the door on a zero whose read was cut short", () => {
+    draw(
+      { more_available: true, prospecting: 0, review: 0 },
+      [],
+      [boundedLeads(0, 0), wholeDecisions(0)],
+      { urgent: 0 },
+    );
+
+    expect(leadsCard().querySelector(".stat-card-open")).toBeTruthy();
+    expect(decisionsCard().querySelector(".stat-card-open")).toBeNull();
+  });
+
+  // THE URGENT SLOT IS NOT A TOPIC, and its door stands at zero. It is the
+  // strip's way into the worklist at all, and a clear morning is exactly when a
+  // reader goes to look for themselves. Held explicitly rather than left to the
+  // default fixture: two cases below press this door on a day that happens to
+  // have no urgent work, and they would go on passing if the exemption were
+  // removed and some other slot happened to be non-zero.
+  it("keeps the urgent door on a morning with nothing urgent", () => {
+    draw({ prospecting: 0, review: 0 }, [], [wholeLeads(0)], { urgent: 0 });
+
+    const urgent = screen
+      .getByText(en["brief.readings.urgent"])
+      .closest(".stat-card");
+    // THE PAIR, on one render, for the reason the bounded case states: the
+    // urgent half alone passes a build with no rule at all, and the leads half
+    // alone passes a blanket "no door on a zero". Both zeros are confirmed, so
+    // only the exemption can tell them apart.
+    expect(urgent?.querySelector(".stat-card-open")).toBeTruthy();
+    expect(leadsCard().querySelector(".stat-card-open")).toBeNull();
+  });
+
   // A FLOOR OF NONE IS NOT A FLOOR. "0+" says "at least nothing", which is true
   // of every number there has ever been — so a bounded read that found none of
   // a kind draws a plain zero, and the mark stays on the figures that count
@@ -548,16 +622,6 @@ describe("the brief readings strip", () => {
 // does: how many are owed an answer does not tell a rep whether one is due
 // before lunch.
 describe("the leads reading", () => {
-  function leadsCard(): HTMLElement {
-    const card = screen
-      .getByText(en["brief.readings.leads"])
-      .closest(".stat-card");
-    if (!(card instanceof HTMLElement)) {
-      throw new Error("the leads reading is not on the page");
-    }
-    return card;
-  }
-
   it("names when the nearest answer is due", () => {
     draw(
       { prospecting: 2 },
