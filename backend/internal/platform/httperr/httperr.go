@@ -288,6 +288,7 @@ type Fault struct {
 var transientCodes = map[string]struct{}{
 	"rate_limited":               {},
 	"incumbent_budget_exhausted": {},
+	schemaChangedCode:            {},
 }
 
 // Transient reports whether repeating the same call unchanged could succeed
@@ -370,9 +371,12 @@ func Classify(err error) (Fault, bool) {
 		}
 	}
 
-	// A constraint the DATABASE enforced that no path above translated. Last,
-	// so every typed refusal a module wrote wins over this — it is the net, not
-	// the answer.
+	// A statement the DATABASE refused that no path above translated. Last, so
+	// every typed refusal a module wrote wins over these two — they are the
+	// net, not the answer.
+	if fault, ok := stalePlanFault(err); ok {
+		return fault, true
+	}
 	if fault, ok := constraintFault(err); ok {
 		return fault, true
 	}
