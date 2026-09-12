@@ -3003,8 +3003,9 @@ export const de = {
   "brief.readings.openDecisions": "Entscheidungen prüfen",
   "brief.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
   "brief.readings.decisions": "Offene Entscheidungen",
-  "brief.readings.decisionsBasis":
-    "jemand kommt erst weiter, wenn du antwortest",
+  "brief.readings.decisionsBasis": "wartet auf deine Antwort",
+  "brief.readings.decisionsBlocking_one": "1 hält Kundenarbeit auf",
+  "brief.readings.decisionsBlocking_other": "{count} halten Kundenarbeit auf",
   "brief.readings.pipeline": "Pipeline · {quarter}",
   "brief.readings.pipelinePlain": "Pipeline",
   "brief.readings.pipelineTipWorkspace": "{period} · gesamte Firma",

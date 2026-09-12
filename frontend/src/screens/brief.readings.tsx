@@ -25,6 +25,13 @@ import {
 } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
 import { useAnalyticsContext } from "./analytics.context";
+import {
+  boundedCategories,
+  DECISIONS,
+  decisionsBlocking,
+  LEADS,
+  MEETINGS,
+} from "./brief.readings.honesty";
 import { useForecastReadings } from "./forecast.queries";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
 import { isUnprepared } from "./worklist.copy";
@@ -60,31 +67,6 @@ import type {
 // mark on the exact figures is one a reader learns to discount. Per slot is not
 // guesswork: `counts` carries `more_available` PER CATEGORY, seeded from the
 // bounded SOURCES through `categoryOfSource` (reach.go).
-
-const MEETINGS = "meetings";
-const LEADS = "leads";
-const DECISIONS = "decisions";
-
-// Which categories came back at a bound, as the server marked them.
-//
-// An ABSENT category is not a bounded one. The server seeds `counts` from the
-// bounded sources BEFORE it walks the rows (reach.go), so a lane that stopped
-// early always leaves an entry even when the scope filter took every row it
-// found. A category with no entry at all therefore had no bound and no rows —
-// an honest nothing — and marking it would put a `+` on the zeros.
-//
-// A lane that could not be read AT ALL is a different fact and is not in
-// `counts`: it travels in `sources_unavailable`, and the strip-wide
-// `readings.more_available` already covers it.
-function boundedCategories(day: Worklist): ReadonlySet<string> {
-  const out = new Set<string>();
-  for (const count of day.counts) {
-    if (count.more_available) {
-      out.add(count.category);
-    }
-  }
-  return out;
-}
 
 // Open the worklist on the lane a reading counted.
 //
@@ -189,6 +171,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
+  const blocking = decisionsBlocking(day);
   // A lane that never ANSWERED is the case the per-category narrowing does not
   // reach: it travels in `sources_unavailable`, which names a source, and only
   // the server maps a source to its lane. Re-deriving that here would be a
@@ -253,7 +236,16 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           label={t("brief.readings.decisions")}
           count={readings.review}
           floor={floorOf(DECISIONS)}
-          basis={t("brief.readings.decisionsBasis")}
+          // Only where something IS held up, and how much of it. Otherwise the
+          // plain basis, which says what the figure was taken over and claims
+          // nothing about who is waiting.
+          basis={
+            blocking === null || blocking === 0
+              ? t("brief.readings.decisionsBasis")
+              : plural("brief.readings.decisionsBlocking", blocking, {
+                  count: formatNumber(blocking, locale),
+                })
+          }
           openLabel={t("brief.readings.openDecisions")}
           lane="decisions"
         />

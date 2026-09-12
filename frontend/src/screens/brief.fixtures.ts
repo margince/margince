@@ -780,6 +780,31 @@ export function boundedMeetings(
   return { category: "meetings", considered, shown, more_available: true };
 }
 
+/**
+ * A decision on the queue, and whether it actually holds customer work up.
+ *
+ * The split is the ranker's own: a decision about a SEND is blocking, and
+ * contact hygiene — a duplicate pair, a captured counterparty — is not
+ * (classifydecision.go). A fixture that made every decision blocking could not
+ * tell the strip's two basis lines apart.
+ */
+export function decisionRow(id: string, blocking: boolean): WorklistItem {
+  return {
+    id,
+    source: "approval",
+    // `kind` is what the server actually decides on: blocksCustomerWork reads
+    // it and treats an absent one as hygiene, so a fixture without it could
+    // not be the blocking row it claims to be.
+    kind: blocking ? "send_email" : "capture_counterparty",
+    level: blocking ? 5 : 6,
+    category: "decisions",
+    title: blocking ? "Send the renewal quote" : "Add someone from your mail",
+    because: [{ kind: blocking ? "blocks_customer_work" : "routine" }],
+    consequence: blocking ? "work_blocked" : "data_drifts",
+    actions: ["decide"],
+  };
+}
+
 /** A decisions count read to the end. */
 export function wholeDecisions(n: number): WorklistCount {
   return {

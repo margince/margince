@@ -2972,8 +2972,9 @@ export const vi = {
   "brief.readings.openDecisions": "Xem quyết định",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
   "brief.readings.decisions": "Quyết định đang chờ",
-  "brief.readings.decisionsBasis":
-    "có người phải chờ bạn trả lời mới đi tiếp được",
+  "brief.readings.decisionsBasis": "đang chờ bạn trả lời",
+  "brief.readings.decisionsBlocking_one": "1 đang chặn việc với khách",
+  "brief.readings.decisionsBlocking_other": "{count} đang chặn việc với khách",
   "brief.readings.pipeline": "Toàn cảnh pipeline · {quarter}",
   "brief.readings.pipelinePlain": "Toàn cảnh pipeline",
   "brief.readings.pipelineTipWorkspace": "{period} · toàn bộ tổ chức",
