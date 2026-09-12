@@ -163,7 +163,9 @@ func up(ctx context.Context, conn *pgx.Conn, dsn string, core, custom dbmigrate.
 	if err != nil {
 		return err
 	}
-	riverPool, err := database.NewPool(ctx, dsn)
+	// No request ceiling: River's own migrator and the index below are DDL,
+	// and this is the role that runs it.
+	riverPool, err := database.NewPool(ctx, database.WithoutRequestCeilings(dsn))
 	if err != nil {
 		return fmt.Errorf("migrate: opening river pool: %w", err)
 	}
