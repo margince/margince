@@ -51,6 +51,8 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { useLinkedCase } from "./privacy.caselink";
+import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
   DSR_STATUS_FACETS,
   type DsrStatus,
@@ -1014,11 +1016,9 @@ export function PrivacyInboxCard() {
   // (share.tsx:290's precedent for the same problem on grant expiry).
   const tz = viewerZone();
   const [facet, setFacet] = useState<DsrStatusFacet>("all");
-  // One case open at a time: expandedId lives here (not per-row) so opening
-  // a second row's panel closes the first — the queue itself (sibling rows,
-  // the facet bar) stays on screen throughout; an officer working a case
-  // never loses sight of what else is waiting.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // One case open at a time, and the open one IS the address: the worklist
+  // links here naming a case, so the row it named opens and a link copied back
+  // out reaches the same row (privacy.caselink.ts).
   const createTitleId = useId();
   const [creating, setCreating] = useState(false);
   // Which request is staged for the destructive fulfil, not per-row — same
@@ -1086,6 +1086,13 @@ export function PrivacyInboxCard() {
     () => pages?.flatMap((page) => page.data) ?? [],
     [pages],
   );
+  // The open row and the address, kept saying the same thing. It needs the
+  // loaded ids, so it sits below the query rather than beside the other state.
+  const { expandedId, linked, toggle } = useLinkedCase(
+    useMemo(() => rows.map((dsr) => dsr.id), [rows]),
+    query.hasNextPage && !query.isFetchingNextPage,
+    query.fetchNextPage,
+  );
   const facetLabels = useMemo(
     () =>
       Object.fromEntries(
@@ -1122,6 +1129,7 @@ export function PrivacyInboxCard() {
     // measured its own gaps in inline style objects.
     body = (
       <QueryStates query={query} pendingLabel={t("privacy.facetAll")}>
+        <LinkedCaseNotice linked={linked} />
         {rows.length === 0 ? (
           <EmptyState>{t("common.empty")}</EmptyState>
         ) : (
@@ -1132,11 +1140,7 @@ export function PrivacyInboxCard() {
                   key={dsr.id}
                   dsr={dsr}
                   expanded={expandedId === dsr.id}
-                  onToggle={() =>
-                    setExpandedId((current) =>
-                      current === dsr.id ? null : dsr.id,
-                    )
-                  }
+                  onToggle={() => toggle(dsr.id)}
                   nowMs={nowMs}
                   tz={tz}
                   locale={locale}

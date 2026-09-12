@@ -4472,6 +4472,10 @@ export const vi = {
   "notice.excuseExempt": "Nghĩa vụ không áp dụng",
   "notice.excuseGround": "Vì sao, theo lời của bạn",
   "notice.excuseConfirm": "Ghi nhận",
+  "privacy.caseNotHere":
+    "Yêu cầu mà liên kết này nêu tên chưa có trên trang này.",
+  "privacy.caseNotHereBody":
+    "Yêu cầu đó có thể nằm ở bộ lọc trạng thái khác, hoặc ở phía dưới trong danh sách tải hai mươi mục mỗi lần. Hãy chọn đúng trạng thái hoặc tải thêm.",
   "privacy.facetAll": "Tất cả",
   "privacy.inboxAdminOnly":
     "Xem yêu cầu của chủ thể dữ liệu cần quyền mà ghế của bạn không có. Danh sách nêu tên người đã yêu cầu, nên không mở cho tất cả mọi người.",
