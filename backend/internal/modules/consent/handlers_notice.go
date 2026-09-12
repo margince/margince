@@ -11,6 +11,7 @@ package consent
 // anything. These three routes are that middle.
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -138,4 +140,92 @@ func (h Handlers) GetNoticeCase(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireNoticeCase(found))
+}
+
+// GetControllerParticulars answers what this installation says about itself.
+func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	if h.settings == nil {
+		writeConsentErr(w, r, errors.New("consent: the settings store is not wired"))
+		return
+	}
+	// Through the settings store, which GATES on installation_settings at the
+	// entry's own read verb. The ungated read exists for the send path
+	// composing a message; a screen asks the object, so somebody with no
+	// settings grant at all is refused the form.
+	current, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireParticulars(current))
+}
+
+// SetControllerParticulars records who this installation is.
+func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.ControllerParticulars
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if h.settings == nil {
+		writeConsentErr(w, r, errors.New("consent: the settings store is not wired"))
+		return
+	}
+	in := ControllerParticulars{
+		LegalName:         valueOr(req.LegalName),
+		PostalAddress:     valueOr(req.PostalAddress),
+		PrivacyContact:    valueOr(req.PrivacyContact),
+		ObjectionRoute:    valueOr(req.ObjectionRoute),
+		AdvertiserContact: valueOr(req.AdvertiserContact),
+	}
+	// THE READ GATE FIRST, before anything is written. The response echoes the
+	// stored value, which asks the read verb — and a principal holding update
+	// without read would otherwise change what every outgoing message says
+	// about this company and then receive a 403 for the same request, with the
+	// mutation already committed and nothing telling them so.
+	if _, err := settings.Get(r.Context(), h.settings, ControllerIdentity); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// The settings store owns the table and applies the entry's own validator,
+	// so the bounds live with the definition rather than being re-checked here.
+	if err := settings.Set(r.Context(), h.settings, ControllerIdentity, in); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// Answering the STORED value rather than the submitted one: a form that
+	// posts and then shows its own input would hide any normalisation, and a
+	// reader would believe something is saved that is not.
+	saved, err := settings.Get(r.Context(), h.settings, ControllerIdentity)
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wireParticulars(saved))
+}
+
+// valueOr reads an optional wire string. An ABSENT field and an empty one are
+// the same answer here: both say this installation states nothing for it, and a
+// form that clears a box sends the empty string while one that never showed the
+// box omits it.
+func valueOr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+// wireParticulars renders the particulars, with every field PRESENT even when
+// empty.
+//
+// An omitted field and an empty one would read the same to a form, so sending
+// them all keeps the round trip lossless: what a GET returns is exactly what a
+// PUT of the same body would store.
+func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars {
+	return crmcontracts.ControllerParticulars{
+		LegalName:         &p.LegalName,
+		PostalAddress:     &p.PostalAddress,
+		PrivacyContact:    &p.PrivacyContact,
+		ObjectionRoute:    &p.ObjectionRoute,
+		AdvertiserContact: &p.AdvertiserContact,
+	}
 }

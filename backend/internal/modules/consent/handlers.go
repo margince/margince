@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,6 +32,17 @@ type Handlers struct {
 	// the eraser: answering an access request means producing the package, not
 	// marking a row done.
 	assembler SubjectAccessAssembler
+	// settings owns the `setting` table. The controller particulars live there
+	// like every other installation setting, and consent may not write another
+	// module's table — so the store that owns it is injected rather than the
+	// row being written from here.
+	settings *settings.Store
+}
+
+// WithSettings hands the handlers the store that owns installation settings.
+func (h Handlers) WithSettings(s *settings.Store) Handlers {
+	h.settings = s
+	return h
 }
 
 // Eraser is the erase-path seam (compose injects the real one): DSR

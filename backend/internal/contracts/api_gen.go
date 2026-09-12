@@ -25842,6 +25842,32 @@ type ContractListResponse struct {
 	Page PageInfo   `json:"page"`
 }
 
+// ControllerParticulars What this installation must be able to say about itself when it writes to somebody.
+//
+// Every field is optional and every field is free text. A jurisdiction pack declares WHICH
+// disclosures a message carries; these are the words that meet them.
+type ControllerParticulars struct {
+	// AdvertiserContact How to reach the advertiser directly — a phone number, a website. A SEPARATE field from
+	// the postal address because the obligation is about reachability rather than about where
+	// somebody is registered, and answering it with a street address reports an unmet duty
+	// as met.
+	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
+
+	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// ObjectionRoute How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
+	// message rather than only the first. The one-click unsubscribe this product mints is
+	// usually the honest answer; an installation whose recipients answer by phone says so here.
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+
+	// PostalAddress Where they are, as a block of lines — including a register court and number where a business letter needs one.
+	PostalAddress *string `json:"postal_address,omitempty"`
+
+	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+}
+
 // ConversationClaim One thing said in a captured conversation, with the evidence it was read from.
 //
 // Grounded or absent: `source_activity_id` and `source_quote` are both required, because
@@ -45384,6 +45410,9 @@ type CreatePipelineJSONRequestBody = CreatePipelineRequest
 // UpdatePipelineJSONRequestBody defines body for UpdatePipeline for application/json ContentType.
 type UpdatePipelineJSONRequestBody = UpdatePipelineRequest
 
+// SetControllerParticularsJSONRequestBody defines body for SetControllerParticulars for application/json ContentType.
+type SetControllerParticularsJSONRequestBody = ControllerParticulars
+
 // AssignNoticeCaseJSONRequestBody defines body for AssignNoticeCase for application/json ContentType.
 type AssignNoticeCaseJSONRequestBody = AssignNoticeCase
 
@@ -56696,6 +56725,12 @@ type ServerInterface interface {
 	// Put a retired pipeline back in use.
 	// (POST /pipelines/{id}/restore)
 	RestorePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// What this installation says about itself in the messages it sends.
+	// (GET /privacy/controller-particulars)
+	GetControllerParticulars(w http.ResponseWriter, r *http.Request)
+	// State who this installation is.
+	// (PUT /privacy/controller-particulars)
+	SetControllerParticulars(w http.ResponseWriter, r *http.Request)
 	// Disclosure duties this installation owes, soonest deadline first.
 	// (GET /privacy/notice-cases)
 	ListNoticeCases(w http.ResponseWriter, r *http.Request, params ListNoticeCasesParams)
@@ -60050,6 +60085,18 @@ func (_ Unimplemented) UpdatePipeline(w http.ResponseWriter, r *http.Request, id
 // Put a retired pipeline back in use.
 // (POST /pipelines/{id}/restore)
 func (_ Unimplemented) RestorePipeline(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What this installation says about itself in the messages it sends.
+// (GET /privacy/controller-particulars)
+func (_ Unimplemented) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// State who this installation is.
+// (PUT /privacy/controller-particulars)
+func (_ Unimplemented) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -80423,6 +80470,46 @@ func (siw *ServerInterfaceWrapper) RestorePipeline(w http.ResponseWriter, r *htt
 	handler.ServeHTTP(w, r)
 }
 
+// GetControllerParticulars operation middleware
+func (siw *ServerInterfaceWrapper) GetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetControllerParticulars(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetControllerParticulars operation middleware
+func (siw *ServerInterfaceWrapper) SetControllerParticulars(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetControllerParticulars(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListNoticeCases operation middleware
 func (siw *ServerInterfaceWrapper) ListNoticeCases(w http.ResponseWriter, r *http.Request) {
 
@@ -90210,6 +90297,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/pipelines/{id}/restore", wrapper.RestorePipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/privacy/controller-particulars", wrapper.GetControllerParticulars)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/privacy/controller-particulars", wrapper.SetControllerParticulars)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/privacy/notice-cases", wrapper.ListNoticeCases)
