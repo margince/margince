@@ -61,6 +61,15 @@ func (s *Store) SummaryFor(
 		if err := companyExists(ctx, tx, companyID); err != nil {
 			return err
 		}
+		// BEFORE the connection is read, and deliberately above every early
+		// return below it. Who handles the invoices is the installation's own
+		// record and has nothing to do with whether an accounting source is
+		// connected, mapped, or still syncing — an account with no connector at
+		// all still has a recipient, and that is exactly when a reader wants to
+		// see it.
+		if err := s.readBillingContacts(ctx, tx, companyID, &out); err != nil {
+			return err
+		}
 		conn, connected, err := readConnection(ctx, tx)
 		if err != nil {
 			return err

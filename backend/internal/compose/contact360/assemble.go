@@ -202,6 +202,9 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedDealRoles, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.dealRolesSection(ctx, tx, contactID, out)
 		}},
+		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedBillingRoles, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
+			return s.billingRolesSection(ctx, tx, contactID, out)
+		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedProjects, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.projectsSection(ctx, tx, contactID, out)
 		}},

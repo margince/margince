@@ -534,6 +534,7 @@ export const de = {
   "rel.kind.referredBy": "Empfohlen von",
   "rel.kind.coSellWith": "Co-Sell mit",
   "rel.kind.worksWith": "Arbeitet zusammen mit",
+  "rel.kind.billingContact": "Rechnungskontakt",
 
   "common.error": "Konnten diese Ansicht nicht laden.",
   "common.errorNoCause":
@@ -1171,6 +1172,14 @@ export const de = {
   "evidence.fullHistory": "Vollständiger Verlauf",
   "co.section.unavailable":
     "Konnte nicht geladen werden — das ist möglicherweise nicht das ganze Bild",
+  "billing.title": "Rechnungskontakte",
+  "billing.contactTitle": "Bearbeitet Rechnungen für",
+  "billing.none":
+    "Noch niemand benannt — tragen Sie ein, an wen die Rechnung gehen soll",
+  "billing.noEmail": "Keine E-Mail hinterlegt",
+  "billing.role.recipient": "Rechnungsempfänger",
+  "billing.role.approver": "Genehmigt",
+  "billing.role.accountsPayable": "Kreditorenbuchhaltung",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",

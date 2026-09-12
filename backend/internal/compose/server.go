@@ -167,7 +167,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The warm room ranks its contact edges by the §4 relationship
 		// strength owned by contacts; injected through the adapter below so
 		// signals never imports its sibling.
-		financeHandlers: finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf),
+		financeHandlers: finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf).
+			WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))}),
 		// No adapter is registered by default, which is the supported
 		// "no provider connected" configuration (PI-AC-9): every surface
 		// answers honestly and nothing can reach the network. WithProvider

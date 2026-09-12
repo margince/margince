@@ -1844,3 +1844,37 @@
 .co-move-reading {
   display: block;
 }
+
+/* Billing contacts — who handles the account's invoices. A list rather than a
+   table: three rows at most on a typical account, and a table's header would
+   cost more rows than it labels. */
+.billing-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.billing-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.billing-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.billing-name {
+  font-weight: var(--fw-medium);
+}
+/* The address wraps rather than truncating. A half-shown email is the one
+   field on this panel where the missing half is what makes it wrong. */
+.billing-email {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}

@@ -8721,7 +8721,7 @@ paths:
         - $ref: '#/components/parameters/IncludeArchived'
         - name: kind
           in: query
-          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with] }
+          schema: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with, billing_contact] }
         - name: contact_id
           in: query
           schema: { type: string, format: uuid }
@@ -27929,6 +27929,18 @@ components:
       properties:
         company_id: { type: string, format: uuid }
         state: { $ref: '#/components/schemas/FinanceSummaryState' }
+        billing_contacts:
+          type: array
+          description: >-
+            Who to send this customer's invoices to, beside the figures — the one question a
+            reader of this card asks that the accounting mirror cannot answer. Read from the
+            installation's own relationships, NOT from the accounting source: it states who we
+            record as handling the invoices, which the connector neither supplies nor is told.
+
+            Absent when the caller lacks the contact or relationship grant, so an empty array
+            means nobody is named rather than nobody may be seen. Contacts outside the caller's
+            row scope are not listed, and no count says how many were withheld.
+          items: { $ref: '#/components/schemas/BillingContact' }
         provider:
           type: [string, 'null']
           description: >-
@@ -28720,6 +28732,52 @@ components:
             see a staged change is a per-row check, and a badge is not worth making one
             record page pay for an unbounded backlog.
 
+    BillingContact:
+      type: object
+      description: |
+        One contact who handles a company's invoices, and in what capacity.
+
+        `email` is read LIVE off the contact, never copied onto the edge: an address
+        stored on the relationship would go stale the day they change it, and the
+        invoice would then be addressed to somewhere only that copy still believes in.
+        Null when the contact has no reachable address on file, which is a fact worth
+        showing — somebody named as the recipient with nowhere to send it.
+
+        Naming somebody here sends nothing. It creates no contact in the accounting
+        mirror, grants no consent to mail them, and starts no invoice.
+      required: [relationship_id, contact_id, full_name, role]
+      properties:
+        relationship_id:
+          type: string
+          format: uuid
+          description: The edge itself, so the panel can change or archive this one row.
+        contact_id: { type: string, format: uuid }
+        full_name: { type: string }
+        role: { $ref: '#/components/schemas/BillingContactRole' }
+        title: { type: [string, 'null'] }
+        email:
+          type: [string, 'null']
+          description: The contact's current reachable address, read live. Null when none is on file.
+
+    BillingContactRole:
+      type: string
+      enum: [recipient, approver, accounts_payable]
+      description: |
+        In what capacity somebody handles the invoice: `recipient` (it is addressed to
+        them), `approver` (they sign it off internally), `accounts_payable` (they pay it).
+        One contact may hold several, and each is a separate edge.
+      x-enum-varnames: [BillingContactRoleRecipient, BillingContactRoleApprover, BillingContactRoleAccountsPayable]
+
+    BillingCompany:
+      type: object
+      description: One company a contact handles invoices for — the same edge read from the contact's end.
+      required: [relationship_id, company_id, company_name, role]
+      properties:
+        relationship_id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+        role: { $ref: '#/components/schemas/BillingContactRole' }
+
     Company360:
       type: object
       description: |
@@ -28776,13 +28834,24 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [contacts, deals, projects, strength, activities, tags, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments]
+            enum: [contacts, deals, projects, strength, activities, tags, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts]
         contacts:
           type: object
           required: [data, page]
           properties:
             data: { type: array, items: { $ref: '#/components/schemas/Company360Contact' } }
             page: { $ref: '#/components/schemas/PageInfo' }
+        billing_contacts:
+          type: array
+          description: >-
+            Who handles this account's invoices, ordered by capacity: addressed, approved,
+            paid. Each entry is one edge, so the panel can change or archive a single role
+            without touching the others. Empty means nobody is named — which for a paying
+            customer is a gap worth showing, not a blank. Absent when the caller lacks the
+            contact or relationship grant, named in `sections_omitted` as `billing_contacts`;
+            a contact outside the caller's row scope is simply not listed, and no count states
+            how many were withheld.
+          items: { $ref: '#/components/schemas/BillingContact' }
         deals: { $ref: '#/components/schemas/Company360Deals' }
         projects:
           type: array
@@ -29046,13 +29115,20 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses]
+            enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile, dead_addresses, billing_roles]
             # Pinned for the reason SavedViewResource is: the generator prefixes a
             # constant only to break a collision, so these names move when an
             # UNRELATED schema gains a value. Adding a lane to the attention feed's
             # lanes_omitted has now unprefixed a whole enum twice.
-            x-enum-varnames: [Contact360SectionsOmittedEmployments, Contact360SectionsOmittedDealRoles, Contact360SectionsOmittedProjects, Contact360SectionsOmittedStrength, Contact360SectionsOmittedNetwork, Contact360SectionsOmittedActivities, Contact360SectionsOmittedNextSteps, Contact360SectionsOmittedConsent, Contact360SectionsOmittedProfileFields, Contact360SectionsOmittedSinceLastVisit, Contact360SectionsOmittedLastTouch, Contact360SectionsOmittedRelationshipChanges, Contact360SectionsOmittedMoments, Contact360SectionsOmittedCommercial, Contact360SectionsOmittedNextMeeting, Contact360SectionsOmittedClaims, Contact360SectionsOmittedConversationMemory, Contact360SectionsOmittedProviderProfile, Contact360SectionsOmittedDeadAddresses]
+            x-enum-varnames: [Contact360SectionsOmittedEmployments, Contact360SectionsOmittedDealRoles, Contact360SectionsOmittedProjects, Contact360SectionsOmittedStrength, Contact360SectionsOmittedNetwork, Contact360SectionsOmittedActivities, Contact360SectionsOmittedNextSteps, Contact360SectionsOmittedConsent, Contact360SectionsOmittedProfileFields, Contact360SectionsOmittedSinceLastVisit, Contact360SectionsOmittedLastTouch, Contact360SectionsOmittedRelationshipChanges, Contact360SectionsOmittedMoments, Contact360SectionsOmittedCommercial, Contact360SectionsOmittedNextMeeting, Contact360SectionsOmittedClaims, Contact360SectionsOmittedConversationMemory, Contact360SectionsOmittedProviderProfile, Contact360SectionsOmittedDeadAddresses, Contact360SectionsOmittedBillingRoles]
         strength: { $ref: '#/components/schemas/RelationshipStrength' }
+        billing_roles:
+          type: array
+          description: >-
+            The companies this contact handles invoices for, and in what capacity. Absent when
+            the caller lacks the company or relationship grant, named in `sections_omitted` as
+            `billing_roles`; a company outside the caller's row scope is not listed.
+          items: { $ref: '#/components/schemas/BillingCompany' }
         projects:
           type: array
           description: >-
@@ -31532,10 +31608,16 @@ components:
         `works_with` is the one contact↔contact kind (contact_id ↔ counterparty_contact_id): two external
         contacts a rep asserts work together. Undirected in fact — the two columns carry no order,
         and one live edge exists per pair whichever way it was recorded.
+
+        `billing_contact` (contact↔company) names who handles the account's invoices, in the
+        capacity `role` states. One live edge per company, contact and role: the same contact may
+        hold several roles, and the same role may be held by several contacts. It is a statement of
+        WHO, and nothing else — naming a recipient sends no invoice, creates nothing in the
+        accounting mirror, and grants no consent to mail them.
       required: [id, kind, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, project_company, partner_of, referred_by, co_sell_with, works_with, billing_contact] }
         contact_id: { type: [string, 'null'], format: uuid }
         company_id: { type: [string, 'null'], format: uuid }
         counterparty_company_id: { type: [string, 'null'], format: uuid, description: 'The other company on a partner edge (partner_of/referred_by/co_sell_with). Null for employment/deal_stakeholder.' }
@@ -31544,7 +31626,17 @@ components:
         project_id: { type: [string, 'null'], format: uuid, description: 'The project on a project_stakeholder or project_company edge. Null for every other kind.' }
         role:
           type: [string, 'null']
-          description: 'employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.'
+          description: >-
+            employment: cto/vp_sales/...; deal or project stakeholder:
+            champion/economic_buyer/blocker/influencer/user, plus
+            sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
+
+            `billing_contact` is the one kind where this field is REQUIRED and
+            bounded: `recipient` (the invoice is addressed to them), `approver`
+            (they sign it off internally) or `accounts_payable` (they pay it).
+            An edge saying only that somebody is a billing contact would not say
+            which of the three to do with them, so the server refuses it. Every
+            other kind keeps free text.
         is_current_primary: { type: boolean, default: false, description: Employment — the one current primary employer (≤1 per contact). }
         started_at: { type: [string, 'null'], format: date }
         ended_at: { type: [string, 'null'], format: date, description: Null = current/ongoing. }
@@ -31564,7 +31656,7 @@ components:
         # this generic surface cannot — write authority over the project ROW,
         # and the refusal that keeps a project's last company on it. The server
         # refuses the kind here, and the enum says so before a caller tries.
-        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with, works_with] }
+        kind: { type: string, enum: [employment, deal_stakeholder, project_stakeholder, partner_of, referred_by, co_sell_with, works_with, billing_contact] }
         contact_id: { type: [string, 'null'], format: uuid }
         company_id: { type: [string, 'null'], format: uuid }
         counterparty_company_id: { type: [string, 'null'], format: uuid }
