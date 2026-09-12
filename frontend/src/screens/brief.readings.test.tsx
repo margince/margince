@@ -9,12 +9,15 @@ import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import {
+  boundedDecisions,
   boundedLeads,
   boundedMeetings,
   leadRow,
   meetingRow,
   readingsDay,
+  wholeDecisions,
   wholeLeads,
+  wholeMeetings,
 } from "./brief.fixtures";
 import { BriefReadingsStrip } from "./brief.readings";
 
@@ -45,7 +48,9 @@ function drawInZone(zone: string, ...args: Parameters<typeof readingsDay>) {
   );
 }
 
-function draw(...args: Parameters<typeof readingsDay>) {
+// The strip over a day built by hand, for the facts `readingsDay`'s parameters
+// do not reach — `sources_unavailable` among them.
+function drawDay(day: ReturnType<typeof readingsDay>) {
   // A QueryClient, because the pipeline reading is a read of its own: it is the
   // one figure on this plate that does not come from the worklist answer, and
   // it asks the same key Analytics asks.
@@ -55,10 +60,14 @@ function draw(...args: Parameters<typeof readingsDay>) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <BriefReadingsStrip day={readingsDay(...args)} />
+        <BriefReadingsStrip day={day} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+}
+
+function draw(...args: Parameters<typeof readingsDay>) {
+  return drawDay(readingsDay(...args));
 }
 
 // Five READINGS, not five DOM children: a strip that wrapped its slots in a
@@ -400,24 +409,82 @@ describe("the brief readings strip", () => {
   // floor — a whole sentence of footnote under a plate whose argument is that
   // five readings are taken in at one glance. The fact belongs ON the figures.
   //
-  // Every figure the flag covers wears the mark, and that is the contract's own
-  // claim rather than a choice: `more_available` is set once for the readings
-  // block, over four populations, so attributing it to one slot would invite
-  // the reading where the other three are exact.
-  it("marks every figure it covers as a floor when a source was read to its limit", () => {
-    // Every worklist-derived figure non-zero, so the mark is asked of all four.
+  // A figure wears the mark when ITS OWN categories were cut short, not when
+  // some other lane was. A lane nobody could read at all is the exception and
+  // is covered further down: it marks the strip, because the source-to-category
+  // mapping that would narrow it lives on the server.
+  it("marks a figure whose own category was read to its limit", () => {
     draw(
       { more_available: true, prospecting: 2, review: 8 },
-      undefined,
-      undefined,
-      {
-        urgent: 4,
-      },
+      [],
+      [boundedDecisions(8, 8), wholeLeads(2), wholeMeetings(3)],
+      { urgent: 4 },
     );
 
-    // Four of the five: the pipeline slot is a read of its own and this flag
-    // says nothing about it.
-    expect(markedFigures()).toHaveLength(4);
+    // Decisions, plus the urgent slot — which spans every lane, so any bound
+    // anywhere makes it a floor. Leads and meetings were read whole and say so.
+    expect(markedFigures()).toEqual(expect.arrayContaining(["8+", "4+"]));
+    expect(markedFigures()).toHaveLength(2);
+  });
+
+  // THE CASE THIS EXISTS FOR. A calendar read whole used to show "3+" because
+  // an unrelated lane stopped at its bound, and a `+` on the figures that are
+  // exact is one a reader learns to discount.
+  it("leaves a whole-read figure exact when another lane was bounded", () => {
+    draw(
+      { more_available: true, prospecting: 2, review: 8 },
+      [],
+      [boundedDecisions(8, 8), wholeMeetings(3)],
+      { urgent: 0 },
+    );
+
+    expect(strippedFigures()).toContain("3");
+    expect(markedFigures()).not.toContain("3+");
+  });
+
+  // A lane that never ANSWERED is not a lane read to a bound, and the strip
+  // cannot tell which reading it would have fed: `sources_unavailable` names a
+  // source, and only the server maps a source to its lane. So it marks the
+  // whole strip rather than guessing, which over-marks instead of calling a
+  // figure exact over work nobody could see.
+  it("marks every figure when a source could not be read at all", () => {
+    const day = readingsDay(
+      { more_available: true, prospecting: 2, review: 8 },
+      [],
+      [wholeMeetings(3)],
+      { urgent: 4 },
+    );
+    day.sources_unavailable = [{ source: "calendar", reason: "failed" }];
+    drawDay(day);
+
+    // All three worklist slots, LEADS INCLUDED — a fallback wired to two of
+    // them would pass a test that only asked about two.
+    expect(markedFigures()).toContain("3+");
+    expect(markedFigures()).toContain("2+");
+    expect(markedFigures()).toContain("8+");
+  });
+
+  // Each lane keeps its own mark, asked one lane at a time. The tests above set
+  // the decisions lane bounded, so a `floorOf` wired to that lane alone would
+  // satisfy them while leaving leads and meetings permanently exact — the
+  // under-marking direction, and the one that fails silently.
+  it.each([
+    {
+      lane: "leads",
+      counts: [boundedLeads(2, 2), wholeMeetings(3), wholeDecisions(8)],
+      marked: "2+",
+    },
+    {
+      lane: "meetings",
+      counts: [wholeLeads(2), boundedMeetings(3, 3), wholeDecisions(8)],
+      marked: "3+",
+    },
+  ])("marks the $lane figure when only that lane was bounded", (each) => {
+    draw({ more_available: true, prospecting: 2, review: 8 }, [], each.counts, {
+      urgent: 0,
+    });
+
+    expect(markedFigures()).toEqual([each.marked]);
   });
 
   // A FLOOR OF NONE IS NOT A FLOOR. "0+" says "at least nothing", which is true
@@ -425,9 +492,16 @@ describe("the brief readings strip", () => {
   // a kind draws a plain zero, and the mark stays on the figures that count
   // something. It shipped as `0+` on a day with no meetings.
   it("leaves a zero unmarked even where the read was bounded", () => {
-    draw({ more_available: true, prospecting: 0, review: 8 }, [], [], {
-      urgent: 0,
-    });
+    // Both lanes bounded, so the zero and the eight are asked the same
+    // question and only the difference in their figures decides the mark.
+    draw(
+      { more_available: true, prospecting: 0, review: 8 },
+      [],
+      [boundedDecisions(8, 8), boundedLeads(0, 0)],
+      {
+        urgent: 0,
+      },
+    );
 
     const figures = strippedFigures();
     expect(figures).toContain("0");

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
+  boundedLeads,
   digest,
   NOT_FOUND,
   pipelineRows,
@@ -10,6 +11,7 @@ import {
   report,
   team,
   teamWeek,
+  wholeDecisions,
 } from "./brief.fixtures";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
@@ -265,13 +267,16 @@ export const Readings: Story = {
   render: part(<BriefReadingsStrip day={readingsDay()} />),
 };
 
-// A source ended short of its list, so every figure drawn from it is a floor.
-// It is a `+` ON the figures — `8+` — rather than the sentence that used to
-// stand under the row, and the cell's own hover line says why. Every figure the
-// flag covers wears the mark, which is the contract's own claim: it is set once
-// for the readings block, over four populations, so marking one slot would
-// invite the reading where the other three are exact. The pipeline slot is a
-// read of its own and stays unmarked.
+// A lane ended short of its list, so the figures drawn from THAT lane are
+// floors. It is a `+` ON the figures — `8+` — rather than the sentence that used
+// to stand under the row, and the cell's own hover line says why.
+//
+// The contrast is the point of this story: leads stopped at its bound and
+// decisions did not, so one wears the mark and the other stays exact. Marking
+// all of them was the old behaviour, and a `+` on the figures that are exact is
+// one a reader learns to discount. `urgent` spans every lane, so any bound
+// anywhere is its bound. The pipeline slot is a read of its own and stays
+// unmarked.
 //
 // The MEETINGS slot is the case to look at: this day has none, and a zero draws
 // a plain `0`. "0+" says "at least nothing", which is true of every number
@@ -281,9 +286,9 @@ export const ReadingsCapped: Story = {
   render: part(
     <BriefReadingsStrip
       day={readingsDay(
-        { buyer_replies: 100, prospecting: 8, more_available: true },
+        { buyer_replies: 100, prospecting: 8, review: 4, more_available: true },
         [],
-        [],
+        [boundedLeads(8, 8), wholeDecisions(4)],
         { urgent: 12 },
       )}
     />,
@@ -301,9 +306,12 @@ export const ReadingsOnAPhone: Story = {
   globals: { viewport: { value: "phone" } },
   render: part(
     <BriefReadingsStrip
-      day={readingsDay({ prospecting: 8, more_available: true }, [], [], {
-        urgent: 12,
-      })}
+      day={readingsDay(
+        { prospecting: 8, more_available: true },
+        [],
+        [boundedLeads(8, 8)],
+        { urgent: 12 },
+      )}
     />,
   ),
 };

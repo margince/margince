@@ -56,13 +56,41 @@ import type {
 // A BOUNDED READ IS A `+`, NOT A SENTENCE. The row used to carry a line saying
 // a source had been read to its limit, so every figure above it was a floor.
 // The fact belongs ON the figures: `8+` says it where the number is, and the
-// cell's hover line says why. `WorklistReadings.more_available` is ONE flag for
-// the whole readings block by contract — "set once for the strip rather than
-// per reading" — so it marks every figure it covers rather than being
-// attributed to whichever slot a reader happens to suspect.
+// cell's hover line says why.
+//
+// AND THE `+` GOES ON THE FIGURES IT IS TRUE OF. This file used to mark all
+// four from `WorklistReadings.more_available`, arguing that one flag is what
+// the contract states. That was right about the flag and wrong about the page:
+// it put a `+` on a calendar read whole because an unrelated lane stopped at
+// its bound, and a mark on the figures that are exact is one a reader learns
+// to discount. Placing it per slot is not guesswork — `counts` already carries
+// `more_available` PER CATEGORY, seeded from the bounded SOURCES through
+// `categoryOfSource` (reach.go), so each slot asks the lanes it is summed from.
 
 const MEETINGS = "meetings";
 const LEADS = "leads";
+const DECISIONS = "decisions";
+
+// Which categories came back at a bound, as the server marked them.
+//
+// An ABSENT category is not a bounded one. The server seeds `counts` from the
+// bounded sources BEFORE it walks the rows (reach.go), so a lane that stopped
+// early always leaves an entry even when the scope filter took every row it
+// found. A category with no entry at all therefore had no bound and no rows —
+// an honest nothing — and marking it would put a `+` on the zeros.
+//
+// A lane that could not be read AT ALL is a different fact and is not in
+// `counts`: it travels in `sources_unavailable`, and the strip-wide
+// `readings.more_available` already covers it.
+function boundedCategories(day: Worklist): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const count of day.counts) {
+    if (count.more_available) {
+      out.add(count.category);
+    }
+  }
+  return out;
+}
 
 // Open the worklist on the lane a reading counted.
 //
@@ -156,10 +184,29 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const readings = day.readings;
   const meetings = meetingsReading(day);
   const soonest = soonestLeadDeadline(day);
-  // ONE flag for the four figures read off this answer, which is what the
-  // contract says it is. Splitting it per slot would attribute a bound to
-  // whichever reading looked likeliest, over populations that differ.
-  const floor = readings.more_available;
+  // Each figure carries its OWN categories' honesty, not the strip's.
+  //
+  // `readings.more_available` is one flag for the whole answer, and marking
+  // every slot from it said "3+" over a calendar that was read whole because an
+  // unrelated notice source stopped at its bound. A `+` a reader learns to
+  // discount is worse than none: it is on the exact figures that are exact.
+  //
+  // This is not the browser splitting one flag by guesswork. `counts` already
+  // carries `more_available` PER CATEGORY, seeded server-side from the bounded
+  // sources themselves (categoryOfSource, reach.go) so a bounded lane that left
+  // no surviving row still marks its category.
+  //
+  // A lane that never answered is the case this does NOT narrow. It travels in
+  // `sources_unavailable`, which names a SOURCE, and the source-to-category
+  // mapping is the server's (categoryOfSource) — re-deriving it here would be a
+  // second copy of it, drifting the first time a producer changes lane. So an
+  // unavailable lane keeps marking the whole strip through `unread`, which is
+  // the safe direction: it over-marks rather than calling a figure exact over
+  // work nobody could see.
+  const bounded = boundedCategories(day);
+  const unread = day.sources_unavailable.length > 0;
+  const floorOf = (category: string): boolean =>
+    unread || bounded.has(category);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -170,7 +217,10 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // the morning's first question is how many of those there are.
           count={day.summary.urgent}
           warn={day.summary.urgent > 0}
-          floor={floor}
+          // The one slot that genuinely spans the day: `urgent` is every row at
+          // the top two levels whatever lane raised it, so any bounded source
+          // anywhere makes it a floor. This is what `more_available` is for.
+          floor={readings.more_available}
           // The basis says what the figure was taken over, on every day. A zero
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
@@ -184,14 +234,14 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
           warn={meetings.unready !== null && meetings.unready > 0}
-          floor={floor}
+          floor={floorOf(MEETINGS)}
           basis={meetingsDetail(meetings, locale, t, plural)}
           lane="meetings"
         />
         <LaneReading
           label={t("brief.readings.leads")}
           count={readings.prospecting}
-          floor={floor}
+          floor={floorOf(LEADS)}
           // The deadline is the fact that changes what a reader does before
           // lunch, and NULL rather than a guess where the page cannot honestly
           // compute one.
@@ -208,7 +258,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <LaneReading
           label={t("brief.readings.decisions")}
           count={readings.review}
-          floor={floor}
+          floor={floorOf(DECISIONS)}
           basis={t("brief.readings.decisionsBasis")}
           lane="decisions"
         />
