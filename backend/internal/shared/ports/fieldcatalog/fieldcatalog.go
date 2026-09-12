@@ -126,6 +126,8 @@ type FilterableReader interface {
 // configured stop rendering.
 type Target string
 
+// The targets themselves. Every value the custom_field.object CHECK admits,
+// including the ones no active target list offers today.
 const (
 	TargetContact      Target = "contact"
 	TargetCompany      Target = "company"

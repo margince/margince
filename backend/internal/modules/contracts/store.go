@@ -183,12 +183,15 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 		effectiveOn   *time.Time
 		fxDate        *time.Time
 	)
-	dests := []any{&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
+
+	dests := []any{
+		&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
 		&c.ValueMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
 		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays, &c.PaymentTermDays,
 		&status, &signedOn, &noticeOn, &effectiveOn,
 		&supersededBy, &c.Source, &capturedBy, &c.Version, &c.CreatedAt, &c.UpdatedAt,
-		&c.ArchivedAt}
+		&c.ArchivedAt,
+	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
 		return crmcontracts.Contract{}, err

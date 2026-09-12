@@ -58,23 +58,35 @@ func (e *ContractCheckError) Error() string { return e.Reason }
 func contractCheckError(constraint string) error {
 	switch constraint {
 	case "contract_value_pair":
-		return &ContractCheckError{Field: "value_minor",
-			Reason: "a contract value needs its currency, and a currency needs its value"}
+		return &ContractCheckError{
+			Field:  "value_minor",
+			Reason: "a contract value needs its currency, and a currency needs its value",
+		}
 	case "contract_fx_pair":
-		return &ContractCheckError{Field: "fx_rate_to_base",
-			Reason: "a frozen conversion rate needs the date it was frozen on"}
+		return &ContractCheckError{
+			Field:  "fx_rate_to_base",
+			Reason: "a frozen conversion rate needs the date it was frozen on",
+		}
 	case "contract_term_order":
-		return &ContractCheckError{Field: "ends_on",
-			Reason: "a term cannot end before it starts"}
+		return &ContractCheckError{
+			Field:  "ends_on",
+			Reason: "a term cannot end before it starts",
+		}
 	case "contract_cancellation_within_term":
-		return &ContractCheckError{Field: "cancellation_effective_on",
-			Reason: "a cancellation cannot take effect after the term already ends"}
+		return &ContractCheckError{
+			Field:  "cancellation_effective_on",
+			Reason: "a cancellation cannot take effect after the term already ends",
+		}
 	case "contract_cancellation_order":
-		return &ContractCheckError{Field: "cancellation_effective_on",
-			Reason: "a cancellation cannot take effect before notice was given"}
+		return &ContractCheckError{
+			Field:  "cancellation_effective_on",
+			Reason: "a cancellation cannot take effect before notice was given",
+		}
 	case "contract_superseded_agrees":
-		return &ContractCheckError{Field: "status",
-			Reason: "a superseded contract names its successor, and only a superseded one may"}
+		return &ContractCheckError{
+			Field:  "status",
+			Reason: "a superseded contract names its successor, and only a superseded one may",
+		}
 	default:
 		return &ContractCheckError{Field: "", Reason: "the contract's dates or amounts contradict each other"}
 	}
