@@ -113,3 +113,41 @@ it("sends nothing when the brief was not changed", async () => {
   ).toBe(true);
   expect(sent).toHaveLength(0);
 });
+
+it("sends the brief as typed, whitespace and all", async () => {
+  const sent: Sent[] = [];
+  stubFetch(sent);
+  render(<DealBrief dealId={DEAL_ID} version={2} brief="Old words." />);
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const box = screen.getByRole("textbox");
+  await userEvent.clear(box);
+  await userEvent.type(box, "  Padded on purpose.  ");
+  await userEvent.click(screen.getByRole("button", { name: "Save brief" }));
+  // The server stores the description verbatim. Trimming here would silently
+  // drop spacing a reader wrote, and would make a whitespace-only correction
+  // impossible to save at all.
+  expect(sent[0].body).toEqual({ description: "  Padded on purpose.  " });
+});
+
+it("keeps an unsaved draft when the deal refetches underneath it", async () => {
+  const sent: Sent[] = [];
+  stubFetch(sent);
+  const { rerender } = render(
+    <DealBrief dealId={DEAL_ID} version={2} brief="Old words." />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+  await userEvent.clear(box);
+  await userEvent.type(box, "Half a sentence");
+  // A colleague saves elsewhere and the background refetch lands. The modal is
+  // OPEN and holds an unsaved draft: re-seeding here would replace a reader's
+  // words with somebody else's, mid-sentence, with no warning.
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider>
+        <DealBrief dealId={DEAL_ID} version={3} brief="Their words." />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  expect(box.value).toBe("Half a sentence");
+});

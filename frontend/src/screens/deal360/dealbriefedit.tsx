@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Button, Field, Modal, Textarea } from "../../design-system/atoms";
@@ -43,27 +43,41 @@ export function DealBriefEdit({
   const { locale } = useLocale();
   const headingId = useId();
   const [text, setText] = useState("");
+  // The brief as it was when this modal OPENED. The deal query refetches in
+  // the background, so `brief` changes under a reader who is mid-sentence;
+  // everything the form compares against has to be the reading it opened on,
+  // or a colleague saving elsewhere silently rewrites what is being typed.
+  const [opened, setOpened] = useState<string>("");
   const save = useSaveBrief(dealId);
   // Pulled out because the effect below depends on THIS function rather than
   // on the mutation object, which is a new object every render: depending on
   // the object would reset the form under the reader mid-typing.
   const resetSave = save.reset;
+  // The live brief, readable from the effect WITHOUT the effect depending on
+  // it. Depending on it is what let a background refetch re-seed the textarea
+  // and wipe an unsaved draft; reading it through a ref seeds from whatever is
+  // current at the moment of opening and never again.
+  const briefRef = useRef(brief);
+  briefRef.current = brief;
 
-  // Re-seeded on every opening, not once at mount. The modal stays mounted for
-  // the life of the panel, so an initializer would hand back whatever the
-  // brief said the first time the page rendered.
+  // Seeded on the OPENING edge alone. The modal stays mounted for the life of
+  // the panel, so an initializer would hand back whatever the brief said the
+  // first time the page rendered.
   useEffect(() => {
     if (open) {
-      setText(brief ?? "");
+      const current = briefRef.current ?? "";
+      setText(current);
+      setOpened(current);
       resetSave();
     }
-  }, [open, brief, resetSave]);
+  }, [open, resetSave]);
 
-  const trimmed = text.trim();
   const tooLong = text.length > BRIEF_MAX;
-  // Clearing the brief is a real edit, so an empty box saves null rather than
-  // being refused. Only an unchanged box has nothing to send.
-  const unchanged = trimmed === (brief ?? "").trim();
+  // Compared RAW, against the reading this modal opened on. Trimming the
+  // comparison would make an edit to the surrounding whitespace unsendable,
+  // and comparing against the live `brief` would call a draft unchanged
+  // because somebody else had just saved those same words.
+  const unchanged = text === opened;
 
   async function submit() {
     if (tooLong || unchanged) {
@@ -71,7 +85,11 @@ export function DealBriefEdit({
     }
     await save.mutateAsync({
       version,
-      description: trimmed === "" ? null : trimmed,
+      // Sent as typed. The server stores the description verbatim, so
+      // trimming here would silently drop leading or trailing whitespace a
+      // reader deliberately wrote — and make a whitespace-only correction
+      // impossible. Only a box holding NOTHING is a cleared brief.
+      description: text === "" ? null : text,
     });
     onClose();
   }

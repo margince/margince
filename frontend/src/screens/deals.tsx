@@ -3808,6 +3808,7 @@ function DealOverviewPane({
   onAdvance,
   advancing,
   advanceRefused,
+  readOnly,
   refusedReasonId,
   pulse,
   spine,
@@ -3837,6 +3838,12 @@ function DealOverviewPane({
    * not this caller's to write, or mirrored from an incumbent that refuses
    * the write. */
   advanceRefused: boolean;
+  /** Whether the deal takes NO field write at all — archived, or not this
+   * caller's to write. Deliberately NOT `advanceRefused`, which also refuses a
+   * CLOSED deal: reopening is its own deliberate action, while correcting the
+   * brief of a deal that was won last week is an ordinary edit the server
+   * accepts. Conflating them hid the brief control on every closed deal. */
+  readOnly: boolean;
   /** The id of the page's sentence about why this deal takes no changes, or
    * undefined while it does. An offer is hung off the deal, so a deal this
    * caller cannot write takes no new offer from them either. */
@@ -3938,10 +3945,11 @@ function DealOverviewPane({
         dealId={deal.id}
         version={deal.version}
         brief={deal.description}
-        // The same refusal the advance verb reads: archived, not this
-        // caller's to write, or mirrored from an incumbent that refuses it.
-        // An overlay deal is a mirror and takes no native write either.
-        readOnly={overlay || advanceRefused}
+        // The record's own write refusal, not the advance verb's. A CLOSED
+        // deal takes no stage move without a deliberate reopen, and takes an
+        // ordinary field edit perfectly well — the server asks only for update
+        // permission, row writability and an unarchived record.
+        readOnly={overlay || readOnly}
       />
       {/* Under the brief, and only on a closed deal: the panel returns null
           while the deal is still open, because there is no outcome to review
@@ -4328,6 +4336,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     advanceRefused={
                       readOnly || overlay || deal.status !== "open"
                     }
+                    readOnly={readOnly}
                     refusedReasonId={refusedReasonId}
                     onAdvance={(toStage) => {
                       // The version this record was drawn from, exactly as the
