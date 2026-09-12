@@ -3934,7 +3934,15 @@ function DealOverviewPane({
           />
         </RecordReadingPair>
       </RecordReading>
-      <DealBrief brief={deal.description} />
+      <DealBrief
+        dealId={deal.id}
+        version={deal.version}
+        brief={deal.description}
+        // The same refusal the advance verb reads: archived, not this
+        // caller's to write, or mirrored from an incumbent that refuses it.
+        // An overlay deal is a mirror and takes no native write either.
+        readOnly={overlay || advanceRefused}
+      />
       {/* Under the brief, and only on a closed deal: the panel returns null
           while the deal is still open, because there is no outcome to review
           yet and inviting one would be asking for a verdict nobody can give. */}

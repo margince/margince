@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { DealBriefEdit } from "./dealbriefedit";
 
 /** How much of the brief shows before the reader asks for the rest. */
 const COLLAPSED_LINES = 6;
@@ -14,16 +16,66 @@ const COLLAPSED_LINES = 6;
  * typed and nothing overwrites it. A reader who cannot tell them apart cannot
  * tell which parts of the page they may correct.
  *
- * Renders NOTHING when the brief is empty rather than an invitation: the edit
- * form already offers the field, and an empty panel on every unbriefed deal is
- * a permanent hole in the page that says nothing.
+ * An UNBRIEFED deal shows the panel and says the field is empty, rather than
+ * rendering nothing. It used to vanish, on the reasoning that the record's
+ * edit form already offers the field — but a reader looking at the page cannot
+ * see a form they have not opened, and every deal without a brief therefore
+ * looked like a product with no such field at all. A panel that names what it
+ * holds is how somebody learns the brief exists.
  */
-export function DealBrief({ brief }: Readonly<{ brief?: string | null }>) {
+export function DealBrief({
+  dealId,
+  version,
+  brief,
+  readOnly = false,
+}: Readonly<{
+  dealId: string;
+  // The version the page READ, which pins the save. Without it the write is
+  // refused rather than landing unpinned.
+  version: number | undefined;
+  brief?: string | null;
+  // The page's own answer to whether this deal takes writes. The panel does
+  // not re-derive it: the server refuses an unauthorized write whatever this
+  // says, and a second implementation of the gate here is the defect rather
+  // than the protection.
+  readOnly?: boolean;
+}>) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
   const text = brief?.trim();
+  const canWrite = !readOnly;
   if (!text) {
-    return null;
+    return (
+      <Panel
+        title={t("deal.brief")}
+        actions={
+          canWrite ? (
+            <Button variant="ghost" onClick={() => setEditing(true)}>
+              {t("deal.briefAdd")}
+            </Button>
+          ) : undefined
+        }
+      >
+        <PanelBody>
+          <SurfaceState
+            state="empty"
+            emptyLabel={t("deal.briefEmpty")}
+            emptyDetail={t("deal.briefEmptyDetail")}
+            loadingLabel={t("deal.brief")}
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+        <DealBriefEdit
+          open={editing}
+          onClose={() => setEditing(false)}
+          dealId={dealId}
+          version={version}
+          brief={brief}
+        />
+      </Panel>
+    );
   }
   // The line count decides whether there is anything to expand. Counting lines
   // rather than characters because the clamp is a line clamp: a long single
@@ -31,7 +83,16 @@ export function DealBrief({ brief }: Readonly<{ brief?: string | null }>) {
   // "Read more" on text already fully shown.
   const clampable = text.split("\n").length > COLLAPSED_LINES;
   return (
-    <Panel title={t("deal.brief")}>
+    <Panel
+      title={t("deal.brief")}
+      actions={
+        canWrite ? (
+          <Button variant="ghost" onClick={() => setEditing(true)}>
+            {t("deal.briefEdit")}
+          </Button>
+        ) : undefined
+      }
+    >
       <PanelBody>
         <p
           className="t-body"
@@ -60,6 +121,13 @@ export function DealBrief({ brief }: Readonly<{ brief?: string | null }>) {
           </Button>
         )}
       </PanelBody>
+      <DealBriefEdit
+        open={editing}
+        onClose={() => setEditing(false)}
+        dealId={dealId}
+        version={version}
+        brief={brief}
+      />
     </Panel>
   );
 }
