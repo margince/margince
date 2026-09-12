@@ -330,8 +330,20 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	// price, now in yen — and the patch records no move for it because the
 	// integer did not change. Judging on the patch would refuse exactly that
 	// caller, who did the one thing this rule asks for.
-	if err := currencyRestatementError(current, resultingCurrency, currencyMoved,
-		in.AmountMinor != nil, in.ExpectedArrMinor != nil); err != nil {
+	if err := currencyRestatementError(current, resultingCurrency, moneyRestatement{
+		Currency: currencyMoved,
+		Amount:   in.AmountMinor != nil,
+		Arr:      in.ExpectedArrMinor != nil,
+	}); err != nil {
+		return err
+	}
+	// While an accepted offer states the recurring figure, the figure is the
+	// offer's. An ordinary edit that would move or clear it is refused rather
+	// than silently overwriting what the signed document says — accepting
+	// another offer is how it changes, and that path replaces the figure and
+	// its provenance together.
+	_, arrMoved := after[arrField]
+	if err := refuseManualArrEdit(current, resultingArr, arrMoved, currencyMoved); err != nil {
 		return err
 	}
 	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {

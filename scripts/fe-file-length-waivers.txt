@@ -50,7 +50,7 @@
 1326 frontend/src/screens/company-context.tsx
 1330 frontend/src/screens/listquery.test.tsx
 1402 frontend/src/screens/listquery.tsx
-1424 frontend/src/screens/offers.tsx
+1378 frontend/src/screens/offers.tsx
 1428 frontend/src/screens/contacts.test.tsx
 1433 frontend/src/screens/contactrail.tsx
 1442 frontend/src/app/agentrail.test.tsx

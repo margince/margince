@@ -80,12 +80,13 @@ func moneyPairError(amount, arr *int64, currency *string) error {
 // currency entirely is allowed only once no figure is left to denominate, which
 // moneyPairError already enforces.
 //
-// `moved` reports which of the three the patch actually writes, so re-sending
-// the currency a deal already holds is not a change and asks for nothing.
+// `restated` says which of the three the request actually carried, so
+// re-sending the currency a deal already holds is not a change and asks for
+// nothing.
 func currencyRestatementError(current crmcontracts.Deal,
-	resultingCurrency *string, currencyMoved, amountMoved, arrMoved bool,
+	resultingCurrency *string, restated moneyRestatement,
 ) error {
-	if !currencyMoved {
+	if !restated.Currency {
 		return nil
 	}
 	// A currency CLEARED reinterprets nothing: moneyPairError has already
@@ -96,13 +97,23 @@ func currencyRestatementError(current crmcontracts.Deal,
 	if resultingCurrency == nil {
 		return nil
 	}
-	if current.AmountMinor != nil && !amountMoved {
+	if current.AmountMinor != nil && !restated.Amount {
 		return &CurrencyRestatementError{Field: amountField}
 	}
-	if current.ExpectedArrMinor != nil && !arrMoved {
+	if current.ExpectedArrMinor != nil && !restated.Arr {
 		return &CurrencyRestatementError{Field: arrField}
 	}
 	return nil
+}
+
+// moneyRestatement says which of a deal's three money fields one request
+// carried. Named rather than three bare bools at the call site, where
+// `(true, false, true)` says nothing about which field is which and a
+// transposed pair reads exactly like a correct one.
+type moneyRestatement struct {
+	Currency bool
+	Amount   bool
+	Arr      bool
 }
 
 // CurrencyRestatementError names the figure the caller has to send again.
@@ -132,6 +143,66 @@ func patchedMoney(after map[string]any, column string, current *int64) *int64 {
 		return &minor
 	}
 	return nil
+}
+
+// refuseManualArrEdit keeps an offer-derived recurring figure the offer's to
+// state.
+//
+// A deal carrying arr_source_offer_id got its ARR from an accepted offer, and
+// that offer is a signed document: its lines say what repeats and how often,
+// and the annual figure follows from them. A human retyping the number would
+// leave the deal claiming a recurring value its own source document does not
+// support, with nothing on the record saying which of the two is right.
+//
+// Only a MOVE is refused. Re-sending the figure the deal already holds asks for
+// nothing, so an unrelated edit that echoes the whole record back still goes
+// through — which matters, because that is what an ordinary form save does.
+//
+// Every other field stays editable. This is a lock on one figure, not on the
+// deal.
+func refuseManualArrEdit(current crmcontracts.Deal, resultingArr *int64,
+	arrMoved, currencyMoved bool,
+) error {
+	if current.ArrSourceOfferId == nil {
+		return nil
+	}
+	// A CURRENCY move is an ARR move, even where the numeral does not change.
+	// The stored figure carries no unit, so re-denominating it states a
+	// different recurring value than the offer it names — 12,000 EUR read as
+	// 12,000 USD is a different claim, and the source document still says
+	// euros. Without this the restatement rule lets exactly that through: it
+	// asks only that every figure be RESENT, and resending the same numeral
+	// under a new code satisfies it.
+	if !arrMoved && !currencyMoved {
+		return nil
+	}
+	return &ArrFromOfferError{
+		Offer:   current.ArrSourceOfferId.String(),
+		Cleared: arrMoved && resultingArr == nil,
+	}
+}
+
+// ArrFromOfferError refuses a manual edit to an offer-derived recurring figure.
+type ArrFromOfferError struct {
+	Offer string
+	// Cleared distinguishes "you tried to change it" from "you tried to remove
+	// it", because the two callers are doing different things and the second
+	// is usually somebody trying to undo the accept.
+	Cleared bool
+}
+
+func (e *ArrFromOfferError) Error() string {
+	if e.Cleared {
+		return "this deal's recurring revenue comes from an accepted offer and cannot be cleared by hand; " +
+			"accepting a different offer replaces it"
+	}
+	return "this deal's recurring revenue comes from an accepted offer and cannot be edited by hand; " +
+		"accepting a different offer replaces it"
+}
+
+// FieldFault points at the figure the caller tried to move.
+func (e *ArrFromOfferError) FieldFault() (field, code, message string) {
+	return arrField, "arr_from_offer", e.Error()
 }
 
 // ArrCurrencyConflictError refuses a currency change over a recurring figure

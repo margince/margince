@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -65,6 +66,14 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 		}
 		if lineCount == 0 {
 			return &OfferEmptyError{}
+		}
+		// A recurring line with no settled term can be drafted — classifying a
+		// price and agreeing how long it runs are two conversations — but it
+		// cannot be SENT. The buyer would be reading a price per period with
+		// nothing saying how many periods they are agreeing to, and the
+		// committed total on the paper would silently be zero.
+		if err := refuseUntermedRecurringLines(ctx, tx, id); err != nil {
+			return err
 		}
 
 		// Resolved ONCE for the whole send: the frozen rate and the issuer
@@ -404,14 +413,63 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 	// proposal_state travels with the line: a still-staged proposal must
 	// not silently become accepted (and start counting toward totals)
 	// just because the offer grew a revision.
+	//
+	// So does the billing classification. It is a SNAPSHOT, and a revision is
+	// the same document renumbered — a line that repeated monthly for a year
+	// in revision 1 repeats monthly for a year in revision 2. Dropping it here
+	// would silently unclassify every recurring line, zero the offer's annual
+	// and committed figures, and let the new revision be accepted without ever
+	// stating the deal's recurring value.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
-		                              unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded)
+		                              unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
+		                              billing_model, billing_interval_months, interval_count)
 		 SELECT uuidv7(), $2, position, product_id, description,
-		        unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded
+		        unit, quantity, unit_price_minor, discount_pct, tax_rate, evidence, proposal_state, price_grounded,
+		        billing_model, billing_interval_months, interval_count
 		 FROM offer_line_item WHERE offer_id = $1`,
 		fromID, newID); err != nil {
 		return fmt.Errorf("copy lines into new revision: %w", err)
 	}
 	return nil
+}
+
+// refuseUntermedRecurringLines refuses to send an offer carrying a recurring
+// line whose committed term nobody has settled.
+//
+// It names the line by its position on the paper, which is what the reader is
+// looking at, rather than by a row id they cannot see. Only ACCEPTED lines are
+// checked: a staged AI proposal is not part of the document until somebody
+// takes it, and refusing a send over one would let a suggestion block a human's
+// offer.
+func refuseUntermedRecurringLines(ctx context.Context, tx pgx.Tx, id ids.OfferID) error {
+	var position int
+	err := tx.QueryRow(ctx,
+		`SELECT position FROM offer_line_item
+		  WHERE offer_id = $1
+		    AND billing_model = 'recurring'
+		    AND interval_count IS NULL
+		    AND proposal_state = 'accepted'
+		  ORDER BY position LIMIT 1`, id).Scan(&position)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check recurring lines for a settled term: %w", err)
+	}
+	return &UntermedRecurringLineError{Position: position}
+}
+
+// UntermedRecurringLineError maps to 422: a recurring line on a sendable offer
+// that still has no committed number of periods.
+type UntermedRecurringLineError struct{ Position int }
+
+func (e *UntermedRecurringLineError) Error() string {
+	return "line " + strconv.Itoa(e.Position) +
+		" repeats, so the offer has to say how many periods the buyer commits to"
+}
+
+// FieldFault points at the count, which is the answer the caller still owes.
+func (e *UntermedRecurringLineError) FieldFault() (field, code, message string) {
+	return intervalCountField, "interval_count_required", e.Error()
 }
