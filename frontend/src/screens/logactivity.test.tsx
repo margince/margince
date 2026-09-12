@@ -1,4 +1,14 @@
 /** @vitest-environment jsdom */
+// jsdom, alone in this suite, and for one case: "refuses a future day for a
+// note" asserts that a date past the input's `max` does not submit, which is
+// the BROWSER's range validation and not the app's. happy-dom implements
+// neither half of it — `checkValidity()` answers true and `validity.
+// rangeOverflow` is false for a value years past the max — so under it the form
+// posts and the case fails against an environment rather than against the code.
+//
+// The app's half is asserted either way (`max` is today), and rewriting the
+// case to assert only that would drop the half that catches a form submitting
+// around its own rule. One file on the slower environment is the smaller cost.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,

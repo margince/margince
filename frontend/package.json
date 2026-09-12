@@ -54,6 +54,7 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^6.0.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "happy-dom": "20.14.0",
     "jsdom": "^30.0.0",
     "node-html-parser": "^9.0.1",
     "openapi-typescript": "^7.13.0",

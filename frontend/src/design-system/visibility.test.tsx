@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // One mark for who may read a thing. What these hold is the claim the mark
 // makes to a reader: the word is exact, the look says the SHAPE of the audience

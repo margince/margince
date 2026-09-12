@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // What the email drawer shows about a message beyond its words: the files that
 // came with it, who it was with, what it is filed against, and the verb that

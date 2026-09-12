@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { locationDouble } from "../testing/locationdouble";
 import { OAuthConsent } from "./oauthconsent";
 
 // The consent screen is where a human hands an agent their own authority.
@@ -382,10 +383,10 @@ describe("OAuthConsent — re-entering after sign-in", () => {
     globalThis.location.hash = hashWithoutNonce();
     stubSession(true);
     const assigned: string[] = [];
-    vi.stubGlobal("location", {
-      ...globalThis.location,
-      assign: (url: string) => assigned.push(url),
-    });
+    vi.stubGlobal(
+      "location",
+      locationDouble({ assign: (url: string) => assigned.push(url) }),
+    );
     render(<OAuthConsent />);
     await waitFor(() => expect(assigned).toHaveLength(1));
     const reentered = new URLSearchParams(assigned[0].split("?")[1] ?? "");
@@ -401,10 +402,10 @@ describe("OAuthConsent — re-entering after sign-in", () => {
     globalThis.location.hash = hashWithoutNonce();
     stubSession(false);
     const assigned: string[] = [];
-    vi.stubGlobal("location", {
-      ...globalThis.location,
-      assign: (url: string) => assigned.push(url),
-    });
+    vi.stubGlobal(
+      "location",
+      locationDouble({ assign: (url: string) => assigned.push(url) }),
+    );
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });

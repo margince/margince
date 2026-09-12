@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { LocaleProvider } from "@margince/frontend/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

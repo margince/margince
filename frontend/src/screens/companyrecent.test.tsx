@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // What the account page's recent-exchange list draws for each kind it holds.
 //

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { THEME_KEY } from "../app/theme";
 import { resetTheme } from "../app/theme-reset";
 import { LOCALES, LocaleProvider, localeNameKey, translate } from "../i18n";
+import { locationDouble } from "../testing/locationdouble";
 import { AuthScreen, AvailabilityScreen, ProviderButtons } from "./auth";
 
 // The unauthenticated surface (A107/ADR-0061 §12): login is the default —
@@ -96,7 +97,7 @@ async function stubLocationAssign(
   const originalLocation = window.location;
   const assign = vi.fn();
   Object.defineProperty(window, "location", {
-    value: { ...originalLocation, assign },
+    value: locationDouble({ assign }),
     writable: true,
     configurable: true,
   });

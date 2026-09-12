@@ -7,7 +7,7 @@
 // existed and every reader filters on `open`. Nothing wrote the other two, so
 // the row named a debt every morning and there was no way to say it was paid.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

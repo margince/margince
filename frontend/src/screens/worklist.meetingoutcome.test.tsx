@@ -9,7 +9,7 @@
 // since the field existed — so the one moment a human knows how it went was the
 // one moment nothing on screen could be told.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

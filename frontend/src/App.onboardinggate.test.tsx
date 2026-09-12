@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
@@ -125,14 +125,32 @@ function completedWizardFetch(shape: InstallShape) {
  *
  * A `hashchange` listener alone is not enough and stopped seeing anything the
  * moment redirects began replacing the entry rather than assigning to the hash:
- * `history.replaceState` fires no `hashchange`, so a loop would have counted
- * zero moves and passed. What this test is about is how many times the app
- * decides to go somewhere, so it counts the decisions.
+ * `history.replaceState` fires no `hashchange` where the specification is
+ * followed, so a loop would have counted zero moves and passed. What this test
+ * is about is how many times the app decides to go somewhere, so it counts the
+ * decisions.
  */
 function recordHashChanges(): string[] {
   const seen: string[] = [];
   const at = () => window.location.hash;
+  // ONE MOVE IS RECORDED ONCE, whichever channel announces it.
+  //
+  // The two channels overlap, and by how much depends on the environment.
+  // `hashchange` is specified to fire for an ASSIGNMENT to the hash and not for
+  // a history write — jsdom follows that, happy-dom fires it for
+  // pushState and replaceState too. Counting both channels blind therefore
+  // records every redirect twice under one environment and once under the
+  // other, and the count is the whole assertion: one move looks like a loop.
+  //
+  // So a history write claims the hashchange it causes. A SECOND move to the
+  // same address arrives with nothing claimed and is still counted, which is
+  // the recurrence these cases are looking for.
+  let claimed: string | null = null;
   window.addEventListener("hashchange", () => {
+    if (claimed === at()) {
+      claimed = null;
+      return;
+    }
     seen.push(at());
   });
   for (const write of ["pushState", "replaceState"] as const) {
@@ -145,6 +163,7 @@ function recordHashChanges(): string[] {
       // A stamp on the entry the reader is already on names it; it is not a
       // move, and it passes no URL.
       if (args[2] !== undefined && args[2] !== null) {
+        claimed = at();
         seen.push(at());
       }
     });

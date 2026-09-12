@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // What the contact page's memory card draws for each kind it holds.
 //

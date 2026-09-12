@@ -8,7 +8,7 @@
 // named a problem and the answer travelled in the response unrendered, so a rep
 // was told a deal had gone quiet and left to work out what to do about it.
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";

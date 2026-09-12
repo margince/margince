@@ -52,6 +52,12 @@ if (typeof window !== "undefined") {
   // prefers-reduced-motion on first render. Default to "no preference" so the
   // animated path is what the tests exercise; a test that wants the reduced path
   // overrides this per case.
+  //
+  // happy-dom HAS one, so this installs for the jsdom file alone. Its answers
+  // are the same either way — "no preference", and not narrow — which is what
+  // makes the two environments agree about which arrangement a screen is in.
+  // The viewport that decides the second of those is stated in vite.config.ts
+  // rather than inherited from whichever environment is installed.
   if (!window.matchMedia) {
     window.matchMedia = ((query: string) => ({
       matches: false,
@@ -68,7 +74,8 @@ if (typeof window !== "undefined") {
   // jsdom ships no ResizeObserver, and the list table watches its own body so
   // the frozen column's edge shadow follows a resized column. A stub that never
   // fires is the honest stand-in: the component measures once on mount either
-  // way, which is what the tests assert on.
+  // way, which is what the tests assert on. happy-dom has one, so this too
+  // installs for the jsdom file alone.
   if (!window.ResizeObserver) {
     window.ResizeObserver = class {
       observe() {}

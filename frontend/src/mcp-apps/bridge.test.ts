@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment happy-dom
 //
 // A view is a document, not a Node module: this spec drives a real DOM —
 // postMessage, createElement, textContent — so it declares jsdom for itself
