@@ -1,6 +1,8 @@
 # How we write prompts — the password, the cost, and one item at a time
 
-Every prompt this product sends has the same three parts in the same order. This
+Almost every prompt this product sends has the same three parts. One carries no
+boundary at all (it is shown nothing untrusted), and the largest deliberately
+puts the boundary last — see §2. This
 page explains what each part is for, what it costs us, and the one decision that
 follows: whether a task asks about **one thing per call** or **several at once**.
 
@@ -111,8 +113,7 @@ exactly the same text*. The password limits how much of ours can ever qualify:
 ```
 
 So **where the password sits decides how much can be reused.** That is a design
-choice, not a law — and until this page was written, one prompt had it in the
-worst possible place.
+choice, not a law — and one prompt had it in the worst possible place.
 
 ### What we measured
 
@@ -127,24 +128,29 @@ Over 7 days on staging:
 Be careful what that 0.28% proves. It shows reuse is **rare**, not that it is
 impossible — a provider's automatic reuse is best-effort and needs the same
 prefix to come round again quickly. And "caches we created: 0" has a simpler
-explanation than the password: **provider-managed caching is opt-in and we have
-never opted in.** Nothing in our code sets the field that asks for it.
+explanation than the password: **the one provider whose caching we would have to
+ask for, we never ask.** Anthropic requires a marker on the request to cache
+anything; nothing in our code sets it. The other providers cache automatically
+where they can — which is where those 90,900 reused units came from.
 
-### The one that was in the worst place
+### The one that was in the wrong place
 
 `agent_loop` — the agent runner — has by far the largest prompt in the product,
 ten times the next one. Its password was written **before** the tool catalog:
 
 ```
-  BEFORE (this PR)                    AFTER
-  [ rules      1,045 bytes ]          [ rules                     ]
-  [ PASSWORD               ]          [ tool catalog  ~97,000 b   ]
-  [ tool catalog ~97,000 b ]          [ PASSWORD                  ]
-        ^                                    ^
-   1% reusable                          99.7% reusable
+  the marker in front               the marker last
+  [ rules        ~1 KB ]            [ rules                ]
+  [ MARKER             ]            [ tool catalog  ~97 KB ]
+  [ tool catalog ~97 KB]            [ MARKER               ]
+        ^                                  ^
+   ~1% reusable                       ~99% reusable
 ```
 
-Moving one line took its reusable prefix from **1,045 bytes to 97,899**. The
+Moving one line took its reusable prefix from about 1% of the prompt to
+virtually all of it — the current figures are in
+[ai-prompts.json](../reference/ai-prompts.json), which is regenerated, rather
+than typed here where they would go stale. The
 catalog is identical for every run of a given tool surface, so it is exactly
 the kind of text reuse exists for. Nothing about the protection changed: the
 sentence still names the boundary that bounds the captured text, and the
@@ -191,10 +197,9 @@ is there so whoever comes next can see them and judge for themselves.
                          thing the design forbids.
 ```
 
-**So "caching cannot work here" is too strong, and an earlier draft of this page
-said it.** The accurate statement: the password caps what can be reused, the cap
-is wherever the password sits, and one prompt was paying that cap
-unnecessarily.
+**"Caching cannot work here" is too strong.** The accurate statement: the
+password caps what can be reused, the cap is wherever the password sits, and it
+is worth checking where that is before concluding there is nothing to win.
 
 > **Careful: two different things are called "cache".** One dashboard number
 > counts answers we served from our own memory without calling the AI at all.
@@ -312,34 +317,37 @@ answer actually happens.** One query. It settles the question outright.
 
 ### Where our tasks stand today
 
-**In [ai-prompts.md](../reference/ai-prompts.md), per site, in a `batch`
-column** — not repeated here. A second copy of that list would drift from the
-first, and the generated one is the copy a gate can hold: a site added without
-a classification fails the build.
-
-As of this writing, of 45 sites:
+[ai-prompts.md](../reference/ai-prompts.md) publishes, per site, **what one real
+call carried** — how many separately fenced items, and whether the site's own
+code declares one item per call.
 
 ```
-  31   single subject          one company, deal, meeting or page
-   6   several authors         more than one party's text in one prompt
-   6   one author, many spans  a transcript's lines, a document's parts
-   2   ONE per call            deliberate, and the code says why
+   2   ONE per call, declared in code
+  12   several fenced items in the call we measured
+  31   one fenced item
 ```
 
-The two deliberate ones are the counterparty verdict (creates and deletes
-contact records) and the confidentiality verdict (decides who may read
-somebody's mail).
+**It does not tell you whether a prompt holds several AUTHORS**, and that is the
+question that decides safety. One fenced region can hold a whole thread two
+parties wrote; several regions can all be one party's. An earlier version of
+that page tried to publish the author question as a per-site verdict and got it
+wrong twice in opposite directions — so it now publishes only what a request
+shows, and leaves the judgement to the test above.
 
-One worth understanding, because it shows the hazard is not only about
-strangers: `signal_extract` reads one email thread with each message in its own
-span. The parties are the customer and us — not unrelated strangers — and its
-own comment still names the risk: *"none can reach another sender's mail in the
-same thread to put words in their mouth."* Two authors is enough.
+The two declared ones are the counterparty verdict (creates and deletes contact
+records) and the confidentiality verdict (decides who may read somebody's mail).
+Each says so in its own code, and the page checks that sentence still exists
+before repeating the claim.
+
+Worth knowing when you apply the test: the hazard is not only about strangers.
+`signal_extract` reads one email thread with each message separately fenced —
+the parties are the customer and our side, not unrelated strangers — and its own
+comment still names the risk: *"none can reach another sender's mail in the same
+thread to put words in their mouth."* Two authors is enough.
 
 If a consequential task ever must carry several authors, `propose_roles` is the
 shape to copy: every claim must quote the message it came from, AND that
-message's author must be whoever the claim is about. Bind each answer to
-evidence only its own item could have produced.
+message's author must be whoever the claim is about.
 
 ### If a task must batch untrusted text anyway
 

@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -69,8 +70,10 @@ type promptEntry struct {
 	Task string `json:"task"`
 	Site string `json:"site"`
 	// Batch answers whether one prompt ever holds untrusted text from several
-	// DIFFERENT authors. See the batchShape constants for what each means.
-	Batch string `json:"batch"`
+	// DIFFERENT authors. See the isolation constants for what each means.
+	// Isolation is derived from the request, except for the two sites whose
+	// own code declares one item per call.
+	Isolation string `json:"isolation"`
 	// Systems holds the distinct instructions the case issued, boundary marker
 	// canonicalised.
 	Systems []string `json:"systems"`
@@ -98,87 +101,43 @@ type promptEntry struct {
 	CacheablePercent   int `json:"cacheable_percent"`
 }
 
-// batchShape is what a site does with untrusted items, and it is the column a
-// reader comes to this page for.
+// isolation is what the page publishes about a site's exposure to a hostile
+// item, and it is DERIVED wherever it can be.
 //
-// Written out rather than derived, for aitaskregistry's reason: the fact that
-// decides it is whether several MUTUALLY UNTRUSTED authors share one prompt,
-// and no walk of the syntax can see that. transcript_propose fences its spans
-// in a loop and is still ONE transcript from one author; capture_classify does
-// the same and carries ten strangers. The two read identically to a scanner.
+// An earlier version of this page carried a hand-written judgement per site —
+// "do several mutually untrusted authors share this prompt?" — and it was wrong
+// twice, in opposite directions, before a reviewer caught it. The fact is not
+// visible to a scanner: one fenced span can hold a whole thread written by two
+// parties, and several spans can all be one author's. A list that cannot be
+// derived and keeps being wrong is worse than no list, because the page reads
+// authoritative either way.
 //
-// What keeps the list honest is that it may not go short: every registered site
-// must appear below or TestTheAIPromptsPageIsCurrent fails, so a site added
-// tomorrow is classified deliberately rather than defaulting to whatever is
-// safest to write.
-type batchShape string
+// So the column now says only what a real request shows, plus the two sites
+// whose own code DECLARES isolation in words. The judgement the reader actually
+// needs is the test in docs/explanation/prompt-shape.md, which no table can
+// answer for them.
+type isolation string
 
 const (
-	// severalAuthors: more than one party's text in one prompt, so a hostile
-	// item has a neighbour it could speak for. The parties may be unrelated
-	// strangers (capture_classify) or the two sides of one conversation
-	// (signal_extract) — the hazard is the same shape either way, and
-	// signal_extract's own comment names it.
-	severalAuthors batchShape = "several authors"
-	// oneAuthorManySpans: several fenced spans, all written by ONE party — a
-	// transcript's lines, a document's parts, one member's own writing
-	// samples. There is no second author to put words in anyone's mouth.
-	oneAuthorManySpans batchShape = "one author, several spans"
-	// oneItemPerCall: one untrusted item, deliberately, because a wrong answer
-	// is consequential. The isolation IS the protection.
-	oneItemPerCall batchShape = "ONE per call (deliberate)"
-	// singleSubject: reads one company, deal, meeting or page. The question
-	// does not arise.
-	singleSubject batchShape = "single subject"
+	// declaredOnePerCall: the site's own comment says it judges one item per
+	// call and why. Held by declaredIsolation below.
+	declaredOnePerCall isolation = "ONE per call (declared in code)"
+	// severalFencedItems: this call carried more than one separately fenced
+	// region, so a hostile item had a neighbour in the prompt.
+	severalFencedItems isolation = "several fenced items"
+	// oneFencedItem: this call carried at most one fenced region. It does NOT
+	// mean one author — a single span can hold a thread two parties wrote.
+	oneFencedItem isolation = "one fenced item"
 )
 
-// siteBatchShape is the classification, one line per registered site.
-var siteBatchShape = map[string]batchShape{
-	"account_scan/company_scan":              singleSubject,
-	"agent_loop/loop":                        singleSubject,
-	"brief_ranking/rank":                     singleSubject,
-	"capture_classify/classify":              severalAuthors,
-	"capture_confidentiality_verdict/thread": oneItemPerCall,
-	"capture_counterparty_verdict/verdict":   oneItemPerCall,
-	"cert_judge/judge":                       singleSubject,
-	"cold_start/acts":                        singleSubject,
-	"cold_start/company_message":             singleSubject,
-	"cold_start/field_extract":               singleSubject,
-	"cold_start/sitereadmessage":             singleSubject,
-	"corpus_ask/corpus_ask":                  severalAuthors,
-	"deal_health/deal_status":                singleSubject,
-	"document_extract/fields":                oneAuthorManySpans,
-	"draft_reply/account":                    singleSubject,
-	"draft_reply/contact":                    singleSubject,
-	"draft_reply/first":                      singleSubject,
-	"draft_reply/intro":                      singleSubject,
-	"draft_reply/intro_note":                 singleSubject,
-	"draft_reply/reply":                      singleSubject,
-	"enrich/signature":                       singleSubject,
-	"growth_fit/growth_fit":                  singleSubject,
-	"offer_draft/draft":                      singleSubject,
-	"owed_verdict/owed":                      severalAuthors,
-	"propose_roles/committee":                severalAuthors,
-	"rate_extract/fx":                        singleSubject,
-	"rate_extract/pricing":                   singleSubject,
-	"signal_extract/thread_events":           severalAuthors,
-	"site_extract/profile":                   singleSubject,
-	"site_fact_extract/page_facts":           singleSubject,
-	"site_triage/triage":                     singleSubject,
-	"stage_evidence_extract/criteria":        severalAuthors,
-	"summarize/company_ask":                  singleSubject,
-	"summarize/company_brief":                singleSubject,
-	"summarize/company_dossier":              singleSubject,
-	"summarize/contact_brief":                singleSubject,
-	"summarize/meeting_brief":                singleSubject,
-	"summarize/meeting_plan":                 singleSubject,
-	"transcript_propose/next_steps":          oneAuthorManySpans,
-	"voice_build/demo_draft":                 oneAuthorManySpans,
-	"voice_build/derive":                     oneAuthorManySpans,
-	"voice_build/eval_draft":                 oneAuthorManySpans,
-	"voice_build/eval_scores":                oneAuthorManySpans,
-	"weekly_learnings/learn":                 singleSubject,
-	"weekly_review/narrative":                singleSubject,
+// declaredIsolation names the sites that refuse to batch on purpose, against
+// the sentence in the code that says so. The sentence is checked to still
+// exist: a declaration deleted from the code must not keep a claim alive on
+// this page.
+// gatekit:fixture the sentence each site's own code uses to declare it judges one item per call — expected data, checked to still exist, not a waived cost
+var declaredIsolation = map[string]string{
+	"capture_counterparty_verdict/verdict":   "ONE SENDER PER MODEL CALL.",
+	"capture_confidentiality_verdict/thread": "ONE THREAD PER CALL,",
 }
 
 // sitePrompt is one site as the wire shows it.
@@ -200,7 +159,7 @@ type sitePrompt struct {
 	// requests is how many calls the case issued for one scenario.
 	requests int
 	// shape is what this site does with untrusted items.
-	shape batchShape
+	shape isolation
 }
 
 func TestTheAIPromptsPageIsCurrent(t *testing.T) {
@@ -242,14 +201,19 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 			t.Logf("%s: the case refused the stand-in reply (%v); publishing the %d request(s) it had already issued",
 				key, refused, got.requests)
 		}
-		shape, classified := siteBatchShape[key]
-		if !classified {
-			t.Errorf("site %s has no batch classification — add it to siteBatchShape. "+
-				"The question is whether several MUTUALLY UNTRUSTED authors share one of its prompts, "+
-				"which decides whether a hostile item has a neighbour to speak for", key)
-			continue
+		switch declared, isDeclared := declaredIsolation[key]; {
+		case isDeclared:
+			if !declarationStillInTree(t, declared) {
+				t.Errorf("site %s is published as isolated on the strength of %q, which is no longer "+
+					"anywhere in backend/ — either the decision was reversed or the sentence moved, and "+
+					"this page must not keep asserting it", key, declared)
+			}
+			got.shape = declaredOnePerCall
+		case got.spans > 1:
+			got.shape = severalFencedItems
+		default:
+			got.shape = oneFencedItem
 		}
-		got.shape = shape
 		prompts = append(prompts, got)
 	}
 	if len(prompts) == 0 {
@@ -267,7 +231,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 	doc := promptDocument{Sites: make([]promptEntry, 0, len(prompts))}
 	for _, p := range prompts {
 		entry := promptEntry{
-			Task: p.task, Site: p.variant, Batch: string(p.shape),
+			Task: p.task, Site: p.variant, Isolation: string(p.shape),
 			Systems: p.systems, SpansInScenario: p.spans, Calls: p.requests,
 		}
 		if len(p.systems) > 0 {
@@ -415,14 +379,17 @@ func renderAIPromptsPage(doc promptDocument) string {
 	b.WriteString("and what follows from it, is in\n")
 	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md).\n\n")
 
-	b.WriteString("## Which sites batch, and what one real call carried\n\n")
-	b.WriteString("**batch** is the column that matters. It answers: does one prompt ever hold\n")
-	b.WriteString("untrusted text from SEVERAL DIFFERENT AUTHORS?\n\n")
+	b.WriteString("## What one real call carried\n\n")
+	b.WriteString("**isolation** is derived from the request, not judged. It says whether a\n")
+	b.WriteString("hostile item had a NEIGHBOUR in the same prompt to argue about.\n\n")
 	b.WriteString("| value | meaning |\n|---|---|\n")
-	b.WriteString("| `several authors` | more than one party's text in one prompt, so a hostile item has a neighbour it could speak for. Unrelated strangers (`capture_classify`) or the two sides of one conversation (`signal_extract`) — the same hazard either way. |\n")
-	b.WriteString("| `one author, several spans` | several fenced regions, all written by ONE party — a transcript's lines, a document's parts. No second author to put words in anyone's mouth. |\n")
-	b.WriteString("| `ONE per call (deliberate)` | one item, on purpose, because a wrong answer creates a record or shows somebody's mail. The isolation IS the protection. |\n")
-	b.WriteString("| `single subject` | reads one company, deal, meeting or page. The question does not arise. |\n\n")
+	b.WriteString("| `ONE per call (declared in code)` | the site's own comment says it judges one item per call, and why. Two sites. |\n")
+	b.WriteString("| `several fenced items` | this call carried more than one separately fenced region. |\n")
+	b.WriteString("| `one fenced item` | this call carried at most one. **This does not mean one author** — a single fenced region can hold a whole thread two parties wrote. |\n\n")
+	b.WriteString("Whether the parties in a prompt are mutually untrusted is the question that\n")
+	b.WriteString("actually decides safety, and it cannot be read off a request. The test for it\n")
+	b.WriteString("is in [prompt-shape.md](../explanation/prompt-shape.md); no column here answers\n")
+	b.WriteString("it, and an earlier revision of this page that tried was wrong twice.\n\n")
 	b.WriteString("**spans in this scenario** is a measurement, not a capacity.\n\n")
 	b.WriteString("**This is not the site's batch capacity.** It is what one scenario produced.\n")
 	b.WriteString("`capture_classify` asks about ten messages in production and shows 1 here,\n")
@@ -432,9 +399,9 @@ func renderAIPromptsPage(doc promptDocument) string {
 	b.WriteString("a hostile item has neighbours it could speak for — the hazard\n")
 	b.WriteString("[prompt-shape.md](../explanation/prompt-shape.md) frames. A 0 means no fenced\n")
 	b.WriteString("region was found in that call at all.\n\n")
-	b.WriteString("| task | site | batch | spans in this scenario | calls |\n|---|---|---|---:|---:|\n")
+	b.WriteString("| task | site | isolation | spans in this scenario | calls |\n|---|---|---|---:|---:|\n")
 	for _, p := range doc.Sites {
-		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %d | %d |\n", p.Task, p.Site, p.Batch, p.SpansInScenario, p.Calls)
+		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %d | %d |\n", p.Task, p.Site, p.Isolation, p.SpansInScenario, p.Calls)
 	}
 
 	b.WriteString("\n## The instructions\n\n")
@@ -516,4 +483,40 @@ func thousands(n int) string {
 		out.WriteRune(digit)
 	}
 	return out.String()
+}
+
+// declarationStillInTree reports whether a sentence a site is published as
+// relying on is still written in the code. A page that kept asserting an
+// isolation after the comment declaring it was deleted would be making a claim
+// nobody holds. The walk root is the backend module, two levels up: this test
+// runs with its own package directory as the working directory, like the
+// artifact paths above it.
+func declarationStillInTree(t *testing.T, sentence string) bool {
+	t.Helper()
+	found := false
+	err := filepath.WalkDir(filepath.Join("..", ".."), func(p string, d fs.DirEntry, walkErr error) error {
+		switch {
+		case walkErr != nil:
+			return walkErr
+		// A test file is skipped, and skipping THIS one is the point: the
+		// declarations are string literals in the map above, so a walk that
+		// read its own source would find every sentence it was looking for and
+		// could never fail. The declaration has to be in production code,
+		// which is where the decision is made and where a reader meets it.
+		case found, d.IsDir(), !strings.HasSuffix(p, ".go"), strings.HasSuffix(p, "_test.go"):
+			return nil
+		}
+		body, readErr := os.ReadFile(p)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(body), sentence) {
+			found = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("searching for the declaration %q: %v", sentence, err)
+	}
+	return found
 }

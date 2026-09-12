@@ -14,17 +14,21 @@ fixed placeholder so this page does not change on every run. Why it is random,
 and what follows from it, is in
 [prompt-shape.md](../explanation/prompt-shape.md).
 
-## Which sites batch, and what one real call carried
+## What one real call carried
 
-**batch** is the column that matters. It answers: does one prompt ever hold
-untrusted text from SEVERAL DIFFERENT AUTHORS?
+**isolation** is derived from the request, not judged. It says whether a
+hostile item had a NEIGHBOUR in the same prompt to argue about.
 
 | value | meaning |
 |---|---|
-| `several authors` | more than one party's text in one prompt, so a hostile item has a neighbour it could speak for. Unrelated strangers (`capture_classify`) or the two sides of one conversation (`signal_extract`) — the same hazard either way. |
-| `one author, several spans` | several fenced regions, all written by ONE party — a transcript's lines, a document's parts. No second author to put words in anyone's mouth. |
-| `ONE per call (deliberate)` | one item, on purpose, because a wrong answer creates a record or shows somebody's mail. The isolation IS the protection. |
-| `single subject` | reads one company, deal, meeting or page. The question does not arise. |
+| `ONE per call (declared in code)` | the site's own comment says it judges one item per call, and why. Two sites. |
+| `several fenced items` | this call carried more than one separately fenced region. |
+| `one fenced item` | this call carried at most one. **This does not mean one author** — a single fenced region can hold a whole thread two parties wrote. |
+
+Whether the parties in a prompt are mutually untrusted is the question that
+actually decides safety, and it cannot be read off a request. The test for it
+is in [prompt-shape.md](../explanation/prompt-shape.md); no column here answers
+it, and an earlier revision of this page that tried was wrong twice.
 
 **spans in this scenario** is a measurement, not a capacity.
 
@@ -38,53 +42,53 @@ a hostile item has neighbours it could speak for — the hazard
 [prompt-shape.md](../explanation/prompt-shape.md) frames. A 0 means no fenced
 region was found in that call at all.
 
-| task | site | batch | spans in this scenario | calls |
+| task | site | isolation | spans in this scenario | calls |
 |---|---|---|---:|---:|
-| `account_scan` | `company_scan` | single subject | 1 | 1 |
-| `agent_loop` | `loop` | single subject | 0 | 1 |
-| `brief_ranking` | `rank` | single subject | 0 | 1 |
-| `capture_classify` | `classify` | several authors | 1 | 1 |
-| `capture_confidentiality_verdict` | `thread` | ONE per call (deliberate) | 1 | 1 |
-| `capture_counterparty_verdict` | `verdict` | ONE per call (deliberate) | 1 | 1 |
-| `cert_judge` | `judge` | single subject | 2 | 1 |
-| `cold_start` | `acts` | single subject | 1 | 1 |
-| `cold_start` | `company_message` | single subject | 1 | 1 |
-| `cold_start` | `field_extract` | single subject | 2 | 1 |
-| `cold_start` | `sitereadmessage` | single subject | 1 | 1 |
-| `corpus_ask` | `corpus_ask` | several authors | 1 | 1 |
-| `deal_health` | `deal_status` | single subject | 1 | 1 |
-| `document_extract` | `fields` | one author, several spans | 2 | 1 |
-| `draft_reply` | `account` | single subject | 1 | 1 |
-| `draft_reply` | `contact` | single subject | 1 | 1 |
-| `draft_reply` | `first` | single subject | 1 | 1 |
-| `draft_reply` | `intro` | single subject | 1 | 1 |
-| `draft_reply` | `intro_note` | single subject | 1 | 1 |
-| `draft_reply` | `reply` | single subject | 1 | 1 |
-| `enrich` | `signature` | single subject | 2 | 1 |
-| `growth_fit` | `growth_fit` | single subject | 1 | 1 |
-| `offer_draft` | `draft` | single subject | 1 | 1 |
-| `owed_verdict` | `owed` | several authors | 2 | 1 |
-| `propose_roles` | `committee` | several authors | 5 | 1 |
-| `rate_extract` | `fx` | single subject | 1 | 1 |
-| `rate_extract` | `pricing` | single subject | 1 | 1 |
-| `signal_extract` | `thread_events` | several authors | 1 | 1 |
-| `site_extract` | `profile` | single subject | 1 | 1 |
-| `site_fact_extract` | `page_facts` | single subject | 1 | 1 |
-| `site_triage` | `triage` | single subject | 1 | 1 |
-| `stage_evidence_extract` | `criteria` | several authors | 3 | 1 |
-| `summarize` | `company_ask` | single subject | 1 | 1 |
-| `summarize` | `company_brief` | single subject | 1 | 1 |
-| `summarize` | `company_dossier` | single subject | 1 | 1 |
-| `summarize` | `contact_brief` | single subject | 1 | 1 |
-| `summarize` | `meeting_brief` | single subject | 1 | 1 |
-| `summarize` | `meeting_plan` | single subject | 1 | 1 |
-| `transcript_propose` | `next_steps` | one author, several spans | 7 | 1 |
-| `voice_build` | `demo_draft` | one author, several spans | 4 | 1 |
-| `voice_build` | `derive` | one author, several spans | 5 | 1 |
-| `voice_build` | `eval_draft` | one author, several spans | 5 | 1 |
-| `voice_build` | `eval_scores` | one author, several spans | 4 | 1 |
-| `weekly_learnings` | `learn` | single subject | 1 | 1 |
-| `weekly_review` | `narrative` | single subject | 1 | 1 |
+| `account_scan` | `company_scan` | one fenced item | 1 | 1 |
+| `agent_loop` | `loop` | one fenced item | 0 | 1 |
+| `brief_ranking` | `rank` | one fenced item | 0 | 1 |
+| `capture_classify` | `classify` | one fenced item | 1 | 1 |
+| `capture_confidentiality_verdict` | `thread` | ONE per call (declared in code) | 1 | 1 |
+| `capture_counterparty_verdict` | `verdict` | ONE per call (declared in code) | 1 | 1 |
+| `cert_judge` | `judge` | several fenced items | 2 | 1 |
+| `cold_start` | `acts` | one fenced item | 1 | 1 |
+| `cold_start` | `company_message` | one fenced item | 1 | 1 |
+| `cold_start` | `field_extract` | several fenced items | 2 | 1 |
+| `cold_start` | `sitereadmessage` | one fenced item | 1 | 1 |
+| `corpus_ask` | `corpus_ask` | one fenced item | 1 | 1 |
+| `deal_health` | `deal_status` | one fenced item | 1 | 1 |
+| `document_extract` | `fields` | several fenced items | 2 | 1 |
+| `draft_reply` | `account` | one fenced item | 1 | 1 |
+| `draft_reply` | `contact` | one fenced item | 1 | 1 |
+| `draft_reply` | `first` | one fenced item | 1 | 1 |
+| `draft_reply` | `intro` | one fenced item | 1 | 1 |
+| `draft_reply` | `intro_note` | one fenced item | 1 | 1 |
+| `draft_reply` | `reply` | one fenced item | 1 | 1 |
+| `enrich` | `signature` | several fenced items | 2 | 1 |
+| `growth_fit` | `growth_fit` | one fenced item | 1 | 1 |
+| `offer_draft` | `draft` | one fenced item | 1 | 1 |
+| `owed_verdict` | `owed` | several fenced items | 2 | 1 |
+| `propose_roles` | `committee` | several fenced items | 5 | 1 |
+| `rate_extract` | `fx` | one fenced item | 1 | 1 |
+| `rate_extract` | `pricing` | one fenced item | 1 | 1 |
+| `signal_extract` | `thread_events` | one fenced item | 1 | 1 |
+| `site_extract` | `profile` | one fenced item | 1 | 1 |
+| `site_fact_extract` | `page_facts` | one fenced item | 1 | 1 |
+| `site_triage` | `triage` | one fenced item | 1 | 1 |
+| `stage_evidence_extract` | `criteria` | several fenced items | 3 | 1 |
+| `summarize` | `company_ask` | one fenced item | 1 | 1 |
+| `summarize` | `company_brief` | one fenced item | 1 | 1 |
+| `summarize` | `company_dossier` | one fenced item | 1 | 1 |
+| `summarize` | `contact_brief` | one fenced item | 1 | 1 |
+| `summarize` | `meeting_brief` | one fenced item | 1 | 1 |
+| `summarize` | `meeting_plan` | one fenced item | 1 | 1 |
+| `transcript_propose` | `next_steps` | several fenced items | 7 | 1 |
+| `voice_build` | `demo_draft` | several fenced items | 4 | 1 |
+| `voice_build` | `derive` | several fenced items | 5 | 1 |
+| `voice_build` | `eval_draft` | several fenced items | 5 | 1 |
+| `voice_build` | `eval_scores` | several fenced items | 4 | 1 |
+| `weekly_learnings` | `learn` | one fenced item | 1 | 1 |
+| `weekly_review` | `narrative` | one fenced item | 1 | 1 |
 
 ## The instructions
 
