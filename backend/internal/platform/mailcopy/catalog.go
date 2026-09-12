@@ -253,17 +253,28 @@ func morningLines(line writeLine) {
 		"Mở ngày của bạn:")
 }
 
-// confirmLines is the two links the installation sends as itself.
+// confirmLines is the copy for messages addressed to a contact the installation
+// holds a record about, rather than to a colleague who works here.
 //
 // The English is the wording that shipped, unchanged: it is pinned by hash and
 // recorded on every consent proof, so moving a word here is a version bump, not
-// a translation.
+// a translation. The order these are registered in is part of that — the
+// sections below run in sequence for the same reason.
 //
 // The German and Vietnamese use the formal address (Sie / quý vị), unlike the
 // reset and invite copy above. Those speak to a colleague who works here; these
 // speak to a stranger the installation holds a record about, and about their
 // own rights.
 func confirmLines(line writeLine) {
+	confirmAskLines(line)
+	recordNoticeLines(line)
+	confirmConsentLines(line)
+}
+
+// confirmAskLines is what the confirm SCREEN asks, and the two answers it
+// offers. A consent proof names the row a reader was shown, so this is the
+// published wording rather than whatever arrived alongside the answer.
+func confirmAskLines(line writeLine) {
 	// THE QUESTION THE PAGE ASKS, which is what a consent is given TO. Its
 	// translations are the ones the confirm screen shipped, moved here so the
 	// proof can name a published row rather than quoting whatever arrived with
@@ -291,6 +302,13 @@ func confirmLines(line writeLine) {
 		"Yes, subscribe me",
 		"Ja, ich möchte das Abo",
 		"Có, đăng ký cho tôi")
+}
+
+// recordNoticeLines is the copy for the messages the installation sends about a
+// record it already holds: the invitation to check it, the notice that it
+// exists, and the acknowledgement that advertising has stopped. None of them
+// asks the reader for anything.
+func recordNoticeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordSubject },
 		"Your details, and whether we may stay in touch",
 		"Ihre Daten, und ob wir in Kontakt bleiben dürfen",
@@ -335,6 +353,12 @@ func confirmLines(line writeLine) {
 		"You do not need to reply. We are telling you because the law requires it.",
 		"Sie müssen nicht antworten. Wir teilen es Ihnen mit, weil das Gesetz es verlangt.",
 		"Quý vị không cần trả lời. Chúng tôi thông báo vì pháp luật yêu cầu.")
+}
+
+// confirmConsentLines is the message that asks a reader to turn a request into
+// a permission, and the lines both confirmation links share — what the link is,
+// how long it lasts, and what ignoring it does.
+func confirmConsentLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
 		"Please confirm you want to hear from us",
 		"Bitte bestätigen Sie, dass Sie von uns hören möchten",
