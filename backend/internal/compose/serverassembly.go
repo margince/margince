@@ -391,5 +391,9 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
-		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		// The store that OWNS the setting table. The controller particulars
+		// live there like every other installation setting, and consent may
+		// not write another module's table.
+		WithSettings(NewSettingsStore(pool))
 }
