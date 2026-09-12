@@ -44,55 +44,37 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
-	"os"
 	"path"
-	"path/filepath"
-	"regexp"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// relationshipReadLiteral matches a SQL string literal that reads the
-// relationship table by name.
-//
-// The pattern is gatekit's, and it is shared rather than spelled here because a
-// matcher that stops seeing this tree's SQL finds nothing to object to and reads
-// exactly like a clean tree. Its boundary cases are tested where it lives.
-var relationshipReadLiteral = gatekit.TableReadPattern(edgeTable)
-
-// edgeTable is the table this census is about, named once so the pattern above
-// and the failure messages below cannot disagree about the subject.
+// edgeTable is the table this census is about, named once so the pattern and
+// the failure messages below cannot disagree about the subject.
 const edgeTable = "relationship"
 
-// edgeGateSeeds are the spellings that ARE the edge's read admission, anywhere.
-// Only EdgeReadScope qualifies: it is the one that takes the object gate.
-var edgeGateSeeds = []string{"EdgeReadScope"}
-
-// rowHalfSeeds are the row-scope spellings. They bound WHICH edges, and answer
-// nothing about whether the caller may read edges at all — so on their own they
-// are the INVERTED form of the defect this gate exists to catch, and a compose
-// read taking the conjunction without the gate must not read green.
+// relationshipGate is the subject: the edge table, what counts as its read
+// admission, and the row-scope spellings that satisfy only inside the packages
+// owning the object's own surface.
 //
-// They still satisfy inside the packages that own the object's own surface,
-// where the object gate is asked at the store entry point and these are the
-// clause that entry point composes.
-var rowHalfSeeds = []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"}
-
-// rowHalfOwners are the packages where a row-half spelling alone is enough:
-// contacts owns the relationship surface and gates every store entry point on it,
-// and auth is where the gate itself lives.
-var rowHalfOwners = []string{"internal/modules/contacts", "internal/platform/auth"}
-
-// requireCall matches a call that asks the object gate under any of this
-// tree's spellings — auth.Require, or a package-local wrapper such as
-// contact360's requireRead. Paired with the object name in the same function
-// body, it is the older form of the admission and still counts.
-var requireCall = regexp.MustCompile(`^[Rr]equire[A-Za-z]*$`)
+// EdgeReadScope is the gate seed, because it takes the object gate. The row-half seeds bound WHICH edges and answer nothing
+// about whether the caller may read edges at all — alone they are the INVERTED
+// form of the defect this gate exists to catch, and a compose read taking the
+// conjunction without the gate must not read green. contacts owns the
+// relationship surface and gates every store entry point on it; auth is where
+// the gate itself lives.
+//
+// The literal pattern is gatekit's, shared rather than spelled here because a
+// matcher that stops seeing this tree's SQL finds nothing to object to and
+// reads exactly like a clean tree. Its boundary cases are tested where it lives.
+var relationshipGate = objectGate{
+	object:        edgeTable,
+	literal:       gatekit.TableReadPattern(edgeTable),
+	gateSeeds:     []string{"EdgeReadScope"},
+	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
+	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
+}
 
 // predicateEdgeReads: the edge appears only inside a JOIN or EXISTS that
 // selects or routes records the caller is separately gated on, and nothing
@@ -233,18 +215,19 @@ var edgeReaderScope = gatekit.Scope{
 }
 
 func readsRelationshipTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, relationshipReadLiteral)
+	return gatekit.FileReadsTable(filePath, file, relationshipGate.literal)
 }
 
 func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testing.T) {
 	t.Parallel()
 	files := edgeReaderScope.Files(t)
-	gated := gatedFunctionsByPackage(t, files)
+	gated := relationshipGate.gatedFunctionsByPackage(t, files)
+	consts := constantTable{}
 
 	var satisfied int
 	for _, parsed := range files {
 		pkg := path.Dir(parsed.Path)
-		for _, site := range relationshipReadSites(parsed) {
+		for _, site := range relationshipGate.readSites(parsed, consts.of(t, pkg)) {
 			subject := parsed.Path
 			if site.function != "" {
 				subject += ":" + site.function
@@ -255,9 +238,9 @@ func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testin
 			// per-function precisely to prevent.
 			carriesGate := site.holdsGate || callsAGatedHelper(site.calls, gated[pkg])
 			if site.function == "" {
-				carriesGate = site.holdsGate || fileHoldsAGatedFunction(t, parsed, gated[pkg])
+				carriesGate = site.holdsGate || relationshipGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}
-			verdict := verdictFor(t, subject)
+			verdict := verdictIn(t, subject, edgeVerdicts)
 
 			switch {
 			case carriesGate && verdict != "":
@@ -296,305 +279,14 @@ func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testin
 	deferredEdgeReads.AssertAllMatched(t)
 }
 
-// verdictFor names the declaration a subject sits in, and refuses one sitting
-// in two: the verdict IS the declaration, so a subject with two of them has no
-// verdict at all.
-func verdictFor(t *testing.T, subject string) string {
-	t.Helper()
-	var found []string
-	for _, set := range []struct {
-		name    string
-		waivers *gatekit.Waivers[string]
-	}{
-		{"predicate", predicateEdgeReads},
-		{"lifecycle", lifecycleEdgeReads},
-		{"ruled", ruledEdgeReads},
-		{"deferred", deferredEdgeReads},
-	} {
-		// A file-keyed verdict answers for every site in the file; a
-		// function-keyed one answers for its own site only. Both are asked,
-		// because a lifecycle FILE and a deferred FUNCTION are both real shapes.
-		if set.waivers.Waived(t, subject) || set.waivers.Waived(t, fileOf(subject)) {
-			found = append(found, set.name)
-		}
-	}
-	if len(found) > 1 {
-		t.Errorf("%s carries %s verdicts at once: which declaration a read sits in IS its verdict, "+
-			"so two of them is none", subject, strings.Join(found, " and "))
-		return ""
-	}
-	if len(found) == 1 {
-		return found[0]
-	}
-	return ""
-}
-
-func fileOf(subject string) string {
-	if idx := strings.LastIndex(subject, ":"); idx >= 0 {
-		return subject[:idx]
-	}
-	return subject
-}
-
-// site is one relationship read: the function that holds it, empty for a
-// package-level SQL fragment, the first line of the SQL for the report, and
-// whether that function's OWN body takes the admission.
-//
-// holdsGate is answered from the declaration itself rather than by looking the
-// function up by name, and that distinction is the whole reason this field
-// exists. *Store and Handlers in one module routinely spell the same method
-// names — contacts has both a Store.RemoveProjectStakeholder and a
-// Handlers.RemoveProjectStakeholder — so a by-name index lets one answer for
-// the other, and which one wins is Go map iteration order. rbacgate_test.go
-// says so in its own header, having been bitten by exactly this. The name index
-// below is still used, but only to reach a gate in a SIBLING function, where a
-// collision can merely be optimistic rather than wrong.
-type site struct {
-	function  string
-	sql       string
-	holdsGate bool
-	// calls is what this declaration calls, so a gate reached through a helper
-	// in a sibling file resolves without consulting this declaration's name.
-	calls map[string]bool
-}
-
-func callsAGatedHelper(calls map[string]bool, gated map[string]bool) bool {
-	for name := range calls {
-		if gated[name] {
-			return true
-		}
-	}
-	return false
-}
-
-func pkgOf(filePath string) string { return path.Dir(filePath) }
-
-func relationshipReadSites(parsed gatekit.ParsedFile) []site {
-	var sites []site
-	for _, decl := range parsed.File.Decls {
-		reads := gatekit.DeclReads(decl, relationshipReadLiteral)
-		if len(reads) == 0 {
-			continue
-		}
-		refs := referencesIn(decl)
-		sites = append(sites, site{
-			function: reads[0].Function, sql: gatekit.FirstLineOf(reads[0].SQL),
-			holdsGate: holdsSeedGate(refs, pkgOf(parsed.Path)), calls: refs.calls,
-		})
-	}
-	return sites
-}
-
-// gatedFunctionsByPackage resolves, per package directory, every function that
-// reaches an edge-gate spelling — directly, or through another function in the
-// same package. Transitive because this tree routinely splits a read across the
-// function holding the SQL and the helper building its predicate (company360's
-// edgeScope, meetingbrief's seatJoinPredicate), and a gate asking only about
-// direct calls would report the reader red while its admission sits in the file
-// next door.
-func gatedFunctionsByPackage(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]bool {
-	t.Helper()
-	// The WHOLE package, not only the files that read the table. The admission
-	// this tree writes routinely lives in a sibling file that holds no SQL of
-	// its own — company360's edgeScope sits in sections.go while the three reads it
-	// gates are in graphreads.go and contacts.go — so a resolution seeded from
-	// the subject files alone reports gated code as ungated, which costs the
-	// gate its credibility faster than a miss does.
-	bodies := map[string]map[string][]references{}
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		if bodies[pkg] != nil {
-			continue
-		}
-		bodies[pkg] = packageFunctionReferences(t, pkg)
-	}
-
-	// A name is gated when ANY declaration spelling it is — a union, never an
-	// overwrite. Optimistic where two receivers share a method name, and
-	// deliberately so: this index only ever answers "is there a gated helper
-	// called X in this package", and the site's own declaration has already
-	// been asked directly, so the optimism cannot excuse an ungated read whose
-	// same-named neighbour happens to be gated.
-	gated := map[string]map[string]bool{}
-	for pkg, funcs := range bodies {
-		gated[pkg] = map[string]bool{}
-		for name, decls := range funcs {
-			for _, refs := range decls {
-				if holdsSeedGate(refs, pkg) {
-					gated[pkg][name] = true
-					break
-				}
-			}
-		}
-		for grew := true; grew; {
-			grew = false
-			for name, decls := range funcs {
-				if gated[pkg][name] {
-					continue
-				}
-				for _, refs := range decls {
-					for callee := range gated[pkg] {
-						if refs.calls[callee] {
-							gated[pkg][name] = true
-							grew = true
-							break
-						}
-					}
-					if gated[pkg][name] {
-						break
-					}
-				}
-			}
-		}
-	}
-	return gated
-}
-
-// holdsSeedGate reports whether a function body IS the admission: one of the
-// platform spellings, or the older object-gate form — a Require-shaped call
-// somewhere in a body that also names the object. The pair is what makes it the
-// edge's gate and not some other object's.
-func holdsSeedGate(refs references, pkg string) bool {
-	for _, seed := range edgeGateSeeds {
-		if refs.calls[seed] {
-			return true
-		}
-	}
-	// The older form: a Require-shaped call taking the object as an ARGUMENT.
-	// Read off the call rather than from the body at large, because a body
-	// holding RequireHuman(ctx) and, separately, an unrelated "relationship"
-	// string — an entity-type constant, a table name in a comment's sibling
-	// literal — would otherwise vouch for itself.
-	if refs.gatesTheEdge {
-		return true
-	}
-	if !slices.Contains(rowHalfOwners, pkg) {
-		return false
-	}
-	for _, seed := range rowHalfSeeds {
-		if refs.calls[seed] {
-			return true
-		}
-	}
-	return false
-}
-
-// references is what a function CALLS and what string literals it holds. Read
-// off the syntax rather than the source text, so a gate spelling cannot be
-// matched inside a comment that merely discusses it — and calls only, because a
-// parameter or local variable that happens to share a gated function's name is
-// not a call to it.
-type references struct {
-	calls    map[string]bool
-	literals map[string]bool
-	// gatesTheEdge records a Require-shaped call that takes "relationship" as
-	// one of its OWN arguments. Kept as a resolved fact rather than as two
-	// facts a reader has to pair up, because pairing them at the body level is
-	// what let RequireHuman(ctx) beside an unrelated "relationship" literal
-	// vouch for a read.
-	gatesTheEdge bool
-}
-
-// packageFunctionReferences parses every non-test source in one package
-// directory and returns what each function mentions.
-//
-// The directory is read and its files parsed one at a time rather than through
-// parser.ParseDir, which is deprecated for a reason that would bite here: it
-// does not consider build tags when grouping files into packages, and several
-// of the directories this walks hold tagged files.
-func packageFunctionReferences(t *testing.T, pkg string) map[string][]references {
-	t.Helper()
-	// The path is relative to the module root, which is this test's working
-	// directory: package gates sits one below it and TestMain chdirs up.
-	dir := filepath.FromSlash(pkg)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("reading %s to resolve its edge gates: %v", pkg, err)
-	}
-	fset := token.NewFileSet()
-	refs := map[string][]references{}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		file, parseErr := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
-		if parseErr != nil {
-			t.Fatalf("parsing %s/%s to resolve its edge gates: %v", pkg, name, parseErr)
-		}
-		for fn, decls := range functionBodies(gatekit.ParsedFile{File: file}) {
-			refs[fn] = append(refs[fn], decls...)
-		}
-	}
-	return refs
-}
-
-func functionBodies(parsed gatekit.ParsedFile) map[string][]references {
-	bodies := map[string][]references{}
-	for _, decl := range parsed.File.Decls {
-		fn, isFunc := decl.(*ast.FuncDecl)
-		if !isFunc {
-			continue
-		}
-		bodies[fn.Name.Name] = append(bodies[fn.Name.Name], referencesIn(fn))
-	}
-	return bodies
-}
-
-func referencesIn(node ast.Node) references {
-	refs := references{calls: map[string]bool{}, literals: map[string]bool{}}
-	ast.Inspect(node, func(n ast.Node) bool {
-		switch typed := n.(type) {
-		case *ast.CallExpr:
-			if name := calleeName(typed); requireCall.MatchString(name) && namesTheEdge(typed) {
-				refs.gatesTheEdge = true
-			}
-			// calleeName is retentionscope_test.go's, shared rather than
-			// respelled: "the called function's own name, ignoring any
-			// qualifier" is the same question here, and auth.EdgeReadScope and
-			// a local edgeScope both need to resolve to what they call.
-			if name := calleeName(typed); name != "" {
-				refs.calls[name] = true
-			}
-		case *ast.BasicLit:
-			if text, isString := gatekit.LiteralText(typed); isString {
-				refs.literals[text] = true
-			}
-		}
-		return true
-	})
-	return refs
-}
-
-// fileHoldsAGatedFunction answers for a package-level SQL fragment, which has
-// no declaration of its own to ask: the file that declares it is judged as a
-// whole, as restrictedreaders_test.go judges one.
-func fileHoldsAGatedFunction(t *testing.T, parsed gatekit.ParsedFile, gated map[string]bool) bool {
-	t.Helper()
-	for name, decls := range functionBodies(parsed) {
-		if gated[name] {
-			return true
-		}
-		for _, refs := range decls {
-			if holdsSeedGate(refs, pkgOf(parsed.Path)) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// namesTheEdge reports whether a call passes the relationship object as one of
-// its own arguments — auth.Require(ctx, "relationship", …) and contact360's
-// requireRead(ctx, "relationship") alike. Asked of the CALL rather than of the
-// body, so an unrelated "relationship" literal elsewhere in a function cannot
-// pair with an unrelated Require-shaped call to vouch for a read.
-func namesTheEdge(call *ast.CallExpr) bool {
-	for _, arg := range call.Args {
-		text, isString := gatekit.LiteralText(arg)
-		if isString && text == edgeTable {
-			return true
-		}
-	}
-	return false
+// edgeVerdicts are the four declarations, in the order a reader meets them
+// above. Named as one list because "which declaration a read sits in IS its
+// verdict" is only true if every declaration is asked — a set left off this
+// list would silently stop counting as a verdict and start reading as a
+// finding, which is the one direction this census must not fail in.
+var edgeVerdicts = []namedVerdict{
+	{"predicate", predicateEdgeReads},
+	{"lifecycle", lifecycleEdgeReads},
+	{"ruled", ruledEdgeReads},
+	{"deferred", deferredEdgeReads},
 }

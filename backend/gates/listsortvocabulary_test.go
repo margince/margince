@@ -43,6 +43,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // listSurface pairs a screen with the resource it lists.
@@ -161,7 +163,7 @@ func sharedColumnSorts(t *testing.T) map[string]string {
 // package constant to the string it holds.
 func goSortVocabulary(t *testing.T, source, name string) []string {
 	t.Helper()
-	constants := packageStringConstants(t, filepath.Dir(source))
+	constants := gatekit.PackageStringConstants(t, filepath.Dir(source))
 	file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", source, err)
@@ -193,45 +195,6 @@ func goSortVocabulary(t *testing.T, source, name string) []string {
 				out = append(out, value)
 			default:
 				t.Fatalf("%s has a key this gate cannot read (%T)", name, kv.Key)
-			}
-		}
-	}
-	return out
-}
-
-// packageStringConstants reads every string constant one package declares.
-func packageStringConstants(t *testing.T, dir string) map[string]string {
-	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
-	if err != nil {
-		t.Fatalf("listing %s: %v", dir, err)
-	}
-	out := map[string]string{}
-	for _, source := range sources {
-		if strings.HasSuffix(source, "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", source, err)
-		}
-		for _, decl := range file.Decls {
-			general, ok := decl.(*ast.GenDecl)
-			if !ok || general.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range general.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok || len(value.Names) != 1 || len(value.Values) != 1 {
-					continue
-				}
-				if lit, ok := value.Values[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					unquoted, err := strconv.Unquote(lit.Value)
-					if err != nil {
-						t.Fatalf("unquoting %s in %s: %v", lit.Value, source, err)
-					}
-					out[value.Names[0].Name] = unquoted
-				}
 			}
 		}
 	}

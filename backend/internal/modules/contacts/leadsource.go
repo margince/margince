@@ -191,20 +191,6 @@ func deriveSourceKey(label string) string {
 	return strings.Trim(key, "_")
 }
 
-// visibleLeadScope renders the lead row-scope clause for the vocabulary
-// rows' lead_count — a count of the leads the CALLER MAY SEE, embedded in
-// the representation the vocabulary writers return. It exists as its own
-// spelling (rather than sharing scopeOrAllRows) so the write-authority gate
-// waives exactly this probe: a future write path reaching the shared helper
-// still fails the gate and states its own reason.
-func visibleLeadScope(ctx context.Context, arg func(any) int) (string, error) {
-	clause, err := auth.ScopeClauseFor(ctx, "lead", "", arg)
-	if err != nil || clause != "" {
-		return clause, err
-	}
-	return scopeAllRows, nil
-}
-
 // leadSourceColumns renders the select list. lead_count carries the caller's
 // row scope — a narrowed actor counts only the leads they may see — and
 // counts a connector family's leads through the family prefix, because the
