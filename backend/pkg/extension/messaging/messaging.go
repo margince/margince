@@ -27,6 +27,8 @@ package messaging
 
 import (
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
@@ -54,6 +56,28 @@ type Rules struct {
 	// that case. Held by TestEveryDeclaredMessagingObligationIsAppliedOrRecorded
 	// (backend/gates/messagingruleapplied_test.go).
 	Version int
+
+	// Instruments are the laws and decrees this version states, each with the
+	// date it took effect.
+	//
+	// A VERSION NUMBER IS OPAQUE on its own. A decision recording "vn version 2"
+	// says which rule set judged it and nothing about what that rule set was.
+	// The instruments say what the number stands for, in the words a regulator
+	// uses.
+	//
+	// WHAT THIS DOES NOT YET DO, said plainly because the gap is easy to read
+	// past: the instruments are not persisted with the decision. Only the
+	// version and the jurisdiction codes are, and the registry keeps one rule
+	// set per jurisdiction — the current one. So a pack that has since moved to
+	// version 3 leaves a version-2 decision still needing the old source tree
+	// to interpret. Closing that means writing the citations onto the decision
+	// or keeping published rule sets by version, and neither is built.
+	//
+	// Declared for the reader, never consulted by the engine: no obligation
+	// here binds a send, and a pack that put one here would be stating law the
+	// engine cannot apply. EffectiveFrom is the instrument's own commencement
+	// date, not the date this product learned about it.
+	Instruments []Instrument
 
 	// ReplyWindow is how long an inbound message keeps making a reply a reply
 	// when there is no thread to continue. Zero means the core default.
@@ -222,6 +246,34 @@ type FrequencyCap struct {
 	Window time.Duration
 }
 
+// Instrument is one law or decree a rule set states, and when it took effect.
+//
+// It is DOCUMENTATION IN THE RECORD, not an obligation. A decision records the
+// ruleset version it was judged under; this says what that number meant. Two
+// instruments with different commencement dates may both be live, which is the
+// ordinary case when a decree amends rather than replaces — Vietnam's Decree
+// 91/2020 and Law 91/2025 sit that way — so this is a list and the pack states
+// every instrument its obligations rest on.
+type Instrument struct {
+	// Name is the instrument as a regulator cites it, e.g.
+	// "Decree 91/2020/ND-CP". Not translated: a citation is the same string
+	// in every locale, and translating one would make it unfindable.
+	Name string
+
+	// EffectiveFrom is the instrument's own commencement date, never the date
+	// this product learned about it. Zero means the pack did not state one,
+	// which is legal and says less rather than saying "the epoch".
+	EffectiveFrom time.Time
+}
+
+// Validate refuses an instrument that names nothing.
+func (i Instrument) Validate() error {
+	if strings.TrimSpace(i.Name) == "" {
+		return fmt.Errorf("an instrument carries no name — a commencement date with nothing to commence names no law")
+	}
+	return nil
+}
+
 // Validate refuses a cap that cannot bind.
 func (c FrequencyCap) Validate() error {
 	if c.Messages <= 0 {
@@ -243,6 +295,14 @@ func (r Rules) Validate() error {
 	if r.Version <= 0 {
 		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version it was taken under, and zero names nothing", string(r.Jurisdiction), r.Version)
 	}
+	// AND IT MUST FIT WHERE IT IS RECORDED. communication_decision.ruleset_version
+	// is a Postgres int, so a larger number would register here and then fail
+	// at the insert — refusing every send under an otherwise valid pack, at the
+	// send rather than at boot. The preflight is where a pack the engine cannot
+	// apply gets refused.
+	if r.Version > math.MaxInt32 {
+		return fmt.Errorf("messaging rules for %q carry version %d — a decision records the version on a 32-bit column, so a larger number would refuse every send under this pack rather than being recorded", string(r.Jurisdiction), r.Version)
+	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))
 	}
@@ -251,6 +311,11 @@ func (r Rules) Validate() error {
 	// is: the fold would have to pick, and a weaker duplicate silently
 	// replacing a stronger one is an exception applied on terms the pack never
 	// declared.
+	for _, in := range r.Instruments {
+		if err := in.Validate(); err != nil {
+			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+		}
+	}
 	seen := map[ExceptionKind]bool{}
 	for _, e := range r.MarketingExceptions {
 		if err := e.Validate(); err != nil {
