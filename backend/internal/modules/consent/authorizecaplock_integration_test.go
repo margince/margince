@@ -101,15 +101,27 @@ var capJurisdictions = struct {
 	next int
 }{}
 
+// testJurisdictionSlots is how many codes the minter can hand out: q…a through
+// q…z, minus the letters before "a" — the whole "q" prefix.
+//
+// WIDENED from the QM-QZ fourteen when the requirement tests began drawing from
+// the same counter and the two together came within two of exhausting it. ISO
+// 3166 reserves every QM-QZ code and assigns no other "q" code except QA
+// (Qatar), which this skips: a test jurisdiction that collided with a real one
+// would read as a pack for a country the product actually serves.
+const testJurisdictionSlots = 25
+
 func testJurisdiction(t *testing.T) jurisdiction.Code {
 	t.Helper()
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
-	if capJurisdictions.next >= 14 {
-		t.Fatalf("this package has taken all %d test jurisdictions in the QM-QZ range — widen the "+
-			"range rather than reusing one, which panics the registry for every test after it", 14)
+	if capJurisdictions.next >= testJurisdictionSlots {
+		t.Fatalf("this package has taken all %d test jurisdictions in the q… range — widen the "+
+			"range rather than reusing one, which panics the registry for every test after it",
+			testJurisdictionSlots)
 	}
-	code := jurisdiction.Code("q" + string(rune('m'+capJurisdictions.next)))
+	// 'b' onward, skipping QA: Qatar is the one assigned "q" code.
+	code := jurisdiction.Code("q" + string(rune('b'+capJurisdictions.next)))
 	capJurisdictions.next++
 	return code
 }
