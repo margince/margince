@@ -106,7 +106,16 @@ function deckLabels(
       plural("brief.deck.staged", count, {
         count: formatNumber(count, locale),
       }),
+    skipped: (count) =>
+      plural("brief.deck.skipped", count, {
+        count: formatNumber(count, locale),
+      }),
+    edited: (count) =>
+      plural("brief.deck.edited", count, {
+        count: formatNumber(count, locale),
+      }),
     commit: t("brief.deck.commit"),
+    commitNothingToSend: t("brief.deck.commitNothingToSend"),
     unstage: t("brief.deck.unstage"),
     clearedTitle: t("brief.deck.clearedTitle"),
     cleared: (count) =>

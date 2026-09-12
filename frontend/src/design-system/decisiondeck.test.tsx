@@ -45,7 +45,10 @@ const LABELS: DecisionDeckLabels = {
   keys: "Arrow keys decide, Enter commits",
   behind: (count) => `${count} more behind`,
   staged: (count) => `${count} staged`,
+  edited: (count: number) => `${count} being edited`,
+  skipped: (count) => `${count} skipped`,
   commit: "Commit",
+  commitNothingToSend: "Finish these",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) => `You decided ${count}.`,
@@ -860,15 +863,67 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     render(deck({ items: [single(1), single(2)], onCommit }));
     await user.click(screen.getByRole("button", { name: "Deck" }));
     await user.click(screen.getByRole("button", { name: "Later" }));
-    expect(screen.getByText("1 staged")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Commit" }));
+    // Held, and named as a SKIP rather than counted as something staged to
+    // send: the tray holds nothing the commit will put on a wire.
+    expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Finish these" }));
     // The caller was told what the reader answered...
     expect(onCommit).toHaveBeenCalledWith([{ id: "id-1", verdict: "skip" }]);
     // ...and the tray is empty rather than holding a verdict nobody will send.
-    expect(screen.queryByText("1 staged")).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 skipped/)).not.toBeInTheDocument();
     // The deferred card does not come back in this session either: later means
     // later, and re-offering it immediately is the one thing "later" rules out.
     expect(screen.getByText("Subject 2")).toBeInTheDocument();
     expect(screen.queryByText("Subject 1")).not.toBeInTheDocument();
+  });
+
+  // A SKIP IS HELD, NOT SENT. The tray counted everything it held and sat under
+  // a button reading "Send", so a reader who skipped one card was told it was
+  // about to go somewhere — and then the commit dropped it, because `later`
+  // sends nothing. The two facts are now separate.
+  it("counts what will send apart from what was skipped", async () => {
+    const user = userEvent.setup();
+    render(deck({}));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
+
+    expect(screen.getByText(/1 staged/)).toBeInTheDocument();
+    expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
+    // The count that promises a send never includes the skip.
+    expect(screen.queryByText(/2 staged/)).toBeNull();
+  });
+
+  // And where a tray holds ONLY skips there is nothing to send at all, so the
+  // control does not say "Send": pressing it clears them out of the deck.
+  it("does not offer to send a tray holding only skips", async () => {
+    const user = userEvent.setup();
+    render(deck({}));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
+
+    expect(
+      screen.getByRole("button", { name: "Finish these" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Commit" })).toBeNull();
+    expect(screen.queryByText(/staged/)).toBeNull();
+  });
+
+  // AN EDIT IS NOT A SKIP. Both send nothing, and lumping them said an edit had
+  // been skipped — which is the opposite of what it means: a skip is an answer
+  // deferred to another session, an edit is one being given on another form.
+  it("names an edit apart from a skip", async () => {
+    const user = userEvent.setup();
+    render(deck({ items: [single(1), single(2), single(3)] }));
+    await user.click(screen.getByRole("button", { name: "Deck" }));
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(screen.getByText(/1 staged/)).toBeInTheDocument();
+    expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
+    expect(screen.getByText(/1 being edited/)).toBeInTheDocument();
+    // And the edit is never counted among the skips.
+    expect(screen.queryByText(/2 skipped/)).toBeNull();
   });
 });

@@ -136,9 +136,12 @@ export type DecisionDeckLabels = Readonly<{
   keys: string;
   /** How many cards are still behind the live one. */
   behind: (count: number) => string;
-  /** The tray: how many verdicts are waiting, and the two controls over them. */
+  /** The tray and its controls, split as the COMMIT splits it — `StagingTray`. */
   staged: (count: number) => string;
+  skipped: (count: number) => string;
+  edited: (count: number) => string;
   commit: string;
+  commitNothingToSend: string;
   unstage: string;
   /** The earned moment: the queue is clear, this many were decided, at this time. */
   clearedTitle: string;
@@ -393,11 +396,10 @@ export function DecisionDeck({
       return;
     }
     onCommit(staged);
-    // The tray keeps only what is now in flight. A verdict that sends nothing
-    // has done everything it is going to do at the moment of the press — later
-    // means later, and an edit is answered on the queue's own form — so it moves
-    // out of the tray and out of the deck rather than sitting under a commit
-    // control that can be pressed again to no effect.
+    // The tray keeps only what is now in flight: a verdict that sends nothing
+    // has done everything it will do at the press, so it leaves the tray and
+    // the deck rather than sitting under a control that can be pressed again
+    // to no effect.
     const quiet = staged.filter((entry) => !verdictSends(entry));
     if (quiet.length > 0) {
       setDeferred((prev) => [...prev, ...quiet.map((entry) => entry.id)]);
@@ -406,11 +408,9 @@ export function DecisionDeck({
   };
 
   const live = waiting[0];
-
-  // THE GESTURE, wired to the one thing it can do. Its four handlers and the
-  // drag they share live beside the stack they move (decisiondeck.frame.tsx):
-  // what a finger is doing to a card is that surface's question, and the deck's
-  // is what is waiting and what has been staged.
+  // THE GESTURE, wired to the one thing it can do. Its handlers live beside the
+  // stack they move (decisiondeck.frame.tsx): what a finger does to a card is
+  // that surface's question, and the deck's is what is waiting and staged.
   const gesture = useDeckDrag({ live, onStage: stage });
 
   // Shortcuts fire only while the deck's own surface holds focus, never while a
@@ -513,7 +513,7 @@ export function DecisionDeck({
   // an empty band is a hairline under nothing.
   const trayBar = staged.length > 0 && (
     <StagingTray
-      count={staged.length}
+      staged={staged}
       labels={labels}
       commitState={commitState}
       commitRef={commitRef}

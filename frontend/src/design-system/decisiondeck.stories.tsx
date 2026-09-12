@@ -74,7 +74,10 @@ const LABELS: DecisionDeckLabels = {
   behind: (count) => `${count} more behind`,
   staged: (count) =>
     count === 1 ? "1 decision staged" : `${count} decisions staged`,
+  edited: (count: number) => `${count} being edited`,
+  skipped: (count) => (count === 1 ? "1 skipped" : `${count} skipped`),
   commit: "Commit",
+  commitNothingToSend: "Clear skipped",
   unstage: "Undo the last",
   clearedTitle: "The queue is clear.",
   cleared: (count) =>
