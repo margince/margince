@@ -143,9 +143,18 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 		address, kindHardBounce, bounceSource(fact.DeliveryID), by,
 		string(commsauthz.LevelMachine)).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// This address is already known to be dead. Nothing happened, so
-		// nothing is audited and nothing is announced.
-		return nil
+		// This address is already known to be dead, so nothing is audited and
+		// nothing is announced — the stop that exists says everything a second
+		// one would.
+		//
+		// THE NOTICE CASE STILL REOPENS. A dead mailbox refuses every message
+		// sent to it, so a second outstanding delivery to the same address
+		// bounces too, and that delivery may have been carrying a disclosure of
+		// its own. Returning here would leave its case in `queued` forever —
+		// the stop is about the ADDRESS and is rightly written once, while the
+		// duty is about a MESSAGE and there is one per delivery.
+		_, failErr := MarkNoticeDeliveryFailedTx(ctx, tx, fact.DeliveryID)
+		return failErr
 	}
 	if err != nil {
 		return fmt.Errorf("consent: recording that this address refused delivery: %w", err)
@@ -179,8 +188,23 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, entityID,
-		suppressionRecordedPayload(kindHardBounce, commsauthz.LevelMachine))
+	if err := storekit.EmitEvent(ctx, tx, auditID, entityID,
+		suppressionRecordedPayload(kindHardBounce, commsauthz.LevelMachine)); err != nil {
+		return err
+	}
+	// A disclosure that did not arrive leaves its duty owed. The same delivery
+	// that just proved this address dead may have been carrying an Art. 13 or
+	// Art. 14 notice, and the case for it is sitting in `queued` — which reads
+	// as handled and is not. Reopened in this transaction, so the dead address
+	// and the duty it failed to discharge move together.
+	//
+	// The count is deliberately dropped: zero is the ordinary answer, because
+	// most bounced mail carries no disclosure, and a caller has nothing to do
+	// differently either way.
+	if _, err := MarkNoticeDeliveryFailedTx(ctx, tx, fact.DeliveryID); err != nil {
+		return err
+	}
+	return nil
 }
 
 // kindHardBounce is the stop's kind. The table's CHECK, the engine's reason map

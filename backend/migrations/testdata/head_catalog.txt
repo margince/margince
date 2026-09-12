@@ -4831,27 +4831,32 @@ public.privacy_notice_case.blocked_reason text gen=- def=-
 public.privacy_notice_case.completed_at timestamp with time zone gen=- def=-
 public.privacy_notice_case.contact_id uuid NOT NULL gen=- def=-
 public.privacy_notice_case.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.privacy_notice_case.delivery_id uuid gen=- def=-
 public.privacy_notice_case.due_at timestamp with time zone NOT NULL gen=- def=-
 public.privacy_notice_case.id uuid NOT NULL gen=- def=uuidv7()
+public.privacy_notice_case.last_sent_at timestamp with time zone gen=- def=-
 public.privacy_notice_case.owner_user_id uuid gen=- def=-
 public.privacy_notice_case.privacy_notice_case_acquisition_fkey FOREIGN KEY (acquisition_id) REFERENCES contact_acquisition_evidence(id) ON DELETE CASCADE
 public.privacy_notice_case.privacy_notice_case_blocked_shape CHECK (((state = 'blocked'::text) = (blocked_reason IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_completion_shape CHECK (((state = ANY (ARRAY['completed'::text, 'not_required'::text, 'exempt_with_reason'::text, 'provided_elsewhere'::text])) = (completed_at IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_contact_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.privacy_notice_case.privacy_notice_case_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
 public.privacy_notice_case.privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.privacy_notice_case.privacy_notice_case_pkey PRIMARY KEY (id)
+public.privacy_notice_case.privacy_notice_case_queued_names_its_delivery CHECK (((state <> 'queued'::text) OR (delivery_id IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500)))
 public.privacy_notice_case.privacy_notice_case_resolution_shape CHECK (((state = ANY (ARRAY['exempt_with_reason'::text, 'provided_elsewhere'::text])) = (resolution_note IS NOT NULL)))
 public.privacy_notice_case.privacy_notice_case_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.privacy_notice_case.privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['art13'::text, 'art14'::text])))
-public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'completed'::text, 'provided_elsewhere'::text, 'exempt_with_reason'::text, 'blocked'::text, 'not_required'::text])))
+public.privacy_notice_case.privacy_notice_case_state CHECK ((state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'completed'::text, 'provided_elsewhere'::text, 'exempt_with_reason'::text, 'blocked'::text, 'not_required'::text])))
 public.privacy_notice_case.resolution_note text gen=- def=-
 public.privacy_notice_case.resolved_by uuid gen=- def=-
 public.privacy_notice_case.rule text NOT NULL gen=- def=-
 public.privacy_notice_case.state text NOT NULL gen=- def='open'::text
 public.privacy_notice_case.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.privacy_notice_case_acquisition CREATE UNIQUE INDEX privacy_notice_case_acquisition ON public.privacy_notice_case USING btree (acquisition_id)
-public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'queued'::text]))
+public.privacy_notice_case_delivery CREATE INDEX privacy_notice_case_delivery ON public.privacy_notice_case USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.privacy_notice_case_due CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text]))
 public.privacy_notice_case_pkey CREATE UNIQUE INDEX privacy_notice_case_pkey ON public.privacy_notice_case USING btree (id)
 public.product acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.product.active boolean NOT NULL gen=- def=true

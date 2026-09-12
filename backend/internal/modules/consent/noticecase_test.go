@@ -53,7 +53,13 @@ func TestTheQueueAsksForEveryUnresolvedState(t *testing.T) {
 	// one says it was met, the other says it never applied. Keeping either on
 	// the queue would prompt work nobody owes, and an officer who had already
 	// written down why would be asked again tomorrow.
-	want := []string{"open", "assigned", "queued", "blocked"}
+	// `delivery_failed` is here because a disclosure that did not arrive left
+	// the duty exactly as owed as before it was sent. The subject was not told.
+	// A case resting outside the queue there would be the worst of the eight
+	// states to get wrong: it reads as handled, so nobody looks at it again,
+	// and the duty quietly stops being anybody's — which is the failure the
+	// whole table exists to prevent.
+	want := []string{"open", "assigned", "queued", "delivery_failed", "blocked"}
 	if len(got) != len(want) {
 		t.Fatalf("the queue asks for %v, want %v — a state was added to the vocabulary without "+
 			"deciding whether a case sitting in it is still owed", got, want)

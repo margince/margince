@@ -46,7 +46,16 @@ const bounceReasonCap = 500
 //   - the named message is a row this store sent (message_id + status),
 //   - the row belongs to the mailbox owner whose capture is reporting
 //     (user_id = the connector principal's user — the contact whose mailbox
-//     the report actually arrived in),
+//     the report actually arrived in), OR it is a CONTROLLER delivery, which
+//     belongs to no seat at all: the installation's own mail — a disclosure, a
+//     confirmation link — is staged with user_id NULL, so a check on user_id
+//     alone can never match one. Before this arm a bounced Art. 14 disclosure
+//     recorded nothing: the ledger never marked it, and the notice case it was
+//     carrying sat in `queued` forever claiming a message was on its way. The
+//     forgery surface does not widen, because the third check still holds —
+//     the report must name an address that message actually went to, and the
+//     message-id of a controller mail is derived from the token row rather
+//     than guessable,
 //   - the address the report says failed is one the message actually went to.
 //
 // A forged report failing any of the three records nothing, which reduces
@@ -79,7 +88,7 @@ func (s *Store) RecordBounce(ctx context.Context, report connector.BounceReport)
 			   SET bounced_at = $2, bounce_kind = $3, bounce_reason = nullif($4, ''),
 			       bounce_recipient = lower($6)
 			 WHERE message_id = $1 AND status IN ('pending', 'sent') AND bounced_at IS NULL
-			   AND user_id = $5
+			   AND (user_id = $5 OR sender_kind = 'controller')
 			   AND EXISTS (
 				SELECT 1 FROM jsonb_array_elements_text(
 					recipients || coalesce(cc, '[]'::jsonb) || coalesce(bcc, '[]'::jsonb)
@@ -158,7 +167,7 @@ func (s *Store) stopVerifiedHard(
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM comms_outbound
 		 WHERE message_id = $1 AND status IN ('pending', 'sent')
-		   AND user_id = $2
+		   AND (user_id = $2 OR sender_kind = 'controller')
 		   AND EXISTS (
 			SELECT 1 FROM jsonb_array_elements_text(
 				recipients || coalesce(cc, '[]'::jsonb) || coalesce(bcc, '[]'::jsonb)

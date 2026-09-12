@@ -69,19 +69,22 @@ type confirmMailInput struct {
 // stageConfirmMail renders the registered wording and stages it, on the
 // caller's transaction.
 //
-// It reports FALSE rather than failing when no lane is wired. The token has
+// It reports a ZERO ID rather than failing when no lane is wired. The token has
 // already been minted and audited by the time this runs, and answering with an
 // error would roll that back and invite a retry that mints another — so an
 // installation with no relay gets a link it can see was not sent, which is what
 // the screen tells an operator to fix.
-func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailInput) (bool, error) {
+func (s *Store) stageConfirmMail(
+	ctx context.Context, tx pgx.Tx, in confirmMailInput,
+) (ids.UUID, error) {
 	if s.confirmSender == nil || s.vault == nil {
-		return false, nil
+		// No lane wired: nothing was staged, and a zero id says so.
+		return ids.UUID{}, nil
 	}
 	rendered, category, err := RenderControllerTemplate(
 		templateForLinkKind(in.kind), in.expiresAt, s.mailLanguage(ctx, tx))
 	if err != nil {
-		return false, err
+		return ids.UUID{}, err
 	}
 	// The plaintext goes to the vault, never onto the row. What the delivery
 	// carries is a placeholder and a reference; the two meet in memory at
@@ -89,9 +92,9 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 	// the audit payload and the outbox event alike.
 	ref, err := s.vault.Put(ctx, in.link)
 	if err != nil {
-		return false, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
-	if _, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
+	deliveryID, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
 		ContactID: in.contactID,
 		Recipient: in.recipient,
 		Category:  category,
@@ -100,10 +103,11 @@ func (s *Store) stageConfirmMail(ctx context.Context, tx pgx.Tx, in confirmMailI
 		ExpiresAt: in.expiresAt,
 		MessageID: confirmMessageID(in.tokenRowID),
 		Rendered:  rendered,
-	}); err != nil {
-		return false, err
+	})
+	if err != nil {
+		return ids.UUID{}, err
 	}
-	return true, nil
+	return deliveryID, nil
 }
 
 // templateForLinkKind maps a token kind to the wording that carries it.

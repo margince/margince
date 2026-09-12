@@ -9804,6 +9804,7 @@ const (
 	NoticeCaseStateAssigned          NoticeCaseState = "assigned"
 	NoticeCaseStateBlocked           NoticeCaseState = "blocked"
 	NoticeCaseStateCompleted         NoticeCaseState = "completed"
+	NoticeCaseStateDeliveryFailed    NoticeCaseState = "delivery_failed"
 	NoticeCaseStateExemptWithReason  NoticeCaseState = "exempt_with_reason"
 	NoticeCaseStateNotRequired       NoticeCaseState = "not_required"
 	NoticeCaseStateOpen              NoticeCaseState = "open"
@@ -9819,6 +9820,8 @@ func (e NoticeCaseState) Valid() bool {
 	case NoticeCaseStateBlocked:
 		return true
 	case NoticeCaseStateCompleted:
+		return true
+	case NoticeCaseStateDeliveryFailed:
 		return true
 	case NoticeCaseStateExemptWithReason:
 		return true
@@ -31204,7 +31207,8 @@ type NoticeCase struct {
 	// State Where a disclosure duty stands.
 	//
 	// `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
-	// on its way. `completed` is a disclosure this installation sent and delivered.
+	// on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+	// `completed` is a disclosure this installation sent and delivered.
 	// `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
 	// `blocked` names an obstacle. `not_required` is the older way of closing a case with no
 	// reason attached, kept so nothing already closed is reinterpreted.
@@ -31221,7 +31225,8 @@ type NoticeCaseRule string
 // NoticeCaseState Where a disclosure duty stands.
 //
 // `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
-// on its way. `completed` is a disclosure this installation sent and delivered.
+// on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+// `completed` is a disclosure this installation sent and delivered.
 // `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
 // `blocked` names an obstacle. `not_required` is the older way of closing a case with no
 // reason attached, kept so nothing already closed is reinterpreted.

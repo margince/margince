@@ -41038,7 +41038,8 @@ components:
         Where a disclosure duty stands.
 
         `open` is owed and unclaimed; `assigned` has an owner working it; `queued` has a disclosure
-        on its way. `completed` is a disclosure this installation sent and delivered.
+        on its way; `delivery_failed` means one went and did not arrive, so the duty is owed again.
+        `completed` is a disclosure this installation sent and delivered.
         `provided_elsewhere` and `exempt_with_reason` end the duty without one, and both say why.
         `blocked` names an obstacle. `not_required` is the older way of closing a case with no
         reason attached, kept so nothing already closed is reinterpreted.
@@ -41046,7 +41047,7 @@ components:
         There is no `overdue`. Overdue is a reading of `due_at` against the clock, not a stored
         fact — a stored one would leave every late case looking on time whenever a sweep failed to
         run.
-      enum: [open, assigned, queued, completed, provided_elsewhere, exempt_with_reason, blocked, not_required]
+      enum: [open, assigned, queued, delivery_failed, completed, provided_elsewhere, exempt_with_reason, blocked, not_required]
 
     NoticeCase:
       type: object

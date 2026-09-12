@@ -21,6 +21,15 @@ describe("which duties are still owed", () => {
     expect(isNoticeResolved("assigned")).toBe(false);
   });
 
+  it("keeps a duty whose disclosure bounced on the queue", () => {
+    // The subject was not told, so the duty is owed exactly as it was before
+    // the message went out. A case resting outside the queue there would read
+    // as handled while being worse than an open one, so nobody would look at
+    // it again.
+    expect(UNRESOLVED_NOTICE_STATES).toContain("delivery_failed");
+    expect(isNoticeResolved("delivery_failed")).toBe(false);
+  });
+
   it("keeps a blocked duty on the queue", () => {
     // Blocked says we cannot discharge it yet, not that we stopped owing it.
     expect(UNRESOLVED_NOTICE_STATES).toContain("blocked");
@@ -43,8 +52,8 @@ describe("which duties are still owed", () => {
     // NOTICE_STATES without somebody deciding whether a case sitting in it is
     // still owed fails here, which is the drift a hand-written second list
     // hides. The backend's own census works the same way.
-    expect(NOTICE_STATES).toHaveLength(8);
-    expect(UNRESOLVED_NOTICE_STATES).toHaveLength(4);
+    expect(NOTICE_STATES).toHaveLength(9);
+    expect(UNRESOLVED_NOTICE_STATES).toHaveLength(5);
   });
 });
 
