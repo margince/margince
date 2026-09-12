@@ -9534,6 +9534,27 @@ export const en = {
   "worklist.verb.acknowledgeFailed": "That could not be marked as seen.",
   "worklist.verb.completeFailed": "That task could not be completed.",
   "worklist.verb.pin": "Pin",
+  // WHAT A PIN ACTUALLY DOES, because the word says none of it. Each clause
+  // is checked against the code and none of them may be written loosely:
+  //
+  //   - "your own queue" rather than "only you see it": the ORDERING is
+  //     reader-scoped (worklist_pin is keyed by reader_id), but the act is
+  //     written to the audit log, so an authorised audit reader can see that
+  //     you pinned something. "Only you see it" would be false there.
+  //   - "while it stays among your most recent" rather than "until you unpin
+  //     it": a reader's newest 50 pins are read (maxPinsPerReader,
+  //     worklistpin.go) and older ones silently stop taking effect.
+  //   - Nothing about urgency, because a pin moves the ORDER and not the
+  //     figure — semanticLevelOf keeps the summary honest.
+  //
+  // A reminder or a timed snooze is not on offer: the table has no expiry.
+  "worklist.verb.pinHint":
+    "Moves this to the top of your own queue while it stays among your most recent pins. It changes your order, not its urgency.",
+  // The SAME control, one state over, and it had better not say the pin
+  // sentence: a button that now removes the pin described as keeping it is the
+  // control contradicting itself.
+  "worklist.verb.unpinHint":
+    "Puts this back in its ranked place in your queue.",
   "worklist.verb.unpin": "Unpin",
   "worklist.verb.pinFailed": "That row could not be pinned.",
   "worklist.verb.unpinFailed": "That row could not be unpinned.",

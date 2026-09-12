@@ -9249,6 +9249,10 @@ export const vi = {
   "worklist.verb.acknowledgeFailed": "Không thể đánh dấu là đã xem.",
   "worklist.verb.completeFailed": "Không thể hoàn thành nhiệm vụ này.",
   "worklist.verb.pin": "Ghim",
+  "worklist.verb.pinHint":
+    "Đưa mục này lên đầu danh sách của riêng bạn, khi nó còn nằm trong những mục bạn ghim gần đây nhất. Đổi thứ tự của bạn, không đổi mức gấp.",
+  "worklist.verb.unpinHint":
+    "Trả mục này về đúng vị trí xếp hạng trong danh sách của bạn.",
   "worklist.verb.unpin": "Bỏ ghim",
   "worklist.verb.pinFailed": "Không thể ghim hàng này.",
   "worklist.verb.unpinFailed": "Không thể bỏ ghim hàng này.",

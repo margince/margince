@@ -9382,6 +9382,10 @@ export const de = {
   "worklist.verb.completeFailed":
     "Diese Aufgabe konnte nicht abgeschlossen werden.",
   "worklist.verb.pin": "Anheften",
+  "worklist.verb.pinHint":
+    "Setzt das in deiner eigenen Liste nach oben, solange es zu deinen neuesten Anheftungen zählt. Ändert deine Reihenfolge, nicht die Dringlichkeit.",
+  "worklist.verb.unpinHint":
+    "Stellt das an seinen gewohnten Platz in deiner Liste zurück.",
   "worklist.verb.unpin": "Lösen",
   "worklist.verb.pinFailed": "Diese Zeile konnte nicht angeheftet werden.",
   "worklist.verb.unpinFailed": "Diese Zeile konnte nicht gelöst werden.",
