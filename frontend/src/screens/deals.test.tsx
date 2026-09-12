@@ -545,13 +545,7 @@ function stubBackend(
         page: { next_cursor: null },
       });
     }
-    // BEFORE the /deals arm, which would otherwise answer this sub-resource
-    // with a page of DEALS — and a deal has no frozen questions, so the review
-    // card read `undefined.map` and took the whole page down with it.
-    if (url.includes("/outcome-reviews")) {
-      return jsonResponse({ data: [], page: { next_cursor: null } });
-    }
-    if (url.includes("/deals")) {
+    if (url.includes("/deals") && !url.includes("/outcome-reviews")) {
       opts.onDealsUrl?.(url);
       if (opts.nextPage) {
         return url.includes("cursor=")
