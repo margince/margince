@@ -96,6 +96,21 @@ var (
 		Field: "end", Code: "invalid_date_range",
 		Message: "`end` must be later than `start`",
 	}
+	// `links` carries minItems: 1 in crm.yaml, and nothing generated enforces
+	// it: the decoder fills the slice and asks no question about its length. So
+	// this is where the contract's bound becomes true, on every door — REST,
+	// the public page, and the tool seam's post-approval execute.
+	//
+	// The bound is not bookkeeping. A meeting linked to nothing lands on no
+	// record's timeline, which means nobody encounters it again by looking at
+	// the account, the contact or the deal it was about; the only way back to
+	// it is to already know it exists. The account send refuses an unlinked
+	// message for the same reason and in the same words.
+	errBookingLinksEmpty = &SchedulingArgumentError{
+		Field: "links", Code: "required",
+		Message: "`links` needs at least one entry: name the contact, company, deal, lead or " +
+			"project the meeting is about — one attached to nothing appears on no timeline",
+	}
 )
 
 type slot struct {
@@ -281,6 +296,9 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	}
 	if !in.End.After(in.Start) {
 		return crmcontracts.Activity{}, errBookingEndNotAfterStart
+	}
+	if len(in.Links) == 0 {
+		return crmcontracts.Activity{}, errBookingLinksEmpty
 	}
 	// The conflict probe reads only the calendar the caller may write
 	// (their own, or any as admin — gated above) and gives the polite

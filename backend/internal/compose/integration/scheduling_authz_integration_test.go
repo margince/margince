@@ -26,14 +26,20 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	e := Setup(t)
 	slotStart := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
 
+	// Every booking names a record, because a meeting attached to nothing is
+	// refused before the calendar rules run. The contact is incidental here —
+	// what this test is about is whose calendar, not whose record.
+	attendee := e.SeedContact(t, "Calendar Client", &e.Rep1)
+	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: attendee}}
+
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, SchedulerPerms)
 	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour),
+		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); err != nil {
 		t.Fatalf("self-booking: %v", err)
 	}
 	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour),
+		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("booking rep2's calendar as rep1 → %v, want ErrPermissionDenied", err)
 	}
@@ -41,7 +47,7 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	// and still books only its own.
 	ops := e.As(ids.NewV7(), nil, OpsPerms)
 	if _, err := e.Activities.BookMeeting(ops, activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour),
+		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("booking rep2's calendar as ops → %v, want ErrPermissionDenied", err)
 	}
@@ -49,13 +55,13 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 	// anyone else.
 	admin := e.Admin()
 	if _, err := e.Activities.BookMeeting(admin, activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour),
+		Host: ids.From[ids.UserKind](e.Rep2), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); err != nil {
 		t.Fatalf("admin booking for rep2: %v", err)
 	}
 	var slotTaken *activities.SlotTakenError
 	if _, err := e.Activities.BookMeeting(rep1, activities.BookMeetingInput{
-		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour),
+		Host: ids.From[ids.UserKind](e.Rep1), Start: slotStart, End: slotStart.Add(time.Hour), Links: links,
 	}); !errors.As(err, &slotTaken) {
 		t.Fatalf("double self-booking → %v, want SlotTakenError", err)
 	}
