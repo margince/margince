@@ -233,3 +233,93 @@ func TestBoundDetailCutsOnARuneBoundary(t *testing.T) {
 		}
 	}
 }
+
+// A cut never lands inside an escape, and a message that FITS comes back whole.
+//
+// echoSafe expands as it escapes: one escape byte becomes six characters, and a
+// tag-block rune becomes ten. So a message legally inside its budget when its
+// producer wrote it crosses the bound here. A cut measured on the FINISHED
+// string lands inside an escape and leaves a dangling backslash, which reads as
+// a bug in the escaper rather than as a truncated name. Writing unit by unit
+// against the remaining budget is what makes that unrepresentable.
+func TestEchoSafeCutsBetweenEscapesAndNeverInsideOne(t *testing.T) {
+	// Every escape WIDTH this function emits, so a cut is tried against each:
+	// two characters for the named ones, four for a raw byte, six for a BMP rune,
+	// ten for an astral one.
+	for _, c := range []struct {
+		name   string
+		source string
+	}{
+		{"newlines", strings.Repeat("\n", 200)},
+		{"raw bytes that are not UTF-8", strings.Repeat("\xff", 200)},
+		{"unprintable BMP runes", strings.Repeat("\v", 200)},
+		{"unprintable astral runes", strings.Repeat("\U000e0020", 200)},
+		{"escapes between printable text", strings.Repeat("ab\vcd", 100)},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			for n := 4; n <= 200; n++ {
+				got := echoSafe(c.source, n)
+				if len(got) > n {
+					t.Fatalf("echoSafe(%d) answered %d bytes: %q", n, len(got), got)
+				}
+				if !utf8.ValidString(got) {
+					t.Fatalf("echoSafe(%d) produced invalid UTF-8: %q", n, got)
+				}
+				// A dangling backslash is what a cut inside an escape looks like,
+				// and it reads as this function being broken rather than as a name
+				// being long.
+				if partialEscapeTail(strings.TrimSuffix(got, "\u2026")) {
+					t.Fatalf("echoSafe(%d) cut inside an escape: %q", n, got)
+				}
+			}
+		})
+	}
+}
+
+// partialEscapeTail reports whether s ends inside one of echoSafe's escapes:
+// an unpaired backslash, or one followed by fewer digits than its form takes.
+func partialEscapeTail(s string) bool {
+	for i := len(s) - 1; i >= 0 && len(s)-i <= 10; i-- {
+		if s[i] != '\\' {
+			continue
+		}
+		// The run of backslashes before this one decides whether it opens an
+		// escape or is itself escaped text.
+		backslashes := 0
+		for j := i; j >= 0 && s[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			return false
+		}
+		switch tail := s[i+1:]; {
+		case tail == "":
+			return true
+		case tail[0] == 'n' || tail[0] == 'r' || tail[0] == 't':
+			return false
+		// SHORTER than the form takes, not merely different: an escape may be
+		// followed by ordinary text, and a length test for equality would read
+		// a complete escape with a letter after it as a cut one.
+		case tail[0] == 'x':
+			return len(tail) < 3
+		case tail[0] == 'u':
+			return len(tail) < 5
+		case tail[0] == 'U':
+			return len(tail) < 9
+		}
+		return false
+	}
+	return false
+}
+
+// A message that fits comes back UNCHANGED. explain() sizes its remedy budget
+// on exactly this: a remedy of precisely the bound spends precisely one slot,
+// and reserving room for an ellipsis it does not need would silently drop the
+// last remedy that fits.
+func TestEchoSafeLeavesAMessageThatFitsAlone(t *testing.T) {
+	for _, s := range []string{"", "a", strings.Repeat("x", 300), "\u65e5\u672c\u8a9e"} {
+		if got := echoSafe(s, 300); got != s {
+			t.Errorf("echoSafe(%q) = %q, want it unchanged", s, got)
+		}
+	}
+}
