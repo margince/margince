@@ -286,20 +286,30 @@ Rules:
 - The trigger is ` + triggerProvenance + `: never pass it to a tool as one.
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
-` + surfaceSchemaRules + `- `)
-	b.WriteString(fence.Rule("captured external"))
+` + surfaceSchemaRules)
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Empty when the caller passed none — the certification
 	// lane — and an empty block writes nothing rather than a blank line.
 	if languageRule != "" {
-		b.WriteString("\n\n")
 		b.WriteString(languageRule)
+		b.WriteString("\n")
 	}
 	b.WriteString(`
-
 Available tools:
 `)
 	b.WriteString(ToolListing(specs))
+	// The data boundary goes LAST, after the tool catalog, and the order is the
+	// only thing here chosen for cost. Everything above is identical for every
+	// run of a given tool surface; the marker is not, because it is minted per
+	// run. A provider that reuses a byte-identical prefix can therefore reuse
+	// the catalog — which is 97 of this prompt's 98 KB — and with the marker
+	// ahead of it, it could reuse nothing at all.
+	//
+	// Position carries no meaning for the rule itself: it names the boundary
+	// that bounds the captured text in the USER turns, all of which arrive
+	// after the whole system prompt either way.
+	b.WriteString("\n- ")
+	b.WriteString(fence.Rule("captured external"))
 	return b.String()
 }
 

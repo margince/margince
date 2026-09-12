@@ -58,7 +58,18 @@ If the wrapper were a fixed word, they could simply type it:
 ```
 
 Sending us one email is enough to try the attack, so the password is generated
-fresh for every single call.
+fresh — **for every call, with one deliberate exception.**
+
+```
+  a one-shot task  (a verdict, an extraction)   a fresh password EVERY call
+  a multi-step agent run                        ONE password for the whole run
+```
+
+An agent run's transcript is cumulative: something written at step 2 is still in
+the prompt at step 9, so a new password each turn would claim a boundary the
+older text never had. The exception is written down where the password is made,
+along with what it costs: the model is shown the marker and could put it in a
+tool argument, so a run whose tools reach an outsider can leak its own boundary.
 
 **What it promises is exact, and narrow:** a stranger cannot *close* the wrapper
 and escape. It does **not** promise that text inside the wrapper is harmless —
@@ -67,12 +78,17 @@ see §4.
 ## The other protections we use
 
 ```
-  closed answer list   the model can only answer from a fixed list of
-                       verdicts. It physically cannot invent a new one.
+  closed answer list   the model may only answer from a fixed list of
+                       verdicts. Where the provider supports it this is
+                       enforced as the answer is generated; a validator
+                       refuses anything that slips through.
 
   per-call ID list     when an answer must cite what it read, it can only
-                       cite IDs from this call. A made-up ID is rejected
-                       before we even see the reply.
+                       cite IDs from this call. Some sites have the provider
+                       enforce it at generation; others check it when the
+                       reply arrives — and there the WHOLE batch is refused,
+                       so one hostile item can void its neighbours' answers.
+                       That is a cost of batching the sums below ignore.
 
   quote checking       if the model claims "the page says X", we check X
                        really is on the page. If not, we drop the claim.
@@ -83,24 +99,24 @@ see §4.
 
 ---
 
-## 2. Prompt caching — why we cannot use it
+## 2. Prompt caching — capped, not impossible
 
 AI providers will reuse part of a previous question if the new one *starts with
-exactly the same text*. Free savings, in principle.
-
-We cannot have them:
+exactly the same text*. The password limits how much of ours can ever qualify:
 
 ```
-  call 1   [ the rules ][ password-A7F3 ][ the email ]
-  call 2   [ the rules ][ password-9C21 ][ the email ]
-           \__________/  X
-             reusable     everything from here differs, on purpose
+  [ the rules ][ password ][ the email ]
+   \__________/  ^
+    reusable      everything from here differs
 ```
 
-The password sits near the front, and it is deliberately never the same twice.
-So reuse stops there.
+So **where the password sits decides how much can be reused.** That is a design
+choice, not a law — and until this page was written, one prompt had it in the
+worst possible place.
 
-**Measured over 7 days on staging:**
+### What we measured
+
+Over 7 days on staging:
 
 ```
   text we sent .................. 32,150,000 units
@@ -108,28 +124,81 @@ So reuse stops there.
   caches we created ourselves ...          0   never
 ```
 
-Two reasonable suggestions, and why neither works:
+Be careful what that 0.28% proves. It shows reuse is **rare**, not that it is
+impossible — a provider's automatic reuse is best-effort and needs the same
+prefix to come round again quickly. And "caches we created: 0" has a simpler
+explanation than the password: **provider-managed caching is opt-in and we have
+never opted in.** Nothing in our code sets the field that asks for it.
+
+### The one that was in the worst place
+
+`agent_loop` — the agent runner — has by far the largest prompt in the product,
+ten times the next one. Its password was written **before** the tool catalog:
 
 ```
-  "make the prompt bigger so caching kicks in"
-      Two tasks already carry a big block of identical text in front of
-      the password - far over any minimum. They cache NOTHING.
-
-  "move the password later"
-      It is already last in the rules section, at nearly every site.
-      There is no rearranging left to do.
+  BEFORE (this PR)                    AFTER
+  [ rules      1,045 bytes ]          [ rules                     ]
+  [ PASSWORD               ]          [ tool catalog  ~97,000 b   ]
+  [ tool catalog ~97,000 b ]          [ PASSWORD                  ]
+        ^                                    ^
+   1% reusable                          99.7% reusable
 ```
 
-This changes only if a provider offers a cache you can *name and re-use by
-handle*, instead of one that matches from the start of the text. Until then,
-treat the repeated rules as a fixed cost.
+Moving one line took its reusable prefix from **1,045 bytes to 97,899**. The
+catalog is identical for every run of a given tool surface, so it is exactly
+the kind of text reuse exists for. Nothing about the protection changed: the
+sentence still names the boundary that bounds the captured text, and the
+captured text still arrives after the whole instruction block either way.
+
+### Reading the numbers on the reference page
+
+[ai-prompts.md](../reference/ai-prompts.md) prints the split for every site, and
+[ai-prompts.json](../reference/ai-prompts.json) carries it as data:
+
+```
+  system 4,244 B (~1,061 tok) - rules 3,964 B . boundary 280 B
+                              . after boundary 0 B . cacheable 93%
+```
+
+- **rules** — the job description. Identical every call, so reusable.
+- **boundary** — the sentence naming the password. ~280 bytes, different every
+  call. This is where reuse has to stop.
+- **after boundary** — anything written AFTER it. Dead weight for caching
+  however identical it is. **Should normally be 0.**
+- **cacheable** — rules as a share of the whole.
+
+A small prompt shows a low percentage simply because the 280-byte boundary
+sentence is a big slice of a 600-byte prompt. That is not a problem to fix;
+there is nothing there to save.
+
+Two sites still strand text after the boundary — `cold_start/company_message`
+(768 B) and `weekly_review/narrative` (232 B). Both were left alone on purpose:
+moving a line of prompt text restamps that task's certification records and
+costs a re-certification run, which under a kilobyte does not repay. The column
+is there so whoever comes next can see them and judge for themselves.
+
+### Where that leaves us
+
+```
+  small verdict tasks    the rules ahead of the password are a few hundred
+                         units. Even perfectly placed, there is little to win.
+
+  agent_loop             ~97,000 units per turn, now in front of the password.
+                         Worth measuring properly.
+
+  opting in              Anthropic-style caching is a field we do not set.
+                         Turning it on is a decision nobody has made, not a
+                         thing the design forbids.
+```
+
+**So "caching cannot work here" is too strong, and an earlier draft of this page
+said it.** The accurate statement: the password caps what can be reused, the cap
+is wherever the password sits, and one prompt was paying that cap
+unnecessarily.
 
 > **Careful: two different things are called "cache".** One dashboard number
 > counts answers we served from our own memory without calling the AI at all.
-> A different number counts text the provider reused. They are unrelated. Check
-> which one you are reading.
-
----
+> A different number counts text the provider reused. They are unrelated.
 
 ## 3. What the repeated rules cost
 
@@ -140,9 +209,12 @@ For a typical verdict task:
   the item       678 units   ################          42%
 ```
 
-**This is not waste.** The model cannot sort mail into eight categories without
-being told what the eight categories are, and every paragraph in that block is
-there because something was once filed wrongly without it.
+Those figures are the **confidentiality check's** — the task that decides
+whether a thread stays private. Its rulebook lists seven kinds of thread.
+
+**This is not waste.** The model cannot sort mail into seven kinds without being
+told what the seven kinds are, and every paragraph in that block is there
+because something was once filed wrongly without it.
 
 It is the price of stating the job. We pay it once per call, because nothing
 makes it stick between calls.
@@ -225,7 +297,7 @@ time. We measured it on the confidentiality check:
 
 ```
   emails whose answer OPENS them to colleagues    86.3%   (measured)
-  how rare that needed to be, to pay off            47%
+  how rare that needed to be, to pay off            47%   (at 5 per call)
 
   today                          1,631 units per email
   batch + re-ask the openers     2,276 units per email    ~40% WORSE
@@ -240,57 +312,34 @@ answer actually happens.** One query. It settles the question outright.
 
 ### Where our tasks stand today
 
-The list of tasks moves; the test above does not. Applied to the tasks as they
-are:
+**In [ai-prompts.md](../reference/ai-prompts.md), per site, in a `batch`
+column** — not repeated here. A second copy of that list would drift from the
+first, and the generated one is the copy a gate can hold: a site added without
+a classification fails the build.
+
+As of this writing, of 45 sites:
 
 ```
-  ALREADY BATCH - a wrong answer is cheap, and re-read by a human or a rule
-  ---------------------------------------------------------------------
-    capture_classify          what kind of message is this
-    owed_verdict              does this message ask us for something
-    signal_extract            what events does this thread contain
-    enrich                    facts off a signature
-    propose_roles             buying roles, read from what was written
-    stage_evidence_extract    does the buyer's own text meet a criterion
-    transcript_propose        next steps out of a meeting transcript
-    voice_build               drafts scored against a writing sample
-
-
-  ONE ITEM PER CALL, AND MUST STAY THAT WAY
-  ---------------------------------------------------------------------
-    capture_counterparty_verdict   creates or deletes a contact record
-    capture_confidentiality_verdict  decides who may read somebody's mail
-
-    Both say so in their own code, with the reason. Neither should be
-    batched without the decision being made deliberately and written down.
-
-
-  NOT A BATCHING QUESTION AT ALL
-  ---------------------------------------------------------------------
-    Everything else reads ONE subject - one company, one deal, one meeting,
-    one page, one document. There is no second item to put beside it, so
-    the question does not arise.
+  31   single subject          one company, deal, meeting or page
+   6   several authors         more than one party's text in one prompt
+   6   one author, many spans  a transcript's lines, a document's parts
+   2   ONE per call            deliberate, and the code says why
 ```
 
-Two cautions when re-applying this:
+The two deliberate ones are the counterparty verdict (creates and deletes
+contact records) and the confidentiality verdict (decides who may read
+somebody's mail).
 
-- **`propose_roles` batches, and its own doc names the same hazard**: both
-  contacts sit in one prompt, so evidence unbound from its author lets one
-  sender hand a role to a colleague. It handles that by requiring each claim to
-  quote the message it came from AND that message's author to be whoever the
-  role is proposed for. That is the shape to copy if a consequential task ever
-  must batch: bind every answer to evidence only its own item could produce.
-- **[ai-prompts.md](../reference/ai-prompts.md) carries this classification per
-  site**, in a `batch` column, and a site added without one fails the gate that
-  renders it. The list is written out rather than derived for the same reason
-  the task registry is: the deciding fact — whether several MUTUALLY UNTRUSTED
-  authors share a prompt — is invisible to a scanner. `transcript_propose`
-  fences its spans in a loop and is one transcript from one author;
-  `capture_classify` does the same and carries ten strangers.
-- **Counting spans in a request does not tell you the capacity.** A site that
-  batches ten may show one span for a one-item fixture. See
-  [ai-prompts.md](../reference/ai-prompts.md), which publishes those counts and
-  says the same thing.
+One worth understanding, because it shows the hazard is not only about
+strangers: `signal_extract` reads one email thread with each message in its own
+span. The parties are the customer and us — not unrelated strangers — and its
+own comment still names the risk: *"none can reach another sender's mail in the
+same thread to put words in their mouth."* Two authors is enough.
+
+If a consequential task ever must carry several authors, `propose_roles` is the
+shape to copy: every claim must quote the message it came from, AND that
+message's author must be whoever the claim is about. Bind each answer to
+evidence only its own item could have produced.
 
 ### If a task must batch untrusted text anyway
 
