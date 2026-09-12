@@ -53,7 +53,11 @@ const ROLES = [
 
 function stubFetch(
   rows: unknown[],
-  opts: Readonly<{ failRead?: boolean; onDelete?: (id: string) => void }> = {},
+  opts: Readonly<{
+    failRead?: boolean;
+    failDelete?: boolean;
+    onDelete?: (id: string) => void;
+  }> = {},
 ) {
   vi.stubGlobal(
     "fetch",
@@ -62,6 +66,12 @@ function stubFetch(
         input instanceof Request ? input : new Request(String(input), init);
       if (req.method === "DELETE") {
         opts.onDelete?.(req.url.split("/").pop() ?? "");
+        if (opts.failDelete) {
+          return new Response(
+            JSON.stringify({ title: "Forbidden", detail: "not yours" }),
+            { status: 403, headers: { "Content-Type": "application/json" } },
+          );
+        }
         return new Response(null, { status: 204 });
       }
       if (req.url.includes("/assignments") && opts.failRead) {
@@ -143,4 +153,17 @@ it("names the row in each verb, so one of four is tellable from the rest", async
   expect(
     screen.getByRole("button", { name: "Change who holds this: Jonas Reed" }),
   ).toBeTruthy();
+});
+
+it("says so when ending a responsibility is refused", async () => {
+  stubFetch([ROW], { failDelete: true });
+  render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
+  const remove = await screen.findByRole("button", {
+    name: "End this responsibility: Mara Feld",
+  });
+  await userEvent.click(remove);
+  // The button re-enables either way, so a refusal that said nothing would
+  // read exactly like a responsibility that ended.
+  expect(await screen.findByRole("alert")).toBeTruthy();
+  expect(screen.getByText(/Mara Feld/)).toBeTruthy();
 });

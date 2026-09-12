@@ -3,6 +3,7 @@ import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { problemMessageOf } from "./common";
 import {
   type AssignmentRecordType,
   type RecordAssignment,
@@ -65,6 +66,16 @@ export function RecordTeam({
     >
       <PanelBody>
         <p className="t-caption mute">{t("assignments.noAccessNote")}</p>
+        {/* A refused end is the one failure here a reader must not have to
+            infer. The button re-enables when the request settles either way,
+            so without this a responsibility that is still standing looks
+            exactly like one that ended — and the next thing the reader does,
+            they do believing it is gone. */}
+        {archive.isError && (
+          <p className="t-caption" role="alert">
+            {problemMessageOf(archive.error, t)}
+          </p>
+        )}
         {isPending || isError || rows.length === 0 ? (
           <SurfaceState
             state={isPending ? "loading" : isError ? "failed" : "empty"}

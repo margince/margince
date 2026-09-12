@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../api/client";
 import { Button, Modal, SegmentedControl } from "../design-system/atoms";
 import {
@@ -56,6 +63,14 @@ export function RecordTeamAssign({
   const [subjectKind, setSubjectKind] = useState<AssignmentSubjectKind>("user");
   const [subject, setSubject] = useState<RecordPickerCandidate | null>(null);
   const [roleId, setRoleId] = useState("");
+  // One id per OPENING of the modal. It is what tells a save that landed late
+  // apart from the draft the reader is writing now; see submit().
+  const [draftId, setDraftId] = useState(() => crypto.randomUUID());
+  // The id as it is RIGHT NOW, readable from a callback that closed over an
+  // older render. State would give submit() the value it captured when the
+  // click happened, which is the one question it must not ask.
+  const draftIdRef = useRef(draftId);
+  draftIdRef.current = draftId;
   const roles = useRecordRoles().data;
   const create = useCreateRecordAssignment(recordType, recordId);
   const update = useUpdateRecordAssignment(recordType, recordId);
@@ -80,6 +95,7 @@ export function RecordTeamAssign({
         : null,
     );
     setRoleId(existing?.role_id ?? "");
+    setDraftId(crypto.randomUUID());
     resetCreate();
     resetUpdate();
   }, [open, existing, resetCreate, resetUpdate]);
@@ -118,6 +134,7 @@ export function RecordTeamAssign({
     if (!subject || !roleId) {
       return;
     }
+    const submitted = draftId;
     if (existing) {
       await update.mutateAsync({
         id: existing.id,
@@ -134,7 +151,15 @@ export function RecordTeamAssign({
         role_id: roleId,
       });
     }
-    close();
+    // Only close the draft that actually landed. A save over a slow link can
+    // return AFTER the reader dismissed this modal — the backdrop closes it
+    // even mid-save — and opened it again on another row. An unconditional
+    // close there would wipe the new draft on the strength of the old request
+    // finishing. The id is minted per opening, so comparing it is exactly the
+    // question "is this still the assignment I was writing".
+    if (submitted === draftIdRef.current) {
+      close();
+    }
   }
 
   return (
@@ -206,38 +231,59 @@ export function RecordTeamAssign({
   );
 }
 
+// The contract's page cap (CAP-PAGE, default 50, max 200). Both rosters ask
+// for a full page rather than the default: a workspace with sixty colleagues
+// would otherwise hide everyone past the fiftieth from this picker — not
+// slowly, but invisibly, with their exact name typed in.
+const ROSTER_PAGE = 200;
+
 /**
  * Colleagues and teams, as pickable candidates.
  *
- * Both lists are small and administered, so they are fetched whole and matched
- * here rather than through a search endpoint neither of them has. A caller
- * typing narrows what is already in hand.
+ * The colleague roster is searched SERVER-side (`q` matches display name and
+ * email), because it is the list that grows: narrowing one page here would
+ * leave somebody past the page boundary unassignable however precisely their
+ * name was typed. Teams have no search parameter and are an administered
+ * vocabulary of a few rows, so that one page is matched here.
  */
 async function searchSubjects(
   kind: AssignmentSubjectKind,
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const term = q.trim().toLowerCase();
+  const term = q.trim();
   if (kind === "team") {
-    const { data, error, response } = await api.GET("/teams");
+    const { data, error, response } = await api.GET("/teams", {
+      params: { query: { limit: ROSTER_PAGE } },
+    });
     if (error || !response.ok) {
       throwProblem(error);
     }
+    const needle = term.toLowerCase();
     return data.data
       .map((team) => ({ id: team.id, name: team.name }))
-      .filter((team) => team.name.toLowerCase().includes(term));
+      .filter((team) => team.name.toLowerCase().includes(needle));
   }
-  const { data, error, response } = await api.GET("/users");
+  const { data, error, response } = await api.GET("/users", {
+    params: { query: { q: term || undefined, limit: ROSTER_PAGE } },
+  });
   if (error || !response.ok) {
     throwProblem(error);
   }
   return (
     data.data
-      // Only a colleague who can actually be reached about the work. An agent
-      // seat holds no responsibility a human can be asked about, and a suspended
-      // or never-redeemed seat is not somebody to hand a record to.
-      .filter((user) => user.status === "active" && !user.is_agent)
+      // An agent seat holds no responsibility a human can be asked about.
+      //
+      // `invited` STAYS. The server admits it deliberately — staffing a record
+      // is part of onboarding somebody, and refusing it would mean nobody
+      // could be given work until their first login. Only the two statuses the
+      // server itself refuses are dropped here, so the picker offers exactly
+      // what a save would accept.
+      .filter(
+        (user) =>
+          !user.is_agent &&
+          user.status !== "suspended" &&
+          user.status !== "deactivated",
+      )
       .map((user) => ({ id: user.id, name: user.display_name }))
-      .filter((user) => user.name.toLowerCase().includes(term))
   );
 }
