@@ -5,10 +5,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { team, teamWeek } from "./brief.fixtures";
 import { TeamWeeklyPanel } from "./brief.teamweekly";
 import {
-  installFetchStub,
   jsonResponse,
   type RouteMap,
   StoryProviders,
+  stubWithSession,
 } from "./story-utils";
 
 // A team's frozen week, with the picker that chooses which team it is about.
@@ -38,7 +38,7 @@ function page(week: () => Response): RouteMap {
 
 function panel(routes: RouteMap) {
   return () => {
-    installFetchStub(routes);
+    stubWithSession(routes, {});
     return (
       <StoryProviders>
         <TeamWeeklyPanel offered />
