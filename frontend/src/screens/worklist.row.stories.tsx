@@ -28,7 +28,7 @@ function noticeItem(): WorklistItem {
     id: "n1",
     source: "notice",
     category: "system",
-    level: 6,
+    level: 5,
     consequence: "none",
     title: "Acme Renewal",
     detail: "Qualified → Won",

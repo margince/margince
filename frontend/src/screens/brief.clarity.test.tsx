@@ -16,7 +16,7 @@ it("keeps the summary visible and puts informational updates after the prioritie
     ...taskRow("notice-one", "Northstar"),
     source: "notice" as const,
     category: "system" as const,
-    level: 6,
+    level: 5,
     urgent: false,
     detail: "Obsolete delivery text",
     notice_origin: {
