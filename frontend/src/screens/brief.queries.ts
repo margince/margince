@@ -74,46 +74,6 @@ export function useMorningDigest(): UseQueryResult<MorningDigest | null> {
   });
 }
 
-/** One page of deals, and whether the list ended there. */
-export type BriefDeals = Readonly<{ rows: Deal[]; more: boolean }>;
-
-/** How many deals Brief reads in one go. */
-const BRIEF_DEALS_PAGE = 100;
-
-/**
- * The deals page Brief reads twice over: the quiet ones it lists, and the count
- * of open ones its readings strip reports.
- *
- * One query rather than two because there is no server-side "stalled" filter to
- * ask for — the flag arrives on the row and the filtering is ours.
- *
- * ONE page, and the page's own `has_more` travels with it. Following the cursor
- * would cost an unbounded fan-out on the one screen that opens every morning,
- * so the honest answer is the other one: every reading taken from these rows is
- * a FLOOR past the page, and says so where it is drawn. A count that quietly
- * stopped rising is the failure this repo cares about most — the same words, a
- * smaller number, and nothing failing.
- */
-export function useBriefDeals(): UseQueryResult<BriefDeals> {
-  return useQuery({
-    queryKey: ["deals"],
-    queryFn: async (): Promise<BriefDeals> => {
-      const { data, error } = await api.GET("/deals", {
-        params: { query: { limit: BRIEF_DEALS_PAGE } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return { rows: data.data, more: data.page?.has_more ?? false };
-    },
-  });
-}
-
-/** The open deals that have gone quiet, in the order the wire sent them. */
-export function quietDeals(deals: readonly Deal[]): Deal[] {
-  return deals.filter((deal) => deal.stalled && deal.status === "open");
-}
-
 /**
  * Ask for today's brief now. The overnight pass owns generation and a rep has
  * one run per local day, so this is a catch-up rather than a re-rank: it

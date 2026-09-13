@@ -1448,7 +1448,7 @@
  * Change/Remove keep their hit targets whatever the name does. */
 .assignrow-verbs {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--gapActions);
   flex: 0 0 auto;
   margin-inline-start: auto;
 }

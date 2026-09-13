@@ -1,6 +1,6 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -395,11 +395,22 @@ export function dealFactsText(
   }
   if (deal.expected_close_date) {
     parts.push(
-      t("worklist.deal.closes", {
-        date: formatDate(deal.expected_close_date, locale, zone),
-      }),
+      t(
+        deal.close_date_provisional
+          ? "worklist.deal.provisional"
+          : "worklist.deal.closes",
+        {
+          date: formatDate(
+            middayInstant(deal.expected_close_date, zone),
+            locale,
+            zone,
+          ),
+        },
+      ),
     );
   }
+  if (deal.forecast_category === "omitted")
+    parts.push(t("worklist.deal.omitted"));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 

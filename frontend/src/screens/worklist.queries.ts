@@ -65,8 +65,10 @@ export function useWorklist(
   scope: WorklistScope,
   filter: WorklistFilter,
   owner?: string,
+  enabled = true,
 ) {
   return useInfiniteQuery({
+    enabled,
     queryKey: [...worklistKey, scope, filter, owner ?? ""],
     refetchOnWindowFocus: true,
     initialPageParam: undefined as string | undefined,
@@ -502,11 +504,6 @@ export function useClearDisposition() {
 /**
  * The reader's own override: this row leads their day, whatever the ranking
  * chose.
- *
- * ONE HOOK FOR BOTH DIRECTIONS, because they are one decision made twice. The
- * pin and the unpin are separate operations on the wire — a PUT and a DELETE —
- * and a component holding two hooks would have to decide which is pending, and
- * would get it wrong the first time somebody pressed during a write.
  *
  * The row identity is the pair, not the id: the lanes mint ids independently,
  * so an id alone can name a row in a lane the reader was not looking at. The

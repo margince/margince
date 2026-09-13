@@ -77,9 +77,9 @@ describe("the headline states the bar it measured against", () => {
   // A verdict that does not name its bar is an opinion. Both clauses come off
   // the stored counts, so the sentence cannot disagree with the figures below.
   it("picks the healthiest reading and the weakest", () => {
-    const { best, worst } = headlineReadings(review());
+    const { best, worst } = headlineReadings(review({ commitments_kept: 4 }));
 
-    expect(best?.key).toBe("teamweekly.reading.firstResponse");
+    expect(best?.key).toBe("teamweekly.reading.commitments");
     expect(worst?.key).toBe("teamweekly.reading.nextStep");
   });
 
@@ -530,4 +530,24 @@ describe("the team's landing", () => {
     // And the "no forecast" line is gone, so the two states are really distinct.
     expect(screen.queryByText(en["brief.weekly.outlook.none"])).toBeNull();
   });
+});
+
+it("does not present zero coverage as a measured week", async () => {
+  stubApi({
+    "GET /weekly-reviews/team": () =>
+      jsonResponse(review({ reps_counted: 0 }, { reps_unread: 3, reps: [] })),
+  });
+  render(<TeamWeeklySection teamId="t1" />);
+  expect(
+    await screen.findByText(en["teamweekly.headline.unmeasured"]),
+  ).toBeTruthy();
+  expect(screen.queryByText(en["teamweekly.card.firstResponse"])).toBeNull();
+});
+
+it("refuses a whole-team performance verdict on partial coverage", () => {
+  const readings = headlineReadings(
+    review({ commitments_kept: 4 }, { reps_unread: 1 }),
+  );
+  expect(readings.best).toBeNull();
+  expect(readings.worst).toBeNull();
 });

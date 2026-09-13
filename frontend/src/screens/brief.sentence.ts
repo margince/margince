@@ -109,6 +109,12 @@ export function briefSentence(
     return null;
   }
   const waiting = waitingRows(day);
+  const partial = Boolean(
+    day.next_cursor ||
+      day.readings?.more_available ||
+      day.sources_unavailable?.length,
+  );
+  if (waiting.length === 0 && partial) return null;
   if (waiting.length === 0) {
     return { key: "brief.sentence.clear", values: {} };
   }
@@ -135,7 +141,7 @@ export function briefSentence(
   // by. A second rule for where the lead goes would let the sentence open a
   // record the row under it does not.
   const leadHref = rowHref(lead);
-  if (waiting.length === NAMED) {
+  if (waiting.length === NAMED || partial) {
     return {
       key: consequence ? "brief.sentence.oneWithCost" : "brief.sentence.one",
       values,

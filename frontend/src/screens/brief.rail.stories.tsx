@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
-  deals,
   digest,
   meetingRow,
   NOT_FOUND,
@@ -73,7 +72,22 @@ function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
-const quiet = deals.filter((deal) => deal.stalled);
+const risk: WorklistItem = {
+  id: "risk",
+  source: "deal_at_risk",
+  category: "deals_at_risk",
+  level: 3,
+  title: "Warehouse renewal",
+  consequence: "deal_drifts",
+  because: [{ kind: "quiet_days", value: { kind: "days", days: 40 } }],
+  actions: ["open"],
+  subject: { type: "deal", id: "risk" },
+  deal: { amount_minor: 8900000, currency: "EUR", quiet_days: 40 },
+};
+const riskDay = readingsDay({}, [
+  ...Array.from({ length: 5 }, (_, i) => taskRow(`task-${i}`, "Follow up")),
+  risk,
+]);
 
 const meta: Meta = {
   title: "Shell/Brief rail",
@@ -87,26 +101,28 @@ type Story = StoryObj;
 // the pipeline board uses. Staleness is stated in WORDS — the badge — and the
 // card carries no edge stripe saying the same thing a second time.
 export const Watch: Story = {
-  render: panel(<WatchPanel deals={quiet} more={false} state="ready" />),
+  render: panel(<WatchPanel day={riskDay} state="ready" />),
 };
 
 // The deals read stopped at one page, so what is here is SOME of the quiet
 // deals and not all of them. The panel keeps its box to say that: past the end
 // of the page, "nothing has gone quiet" is a claim this read cannot make.
 export const WatchPartial: Story = {
-  render: panel(<WatchPanel deals={quiet} more state="ready" />),
+  render: panel(
+    <WatchPanel day={{ ...riskDay, next_cursor: "next" }} state="ready" />,
+  ),
 };
 
 // Nothing has gone quiet, and the read ended the list: no panel. The line moves
 // to the quiet panel below.
 export const WatchCollapsed: Story = {
-  render: panel(<WatchPanel deals={[]} more={false} state="ready" />),
+  render: panel(<WatchPanel day={readingsDay({}, [])} state="ready" />),
 };
 
 // The deals read failed, which is a fact about the request rather than about
 // the pipeline — so the box stands and the failure is said out loud.
 export const WatchRefused: Story = {
-  render: panel(<WatchPanel deals={[]} more={false} state="failed" />),
+  render: panel(<WatchPanel day={undefined} state="failed" />),
 };
 
 // ── The quiet panel ─────────────────────────────────────────────────────────
@@ -116,16 +132,10 @@ export const WatchRefused: Story = {
 // reader cannot tell a silent source from one the page forgot to draw — so one
 // panel carries one line per source, at meta size, in the rail's own order.
 export const Quiet: Story = {
-  render: panel(
-    <RailQuiet
-      day={readingsDay({}, [])}
-      dayState="ready"
-      deals={[]}
-      more={false}
-      dealsState="ready"
-    />,
-    { ...RAIL_ROUTES, "GET /digest": () => jsonResponse(NOT_FOUND, 404) },
-  ),
+  render: panel(<RailQuiet day={readingsDay({}, [])} dayState="ready" />, {
+    ...RAIL_ROUTES,
+    "GET /digest": () => jsonResponse(NOT_FOUND, 404),
+  }),
 };
 
 // One source silent and the rest reporting: the panel names only what it can
@@ -139,9 +149,6 @@ export const QuietOneSource: Story = {
         taskRow("t1", "Call Alice"),
       ])}
       dayState="ready"
-      deals={[]}
-      more={false}
-      dealsState="ready"
     />,
   ),
 };
@@ -152,13 +159,11 @@ export const QuietCollapsed: Story = {
   render: panel(
     <RailQuiet
       day={readingsDay({}, [
+        risk,
         meetingRow("m1", true),
         taskRow("t1", "Call Alice"),
       ])}
       dayState="ready"
-      deals={quiet}
-      more={false}
-      dealsState="ready"
     />,
   ),
 };
@@ -168,14 +173,8 @@ export const QuietCollapsed: Story = {
 export const RailOnAQuietMorning: Story = {
   render: panel(
     <>
-      <WatchPanel deals={quiet} more={false} state="ready" />
-      <RailQuiet
-        day={readingsDay({}, [])}
-        dayState="ready"
-        deals={quiet}
-        more={false}
-        dealsState="ready"
-      />
+      <WatchPanel day={riskDay} state="ready" />
+      <RailQuiet day={readingsDay({}, [])} dayState="ready" />
     </>,
     { ...RAIL_ROUTES, "GET /digest": () => jsonResponse(NOT_FOUND, 404) },
   ),

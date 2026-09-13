@@ -14,6 +14,27 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
+  "brief.feed.moreAvailable": "Tiếp tục trong danh sách công việc",
+  "brief.feed.countsPartial":
+    "Ít nhất {items} việc đang chờ · {urgent} việc khẩn cấp",
+  "brief.readings.openPriorities": "Xem tất cả ưu tiên",
+  "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
+  "teamweekly.headline.partial":
+    "Dữ liệu chưa đầy đủ. Các số liệu này chỉ mô tả những thành viên được tính bên dưới.",
+  "teamweekly.headline.unmeasured":
+    "Chưa có bản ghi tuần của thành viên. Chưa đo lường hiệu suất.",
+  "worklist.lead.noTarget": "chưa đặt mục tiêu phản hồi",
+  "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
+  "worklist.deal.omitted": "không nằm trong dự báo",
+  "worklist.deal.provisional": "ngày chốt dự kiến {date} — xác nhận hoặc sửa",
+  "brief.readings.openRisk": "Xem công việc về cơ hội",
+  "brief.readings.riskBasis":
+    "Giá trị đã biết trong danh sách này; có thể chưa đầy đủ",
+  "brief.readings.risk": "Giá trị cơ hội cần chú ý",
+  "brief.panel.remainingRisk": "Các cơ hội khác cần chú ý",
+  "brief.glance.introTeamWeekly": "Xem lại tuần được ghi nhận của nhóm.",
+  "brief.feed.teamTitle": "Ưu tiên của nhóm",
   "theme.toDark": "Giao diện tối",
   "theme.toLight": "Giao diện sáng",
   // Ba lựa chọn giao diện — menu tài khoản hiện cả ba cùng lúc, nên mỗi nhãn nói
@@ -2532,7 +2553,7 @@ export const vi = {
   "deal.briefEditTitle": "Tóm lược thương vụ",
   "deal.briefEmpty": "Chưa có tóm lược nào",
   "deal.briefEmptyDetail":
-    "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để người tiếp nhận không phải dựng lại từ đầu.",
+    "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để đồng nghiệp tiếp nhận không phải dựng lại từ đầu.",
   "deal.briefSave": "Lưu tóm lược",
   "deal.briefTooLong": "Một bản tóm lược dài nhiều nhất {max} ký tự.",
   "deal.motion": "Loại giao dịch",
@@ -2564,10 +2585,10 @@ export const vi = {
   "assignments.add": "Giao trách nhiệm",
   "assignments.change": "Đổi",
   "assignments.remove": "Gỡ",
-  "assignments.changeOne": "Đổi người chịu trách nhiệm: {who}",
+  "assignments.changeOne": "Thay đổi trách nhiệm: {who}",
   "assignments.removeOne": "Kết thúc trách nhiệm này: {who}",
   "assignments.addTitle": "Ghi nhận ai chịu trách nhiệm",
-  "assignments.changeTitle": "Đổi người chịu trách nhiệm",
+  "assignments.changeTitle": "Thay đổi trách nhiệm",
   "assignments.subjectKind": "Một đồng nghiệp hoặc một nhóm",
   "assignments.kindUser": "Đồng nghiệp",
   "assignments.kindTeam": "Nhóm",
@@ -2751,7 +2772,7 @@ export const vi = {
   "brief.weekly.scorecard.dealBlock": "Cơ hội",
   "brief.weekly.scorecard.advanced": "Khách tiềm năng tiến lên",
   "brief.weekly.scorecard.advancedBasis": "Số bậc tiến lên, đếm theo từng bước",
-  "brief.weekly.scorecard.answeredInTarget": "Trả lời đúng hạn",
+  "brief.weekly.scorecard.answeredInTarget": "Phản hồi đã ghi nhận",
   "brief.weekly.scorecard.breachedDetail": "{count} quá hạn",
   "brief.weekly.scorecard.meetingsHeld": "Cuộc họp đã diễn ra",
   "brief.weekly.scorecard.meetingsBasis":
@@ -2842,11 +2863,11 @@ export const vi = {
     "{reading} ở mức tốt là {pct}%, so với ngưỡng {bar}%.",
   "teamweekly.headline.weak":
     "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
-  "teamweekly.reading.firstResponse": "Phản hồi đầu tiên",
   "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
   "teamweekly.reading.commitments": "Cam kết kế hoạch đã giữ",
-  "teamweekly.card.firstResponse": "Trả lời đúng hạn",
-  "teamweekly.card.firstResponseBasis": "{breached} quá hạn",
+  "teamweekly.card.firstResponse": "Phản hồi đã ghi nhận",
+  "teamweekly.card.firstResponseBasis":
+    "Chưa ghi nhận vi phạm; {breached} khách tiềm năng đã quá hạn",
   "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
   "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
   "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
@@ -2974,7 +2995,7 @@ export const vi = {
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "brief.weekly.sincePrior": "{delta} so với tuần trước",
   "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần trước",
-  "brief.weekly.leadsAnswered": "Lead được trả lời đúng hạn",
+  "brief.weekly.leadsAnswered": "Phản hồi khách tiềm năng đã ghi nhận",
   "brief.weekly.ofRouted": "{answered} trên {routed}",
   "brief.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
   "brief.weekly.meetingsHeld": "Cuộc họp có bước tiếp theo",
@@ -3027,9 +3048,8 @@ export const vi = {
   "brief.rail.quietSchedule": "Không có lịch nào",
   "brief.rail.quietTasks": "Không có việc đến hạn",
   "brief.rail.quietOvernight": "Không có bản tổng hợp qua đêm",
-  "brief.rail.quietWatch": "Không có gì im ắng",
+  "brief.rail.quietWatch": "Không tìm thấy rủi ro cơ hội trong danh sách này.",
   "brief.panel.schedule": "Lịch hôm nay",
-  "brief.panel.watch": "Đã im ắng",
   "brief.overnight.connectorsUnhealthy": "Các kết nối cần được xử lý",
   "brief.overnight.fixConnector": "Kiểm tra kết nối",
   "brief.readings.label": "Buổi sáng của bạn qua năm chỉ số",
@@ -3039,21 +3059,12 @@ export const vi = {
   "brief.readings.openUrgent": "Xem việc gấp",
   "brief.readings.openMeetings": "Xem lịch họp hôm nay",
   "brief.readings.openLeads": "Xem lead cần trả lời",
-  "brief.readings.openPipeline": "Xem pipeline",
   "brief.readings.openDecisions": "Xem quyết định",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
   "brief.readings.decisions": "Quyết định đang chờ",
   "brief.readings.decisionsBasis": "đang chờ bạn trả lời",
   "brief.readings.decisionsBlocking_one": "1 đang chặn việc với khách",
   "brief.readings.decisionsBlocking_other": "{count} đang chặn việc với khách",
-  "brief.readings.pipeline": "Toàn cảnh pipeline · {quarter}",
-  "brief.readings.pipelinePlain": "Toàn cảnh pipeline",
-  "brief.readings.pipelineTipWorkspace": "{period} · toàn bộ tổ chức",
-  "brief.readings.pipelineBasis":
-    "{weighted} theo trọng số · {priced} đã định giá",
-  "brief.readings.pipelineUnread": "không đọc được pipeline",
-  "brief.readings.pipelineReading": "đang đọc pipeline",
-  "brief.readings.pipelinePending": "Đang đọc…",
   "brief.readings.pipelineNoRead": "Không đọc được",
   "brief.snooze.done": "Đã tạm gác đến {at}",
   "brief.snooze.undo": "Hoàn tác",
@@ -8908,7 +8919,7 @@ export const vi = {
   "projectHealth.noteOptionalHint":
     "Không bắt buộc khi dự án đang đúng tiến độ.",
   "projectHealth.noteRequiredHint":
-    "Hãy nói rõ vấn đề, để người xem tiếp theo không phải đoán.",
+    "Hãy nói rõ vấn đề, để đồng nghiệp xem tiếp theo không phải đoán.",
   "projectHealth.correctionNote":
     "Một chỉnh sửa sửa lại điều đã nói, không bao giờ sửa thời điểm đã nói. Đánh giá giữ nguyên ngày gốc.",
   "projectHealth.saveReading": "Ghi nhận",
@@ -9074,7 +9085,8 @@ export const vi = {
   "worklist.band.build_pipeline": "Xây dựng pipeline",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Rà soát",
-  "worklist.bandClear.now": "Hôm nay không có gì cần bạn.",
+  "worklist.bandClear.now":
+    "Không có việc khẩn cấp. Xem các việc còn lại bên dưới.",
   "worklist.bandClear.build_pipeline":
     "Không có việc xây dựng pipeline nào đang chờ.",
   "worklist.bandClear.keep_momentum":
@@ -9271,9 +9283,10 @@ export const vi = {
   "worklist.because.expected_revenue.value": "trị giá {value}",
   "worklist.because.material": "trên mức deal mở thông thường",
   "worklist.because.material.value": "trị giá {value}, trên mức thông thường",
-  "worklist.because.below_material": "dưới mức deal mở thông thường",
+  "worklist.because.below_material":
+    "không cao hơn giá trị điển hình của cơ hội có rủi ro",
   "worklist.because.below_material.value":
-    "trị giá {value}, dưới mức thông thường",
+    "{value} — không cao hơn giá trị điển hình của cơ hội có rủi ro",
   "worklist.because.quiet_days": "đã im lặng",
   "worklist.because.quiet_days.value_one": "im lặng {value} ngày",
   "worklist.because.quiet_days.value_other": "im lặng {value} ngày",

@@ -44,7 +44,7 @@ import "./brief.feed.css";
 // because a customer waiting an hour does not outrank a deal closing today.
 
 /** At most this many rows. A morning a contact can finish, not a list. */
-const FEED = 5;
+export const BRIEF_FEED_LIMIT = 5;
 
 /**
  * The morning's work, in the order the server ranked it.
@@ -71,9 +71,9 @@ export function BriefFeed({
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const all = waitingRows(day);
-  const drawn = all.slice(0, FEED);
+  const drawn = all.slice(0, BRIEF_FEED_LIMIT);
   const rest = all.length - drawn.length;
-  const restKinds = overflowByKind(all.slice(FEED));
+  const restKinds = overflowByKind(all.slice(BRIEF_FEED_LIMIT));
   // WHETHER THE LABELS SAY ANYTHING. A run-length label over a single section
   // names the whole panel a second time — "Today", then "Respond now" over
   // every row in it — and a heading that is true of everything under it tells a
@@ -91,7 +91,9 @@ export function BriefFeed({
     // part of the page's contract rather than decoration.
     <section id="brief-today">
       <Panel
-        title={t("brief.feed.title")}
+        title={t(
+          day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
+        )}
         // WHAT IS ON SCREEN, out of what the day holds — the panel's own count
         // line rather than a motto. `urgent` is the SUMMARY's figure, the same
         // one the readings strip above draws, so the panel and the strip cannot
@@ -99,10 +101,15 @@ export function BriefFeed({
         sub={
           urgent === undefined
             ? undefined
-            : t("brief.feed.counts", {
-                items: formatNumber(all.length, locale),
-                urgent: formatNumber(urgent, locale),
-              })
+            : t(
+                day?.next_cursor
+                  ? "brief.feed.countsPartial"
+                  : "brief.feed.counts",
+                {
+                  items: formatNumber(all.length, locale),
+                  urgent: formatNumber(urgent, locale),
+                },
+              )
         }
         titleAction={
           changed ? (
@@ -118,18 +125,20 @@ export function BriefFeed({
         footer={
           // The way to the rest. A page showing five of nineteen rows that did
           // not say where the other fourteen are has hidden them.
-          day && rest > 0 ? (
+          day && (rest > 0 || day.next_cursor) ? (
             // The SAME cut this footer counted. `rest` comes off waitingRows,
             // which drops the approvals the Decisions deck above already draws,
             // so a bare `#/worklist` sent a rep told "11 more" to a list of 14.
             <>
               <a
                 className="entity-link"
-                href={worklistLaneHref("except_decisions")}
+                href={worklistLaneHref("except_decisions", day.scope)}
               >
-                {plural("brief.feed.rest", rest, {
-                  count: formatNumber(rest, locale),
-                })}
+                {day.next_cursor
+                  ? t("brief.feed.moreAvailable")
+                  : plural("brief.feed.rest", rest, {
+                      count: formatNumber(rest, locale),
+                    })}
               </a>
               {restKinds.length > 1 && (
                 // ONLY where the kinds differ. Over a remainder that is all one
@@ -162,7 +171,7 @@ export function BriefFeed({
           // A READ THAT LANDED ON NOTHING is `empty`; a read that has not
           // landed is not. Saying "nothing is waiting" over a read that failed
           // would send a rep away believing their morning was clear.
-          state={state === "ready" && drawn.length === 0 ? "empty" : state}
+          state={feedState(day, state, drawn.length)}
           emptyLabel={t("brief.feed.clear")}
           loadingLabel={t("brief.feed.loading")}
         >
@@ -173,7 +182,7 @@ export function BriefFeed({
             // claim for a reader hearing it.
             <ol className="brief-feed-list">
               {drawn.map((item, index) => (
-                <li key={item.id}>
+                <li key={`${item.source}-${item.id}`}>
                   {sections.size > 1 && (
                     <SectionLabel item={item} above={drawn[index - 1]} />
                   )}
@@ -185,10 +194,7 @@ export function BriefFeed({
                     // already, and everything a row cannot say on its line is
                     // one press away on it.
                     density="compact"
-                    // The reader's OWN day. A row is handed to somebody else
-                    // only from a page that is already about somebody else,
-                    // and this page is about the reader reading it.
-                    owner=""
+                    owner={day.scope === "team" ? (item.owner?.id ?? "") : ""}
                     onOpenEmail={setOpenEmail}
                   />
                 </li>
@@ -214,6 +220,16 @@ export function BriefFeed({
       />
     </section>
   );
+}
+
+function feedState(
+  day: Worklist | undefined,
+  state: SectionState,
+  count: number,
+): SectionState {
+  if (state !== "ready") return state;
+  if (day?.next_cursor || day?.readings?.more_available) return "partial";
+  return count === 0 ? "empty" : "ready";
 }
 
 /**

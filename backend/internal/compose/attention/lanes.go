@@ -163,9 +163,10 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
-	ID      ids.UUID
-	Subject string
-	DueAt   *time.Time
+	LeadResponseEscalation bool
+	ID                     ids.UUID
+	Subject                string
+	DueAt                  *time.Time
 	// The record this task was raised for, when it names one. A follow-up task
 	// says "Follow up with the new lead" and nothing else, so without the link
 	// the row is a sentence the reader cannot act on: the lane knows which lead
@@ -405,11 +406,13 @@ type DealFacts interface {
 // DealFigures is what a card needs to state a deal's commercial case: what it
 // is worth, when it was meant to land, and who answers for it.
 type DealFigures struct {
-	StageID           ids.UUID
-	OwnerID           ids.UUID
-	AmountMinor       *int64
-	Currency          string
-	ExpectedCloseDate *time.Time
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	StageID              ids.UUID
+	OwnerID              ids.UUID
+	AmountMinor          *int64
+	Currency             string
+	ExpectedCloseDate    *time.Time
 	// CloseOverdue is the SAME calendar-date, workspace-zone verdict
 	// deals.CloseIsOverdue gives the at-risk lane's identical deal. Meaningless
 	// where ExpectedCloseDate is nil — a deal with no close date is not late by

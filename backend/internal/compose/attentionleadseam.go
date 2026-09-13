@@ -114,6 +114,13 @@ func (l attentionLeadResponses) Owed(
 			ID:      ids.UUID(row.Id),
 			Name:    leadDisplayName(row),
 			OwnerID: ownerOfLead(row),
+			Facts: &crmcontracts.WorklistLeadFacts{
+				CompanyName:           row.CompanyName,
+				Status:                leadStatus(row.Status),
+				Source:                row.SourceLabel,
+				LastActivityAt:        row.LastActivityAt,
+				ResponseTargetTracked: &tracked,
+			},
 		}
 		// A deadline and its state exist only where a policy states one: with
 		// the target off leadSLAFields returns nil for every lead. Left zero
@@ -217,4 +224,9 @@ func (l attentionLeadResponses) narrowToTeam(
 		}
 	}
 	return kept, nil
+}
+
+func leadStatus(status crmcontracts.LeadStatus) *string {
+	value := string(status)
+	return &value
 }

@@ -15,14 +15,9 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 // "Nothing needs you today" is an answer. Inferring headings from rows cannot
 // give it, because the absence leaves no row to hang it on.
 //
-// THE QUEUE'S OWN ORDER IS NEVER CHANGED HERE, and that is the whole shape of
-// this file. The server sends the rows sorted with each band contiguous, and
-// says so in the contract; the ranks the page prints are positions in that
-// order. Grouping the rows BY band instead — walking `bands` and collecting
-// each one's rows — reorders them whenever the two disagree, which a paginated
-// walk makes possible, and the page then prints rank 2 above rank 1. So the
-// sections are runs of CONSECUTIVE rows, and `bands` is read only for which
-// headings exist and which of them are empty.
+// Preserve the server's order. Prospecting and existing work may interleave
+// as deadlines and value change, so a heading labels each consecutive run.
+// Declared bands supply empty headings; they never regroup the rows.
 
 type Band = NonNullable<WorklistItem["band"]>;
 

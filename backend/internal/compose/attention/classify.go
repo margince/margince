@@ -444,7 +444,15 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
 // nobody dated is real work and is not today's.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelAgreed, "tasks", "task_slips")
+	level := levelAgreed
+	// A due customer obligation needs attention even if its deal is small.
+	// Prospecting follow-ups retain their dates without claiming an external
+	// response deadline; that clock belongs to the lead-response lane.
+	if item.DueAt != nil && (overdueAt(item.DueAt, asOf) || (item.DueGroup != nil && *item.DueGroup == crmcontracts.AttentionItemDueGroupToday)) &&
+		(item.Subject == nil || item.Subject.Type != subjectLead) {
+		level = levelPromise
+	}
+	row := base(item, level, "tasks", "task_slips")
 	stampDeadline(&row, item.DueAt, asOf)
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))

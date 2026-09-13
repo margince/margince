@@ -307,6 +307,10 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	if task.LeadResponseEscalation {
+		kind := "lead_response_escalation"
+		item.Kind = &kind
+	}
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due

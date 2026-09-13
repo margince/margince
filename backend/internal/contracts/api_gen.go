@@ -13219,6 +13219,7 @@ func (e TeamExceptionKind) Valid() bool {
 // Defines values for TeamWeeklyRepFocusKind.
 const (
 	TeamWeeklyRepFocusKindCommitmentsMissed       TeamWeeklyRepFocusKind = "commitments_missed"
+	TeamWeeklyRepFocusKindDealsAtRisk             TeamWeeklyRepFocusKind = "deals_at_risk"
 	TeamWeeklyRepFocusKindHelpRequested           TeamWeeklyRepFocusKind = "help_requested"
 	TeamWeeklyRepFocusKindLeadsBreached           TeamWeeklyRepFocusKind = "leads_breached"
 	TeamWeeklyRepFocusKindMeetingsWithoutNextStep TeamWeeklyRepFocusKind = "meetings_without_next_step"
@@ -13230,6 +13231,8 @@ const (
 func (e TeamWeeklyRepFocusKind) Valid() bool {
 	switch e {
 	case TeamWeeklyRepFocusKindCommitmentsMissed:
+		return true
+	case TeamWeeklyRepFocusKindDealsAtRisk:
 		return true
 	case TeamWeeklyRepFocusKindHelpRequested:
 		return true
@@ -19978,8 +19981,14 @@ type AttentionCounts struct {
 // client already holds the pipelines vocabulary and writes the label in the
 // reader's own language; a label composed server-side would not be.
 type AttentionDealFacts struct {
-	AmountMinor *int64  `json:"amount_minor,omitempty"`
-	Currency    *string `json:"currency,omitempty"`
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
+	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
+	Currency             *string `json:"currency,omitempty"`
+
+	// ForecastCategory The recorded forecast category, including omitted.
+	ForecastCategory *string `json:"forecast_category,omitempty"`
 
 	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
 	// the champion seat. There is no other value: `false` is NEVER sent, and absent
@@ -38189,9 +38198,9 @@ type WeeklyReviewCounts struct {
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
 
-	// LeadsAnsweredInTarget Of those, the ones answered before the first-response target ran out. Read from the
-	// stamps the SLA writer maintained at the time, never recomputed from today's policy —
-	// a week is judged by the target that applied to it.
+	// LeadsAnsweredInTarget Of those, leads with a first response recorded before the week closed and no breach
+	// recorded by then. This is a recorded-response count, not a measured SLA success rate:
+	// no breach stamp can also mean the installation had no response target configured.
 	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
 
 	// LeadsBreached And the ones whose target ran out.
@@ -38488,7 +38497,7 @@ type WeeklyScorecardLeadBlock struct {
 	// only where it ended and could report at most one of them.
 	Advanced int `json:"advanced"`
 
-	// AnsweredInTarget Leads that arrived this week and were answered without breaching the SLA.
+	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured.
 	AnsweredInTarget int `json:"answered_in_target"`
 	Breached         int `json:"breached"`
 	Disqualified     int `json:"disqualified"`
@@ -38558,7 +38567,7 @@ type Worklist struct {
 	// Every band appears, including one with no rows: "nothing needs you today" is
 	// something to tell a reader, and a client inferring the headings from the rows it
 	// received could not say it. The queue arrives sorted so each band's rows are
-	// contiguous — a client draws a heading where the band changes.
+	// labelled in ranked order — a client draws a heading where the band changes.
 	Bands *[]WorklistBand `json:"bands,omitempty"`
 
 	// Counts The same accounting per KIND of work rather than per producer — what a filter
@@ -38868,12 +38877,18 @@ type WorklistCountCategory string
 // and a reader must not multiply them together expecting the product to equal a
 // risk-adjusted figure the API does not compute.
 type WorklistDealFacts struct {
-	AmountMinor       *int64              `json:"amount_minor,omitempty"`
-	Currency          *string             `json:"currency,omitempty"`
-	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
+	CloseDateProvisional *bool               `json:"close_date_provisional,omitempty"`
+	Currency             *string             `json:"currency,omitempty"`
+	ExpectedCloseDate    *openapi_types.Date `json:"expected_close_date,omitempty"`
 
 	// ExpectedMinorBase The deal amount converted to the base currency, NOT weighted by win_probability. Null when the amount or the conversion rate is unknown.
 	ExpectedMinorBase *int64 `json:"expected_minor_base,omitempty"`
+
+	// ForecastCategory The recorded forecast category, including omitted.
+	ForecastCategory *string `json:"forecast_category,omitempty"`
 
 	// NoChampion `true` when the account has a buying committee and nobody engaged on it holds
 	// the champion seat — a deal drifting because nobody INSIDE is arguing for it,
@@ -39003,7 +39018,8 @@ type WorklistItem struct {
 	// scanning for "what must happen now" should not have to know which levels mean that.
 	//
 	// Derived from the level and the row's own subject, so it cannot disagree with the order:
-	// the queue arrives already sorted, and every row of one band is contiguous. A client
+	// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
+	// interleave prospecting and deal follow-up. A client
 	// draws a heading when the band changes and never re-sorts.
 	Band *WorklistItemBand `json:"band,omitempty"`
 
@@ -39145,6 +39161,9 @@ type WorklistItem struct {
 
 	// Kind The producer's own sub-type — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
+
+	// Lead The lead's contact context, without inventing an inbound request or response deadline.
+	Lead *WorklistLeadFacts `json:"lead,omitempty"`
 
 	// Level The hard priority band, and the whole of the product rule: 0 pinned by the
 	// reader, 1 a customer waiting or a deadline arriving, 2 a promise due or an
@@ -39289,7 +39308,8 @@ type WorklistItemActions string
 // scanning for "what must happen now" should not have to know which levels mean that.
 //
 // Derived from the level and the row's own subject, so it cannot disagree with the order:
-// the queue arrives already sorted, and every row of one band is contiguous. A client
+// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
+// interleave prospecting and deal follow-up. A client
 // draws a heading when the band changes and never re-sorts.
 type WorklistItemBand string
 
@@ -39353,6 +39373,17 @@ type WorklistItemPrimaryAction string
 // routine decisions that read alike, so a hundred of them cost the reader one
 // row rather than a hundred. Its own facts ride in `batch`.
 type WorklistItemSource string
+
+// WorklistLeadFacts The lead's contact context, without inventing an inbound request or response deadline.
+type WorklistLeadFacts struct {
+	CompanyName           *string    `json:"company_name,omitempty"`
+	LastActivityAt        *time.Time `json:"last_activity_at,omitempty"`
+	ResponseTargetTracked *bool      `json:"response_target_tracked,omitempty"`
+
+	// Source The administered source label, absent for an unlabelled import or connector key.
+	Source *string `json:"source,omitempty"`
+	Status *string `json:"status,omitempty"`
+}
 
 // WorklistMove The next step this row suggests, and what it would act on.
 //

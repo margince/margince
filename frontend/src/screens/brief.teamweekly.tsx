@@ -76,12 +76,10 @@ function readingOf(key: MessageKey, value: number | null): Reading | null {
 export function headlineReadings(
   review: TeamWeeklyReview,
 ): Readonly<{ best: Reading | null; worst: Reading | null }> {
+  if (review.counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
+    return { best: null, worst: null };
   const counts = review.counts;
   const readings = [
-    readingOf(
-      "teamweekly.reading.firstResponse",
-      rate(counts.leads_answered_in_target, counts.leads_routed),
-    ),
     readingOf(
       "teamweekly.reading.nextStep",
       rate(counts.meetings_with_next_step, counts.meetings_held),
@@ -166,17 +164,23 @@ export function TeamWeeklySection({
             <>
               <PanelBody className="teamweekly-reading">
                 <Headline review={review} />
-                <AgendaSummary review={review} />
+                {review.counts.reps_counted > 0 && (
+                  <AgendaSummary review={review} />
+                )}
                 <Coverage review={review} />
               </PanelBody>
               {/* The strip pays the pane's inset like everything else in it.
                   As a direct child of the panel it ran edge to edge, so the
                   readings sat a pixel off the pane's own border while the
                   sentence above them was inset by the body's gutter. */}
-              <PanelBody>
-                <Scorecard review={review} />
-              </PanelBody>
-              <Movement review={review} />
+              {review.counts.reps_counted > 0 && (
+                <>
+                  <PanelBody>
+                    <Scorecard review={review} />
+                  </PanelBody>
+                  <Movement review={review} />
+                </>
+              )}
             </>
           )}
         </SurfaceState>
@@ -185,8 +189,12 @@ export function TeamWeeklySection({
           the outcome first and the conversation it implies second. The SAME
           panel the rep's retrospective draws — a second one would be two
           answers to "what does a landing look like". */}
-      {review && <TeamOutlook review={review} />}
-      {review && <AgendaPanel review={review} />}
+      {review && review.counts.reps_counted > 0 && (
+        <TeamOutlook review={review} />
+      )}
+      {review && review.counts.reps_counted > 0 && (
+        <AgendaPanel review={review} />
+      )}
     </section>
   );
 }
@@ -218,6 +226,17 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const { locale } = useLocale();
   const { best, worst } = headlineReadings(review);
 
+  if (review.counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0) {
+    return (
+      <h3 className="teamweekly-headline">
+        {t(
+          review.counts.reps_counted === 0
+            ? "teamweekly.headline.unmeasured"
+            : "teamweekly.headline.partial",
+        )}
+      </h3>
+    );
+  }
   if (!best && !worst) {
     return (
       <h3 className="teamweekly-headline">{t("teamweekly.headline.plain")}</h3>

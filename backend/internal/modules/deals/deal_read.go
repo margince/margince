@@ -108,7 +108,9 @@ type ListDealsInput struct {
 	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
 	// because they answer different questions: Stalled is the product-wide
 	// status, this is "notice it earlier". Set both and both apply.
-	QuietForDays    *int
+	QuietForDays *int
+	// CloseBefore filters calendar dates before the bound, before pagination.
+	CloseBefore     *time.Time
 	IncludeArchived bool
 	// Sort is the contract's sort spec, validated against the core
 	// vocabulary below plus the workspace's active cf_ columns.
@@ -319,6 +321,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		// and an uncategorised deal belongs to none of them rather than
 		// quietly joining whichever one is asked for.
 		where = append(where, storekit.SQLf("forecast_category = $%d", arg(*in.ForecastCategory)))
+	}
+	if in.CloseBefore != nil {
+		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
 	if in.Stalled != nil {

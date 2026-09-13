@@ -106,16 +106,18 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 	risky := make([]attention.RiskyDeal, 0, len(candidates))
 	for _, deal := range candidates {
 		risky = append(risky, attention.RiskyDeal{
-			DealID:            deal.DealID,
-			Name:              deal.Name,
-			StageID:           deal.StageID,
-			OwnerID:           deal.OwnerID,
-			AmountMinor:       deal.AmountMinor,
-			Currency:          deal.Currency,
-			QuietDays:         idleDaysOf(deal, now),
-			CloseOverdue:      deal.CloseOverdue,
-			ExpectedCloseDate: deal.ExpectedCloseDate,
-			NoChampion:        noChampionOf(cover, deal.DealID),
+			DealID:               deal.DealID,
+			Name:                 deal.Name,
+			StageID:              deal.StageID,
+			OwnerID:              deal.OwnerID,
+			AmountMinor:          deal.AmountMinor,
+			Currency:             deal.Currency,
+			QuietDays:            idleDaysOf(deal, now),
+			CloseOverdue:         deal.CloseOverdue,
+			ExpectedCloseDate:    deal.ExpectedCloseDate,
+			CloseDateProvisional: deal.CloseDateProvisional,
+			ForecastCategory:     deal.ForecastCategory,
+			NoChampion:           noChampionOf(cover, deal.DealID),
 		})
 	}
 	return risky, cut, nil
@@ -344,12 +346,14 @@ func (f attentionDealFacts) Figures(
 	out := make(map[ids.UUID]attention.DealFigures, len(found))
 	for id, figures := range found {
 		out[id] = attention.DealFigures{
-			StageID:           figures.StageID,
-			OwnerID:           figures.OwnerID,
-			AmountMinor:       figures.AmountMinor,
-			Currency:          figures.Currency,
-			ExpectedCloseDate: figures.ExpectedCloseDate,
-			CloseOverdue:      figures.CloseOverdue,
+			StageID:              figures.StageID,
+			OwnerID:              figures.OwnerID,
+			AmountMinor:          figures.AmountMinor,
+			Currency:             figures.Currency,
+			ExpectedCloseDate:    figures.ExpectedCloseDate,
+			CloseDateProvisional: figures.CloseDateProvisional,
+			ForecastCategory:     figures.ForecastCategory,
+			CloseOverdue:         figures.CloseOverdue,
 		}
 	}
 	return out, nil
@@ -365,11 +369,12 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 	due := *row.DueAt
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
-		ID:       ids.UUID(row.Id),
-		Subject:  subjectOfActivity(row),
-		DueAt:    &due,
-		LinkType: linkType,
-		LinkID:   linkID,
+		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
+		ID:                     ids.UUID(row.Id),
+		Subject:                subjectOfActivity(row),
+		DueAt:                  &due,
+		LinkType:               linkType,
+		LinkID:                 linkID,
 	}
 	// Who holds it, already on the row the store returned and dropped here.
 	// Two of this lane's three scopes put somebody else's task in front of the

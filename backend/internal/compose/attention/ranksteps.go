@@ -59,17 +59,8 @@ var rankSteps = []rankStep{
 	},
 	{
 		name: "band",
-		// The heading sorts ABOVE crowding, which is what makes each band one
-		// contiguous run — and contiguity is the whole of what a heading is.
-		// With crowding first, the ninth waiting customer sorted below the
-		// hygiene rows while still banding as `now`, so the page drew `now`
-		// twice with somebody else's work in between.
-		//
-		// Crowding still applies, WITHIN the band: past the lead group a wait
-		// sits at the foot of its own heading rather than at the foot of the
-		// page. That keeps the anti-monopoly rule the crowding exists for — a
-		// hundred replies cannot own the band — without letting it move a row
-		// out from under the heading that describes it.
+		// Urgent work leads and review follows. The two agreed-work labels share
+		// precedence, so their deadlines and deal facts decide the order.
 		decides: func(a, b ranked) (bool, bool) {
 			ai, bi := bandRank(bandOfRow(a)), bandRank(bandOfRow(b))
 			return ai != bi, ai < bi

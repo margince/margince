@@ -5,6 +5,27 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "brief.glance.introTeam": "Das steht heute im Team an.",
+  "brief.feed.moreAvailable": "Weiter zur Aufgabenliste",
+  "brief.feed.countsPartial": "Mindestens {items} offen · {urgent} dringend",
+  "brief.readings.openPriorities": "Alle Prioritäten ansehen",
+  "teamweekly.focus.deals_at_risk": "Deals wieder voranbringen",
+  "teamweekly.headline.partial":
+    "Unvollständige Abdeckung. Diese Zahlen betreffen die unten erfassten Mitarbeitenden.",
+  "teamweekly.headline.unmeasured":
+    "Für diese Woche liegen keine Mitarbeiter-Snapshots vor. Die Leistung ist nicht erfasst.",
+  "worklist.lead.noTarget": "kein Antwortziel festgelegt",
+  "worklist.lead.lastTouch": "letzte Aktivität {date}",
+  "worklist.deal.omitted": "nicht in der Prognose",
+  "worklist.deal.provisional":
+    "vorläufiger Abschluss {date} — bestätigen oder ändern",
+  "brief.readings.openRisk": "Dealaufgaben prüfen",
+  "brief.readings.riskBasis":
+    "Bekannter Wert in dieser Liste; möglicherweise unvollständig",
+  "brief.readings.risk": "Dealwert mit Handlungsbedarf",
+  "brief.panel.remainingRisk": "Weitere Deals mit Handlungsbedarf",
+  "brief.glance.introTeamWeekly": "Die erfasste Woche deines Teams.",
+  "brief.feed.teamTitle": "Prioritäten im Team",
   "theme.toDark": "Dunkles Design",
   "theme.toLight": "Helles Design",
   // Die drei Auswahlmöglichkeiten fürs Erscheinungsbild: das Kontomenü zeigt
@@ -2781,7 +2802,7 @@ export const de = {
   "brief.weekly.scorecard.advanced": "Leads weitergekommen",
   "brief.weekly.scorecard.advancedBasis":
     "Stufen nach oben, je Schritt gezählt",
-  "brief.weekly.scorecard.answeredInTarget": "Fristgerecht beantwortet",
+  "brief.weekly.scorecard.answeredInTarget": "Erfasste Antworten",
   "brief.weekly.scorecard.breachedDetail": "{count} über der Frist",
   "brief.weekly.scorecard.meetingsHeld": "Termine gehalten",
   "brief.weekly.scorecard.meetingsBasis":
@@ -2871,11 +2892,11 @@ export const de = {
     "{reading} ist gesund bei {pct}%, gemessen an einer Schwelle von {bar}%.",
   "teamweekly.headline.weak":
     "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
-  "teamweekly.reading.firstResponse": "Erstreaktion",
   "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
   "teamweekly.reading.commitments": "Planzusagen eingehalten",
-  "teamweekly.card.firstResponse": "Rechtzeitig beantwortet",
-  "teamweekly.card.firstResponseBasis": "{breached} überschritten",
+  "teamweekly.card.firstResponse": "Erfasste Antworten",
+  "teamweekly.card.firstResponseBasis":
+    "Ohne erfasste Überschreitung; {breached} Leads überfällig",
   "teamweekly.card.meetings": "Termine mit nächstem Schritt",
   "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
   "teamweekly.card.commitments": "Planzusagen eingehalten",
@@ -3008,7 +3029,7 @@ export const de = {
   "brief.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
   "brief.weekly.sincePrior": "{delta} ggü. Vorwoche",
   "brief.weekly.wonVsPrior": "{value} · {delta} zur Vorwoche",
-  "brief.weekly.leadsAnswered": "Leads rechtzeitig beantwortet",
+  "brief.weekly.leadsAnswered": "Erfasste Lead-Antworten",
   "brief.weekly.ofRouted": "{answered} von {routed}",
   "brief.weekly.planCommitmentsKept": "Planzusagen eingehalten",
   "brief.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
@@ -3061,9 +3082,8 @@ export const de = {
   "brief.rail.quietSchedule": "Nichts gebucht",
   "brief.rail.quietTasks": "Keine Aufgaben fällig",
   "brief.rail.quietOvernight": "Kein Nachtbericht",
-  "brief.rail.quietWatch": "Nichts verstummt",
+  "brief.rail.quietWatch": "Keine Dealrisiken in dieser Liste gefunden.",
   "brief.panel.schedule": "Heutiger Kalender",
-  "brief.panel.watch": "Still geworden",
   "brief.overnight.connectorsUnhealthy": "Verbindungen brauchen Aufmerksamkeit",
   "brief.overnight.fixConnector": "Verbindung prüfen",
   "brief.readings.label": "Dein Morgen in fünf Kennzahlen",
@@ -3073,20 +3093,12 @@ export const de = {
   "brief.readings.openUrgent": "Dringendes prüfen",
   "brief.readings.openMeetings": "Heutige Termine ansehen",
   "brief.readings.openLeads": "Offene Leads prüfen",
-  "brief.readings.openPipeline": "Pipeline ansehen",
   "brief.readings.openDecisions": "Entscheidungen prüfen",
   "brief.readings.urgentBasis": "jemand wartet oder eine Zusage bricht",
   "brief.readings.decisions": "Offene Entscheidungen",
   "brief.readings.decisionsBasis": "wartet auf deine Antwort",
   "brief.readings.decisionsBlocking_one": "1 hält Kundenarbeit auf",
   "brief.readings.decisionsBlocking_other": "{count} halten Kundenarbeit auf",
-  "brief.readings.pipeline": "Pipeline · {quarter}",
-  "brief.readings.pipelinePlain": "Pipeline",
-  "brief.readings.pipelineTipWorkspace": "{period} · gesamte Firma",
-  "brief.readings.pipelineBasis": "{weighted} gewichtet · {priced} bewertet",
-  "brief.readings.pipelineUnread": "die Pipeline war nicht lesbar",
-  "brief.readings.pipelineReading": "Pipeline wird gelesen",
-  "brief.readings.pipelinePending": "Wird gelesen…",
   "brief.readings.pipelineNoRead": "Nicht lesbar",
   "brief.snooze.done": "Zurückgestellt bis {at}",
   "brief.snooze.undo": "Rückgängig",
@@ -9194,7 +9206,8 @@ export const de = {
   "worklist.band.build_pipeline": "Pipeline aufbauen",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
-  "worklist.bandClear.now": "Heute braucht Sie nichts.",
+  "worklist.bandClear.now":
+    "Keine dringenden Unterbrechungen. Weitere Aufgaben stehen unten.",
   "worklist.bandClear.build_pipeline": "Keine neue Pipeline-Arbeit offen.",
   "worklist.bandClear.keep_momentum": "Nichts Vereinbartes bleibt liegen.",
   "worklist.bandClear.review": "Nichts zu prüfen.",
@@ -9392,9 +9405,10 @@ export const de = {
   "worklist.because.material": "über dem üblichen offenen Deal",
   "worklist.because.material.value":
     "Wert {value}, über dem üblichen offenen Deal",
-  "worklist.because.below_material": "unter dem üblichen offenen Deal",
+  "worklist.because.below_material":
+    "nicht über dem typischen Wert gefährdeter Deals",
   "worklist.because.below_material.value":
-    "Wert {value}, unter dem üblichen offenen Deal",
+    "{value} — nicht über dem typischen Wert gefährdeter Deals",
   "worklist.because.quiet_days": "still geworden",
   "worklist.because.quiet_days.value_one": "seit {value} Tag still",
   "worklist.because.quiet_days.value_other": "seit {value} Tagen still",

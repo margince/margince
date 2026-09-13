@@ -61,7 +61,11 @@ describe("a band holding nothing says so", () => {
     stub(banded());
     renderWorklist("en");
 
-    expect(await screen.findByText("Nothing needs you today.")).toBeTruthy();
+    expect(
+      await screen.findByText(
+        "No urgent interruptions. Check the remaining work below.",
+      ),
+    ).toBeTruthy();
     // A band that stays in the day. `review` is drawn in its own panel below
     // now, so it declares no empty run here.
     expect(screen.getByText("No new pipeline work waiting.")).toBeTruthy();
@@ -74,7 +78,9 @@ describe("a band holding nothing says so", () => {
     stub(banded());
     renderWorklist("en");
 
-    await screen.findByText("Nothing needs you today.");
+    await screen.findByText(
+      "No urgent interruptions. Check the remaining work below.",
+    );
     expect(headings()).toContain("Now");
     expect(headings()).toContain("Build pipeline");
   });
@@ -85,7 +91,9 @@ describe("a band holding nothing says so", () => {
     stub(banded());
     renderWorklist("en");
 
-    await screen.findByText("Nothing needs you today.");
+    await screen.findByText(
+      "No urgent interruptions. Check the remaining work below.",
+    );
     for (const line of ["No new pipeline work waiting."]) {
       expect(screen.queryByText(line)).toBeTruthy();
     }
@@ -119,7 +127,11 @@ describe("a page with more to load claims no band is empty", () => {
     // Anchored on a line drawn in the same pass, so the absence is asserted
     // against a rendered page rather than against one that has not arrived.
     expect(await screen.findByText("Send the retrofit quote")).toBeTruthy();
-    expect(screen.queryByText("Nothing needs you today.")).toBeNull();
+    expect(
+      screen.queryByText(
+        "No urgent interruptions. Check the remaining work below.",
+      ),
+    ).toBeNull();
     expect(screen.queryByText("Nothing to review.")).toBeNull();
   });
 });
@@ -178,7 +190,9 @@ describe("the headings follow the QUEUE", () => {
     );
     renderWorklist("en");
 
-    await screen.findByText("Nothing needs you today.");
+    await screen.findByText(
+      "No urgent interruptions. Check the remaining work below.",
+    );
     const drawn = headings();
     expect(drawn.indexOf("Now")).toBeLessThan(drawn.indexOf("Review"));
   });
@@ -205,7 +219,11 @@ describe("a server that sends no bands still draws headings", () => {
     expect(headings()).toContain("Review");
     // And no line claiming a band is clear: the server said nothing about the
     // bands it is not sending, so the page must not answer for it.
-    expect(screen.queryByText("Nothing needs you today.")).toBeNull();
+    expect(
+      screen.queryByText(
+        "No urgent interruptions. Check the remaining work below.",
+      ),
+    ).toBeNull();
   });
 });
 

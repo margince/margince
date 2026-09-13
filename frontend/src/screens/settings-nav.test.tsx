@@ -144,10 +144,9 @@ const EVERY_PAGE = [
 // The five reads the old Data model entry unioned, now spread across five pages
 // of their own. Each still has to open its page ALONE: a page wired to one
 // object with four decorative terms passes any fixture that grants all five.
-// `custom_field` names THREE pages: the field editor, the lead vocabulary and
-// the acquisition-source catalog are all gated on that object server-side, so
-// one revoked grant closes all three — which a case naming only the editor
-// would not say. `pipeline` names the stage designer alone.
+// `custom_field` opens the field editor, lead and acquisition vocabularies,
+// outcome-review templates and responsibility roles. Revoking that read closes
+// all five; the template page needs no write because its content is read-only.
 //
 // A record rather than a tuple, so the object and the pages keep their own
 // types: a tuple with a variadic tail widens both halves to their union, and
@@ -158,7 +157,7 @@ const SALES_READS: readonly {
 }[] = [
   {
     object: "custom_field",
-    opens: ["leads", "acquisition", "recordroles", "fields"],
+    opens: ["leads", "acquisition", "reviewtemplates", "recordroles", "fields"],
   },
   { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
@@ -248,6 +247,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "reviewtemplates",
   "recordroles",
   "fields",
   "products",
@@ -272,6 +272,7 @@ const SEEDED_OPS_PAGES = pagesNamed(
   "stageautomation",
   "leads",
   "acquisition",
+  "reviewtemplates",
   "recordroles",
   "fields",
   "products",
