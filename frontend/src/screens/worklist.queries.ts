@@ -172,12 +172,14 @@ export function useTeamExceptions(enabled: boolean) {
   });
 }
 
-export function useTeamBoard(enabled: boolean) {
+export function useTeamBoard(enabled: boolean, team?: string) {
   return useQuery({
     enabled,
-    queryKey: [...worklistKey, "team"],
+    queryKey: [...worklistKey, "team", team ?? ""],
     queryFn: async (): Promise<TeamBoard> => {
-      const { data, error } = await api.GET("/worklist/team", {});
+      const { data, error } = await api.GET("/worklist/team", {
+        params: { query: { team } },
+      });
       if (error) {
         throwProblem(error);
       }

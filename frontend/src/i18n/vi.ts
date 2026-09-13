@@ -14,11 +14,101 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "brief.team.planUnavailable":
+    "Bạn không thể xem kế hoạch hiện tại của {name}.",
+  "brief.team.noCommitments": "{name} chưa có cam kết trong kế hoạch này.",
+  "brief.team.outcomes":
+    "{won} thắng · {lost} thua · {moved} cơ hội chuyển giai đoạn · {leads} khách hàng tiềm năng được giao",
+  "brief.schedule.unavailable": "Không thể kiểm tra lịch của bạn.",
+  "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
+  "brief.readings.riskPartial":
+    "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
+  "brief.feed.remainingUrgent_one": "Chưa tải {count} mục khẩn cấp.",
+  "brief.feed.remainingUrgent_other": "Chưa tải {count} mục khẩn cấp.",
+  "brief.readings.unpricedCount_one":
+    "{count} cơ hội không có giá trị so sánh được nên không được tính.",
+  "brief.readings.unpricedCount_other":
+    "{count} cơ hội không có giá trị so sánh được nên không được tính.",
+  "brief.coverage.source.generic": "Công việc khác",
+  "brief.coverage.source.weekly_commitment": "Cam kết tuần",
+  "brief.coverage.source.batch": "Nhóm công việc",
+  "brief.coverage.source.introduction_request": "Yêu cầu giới thiệu",
+  "brief.coverage.source.automation_run": "Lỗi tự động hóa",
+  "brief.coverage.source.undelivered": "Email chưa gửi",
+  "brief.coverage.source.bounce": "Email không gửi đến được",
+  "brief.coverage.source.ai_work_health": "Kiểm tra tự động hóa",
+  "brief.coverage.source.capture_health": "Kết nối hộp thư",
+  "brief.coverage.source.sync_health": "Kiểm tra đồng bộ CRM",
+  "brief.coverage.source.failed_approval":
+    "Hành động được duyệt nhưng thất bại",
+  "brief.coverage.source.relationship_decay": "Mối quan hệ ít liên lạc",
+  "brief.coverage.source.meeting_outcome": "Theo dõi sau cuộc họp",
+  "brief.coverage.source.meeting": "Cuộc họp sắp tới",
+  "brief.coverage.source.deal_at_risk": "Giao dịch được đánh dấu",
+  "brief.coverage.source.lead_response": "Khách hàng tiềm năng được phân công",
+  "brief.coverage.source.customer_waiting": "Tin nhắn chưa trả lời",
+  "brief.coverage.source.conversation_claim": "Cam kết với khách hàng",
+  "brief.coverage.source.brief_item": "Cập nhật giao dịch",
+  "brief.coverage.source.dedupe_candidate": "Hồ sơ có thể trùng",
+  "brief.team.commitmentRate":
+    "Đã hoàn thành {done} trên {total} cam kết đến hạn.",
+  "brief.team.meetingRate":
+    "{done} trên {total} cuộc họp có bước tiếp theo được ghi nhận.",
+  "brief.digest.messages": "Email đã đồng bộ",
+  "brief.team.week": "Xem tuần bắt đầu",
+  "brief.week.movedLabel": "Thay đổi giai đoạn",
+  "brief.week.lostLabel": "Đã mất",
+  "brief.feed.refreshFailed":
+    "Không thể làm mới bản tin. Vẫn hiển thị công việc đã tải lần trước.",
+  "brief.feed.routine": "Theo dõi quyền riêng tư · {count} mục đến hạn sau",
+  "brief.team.saveResponse": "Lưu phản hồi",
+  "brief.team.response": "Phản hồi của bạn cho yêu cầu hỗ trợ",
+  "brief.team.planFor": "Kế hoạch hiện tại · {name}",
+  "brief.team.plan": "Xem kế hoạch hiện tại",
+  "brief.approval.approve": "Phê duyệt",
+  "brief.approval.email": "Phê duyệt email",
+  "brief.coverage.source.approval": "Đề xuất",
+  "brief.coverage.source.task": "Công việc",
+  "brief.coverage.source.dsr": "Yêu cầu quyền riêng tư",
+  "brief.coverage.source.notice_case": "Thông báo quyền riêng tư",
+  "brief.coverage.source.notice": "Thông báo",
+  "brief.weekly.learnings.caveat":
+    "Các nhận xét mô tả mối liên hệ trong công việc được ghi nhận; không chứng minh nguyên nhân của kết quả.",
+  "brief.plan.open": "Mở kế hoạch tuần",
+  "worklist.source.weekly_commitment": "Cam kết trong tuần",
+  "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
+  "brief.plan.select":
+    "Tìm giao dịch, khách hàng tiềm năng, liên hệ, công ty hoặc dự án",
+  "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
+  "brief.forecast.period":
+    "Kỳ dự báo: {start} – {end}. Được lưu cùng tổng kết tuần này.",
+  "brief.team.none": "Chưa có nhóm. Thêm nhóm trong Cài đặt để xem công việc.",
+  "brief.week.supporting": "Chỉ số, dự báo và nhận xét",
+  "brief.coverage.more":
+    "Có thể còn mục trong {source}. Mở danh sách công việc đầy đủ để xem khu vực này.",
+  "brief.coverage.retry": "Làm mới bản tin",
+  "brief.coverage.summary": "Có thể thiếu công việc",
+  "brief.task.undated": "Chưa có hạn",
+  "brief.readings.summary": "Tổng quan công việc",
+  "brief.readings.unpriced": "Chưa có giá trị",
+  "brief.readings.noDealWork": "Không có giao dịch được đánh dấu",
+  "brief.readings.unavailable": "Chưa rõ",
+  "brief.feed.incomplete":
+    "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
+  "brief.feed.moreUrgentPossible":
+    "Còn công việc khác, có thể gồm các mục khẩn cấp sau trang này.",
+  "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
+  "brief.feed.showMore": "Xem thêm",
+  "brief.feed.retryMore": "Thử tải thêm",
+  "brief.feed.visible_one": "Đã tải {count} mục",
+  "brief.feed.visible_other": "Đã tải {count} mục",
+  "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
+  "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
+  "brief.week.responses":
+    "Đã phản hồi {count} khách hàng tiềm năng trong thời hạn.",
+  "brief.week.lost": "Mất {count} giao dịch.",
+  "brief.row.details": "Chi tiết",
   "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
-  "brief.feed.moreAvailable": "Tiếp tục trong danh sách công việc",
-  "brief.feed.countsPartial":
-    "Ít nhất {items} việc đang chờ · {urgent} việc khẩn cấp",
-  "brief.readings.openPriorities": "Xem tất cả ưu tiên",
   "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
   "teamweekly.headline.partial":
     "Dữ liệu chưa đầy đủ. Các số liệu này chỉ mô tả những thành viên được tính bên dưới.",
@@ -30,9 +120,8 @@ export const vi = {
   "worklist.deal.provisional": "ngày chốt dự kiến {date} — xác nhận hoặc sửa",
   "brief.readings.openRisk": "Xem công việc về cơ hội",
   "brief.readings.riskBasis":
-    "Giá trị đã biết trong danh sách này; có thể chưa đầy đủ",
+    "giá trị giao dịch kỳ vọng; không gồm giao dịch chưa định giá",
   "brief.readings.risk": "Giá trị cơ hội cần chú ý",
-  "brief.panel.remainingRisk": "Các cơ hội khác cần chú ý",
   "brief.glance.introTeamWeekly": "Xem lại tuần được ghi nhận của nhóm.",
   "brief.feed.teamTitle": "Ưu tiên của nhóm",
   "theme.toDark": "Giao diện tối",
@@ -2754,7 +2843,6 @@ export const vi = {
   "offer.viewPdf": "Xem PDF",
   "offer.pdfUnavailable": "Bản triển khai này không tạo được PDF.",
 
-  "decision.viaTool": "qua {verb}",
   "decision.approveEdited": "Duyệt bản đã sửa",
   "decision.reject": "Từ chối",
   "decision.draftSubject": "Tiêu đề",
@@ -2777,16 +2865,16 @@ export const vi = {
   "decision.status.rejected": "Đã từ chối",
   "decision.status.expired": "Đã hết hạn",
 
-  "brief.panel.weekly": "Tuần trước",
+  "brief.panel.weekly": "Tổng kết tuần",
   "brief.weekly.weekOf": "Tuần từ {day}",
-  "brief.weekly.learnings.title": "Tuần này dạy điều gì",
-  "brief.weekly.learnings.worked": "Điều đã hiệu quả",
-  "brief.weekly.learnings.didNotWork": "Điều chưa hiệu quả",
+  "brief.weekly.learnings.title": "Nhận xét cần xem xét",
+  "brief.weekly.learnings.worked": "Kết quả tích cực",
+  "brief.weekly.learnings.didNotWork": "Kết quả chưa thành công",
   "brief.weekly.learnings.pattern": "Một quy luật",
   "brief.weekly.learnings.experiment": "Đáng thử",
   "brief.weekly.learnings.notRun": "Chưa ai đọc tuần này.",
   "brief.weekly.learnings.insufficient":
-    "Tuần này có quá ít điều xảy ra để rút ra bài học.",
+    "Chưa đủ dữ kiện được ghi nhận để đưa ra nhận xét hữu ích.",
   "brief.weekly.scorecard.title": "Tuần vừa qua thế nào",
   "brief.weekly.scorecard.leadBlock": "Khách tiềm năng và cuộc họp",
   "brief.weekly.scorecard.dealBlock": "Cơ hội",
@@ -2819,7 +2907,7 @@ export const vi = {
     "Tuần của chúng nằm sau một lần xóa, nên các số trên là mức tối thiểu",
   // Tuần tới. Bản tổng kết đã đóng băng nói điều đã xảy ra; đây là phần duy nhất
   // của trang đó mà vẫn còn ai đó thay đổi được.
-  "plan.title": "Lập kế hoạch tuần của bạn",
+  "plan.title": "Cam kết tuần này",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
   "brief.view.label": "Bản tóm tắt nào",
   "brief.view.morning": "Buổi sáng",
@@ -2831,10 +2919,7 @@ export const vi = {
   // không do mô hình viết.
   "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
   "brief.sentence.one": "Trước tiên: {lead}",
-  "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
-  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest}.",
-  "brief.sentence.manyWithCost":
-    "Trước tiên: {lead} — {consequence} Rồi {rest}.",
+  "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
@@ -2845,24 +2930,13 @@ export const vi = {
   "brief.week.carryTasks": "{count} công việc còn dang dở.",
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet":
-    "Một tuần yên ắng — không chốt được gì và không có gì chuyển động.",
+    "Chưa ghi nhận công việc hoàn thành hoặc thay đổi giao dịch.",
 
   "brief.feed.title": "Hôm nay",
-  "brief.feed.counts": "{items} đang chờ · {urgent} gấp",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang đọc buổi sáng của bạn",
-  "brief.feed.clear": "Hiện không có gì đang chờ bạn.",
-  "brief.feed.rest_one": "1 mục khác trong danh sách công việc",
-  "brief.feed.rest_other": "{count} mục khác trong danh sách công việc",
-  "brief.feed.section.respond_now": "Trả lời ngay",
-  "brief.feed.section.prepare_conversations": "Chuẩn bị cho các cuộc trao đổi",
-  "brief.feed.section.move_revenue": "Thúc đẩy doanh thu",
-  "brief.feed.section.build_pipeline": "Xây dựng pipeline",
-  "brief.feed.section.review_and_repair": "Xem xét và khắc phục",
-
-  // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
-  // không tuần nào dịch chuyển dưới phép so sánh.
+  "brief.feed.clear": "Không có công việc cần xử lý trong chế độ xem này.",
   "teamweekly.title": "Tuần của nhóm",
   "teamweekly.weekOf": "{team} · tuần từ {day}",
   "teamweekly.frozen": "Đã đóng băng",
@@ -2871,23 +2945,16 @@ export const vi = {
   "teamweekly.forbidden":
     "Tuần của nhóm là câu hỏi cấp nhóm, còn quyền của bạn chỉ tới các bản ghi của chính bạn.",
   "teamweekly.noSnapshot":
-    "Chưa có tuần nào khép lại cho nhóm này. Ảnh chụp đầu tiên được ghi vào thứ Hai sau tuần đầy đủ đầu tiên.",
+    "Chưa có tổng kết được lưu cho nhóm và tuần này. Chọn tuần khác hoặc xem công việc hiện tại của nhóm.",
   "teamweekly.pickTeam": "Chọn một nhóm",
-  "teamweekly.chooseTeam": "Chọn một nhóm để đọc tuần của nhóm đó.",
+  "teamweekly.chooseTeam": "Chọn nhóm để xem công việc.",
   "teamweekly.repsUnread":
-    "Không đọc được {count} thành viên. Mọi con số ở đây bao phủ {counted}.",
+    "Thiếu bản tổng kết của {count} thành viên. Các số liệu này bao gồm {counted} thành viên.",
   "teamweekly.ofTotal": "{part} trên {whole}",
-  "teamweekly.headline.plain":
-    "Tuần trôi qua mà không có chỉ số nào nổi bật theo hướng nào.",
-  "teamweekly.headline.healthy":
-    "{reading} ở mức tốt là {pct}%, so với ngưỡng {bar}%.",
-  "teamweekly.headline.weak":
-    "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
-  "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
-  "teamweekly.reading.commitments": "Cam kết kế hoạch đã giữ",
+  "teamweekly.headline.plain": "Chưa ghi nhận cuộc họp hoặc cam kết đến hạn.",
   "teamweekly.card.firstResponse": "Phản hồi đã ghi nhận",
   "teamweekly.card.firstResponseBasis":
-    "Chưa ghi nhận vi phạm; {breached} khách tiềm năng đã quá hạn",
+    "{breached} lần vượt thời hạn phản hồi được ghi nhận",
   "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
   "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
   "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
@@ -2946,7 +3013,7 @@ export const vi = {
   "plan.contract.title": "Tuần này đối mặt với điều gì",
   "plan.contract.risks": "Điều gì có thể cản trở",
   "plan.contract.risksHint": "Điều bạn dự đoán sẽ trục trặc, theo lời của bạn",
-  "plan.contract.capacityNote": "Khoảng trống bạn có",
+  "plan.contract.capacityNote": "Năng lực còn lại",
   "plan.contract.capacityNoteHint":
     "Điều lịch không biết — nghỉ phép, đi công tác, một đợt ra mắt",
   "plan.contract.unwritten": "Chưa viết",
@@ -2964,7 +3031,7 @@ export const vi = {
   "plan.help.send": "Gửi",
   "plan.help.cancel": "Huỷ",
   "plan.help.asked": "Bạn đã hỏi: {text}",
-  "plan.help.waiting": "Đang chờ quản lý của bạn.",
+  "plan.help.waiting": "Đã yêu cầu hỗ trợ · đang chờ phản hồi",
   "plan.new.label": "Bạn sẽ làm gì?",
   "plan.new.due": "Trước khi nào",
   "plan.new.save": "Thêm",
@@ -2974,8 +3041,7 @@ export const vi = {
   "brief.weekly.outlook.week": "Tuần này",
   "brief.weekly.outlook.month": "Tháng này",
   "brief.weekly.outlook.quarter": "Quý này",
-  "brief.weekly.outlook.none":
-    "Khi bản tổng kết này được ghi, chưa có dự báo nào được gắn vào, nên tuần này không lưu kết quả hướng tới. Điều đó khác với một tuần kết thúc ở con số không.",
+  "brief.weekly.outlook.none": "Chưa có bản dự báo được lưu cho tuần này.",
   "brief.weekly.outlook.won": "Đã thắng",
   "brief.weekly.outlook.commit": "Cam kết còn lại",
   "brief.weekly.outlook.bestCase": "Trường hợp tốt nhất (gồm cam kết)",
@@ -3009,8 +3075,6 @@ export const vi = {
   "brief.weekly.dealsMoved": "Đã chuyển",
   "brief.weekly.decided": "Bạn đã quyết",
   "brief.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
-  "brief.weekly.noNarrative":
-    "Không có tóm tắt tuần này — Margince chưa chạy lượt nào. Các số liệu bên dưới vẫn là của tuần đó.",
   "brief.weekly.queueWorked": "Danh sách buổi sáng",
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "brief.weekly.sincePrior": "{delta} so với tuần trước",
@@ -3038,12 +3102,12 @@ export const vi = {
   "brief.factorWarmth": "Độ thân thiết",
 
   "brief.digestFor": "tổng hợp ngày {date}",
-  "brief.digestSynced": "Email đã đồng bộ",
+  "brief.digestSynced": "Chi tiết đồng bộ",
   "brief.digestContacts": "Liên hệ đã tạo",
   "brief.digestCompanies": "Công ty đã tạo",
   "brief.digestDedupe": "Trùng lặp cần rà",
   "brief.digestClassify":
-    "Phân loại qua đêm: {commitments} cam kết · {meetings} cuộc họp · {noise} nhiễu",
+    "Đã phân loại: {commitments} cam kết, {meetings} cuộc họp, {noise} tin nhắn không cần hành động bán hàng.",
   "brief.digestProjects": "Dự án",
   "brief.digestPhaseChanges": "Chuyển giai đoạn",
   "brief.digestNewCommitments": "Cam kết mới",
@@ -3059,17 +3123,13 @@ export const vi = {
   "brief.glance.eveningAnon": "Chào buổi tối.",
   "brief.glance.night": "Vẫn đang làm việc, {name}.",
   "brief.glance.nightAnon": "Vẫn đang làm việc.",
-  "brief.glance.introWeekly": "Đây là tuần bạn vừa khép lại.",
+  "brief.glance.introWeekly":
+    "Xem lại kết quả và lên kế hoạch cho các bước tiếp theo.",
   "brief.glance.intro": "Đây là ngày của bạn.",
-  "brief.panel.decisions": "Đang chờ bạn",
+  "brief.panel.decisions": "Đề xuất cần phê duyệt",
   "brief.panel.overnight": "Qua đêm",
-  "brief.panel.tasks": "Việc đến hạn",
-  "brief.panel.quiet": "Hôm nay yên ắng",
   "brief.rail.quietSchedule": "Không có lịch nào",
-  "brief.rail.quietTasks": "Không có việc đến hạn",
-  "brief.rail.quietOvernight": "Không có bản tổng hợp qua đêm",
-  "brief.rail.quietWatch": "Không tìm thấy rủi ro cơ hội trong danh sách này.",
-  "brief.panel.schedule": "Lịch hôm nay",
+  "brief.panel.schedule": "Cuộc họp sắp tới",
   "brief.overnight.connectorsUnhealthy": "Các kết nối cần được xử lý",
   "brief.overnight.fixConnector": "Kiểm tra kết nối",
   "brief.readings.label": "Buổi sáng của bạn qua năm chỉ số",
@@ -3081,21 +3141,20 @@ export const vi = {
   "brief.readings.openLeads": "Xem lead cần trả lời",
   "brief.readings.openDecisions": "Xem quyết định",
   "brief.readings.urgentBasis": "có người đang chờ hoặc một cam kết sắp lỡ",
-  "brief.readings.decisions": "Quyết định đang chờ",
-  "brief.readings.decisionsBasis": "đang chờ bạn trả lời",
+  "brief.readings.decisions": "Cần xem xét",
+  "brief.readings.decisionsBasis": "đề xuất và kiểm tra hồ sơ",
   "brief.readings.decisionsBlocking_one": "1 đang chặn việc với khách",
   "brief.readings.decisionsBlocking_other": "{count} đang chặn việc với khách",
-  "brief.readings.pipelineNoRead": "Không đọc được",
   "brief.snooze.done": "Đã tạm gác đến {at}",
   "brief.snooze.undo": "Hoàn tác",
-  "brief.readings.meetings": "Cuộc họp hôm nay",
-  "brief.readings.meetingsBasis": "trong lịch hôm nay",
+  "brief.readings.meetings": "Cuộc họp sắp tới",
+  "brief.readings.meetingsBasis": "còn lại trong lịch hôm nay",
   "brief.readings.needsPrep_one": "1 chưa chuẩn bị",
   "brief.readings.needsPrep_other": "{count} chưa chuẩn bị",
   "brief.readings.prepUnknown": "không kiểm tra được hết",
   "brief.readings.prepared": "đã chuẩn bị đủ",
-  "brief.readings.leads": "Khách mới chờ trả lời",
-  "brief.readings.leadsBasis": "đang chờ câu trả lời đầu tiên",
+  "brief.readings.leads": "Khách hàng tiềm năng cần liên hệ",
+  "brief.readings.leadsBasis": "đã phân công, đang chờ liên hệ lần đầu",
   "brief.readings.leadsDue": "tiếp theo đến hạn {value}",
   "brief.rail": "Ngữ cảnh",
   "brief.pct": "{pct}%",
@@ -4012,8 +4071,6 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
-  "brief.coverage.line": "Đã đọc đến giới hạn · {sources}",
-  "brief.coverage.bounded": "{source}: hiển thị {shown}, có thể còn nữa",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
     "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",
@@ -9177,7 +9234,7 @@ export const vi = {
   "worklist.manager.kind.next_step": "Bước tiếp theo của một deal",
   "worklist.manager.kind.review_backlog": "Việc cần rà soát",
   "worklist.manager.kind.general": "Việc khác",
-  "worklist.board.title": "Nhóm của tôi đang thế nào",
+  "worklist.board.title": "Công việc của nhóm cần xử lý",
   "worklist.exceptions.title": "Việc cần đến bạn",
   "worklist.handled.title": "Đã xử lý giúp bạn",
   "worklist.walk.arrived":
@@ -9222,7 +9279,7 @@ export const vi = {
   "worklist.board.waiting": "Đang chờ trả lời",
   "worklist.board.atRisk": "Deal có rủi ro",
   "worklist.board.overdue": "Quá hạn",
-  "worklist.board.nobody": "Chưa có ai",
+  "worklist.board.nobody": "Công việc chưa phân công",
   "worklist.coaching.title": "Đáng trao đổi sáng nay",
   "worklist.coaching.promises":
     "{name} còn {count} cam kết đã đến hạn — khách hàng đang chờ.",

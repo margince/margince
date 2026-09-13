@@ -73,3 +73,15 @@ func (t teammatesSeam) LiveTeammatesOfCaller(ctx context.Context) ([]attention.T
 	}
 	return out, cut, nil
 }
+
+func (t teammatesSeam) LiveMembersOfTeam(ctx context.Context, team ids.UUID) ([]attention.TeamMember, bool, error) {
+	members, cut, err := t.svc.LiveMembersOfTeam(ctx, team)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.TeamMember, 0, len(members))
+	for _, member := range members {
+		out = append(out, attention.TeamMember{UserID: member.UserID, DisplayName: member.DisplayName})
+	}
+	return out, cut, nil
+}

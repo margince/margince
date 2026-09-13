@@ -2631,6 +2631,6 @@ func (stubs) GetResponseMetrics(w nethttp.ResponseWriter, r *nethttp.Request, pa
 	httperr.NotImplemented(w, r, "GetResponseMetrics")
 }
 
-func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetTeamBoard(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetTeamBoardParams) {
 	httperr.NotImplemented(w, r, "GetTeamBoard")
 }

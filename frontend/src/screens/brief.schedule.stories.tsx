@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { meetingRow, readingsDay } from "./brief.fixtures";
-import { PromisesPanel, SchedulePanel } from "./brief.schedule";
+import { SchedulePanel } from "./brief.schedule";
 import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -96,19 +96,3 @@ export const ScheduleRefused: Story = {
 // What this rep owes today, and nothing else. The panel read "Promises &
 // tasks" over a standing line explaining that a promise made in conversation
 // reaches nothing; the title is the fix and the disclaimer was the workaround.
-export const Tasks: Story = {
-  render: panel(<PromisesPanel day={BOOKED} state="ready" />),
-};
-
-// Nothing due: no panel.
-export const TasksCollapsed: Story = {
-  render: panel(<PromisesPanel day={CLEAR} state="ready" />),
-};
-
-export const TasksLoading: Story = {
-  render: panel(<PromisesPanel day={undefined} state="loading" />),
-};
-
-export const TasksRefused: Story = {
-  render: panel(<PromisesPanel day={undefined} state="failed" />),
-};

@@ -54,6 +54,10 @@ func (s *Service) TeamBoard(ctx context.Context) (crmcontracts.TeamBoard, error)
 	if err != nil {
 		return crmcontracts.TeamBoard{}, err
 	}
+	return s.boardForRoster(ctx, roster, rosterCut)
+}
+
+func (s *Service) boardForRoster(ctx context.Context, roster []TeamMember, rosterCut bool) (crmcontracts.TeamBoard, error) {
 	asOf := s.now()
 	load, err := s.teamLoad(ctx, roster, asOf)
 	if err != nil {

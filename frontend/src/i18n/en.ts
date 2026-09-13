@@ -2,10 +2,100 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "brief.team.planUnavailable":
+    "No current plan is available to you for {name}.",
+  "brief.team.noCommitments": "{name} has no commitments in this plan.",
+  "brief.team.outcomes":
+    "{won} won · {lost} lost · {moved} deals moved · {leads} leads assigned",
+  "brief.schedule.unavailable": "Your calendar could not be checked.",
+  "brief.schedule.more":
+    "Load more agenda items to see the remaining meetings.",
+  "brief.readings.riskPartial":
+    "Known value only; some deal work could not be checked.",
+  "brief.feed.remainingUrgent_one": "{count} urgent item is not loaded yet.",
+  "brief.feed.remainingUrgent_other":
+    "{count} urgent items are not loaded yet.",
+  "brief.readings.unpricedCount_one":
+    "{count} deal has no comparable value and is excluded.",
+  "brief.readings.unpricedCount_other":
+    "{count} deals have no comparable value and are excluded.",
+  "brief.coverage.source.generic": "Other work",
+  "brief.coverage.source.weekly_commitment": "Weekly commitments",
+  "brief.coverage.source.batch": "Grouped work",
+  "brief.coverage.source.introduction_request": "Introduction requests",
+  "brief.coverage.source.automation_run": "Automation failures",
+  "brief.coverage.source.undelivered": "Unsent emails",
+  "brief.coverage.source.bounce": "Undeliverable emails",
+  "brief.coverage.source.ai_work_health": "Automation checks",
+  "brief.coverage.source.capture_health": "Mailbox connections",
+  "brief.coverage.source.sync_health": "CRM sync checks",
+  "brief.coverage.source.failed_approval": "Failed approved actions",
+  "brief.coverage.source.relationship_decay": "Quiet relationships",
+  "brief.coverage.source.meeting_outcome": "Meeting follow-up",
+  "brief.coverage.source.meeting": "Upcoming meetings",
+  "brief.coverage.source.deal_at_risk": "Flagged deals",
+  "brief.coverage.source.lead_response": "Assigned leads",
+  "brief.coverage.source.customer_waiting": "Unanswered messages",
+  "brief.coverage.source.conversation_claim": "Customer commitments",
+  "brief.coverage.source.brief_item": "Deal updates",
+  "brief.coverage.source.dedupe_candidate": "Duplicate candidates",
+  "brief.team.commitmentRate":
+    "{done} of {total} due commitments were completed.",
+  "brief.team.meetingRate":
+    "{done} of {total} meetings had a recorded next step.",
+  "brief.digest.messages": "Emails synced",
+  "brief.team.week": "Review week starting",
+  "brief.week.movedLabel": "Stage changes",
+  "brief.week.lostLabel": "Lost",
+  "brief.feed.refreshFailed":
+    "The brief could not refresh. The last loaded work is still shown.",
+  "brief.feed.routine": "Privacy follow-up · {count} items due later",
+  "brief.team.saveResponse": "Save response",
+  "brief.team.response": "Your response to the help request",
+  "brief.team.planFor": "Current plan · {name}",
+  "brief.team.plan": "Review current plan",
+  "brief.approval.approve": "Approve",
+  "brief.approval.email": "Approve email",
+  "brief.coverage.source.approval": "Proposals",
+  "brief.coverage.source.task": "Tasks",
+  "brief.coverage.source.dsr": "Privacy requests",
+  "brief.coverage.source.notice_case": "Privacy notices",
+  "brief.coverage.source.notice": "Notices",
+  "brief.weekly.learnings.caveat":
+    "These observations describe associations in recorded work; they do not establish what caused the outcome.",
+  "brief.plan.open": "Open weekly plan",
+  "worklist.source.weekly_commitment": "Weekly commitment",
+  "worklist.untitled.weekly_commitment": "Weekly commitment",
+  "brief.plan.select": "Find a deal, lead, contact, company or project",
+  "brief.plan.period": "Current plan · week of {date}",
+  "brief.forecast.period":
+    "Forecast period: {start} – {end}. Saved with this weekly review.",
+  "brief.team.none":
+    "No teams available. Add a team in Settings to review its work.",
+  "brief.week.supporting": "Metrics, forecast and observations",
+  "brief.coverage.more":
+    "More {source} may be available. Open the full worklist to review this area.",
+  "brief.coverage.retry": "Refresh brief",
+  "brief.coverage.summary": "Some work may be missing",
+  "brief.task.undated": "No due date",
+  "brief.readings.summary": "Work summary",
+  "brief.readings.unpriced": "Value unavailable",
+  "brief.readings.noDealWork": "No flagged deals",
+  "brief.readings.unavailable": "Unknown",
+  "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
+  "brief.feed.moreUrgentPossible":
+    "More work is available, including any urgent items beyond this page.",
+  "brief.feed.fullWorklist": "Open full worklist",
+  "brief.feed.showMore": "Show more",
+  "brief.feed.retryMore": "Retry loading more",
+  "brief.feed.visible_one": "{count} item loaded",
+  "brief.feed.visible_other": "{count} items loaded",
+  "brief.week.workRecorded": "Work completed this week.",
+  "brief.week.leads": "{count} leads assigned.",
+  "brief.week.responses": "{count} leads answered within target.",
+  "brief.week.lost": "{count} deals lost.",
+  "brief.row.details": "Details",
   "brief.glance.introTeam": "Here is your team’s day.",
-  "brief.feed.moreAvailable": "Continue on the worklist",
-  "brief.feed.countsPartial": "At least {items} waiting · {urgent} urgent",
-  "brief.readings.openPriorities": "View all priorities",
   "teamweekly.focus.deals_at_risk": "Deal recovery",
   "teamweekly.headline.partial":
     "Partial coverage. These figures describe the reps counted below.",
@@ -16,9 +106,9 @@ export const en = {
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "provisional close {date} — confirm or revise",
   "brief.readings.openRisk": "Review deal work",
-  "brief.readings.riskBasis": "Known value in this queue; may be incomplete",
+  "brief.readings.riskBasis":
+    "expected deal value; unpriced deals are excluded",
   "brief.readings.risk": "Deal value needing attention",
-  "brief.panel.remainingRisk": "More deals needing attention",
   "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
   "brief.feed.teamTitle": "Team priorities",
   "theme.toDark": "Dark theme",
@@ -2862,7 +2952,6 @@ export const en = {
   // reader told four names for one surface has been told none. Copy that has to
   // point at it says what the reader does there ("waiting on you", "wait for
   // your decision") rather than inventing a fifth noun for the place.
-  "decision.viaTool": "via {verb}",
   "decision.approveEdited": "Approve edited",
   "decision.reject": "Reject",
   "decision.draftSubject": "Subject",
@@ -2893,21 +2982,21 @@ export const en = {
   // silence, so the screen says which one this is.
   // The week just gone. No nav entry of its own: Today is the single door to
   // the work that waits on a contact, and this is a view of that same work.
-  "brief.panel.weekly": "Last week",
+  "brief.panel.weekly": "Weekly review",
   "brief.weekly.weekOf": "Week of {day}",
   // What the week TAUGHT, as against what it was. Every learning shows what it
   // rests on, because a claim about cause is one the reader cannot check
   // against anything else on the page.
-  "brief.weekly.learnings.title": "What this week taught",
-  "brief.weekly.learnings.worked": "What worked",
-  "brief.weekly.learnings.didNotWork": "What did not",
+  "brief.weekly.learnings.title": "Observations to review",
+  "brief.weekly.learnings.worked": "Positive outcome",
+  "brief.weekly.learnings.didNotWork": "Unsuccessful outcome",
   "brief.weekly.learnings.pattern": "A pattern",
   "brief.weekly.learnings.experiment": "Worth trying",
   // Two empty states, never one: a week nobody read and a week that held no
   // lesson are different facts, and only one of them is about the week.
   "brief.weekly.learnings.notRun": "Nobody has read this week yet.",
   "brief.weekly.learnings.insufficient":
-    "Not enough happened this week to draw a lesson from.",
+    "Not enough recorded evidence for useful observations.",
   // How WELL the week went, beside what happened in it. Each block is drawn only
   // when the server sent it: a rep who carried no leads did not score zero on
   // the funnel, and an empty row would read as failure at something nobody
@@ -2942,7 +3031,7 @@ export const en = {
     "Their week sits behind an erasure, so the counts above are a floor",
   // The week ahead. The frozen review says what happened; this is the only part
   // of that page anybody can still change.
-  "plan.title": "Plan your week",
+  "plan.title": "This week’s commitments",
   // The Brief's two dials. Which brief, and whose.
   "brief.view.label": "Which brief",
   "brief.view.morning": "Morning",
@@ -2954,12 +3043,7 @@ export const en = {
   // never model-written, so it cannot say what the rows contradict.
   "brief.sentence.clear": "Nothing is waiting on you this morning.",
   "brief.sentence.one": "First: {lead}",
-  "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
-  "brief.sentence.many": "First: {lead} Then {rest}.",
-  "brief.sentence.manyWithCost": "First: {lead} — {consequence} Then {rest}.",
-  // The tail of the sentence, which is a LINK to the day's own order: the
-  // whole clause is the control, because a bare numeral is a two-character
-  // press target and reads as a figure rather than as a way anywhere.
+  "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
 
   // The weekly Brief's opening sentence, composed from the counts the week was
@@ -2970,28 +3054,14 @@ export const en = {
   "brief.week.carryPromises": "{count} promises carried over.",
   "brief.week.carryTasks": "{count} tasks carried over.",
   "brief.week.andCarry": "{result} {carry}",
-  "brief.week.quiet": "A quiet week — nothing closed and nothing moved.",
+  "brief.week.quiet": "No completed work or deal movement recorded.",
 
   "brief.feed.title": "Today",
   // What is on screen out of what the day holds, on the panel's own line.
-  "brief.feed.counts": "{items} waiting · {urgent} urgent",
-  // What has MOVED since the brief was written, as a badge beside the title
-  // and a link to exactly those rows. It replaced a titled notice above the
-  // readings that named three rows the feed draws in full directly below it.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Reading your morning",
-  "brief.feed.clear": "Nothing is waiting on you right now.",
-  "brief.feed.rest_one": "1 more on the worklist",
-  "brief.feed.rest_other": "{count} more on the worklist",
-  "brief.feed.section.respond_now": "Respond now",
-  "brief.feed.section.prepare_conversations": "Prepare conversations",
-  "brief.feed.section.move_revenue": "Move revenue",
-  "brief.feed.section.build_pipeline": "Build pipeline",
-  "brief.feed.section.review_and_repair": "Review and repair",
-
-  // A team's week, frozen when it closed. Two weeks compare because neither
-  // moves under the comparison.
+  "brief.feed.clear": "No work needs attention in this view.",
   "teamweekly.title": "The team's week",
   "teamweekly.weekOf": "{team} · week of {day}",
   "teamweekly.frozen": "Frozen",
@@ -3000,23 +3070,16 @@ export const en = {
   "teamweekly.forbidden":
     "A team's week is a team question, and your access reaches your own rows only.",
   "teamweekly.noSnapshot":
-    "No week has closed for this team yet. The first snapshot is written on the Monday after their first full week.",
+    "No saved review is available for this team and week. Choose another week or review the team’s current work.",
   "teamweekly.pickTeam": "Choose a team",
-  "teamweekly.chooseTeam": "Choose a team to read its week.",
+  "teamweekly.chooseTeam": "Choose a team to review its work.",
   "teamweekly.repsUnread":
-    "{count} member(s) could not be read. Every figure here covers {counted}.",
+    "Snapshots are missing for {count} team members. These figures cover {counted} members.",
   "teamweekly.ofTotal": "{part} of {whole}",
-  "teamweekly.headline.plain":
-    "The week ran without a reading that stands out either way.",
-  "teamweekly.headline.healthy":
-    "{reading} is healthy at {pct}%, against a bar of {bar}%.",
-  "teamweekly.headline.weak":
-    "{reading} is not, at {pct}% against a bar of {bar}%.",
-  "teamweekly.reading.nextStep": "Meetings with a next step",
-  "teamweekly.reading.commitments": "Plan commitments kept",
+  "teamweekly.headline.plain": "No meetings or due commitments were recorded.",
   "teamweekly.card.firstResponse": "Recorded responses",
   "teamweekly.card.firstResponseBasis":
-    "No breach recorded; {breached} leads breached",
+    "{breached} recorded response-target breaches",
   "teamweekly.card.meetings": "Meetings with a next step",
   "teamweekly.card.meetingsBasis": "of the meetings held",
   "teamweekly.card.commitments": "Plan commitments kept",
@@ -3078,7 +3141,7 @@ export const en = {
   "plan.contract.title": "What this week is up against",
   "plan.contract.risks": "What could get in the way",
   "plan.contract.risksHint": "What you expect to go wrong, in your own words",
-  "plan.contract.capacityNote": "Room you have",
+  "plan.contract.capacityNote": "Available capacity",
   "plan.contract.capacityNoteHint":
     "Anything the calendar does not know — leave, travel, a launch",
   "plan.contract.unwritten": "Not written yet",
@@ -3096,7 +3159,7 @@ export const en = {
   "plan.help.send": "Send",
   "plan.help.cancel": "Cancel",
   "plan.help.asked": "You asked: {text}",
-  "plan.help.waiting": "Waiting on your lead.",
+  "plan.help.waiting": "Help requested · awaiting a response",
   "plan.new.label": "What will you do?",
   "plan.new.due": "By when",
   "plan.new.save": "Add",
@@ -3107,7 +3170,7 @@ export const en = {
   "brief.weekly.outlook.month": "This month",
   "brief.weekly.outlook.quarter": "This quarter",
   "brief.weekly.outlook.none":
-    "No forecast was composed when this review was written, so this week records no landing. That is different from a week that landed on nothing.",
+    "No forecast snapshot is available for this week.",
   "brief.weekly.outlook.won": "Won",
   "brief.weekly.outlook.commit": "Commit remaining",
   "brief.weekly.outlook.bestCase": "Best case (incl. commit)",
@@ -3141,8 +3204,6 @@ export const en = {
   "brief.weekly.dealsMoved": "Moved",
   "brief.weekly.decided": "You decided",
   "brief.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
-  "brief.weekly.noNarrative":
-    "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
   "brief.weekly.queueWorked": "Morning queue",
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "brief.weekly.sincePrior": "{delta} vs last week",
@@ -3170,12 +3231,12 @@ export const en = {
   "brief.factorWarmth": "Warmth",
 
   "brief.digestFor": "digest for {date}",
-  "brief.digestSynced": "Emails synced",
+  "brief.digestSynced": "Sync details",
   "brief.digestContacts": "Contacts created",
   "brief.digestCompanies": "Companies created",
   "brief.digestDedupe": "Duplicates to review",
   "brief.digestClassify":
-    "Classified overnight: {commitments} commitments · {meetings} meetings · {noise} noise",
+    "Classified: {commitments} promises, {meetings} meetings, {noise} messages without a sales action.",
   "brief.digestProjects": "Projects",
   "brief.digestPhaseChanges": "Phase moves",
   "brief.digestNewCommitments": "New commitments",
@@ -3191,22 +3252,15 @@ export const en = {
   "brief.glance.eveningAnon": "Good evening.",
   "brief.glance.night": "Still at it, {name}.",
   "brief.glance.nightAnon": "Still at it.",
-  "brief.glance.introWeekly": "This is the week you just closed.",
+  "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.glance.intro": "Here is your day.",
-  "brief.panel.decisions": "Waiting on you",
+  "brief.panel.decisions": "Proposals to approve",
   "brief.panel.overnight": "Overnight",
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
-  "brief.panel.tasks": "Tasks due",
-  // The one panel a silent morning gets: a line per source that had nothing to
-  // report, so a reader can tell a quiet source from one the page forgot.
-  "brief.panel.quiet": "Quiet today",
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.rail.quietTasks": "No tasks due",
-  "brief.rail.quietOvernight": "No overnight digest",
-  "brief.rail.quietWatch": "No deal risks found in this queue.",
-  "brief.panel.schedule": "Today's schedule",
+  "brief.panel.schedule": "Upcoming meetings",
   "brief.overnight.connectorsUnhealthy": "Connections need attention",
   "brief.overnight.fixConnector": "Fix the connection",
   "brief.readings.label": "Your morning, in five readings",
@@ -3225,8 +3279,8 @@ export const en = {
   "brief.readings.openLeads": "Review leads owed a reply",
   "brief.readings.openDecisions": "Review decisions",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
-  "brief.readings.decisions": "Decisions waiting",
-  "brief.readings.decisionsBasis": "waiting on your answer",
+  "brief.readings.decisions": "Reviews needed",
+  "brief.readings.decisionsBasis": "proposals and record checks",
   // Only drawn where a decision on the page carries the server's own
   // `work_blocked` consequence — a held SEND, not a duplicate pair. The basis
   // above it claims nothing about who is waiting, because most decisions are
@@ -3238,17 +3292,16 @@ export const en = {
   // The cell's hover line. The title has room for a quarter and nothing more,
   // so the full range lives here — and where the figure is the whole
   // company's rather than this reader's, whose pipeline it is.
-  "brief.readings.pipelineNoRead": "Could not be read",
   "brief.snooze.done": "Set aside until {at}",
   "brief.snooze.undo": "Undo",
-  "brief.readings.meetings": "Meetings today",
-  "brief.readings.meetingsBasis": "on today's calendar",
+  "brief.readings.meetings": "Upcoming meetings",
+  "brief.readings.meetingsBasis": "remaining on today’s calendar",
   "brief.readings.needsPrep_one": "1 needs prep",
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "not all could be checked",
   "brief.readings.prepared": "all prepared",
-  "brief.readings.leads": "Leads owed a reply",
-  "brief.readings.leadsBasis": "owed a first answer",
+  "brief.readings.leads": "Leads to contact",
+  "brief.readings.leadsBasis": "assigned and awaiting first contact",
   "brief.readings.leadsDue": "next due {value}",
   "brief.rail": "Context",
   "brief.pct": "{pct}%",
@@ -4192,13 +4245,6 @@ export const en = {
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
   // One line under the readings strip, naming what the day could not read.
-  "brief.coverage.line": "Read to a limit · {sources}",
-  // What the page HAS of a bounded source, and that more exists. Never a
-  // shortfall between two figures: `considered` is itself a floor where a
-  // source was bounded, so naming both read "8 shown of at least 8 read" —
-  // a sentence that claims something is held back and then accounts for all
-  // of it.
-  "brief.coverage.bounded": "{source}: {shown} shown, more may exist",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
     "Whether the day's brief also arrives by email. It is on your Brief page either way.",
@@ -9462,7 +9508,7 @@ export const en = {
   "worklist.manager.kind.next_step": "A deal's next step",
   "worklist.manager.kind.review_backlog": "Review work",
   "worklist.manager.kind.general": "Something else",
-  "worklist.board.title": "How my team is doing",
+  "worklist.board.title": "Team work needing attention",
   "worklist.exceptions.title": "What needs me",
   "worklist.handled.title": "Handled for you",
   "worklist.walk.arrived":
@@ -9506,7 +9552,7 @@ export const en = {
   "worklist.board.waiting": "Waiting on a reply",
   "worklist.board.atRisk": "Deals at risk",
   "worklist.board.overdue": "Past due",
-  "worklist.board.nobody": "Nobody yet",
+  "worklist.board.nobody": "Unassigned work",
   "worklist.coaching.title": "Worth a word this morning",
   "worklist.coaching.promises":
     "{name} owes {count} promises that are due — the customer is already expecting them.",

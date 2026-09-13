@@ -73,13 +73,19 @@ export function useTeams(): UseQueryResult<readonly Team[]> {
   return useQuery({
     queryKey: ["teams", "for-weekly"],
     queryFn: async (): Promise<readonly Team[]> => {
-      const { data, error } = await api.GET("/teams", {
-        params: { query: { limit: 100 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data?.data ?? [];
+      const teams: Team[] = [];
+      let cursor: string | undefined;
+      do {
+        const { data, error } = await api.GET("/teams", {
+          params: { query: { limit: 100, cursor } },
+        });
+        if (error) throwProblem(error);
+        teams.push(...data.data);
+        cursor = data.page.has_more
+          ? (data.page.next_cursor ?? undefined)
+          : undefined;
+      } while (cursor);
+      return teams;
     },
   });
 }

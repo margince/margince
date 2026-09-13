@@ -9,10 +9,11 @@
 // whole point of showing counts rather than rows. The board is where a lead
 // decides who to look at; the queue is where they look.
 
-import { DataTable } from "../design-system/atoms";
+import { Button, DataTable } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { TeamPlanReview } from "./brief.teamplan";
 import { CoachingMoves } from "./worklist.coaching";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
@@ -115,12 +116,14 @@ function count(value: number | undefined) {
 export function TeamBoard({
   onOwner,
   onUnassigned,
+  teamId,
 }: Readonly<{
   onOwner: (userId: string) => void;
   onUnassigned: () => void;
+  teamId?: string;
 }>) {
   const t = useT();
-  const board = useTeamBoard(true);
+  const board = useTeamBoard(true, teamId);
   // A board that could not be read says so. It never reads as an empty team:
   // the server refuses rather than answering zeros, and a surface that drew the
   // refusal as "nobody is carrying anything" would be the same lie one lane
@@ -164,24 +167,26 @@ export function TeamBoard({
                     t("worklist.board.nobody"),
                   )}
                   rowKey={(row) => row.id || "unassigned"}
-                  // Every row goes somewhere: a contact's row opens their day, and
-                  // the unassigned row opens the scope that holds unowned work.
-                  //
-                  // DataTable draws every row as pressable once onRowClick is set —
-                  // it has no per-row opt-out — so a row that led nowhere would look
-                  // exactly like one that led somewhere and do nothing when pressed.
-                  onRowClick={(row) => {
-                    if (row.id === "") {
-                      onUnassigned();
-                      return;
-                    }
-                    onOwner(row.id);
-                  }}
                   columns={[
                     {
                       key: "name",
                       header: t("worklist.board.member"),
-                      render: (row) => row.name,
+                      render: (row) => (
+                        <>
+                          <Button
+                            variant="ghost"
+                            small
+                            onClick={() =>
+                              row.id ? onOwner(row.id) : onUnassigned()
+                            }
+                          >
+                            {row.name}
+                          </Button>
+                          {teamId && row.id && (
+                            <TeamPlanReview owner={row.id} name={row.name} />
+                          )}
+                        </>
+                      ),
                     },
                     {
                       key: "waiting",

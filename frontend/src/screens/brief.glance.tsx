@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { hourInZone } from "../format/format";
+import { useRecordZone } from "../app/recordzone";
+import { middayInstant } from "../format/calendarday";
+import { formatDate, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -16,30 +18,6 @@ import type { BriefView } from "./brief.view";
 import { weekSentence } from "./brief.weeksentence";
 import type { Worklist } from "./worklist.queries";
 
-// The first thing a reader sees each morning: who they are, and the day stated
-// in one sentence. The readings strip directly below says the numbers; this
-// block exists to say what to DO about the first of them, which a row of
-// figures cannot.
-//
-// TWO LINES AND NOTHING ELSE. What stood here before — an uppercase eyebrow
-// naming the view, a clock reporting the minute the queue was read, and the
-// date under the greeting — were three lines a reader already knew. The view is
-// the dial's own state, drawn beside this block; the date is the shell's; and
-// an as-of that ticked every sixty seconds re-rendered the page's opening for a
-// digit nobody was reading. Both views are now greeting plus sentence, which is
-// also why neither wears a label: two views drawn alike need no kicker to tell
-// them apart, and one of them wearing one would be the odd page.
-//
-// Presentational and total: every figure arrives as a prop and every prop is
-// nullable, because "we could not read this" and "there is none of it" are
-// different sentences and neither may be printed as a zero.
-//
-// `now` is a prop rather than a call to the clock inside the render. The
-// greeting is the one thing here that changes with the hour, so a test that
-// cannot choose the hour cannot test it, and a real clock would make the same
-// test pass at 09:00 and fail at 21:00.
-
-/** Where the day's own order is drawn, for the sentence's tail to reach. */
 const TODAY_SECTION = "brief-today";
 
 // Four greetings, and the boundaries are the reader's day rather than the
@@ -186,27 +164,30 @@ export function BriefGlance({
 }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
-  // No name yet is not a reason to greet nobody: the hour is known either way,
-  // and the name arrives a moment later without the heading having to move.
-  const greeting = firstName
-    ? t(greetingKey(hour), { name: firstName })
-    : t(anonGreetingKey(hour));
-
-  // EACH VIEW COMPOSES ITS OWN. The morning's comes from the ranked queue,
-  // which is what waits TODAY; over the weekly it would be describing this
-  // morning under a heading about the week that closed. The weekly's comes from
-  // the frozen counts, which is what the week is now a record of.
+  const recordZone = useRecordZone();
   const { locale } = useLocale();
-  const sentence =
-    view === "morning"
-      ? briefSentence(day, t, locale)
-      : scope === "team"
-        ? null
-        : weekSentence(week, t);
-
+  const greeting =
+    view === "weekly"
+      ? t("brief.panel.weekly")
+      : firstName
+        ? t(greetingKey(hour), { name: firstName })
+        : t(anonGreetingKey(hour));
+  const sentence = glanceSentence({ view, scope, day, week }, t, locale);
+  const date = view === "morning" ? now.toISOString() : week?.local_week_start;
   return (
     <header className="glance arrive" data-testid="brief-glance">
       <h1 className="glance-greeting t-display">{greeting}</h1>
+      {date && (
+        <p className="t-caption">
+          <time dateTime={date}>
+            {formatDate(
+              view === "weekly" ? middayInstant(date, recordZone) : date,
+              locale,
+              view === "weekly" ? recordZone : viewerZone(),
+            )}
+          </time>
+        </p>
+      )}
       {sentence ? (
         <GlanceSentence sentence={sentence} />
       ) : (
@@ -219,18 +200,25 @@ export function BriefGlance({
         // ONE FACE either way. It is the same slot the composed sentence fills,
         // and drawn as a caption it read as a footnote where the composed one
         // read as the page's opening.
-        <p className="glance-sentence">
-          {t(
-            view === "weekly"
-              ? scope === "team"
-                ? "brief.glance.introTeamWeekly"
-                : "brief.glance.introWeekly"
-              : scope === "team"
-                ? "brief.glance.introTeam"
-                : "brief.glance.intro",
-          )}
-        </p>
+        <p className="glance-sentence">{t(introKey(view, scope))}</p>
       )}
     </header>
   );
+}
+
+function glanceSentence(
+  facts: Pick<GlanceFacts, "view" | "scope" | "day" | "week">,
+  t: ReturnType<typeof useT>,
+  locale: ReturnType<typeof useLocale>["locale"],
+) {
+  if (facts.view === "morning") return briefSentence(facts.day, t, locale);
+  return facts.scope === "team" ? null : weekSentence(facts.week, t);
+}
+
+function introKey(view: BriefView, scope: "mine" | "team"): MessageKey {
+  if (view === "weekly")
+    return scope === "team"
+      ? "brief.glance.introTeamWeekly"
+      : "brief.glance.introWeekly";
+  return scope === "team" ? "brief.glance.introTeam" : "brief.glance.intro";
 }

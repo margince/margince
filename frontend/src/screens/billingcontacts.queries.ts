@@ -33,8 +33,8 @@ export function financeSummaryKey(companyId: string) {
  * a time, and a company with more billing rows than fit on it would leave
  * every row past the first page unresolvable — the reader would be told the
  * edge could not be read back, and a reload would say the same thing again.
- * Narrowing to the one person makes that page hold their handful of edges.
- * The cursor is still followed, because a person may hold several roles and
+ * Narrowing to the one contact makes that page hold their handful of edges.
+ * The cursor is still followed, because a contact may hold several roles and
  * `works_with` edges name a contact in either column.
  */
 async function billingEdgeVersion(
@@ -111,7 +111,7 @@ export function useBillingContactActions(
         company_id: companyId,
         contact_id: args.contactId,
         role: args.role,
-        // A person sitting at the screen named this contact, which is what
+        // The user named this contact, which is what
         // "manual" records — the same value the generic relationship form
         // sends. It is not a provenance the caller may choose freely: an edge
         // a connector discovered says so instead, and reporting one as the

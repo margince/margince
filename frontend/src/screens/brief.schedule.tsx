@@ -7,30 +7,12 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { isUnprepared, itemTitle, rowHref } from "./worklist.copy";
+import { sourceComplete } from "./brief.facts";
+import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
-// The two rail panels the morning is read alongside: what the day is booked
-// with, and what this rep owes.
-//
-// Both are cuts of the ONE worklist answer the work column is drawn from, not
-// reads of their own. The rail is context for the work beside it, and a rail
-// that fetched separately could show a meeting the queue had already dropped.
-//
-// NEITHER SORTS. The order is the server's, the same order the queue prints,
-// so the rail and the work column cannot disagree about what comes first.
-//
-// A PANEL WITH NOTHING IN IT DOES NOT EARN ITS BOX. Either of these on a clear
-// day used to draw a header band, a hairline and one grey sentence — two boxes
-// of chrome around eleven words, which cost the populated panels beside them
-// the reader's eye. Empty, the panel renders nothing and the rail's own
-// `RailQuiet` prints the one line that says so (screens/brief.rail.tsx). A read
-// still in flight or a read that failed still draws in full: those are facts
-// about the request, and collapsing them would tell a reader their day was
-// clear on the strength of an answer nobody received.
-
+// Calendar context is drawn from the same loaded agenda, with explicit partial states.
 const MEETING = "meeting";
-const TASK = "task";
 
 /**
  * Whether the day's schedule has nothing to draw.
@@ -44,15 +26,12 @@ export function scheduleIsEmpty(
   day: Worklist | undefined,
   state: SectionState,
 ): boolean {
-  return answered(state) && rowsFrom(day, MEETING).length === 0;
-}
-
-/** Whether this rep has no task due today. Same contract as above. */
-export function tasksIsEmpty(
-  day: Worklist | undefined,
-  state: SectionState,
-): boolean {
-  return answered(state) && rowsFrom(day, TASK).length === 0;
+  return (
+    answered(state) &&
+    day !== undefined &&
+    sourceComplete(day, MEETING) &&
+    rowsFrom(day, MEETING).length === 0
+  );
 }
 
 /**
@@ -81,6 +60,9 @@ export function SchedulePanel({
     return null;
   }
   const meetings = rowsFrom(day, MEETING);
+  const calendarFailed = day?.sources_unavailable.some(
+    (entry) => entry.source === MEETING,
+  );
   return (
     <section id="brief-schedule">
       <Panel title={t("brief.panel.schedule")} className="rail-panel">
@@ -95,6 +77,15 @@ export function SchedulePanel({
           // quiet line cannot report one morning in two vocabularies.
           emptyLabel={t("brief.rail.quietSchedule")}
         >
+          {meetings.length === 0 && answered(state) && (
+            <PanelRow>
+              {t(
+                calendarFailed
+                  ? "brief.schedule.unavailable"
+                  : "brief.schedule.more",
+              )}
+            </PanelRow>
+          )}
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
               <span className="t-caption rail-schedule-when">
@@ -114,49 +105,12 @@ export function SchedulePanel({
   );
 }
 
-/**
- * What this rep owes today: the tasks due on them.
- *
- * TASKS ONLY, AND THE TITLE SAYS SO. It read "Promises & tasks" over a
- * disclaimer explaining that a promise made in conversation reaches nothing —
- * a heading that named a thing the product does not have, and a standing line
- * of apology in the narrowest column on the page. The panel now claims exactly
- * what it lists, which is what the disclaimer existed to walk back.
- */
-export function PromisesPanel({
-  day,
-  state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
-  const t = useT();
-  if (tasksIsEmpty(day, state)) {
-    return null;
-  }
-  const tasks = rowsFrom(day, TASK);
-  return (
-    <section id="brief-tasks">
-      <Panel title={t("brief.panel.tasks")} className="rail-panel">
-        <SurfaceState
-          loadingLabel={t("brief.panel.tasks")}
-          state={state}
-          emptyLabel={t("brief.rail.quietTasks")}
-        >
-          {tasks.map((item) => (
-            <PanelRow key={item.id} className="rail-promise-row">
-              <Title item={item} />
-            </PanelRow>
-          ))}
-        </SurfaceState>
-      </Panel>
-    </section>
-  );
-}
-
 /** The row's own words, linked where the row names a record. */
 function Title({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
   const title = itemTitle(item, t, locale);
-  const href = rowHref(item);
+  const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
     <a className="entity-link t-body" href={href}>
       {title}

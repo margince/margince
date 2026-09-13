@@ -6,12 +6,7 @@ import { viewerZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meetingRow, readingsDay } from "./brief.fixtures";
-import {
-  PromisesPanel,
-  SchedulePanel,
-  scheduleIsEmpty,
-  tasksIsEmpty,
-} from "./brief.schedule";
+import { SchedulePanel, scheduleIsEmpty } from "./brief.schedule";
 import type { WorklistItem } from "./worklist.queries";
 
 // The two rail panels, and what each of them refuses to claim.
@@ -130,53 +125,5 @@ describe("the schedule panel", () => {
       screen.getByRole("region", { name: en["brief.panel.schedule"] }),
     ).toBeTruthy();
     expect(screen.getByText(en["state.failed"])).toBeTruthy();
-  });
-});
-
-describe("the tasks panel", () => {
-  it("lists open tasks and leaves the meetings to the panel above", () => {
-    const day = readingsDay({}, [
-      meetingRow("m1", true),
-      taskRow("t1", "Call Alice back"),
-    ]);
-    draw(<PromisesPanel day={day} state="ready" />);
-
-    const panel = screen.getByRole("region");
-    expect(within(panel).getByText("Call Alice back")).toBeTruthy();
-    expect(within(panel).queryByText(/Weber GmbH/)).toBeNull();
-  });
-
-  // IT CLAIMS WHAT IT LISTS, AND NOTHING ELSE. The panel read "Promises &
-  // tasks" over a standing line explaining that a promise made in conversation
-  // reaches nothing — a heading naming a thing the product does not have, and
-  // an apology for it in the narrowest column on the page. The title is the
-  // fix; the disclaimer was the workaround.
-  it("names itself for the tasks it lists", () => {
-    const day = readingsDay({}, [taskRow("t1", "Call Alice back")]);
-    draw(<PromisesPanel day={day} state="ready" />);
-
-    expect(
-      screen.getByRole("heading", { name: en["brief.panel.tasks"] }),
-    ).toBeTruthy();
-    expect(en["brief.panel.tasks"].toLowerCase()).not.toContain("promise");
-    expect(document.body.textContent).not.toContain("not tracked yet");
-  });
-
-  it("draws nothing at all when no task is due", () => {
-    const { container } = draw(
-      <PromisesPanel day={readingsDay({}, [])} state="ready" />,
-    );
-
-    expect(container.innerHTML).toBe("");
-    expect(tasksIsEmpty(readingsDay({}, []), "ready")).toBe(true);
-  });
-
-  it("keeps its box, and claims nothing, before the read lands", () => {
-    draw(<PromisesPanel day={undefined} state="loading" />);
-
-    expect(
-      screen.getByRole("region", { name: en["brief.panel.tasks"] }),
-    ).toBeTruthy();
-    expect(tasksIsEmpty(undefined, "loading")).toBe(false);
   });
 });

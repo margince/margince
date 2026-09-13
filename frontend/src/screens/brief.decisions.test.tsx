@@ -111,7 +111,7 @@ describe("waiting on you", () => {
     render(section(1));
 
     expect(
-      screen.getByRole("button", { name: en["trust.accept"] }),
+      screen.getByRole("button", { name: en["brief.approval.approve"] }),
     ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["brief.deck.later"] }),
@@ -169,7 +169,7 @@ describe("waiting on you", () => {
     const { container } = render(section(2));
 
     const [accept] = screen.getAllByRole("button", {
-      name: en["trust.accept"],
+      name: en["brief.approval.approve"],
     });
     await user.click(accept);
 
@@ -187,7 +187,9 @@ describe("waiting on you", () => {
     const user = userEvent.setup();
     const { container } = render(section(1));
 
-    await user.click(screen.getByRole("button", { name: en["trust.accept"] }));
+    await user.click(
+      screen.getByRole("button", { name: en["brief.approval.approve"] }),
+    );
 
     expect(screen.queryByText(en["brief.deck.empty"])).toBeNull();
     expect(container.querySelector(".panel-body")).toBeNull();

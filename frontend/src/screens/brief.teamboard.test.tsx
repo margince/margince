@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { en } from "../i18n/en";
 import { BriefTeamBoard } from "./brief.teamboard";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
@@ -95,4 +96,108 @@ describe("the team board on Brief", () => {
     expect(boardReads).toHaveLength(1);
     expect(boardReads[0].method).toBe("GET");
   });
+});
+
+it("opens the named teammate plan without also following the table row", async () => {
+  stubApi({
+    "GET /worklist/team": () => jsonResponse(board),
+    "GET /weekly-plans/11111111-1111-4111-8111-111111111111/current": () =>
+      jsonResponse({ title: "Not found" }, 404),
+  });
+  render(<BriefTeamBoard offered teamId="team-1" />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: en["brief.team.plan"] }),
+  );
+  expect(await screen.findByRole("dialog")).toBeTruthy();
+  await userEvent.click(
+    screen.getByRole("heading", {
+      name: en["brief.team.planFor"].replace("{name}", "Lena Fischer"),
+    }),
+  );
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(globalThis.location.hash).toBe("");
+  expect(
+    screen.getByRole("heading", {
+      name: en["brief.team.planFor"].replace("{name}", "Lena Fischer"),
+    }),
+  ).toBeTruthy();
+});
+
+const helpPlan = {
+  id: "plan-1",
+  local_week_start: "2026-06-08",
+  status: "open",
+  commitments: [
+    {
+      id: "commitment-1",
+      label: "Confirm the proposal",
+      due_on: "2026-06-10",
+      state: "open",
+      position: 0,
+      help_requested: "Join the pricing call",
+      manager_response: "I will review the proposal",
+    },
+  ],
+};
+
+it.each([
+  meFixture({ allow: { weekly_plan: ["read"] } }),
+  meFixture({ seat: "read", allow: { weekly_plan: ["read", "update"] } }),
+])(
+  "keeps a teammate's help request readable without offering an unauthorized response",
+  async (me) => {
+    stubApi({
+      "GET /me": () => jsonResponse(me),
+      "GET /worklist/team": () => jsonResponse(board),
+      "GET /weekly-plans/11111111-1111-4111-8111-111111111111/current": () =>
+        jsonResponse(helpPlan),
+    });
+    render(<BriefTeamBoard offered teamId="team-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["brief.team.plan"] }),
+    );
+    expect(await screen.findByText("Join the pricing call")).toBeTruthy();
+    expect(screen.getByText("I will review the proposal")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["brief.team.saveResponse"] }),
+    ).toBeNull();
+  },
+);
+
+it("saves the manager's help response without leaving the teammate plan", async () => {
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { weekly_plan: ["read", "update"] } })),
+    "GET /worklist/team": () => jsonResponse(board),
+    "GET /weekly-plans/11111111-1111-4111-8111-111111111111/current": () =>
+      jsonResponse(helpPlan),
+    "PUT /weekly-plans/commitments/commitment-1/response": () =>
+      new Response(null, { status: 204 }),
+  });
+  render(<BriefTeamBoard offered teamId="team-1" />);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: en["brief.team.plan"] }),
+  );
+  const response = await screen.findByRole("textbox", {
+    name: en["brief.team.response"],
+  });
+  await user.clear(response);
+  await user.type(response, "I will join the call");
+  await user.click(
+    screen.getByRole("button", { name: en["brief.team.saveResponse"] }),
+  );
+  await waitFor(() =>
+    expect(calls.filter((call) => call.method === "PUT")).toEqual([
+      {
+        method: "PUT",
+        path: "/weekly-plans/commitments/commitment-1/response",
+        body: { manager_response: "I will join the call" },
+      },
+    ]),
+  );
+  expect(screen.getByRole("dialog")).toBeTruthy();
+  expect(screen.getByText("due 10/06/2026")).toBeTruthy();
+  expect(globalThis.location.hash).toBe("");
 });

@@ -198,7 +198,12 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 // Both lanes reach only privacy admins — they are absent for everyone else — so
 // neither ever needs explaining to a rep.
 func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelWaiting, "system", "legal_deadline_missed")
+	// Seven days is the agenda preparation window, not a change to the legal deadline.
+	level := levelRoutine
+	if item.DueAt != nil && item.DueAt.Sub(asOf) <= 7*24*time.Hour {
+		level = levelWaiting
+	}
+	row := base(item, level, "system", "legal_deadline_missed")
 	stampDeadline(&row, item.DueAt, asOf)
 	row.Because = []crmcontracts.WorklistReason{reason("legal_deadline", nil)}
 	return ranked{
@@ -218,8 +223,7 @@ func classifyLegalDeadline(item crmcontracts.AttentionItem, asOf time.Time) rank
 // the page lying about what matters now. Such a row moves to the review band —
 // still visible, still answerable, no longer claiming the day.
 //
-// Unless money is still on it. An open deal keeps a long wait in execution,
-// because there the silence is the problem rather than a closed chapter.
+// Old waits on open deals stay in the revenue recovery band.
 const waitingStaleDays = 14
 
 // classifyWaiting: somebody wrote and nobody answered.
@@ -236,13 +240,15 @@ const waitingStaleDays = 14
 // drafting a reply to words this reader may not see, and a button that opened
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
-	subject := waiting.Subject
 	days := daysSince(waiting.Since, asOf)
-	// Stale and unfunded: the row belongs to review, not to today.
+	// Old threads are recovery work; an open deal preserves material-risk priority.
 	level := levelWaiting
-	stale := days > waitingStaleDays && !waiting.HasOpenDeal
+	stale := days > waitingStaleDays
 	if stale {
 		level = levelRoutine
+		if waiting.HasOpenDeal {
+			level = levelMaterialRisk
+		}
 	}
 	// Nobody here has written on this thread, and no money is on it either.
 	//
@@ -319,8 +325,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// The subject travels because the row exists at all only for a reader the
 	// content gate admitted: a message this reader may not read produces no
 	// row, rather than a row with its words removed.
-	if subject != "" {
-		row.Title = &subject
+	if waiting.Subject != "" {
+		row.Title = &waiting.Subject
 	}
 	// Present exactly when this wait is an email the reader may read. A client
 	// branches on the field rather than on the kind word: the lane also carries

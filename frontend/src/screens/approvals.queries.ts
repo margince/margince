@@ -44,7 +44,7 @@ export type BundleOutcome =
 // one collection before the query resolves.
 async function fetchAllApprovals(
   status: ApprovalStatus,
-  target?: { entityType: string; entityId: string },
+  target?: { entityType?: string; entityId?: string; bundleId?: string },
 ): Promise<Approval[]> {
   const all: Approval[] = [];
   let cursor: string | null | undefined;
@@ -55,6 +55,7 @@ async function fetchAllApprovals(
           status,
           limit: 50,
           cursor: cursor ?? undefined,
+          bundle_id: target?.bundleId,
           target_entity_type: target?.entityType,
           target_entity_id: target?.entityId,
         },
@@ -162,6 +163,17 @@ export function useTargetApprovals(
       data: (
         await fetchAllApprovals("pending", { entityType, entityId })
       ).filter((approval) => approval.status === "pending"),
+    }),
+  });
+}
+
+export function useBundleApprovals(bundleId: string) {
+  return useQuery({
+    queryKey: ["approvals", "pending", "bundle", bundleId],
+    queryFn: async (): Promise<ApprovalPage> => ({
+      data: (await fetchAllApprovals("pending", { bundleId })).filter(
+        (approval) => approval.status === "pending",
+      ),
     }),
   });
 }

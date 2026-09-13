@@ -291,7 +291,7 @@ func keepOwnedBy(rows []ranked, owner ids.UUID) []ranked {
 // narrowToScope, so a fourth caller with its own source list cannot appear
 // without that test naming it.
 func narrowedByItsOwnLane(row ranked) bool {
-	return row.item.Source == sourceTask || row.item.Source == sourceLeadResponse ||
+	return row.item.Source == sourceTask || row.item.Source == sourceWeeklyCommitment || row.item.Source == sourceLeadResponse ||
 		row.item.Source == sourceMeeting || row.item.Source == sourceMeetingOutcome
 }
 

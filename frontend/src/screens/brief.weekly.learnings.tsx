@@ -49,6 +49,9 @@ export function LearningsPanel({
     <>
       <PanelGroupHead title={t("brief.weekly.learnings.title")} level="h3" />
       <PanelBody className="brief-weekly-learnings">
+        {learnings.items.length > 0 && (
+          <p className="t-caption">{t("brief.weekly.learnings.caveat")}</p>
+        )}
         {learnings.items.length === 0 ? (
           <EmptyLearnings state={learnings.state} />
         ) : (

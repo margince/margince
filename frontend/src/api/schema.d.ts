@@ -34197,7 +34197,7 @@ export interface components {
              * @description Which producer these numbers are about. The same vocabulary as an item source.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /** @description How many candidates from this source were read and ranked. */
             considered: number;
             /** @description How many of them the queue is carrying after folding, filtering and the page cut. */
@@ -34713,6 +34713,8 @@ export interface components {
              *     error the conversion seam exists to prevent.
              */
             revenue_currency?: string | null;
+            /** @description Distinct flagged deals excluded from the known value because no comparable expected value was available. */
+            unpriced_deals?: number;
             /** @description How many customers have written and are waiting on an answer. */
             buyer_replies: number;
             /** @description How much new business is in hand and owed a first response. */
@@ -34917,12 +34919,14 @@ export interface components {
              *     row rather than a hundred. Its own facts ride in `batch`.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "batch";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "customer_waiting" | "lead_response" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval" | "dsr" | "notice_case" | "sync_health" | "capture_health" | "ai_work_health" | "bounce" | "undelivered" | "automation_run" | "notice" | "introduction_request" | "meeting_outcome" | "weekly_commitment" | "batch";
             /**
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
             category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            /** @description Whether this work contributes to the urgent summary, independent of a personal pin. */
+            urgent?: boolean;
             owner?: components["schemas"]["WorklistOwner"];
             /**
              * @description Which SCREEN this row belongs on. The server decides it once, and every count,
@@ -35639,6 +35643,8 @@ export interface components {
          */
         WorklistSourceUnavailable: {
             source: string;
+            /** @description Worklist category affected by this missing source. */
+            category?: string;
             /** @enum {string} */
             reason: "withheld" | "failed";
         };
@@ -48791,7 +48797,10 @@ export interface operations {
     };
     getTeamBoard: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A named live team; uses the weekly review's team visibility rule. Omit for the caller's shared teams. */
+                team?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

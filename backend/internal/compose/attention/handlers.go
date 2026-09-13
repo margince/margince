@@ -38,11 +38,15 @@ func (h Handlers) GetAttention(w http.ResponseWriter, r *http.Request) {
 
 // GetTeamBoard answers what each teammate is carrying.
 //
-// No parameters: whose team it is comes from the principal, so a reader cannot
+// The optional team parameter selects a named live roster: whose team it is comes from the principal, so a reader cannot
 // ask about somebody else's. The row-scope tier that admits the read is checked
 // in the service, beside the roster it draws.
-func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.TeamBoard(r.Context())
+func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request, params crmcontracts.GetTeamBoardParams) {
+	var team ids.UUID
+	if params.Team != nil {
+		team = ids.UUID(*params.Team)
+	}
+	out, err := h.svc.NamedTeamBoard(r.Context(), team)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -52,7 +56,7 @@ func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
 // GetHandledForYou answers what the product did on this reader's behalf.
 //
-// No parameters and no tier: a receipt is the reader's own, and every act it
+// The optional team parameter selects a named live roster and no tier: a receipt is the reader's own, and every act it
 // reports was taken for them. The service refuses a principal with no human
 // behind it, because there is nobody for the acts to have been done for.
 func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +70,7 @@ func (h Handlers) GetHandledForYou(w http.ResponseWriter, r *http.Request) {
 
 // GetTeamExceptions answers what is going wrong on this lead's team.
 //
-// No parameters, for the reason GetTeamBoard has none: whose team it is comes
+// The optional team parameter selects a named live roster, for the reason GetTeamBoard has none: whose team it is comes
 // from the principal, so a reader cannot ask about somebody else's. The tier
 // that admits the read is checked in the service, beside the roster it needs.
 func (h Handlers) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +85,7 @@ func (h Handlers) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 // GetHiddenBacklog answers what the queue is NOT showing, and which rule holds
 // it back.
 //
-// No parameters, for the reason the team board has none: whose queue is being
+// The optional team parameter selects a named live roster, for the reason the team board has none: whose queue is being
 // measured comes from the principal, so a reader cannot ask what is hidden from
 // somebody else.
 func (h Handlers) GetHiddenBacklog(w http.ResponseWriter, r *http.Request) {

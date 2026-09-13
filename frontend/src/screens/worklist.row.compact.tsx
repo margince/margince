@@ -1,28 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The row at LIST DENSITY: one line, and everything it cannot carry one press
-// away.
-//
-// Its own file rather than a branch inside `worklist.row.tsx` because what
-// differs between the two densities is the TEXT COLUMN's layout and nothing
-// else — the rank, the kind, the verbs and the thumb surface around it are the
-// row's either way. Every reading this draws arrives already made, so there is
-// no second derivation of a title, a clock or a reason here: the row reads the
-// item once and both densities print the same answers.
-//
-// WHY A DENSITY AND NOT A SECOND ROW. The Brief opens with five of these and
-// goes on to the rest of the morning; the Worklist is the surface a rep works
-// to the end. Same work, same words, same verbs — the reader is scanning in one
-// place and reading in the other, and a row that told them different things
-// depending on which would be two answers to what a piece of work is.
+// Compact rows share their title, dates and actions with the full worklist.
+// Details expose supporting evidence; sorting diagnostics stay off the agenda.
 
 import type { ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
 import { useTruncationTooltip } from "../design-system/tooltip";
-import { formatNumber } from "../format/format";
-import { translatePlural, useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import { isUnprepared } from "./worklist.copy";
 import type { WorklistItem } from "./worklist.queries";
 import { VerdictLine } from "./worklist.verdict";
@@ -63,20 +49,7 @@ export type RowReadings = Readonly<{
   zone: string;
 }>;
 
-/**
- * The one line, and the press that opens the rest of it.
- *
- * THE TITLE IS THE LINK. The default row draws the way to the record as a verb
- * of its own beside the work; at this density that verb and the title would be
- * two controls on one line reaching the same page, so the name carries it and
- * `RowVerbs` withholds the duplicate (worklist.rowverbs.tsx).
- *
- * NOTHING IS DISCARDED, which is the same shape the default row's fold has: the
- * line says as much as it fits and the count behind it covers everything else
- * the row holds — the reasons that did not fit, why it outranked the row below,
- * the supporting sentence, a group's members, the deal's standing. A count that
- * named only the reasons would promise less than the press delivers.
- */
+/** The linked title opens the record; optional details contain its evidence. */
 export function CompactRowLine({
   readings,
   named,
@@ -93,13 +66,12 @@ export function CompactRowLine({
    */
   named: boolean;
 }>) {
-  const { item, title, href, said, folded, above, zone } = readings;
+  const { item, title, href, said, folded, zone } = readings;
   const t = useT();
-  const { locale } = useLocale();
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
   // leave a reader no way to see what went.
-  const inline = [readings.when, readings.facts, ...said, readings.consequence]
+  const inline = [readings.when, readings.facts, ...said]
     .filter((part): part is string => part !== null && part !== "")
     .join(" · ");
   const tip = useTruncationTooltip<HTMLSpanElement>(inline);
@@ -108,13 +80,6 @@ export function CompactRowLine({
     rest.push(
       <p className="t-caption" key="reasons">
         {folded.join(" · ")}
-      </p>,
-    );
-  }
-  if (above) {
-    rest.push(
-      <p className="t-caption" key="above">
-        {above}
       </p>,
     );
   }
@@ -164,32 +129,13 @@ export function CompactRowLine({
         </span>
       )}
       {rest.length > 0 && (
-        // THE POPOVER, not a `<details>`: a fold in a five-row list pushes
-        // every row under it down, and the reader comparing two rows loses the
-        // second one out from under their eye. Escape closes it and hands the
-        // trigger back its focus, both of which the primitive owns.
-        //
-        // Its own trigger IS the count chip. A `Badge` would be a status pill
-        // in one of six SEMANTIC tones, and "+2 more" is not a status; the
-        // house already spells this affordance as a small ghost control
-        // (`RowTags`, the tags panel), and a badge nested inside a button would
-        // be a control named by a decoration.
         <Popover
           // NO `variant`: the catalog's own direction for a trigger that reads
           // as words in the line it sits in rather than as a control — the
           // shape the tags strip's "+N" already wears. A ghost Button here drew
           // a 44px filled chip beside a 19px line.
           className="t-caption worklist-row-why"
-          label={
-            said.length === 0
-              ? // Nothing was said on the line, so there is no "more" to count
-                // from and the press names itself — in the words the product
-                // already has for this question.
-                t("worklist.verdict.rule")
-              : translatePlural(locale, "worklist.because.more", rest.length, {
-                  count: formatNumber(rest.length, locale),
-                })
-          }
+          label={t("brief.row.details")}
         >
           {rest}
         </Popover>

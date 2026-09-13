@@ -204,9 +204,9 @@ func weeklyMovementLines(line writeLine) {
 // list is written in.
 func weeklyClosingLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"Plan your week",
-		"Ihre Woche planen",
-		"Lập kế hoạch tuần của bạn")
+		"This week’s commitments",
+		"Zusagen für diese Woche",
+		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
 		"Die ganze Woche, und die davor:",

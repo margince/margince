@@ -2,11 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import {
-  headlineReadings,
-  TeamWeeklyPanel,
-  TeamWeeklySection,
-} from "./brief.teamweekly";
+import { TeamWeeklyPanel, TeamWeeklySection } from "./brief.teamweekly";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 
@@ -16,6 +12,7 @@ import type { TeamWeeklyRep, TeamWeeklyReview } from "./teamweekly.queries";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 function rep(over: Partial<TeamWeeklyRep> = {}): TeamWeeklyRep {
@@ -73,57 +70,11 @@ function review(
   } as TeamWeeklyReview;
 }
 
-describe("the headline states the bar it measured against", () => {
-  // A verdict that does not name its bar is an opinion. Both clauses come off
-  // the stored counts, so the sentence cannot disagree with the figures below.
-  it("picks the healthiest reading and the weakest", () => {
-    const { best, worst } = headlineReadings(review({ commitments_kept: 4 }));
-
-    expect(best?.key).toBe("teamweekly.reading.commitments");
-    expect(worst?.key).toBe("teamweekly.reading.nextStep");
-  });
-
-  // Zero of zero is not zero per cent. A team that routed no leads has no
-  // first-response reading, and inventing one at 0% would report a failure
-  // where nothing was attempted.
-  it("has no reading where nothing was due", () => {
-    const { best, worst } = headlineReadings(
-      review({
-        leads_routed: 0,
-        leads_answered_in_target: 0,
-        meetings_held: 0,
-        meetings_with_next_step: 0,
-        commitments_due: 0,
-        commitments_kept: 0,
-      }),
-    );
-
-    expect(best).toBeNull();
-    expect(worst).toBeNull();
-  });
-
-  // Nothing stood out. Saying so is the honest answer; manufacturing a verdict
-  // from a middling number is not.
-  it("says the plain thing when no reading is decided either way", async () => {
-    stubApi({
-      "GET /weekly-reviews/team": () =>
-        jsonResponse(
-          review({
-            leads_routed: 10,
-            leads_answered_in_target: 8,
-            meetings_held: 10,
-            meetings_with_next_step: 8,
-            commitments_due: 10,
-            commitments_kept: 8,
-          }),
-        ),
-    });
-    render(<TeamWeeklySection teamId="t1" />);
-
-    expect(
-      await screen.findByText(en["teamweekly.headline.plain"]),
-    ).toBeTruthy();
-  });
+it("leads with observed sales outcomes without inventing a performance bar", async () => {
+  stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
+  render(<TeamWeeklySection teamId="t1" />);
+  expect(await screen.findByText(/won .* lost .* deals moved/)).toBeTruthy();
+  expect(document.body.textContent).not.toContain("against a bar");
 });
 
 describe("the week's movement counts what advanced", () => {
@@ -257,7 +208,7 @@ describe("the scorecard says what the wins were worth", () => {
     expect(await screen.findByText(/25.000,00\s*€|€25,000\.00/)).toBeTruthy();
     // The lost count survives the money arriving: it is a different fact, not a
     // delta the value replaces.
-    expect(screen.getByText(/1 lost|1 verloren/)).toBeTruthy();
+    expect(screen.getAllByText(/1 lost|1 verloren/)[0]).toBeTruthy();
   });
 
   // The block is ABSENT whenever any member's week could not be converted, and
@@ -389,7 +340,7 @@ describe("the team picker", () => {
 
   // One team is not a choice: a control whose only option is the one already
   // showing asks the reader to confirm what they cannot change.
-  it("reads a single team straight through without a control", async () => {
+  it("names the selected team even when there is only one", async () => {
     stubApi({
       "GET /teams": () =>
         jsonResponse({
@@ -401,7 +352,7 @@ describe("the team picker", () => {
     render(<TeamWeeklyPanel offered />);
 
     await screen.findByText(en["teamweekly.movement.title"]);
-    expect(screen.queryByLabelText(en["teamweekly.pickTeam"])).toBeNull();
+    expect(screen.getByLabelText(en["teamweekly.pickTeam"])).toBeTruthy();
   });
 });
 
@@ -427,9 +378,7 @@ describe("the page before a team is chosen", () => {
     expect(
       await screen.findByLabelText(en["teamweekly.pickTeam"]),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("region", { name: en["teamweekly.title"] }),
-    ).toBeTruthy();
+    expect(screen.getByText(en["teamweekly.chooseTeam"])).toBeTruthy();
   });
 
   // A read still in flight, and a scope that reaches no team, both leave the
@@ -544,10 +493,13 @@ it("does not present zero coverage as a measured week", async () => {
   expect(screen.queryByText(en["teamweekly.card.firstResponse"])).toBeNull();
 });
 
-it("refuses a whole-team performance verdict on partial coverage", () => {
-  const readings = headlineReadings(
-    review({ commitments_kept: 4 }, { reps_unread: 1 }),
-  );
-  expect(readings.best).toBeNull();
-  expect(readings.worst).toBeNull();
+it("refuses a whole-team performance verdict on partial coverage", async () => {
+  stubApi({
+    "GET /weekly-reviews/team": () =>
+      jsonResponse(review({ commitments_kept: 4 }, { reps_unread: 1 })),
+  });
+  render(<TeamWeeklySection teamId="t1" />);
+  expect(
+    await screen.findByText(en["teamweekly.headline.partial"]),
+  ).toBeTruthy();
 });

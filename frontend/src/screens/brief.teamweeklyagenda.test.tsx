@@ -122,7 +122,7 @@ describe("the agenda on the screen", () => {
 
     await screen.findByText("Asked for help on 2 commitments");
     const names = [
-      ...container.querySelectorAll(".teamweekly-agenda-name"),
+      ...container.querySelectorAll(".teamweekly-agenda-name > a"),
     ].map((node) => node.textContent);
     expect(names).toEqual(["Noah Berger", "Lena Fischer"]);
     // The header summary and the list are one derivation, so the summary names

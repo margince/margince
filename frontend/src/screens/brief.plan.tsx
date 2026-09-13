@@ -14,6 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { middayInstant } from "../format/calendarday";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -125,6 +126,8 @@ function hasFoot(
 
 export function PlanSection() {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -215,7 +218,17 @@ export function PlanSection() {
     <section id="brief-plan">
       <Panel
         title={t("plan.title")}
-        sub={t("plan.sub")}
+        sub={
+          plan.data
+            ? t("brief.plan.period", {
+                date: formatDate(
+                  middayInstant(plan.data.local_week_start, recordZone),
+                  locale,
+                  recordZone,
+                ),
+              })
+            : t("plan.sub")
+        }
         titleAction={
           editable && !adding ? (
             <Button onClick={() => setAdding(true)}>{t("plan.add")}</Button>
@@ -391,7 +404,11 @@ function CommitmentRow({
             {commitment.due_on && (
               <span>
                 {t("plan.due", {
-                  day: formatDate(commitment.due_on, locale, recordZone),
+                  day: formatDate(
+                    middayInstant(commitment.due_on, recordZone),
+                    locale,
+                    recordZone,
+                  ),
                 })}
               </span>
             )}

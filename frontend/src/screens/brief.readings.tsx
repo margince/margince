@@ -20,14 +20,17 @@ import {
   useT,
 } from "../i18n";
 import {
+  meetingReadiness,
+  scheduledMeetings,
+  sourceComplete,
+} from "./brief.facts";
+import {
   boundedCategories,
   DECISIONS,
   decisionsBlocking,
   LEADS,
-  MEETINGS,
 } from "./brief.readings.honesty";
 import { WORKLIST_FILTER_PARAM } from "./worklist";
-import { isUnprepared } from "./worklist.copy";
 import type {
   Worklist,
   WorklistFilter,
@@ -87,7 +90,7 @@ function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
 type Reading = Readonly<{
   label: string;
   /** The figure itself, so the slot can tell a floor of none from a floor. */
-  count: number;
+  count: number | null;
   basis: ReactNode;
   warn?: boolean;
   /** The source behind the figure was read to its bound: it is a floor. */
@@ -143,7 +146,7 @@ function LaneReading({
   // true of every number there has ever been — so the mark goes on a figure
   // that counts something and nowhere else. A bounded read that found none of
   // a kind is a reading of zero, and the `+` was noise on it.
-  const marked = floor === true && count > 0;
+  const marked = floor === true && count !== null && count > 0;
   // A DOOR INTO NOTHING IS NOT REASSURANCE, it is a trip. A topic's confirmed
   // zero has no rows behind it, so its door lands the reader in an empty lane
   // framed by the urgent counts of every other slot — which reads as a filter
@@ -155,18 +158,22 @@ function LaneReading({
   //     question the worklist can still answer where "none" is not. `floor`
   //     tells those apart and is already on this slot for the `+` mark;
   //   - the SPANNING slot, which is the strip's way into the worklist at all.
-  const openable = count > 0 || floor === true || spans === true;
+  const openable =
+    count === null || count > 0 || floor === true || spans === true;
   // The tip rides the whole CELL rather than the three characters that carry
   // the mark: a `+` that explains itself only to a pointer resting on it is a
   // mark most readers never read. Focus reaches it too — the card's own door is
   // inside this element, and a focus event bubbles.
   const floorTip = useTooltip<HTMLSpanElement>(t("brief.readings.floorTip"));
 
-  const figure = formatNumber(count, locale);
+  const figure =
+    count === null
+      ? t("brief.readings.unavailable")
+      : formatNumber(count, locale);
   const card = (
     <StatCard
       label={label}
-      value={marked ? `${figure}+` : figure}
+      value={readingFigure(figure, marked)}
       tone={warn ? "warn" : undefined}
       detail={basis}
       // The whole plate is read as ONE glance, so every slot on it keeps the
@@ -208,7 +215,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
   const bounded = boundedCategories(day);
   const unread = day.sources_unavailable.length > 0;
   const floorOf = (category: string): boolean =>
-    unread || bounded.has(category);
+    day.sources_unavailable.some(
+      (entry) => entry.category === category || !entry.category,
+    ) || bounded.has(category);
   return (
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
@@ -218,12 +227,12 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // The SUMMARY's own count, not one lane's. `urgent` is every row at
           // the top two levels — somebody waiting or a promise breaking — and
           // the morning's first question is how many of those there are.
-          count={day.summary.urgent}
+          count={unread && day.summary.urgent === 0 ? null : day.summary.urgent}
           warn={day.summary.urgent > 0}
           // The one slot that genuinely spans the day: `urgent` is every row at
           // the top two levels whatever lane raised it, so any bounded source
           // anywhere makes it a floor. This is what `more_available` is for.
-          floor={readings.more_available}
+          floor={readings.more_available || unread}
           // The basis says what the figure was taken over, on every day. A zero
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
@@ -246,7 +255,13 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // prepared is the one fact on this slot a reader must act on before
           // it begins. The count of meetings itself is neither good nor bad.
           warn={meetings.unready !== null && meetings.unready > 0}
-          floor={floorOf(MEETINGS)}
+          floor={
+            day.reach?.find((entry) => entry.source === "meeting")
+              ?.more_available ||
+            day.sources_unavailable.some(
+              (entry) => entry.source === "meeting" || !entry.category,
+            )
+          }
           basis={meetingsDetail(meetings, locale, t, plural)}
           openLabel={t("brief.readings.openMeetings")}
           lane="meetings"
@@ -254,7 +269,13 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <LaneReading
           scope={day.scope}
           label={t("brief.readings.leads")}
-          count={readings.prospecting}
+          count={
+            day.sources_unavailable.some(
+              (entry) => entry.source === "lead_response",
+            )
+              ? null
+              : readings.prospecting
+          }
           floor={floorOf(LEADS)}
           // The deadline is the fact that changes what a reader does before
           // lunch, and NULL rather than a guess where the page cannot honestly
@@ -273,7 +294,13 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
         <LaneReading
           scope={day.scope}
           label={t("brief.readings.decisions")}
-          count={readings.review}
+          count={
+            day.sources_unavailable.some(
+              (entry) => entry.category === DECISIONS || !entry.category,
+            ) && readings.review === 0
+              ? null
+              : readings.review
+          }
           floor={floorOf(DECISIONS)}
           // Only where something IS held up, and how much of it. Otherwise the
           // plain basis, which says what the figure was taken over and claims
@@ -371,7 +398,7 @@ function replyDueAt(item: WorklistItem): string | undefined {
 }
 
 type MeetingsReading = Readonly<{
-  meetings: number;
+  meetings: number | null;
   // Null when the page carries fewer meetings than it counted, so no honest
   // readiness figure exists — NOT the same as zero unprepared.
   unready: number | null;
@@ -389,36 +416,74 @@ type MeetingsReading = Readonly<{
 //
 // So readiness is claimed ONLY when the page carries every meeting it counted.
 function meetingsReading(day: Worklist): MeetingsReading {
-  const entry = day.counts.find((count) => count.category === MEETINGS);
-  // No entry at all means no meeting was read: a day of zero meetings, carried
-  // whole. Treating that as unanswerable told a rep the page could not check
-  // meetings it had already established there were none of.
-  if (entry === undefined) {
-    return { meetings: 0, unready: 0 };
+  const meetings = scheduledMeetings(day);
+  if (day.sources_unavailable.some((entry) => entry.source === "meeting")) {
+    return { meetings: null, unready: null };
   }
-  const whole = entry.shown === entry.considered && !entry.more_available;
+  const reach = day.reach?.find((entry) => entry.source === "meeting");
+  const known =
+    sourceComplete(day, "meeting") &&
+    meetings.every((item) => meetingReadiness(item) !== "unknown");
   return {
-    meetings: entry.considered,
-    unready: whole ? day.queue.filter(isUnprepared).length : null,
+    meetings: reach?.considered ?? meetings.length,
+    unready: known
+      ? meetings.filter((item) => meetingReadiness(item) === "unprepared")
+          .length
+      : null,
   };
+}
+
+function readingFigure(value: string, lowerBound: boolean) {
+  return lowerBound ? `${value}+` : value;
 }
 
 // This value describes the same scoped work as the rest of the brief.
 function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const { revenue_at_risk_minor: amount, revenue_currency: currency } =
     day.readings;
+  const count =
+    day.counts.find((entry) => entry.category === "deals_at_risk")
+      ?.considered ?? 0;
+  const incomplete =
+    day.sources_unavailable.some(
+      (entry) => entry.category === "deals_at_risk" || !entry.category,
+    ) ||
+    day.counts.some(
+      (entry) => entry.category === "deals_at_risk" && entry.more_available,
+    );
+  const complete = !incomplete;
   return (
     <StatCard
       density="compact"
       label={t("brief.readings.risk")}
       value={
         amount != null && currency
-          ? formatMoneyCompact(amount, currency, locale)
-          : t("brief.readings.pipelineNoRead")
+          ? readingFigure(
+              formatMoneyCompact(amount, currency, locale),
+              incomplete,
+            )
+          : t(
+              count === 0 && complete && amount == null
+                ? "brief.readings.noDealWork"
+                : "brief.readings.unpriced",
+            )
       }
-      detail={t("brief.readings.riskBasis")}
+      detail={
+        incomplete
+          ? t("brief.readings.riskPartial")
+          : day.readings.unpriced_deals
+            ? plural(
+                "brief.readings.unpricedCount",
+                day.readings.unpriced_deals,
+                {
+                  count: formatNumber(day.readings.unpriced_deals, locale),
+                },
+              )
+            : t("brief.readings.riskBasis")
+      }
       onOpen={() => openLane("deals_at_risk", day.scope)}
       openLabel={t("brief.readings.openRisk")}
     />
