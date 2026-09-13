@@ -116,17 +116,35 @@ describe("CoverageCard", () => {
     expect(screen.getByText("no reason recorded")).toBeTruthy();
   });
 
-  it("says the read was cut short, so the page counts cannot read as the whole site", async () => {
+  it("says a page cap bounded the read, without calling it a fault", async () => {
     render(
       <CoverageCard pages={pages} warnings={[]} stoppedReason="page_cap" />,
     );
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 
-    expect(screen.getByText("Stopped early")).toBeTruthy();
+    // Still said — the page counts beside it would otherwise read as the whole
+    // site — but said as a note, because this is the size the read was
+    // configured for rather than something that went wrong.
+    expect(screen.getByText("Read up to its limit")).toBeTruthy();
+    expect(screen.queryByText("Stopped early")).toBeNull();
     expect(
       screen.getByText(
         "I reached the page limit for one read, so there is more of your site I did not open.",
       ),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('.ob-live-coverage[data-kind="note"]'),
+    ).toBeTruthy();
+  });
+
+  it("keeps the warning for a stop a later read could get past", async () => {
+    render(<CoverageCard pages={pages} warnings={[]} stoppedReason="budget" />);
+    await userEvent.click(screen.getByRole("button", { name: /Review/ }));
+
+    expect(screen.getByText("Stopped early")).toBeTruthy();
+    expect(screen.queryByText("Read up to its limit")).toBeNull();
+    expect(
+      document.querySelector('.ob-live-coverage[data-kind="warn"]'),
     ).toBeTruthy();
   });
 

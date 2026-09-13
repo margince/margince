@@ -45,3 +45,23 @@ export function namedSiteReadKind(
   }
   return KIND_LABELS_BY_NAME[kind];
 }
+
+/**
+ * Whether a stop reason means the read ran to the size it was configured for.
+ *
+ * A page or byte cap is the operator's own budget, reached as designed: the
+ * read covered less than the whole site, which its page count already says, and
+ * nothing went wrong. Budget and deadline are the other kind — the read wanted
+ * to carry on and something outside it intervened, so a later run may get
+ * further and a reader should be told to look.
+ *
+ * Both still bound the read and both are still SAID. This decides the tone, not
+ * whether a reader is told. It lives beside the page-kind vocabulary for the
+ * same reason: the company panel and the onboarding dossier must not disagree
+ * about whether the same stop was a problem.
+ */
+export function stopIsConfigured(
+  reason: components["schemas"]["SiteReadReport"]["stopped_reason"],
+): boolean {
+  return reason === "page_cap" || reason === "byte_cap";
+}

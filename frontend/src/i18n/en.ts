@@ -3387,9 +3387,13 @@ export const en = {
   "enrich.toInbox": "Open the Worklist",
 
   "deepread.title": "Margince can fill this in",
+  // Once a read exists the offer has been answered, so the panel names
+  // what it now holds rather than pitching a capability already used.
+  "deepread.titleRead": "Website research",
   "deepread.sub":
     "It reads the company's website for the domain, industry, size, locations and likely decision-makers, then suggests a first move. Findings are staged for your review — nothing is written until you accept.",
   "deepread.cta": "Start company research",
+  "deepread.ctaAgain": "Read the website again",
   "deepread.starting": "Starting…",
   "deepread.unavailable": "Site reading is not configured on this server.",
   "deepread.statusQueued": "Queued",
@@ -3397,6 +3401,10 @@ export const en = {
   "deepread.statusRunning": "Reading…",
   "deepread.statusDone": "Done",
   "deepread.statusPartial": "Stopped early",
+  // A read that spent the page or byte budget it was given did what it
+  // was configured to do, so it is named for that rather than for the
+  // rest of the site it was never going to reach.
+  "deepread.statusCapped": "Read up to the page limit",
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Cancelled",
   "deepread.resumesAt": "Resumes automatically {when}.",
@@ -6256,6 +6264,9 @@ export const en = {
   // A bounded read has to say it was bounded: the page counts beside it
   // otherwise read as the whole site.
   "ob.live.coverageStopped": "Stopped early",
+  // The same bound, said without alarm: a page or byte cap is the size this
+  // read was configured for, not something that went wrong.
+  "ob.live.coverageCapped": "Read up to its limit",
   "ob.live.stoppedPageCap":
     "I reached the page limit for one read, so there is more of your site I did not open.",
   "ob.live.stoppedByteCap":

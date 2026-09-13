@@ -3269,9 +3269,11 @@ export const de = {
   "enrich.toInbox": "Arbeitsliste öffnen",
 
   "deepread.title": "Margince kann das ausfüllen",
+  "deepread.titleRead": "Website-Recherche",
   "deepread.sub":
     "Margince liest die Website des Unternehmens nach Domain, Branche, Größe, Standorten und wahrscheinlichen Entscheidern und schlägt dann einen ersten Schritt vor. Die Funde werden zur Prüfung vorgemerkt — nichts wird geschrieben, bevor Sie zustimmen.",
   "deepread.cta": "Unternehmensrecherche starten",
+  "deepread.ctaAgain": "Website erneut lesen",
   "deepread.starting": "Startet…",
   "deepread.unavailable":
     "Website-Lesen ist auf diesem Server nicht eingerichtet.",
@@ -3280,6 +3282,7 @@ export const de = {
   "deepread.statusRunning": "Liest…",
   "deepread.statusDone": "Fertig",
   "deepread.statusPartial": "Früh beendet",
+  "deepread.statusCapped": "Bis zum Seitenlimit gelesen",
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird automatisch am {when} fortgesetzt.",
@@ -6124,6 +6127,7 @@ export const de = {
   "ob.live.cardCoverage": "Was ich gelesen und was ich übersprungen habe",
   "ob.live.coverageWarning": "Hinweis",
   "ob.live.coverageStopped": "Vorzeitig beendet",
+  "ob.live.coverageCapped": "Bis zum Limit gelesen",
   "ob.live.stoppedPageCap":
     "Ich habe das Seitenlimit für einen Lesevorgang erreicht. Es gibt also mehr auf deiner Website, das ich nicht geöffnet habe.",
   "ob.live.stoppedByteCap":

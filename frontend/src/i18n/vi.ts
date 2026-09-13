@@ -3232,9 +3232,11 @@ export const vi = {
   "enrich.toInbox": "Mở danh sách việc",
 
   "deepread.title": "Margince có thể điền giúp",
+  "deepread.titleRead": "Nghiên cứu website",
   "deepread.sub":
     "Margince đọc website của công ty để tìm tên miền, ngành, quy mô, địa điểm và những người có thể ra quyết định, rồi đề xuất bước đầu tiên. Kết quả được xếp chờ bạn duyệt — không có gì được ghi cho đến khi bạn chấp nhận.",
   "deepread.cta": "Bắt đầu nghiên cứu công ty",
+  "deepread.ctaAgain": "Đọc lại website",
   "deepread.starting": "Đang bắt đầu…",
   "deepread.unavailable": "Máy chủ này chưa cấu hình việc đọc website.",
   "deepread.statusQueued": "Đã xếp hàng",
@@ -3242,6 +3244,7 @@ export const vi = {
   "deepread.statusRunning": "Đang đọc…",
   "deepread.statusDone": "Xong",
   "deepread.statusPartial": "Dừng sớm",
+  "deepread.statusCapped": "Đã đọc tới giới hạn trang",
   "deepread.statusFailed": "Thất bại",
   "deepread.statusCancelled": "Đã huỷ",
   "deepread.resumesAt": "Tự chạy tiếp {when}.",
@@ -6040,6 +6043,7 @@ export const vi = {
   "ob.live.cardCoverage": "Tôi đã đọc gì và bỏ qua gì",
   "ob.live.coverageWarning": "Cảnh báo",
   "ob.live.coverageStopped": "Dừng sớm",
+  "ob.live.coverageCapped": "Đã đọc tới giới hạn",
   "ob.live.stoppedPageCap":
     "Tôi đã chạm giới hạn số trang cho một lượt đọc, nên vẫn còn phần website của bạn mà tôi chưa mở.",
   "ob.live.stoppedByteCap":
