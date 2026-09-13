@@ -20,8 +20,8 @@ const BRIEF_MAX = 20000;
  *
  * The write is version-pinned like every other deal write. An unpinned save
  * would land on top of an edit it never saw and report success to both
- * authors, which for a field two people might both be rewriting is the exact
- * loss worth refusing.
+ * authors, which for a field two colleagues might both be rewriting is the
+ * exact loss worth refusing.
  */
 export function DealBriefEdit({
   open,
