@@ -16,7 +16,6 @@ package weekly
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -139,34 +137,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			return err
 		}
 		review.Scorecard = &card
-		// Where the week was landing, frozen into the same transaction as the
-		// counts. Split across two, a review could exist with no outlook and no
-		// way to tell that from an installation that forecasts nothing.
-		//
-		// Only on the branch that WROTE the review: the loser of the insert
-		// race returned above, and freezing an outlook onto somebody else's
-		// review row would give it two.
-		if e.forecast == nil {
-			// No forecast composed. The review stands without one.
-			return nil
-		}
-		outlooks, movements, drivers, err := e.forecast.CloseWeek(ctx, tx, start, end)
-		// Forecast authority may be narrower than the recorded-work review.
-		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		if err := writeOutlook(ctx, tx, id, outlooks, movements, drivers); err != nil {
-			return err
-		}
-		// Carried on the returned review as well as written. The weekly mail is
-		// built from THIS value rather than from a re-read, so a review that
-		// froze its landing and did not carry it would send a rep an email with
-		// no outlook in it.
-		review.Outlook = outlooks
-		return nil
+		return e.freezeReviewOutlook(ctx, tx, &review, start, end)
 	})
 	if err != nil {
 		return Review{}, false, err
