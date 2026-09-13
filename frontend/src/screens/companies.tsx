@@ -1925,15 +1925,15 @@ function CompanyRecordBody({
       {/* The money gets the whole column: what is overdue, what has been
           invoiced over the year, and how this account pays are three readings
           a rep opens the page WITH a question about, rather than meets on the
-          way past the day's brief.
-          The card keeps its own lifecycle-varying title inside the tab — a
-          former customer's figures still read under "Finance (historical)",
-          which is the one thing the tab strip above cannot say, because a tab
-          label names a place and does not qualify it. */}
+          way past the day's brief. The card keeps its own lifecycle-varying
+          title inside the tab — a former customer's figures still read under
+          "Finance (historical)", which is the one thing the tab strip above
+          cannot say, because a tab label names a place, not its qualifier. */}
       {!overlay && tab === "finance" && (
         <CompanyFinanceCard
           companyId={company.id}
           lifecycle={company.lifecycle}
+          readOnly={readOnly}
         />
       )}
       {!overlay && tab === "documents" && (

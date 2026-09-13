@@ -1872,6 +1872,15 @@
 .billing-name {
   font-weight: var(--fw-medium);
 }
+/* The row's own verbs, pushed to the end and never shrunk: a long name wraps,
+   and Change/Remove keep their hit targets whatever the name does. Its own
+   flex row because .billing-who's gap does not reach inside a child. */
+.billing-verbs {
+  display: flex;
+  gap: var(--gapActions);
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
 /* The address wraps rather than truncating. A half-shown email is the one
    field on this panel where the missing half is what makes it wrong. */
 .billing-email {
