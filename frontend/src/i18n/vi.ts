@@ -2553,7 +2553,7 @@ export const vi = {
   "deal.briefEditTitle": "Tóm lược thương vụ",
   "deal.briefEmpty": "Chưa có tóm lược nào",
   "deal.briefEmptyDetail":
-    "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để người tiếp nhận không phải dựng lại từ đầu.",
+    "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để đồng nghiệp tiếp nhận không phải dựng lại từ đầu.",
   "deal.briefSave": "Lưu tóm lược",
   "deal.briefTooLong": "Một bản tóm lược dài nhiều nhất {max} ký tự.",
   "deal.motion": "Loại giao dịch",
@@ -2585,10 +2585,10 @@ export const vi = {
   "assignments.add": "Giao trách nhiệm",
   "assignments.change": "Đổi",
   "assignments.remove": "Gỡ",
-  "assignments.changeOne": "Đổi người chịu trách nhiệm: {who}",
+  "assignments.changeOne": "Thay đổi trách nhiệm: {who}",
   "assignments.removeOne": "Kết thúc trách nhiệm này: {who}",
   "assignments.addTitle": "Ghi nhận ai chịu trách nhiệm",
-  "assignments.changeTitle": "Đổi người chịu trách nhiệm",
+  "assignments.changeTitle": "Thay đổi trách nhiệm",
   "assignments.subjectKind": "Một đồng nghiệp hoặc một nhóm",
   "assignments.kindUser": "Đồng nghiệp",
   "assignments.kindTeam": "Nhóm",
@@ -8919,7 +8919,7 @@ export const vi = {
   "projectHealth.noteOptionalHint":
     "Không bắt buộc khi dự án đang đúng tiến độ.",
   "projectHealth.noteRequiredHint":
-    "Hãy nói rõ vấn đề, để người xem tiếp theo không phải đoán.",
+    "Hãy nói rõ vấn đề, để đồng nghiệp xem tiếp theo không phải đoán.",
   "projectHealth.correctionNote":
     "Một chỉnh sửa sửa lại điều đã nói, không bao giờ sửa thời điểm đã nói. Đánh giá giữ nguyên ngày gốc.",
   "projectHealth.saveReading": "Ghi nhận",
