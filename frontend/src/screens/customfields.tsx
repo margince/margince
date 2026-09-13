@@ -304,6 +304,8 @@ function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
     company: t("cf.obj.company"),
     contact: t("cf.obj.contact"),
     lead: t("cf.obj.lead"),
+    project: t("cf.obj.project"),
+    contract: t("cf.obj.contract"),
   };
 }
 

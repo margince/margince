@@ -2,7 +2,9 @@
 // isolation so the screen's derivations (immutable API key, the pending DDL
 // preview, and the structural-word refusal) are proven independently.
 
-export type CfObject = "deal" | "company" | "contact" | "lead";
+import type { components } from "../api/schema";
+
+export type CfObject = components["schemas"]["CustomField"]["object"];
 export type CfType =
   | "text"
   | "number"
@@ -11,20 +13,24 @@ export type CfType =
   | "picklist"
   | "boolean";
 
-// Chip order is normative (AC-custom-fields-2): Deal, Company, Contact, Lead.
+// Chip order is normative (AC-custom-fields-2), and the SET is the contract's:
+// CfObject is the generated `CustomField["object"]`, so this list cannot quietly
+// fall behind the objects the engine accepts. That is not hypothetical — it did.
+// The four below shipped while the engine had already grown to six, and a field
+// an admin could create on a project or a contract was one this screen refused
+// to name, with no way to reach it but the API.
 //
-// `activity` is not here and no longer needs a flag: the engine itself stopped
-// accepting it. Its target set (customfields.FieldObjects) is now the objects
-// whose stores read cf_* columns AND whose contract schemas carry them, and an
-// activity has neither — so a field on one was creatable and never served, and
-// this screen was the only thing hiding it. `project` is absent for the
-// opposite reason: the custom-field contract (`CustomField.object`) does not
-// admit it, so a project carries no cf_* columns to define a field on.
+// `activity` is absent because the engine itself stopped accepting it: the
+// target set (customfields.FieldObjects) is the objects whose stores read cf_*
+// columns AND whose contract schemas carry them, and an activity has neither.
+// The parity test in customfields.logic.test.ts is what holds the two equal.
 export const CF_OBJECTS: readonly CfObject[] = [
   "deal",
   "company",
   "contact",
   "lead",
+  "project",
+  "contract",
 ];
 
 export const CF_TYPES: readonly CfType[] = [
