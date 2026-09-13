@@ -482,15 +482,21 @@ describe("what an edit is a reading of", () => {
     expect(seen[0]?.cf_tier).toBe("Strategic");
   });
 
-  it("converts a late field's stored units the way the first seed would", async () => {
-    // Currency is stored in minor units and shown in major. A late field must
-    // go through the same `toInput` as one the form had from the start, or the
-    // reader is shown 10000 where the record means 100.
+  it("seeds a late field's form string and its raw baseline apart", async () => {
+    // The one case where the two representations DIFFER, which is what makes
+    // it the only test that can hold them apart: a currency is stored in minor
+    // units and shown in major. Every other field in this suite reads the same
+    // either way, so a regression that seeded the form string into the write's
+    // baseline — or the raw units into the control — would pass all of them.
+    //
+    // The baseline must stay RAW: customFieldsToPatch converts it itself, so a
+    // converted one converts twice and a real edit compares equal and vanishes.
+    const seen: { values: Record<string, unknown>; opened?: unknown }[] = [];
     render(
       <LateCatalogScreen
         catalog={[BUDGET]}
         row={{ cf_budget: 10000 }}
-        onUpdate={() => {}}
+        onUpdate={(values, opened) => seen.push({ values, opened })}
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
@@ -498,6 +504,19 @@ describe("what an edit is a reading of", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Budget")).toHaveValue(100),
     );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+    const { values, opened } = seen[0] as {
+      values: { cf_budget?: string };
+      opened: Record<string, unknown>;
+    };
+    // Major units on the form, minor units in the baseline. Both, or the split
+    // is not actually held.
+    expect(values.cf_budget).toBe("100");
+    expect(opened.cf_budget).toBe(10000);
   });
 
   it("leaves what the reader typed alone when the catalog lands", async () => {
@@ -528,9 +547,13 @@ describe("what an edit is a reading of", () => {
     // (customFieldFormValue normalises null and "" alike) and drop out of the
     // body, while the save reports success.
     //
-    // Asserts the patch CARRIES the key, not that the column ends up empty:
-    // coerceWrite turns a cleared field into null and the backend refuses null
-    // on a cf_ column, which is a separate, pre-existing gap.
+    // Checks the two INPUTS the diff is taken from — the submitted string and
+    // the baseline — rather than a constructed PATCH body, which this harness
+    // never builds. That they differ is what makes customFieldsToPatch emit
+    // the key at all; that it emits one holding null is covered where the body
+    // is actually built (customfields.form.test.ts). The column still does not
+    // end up empty: coerceWrite sends null and the backend refuses null on a
+    // cf_ column, a separate pre-existing gap.
     const seen: { values: Record<string, unknown>; opened?: unknown }[] = [];
     render(
       <LateCatalogScreen
