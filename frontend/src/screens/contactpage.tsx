@@ -26,6 +26,7 @@ import type { MessageKey } from "../i18n/en";
 import { throwProblem, useSorMode } from "./common";
 import { ComposeModal } from "./compose";
 import { ConsentSection } from "./consent";
+import { ContactAccess } from "./contactaccess";
 import { ContactActions } from "./contactactions";
 import {
   ContactBriefCard,
@@ -876,6 +877,7 @@ function ContactIdentityLine({
             t("contact.page.ownerUnassigned"),
           )}
         </IdentityFact>
+        <ContactAccess key={contact.id} contact={contact} />
       </IdentityLine>
     </IdentityMeta>
   );

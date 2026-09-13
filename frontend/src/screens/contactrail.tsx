@@ -38,7 +38,6 @@ import {
   useT,
 } from "../i18n";
 import { throwProblem, useSorMode } from "./common";
-import { ContactAccess } from "./contactaccess";
 import { ContactBillingRoles } from "./contactbillingroles";
 import { ConsentAndChannels } from "./contactconsentpanel";
 import { Employers } from "./contactemployers";
@@ -158,7 +157,6 @@ export function ContactRail({
           allows us to send, and what the seat is willing for colleagues to
           read of their own mail with them. They were easy to confuse while
           only two of them were on the page. */}
-      <ContactAccess contact={view.contact} />
       <ContactHoldSection view={view} />
       <ContactTagsSection view={view} />
       <RecentActivity view={view} onOpenEmail={onOpenEmail} />

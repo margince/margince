@@ -48,6 +48,7 @@ function daysAgo(days: number): string {
 const contact: components["schemas"]["Contact"] = {
   id: "p-1",
   full_name: "Dana Buyer",
+  visibility: "owner",
   first_name: "Dana",
   last_name: "Buyer",
   title: "Head of Fleet",
