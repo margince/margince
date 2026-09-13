@@ -3,17 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { IdentityFact, IdentityLine } from "../design-system/identityline";
 import { ContactAccess } from "./contactaccess";
 import { StoryProviders, stubWithSession } from "./story-utils";
-
-// Who may read a captured contact, on the record itself.
-//
-// The same mark and the same verb the mail drawer draws, because a contact
-// private to its owner and a message limited to its participants are the same
-// fact about two things — a reader who has learned the mark on one should read
-// it on the other. That is why this panel's verb is the text affordance too:
-// the fact is the panel's subject, and a filled box beside the badge would be
-// the louder half of a line whose point is the badge.
 
 type Contact = components["schemas"]["Contact"];
 
@@ -39,9 +31,10 @@ function Access({ contact }: Readonly<{ contact: Contact }>) {
   stubWithSession({}, { contact: ["update"] });
   return (
     <StoryProviders>
-      <div style={{ maxWidth: 620 }}>
+      <IdentityLine separator="space">
+        <IdentityFact quiet>Owner: Alex</IdentityFact>
         <ContactAccess contact={contact} />
-      </div>
+      </IdentityLine>
     </StoryProviders>
   );
 }
@@ -70,5 +63,18 @@ export const PrivateToItsOwner: Story = {
 export const NotYoursToChange: Story = {
   render: () => (
     <Access contact={{ ...base, visibility: "owner", writable: false }} />
+  ),
+};
+
+export const Archived: Story = {
+  render: () => (
+    <Access
+      contact={{
+        ...base,
+        visibility: "workspace",
+        writable: true,
+        archived_at: "2026-08-02T00:00:00Z",
+      }}
+    />
   ),
 };

@@ -104,6 +104,9 @@ const populated: View = {
     last_name: "Buyer",
     title: "Head of Fleet",
     owner_id: "u-1",
+    visibility: "owner",
+    writable: true,
+    version: 7,
     social: { linkedin: "https://linkedin.com/in/danabuyer" },
     address: { city: "Munich", country: "DE" },
     emails: [

@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en } from "../i18n/en";
+import { useContact360 } from "./contact360";
 import { ContactAccess } from "./contactaccess";
 
 type Contact = components["schemas"]["Contact"];
@@ -37,7 +39,11 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stub(sent: string[] = []) {
+function stub(
+  sent: string[] = [],
+  writes: { body: unknown; version: string | null }[] = [],
+  status = 200,
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -50,19 +56,31 @@ function stub(sent: string[] = []) {
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       sent.push(key);
       if (key === "GET /me") return json(seatMayWrite);
+      if (method === "PATCH" && request) {
+        writes.push({
+          body: await request.json(),
+          version: request.headers.get("If-Match"),
+        });
+        if (status !== 200) return json({ status, title: "Conflict" }, status);
+      }
       return json({});
     }),
   );
 }
 
-function draw(contact: Contact) {
+function LiveContactAccess() {
+  const view = useContact360(base.id);
+  return view.data ? <ContactAccess contact={view.data.contact} /> : null;
+}
+
+function draw(contact?: Contact) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <ContactAccess contact={contact} />
+        {contact ? <ContactAccess contact={contact} /> : <LiveContactAccess />}
         <ToastRegion />
       </ToastProvider>
     </QueryClientProvider>,
@@ -77,38 +95,44 @@ afterEach(() => {
 });
 
 describe("ContactAccess", () => {
-  it("says a captured contact is private to its owner, which no other surface does", async () => {
+  it("shows the private visibility badge beside its action", async () => {
     stub();
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
-    expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
+    expect(await screen.findByText("Only you")).toBeTruthy();
   });
 
   it("says a promoted contact is the company's", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: true });
-    expect(await screen.findByText(/everyone in the company/i)).toBeTruthy();
+    expect(await screen.findByText("Team")).toBeTruthy();
   });
 
   it("publishes a private contact through the ordinary contact patch", async () => {
+    const user = userEvent.setup();
     const sent: string[] = [];
-    stub(sent);
+    const writes: { body: unknown; version: string | null }[] = [];
+    stub(sent, writes);
     draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", {
         name: /share with the company/i,
       }),
     );
     expect(sent).toContain("PATCH /contacts/p-1");
+    expect(writes).toEqual([
+      { body: { visibility: "workspace" }, version: "7" },
+    ]);
   });
 
   it("makes a workspace contact private again — the direction that did not exist", async () => {
+    const user = userEvent.setup();
     // The whole point of the change. A contact the sender classifier published
     // with nobody approving it could not be narrowed by anybody, its own owner
     // included.
     const sent: string[] = [];
     stub(sent);
     draw({ ...base, visibility: "workspace", writable: true, owner_id: "u1" });
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /make private/i }),
     );
     expect(sent).toContain("PATCH /contacts/p-1");
@@ -122,13 +146,14 @@ describe("ContactAccess", () => {
       writable: false,
       owner_id: "someone-else",
     });
-    expect(await screen.findByText(/private to its owner/i)).toBeTruthy();
+    expect(await screen.findByText("Only you")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: /share with the company/i }),
     ).toBeNull();
   });
 
   it("offers the verb to a colleague holding a write grant", async () => {
+    const user = userEvent.setup();
     // Write access is the whole gate now. The patch path runs the ordinary
     // write test — object grant plus EnsureWritable — so a grant holder the
     // server would admit must not be refused by the drawing.
@@ -140,7 +165,7 @@ describe("ContactAccess", () => {
       writable: true,
       owner_id: "someone-else",
     });
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", {
         name: /share with the company/i,
       }),
@@ -151,11 +176,12 @@ describe("ContactAccess", () => {
   it("offers no verb on any contact to a reader who cannot write it", async () => {
     stub();
     draw({ ...base, visibility: "workspace", writable: false, owner_id: "u1" });
-    expect(await screen.findByText(/everyone in the company/i)).toBeTruthy();
+    expect(await screen.findByText("Team")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /make private/i })).toBeNull();
   });
 
   it("refuses to write a row it read back without a version", async () => {
+    const user = userEvent.setup();
     // Unpinned is last-write-wins, and this write moves the column that
     // decides who may read the record. The refusal surfaces through the
     // mutation's error path rather than sending an unconditional PATCH.
@@ -168,10 +194,96 @@ describe("ContactAccess", () => {
       writable: true,
       owner_id: "u1",
     });
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /make private/i }),
     );
     expect(sent).not.toContain("PATCH /contacts/p-1");
+  });
+
+  it("keeps archived visibility readable without a toggle", () => {
+    stub();
+    draw({
+      ...base,
+      visibility: "workspace",
+      writable: true,
+      archived_at: "2026-08-02T00:00:00Z",
+    });
+    expect(screen.getByText("Team")).toBeTruthy();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("keeps the private badge and explains a refused sharing attempt", async () => {
+    const user = userEvent.setup();
+    stub([], [], 409);
+    draw({ ...base, visibility: "owner", writable: true, owner_id: "u1" });
+    await user.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: /share with the company/i }),
+    );
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByText("Only you")).toBeTruthy();
+    expect(
+      screen.queryByText("The company can see this contact now."),
+    ).toBeNull();
+  });
+
+  it("refreshes a stale version, then shares and makes private again", async () => {
+    const user = userEvent.setup();
+    let version = 7;
+    let visibility: "owner" | "workspace" = "owner";
+    const writes: { version: string | null; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (!(input instanceof Request))
+          throw new Error("Expected an API request");
+        if (input.method === "PATCH") {
+          const body: unknown = await input.json();
+          writes.push({ version: input.headers.get("If-Match"), body });
+          version++;
+          if (writes.length === 1)
+            return json({ status: 409, code: "version_skew" }, 409);
+          if (
+            typeof body === "object" &&
+            body !== null &&
+            "visibility" in body &&
+            (body.visibility === "owner" || body.visibility === "workspace")
+          ) {
+            visibility = body.visibility;
+          }
+          return json({});
+        }
+        return json({
+          contact: {
+            ...base,
+            version,
+            visibility,
+            writable: true,
+            owner_id: "u1",
+          },
+        });
+      }),
+    );
+    draw();
+    await user.click(
+      await screen.findByRole("button", { name: /share with the company/i }),
+    );
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      en["edit.versionSkew"],
+    );
+    await user.click(
+      screen.getByRole("button", { name: /share with the company/i }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    await screen.findByText("Only you");
+    expect(writes).toEqual([
+      { version: "7", body: { visibility: "workspace" } },
+      { version: "8", body: { visibility: "workspace" } },
+      { version: "9", body: { visibility: "owner" } },
+    ]);
   });
 
   it("draws nothing at all when the server sent no visibility", () => {
