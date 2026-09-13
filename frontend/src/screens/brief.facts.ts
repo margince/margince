@@ -18,11 +18,31 @@ export function briefDay(
   const queue = loadedQueue(pages);
   const counts = first.counts.map((entry) => ({
     ...entry,
+    more_available: pages.some((page) =>
+      page.counts.some(
+        (count) => count.category === entry.category && count.more_available,
+      ),
+    ),
     shown: queue
       .filter((item) => item.category === entry.category)
       .reduce((total, item) => total + (item.batch?.count ?? 1), 0),
   }));
-  return { ...first, queue, counts, next_cursor: pages.at(-1)?.next_cursor };
+  const unavailable = new Map(
+    pages
+      .flatMap((page) => page.sources_unavailable)
+      .map((entry) => [entry.source, entry]),
+  );
+  return {
+    ...first,
+    queue,
+    counts,
+    sources_unavailable: [...unavailable.values()],
+    readings: {
+      ...first.readings,
+      more_available: pages.some((page) => page.readings.more_available),
+    },
+    next_cursor: pages.at(-1)?.next_cursor,
+  };
 }
 
 export function sourceComplete(day: Worklist, source: Source): boolean {

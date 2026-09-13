@@ -130,6 +130,7 @@ function AgendaFoot({
   const t = useT();
   const { locale } = useLocale();
   const rows = day.queue;
+  const plural = usePlural();
   const known = rows.every((item) => item.urgent !== undefined);
   const loaded = rows.reduce(
     (sum, item) => sum + (item.urgent ? (item.batch?.count ?? 1) : 0),
@@ -149,7 +150,7 @@ function AgendaFoot({
       {day.next_cursor && (
         <span className="t-caption">
           {hidden > 0
-            ? t("brief.feed.remainingUrgent", {
+            ? plural("brief.feed.remainingUrgent", hidden, {
                 count: formatNumber(hidden, locale),
               })
             : t("brief.feed.moreUrgentPossible")}

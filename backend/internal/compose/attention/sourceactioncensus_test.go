@@ -40,6 +40,8 @@ import (
 // admit a source the client has no route for — which is the shape of the defect
 // this gate exists to catch, so it must not be the shape of the gate.
 var performedBySource = map[string][]crmcontracts.AttentionItemActions{
+	// Weekly plans use their own state endpoint through PlanWorkActions, not activity verbs.
+	"weekly_commitment": {},
 	// Routed to the record the row is about, through VERB_DESTINATION.
 	// `reply` opens the composer over the row, through ChannelReplyAction. Sent
 	// only where the wait IS mail (email_summary present) and names a record to
@@ -116,6 +118,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 	// deliberate act somebody has to write down rather than an omission nothing
 	// notices. The map only shrinks.
 	notYetAssembled := map[string]string{
+		"weekly_commitment": "request-scoped plan lane is read beside Assemble; briefclaims_test exercises the actual worklist path",
 		"customer_waiting": "the waiting lane is a positional seam Assemble does not read; " +
 			"reaching it needs a stub this fixture has no argument slot for",
 		"lead_response": "the same lane shape as customer_waiting, and unreachable for the same reason",

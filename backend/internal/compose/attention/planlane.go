@@ -40,6 +40,9 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 	if s.weeklyPlans == nil || s.taskScope == TasksUnassigned {
 		return &copy, nil
 	}
+	if s.taskScope == TasksVisible {
+		return &copy, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld}
+	}
 	entries, err := s.weeklyPlans.DuePlan(ctx, s.taskOwner, now)
 	if err != nil {
 		reason := crmcontracts.WorklistSourceUnavailableReasonFailed
@@ -53,12 +56,9 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 		due := entry.DueAt
 		row := crmcontracts.WorklistItem{
 			Id: entry.ID.String(), Source: sourceWeeklyCommitment, Category: "tasks",
-			Level: levelAgreed, Title: &entry.Label, DueAt: &due, Subject: entry.Subject,
+			Level: levelPromise, Title: &entry.Label, DueAt: &due, Subject: entry.Subject,
 			Consequence: "promise_breaks", Because: []crmcontracts.WorklistReason{},
 			Actions: []crmcontracts.WorklistItemActions{},
-		}
-		if deadline.Passed(&due, now) {
-			row.Level = levelPromise
 		}
 		stampDeadline(&row, &due, now)
 		copy.planRows = append(copy.planRows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})

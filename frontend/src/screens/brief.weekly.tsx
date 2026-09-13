@@ -1,3 +1,4 @@
+import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -71,7 +72,7 @@ export function WeeklySection() {
           review.data
             ? t("brief.weekly.weekOf", {
                 day: formatDate(
-                  review.data.local_week_start,
+                  middayInstant(review.data.local_week_start, recordZone),
                   locale,
                   recordZone,
                 ),
@@ -123,7 +124,11 @@ export function WeeklySection() {
                 onChange={(next) => setWeek(next)}
                 options={index.data.map((start) => ({
                   value: start,
-                  label: formatDate(start, locale, recordZone),
+                  label: formatDate(
+                    middayInstant(start, recordZone),
+                    locale,
+                    recordZone,
+                  ),
                 }))}
               />
             )}

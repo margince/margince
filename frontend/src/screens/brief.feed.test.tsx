@@ -69,11 +69,7 @@ it("shows dates and does not repeat the ranking comparator", () => {
     due_at: "2026-06-09T08:30:00Z",
   };
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
-  expect(
-    screen.getByText(
-      /due 09\/06\/2026/,
-    ),
-  ).toBeTruthy();
+  expect(screen.getByText(/due 09\/06\/2026/)).toBeTruthy();
   expect(screen.queryByText("Why it is here")).toBeNull();
   expect(screen.queryByText(/Above the next/)).toBeNull();
 });

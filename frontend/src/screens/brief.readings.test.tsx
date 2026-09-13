@@ -755,3 +755,23 @@ describe("risk scope and reading actions", () => {
     expect(window.location.hash).toContain("filter=deals_at_risk");
   });
 });
+
+it("marks known deal value and urgent work as incomplete when a source fails", () => {
+  const day = readingsDay(
+    {
+      revenue_at_risk_minor: 1200000,
+      revenue_currency: "EUR",
+      more_available: false,
+    },
+    [],
+    [],
+    { urgent: 3 },
+  );
+  day.sources_unavailable = [
+    { source: "deal_at_risk", reason: "failed", category: "deals_at_risk" },
+  ];
+  drawDay(day);
+  expect(strippedFigures()).toContain("3+");
+  expect(screen.getByText(/12k.*\+/i)).toBeTruthy();
+  expect(screen.getByText(en["brief.readings.riskPartial"])).toBeTruthy();
+});

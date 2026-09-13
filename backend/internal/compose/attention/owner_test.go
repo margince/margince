@@ -29,6 +29,13 @@ import (
 func TestEveryProducerStatesAnOwner(t *testing.T) {
 	t.Parallel()
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
+	planService.taskScope = TasksMine
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
+	if missing != nil {
+		t.Fatalf("plan source: %+v", missing)
+	}
+	rows = append(rows, planRows.planRows...)
 	// The two lanes read BESIDE the assembled day rather than as part of it —
 	// the who-is-waiting and owed-leads reads take the scope as a query argument
 	// — so classifyDay never produces them and a census over it alone would
@@ -240,6 +247,13 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"capture_health":       "a mailbox belongs to one contact",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
+	planService.taskScope = TasksMine
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
+	if missing != nil {
+		t.Fatalf("plan source: %+v", missing)
+	}
+	rows = append(rows, planRows.planRows...)
 	for _, row := range rows {
 		why, claimed := readerBound[row.item.Source]
 		isReaderBound := row.ownerRef.kind == ownerTheReader

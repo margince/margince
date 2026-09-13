@@ -69,11 +69,15 @@ export function TeamWeeklySection({
       <p>
         {t("teamweekly.weekOf", {
           team: review.team_name,
-          day: formatDate(review.local_week_start, locale, recordZone),
+          day: formatDate(
+            middayInstant(review.local_week_start, recordZone),
+            locale,
+            recordZone,
+          ),
         })}
       </p>
       <Coverage review={review} />
-      {!measured && <Headline review={review} />}
+      <Headline review={review} />
       {measured && <AgendaPanel review={review} />}
       {measured && (
         <Disclosure summary={t("brief.week.supporting")}>
@@ -82,7 +86,6 @@ export function TeamWeeklySection({
             titleAction={<Badge quiet>{t("teamweekly.frozen")}</Badge>}
           >
             <PanelBody className="teamweekly-reading">
-              <Headline review={review} />
               <AgendaSummary review={review} />
             </PanelBody>
             <PanelBody>
@@ -134,6 +137,22 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
       </h3>
     );
   const n = (value: number) => formatNumber(value, locale);
+  if (
+    counts.deals_won ||
+    counts.deals_lost ||
+    counts.deals_moved ||
+    counts.leads_routed
+  )
+    return (
+      <h3 className="teamweekly-headline">
+        {t("brief.team.outcomes", {
+          won: n(counts.deals_won),
+          lost: n(counts.deals_lost),
+          moved: n(counts.deals_moved),
+          leads: n(counts.leads_routed),
+        })}
+      </h3>
+    );
   if (counts.meetings_held === 0 && counts.commitments_due === 0)
     return (
       <h3 className="teamweekly-headline">{t("teamweekly.headline.plain")}</h3>

@@ -13,9 +13,9 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
-import { meetingRow, readingsDay } from "./brief.fixtures";
+import { readingsDay } from "./brief.fixtures";
 import type { Deal } from "./brief.queries";
-import { OvernightPanel, RailQuiet } from "./brief.rail";
+import { OvernightPanel } from "./brief.rail.overnight";
 import type { WorklistItem } from "./worklist.queries";
 
 // Brief's context rail (screens/brief.rail.tsx): what the night shift did, and
@@ -151,7 +151,16 @@ describe("BriefScreen — the context rail", () => {
             ...Array.from({ length: 5 }, (_, i) =>
               taskRow(`t${i}`, `Follow up ${i}`),
             ),
-            riskRow,
+            {
+              id: "risk-1",
+              source: "deal_at_risk",
+              category: "deals_at_risk",
+              level: 3,
+              title: "Ostwind refit",
+              consequence: "deal_drifts",
+              because: [],
+              actions: [],
+            },
           ]),
         ),
     });
@@ -171,9 +180,7 @@ describe("BriefScreen — the context rail", () => {
     await waitFor(() =>
       expect(document.querySelector("[aria-busy='true']")).toBeNull(),
     );
-    expect(
-      screen.queryByRole("region", { name: en["brief.panel.remainingRisk"] }),
-    ).toBeNull();
+    expect(document.querySelector("#brief-watch")).toBeNull();
   });
 
   // The panel keeps its box wherever it has something to SAY. Past the end of
@@ -398,100 +405,6 @@ function taskRow(id: string, title: string): WorklistItem {
     actions: ["complete", "open"],
   };
 }
-
-const riskRow: WorklistItem = {
-  id: "d-9",
-  source: "deal_at_risk",
-  category: "deals_at_risk",
-  level: 3,
-  title: "Ostwind refit",
-  consequence: "deal_drifts",
-  because: [],
-  actions: ["open"],
-  subject: { type: "deal", id: "d-9" },
-  deal: { quiet_days: 40, amount_minor: 1200000, currency: "EUR" },
-};
-const busyDay = readingsDay({}, [
-  riskRow,
-  meetingRow("m1", true),
-  taskRow("t1", "Call Alice back"),
-]);
-
-const quietLines = [
-  en["brief.rail.quietSchedule"],
-  en["brief.rail.quietTasks"],
-  en["brief.rail.quietOvernight"],
-  en["brief.rail.quietWatch"],
-];
-
-describe("the rail's quiet panel", () => {
-  it("names every silent source, in the order the rail draws them", async () => {
-    stubApi({});
-    render(<RailQuiet day={readingsDay({}, [])} dayState="ready" />);
-
-    // Awaited on the digest's line: the other three are settled on the first
-    // paint, and the panel is the whole point only once all four agree.
-    await screen.findByText(en["brief.rail.quietOvernight"]);
-    const panel = screen.getByRole("region", { name: en["brief.panel.quiet"] });
-    expect(
-      Array.from(
-        panel.querySelectorAll(".panel-row"),
-        (row) => row.textContent,
-      ),
-    ).toEqual(quietLines);
-  });
-
-  // The counterweight: with news in every source there is nothing to report
-  // about the reporting, and a panel saying so is the chrome this replaced.
-  it("draws nothing when every source has news", async () => {
-    stubApi({
-      "GET /digest": () =>
-        jsonResponse({
-          date: "2026-07-16",
-          generated_at: "2026-07-17T03:00:00Z",
-          capture: { messages_synced: 1 },
-          review: { dedupe_open: 0 },
-          connectors: [],
-        }),
-    });
-    render(<RailQuiet day={busyDay} dayState="ready" />);
-
-    // The digest read has to ANSWER before its absence can be ruled out, so
-    // this waits on the page going quiet rather than asserting into a read in
-    // flight — which would pass over a panel that never collapses.
-    await waitFor(() =>
-      expect(document.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(
-      screen.queryByRole("region", { name: en["brief.panel.quiet"] }),
-    ).toBeNull();
-  });
-
-  // A READ IN FLIGHT IS NOT SILENCE. Saying "nothing booked" while the worklist
-  // is still being read tells a rep their morning is clear on the strength of
-  // an answer nobody has received — and the panel it stands in for is still
-  // drawing its own pending state at the time.
-  it("says nothing about a source whose read has not answered", async () => {
-    stubApi({});
-    render(<RailQuiet day={undefined} dayState="loading" />);
-
-    await screen.findByText(en["brief.rail.quietOvernight"]);
-    expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();
-    expect(screen.queryByText(en["brief.rail.quietTasks"])).toBeNull();
-    expect(screen.queryByText(en["brief.rail.quietWatch"])).toBeNull();
-  });
-
-  // Nor is a read that FAILED. The panel keeps its box to say so, and a quiet
-  // line beside it would claim the source answered.
-  it("says nothing about a source whose read failed", async () => {
-    stubApi({});
-    render(<RailQuiet day={undefined} dayState="failed" />);
-
-    await screen.findByText(en["brief.rail.quietOvernight"]);
-    expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();
-    expect(screen.queryByText(en["brief.rail.quietWatch"])).toBeNull();
-  });
-});
 
 describe("the overnight panel with no digest", () => {
   // /v1/digest answers 404 before the first nightly run and 501 where the

@@ -96,3 +96,22 @@ describe("the team board on Brief", () => {
     expect(boardReads[0].method).toBe("GET");
   });
 });
+
+it("opens the named teammate plan without also following the table row", async () => {
+  stubApi({
+    "GET /worklist/team": () => jsonResponse(board),
+    "GET /weekly-plans/11111111-1111-4111-8111-111111111111/current": () =>
+      jsonResponse({ title: "Not found" }, 404),
+  });
+  render(<BriefTeamBoard offered teamId="team-1" />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: en["brief.team.plan"] }),
+  );
+  expect(await screen.findByRole("dialog")).toBeTruthy();
+  expect(globalThis.location.hash).toBe("");
+  expect(
+    screen.getByRole("heading", {
+      name: en["brief.team.planFor"].replace("{name}", "Lena Fischer"),
+    }),
+  ).toBeTruthy();
+});

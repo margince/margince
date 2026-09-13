@@ -1,3 +1,4 @@
+import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -196,7 +197,11 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
     <Panel
       title={t("brief.panel.overnight")}
       sub={t("brief.digestFor", {
-        date: formatDate(digest.date, locale, recordZone),
+        date: formatDate(
+          middayInstant(digest.date, recordZone),
+          locale,
+          recordZone,
+        ),
       })}
       className="rail-panel"
     >

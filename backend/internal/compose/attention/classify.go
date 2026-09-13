@@ -240,9 +240,8 @@ const waitingStaleDays = 14
 // drafting a reply to words this reader may not see, and a button that opened
 // an empty composer would be worse than no button.
 func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
-	subject := waiting.Subject
 	days := daysSince(waiting.Since, asOf)
-	// Stale and unfunded: the row belongs to review, not to today.
+	// Old threads are recovery work; an open deal preserves material-risk priority.
 	level := levelWaiting
 	stale := days > waitingStaleDays
 	if stale {
@@ -326,8 +325,8 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	// The subject travels because the row exists at all only for a reader the
 	// content gate admitted: a message this reader may not read produces no
 	// row, rather than a row with its words removed.
-	if subject != "" {
-		row.Title = &subject
+	if waiting.Subject != "" {
+		row.Title = &waiting.Subject
 	}
 	// Present exactly when this wait is an email the reader may read. A client
 	// branches on the field rather than on the kind word: the lane also carries

@@ -123,9 +123,7 @@ describe("the opening sentence", () => {
     for (const catalog of [en, de, vi]) {
       for (const key of [
         "brief.sentence.one",
-        "brief.sentence.oneWithCost",
         "brief.sentence.many",
-        "brief.sentence.manyWithCost",
       ] as const) {
         const template = catalog[key];
         // The hole is the last thing before a separator or the end — never
@@ -207,9 +205,7 @@ describe("sentenceParts", () => {
     for (const catalog of [en, de, vi]) {
       for (const key of [
         "brief.sentence.one",
-        "brief.sentence.oneWithCost",
         "brief.sentence.many",
-        "brief.sentence.manyWithCost",
       ] as const) {
         for (const part of sentenceParts(catalog[key])) {
           if (part.kind === "slot") {

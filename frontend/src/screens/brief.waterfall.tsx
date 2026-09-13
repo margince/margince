@@ -3,6 +3,7 @@ import { useRecordZone } from "../app/recordzone";
 import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
+import { middayInstant } from "../format/calendarday";
 import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useT } from "../i18n";
 
@@ -56,8 +57,12 @@ export function OutlookPanel({
     <>
       <p className="t-caption">
         {t("brief.forecast.period", {
-          start: formatDate(shown.period_start, locale, zone),
-          end: formatDate(shown.period_end, locale, zone),
+          start: formatDate(
+            middayInstant(shown.period_start, zone),
+            locale,
+            zone,
+          ),
+          end: formatDate(middayInstant(shown.period_end, zone), locale, zone),
         })}
       </p>
       <SegmentedControl

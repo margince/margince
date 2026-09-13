@@ -1,3 +1,4 @@
+import { useToast } from "../design-system/toast";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -163,6 +164,7 @@ export function DecisionsSection({
   const stagedDay = stagedDayFormatter(locale, viewerZone());
   const queryClient = useQueryClient();
   const viewerId = useViewerId();
+  const toast = useToast();
   const tierMap = useAgentTierMap();
   // What stopped a commit that had already sent something. Screen state rather
   // than the mutation's error, because the mutation SUCCEEDED — it carried the
@@ -182,14 +184,16 @@ export function DecisionsSection({
         onAlreadyDecided();
       }
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
+      queryClient.invalidateQueries({ queryKey: worklistKey });
       if (result.failure) {
         // Reported after the outcomes that DID land, and as a failure: the tray
         // keeps what it still holds and the notice under it says what stopped.
-        setFailure(problemMessageOf(result.failure, t));
+        const message = problemMessageOf(result.failure, t);
+        setFailure(message);
+        toast.show(message, { mark: false, sticky: true });
         return;
       }
       setFailure(null);
-      queryClient.invalidateQueries({ queryKey: worklistKey });
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {

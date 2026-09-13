@@ -232,7 +232,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           // The one slot that genuinely spans the day: `urgent` is every row at
           // the top two levels whatever lane raised it, so any bounded source
           // anywhere makes it a floor. This is what `more_available` is for.
-          floor={readings.more_available}
+          floor={readings.more_available || unread}
           // The basis says what the figure was taken over, on every day. A zero
           // already reads as "none"; a line repeating that says the same thing
           // twice and drops the one fact it could add.
@@ -437,20 +437,27 @@ function meetingsReading(day: Worklist): MeetingsReading {
 function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const { revenue_at_risk_minor: amount, revenue_currency: currency } =
     day.readings;
   const count =
     day.counts.find((entry) => entry.category === "deals_at_risk")
       ?.considered ?? 0;
-  const complete =
-    sourceComplete(day, "deal_at_risk") && sourceComplete(day, "brief_item");
+  const incomplete =
+    day.sources_unavailable.some(
+      (entry) => entry.category === "deals_at_risk" || !entry.category,
+    ) ||
+    day.counts.some(
+      (entry) => entry.category === "deals_at_risk" && entry.more_available,
+    );
+  const complete = !incomplete;
   return (
     <StatCard
       density="compact"
       label={t("brief.readings.risk")}
       value={
         amount != null && currency
-          ? formatMoneyCompact(amount, currency, locale)
+          ? `${formatMoneyCompact(amount, currency, locale)}${incomplete ? "+" : ""}`
           : t(
               count === 0 && complete && amount == null
                 ? "brief.readings.noDealWork"
@@ -458,11 +465,17 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
             )
       }
       detail={
-        day.readings.unpriced_deals
-          ? t("brief.readings.unpricedCount", {
-              count: formatNumber(day.readings.unpriced_deals, locale),
-            })
-          : t("brief.readings.riskBasis")
+        incomplete
+          ? t("brief.readings.riskPartial")
+          : day.readings.unpriced_deals
+            ? plural(
+                "brief.readings.unpricedCount",
+                day.readings.unpriced_deals,
+                {
+                  count: formatNumber(day.readings.unpriced_deals, locale),
+                },
+              )
+            : t("brief.readings.riskBasis")
       }
       onOpen={() => openLane("deals_at_risk", day.scope)}
       openLabel={t("brief.readings.openRisk")}

@@ -2,6 +2,23 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "brief.team.planUnavailable":
+    "No current plan is available to you for {name}.",
+  "brief.team.noCommitments": "{name} has no commitments in this plan.",
+  "brief.team.outcomes":
+    "{won} won · {lost} lost · {moved} deals moved · {leads} leads assigned",
+  "brief.schedule.unavailable": "Your calendar could not be checked.",
+  "brief.schedule.more":
+    "Load more agenda items to see the remaining meetings.",
+  "brief.readings.riskPartial":
+    "Known value only; some deal work could not be checked.",
+  "brief.feed.remainingUrgent_one": "{count} urgent item is not loaded yet.",
+  "brief.feed.remainingUrgent_other":
+    "{count} urgent items are not loaded yet.",
+  "brief.readings.unpricedCount_one":
+    "{count} deal has no comparable value and is excluded.",
+  "brief.readings.unpricedCount_other":
+    "{count} deals have no comparable value and are excluded.",
   "brief.coverage.source.generic": "Other work",
   "brief.coverage.source.weekly_commitment": "Weekly commitments",
   "brief.coverage.source.batch": "Grouped work",
@@ -26,15 +43,12 @@ export const en = {
     "{done} of {total} due commitments were completed.",
   "brief.team.meetingRate":
     "{done} of {total} meetings had a recorded next step.",
-  "brief.readings.unpricedCount":
-    "{count} flagged deals have no comparable value and are excluded.",
   "brief.digest.messages": "Emails synced",
   "brief.team.week": "Review week starting",
   "brief.week.movedLabel": "Stage changes",
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The brief could not refresh. The last loaded work is still shown.",
-  "brief.feed.remainingUrgent": "{count} urgent items are not loaded yet.",
   "brief.feed.routine": "Privacy follow-up · {count} items due later",
   "brief.team.saveResponse": "Save response",
   "brief.team.response": "Your response to the help request",
@@ -64,7 +78,6 @@ export const en = {
   "brief.coverage.retry": "Refresh brief",
   "brief.coverage.summary": "Some work may be missing",
   "brief.task.undated": "No due date",
-  "brief.task.due": "Due {date}",
   "brief.readings.summary": "Work summary",
   "brief.readings.unpriced": "Value unavailable",
   "brief.readings.noDealWork": "No flagged deals",
@@ -83,7 +96,6 @@ export const en = {
   "brief.week.lost": "{count} deals lost.",
   "brief.row.details": "Details",
   "brief.glance.introTeam": "Here is your team’s day.",
-  "brief.readings.openPriorities": "View all priorities",
   "teamweekly.focus.deals_at_risk": "Deal recovery",
   "teamweekly.headline.partial":
     "Partial coverage. These figures describe the reps counted below.",
@@ -97,7 +109,6 @@ export const en = {
   "brief.readings.riskBasis":
     "expected deal value; unpriced deals are excluded",
   "brief.readings.risk": "Deal value needing attention",
-  "brief.panel.remainingRisk": "More deals needing attention",
   "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
   "brief.feed.teamTitle": "Team priorities",
   "theme.toDark": "Dark theme",
@@ -3248,14 +3259,7 @@ export const en = {
   // The rail's own panel titles, after the rename that made each claim exactly
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
-  "brief.panel.tasks": "Tasks due",
-  // The one panel a silent morning gets: a line per source that had nothing to
-  // report, so a reader can tell a quiet source from one the page forgot.
-  "brief.panel.quiet": "Quiet today",
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.rail.quietTasks": "No tasks due",
-  "brief.rail.quietOvernight": "No overnight digest",
-  "brief.rail.quietWatch": "No deal risks found in this queue.",
   "brief.panel.schedule": "Upcoming meetings",
   "brief.overnight.connectorsUnhealthy": "Connections need attention",
   "brief.overnight.fixConnector": "Fix the connection",

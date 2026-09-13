@@ -70,12 +70,10 @@ function review(
   } as TeamWeeklyReview;
 }
 
-it("describes observed completion rates without inventing a performance bar", async () => {
+it("leads with observed sales outcomes without inventing a performance bar", async () => {
   stubApi({ "GET /weekly-reviews/team": () => jsonResponse(review()) });
   render(<TeamWeeklySection teamId="t1" />);
-  expect(
-    await screen.findByText(/meetings had a recorded next step/),
-  ).toBeTruthy();
+  expect(await screen.findByText(/won .* lost .* deals moved/)).toBeTruthy();
   expect(document.body.textContent).not.toContain("against a bar");
 });
 
@@ -210,7 +208,7 @@ describe("the scorecard says what the wins were worth", () => {
     expect(await screen.findByText(/25.000,00\s*€|€25,000\.00/)).toBeTruthy();
     // The lost count survives the money arriving: it is a different fact, not a
     // delta the value replaces.
-    expect(screen.getByText(/1 lost|1 verloren/)).toBeTruthy();
+    expect(screen.getAllByText(/1 lost|1 verloren/)[0]).toBeTruthy();
   });
 
   // The block is ABSENT whenever any member's week could not be converted, and

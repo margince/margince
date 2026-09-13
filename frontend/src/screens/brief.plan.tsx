@@ -1,3 +1,4 @@
+import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -221,7 +222,7 @@ export function PlanSection() {
           plan.data
             ? t("brief.plan.period", {
                 date: formatDate(
-                  plan.data.local_week_start,
+                  middayInstant(plan.data.local_week_start, recordZone),
                   locale,
                   recordZone,
                 ),
@@ -403,7 +404,11 @@ function CommitmentRow({
             {commitment.due_on && (
               <span>
                 {t("plan.due", {
-                  day: formatDate(commitment.due_on, locale, recordZone),
+                  day: formatDate(
+                    middayInstant(commitment.due_on, recordZone),
+                    locale,
+                    recordZone,
+                  ),
                 })}
               </span>
             )}

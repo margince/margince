@@ -1,3 +1,4 @@
+import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -24,7 +25,14 @@ export function TeamPlanReview({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button small variant="ghost" onClick={() => setOpen(true)}>
+      <Button
+        small
+        variant="ghost"
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen(true);
+        }}
+      >
         {t("brief.team.plan")}
       </Button>
       {open && (
@@ -54,7 +62,11 @@ function TeamPlanDialog({
       {plan.data && (
         <p>
           {t("brief.plan.period", {
-            date: formatDate(plan.data.local_week_start, locale, zone),
+            date: formatDate(
+              middayInstant(plan.data.local_week_start, zone),
+              locale,
+              zone,
+            ),
           })}
         </p>
       )}
@@ -69,10 +81,12 @@ function TeamPlanDialog({
                 : "ready"
         }
         loadingLabel={t("plan.loading")}
-        emptyLabel={t("plan.none")}
+        emptyLabel={t("brief.team.planUnavailable", { name })}
         detail={{ onRetry: () => void plan.refetch() }}
       >
-        {plan.data?.commitments.length === 0 && <p>{t("plan.none")}</p>}
+        {plan.data?.commitments.length === 0 && (
+          <p>{t("brief.team.noCommitments", { name })}</p>
+        )}
         {plan.data?.commitments.map((commitment) => (
           <TeamCommitment
             key={commitment.id}

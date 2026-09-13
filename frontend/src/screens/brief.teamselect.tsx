@@ -6,6 +6,7 @@ import { useUrlParams } from "../app/urlstate";
 import { Select } from "../design-system/select";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { useMe } from "./common";
 import { useTeams } from "./teamweekly.queries";
 
 export function BriefTeamSelect({
@@ -13,15 +14,22 @@ export function BriefTeamSelect({
 }: Readonly<{ children: (team: string) => ReactNode }>) {
   const t = useT();
   const teams = useTeams();
+  const me = useMe();
   const [params, setParams] = useUrlParams();
-  const options = (teams.data ?? []).map((team) => ({
-    value: team.id,
-    label: team.name,
-  }));
+  const options = (teams.data ?? [])
+    .filter(
+      (team) =>
+        me.data?.authorization?.row_scope !== "team" ||
+        me.data.teams.includes(team.id),
+    )
+    .map((team) => ({
+      value: team.id,
+      label: team.name,
+    }));
   const asked = params.get("team");
   const chosen = options.some((option) => option.value === asked)
     ? asked
-    : options.length === 1
+    : !asked && options.length === 1
       ? options[0].value
       : undefined;
   return (

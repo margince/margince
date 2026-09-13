@@ -1,3 +1,5 @@
+import { useRecordZone } from "../app/recordzone";
+import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -162,6 +164,7 @@ export function BriefGlance({
 }: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
+  const recordZone = useRecordZone();
   const { locale } = useLocale();
   const greeting =
     view === "weekly"
@@ -176,7 +179,13 @@ export function BriefGlance({
       <h1 className="glance-greeting t-display">{greeting}</h1>
       {date && (
         <p className="t-caption">
-          <time dateTime={date}>{formatDate(date, locale, viewerZone())}</time>
+          <time dateTime={date}>
+            {formatDate(
+              view === "weekly" ? middayInstant(date, recordZone) : date,
+              locale,
+              view === "weekly" ? recordZone : viewerZone(),
+            )}
+          </time>
         </p>
       )}
       {sentence ? (

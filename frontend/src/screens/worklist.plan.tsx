@@ -16,6 +16,7 @@ export function PlanWorkActions({ item }: Readonly<{ item: WorklistItem }>) {
   const canEdit = useCanWrite("weekly_plan", "update");
   const settle = useSetCommitmentState();
   const own = item.owner?.id === me.data?.user.id;
+  if (!me.data) return null;
   return (
     <>
       {!own && item.owner?.id ? (

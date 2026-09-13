@@ -5,6 +5,24 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "brief.team.planUnavailable":
+    "Für {name} ist kein aktueller Plan für Sie verfügbar.",
+  "brief.team.noCommitments": "{name} hat in diesem Plan keine Zusagen.",
+  "brief.team.outcomes":
+    "{won} gewonnen · {lost} verloren · {moved} Deals bewegt · {leads} Leads zugewiesen",
+  "brief.schedule.unavailable": "Ihr Kalender konnte nicht geprüft werden.",
+  "brief.schedule.more":
+    "Laden Sie weitere Einträge, um die übrigen Termine zu sehen.",
+  "brief.readings.riskPartial":
+    "Nur bekannter Wert; einige Deal-Aufgaben konnten nicht geprüft werden.",
+  "brief.feed.remainingUrgent_one":
+    "{count} dringender Eintrag ist noch nicht geladen.",
+  "brief.feed.remainingUrgent_other":
+    "{count} dringende Einträge sind noch nicht geladen.",
+  "brief.readings.unpricedCount_one":
+    "{count} Deal hat keinen vergleichbaren Wert und ist ausgeschlossen.",
+  "brief.readings.unpricedCount_other":
+    "{count} Deals haben keinen vergleichbaren Wert und sind ausgeschlossen.",
   "brief.coverage.source.generic": "Weitere Arbeit",
   "brief.coverage.source.weekly_commitment": "Wochenzusagen",
   "brief.coverage.source.batch": "Gruppierte Arbeit",
@@ -30,16 +48,12 @@ export const de = {
     "{done} von {total} fälligen Zusagen wurden erledigt.",
   "brief.team.meetingRate":
     "{done} von {total} Terminen hatten einen erfassten nächsten Schritt.",
-  "brief.readings.unpricedCount":
-    "{count} markierte Deals haben keinen vergleichbaren Wert und sind nicht enthalten.",
   "brief.digest.messages": "Synchronisierte E-Mails",
   "brief.team.week": "Woche ab prüfen",
   "brief.week.movedLabel": "Phasenwechsel",
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Brief konnte nicht aktualisiert werden. Die zuletzt geladene Arbeit wird weiterhin angezeigt.",
-  "brief.feed.remainingUrgent":
-    "{count} dringende Einträge sind noch nicht geladen.",
   "brief.feed.routine":
     "Datenschutz-Nacharbeit · {count} später fällige Einträge",
   "brief.team.saveResponse": "Antwort speichern",
@@ -70,7 +84,6 @@ export const de = {
   "brief.coverage.retry": "Brief aktualisieren",
   "brief.coverage.summary": "Möglicherweise fehlt Arbeit",
   "brief.task.undated": "Kein Fälligkeitsdatum",
-  "brief.task.due": "Fällig {date}",
   "brief.readings.summary": "Arbeitsübersicht",
   "brief.readings.unpriced": "Wert nicht verfügbar",
   "brief.readings.noDealWork": "Keine markierten Deals",
@@ -90,7 +103,6 @@ export const de = {
   "brief.week.lost": "{count} Deals verloren.",
   "brief.row.details": "Details",
   "brief.glance.introTeam": "Das steht heute im Team an.",
-  "brief.readings.openPriorities": "Alle Prioritäten ansehen",
   "teamweekly.focus.deals_at_risk": "Deals wieder voranbringen",
   "teamweekly.headline.partial":
     "Unvollständige Abdeckung. Diese Zahlen betreffen die unten erfassten Mitarbeitenden.",
@@ -105,7 +117,6 @@ export const de = {
   "brief.readings.riskBasis":
     "erwarteter Deal-Wert; Deals ohne Bewertung sind nicht enthalten",
   "brief.readings.risk": "Dealwert mit Handlungsbedarf",
-  "brief.panel.remainingRisk": "Weitere Deals mit Handlungsbedarf",
   "brief.glance.introTeamWeekly": "Die erfasste Woche deines Teams.",
   "brief.feed.teamTitle": "Prioritäten im Team",
   "theme.toDark": "Dunkles Design",
@@ -3154,12 +3165,7 @@ export const de = {
   "brief.glance.intro": "Das ist dein Tag.",
   "brief.panel.decisions": "Vorschläge zur Freigabe",
   "brief.panel.overnight": "Über Nacht",
-  "brief.panel.tasks": "Fällige Aufgaben",
-  "brief.panel.quiet": "Heute ruhig",
   "brief.rail.quietSchedule": "Nichts gebucht",
-  "brief.rail.quietTasks": "Keine Aufgaben fällig",
-  "brief.rail.quietOvernight": "Kein Nachtbericht",
-  "brief.rail.quietWatch": "Keine Dealrisiken in dieser Liste gefunden.",
   "brief.panel.schedule": "Anstehende Termine",
   "brief.overnight.connectorsUnhealthy": "Verbindungen brauchen Aufmerksamkeit",
   "brief.overnight.fixConnector": "Verbindung prüfen",

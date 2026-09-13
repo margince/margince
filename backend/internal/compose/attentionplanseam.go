@@ -40,6 +40,9 @@ func (s attentionWeeklyPlan) DuePlan(ctx context.Context, owner ids.UUID, now ti
 	if err != nil {
 		return nil, err
 	}
+	if plan.Status != weeklyplan.StateOpen {
+		return nil, nil
+	}
 	var zone string
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error

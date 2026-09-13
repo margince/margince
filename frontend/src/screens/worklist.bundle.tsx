@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useNow } from "../format/now";
-import { type Approval, useApprovals } from "./approvals.queries";
+import { type Approval, useBundleApprovals } from "./approvals.queries";
 import { DecisionsSection } from "./brief.decisions";
 import { deckItems } from "./brief.decisions.items";
 
 export function ApprovalBundleReview({
   approval,
 }: Readonly<{ approval: Approval }>) {
-  const pending = useApprovals("pending");
+  const pending = useBundleApprovals(approval.bundle_id ?? "");
   const now = useNow(60_000);
   const members =
     pending.data?.data.filter(
