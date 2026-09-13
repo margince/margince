@@ -102,7 +102,7 @@ func needsDealFigures(item crmcontracts.AttentionItem) (ids.UUID, bool) {
 // never classifyBriefItem's own instant comparison, which is what let the two
 // lanes disagree about a deal due today.
 func applyDealFigures(item *crmcontracts.AttentionItem, figures DealFigures) {
-	facts := &crmcontracts.AttentionDealFacts{AmountMinor: figures.AmountMinor}
+	facts := &crmcontracts.AttentionDealFacts{AmountMinor: figures.AmountMinor, CloseDateProvisional: figures.CloseDateProvisional, ForecastCategory: figures.ForecastCategory}
 	if !figures.StageID.IsZero() {
 		stage := openapi_types.UUID(figures.StageID)
 		facts.StageId = &stage

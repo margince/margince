@@ -14,7 +14,7 @@ import { BriefDials } from "./brief.dials";
 import { BriefFeed } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
-import { quietDeals, useBriefDeals, useWeeklyReview } from "./brief.queries";
+import { useWeeklyReview } from "./brief.queries";
 import { OvernightPanel, RailQuiet, WatchPanel } from "./brief.rail";
 import { BriefReadingsStrip } from "./brief.readings";
 import { PromisesPanel, SchedulePanel } from "./brief.schedule";
@@ -196,7 +196,7 @@ function BriefWork({
   // (`teamOffered`), which is also what draws the scope dial: the control and
   // the surface read one answer, so neither can offer what the other refuses.
   if (address.scope === "team") {
-    return address.view === "weekly" ? [teamWeek] : [board];
+    return address.view === "weekly" ? [teamWeek] : [feed, board];
   }
   if (address.view === "weekly") {
     return [lastWeek, nextWeek];
@@ -220,7 +220,6 @@ export function BriefScreen() {
   // screen does.
   const { onAlreadyDecided, decidedNote } = useDecisionSink();
   const approvalsQuery = usePendingApprovals();
-  const dealsQuery = useBriefDeals();
   // The ONE ranked order, read here for its coverage. Brief has always been
   // deal-only; what it could not say is which sources it never saw, and that
   // answer lives on the worklist read rather than on any of the five deal
@@ -231,20 +230,29 @@ export function BriefScreen() {
   // never its rows, so the first page is the whole of what it needs. Those
   // figures describe the assembled day rather than the page, so paging would
   // not change one of them.
-  const worklistQuery = {
+  const ownQuery = {
     ...worklistPages,
     data: worklistPages.data?.pages[0],
   };
   // Whether this reader's scope reaches a team, off the read the page already
   // makes. It decides BOTH which dials are drawn and which the address may
   // resolve to, so a control and a surface cannot disagree about it.
-  const teamOffered =
-    worklistQuery.data?.scope_options?.includes("team") ?? false;
+  const teamOffered = ownQuery.data?.scope_options?.includes("team") ?? false;
   // The dials live in the ADDRESS, not in state — decision 2. The Brief is a
   // destination contacts return to and send each other, which is the case the
   // Worklist's "dials stay state" choice deliberately excluded.
   const [params, setParams] = useUrlParams();
   const address = addressFrom(params, teamOffered);
+  const teamPages = useWorklist(
+    "team",
+    "all",
+    undefined,
+    teamOffered && address.scope === "team",
+  );
+  const worklistQuery =
+    address.scope === "team"
+      ? { ...teamPages, data: teamPages.data?.pages[0] }
+      : ownQuery;
   // The closed week, for the weekly's opening sentence. The SAME query key
   // WeeklySection uses for the latest week, so the header band and the panel
   // below it read one answer rather than two that could differ — and the read
@@ -253,12 +261,6 @@ export function BriefScreen() {
 
   const approvals = approvalsQuery.data?.data ?? [];
   const items = useMemo(() => deckItems(approvals), [approvals]);
-  const deals = dealsQuery.data?.rows ?? [];
-  // Every count taken from this page is a floor: the read stops at one page,
-  // and `more` is what keeps the glance and the watch panel from reporting a
-  // bounded number as a total.
-  const beyondPage = dealsQuery.data?.more ?? false;
-  const quiet = quietDeals(deals);
 
   // `QueryLike` has no `isSuccess`: settled-and-answered is the absence of both
   // other states, and the difference matters here — a reading that is still in
@@ -281,6 +283,7 @@ export function BriefScreen() {
       <div className="brief-head">
         <BriefGlance
           view={address.view}
+          scope={address.scope}
           day={worklistQuery.data}
           week={weeklyReview.data}
           firstName={firstNameOf(me.data?.user?.display_name)}
@@ -374,11 +377,10 @@ export function BriefScreen() {
                 day={worklistQuery.data}
                 state={readState(worklistQuery)}
               />
-              <OvernightPanel />
+              {address.scope === "mine" && <OvernightPanel />}
               <WatchPanel
-                deals={quiet}
-                more={beyondPage}
-                state={readState(dealsQuery)}
+                day={worklistQuery.data}
+                state={readState(worklistQuery)}
               />
               {/* LAST, and it is the counterweight to every panel above
                   collapsing: four absent panels say nothing at all, and a
@@ -389,9 +391,7 @@ export function BriefScreen() {
               <RailQuiet
                 day={worklistQuery.data}
                 dayState={readState(worklistQuery)}
-                deals={quiet}
-                more={beyondPage}
-                dealsState={readState(dealsQuery)}
+                includeOvernight={address.scope === "mine"}
               />
             </>
           )

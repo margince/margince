@@ -2,6 +2,21 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "teamweekly.focus.deals_at_risk": "Deal recovery",
+  "teamweekly.headline.partial":
+    "Partial coverage. These figures describe the reps counted below.",
+  "teamweekly.headline.unmeasured":
+    "No rep snapshots are available for this week. Performance is not measured.",
+  "worklist.lead.noTarget": "no response target configured",
+  "worklist.lead.lastTouch": "last activity {date}",
+  "worklist.deal.omitted": "omitted from forecast",
+  "worklist.deal.provisional": "provisional close {date} — confirm or revise",
+  "brief.readings.openRisk": "Review deal risks",
+  "brief.readings.riskBasis": "Known value in this queue; may be incomplete",
+  "brief.readings.risk": "Deal value at risk",
+  "brief.panel.remainingRisk": "More deals needing attention",
+  "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
+  "brief.feed.teamTitle": "Team priorities",
   "theme.toDark": "Dark theme",
   "theme.toLight": "Light theme",
   // The three appearance choices, as the options of a chooser — the account menu
@@ -2876,7 +2891,7 @@ export const en = {
   "brief.weekly.scorecard.advanced": "Leads moved forward",
   "brief.weekly.scorecard.advancedBasis":
     "Steps up the ladder, counted per move",
-  "brief.weekly.scorecard.answeredInTarget": "Answered in target",
+  "brief.weekly.scorecard.answeredInTarget": "Recorded responses",
   "brief.weekly.scorecard.breachedDetail": "{count} breached the target",
   "brief.weekly.scorecard.meetingsHeld": "Meetings held",
   "brief.weekly.scorecard.meetingsBasis": "{booked} booked · {noShow} no-show",
@@ -2973,8 +2988,9 @@ export const en = {
   "teamweekly.reading.firstResponse": "First response",
   "teamweekly.reading.nextStep": "Meetings with a next step",
   "teamweekly.reading.commitments": "Plan commitments kept",
-  "teamweekly.card.firstResponse": "Answered in time",
-  "teamweekly.card.firstResponseBasis": "{breached} breached",
+  "teamweekly.card.firstResponse": "Recorded responses",
+  "teamweekly.card.firstResponseBasis":
+    "No breach recorded; {breached} leads breached",
   "teamweekly.card.meetings": "Meetings with a next step",
   "teamweekly.card.meetingsBasis": "of the meetings held",
   "teamweekly.card.commitments": "Plan commitments kept",
@@ -3105,7 +3121,7 @@ export const en = {
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "brief.weekly.sincePrior": "{delta} vs last week",
   "brief.weekly.wonVsPrior": "{value} · {delta} vs prior week",
-  "brief.weekly.leadsAnswered": "Leads answered in time",
+  "brief.weekly.leadsAnswered": "Recorded lead responses",
   "brief.weekly.ofRouted": "{answered} of {routed}",
   "brief.weekly.planCommitmentsKept": "Plan commitments kept",
   "brief.weekly.meetingsHeld": "Meetings with a next step",
@@ -3163,7 +3179,7 @@ export const en = {
   "brief.rail.quietSchedule": "Nothing booked",
   "brief.rail.quietTasks": "No tasks due",
   "brief.rail.quietOvernight": "No overnight digest",
-  "brief.rail.quietWatch": "Nothing gone quiet",
+  "brief.rail.quietWatch": "No deal risks found in this queue.",
   "brief.panel.schedule": "Today's schedule",
   "brief.panel.watch": "Gone quiet",
   "brief.overnight.connectorsUnhealthy": "Connections need attention",
@@ -9362,7 +9378,8 @@ export const en = {
   // A band holding nothing, said rather than left out. Each says what is
   // absent, because "nothing here" four times over tells a reader less than
   // one line naming what they are clear of.
-  "worklist.bandClear.now": "Nothing needs you today.",
+  "worklist.bandClear.now":
+    "No urgent interruptions. Check the remaining work below.",
   "worklist.bandClear.build_pipeline": "No new pipeline work waiting.",
   "worklist.bandClear.keep_momentum": "Nothing agreed is drifting.",
   "worklist.bandClear.review": "Nothing to review.",
@@ -9553,9 +9570,9 @@ export const en = {
   "worklist.because.material": "above the typical open deal",
   "worklist.because.material.value":
     "worth {value}, above the typical open deal",
-  "worklist.because.below_material": "below the typical open deal",
+  "worklist.because.below_material": "not above the typical at-risk deal value",
   "worklist.because.below_material.value":
-    "worth {value}, below the typical open deal",
+    "{value} — not above the typical at-risk deal value",
   "worklist.because.quiet_days": "gone quiet",
   "worklist.because.quiet_days.value_one": "quiet for {value} day",
   "worklist.because.quiet_days.value_other": "quiet for {value} days",

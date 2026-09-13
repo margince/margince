@@ -46,7 +46,8 @@ const (
 	// produces no row at all, and a page promising one focus per rep would
 	// quietly shorten to the troubled ones — which reads as a team where only
 	// those contacts exist.
-	FocusStrongWeek = "strong_week"
+	FocusStrongWeek  = "strong_week"
+	FocusDealsAtRisk = "deals_at_risk"
 	// Nothing to fix and nothing that stood out. Said plainly rather than
 	// dressed as either a problem or a triumph.
 	FocusQuietWeek = "quiet_week"
@@ -243,7 +244,11 @@ func gatherTeamWeek(
 			money.WonMinor += memberMoney.WonMinor
 			money.LostMinor += memberMoney.LostMinor
 		}
-		review.Reps = append(review.Reps, repFrom(member, counts, help))
+		recovery, err := memberDealRecovery(ctx, tx, member.UserID, review.LocalWeekStart)
+		if err != nil {
+			return err
+		}
+		review.Reps = append(review.Reps, repFrom(member, counts, help, recovery))
 	}
 	if money.Known && money.Currency != "" {
 		review.Money = money
@@ -266,8 +271,8 @@ func addTeamCounts(team *TeamCounts, member Counts) {
 }
 
 // repFrom builds one member's row, focus and all.
-func repFrom(member TeamMember, counts Counts, help int) TeamRep {
-	kind, label := focusFor(counts, help)
+func repFrom(member TeamMember, counts Counts, help int, recovery string) TeamRep {
+	kind, label := focusFor(counts, help, recovery)
 	return TeamRep{
 		UserID: member.UserID, DisplayName: member.DisplayName,
 		DealsWon: counts.DealsWon, LeadsBreached: counts.LeadsBreached,
@@ -287,7 +292,7 @@ func repFrom(member TeamMember, counts Counts, help int) TeamRep {
 //
 // The label is composed here rather than by a model: it states a stored figure
 // and nothing else, so it cannot say something the snapshot does not hold.
-func focusFor(counts Counts, help int) (kind, label string) {
+func focusFor(counts Counts, help int, recovery string) (kind, label string) {
 	switch {
 	case help > 0:
 		return FocusHelpRequested, fmt.Sprintf("Asked for help on %s", plural(help, "commitment"))
@@ -297,6 +302,8 @@ func focusFor(counts Counts, help int) (kind, label string) {
 	case counts.CommitmentsDue > counts.CommitmentsKept:
 		return FocusCommitmentsMissed, fmt.Sprintf("Kept %d of %d commitments",
 			counts.CommitmentsKept, counts.CommitmentsDue)
+	case recovery != "":
+		return FocusDealsAtRisk, recovery
 	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
 		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s left without a next step",
 			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))

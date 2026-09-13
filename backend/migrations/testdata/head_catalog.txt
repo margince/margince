@@ -5956,7 +5956,7 @@ public.team_weekly_review_rep.leads_breached integer NOT NULL gen=- def=0
 public.team_weekly_review_rep.meetings_held integer NOT NULL gen=- def=0
 public.team_weekly_review_rep.team_weekly_review_id uuid NOT NULL gen=- def=-
 public.team_weekly_review_rep.team_weekly_review_rep_counts_are_tallies CHECK (((deals_won >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND (help_requested >= 0) AND (commitments_kept <= commitments_due)))
-public.team_weekly_review_rep.team_weekly_review_rep_focus_kind_check CHECK ((focus_kind = ANY (ARRAY['help_requested'::text, 'leads_breached'::text, 'commitments_missed'::text, 'meetings_without_next_step'::text, 'strong_week'::text, 'quiet_week'::text])))
+public.team_weekly_review_rep.team_weekly_review_rep_focus_kind_check CHECK ((focus_kind = ANY (ARRAY['help_requested'::text, 'leads_breached'::text, 'commitments_missed'::text, 'meetings_without_next_step'::text, 'deals_at_risk'::text, 'strong_week'::text, 'quiet_week'::text])))
 public.team_weekly_review_rep.team_weekly_review_rep_focus_present CHECK ((btrim(focus_label) <> ''::text))
 public.team_weekly_review_rep.team_weekly_review_rep_name_present CHECK ((btrim(display_name) <> ''::text))
 public.team_weekly_review_rep.team_weekly_review_rep_pkey PRIMARY KEY (id)

@@ -175,6 +175,9 @@ func TestWithTheTargetOffALeadIsOwedButCarriesNoDeadline(t *testing.T) {
 	// Silent about WHEN, which is the half the policy owns. A deadline here
 	// would be one this installation never stated.
 	for _, item := range page.Queue {
+		if string(item.Source) == "lead_response" && (item.Lead == nil || item.Lead.ResponseTargetTracked == nil || *item.Lead.ResponseTargetTracked) {
+			t.Error("an unmeasured lead must carry honest response-target context")
+		}
 		if string(item.Source) == "lead_response" && item.DueAt != nil {
 			t.Errorf("the row carries a deadline of %v where no policy states one", *item.DueAt)
 		}

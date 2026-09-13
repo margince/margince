@@ -276,11 +276,11 @@ func scoreLeads(
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
 		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
-		      AND l.first_response_at IS NOT NULL AND l.sla_breached_at IS NULL),
+		      AND `+responseRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
 		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
-		      AND l.sla_breached_at IS NOT NULL),
+		      AND `+breachRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM met WHERE status = 'booked' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'no_show' AND NOT partial_pre_history),

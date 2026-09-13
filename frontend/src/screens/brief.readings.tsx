@@ -6,7 +6,11 @@ import { navigate } from "../app/router";
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { useTooltip } from "../design-system/tooltip";
-import { formatDateTime, formatNumber } from "../format/format";
+import {
+  formatDateTime,
+  formatMoneyCompact,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import {
   type Locale,
@@ -15,7 +19,6 @@ import {
   usePlural,
   useT,
 } from "../i18n";
-import { PipelineOutlook } from "./brief.pipelineoutlook";
 import {
   boundedCategories,
   DECISIONS,
@@ -62,8 +65,14 @@ import type {
 //
 // Each figure in this strip IS one of the queue's filter pills counted, so the
 // reading's door is that lane.
-function openLane(filter: WorklistFilter): void {
-  navigate({ screen: "worklist" }, new Map([[WORKLIST_FILTER_PARAM, filter]]));
+function openLane(filter: WorklistFilter, scope: Worklist["scope"]): void {
+  navigate(
+    { screen: "worklist" },
+    new Map([
+      [WORKLIST_FILTER_PARAM, filter],
+      ["scope", scope],
+    ]),
+  );
 }
 
 /**
@@ -85,6 +94,7 @@ type Reading = Readonly<{
   floor?: boolean;
   /** The lane this reading counted, which is where its cell leads. */
   lane: WorklistFilter;
+  scope: Worklist["scope"];
   /** What this reading's door says, so five doors are not five "Open"s. */
   openLabel: string;
   /**
@@ -123,6 +133,7 @@ function LaneReading({
   warn,
   floor,
   lane,
+  scope,
   openLabel,
   spans,
 }: Reading) {
@@ -162,7 +173,7 @@ function LaneReading({
       // same air. At the tile's default floor the day's own work started below
       // the fold on a laptop.
       density="compact"
-      onOpen={openable ? () => openLane(lane) : undefined}
+      onOpen={openable ? () => openLane(lane, scope) : undefined}
       openLabel={openLabel}
     />
   );
@@ -202,6 +213,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
     <section className="brief-readings" aria-label={t("brief.readings.label")}>
       <StatStrip testId="brief-readings">
         <LaneReading
+          scope={day.scope}
           label={t("brief.readings.urgent")}
           // The SUMMARY's own count, not one lane's. `urgent` is every row at
           // the top two levels — somebody waiting or a promise breaking — and
@@ -227,6 +239,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           spans
         />
         <LaneReading
+          scope={day.scope}
           label={t("brief.readings.meetings")}
           count={meetings.meetings}
           // Readiness is the breach here: a meeting starting with nothing
@@ -239,6 +252,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           lane="meetings"
         />
         <LaneReading
+          scope={day.scope}
           label={t("brief.readings.leads")}
           count={readings.prospecting}
           floor={floorOf(LEADS)}
@@ -255,8 +269,9 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           openLabel={t("brief.readings.openLeads")}
           lane="leads"
         />
-        <PipelineOutlook />
+        <RiskReading day={day} />
         <LaneReading
+          scope={day.scope}
           label={t("brief.readings.decisions")}
           count={readings.review}
           floor={floorOf(DECISIONS)}
@@ -386,4 +401,26 @@ function meetingsReading(day: Worklist): MeetingsReading {
     meetings: entry.considered,
     unready: whole ? day.queue.filter(isUnprepared).length : null,
   };
+}
+
+// This value describes the same scoped work as the rest of the brief.
+function RiskReading({ day }: Readonly<{ day: Worklist }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { revenue_at_risk_minor: amount, revenue_currency: currency } =
+    day.readings;
+  return (
+    <StatCard
+      density="compact"
+      label={t("brief.readings.risk")}
+      value={
+        amount != null && currency
+          ? formatMoneyCompact(amount, currency, locale)
+          : t("brief.readings.pipelineNoRead")
+      }
+      detail={t("brief.readings.riskBasis")}
+      onOpen={() => openLane("deals_at_risk", day.scope)}
+      openLabel={t("brief.readings.openRisk")}
+    />
+  );
 }

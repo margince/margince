@@ -737,18 +737,12 @@ describe("BriefScreen — a reading in flight is absent, not zero", () => {
   // The readings strip no longer counts deals — it is drawn from the worklist
   // answer, which carries its own bound. What still reads a deals PAGE is the
   // panel that lists the quiet ones, and that is where the floor has to be said.
-  it("reports a deal reading off a full page as a floor rather than a total", async () => {
+  it("reports a bounded queue as partial in the remaining-risk panel", async () => {
     stubApi({
-      "GET /deals": () =>
-        jsonResponse({
-          data: [fleetDeal, { ...fleetDeal, id: "d-2", stalled: true }],
-          page: { has_more: true },
-        }),
+      "GET /worklist": () =>
+        jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
     render(<BriefScreen />);
-
-    // The panel that LISTS them says the list is part of one, rather than making
-    // the "nothing has gone quiet" claim it has no grounds for.
     expect(await screen.findByText("Showing part of the list")).toBeTruthy();
   });
 

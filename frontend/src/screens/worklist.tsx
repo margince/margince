@@ -636,9 +636,22 @@ export function WorklistScreen({
   // The dials are state rather than a stored preference: a scope is a question
   // about right now, and a remembered one would answer a different question
   // than the reader asked on their next visit.
-  const [scope, setScope] = useState<WorklistScope>(
-    opensOn === UNASSIGNED ? UNASSIGNED : "mine",
-  );
+  const [params, setParams] = useUrlParams();
+  const requestedScope = params.get("scope");
+  const scope: WorklistScope =
+    opensOn === UNASSIGNED
+      ? UNASSIGNED
+      : requestedScope === "team" ||
+          requestedScope === "all" ||
+          requestedScope === "unassigned"
+        ? requestedScope
+        : "mine";
+  const setScope = (next: WorklistScope) => {
+    const query = new Map(params);
+    if (next === "mine") query.delete("scope");
+    else query.set("scope", next);
+    setParams(query);
+  };
   // The one dial of the four that lives in the ADDRESS, and the reason is a
   // figure on another screen: Brief's readings each count one of these lanes,
   // and a reading that names a set is the way into it — which it cannot be
@@ -649,7 +662,6 @@ export function WorklistScreen({
   //
   // Scope, owner and the selected row stay state. Moving all four is still its
   // own change; this moves the one that another surface has to be able to say.
-  const [params, setParams] = useUrlParams();
   const filter = worklistFilterFrom(params);
   const setFilter = (next: WorklistFilter) => {
     const query = new Map(params);

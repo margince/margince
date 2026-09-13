@@ -291,7 +291,7 @@ func TestTheLeadLaneReportsItsReachWithOrWithoutATarget(t *testing.T) {
 func TestTheEscalationTaskForAnOwedLeadFoldsIntoTheLeadRow(t *testing.T) {
 	lead := ids.NewV7()
 	tasks := &stubTasks{rows: []Task{{
-		ID: ids.NewV7(), Subject: "Follow up with the new lead",
+		ID: ids.NewV7(), Subject: "Follow up with the new lead", LeadResponseEscalation: true,
 		LinkType: string(subjectLead), LinkID: lead,
 	}}}
 	svc := NewService(

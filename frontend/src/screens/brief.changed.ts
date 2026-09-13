@@ -66,5 +66,5 @@ export function changedSinceBrief(
   // and its door shared nothing at all. The server applies the same freshness
   // test that stamped the flags read above, which is why this is one rule
   // rather than a browser-side narrowing that could disagree.
-  return { count, href: worklistLaneHref("changed_since_brief") };
+  return { count, href: worklistLaneHref("changed_since_brief", day?.scope) };
 }

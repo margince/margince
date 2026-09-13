@@ -157,6 +157,11 @@ func bandsOf(items []crmcontracts.WorklistItem) []crmcontracts.WorklistBand {
 // A band this build does not know sorts last rather than first: an unknown
 // heading must not push real work off the top of the page.
 func bandRank(band string) int {
+	// Prospecting and existing obligations compete on their facts. Their
+	// presentation labels must not override a deadline or a deal's value.
+	if band == bandKeepMomentum {
+		return bandRank(bandBuildPipeline)
+	}
 	for i, known := range bandOrder {
 		if known == band {
 			return i

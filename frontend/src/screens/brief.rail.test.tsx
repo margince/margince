@@ -5,7 +5,6 @@ import {
   render as rtlRender,
   screen,
   waitFor,
-  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -138,46 +137,27 @@ const fleetDeal: Deal = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-const quietDeal: Deal = {
-  ...fleetDeal,
-  id: "d-9",
-  name: "Ostwind refit",
-  amount_minor: 1_200_000,
-  company_id: "company-9",
-  stalled: true,
-};
-
 // ── The context rail ──
 
 describe("BriefScreen — the context rail", () => {
   // Brief used to pass `company: ""` for every card here, so every quiet deal on
   // this page claimed to belong to no company at all. The panel resolves the
   // company through the same naming the pipeline board uses.
-  it("names the company on a quiet deal", async () => {
-    stubApi({
-      "GET /deals": () => jsonResponse({ data: [fleetDeal, quietDeal] }),
-      "GET /companies/company-9": () =>
-        jsonResponse({ id: "company-9", display_name: "Nordwind Logistik" }),
+  it("uses the scoped queue for remaining risks and never reads the deals list", async () => {
+    const calls = stubApi({
+      "GET /worklist": () =>
+        jsonResponse(
+          readingsDay({}, [
+            ...Array.from({ length: 5 }, (_, i) =>
+              taskRow(`t${i}`, `Follow up ${i}`),
+            ),
+            riskRow,
+          ]),
+        ),
     });
     render(<BriefScreen />);
-
-    const card = await screen.findByText("Ostwind refit");
-    // The card is the element AROUND both its links — the deal's and the
-    // company's. The nearest anchor is the deal name itself, which contains
-    // neither the company slot nor the flags.
-    const panel = card.closest(".deal-card");
-    if (!(panel instanceof HTMLElement)) {
-      throw new Error("no board card around the quiet deal");
-    }
-    // Awaited, not read: the company name comes from a second read that the
-    // card does not wait for, so it can still be in flight when the deal's own
-    // title is already on screen.
-    expect(await within(panel).findByText("Nordwind Logistik")).toBeTruthy();
-    // The quiet deal is on the page as a CARD rather than as a count. The
-    // briefing line that carried "1 has gone quiet" is gone: the panel listing
-    // the deal itself says more than a figure above it could, and says it in
-    // the one place a reader can act on it.
-    expect(within(panel).getByText("Ostwind refit")).toBeTruthy();
+    expect(await screen.findByText("Ostwind refit")).toBeTruthy();
+    expect(calls.some((call) => call.path === "/deals")).toBe(false);
   });
 
   // A clear watch list is not a panel. The box, the header band and the
@@ -192,25 +172,23 @@ describe("BriefScreen — the context rail", () => {
       expect(document.querySelector("[aria-busy='true']")).toBeNull(),
     );
     expect(
-      screen.queryByRole("region", { name: en["brief.panel.watch"] }),
+      screen.queryByRole("region", { name: en["brief.panel.remainingRisk"] }),
     ).toBeNull();
   });
 
   // The panel keeps its box wherever it has something to SAY. Past the end of
   // Brief's one page an empty list is "nothing on the page we read" rather than
   // "nothing has gone quiet", and that caveat is content.
-  it("keeps the watch panel when the page ended short of the list", async () => {
+  it("keeps the watch panel when the ranked queue ended short", async () => {
     stubApi({
-      "GET /deals": () =>
-        jsonResponse({
-          data: [fleetDeal],
-          page: { next_cursor: "c2", has_more: true },
-        }),
+      "GET /worklist": () =>
+        jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
     render(<BriefScreen />);
-
     expect(
-      await screen.findByRole("region", { name: en["brief.panel.watch"] }),
+      await screen.findByRole("region", {
+        name: en["brief.panel.remainingRisk"],
+      }),
     ).toBeTruthy();
   });
 
@@ -424,7 +402,20 @@ function taskRow(id: string, title: string): WorklistItem {
   };
 }
 
+const riskRow: WorklistItem = {
+  id: "d-9",
+  source: "deal_at_risk",
+  category: "deals_at_risk",
+  level: 3,
+  title: "Ostwind refit",
+  consequence: "deal_drifts",
+  because: [],
+  actions: ["open"],
+  subject: { type: "deal", id: "d-9" },
+  deal: { quiet_days: 40, amount_minor: 1200000, currency: "EUR" },
+};
 const busyDay = readingsDay({}, [
+  riskRow,
   meetingRow("m1", true),
   taskRow("t1", "Call Alice back"),
 ]);
@@ -439,15 +430,7 @@ const quietLines = [
 describe("the rail's quiet panel", () => {
   it("names every silent source, in the order the rail draws them", async () => {
     stubApi({});
-    render(
-      <RailQuiet
-        day={readingsDay({}, [])}
-        dayState="ready"
-        deals={[]}
-        more={false}
-        dealsState="ready"
-      />,
-    );
+    render(<RailQuiet day={readingsDay({}, [])} dayState="ready" />);
 
     // Awaited on the digest's line: the other three are settled on the first
     // paint, and the panel is the whole point only once all four agree.
@@ -474,15 +457,7 @@ describe("the rail's quiet panel", () => {
           connectors: [],
         }),
     });
-    render(
-      <RailQuiet
-        day={busyDay}
-        dayState="ready"
-        deals={[quietDeal]}
-        more={false}
-        dealsState="ready"
-      />,
-    );
+    render(<RailQuiet day={busyDay} dayState="ready" />);
 
     // The digest read has to ANSWER before its absence can be ruled out, so
     // this waits on the page going quiet rather than asserting into a read in
@@ -501,15 +476,7 @@ describe("the rail's quiet panel", () => {
   // drawing its own pending state at the time.
   it("says nothing about a source whose read has not answered", async () => {
     stubApi({});
-    render(
-      <RailQuiet
-        day={undefined}
-        dayState="loading"
-        deals={[]}
-        more={false}
-        dealsState="loading"
-      />,
-    );
+    render(<RailQuiet day={undefined} dayState="loading" />);
 
     await screen.findByText(en["brief.rail.quietOvernight"]);
     expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();
@@ -521,15 +488,7 @@ describe("the rail's quiet panel", () => {
   // line beside it would claim the source answered.
   it("says nothing about a source whose read failed", async () => {
     stubApi({});
-    render(
-      <RailQuiet
-        day={undefined}
-        dayState="failed"
-        deals={[]}
-        more={false}
-        dealsState="failed"
-      />,
-    );
+    render(<RailQuiet day={undefined} dayState="failed" />);
 
     await screen.findByText(en["brief.rail.quietOvernight"]);
     expect(screen.queryByText(en["brief.rail.quietSchedule"])).toBeNull();

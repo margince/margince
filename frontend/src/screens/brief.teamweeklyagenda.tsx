@@ -33,6 +33,7 @@ const CELEBRATED: ReadonlySet<TeamWeeklyFocusKind> = new Set([
 
 const FOCUS_LABEL: Readonly<Record<TeamWeeklyFocusKind, MessageKey>> = {
   help_requested: "teamweekly.focus.help_requested",
+  deals_at_risk: "teamweekly.focus.deals_at_risk",
   leads_breached: "teamweekly.focus.leads_breached",
   commitments_missed: "teamweekly.focus.commitments_missed",
   meetings_without_next_step: "teamweekly.focus.meetings_without_next_step",

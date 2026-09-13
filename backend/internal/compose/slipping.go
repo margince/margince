@@ -76,8 +76,17 @@ func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister
 func quietDealScan(
 	pool *pgxpool.Pool, quietForDays int,
 ) func(context.Context) ([]agents.SlippingDeal, bool, error) {
+	return quietDealScanWithClock(pool, quietForDays, clockNow)
+}
+
+func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() time.Time) func(context.Context) ([]agents.SlippingDeal, bool, error) {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context) ([]agents.SlippingDeal, bool, error) {
+		zone, err := installationZone(ctx, pool)
+		if err != nil {
+			return nil, false, err
+		}
+		now := clock().UTC()
 		limit := slippingScanLimit
 		quiet, _, err := store.ListDeals(ctx, deals.ListDealsInput{
 			QuietForDays: &quietForDays, Limit: &limit,
@@ -86,7 +95,13 @@ func quietDealScan(
 			return nil, false, err
 		}
 		openStatus := "open"
-		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, Limit: &limit})
+		date := now.In(zone).Format(time.DateOnly)
+		today, err := time.Parse(time.DateOnly, date)
+		if err != nil {
+			return nil, false, err
+		}
+		sort := "expected_close_date"
+		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, CloseBefore: &today, Sort: &sort, Limit: &limit})
 		if err != nil {
 			return nil, false, err
 		}
@@ -109,11 +124,7 @@ func quietDealScan(
 		// different answer from the deal record's own hygiene flag for as long
 		// as the two zones disagree about the day — hours wide, every day, for
 		// any installation not running in UTC.
-		zone, err := installationZone(ctx, pool)
-		if err != nil {
-			return nil, false, err
-		}
-		now := time.Now().UTC()
+
 		out := make([]agents.SlippingDeal, 0, len(quiet))
 		seen := map[ids.UUID]bool{}
 		for _, d := range append(quiet, open...) {
@@ -177,13 +188,15 @@ func zoneNamed(name string) *time.Location {
 // evidence field cannot ground.
 func slippingCandidate(d crmcontracts.Deal, now time.Time, zone *time.Location) agents.SlippingDeal {
 	candidate := agents.SlippingDeal{
-		DealID:         ids.UUID(d.Id),
-		Name:           d.Name,
-		AmountMinor:    d.AmountMinor,
-		Currency:       d.Currency,
-		Stalled:        d.Stalled != nil && *d.Stalled,
-		LastActivityAt: d.LastActivityAt,
-		CreatedAt:      d.CreatedAt,
+		DealID:               ids.UUID(d.Id),
+		Name:                 d.Name,
+		AmountMinor:          d.AmountMinor,
+		Currency:             d.Currency,
+		Stalled:              d.Stalled != nil && *d.Stalled,
+		LastActivityAt:       d.LastActivityAt,
+		CreatedAt:            d.CreatedAt,
+		CloseDateProvisional: d.CloseDateProvisional,
+		ForecastCategory:     forecastCategoryName(d.ForecastCategory),
 	}
 	if d.StageId != nil {
 		stage := ids.UUID(*d.StageId)
@@ -242,4 +255,12 @@ func followUpDrafter(provider datasource.SystemOfRecordProvider) agents.FollowUp
 		}
 		return ref.ID, subject, nil
 	}
+}
+
+func forecastCategoryName(category *crmcontracts.DealForecastCategory) *string {
+	if category == nil {
+		return nil
+	}
+	name := string(*category)
+	return &name
 }

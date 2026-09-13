@@ -152,12 +152,14 @@ func relationshipBand(bucket string) *crmcontracts.AttentionRelationshipFactsStr
 // a facts object with every field empty says less than its absence.
 func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	if deal.StageID == nil && deal.OwnerID == nil && deal.AmountMinor == nil &&
-		deal.Currency == nil && deal.NoChampion == nil {
+		deal.Currency == nil && deal.NoChampion == nil && deal.CloseDateProvisional == nil && deal.ForecastCategory == nil {
 		return nil
 	}
 	facts := &crmcontracts.AttentionDealFacts{
-		AmountMinor: deal.AmountMinor,
-		Currency:    deal.Currency,
+		AmountMinor:          deal.AmountMinor,
+		CloseDateProvisional: deal.CloseDateProvisional,
+		ForecastCategory:     deal.ForecastCategory,
+		Currency:             deal.Currency,
 		// A finding or nothing, the same rule the worklist projection applies:
 		// `false` is never sent, so a covered committee reaches the wire absent
 		// alongside the unreadable and the seatless one. Both sides of this

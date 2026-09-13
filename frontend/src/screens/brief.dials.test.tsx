@@ -345,3 +345,43 @@ describe("the Brief's dials", () => {
     );
   });
 });
+
+it("uses team data for the greeting, readings and priority feed", async () => {
+  stubBrief(["mine", "team"]);
+  const fallback = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      );
+      if (url.pathname.endsWith("/worklist")) {
+        const team = url.searchParams.get("scope") === "team";
+        const day: Worklist = {
+          ...readingsDay({}, [
+            {
+              ...waitingRow(),
+              title: team ? "Team renewal" : "My customer",
+              email_summary: undefined,
+            },
+          ]),
+          scope: team ? "team" : "mine",
+          scope_options: ["mine", "team"],
+        };
+        return jsonResponse(day);
+      }
+      return fallback(input, init);
+    },
+  );
+  render(<BriefScreen />);
+  await screen.findAllByText("My customer");
+  await userEvent.click(
+    screen.getByRole("button", { name: en["brief.scope.team"] }),
+  );
+  await screen.findAllByText("Team renewal");
+  expect(screen.queryByText("My customer")).toBeNull();
+  expect(
+    screen.getByRole("region", { name: en["brief.feed.teamTitle"] }),
+  ).toBeTruthy();
+});

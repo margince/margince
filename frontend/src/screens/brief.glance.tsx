@@ -88,6 +88,7 @@ export type GlanceFacts = Readonly<{
    *  from the ranked queue, the weekly's from the counts the week was frozen
    *  with. Neither can describe the other. */
   view: BriefView;
+  scope?: "mine" | "team";
 }>;
 
 export type GlanceProps = GlanceFacts;
@@ -175,7 +176,14 @@ function filled(
   return value;
 }
 
-export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
+export function BriefGlance({
+  firstName,
+  now,
+  day,
+  week,
+  view,
+  scope = "mine",
+}: GlanceProps) {
   const t = useT();
   const hour = hourInZone(now, viewerZone());
   // No name yet is not a reason to greet nobody: the hour is known either way,
@@ -190,7 +198,11 @@ export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
   // the frozen counts, which is what the week is now a record of.
   const { locale } = useLocale();
   const sentence =
-    view === "morning" ? briefSentence(day, t, locale) : weekSentence(week, t);
+    view === "morning"
+      ? briefSentence(day, t, locale)
+      : scope === "team"
+        ? null
+        : weekSentence(week, t);
 
   return (
     <header className="glance arrive" data-testid="brief-glance">
@@ -210,7 +222,9 @@ export function BriefGlance({ firstName, now, day, week, view }: GlanceProps) {
         <p className="glance-sentence">
           {t(
             view === "weekly"
-              ? "brief.glance.introWeekly"
+              ? scope === "team"
+                ? "brief.glance.introTeamWeekly"
+                : "brief.glance.introWeekly"
               : "brief.glance.intro",
           )}
         </p>

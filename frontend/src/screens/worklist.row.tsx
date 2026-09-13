@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// One row of the day: how a piece of work reads, and the answers it carries.
-//
 // Split from the screen because they answer different questions. The screen
 // decides WHAT the page shows — whose day, which cut, which headings. A row
 // decides how one piece of work reads, and that is the half a reader of either
@@ -48,6 +46,7 @@ import {
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
+import { leadFactsText } from "./worklist.leadfacts";
 import { PairDecision } from "./worklist.pair";
 import {
   useApproval,
@@ -150,7 +149,9 @@ export function WorklistRow({
   const recordZone = useRecordZone();
   const href = rowHref(item);
   const title = itemTitle(item, t, locale);
-  const facts = dealFactsText(item, t, locale, zone);
+  const facts =
+    dealFactsText(item, t, locale, zone) ??
+    leadFactsText(item, t, locale, zone);
   const sample = namedMembers(item);
   // The clock this row is racing. A meeting said "starting shortly" whether it
   // began in four minutes or in fifty, and a task said "Overdue" without saying

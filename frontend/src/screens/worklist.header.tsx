@@ -113,11 +113,13 @@ export function isLinkedOnlyFilter(
  * written here and one the dial on the screen writes are byte-identical — which
  * is what lets the reader arrive by link, press a pill, and press Back.
  */
-export function worklistLaneHref(filter: WorklistFilter): string {
-  return hashWithParams(
-    routeHash({ screen: "worklist" }),
-    new Map([[WORKLIST_FILTER_PARAM, filter]]),
-  );
+export function worklistLaneHref(
+  filter: WorklistFilter,
+  scope: WorklistScope = "mine",
+): string {
+  const params = new Map<string, string>([[WORKLIST_FILTER_PARAM, filter]]);
+  if (scope !== "mine") params.set("scope", scope);
+  return hashWithParams(routeHash({ screen: "worklist" }), params);
 }
 
 /**

@@ -41,8 +41,9 @@ type LeadResponses interface {
 
 // OwedLead is one inbound lead nobody has replied to yet.
 type OwedLead struct {
-	ID   ids.UUID
-	Name string
+	Facts *crmcontracts.WorklistLeadFacts
+	ID    ids.UUID
+	Name  string
 	// OwnerID is zero when the lead is assigned to nobody, which is its own
 	// kind of urgency rather than a missing field.
 	OwnerID ids.UUID
@@ -84,7 +85,11 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		Consequence: "buyer_waits",
 		Because:     because,
 		Subject:     subjectOf(string(subjectLead), lead.ID),
+		Lead:        lead.Facts,
 		Actions:     []crmcontracts.WorklistItemActions{crmcontracts.WorklistItemActions(actionOpen)},
+	}
+	if lead.State == "" {
+		row.Consequence = valueNone
 	}
 	if name != "" {
 		row.Title = &name
@@ -167,7 +172,7 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	owed := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceLeadResponse && row.item.Subject != nil {
+		if row.item.Source == sourceLeadResponse && row.item.Subject != nil && row.item.DueAt != nil {
 			owed[row.item.Subject.Id.String()] = true
 		}
 	}
@@ -176,7 +181,8 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == sourceTask && row.item.Subject != nil &&
+		if row.item.Source == sourceTask && row.item.Kind != nil &&
+			*row.item.Kind == "lead_response_escalation" && row.item.Subject != nil &&
 			row.item.Subject.Type == subjectLead && owed[row.item.Subject.Id.String()] {
 			continue
 		}

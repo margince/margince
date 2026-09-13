@@ -55,8 +55,10 @@ type AtRisk interface {
 // anyone touched it. A card that collapsed them would say "at risk" and leave
 // the rep to guess which.
 type RiskyDeal struct {
-	DealID ids.UUID
-	Name   string
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	DealID               ids.UUID
+	Name                 string
 	// The card's facts, carried so the client draws value, stage and
 	// ownership without a second read per row. All optional: a deal can be
 	// ownerless, unpriced, or an overlay mirror with no native stage.

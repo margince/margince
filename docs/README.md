@@ -102,6 +102,7 @@ decision rather than an omission.
 
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
+- [brief-priorities.md](reference/brief-priorities.md) — how morning priorities, scoped risk and weekly coverage are derived.
 - [meeting-brief.md](reference/meeting-brief.md) — the pre-meeting brief and its preparation plan: the three invariants, what a caller is and is not shown, how a year of history becomes five moments, and why the plan and the sections have separate writers.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
 - [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.

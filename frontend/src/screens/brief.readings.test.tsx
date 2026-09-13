@@ -135,24 +135,6 @@ function decisionsCard(): HTMLElement {
  * answered only the forecast would leave the query disabled and the test would
  * assert against a pending card forever.
  */
-function stubPipeline(forecast: () => Response) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/analytics/context")) {
-        return new Response(
-          JSON.stringify({
-            default_scope: { kind: "owner", id: "u-1", label: "Lena" },
-            scopes: [],
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
-      return forecast();
-    }),
-  );
-}
 
 afterEach(() => {
   cleanup();
@@ -167,7 +149,7 @@ describe("the brief readings strip", () => {
     expect(screen.getByText(en["brief.readings.urgent"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.meetings"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.leads"])).toBeTruthy();
-    expect(screen.getByText(en["brief.readings.pipelinePlain"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.risk"])).toBeTruthy();
     expect(screen.getByText(en["brief.readings.decisions"])).toBeTruthy();
   });
 
@@ -175,32 +157,10 @@ describe("the brief readings strip", () => {
   // draws an em dash. The strings of the retired slots are gone from all three
   // catalogs, so asserting THOSE are absent is an assertion nothing in the tree
   // can fail — a test that cannot go red is not a guard.
-  it("draws no unanswered slot on a morning every read landed on", async () => {
-    stubPipeline(
-      () =>
-        new Response(
-          JSON.stringify({
-            period_start: "2026-07-01",
-            period_end: "2026-09-30",
-            scope_kind: "owner",
-            open_minor: 42_000_000,
-            weighted_minor: 16_800_000,
-            best_case_minor: 0,
-            evidence_minor: 0,
-            eligible_count: 12,
-            priced_count: 12,
-            confirmed_date_count: 8,
-            fx_missing_count: 0,
-            as_of: "2026-09-03T06:42:00Z",
-            base_currency: "EUR",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-    );
-    draw();
-
-    await screen.findByText(/420k|420,000/i);
-    expect(screen.queryAllByText("—")).toHaveLength(0);
+  it("uses the priced risk from the same day as the other readings", () => {
+    draw({ revenue_at_risk_minor: 42000000, revenue_currency: "EUR" });
+    expect(screen.getByText(/420k/i)).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.riskBasis"])).toBeTruthy();
   });
 
   it("still draws five slots when nothing is waiting", () => {
@@ -276,27 +236,9 @@ describe("the brief readings strip", () => {
   // The read is REFUSED here rather than left unstubbed: an unstubbed query
   // stays pending forever, and a test asserting the failure copy over a pending
   // card would pass on a card that never resolves either way.
-  it("says the pipeline went unread rather than drawing a nought", async () => {
-    stubPipeline(
-      () =>
-        new Response(JSON.stringify({ title: "Server Error" }), {
-          status: 500,
-          headers: { "content-type": "application/problem+json" },
-        }),
-    );
-    draw();
-
-    expect(
-      await screen.findByText(en["brief.readings.pipelineUnread"]),
-    ).toBeTruthy();
-    // The slot says it in WORDS. Every figure on this plate is read across as
-    // one statement, and an em dash in one of them reads as a card that failed
-    // to draw rather than as a reading nobody could take — so no slot on this
-    // strip may fall back to the glyph.
-    expect(
-      await screen.findByText(en["brief.readings.pipelineNoRead"]),
-    ).toBeTruthy();
-    expect(screen.queryAllByText("—")).toHaveLength(0);
+  it("does not print missing risk values as zero", () => {
+    draw({ revenue_at_risk_minor: null, revenue_currency: "EUR" });
+    expect(screen.getByText(en["brief.readings.pipelineNoRead"])).toBeTruthy();
   });
 
   // BOTH figures, and neither of them a target. `open` is the face value of
@@ -307,50 +249,10 @@ describe("the brief readings strip", () => {
   // authoritative target in this product to compare against, so the card must
   // never say on track, attainment or gap — it would be inventing the thing
   // that was removed.
-  it("draws the open pipeline with its weighted figure beside it", async () => {
-    stubPipeline(
-      () =>
-        new Response(
-          JSON.stringify({
-            period_start: "2026-07-01",
-            period_end: "2026-09-30",
-            scope_kind: "owner",
-            open_minor: 42_000_000,
-            weighted_minor: 16_800_000,
-            best_case_minor: 0,
-            evidence_minor: 0,
-            eligible_count: 12,
-            priced_count: 11,
-            confirmed_date_count: 8,
-            fx_missing_count: 0,
-            as_of: "2026-09-03T06:42:00Z",
-            base_currency: "EUR",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-    );
-    draw();
-
-    // COMPACT for both figures — the slot is ~110px and a full euro amount
-    // wraps mid-number. The basis line has no more room than the headline does.
-    expect(await screen.findByText(/420k/i)).toBeTruthy();
-    // The weighted figure and how much of the population carries a price ride
-    // the same line: a weighted number over a partly priced population is a
-    // floor, and a reader who cannot see the second cannot judge the first.
-    expect(screen.getByText(/168k weighted · 11 priced/i)).toBeTruthy();
-    // THE WINDOW the money covers, in the title. €420k of open pipeline means
-    // nothing without it: the same page carries a by-currency total of
-    // everything open, and a reader with no period cannot tell why the two
-    // disagree. A quarter is all a dense title has room for, so the full range
-    // is on the cell's hover line and asserted where that is.
-    expect(
-      screen.getByText(
-        en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-      ),
-    ).toBeTruthy();
-    // Never a target word. The quota table was dropped by founder decision.
-    const strip = screen.getByTestId("brief-readings");
-    expect(strip.textContent).not.toMatch(/on track|target|attainment|gap/i);
+  it("does not price a risk figure without its currency", () => {
+    draw({ revenue_at_risk_minor: 42000000, revenue_currency: null });
+    expect(screen.queryByText(/420k/i)).toBeNull();
+    expect(screen.getByText(en["brief.readings.pipelineNoRead"])).toBeTruthy();
   });
 
   // THE one way this card can be wrong without looking wrong. The scope is left
@@ -360,45 +262,20 @@ describe("the brief readings strip", () => {
   // morning", and nothing about the number itself would give it away.
   //
   // So the card reads the answer's own `scope_kind` back and says so.
-  it("says when the pipeline it drew is the whole workspace, not the reader's", async () => {
-    stubPipeline(
-      () =>
-        new Response(
-          JSON.stringify({
-            period_start: "2026-07-01",
-            period_end: "2026-09-30",
-            scope_kind: "workspace",
-            open_minor: 42_000_000,
-            weighted_minor: 16_800_000,
-            best_case_minor: 0,
-            evidence_minor: 0,
-            eligible_count: 12,
-            priced_count: 12,
-            confirmed_date_count: 8,
-            fx_missing_count: 0,
-            as_of: "2026-09-03T06:42:00Z",
-            base_currency: "EUR",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-    );
-    draw();
-
-    // The title has room for a quarter and nothing else, so the scope rides the
-    // cell's hover line. Reached through the card's own DOOR, because that is
-    // the one focusable thing on the cell and a focus event bubbles up to the
-    // wrapper the tip hangs off — a pointer tip waits on hover intent, and a
-    // reader who tabbed here has said what they want outright.
-    const door = await screen.findByRole("button", {
-      name: en["brief.readings.openPipeline"],
-      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
+  it("preserves team scope when opening the risk queue", async () => {
+    const user = userEvent.setup();
+    drawDay({
+      ...readingsDay({
+        revenue_at_risk_minor: 8900000,
+        revenue_currency: "EUR",
+      }),
+      scope: "team",
     });
-    door.focus();
-    const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toContain(
-      en["brief.readings.pipelineTipWorkspace"].replace("{period} · ", ""),
+    await user.click(
+      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
     );
-    expect(tip.textContent).toContain("1 Jul 2026 – 30 Sept 2026");
+    expect(window.location.hash).toContain("scope=team");
+    expect(window.location.hash).toContain("filter=deals_at_risk");
   });
 
   // The first card a rep reads, at a REAL figure.
@@ -691,66 +568,17 @@ describe("the leads reading", () => {
 // a colleague in Berlin saw "1 Jul – 30 Sept" — two contacts quoting one page and
 // quoting different quarters. The record's zone is the only answer that is the
 // same for both.
-describe("the pipeline period", () => {
+describe("risk scope and reading actions", () => {
   afterEach(cleanup);
 
-  it("names the same days west of UTC as it does east of it", async () => {
-    const payload = {
-      period_start: "2026-07-01",
-      period_end: "2026-09-30",
-      scope_kind: "owner",
-      open_minor: 42_000_000,
-      weighted_minor: 16_800_000,
-      best_case_minor: 0,
-      evidence_minor: 0,
-      eligible_count: 12,
-      priced_count: 11,
-      confirmed_date_count: 8,
-      fx_missing_count: 0,
-      as_of: "2026-09-03T06:42:00Z",
-      base_currency: "EUR",
-    };
-    stubPipeline(
-      () =>
-        new Response(JSON.stringify(payload), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+  it("opens the matching personal risk queue", async () => {
+    const user = userEvent.setup();
+    draw();
+    await user.click(
+      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
     );
-
-    // The VIEWER sits west of UTC while the installation's calendar does not.
-    // Without this the suite's own machine decides whether the bug can appear
-    // at all: east of UTC a viewer-zone read prints the right days by luck, and
-    // the assertion passes over code that is wrong for half the world.
-    const resolved = Intl.DateTimeFormat.prototype.resolvedOptions;
-    vi.spyOn(
-      Intl.DateTimeFormat.prototype,
-      "resolvedOptions",
-    ).mockImplementation(function (this: Intl.DateTimeFormat) {
-      return { ...resolved.call(this), timeZone: "America/Los_Angeles" };
-    });
-
-    // The range is on the CELL's hover line — a dense title has room for a
-    // quarter and nothing more — so it is reached by focus, which reveals a tip
-    // outright where a pointer waits on hover intent.
-    async function rangeSaid(zone: string): Promise<string> {
-      drawInZone(zone);
-      const door = await screen.findByRole("button", {
-        name: en["brief.readings.openPipeline"],
-        description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-      });
-      door.focus();
-      return (await screen.findByRole("tooltip")).textContent ?? "";
-    }
-
-    expect(await rangeSaid("Europe/Berlin")).toContain(
-      "1 Jul 2026 – 30 Sept 2026",
-    );
-    cleanup();
-
-    expect(await rangeSaid("Asia/Tokyo")).toContain(
-      "1 Jul 2026 – 30 Sept 2026",
-    );
+    expect(window.location.hash).toContain("scope=mine");
+    expect(window.location.hash).toContain("filter=deals_at_risk");
   });
   // EVERY DOOR NAMES ITS OWN ACTION. The strip's doors all read "Open" once,
   // which is one entry repeated in a screen reader's control list: the card
@@ -908,55 +736,22 @@ describe("the pipeline period", () => {
   // pipeline figure is the one slot read separately, so it is the one slot that
   // can be pending or unread — and a door onto a figure nobody could read sends
   // a reader to a section to check a number this page never had.
-  it("opens the forecast from the pipeline reading once it has landed", async () => {
-    stubPipeline(
-      () =>
-        new Response(
-          JSON.stringify({
-            period_start: "2026-07-01",
-            period_end: "2026-09-30",
-            scope_kind: "owner",
-            open_minor: 42_000_000,
-            weighted_minor: 16_800_000,
-            best_case_minor: 0,
-            evidence_minor: 0,
-            eligible_count: 12,
-            priced_count: 12,
-            confirmed_date_count: 8,
-            fx_missing_count: 0,
-            as_of: "2026-09-03T06:42:00Z",
-            base_currency: "EUR",
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        ),
-    );
-    draw();
-    await screen.findByText(/420k|420,000/i);
-
-    const door = screen.getByRole("button", {
-      name: en["brief.readings.openPipeline"],
-      description: en["brief.readings.pipeline"].replace("{quarter}", "Q3"),
-    });
-    try {
-      await userEvent.setup().click(door);
-      expect(window.location.hash).toBe("#/analytics/forecast");
-    } finally {
-      window.location.hash = "";
-    }
+  it("requires no additional forecast read to show risk", () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    draw({ revenue_at_risk_minor: 8900000, revenue_currency: "EUR" });
+    expect(screen.getByText(/89k/i)).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   // The same slot with nothing behind it. A read that did not land is not a
   // pipeline of nothing, and it is not a door either.
-  it("offers no door while the pipeline read has not landed", async () => {
-    stubPipeline(() => new Response("", { status: 500 }));
-    draw();
-
-    await screen.findByText(en["brief.readings.pipelineNoRead"]);
-    expect(
-      screen.queryByRole("button", {
-        name: en["brief.readings.openPipeline"],
-        description: en["brief.readings.pipelinePlain"],
-      }),
-    ).toBeNull();
+  it("keeps unpriced risks reachable for review", async () => {
+    const user = userEvent.setup();
+    draw({ revenue_at_risk_minor: null, revenue_currency: null });
+    await user.click(
+      screen.getByRole("button", { name: en["brief.readings.openRisk"] }),
+    );
+    expect(window.location.hash).toContain("filter=deals_at_risk");
   });
 });

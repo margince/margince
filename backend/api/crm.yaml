@@ -43635,7 +43635,7 @@ components:
         focus_kind:
           type: string
           enum: [help_requested, leads_breached, commitments_missed,
-                 meetings_without_next_step, strong_week, quiet_week]
+                 deals_at_risk, meetings_without_next_step, strong_week, quiet_week]
           description: |
             Which rule picked the focus, so a reader can tell a coaching prompt from a thing to
             celebrate. Tried in the order a lead should raise them: a rep who ASKED for help
@@ -43753,7 +43753,7 @@ components:
         answered_in_target:
           type: integer
           minimum: 0
-          description: Leads that arrived this week and were answered without breaching the SLA.
+          description: Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured.
         breached: { type: integer, minimum: 0 }
         meetings_booked:
           type: integer
@@ -44132,9 +44132,9 @@ components:
           type: integer
           minimum: 0
           description: |
-            Of those, the ones answered before the first-response target ran out. Read from the
-            stamps the SLA writer maintained at the time, never recomputed from today's policy —
-            a week is judged by the target that applied to it.
+            Of those, leads with a first response recorded before the week closed and no breach
+            recorded by then. This is a recorded-response count, not a measured SLA success rate:
+            no breach stamp can also mean the installation had no response target configured.
         leads_breached: { type: integer, minimum: 0, description: 'And the ones whose target ran out.' }
         meetings_held:
           type: integer
@@ -44979,6 +44979,8 @@ components:
         client already holds the pipelines vocabulary and writes the label in the
         reader's own language; a label composed server-side would not be.
       properties:
+        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a person.' }
+        forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent." }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
@@ -45153,7 +45155,7 @@ components:
             Every band appears, including one with no rows: "nothing needs you today" is
             something to tell a reader, and a client inferring the headings from the rows it
             received could not say it. The queue arrives sorted so each band's rows are
-            contiguous — a client draws a heading where the band changes.
+            labelled in ranked order — a client draws a heading where the band changes.
 
     WorklistReach:
       type: object
@@ -46017,6 +46019,7 @@ components:
             source, because one source has several honest answers: a deal past its close
             date slips, one merely idle drifts.
         subject: { $ref: '#/components/schemas/AttentionSubject' }
+        lead: { $ref: '#/components/schemas/WorklistLeadFacts' }
         email_summary:
           allOf: [{ $ref: '#/components/schemas/EmailSummary' }]
           readOnly: true
@@ -46106,7 +46109,8 @@ components:
             scanning for "what must happen now" should not have to know which levels mean that.
 
             Derived from the level and the row's own subject, so it cannot disagree with the order:
-            the queue arrives already sorted, and every row of one band is contiguous. A client
+            the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
+            interleave prospecting and deal follow-up. A client
             draws a heading when the band changes and never re-sorts.
         dispositions:
           type: array
@@ -46705,6 +46709,16 @@ components:
             `cause`, because an identity on screen is worse than a vaguer sentence: the
             reader cannot act on it and cannot tell it from a bug.
 
+    WorklistLeadFacts:
+      type: object
+      description: The lead's contact context, without inventing an inbound request or response deadline.
+      properties:
+        company_name: { type: [string, 'null'] }
+        status: { type: string }
+        source: { type: [string, 'null'], description: 'The administered source label, absent for an unlabelled import or connector key.' }
+        last_activity_at: { type: [string, 'null'], format: date-time }
+        response_target_tracked: { type: boolean }
+
     WorklistDealFacts:
       type: object
       description: |
@@ -46716,6 +46730,8 @@ components:
         and a reader must not multiply them together expecting the product to equal a
         risk-adjusted figure the API does not compute.
       properties:
+        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a person.' }
+        forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid }
         amount_minor: { type: [integer, 'null'], format: int64 }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }

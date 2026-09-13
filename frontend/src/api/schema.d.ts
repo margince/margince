@@ -32853,7 +32853,7 @@ export interface components {
              *     fastest way to teach them not to ask.
              * @enum {string}
              */
-            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "meetings_without_next_step" | "strong_week" | "quiet_week";
+            focus_kind: "help_requested" | "leads_breached" | "commitments_missed" | "deals_at_risk" | "meetings_without_next_step" | "strong_week" | "quiet_week";
             /**
              * @description The focus in words, composed from the stored figures — never model-written, so it
              *     cannot say something the snapshot does not hold.
@@ -32932,7 +32932,7 @@ export interface components {
             advanced: number;
             disqualified: number;
             promoted: number;
-            /** @description Leads that arrived this week and were answered without breaching the SLA. */
+            /** @description Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured. */
             answered_in_target: number;
             breached: number;
             /**
@@ -33278,9 +33278,9 @@ export interface components {
             /** @description Inbound leads routed to this rep during the week. */
             leads_routed: number;
             /**
-             * @description Of those, the ones answered before the first-response target ran out. Read from the
-             *     stamps the SLA writer maintained at the time, never recomputed from today's policy —
-             *     a week is judged by the target that applied to it.
+             * @description Of those, leads with a first response recorded before the week closed and no breach
+             *     recorded by then. This is a recorded-response count, not a measured SLA success rate:
+             *     no breach stamp can also mean the installation had no response target configured.
              */
             leads_answered_in_target: number;
             /** @description And the ones whose target ran out. */
@@ -33993,6 +33993,10 @@ export interface components {
          *     reader's own language; a label composed server-side would not be.
          */
         AttentionDealFacts: {
+            /** @description True when the close date has not been confirmed by a person. */
+            close_date_provisional?: boolean | null;
+            /** @description The recorded forecast category, including omitted. */
+            forecast_category?: string | null;
             /**
              * Format: uuid
              * @description The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
@@ -34172,7 +34176,7 @@ export interface components {
              *     Every band appears, including one with no rows: "nothing needs you today" is
              *     something to tell a reader, and a client inferring the headings from the rows it
              *     received could not say it. The queue arrives sorted so each band's rows are
-             *     contiguous — a client draws a heading where the band changes.
+             *     labelled in ranked order — a client draws a heading where the band changes.
              */
             bands?: components["schemas"]["WorklistBand"][];
         };
@@ -34990,6 +34994,7 @@ export interface components {
              */
             consequence: "buyer_waits" | "promise_breaks" | "deal_drifts" | "deal_slips_past_close" | "meeting_unprepared" | "task_slips" | "work_blocked" | "customer_never_received" | "you_believe_it_happened" | "legal_deadline_missed" | "mailbox_blind" | "data_drifts" | "none";
             subject?: components["schemas"]["AttentionSubject"];
+            lead?: components["schemas"]["WorklistLeadFacts"];
             /** @description The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not. */
             readonly email_summary?: components["schemas"]["EmailSummary"] | null;
             deal?: components["schemas"]["WorklistDealFacts"];
@@ -35062,7 +35067,8 @@ export interface components {
              *     scanning for "what must happen now" should not have to know which levels mean that.
              *
              *     Derived from the level and the row's own subject, so it cannot disagree with the order:
-             *     the queue arrives already sorted, and every row of one band is contiguous. A client
+             *     the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
+             *     interleave prospecting and deal follow-up. A client
              *     draws a heading when the band changes and never re-sorts.
              * @enum {string}
              */
@@ -35568,6 +35574,16 @@ export interface components {
              */
             label?: string;
         };
+        /** @description The lead's contact context, without inventing an inbound request or response deadline. */
+        WorklistLeadFacts: {
+            company_name?: string | null;
+            status?: string;
+            /** @description The administered source label, absent for an unlabelled import or connector key. */
+            source?: string | null;
+            /** Format: date-time */
+            last_activity_at?: string | null;
+            response_target_tracked?: boolean;
+        };
         /**
          * @description The deal behind an item, with the facts its card states. `expected_minor_base` is
          *     `amount_minor` converted to the installation's base currency — the only figure by
@@ -35578,6 +35594,10 @@ export interface components {
          *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
+            /** @description True when the close date has not been confirmed by a person. */
+            close_date_provisional?: boolean | null;
+            /** @description The recorded forecast category, including omitted. */
+            forecast_category?: string | null;
             /** Format: uuid */
             stage_id?: string | null;
             /** Format: int64 */
