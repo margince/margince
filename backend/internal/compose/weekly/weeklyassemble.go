@@ -16,6 +16,7 @@ package weekly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -149,6 +151,10 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			return nil
 		}
 		outlooks, movements, drivers, err := e.forecast.CloseWeek(ctx, tx, start, end)
+		// Forecast authority may be narrower than the recorded-work review.
+		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+			return nil
+		}
 		if err != nil {
 			return err
 		}

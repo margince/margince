@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,7 +33,7 @@ var teamJobClock = time.Date(2026, 6, 10, 9, 0, 0, 0, time.UTC)
 // without them, and neither is what this test is about.
 func teamSnapshotWorker(e *integration.Env) *weeklyGenerateWorker {
 	return &weeklyGenerateWorker{
-		engine: weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)),
+		engine: newWeeklyEngine(e.Pool),
 		pool:   e.Pool,
 		users:  identity.NewService(e.Pool),
 		now:    func() time.Time { return teamJobClock },
@@ -58,7 +57,7 @@ func seedManagerRoles(t *testing.T, e *integration.Env, users ...ids.UUID) {
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
 	             VALUES ('team_lead_under_test', 'Team Lead', $1::jsonb)`,
 		`{"objects":{"deal":{"read":true},"contact":{"read":true},`+
-			`"activity":{"read":true},"installation_settings":{"read":true}},`+
+			`"activity":{"read":true},"weekly_plan":{"read":true,"update":true},"installation_settings":{"read":true}},`+
 			`"row_scope":"team"}`)
 	for _, user := range users {
 		e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)

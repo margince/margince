@@ -64,7 +64,6 @@ func TestAnUnnarratedWeekIsStillDueForNarration(t *testing.T) {
 			t.Fatalf("after %s due=%v want %v", tc.patch, got, tc.due)
 		}
 	}
-
 }
 
 // repsDue runs the production candidate query.

@@ -402,15 +402,16 @@ func (w *WeeklyForecast) openingSnapshot(
 	ctx context.Context, tx pgx.Tx, period forecasting.Period, scope forecasting.Scope,
 	weekStart time.Time,
 ) (ids.UUID, bool, error) {
+	args := []any{period.StartDate, period.EndDate, string(scope.Kind), scope.ID}
+	args = append(args, weekStart)
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT id FROM forecast_snapshot
 		 WHERE period_start = $1 AND period_end = $2
 		   AND scope_kind = $3 AND scope_id IS NOT DISTINCT FROM $4
-		   AND local_day = $4
+		   AND local_day = $%d
 		 ORDER BY taken_at DESC
-		 LIMIT 1`,
-		period.StartDate, period.EndDate, string(scope.Kind), scope.ID, weekStart).Scan(&id)
+		 LIMIT 1`, len(args)), args...).Scan(&id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// No snapshot on or before this week's Monday. A real state — an

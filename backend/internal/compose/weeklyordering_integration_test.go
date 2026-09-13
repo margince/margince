@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -72,4 +73,34 @@ func TestWeeklyReviewHourAppliesToTeamsAndSundayCanCatchUp(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
+	e := integration.Setup(t)
+	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
+	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,forecast}','{"read":true,"create":true}'::jsonb) WHERE key='team_lead_under_test'`)
+	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
+	plan := weeklyPlanStore(e.Pool)
+	during := teamJobClock.AddDate(0, 0, -7)
+	if _, err := plan.StartWeek(ctx, during); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := plan.AddCommitment(ctx, during, weeklyplan.NewCommitment{Label: "Send the proposal"}); err != nil {
+		t.Fatal(err)
+	}
+	w := teamSnapshotWorker(e)
+	if err := w.measureWorkspace(e.Admin(), e.WS, teamJobClock); err != nil {
+		t.Fatal(err)
+	}
+	review, err := w.engine.LatestReview(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if review.Counts.CommitmentsDue != 1 || review.Counts.CommitmentsKept != 0 {
+		t.Fatalf("plan outcome missing: %+v", review.Counts)
+	}
+	if len(review.Outlook) != 3 {
+		t.Fatalf("scheduled forecast horizons missing: %d", len(review.Outlook))
+	}
+
 }

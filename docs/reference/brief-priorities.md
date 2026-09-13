@@ -171,3 +171,7 @@ Current-plan and work-queue links explicitly refer to today's responsibilities.
 
 Older frozen reports retain the measurement rules used when they were created.
 Missing meeting documentation ranks below recorded wins or kept commitments.
+
+The scheduled writer and web reader share the composed weekly engine, including
+plan settlement and forecast snapshots. A refused forecast does not discard the
+member's recorded-work report.
