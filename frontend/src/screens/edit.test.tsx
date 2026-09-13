@@ -389,50 +389,87 @@ describe("what an edit is a reading of", () => {
     expect(live.full_name).toBe("Alice Cooper");
     expect(opened.full_name).toBe("Alice");
   });
-  it("seeds a field that arrives after the dialog opened", async () => {
-    // The custom-field catalog is a second request. A reader who presses Edit
-    // before it lands gets the control once it does — and it must carry the
-    // stored value, not a blank that the diff would then read as unchanged.
-    const seen: Record<string, unknown>[] = [];
-    function Screen() {
-      const [fieldList, setFieldList] = useState<CreateField[]>(fields);
-      return (
-        <>
-          <Button
-            onClick={() =>
-              setFieldList([
-                ...fields,
-                { key: "cf_tier", labelText: "Tier", type: "text" },
-              ])
-            }
-          >
-            catalog
-          </Button>
-          <EditAction<{ id: string }>
-            label="Edit"
-            fields={fieldList}
-            record={{ ...record, cf_tier: "Strategic" }}
-            savedMessage="saved"
-            invalidate="contacts"
-            recordKey="contact"
-            update={async (values) => {
-              seen.push(values);
-              return { id: "p1" };
-            }}
-          />
-        </>
-      );
+  // The custom-field catalog is a SECOND request, and every screen builds this
+  // modal's record through `cf.recordSlice`, which projects the catalog's own
+  // column list off the row. So before the catalog answers, the record the
+  // modal is handed carries no cf_ key AT ALL — not a blank one, an absent
+  // one. These tests build the record that way rather than putting the column
+  // straight on it: a record that already carries the value sidesteps the
+  // projection, which is the exact thing that makes the bug real.
+  function recordSlice(
+    row: Record<string, unknown>,
+    catalog: { key: string }[],
+  ): Record<string, unknown> {
+    const slice: Record<string, unknown> = {};
+    for (const field of catalog) {
+      slice[field.key] = row[field.key];
     }
+    return slice;
+  }
 
-    render(<Screen />);
+  const TIER: CreateField = { key: "cf_tier", labelText: "Tier", type: "text" };
+  // Stored in MINOR units, rendered in major — the one conversion a form does.
+  const BUDGET: CreateField = {
+    key: "cf_budget",
+    labelText: "Budget",
+    type: "number",
+    toInput: (raw) =>
+      raw == null || raw === "" ? "" : String(Number(raw) / 100),
+  };
+
+  // One screen shaped like the real ones: a row that always holds the stored
+  // values, a catalog that starts empty, and a record built by projecting the
+  // catalog over the row.
+  function LateCatalogScreen({
+    catalog,
+    onUpdate,
+    row,
+  }: Readonly<{
+    catalog: CreateField[];
+    onUpdate: (values: Record<string, unknown>) => void;
+    row: Record<string, unknown>;
+  }>) {
+    const [known, setKnown] = useState<CreateField[]>([]);
+    return (
+      <>
+        <Button onClick={() => setKnown(catalog)}>catalog</Button>
+        <EditAction<{ id: string }>
+          label="Edit"
+          fields={[...fields, ...known]}
+          record={{
+            ...record,
+            ...recordSlice(row, known),
+          }}
+          savedMessage="saved"
+          invalidate="contacts"
+          recordKey="contact"
+          update={async (values) => {
+            onUpdate(values);
+            return { id: "p1" };
+          }}
+        />
+      </>
+    );
+  }
+
+  it("seeds a field the catalog only named after the dialog opened", async () => {
+    const seen: Record<string, unknown>[] = [];
+    render(
+      <LateCatalogScreen
+        catalog={[TIER]}
+        row={{ cf_tier: "Strategic" }}
+        onUpdate={(values) => seen.push(values)}
+      />,
+    );
     await userEvent.click(screen.getByTestId("edit-record"));
     await userEvent.click(screen.getByRole("button", { name: "catalog" }));
 
-    // On screen, holding the record's value rather than a blank.
+    // The control carries the STORED value. Seeding from the reading the form
+    // opened on would put "" here, because that reading predates the catalog
+    // and so has no cf_tier key to read.
     await waitFor(() =>
       expect(screen.getByLabelText("Tier")).toHaveValue("Strategic"),
     );
-
     await userEvent.click(
       screen.getByRole("button", { name: en["record.save"] }),
     );
@@ -440,37 +477,32 @@ describe("what an edit is a reading of", () => {
     expect(seen[0]?.cf_tier).toBe("Strategic");
   });
 
-  it("leaves what the reader typed alone when the field list grows", async () => {
-    // The same late catalog, but the reader has already edited a field the
-    // form had from the start. Seeding the newcomer must not re-seed that one.
-    function Screen() {
-      const [fieldList, setFieldList] = useState<CreateField[]>(fields);
-      return (
-        <>
-          <Button
-            onClick={() =>
-              setFieldList([
-                ...fields,
-                { key: "cf_tier", labelText: "Tier", type: "text" },
-              ])
-            }
-          >
-            catalog
-          </Button>
-          <EditAction<{ id: string }>
-            label="Edit"
-            fields={fieldList}
-            record={{ ...record, cf_tier: "Strategic" }}
-            savedMessage="saved"
-            invalidate="contacts"
-            recordKey="contact"
-            update={vi.fn(async () => ({ id: "p1" }))}
-          />
-        </>
-      );
-    }
+  it("converts a late field's stored units the way the first seed would", async () => {
+    // Currency is stored in minor units and shown in major. A late field must
+    // go through the same `toInput` as one the form had from the start, or the
+    // reader is shown 10000 where the record means 100.
+    render(
+      <LateCatalogScreen
+        catalog={[BUDGET]}
+        row={{ cf_budget: 10000 }}
+        onUpdate={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "catalog" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Budget")).toHaveValue(100),
+    );
+  });
 
-    render(<Screen />);
+  it("leaves what the reader typed alone when the catalog lands", async () => {
+    render(
+      <LateCatalogScreen
+        catalog={[TIER]}
+        row={{ cf_tier: "Strategic" }}
+        onUpdate={() => {}}
+      />,
+    );
     await userEvent.click(screen.getByTestId("edit-record"));
     const name = screen.getByLabelText(en["create.fullName"], { exact: false });
     await userEvent.clear(name);
@@ -480,6 +512,61 @@ describe("what an edit is a reading of", () => {
     await waitFor(() =>
       expect(screen.getByLabelText("Tier")).toHaveValue("Strategic"),
     );
+    // The newcomer is seeded; the answer already on screen is not re-read.
     expect(name).toHaveValue("Alice Cooper");
+  });
+
+  it("opens on one reading when the record changed while it was closed", async () => {
+    // Both seeds run on the open transition. The second must not compute from
+    // the values the first is replacing — React has not applied that setter
+    // yet — or the form submits an old field value against the new version.
+    const seen: { values: Record<string, unknown>; opened?: unknown }[] = [];
+    function Screen() {
+      const [live, setLive] = useState({
+        id: "p1",
+        version: 1,
+        full_name: "Alice",
+      });
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setLive({ id: "p1", version: 2, full_name: "Updated" })
+            }
+          >
+            refetch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fields}
+            record={live}
+            savedMessage="saved"
+            invalidate="contacts"
+            recordKey="contact"
+            update={async (values, _rows, opened) => {
+              seen.push({ values, opened });
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    // Refetch BEFORE opening, so the transition seeds from the new reading.
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    const { values, opened } = seen[0] as {
+      values: { full_name?: string };
+      opened: { version?: number };
+    };
+    // One reading: the name and the version describe the same record.
+    expect(values.full_name).toBe("Updated");
+    expect(opened.version).toBe(2);
   });
 });

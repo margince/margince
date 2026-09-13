@@ -15,11 +15,15 @@ import {
 } from "./common";
 import {
   type CreateField,
-  type FormRow,
   type FormRows,
   RecordFormBody,
   usePublishedValues,
 } from "./create";
+import {
+  prefillFromRecord,
+  prefillRowsFromRecord,
+  seedMissingFields,
+} from "./edit.prefill";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
 // copy.ts). Only the four record kinds a salesperson edits by hand carry
@@ -109,105 +113,6 @@ export function useUpdateRecord<Updated extends { id: string }>({
       );
     },
   });
-}
-
-// One field's initial form string: a divider holds no value; a field with a
-// `toInput` transform (e.g. currency minor→major) uses it; otherwise the raw
-// record value is stringified, or blank when the record doesn't carry it.
-function prefillField(
-  field: CreateField,
-  record: Record<string, unknown>,
-): string {
-  const current = record[field.key];
-  if (field.toInput) {
-    return field.toInput(current);
-  }
-  return current == null ? "" : String(current);
-}
-
-// The record's scalar field values as form strings, keyed by field — dividers
-// hold no value and repeatable fields live in the separate rows channel, so
-// both are skipped here.
-function prefillFromRecord(
-  fields: CreateField[],
-  record: Record<string, unknown>,
-): Record<string, string> {
-  const prefilled: Record<string, string> = {};
-  for (const field of fields) {
-    if (field.divider || field.type === "repeatable") {
-      continue;
-    }
-    prefilled[field.key] = prefillField(field, record);
-  }
-  return prefilled;
-}
-
-// One repeatable field's row value coerced to the form's string-keyed rows: an
-// array of row objects seeds those rows (each subfield stringified — the form
-// controls only ever read/write strings); anything else starts with no rows.
-function prefillRows(value: unknown): FormRow[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.map((entry) => {
-    const row: FormRow = {};
-    if (entry && typeof entry === "object") {
-      for (const [key, cell] of Object.entries(entry)) {
-        row[key] = cell == null ? "" : String(cell);
-      }
-    }
-    return row;
-  });
-}
-
-// The record's repeatable fields as prefilled rows, keyed by field — the rows
-// channel's counterpart to prefillFromRecord (a field the record doesn't carry
-// starts empty rather than throwing).
-function prefillRowsFromRecord(
-  fields: CreateField[],
-  record: Record<string, unknown>,
-): FormRows {
-  const rows: FormRows = {};
-  for (const field of fields) {
-    if (field.type === "repeatable") {
-      rows[field.key] = prefillRows(record[field.key]);
-    }
-  }
-  return rows;
-}
-
-// The fields a form has no answer for yet, seeded from the record.
-//
-// A screen's field list can GROW while the dialog is open: the custom-field
-// catalog is a second request, so a record page that opens Edit before it
-// lands renders the core fields and then gains the workspace's own. The seed
-// above cannot cover them — it fires on the open transition and on a change of
-// record, and a late catalog is neither — so without this the new control
-// shows blank over a stored value, and the diff that follows reads that blank
-// as "unchanged" and writes nothing. The reader sees an empty field and has no
-// way to tell that from one nobody filled in.
-//
-// Only keys the values do not already carry are filled, which is what makes
-// this safe to run on every render: an answer the reader typed is an entry, so
-// it is never overwritten, and neither is a prefilled one. That is the same
-// guarantee the transition seed protects by refusing to key off `fields`.
-function seedMissingFields(
-  fields: CreateField[],
-  record: Record<string, unknown>,
-  values: Record<string, string>,
-): Record<string, string> | null {
-  let added: Record<string, string> | null = null;
-  for (const field of fields) {
-    if (field.divider || field.type === "repeatable") {
-      continue;
-    }
-    if (Object.hasOwn(values, field.key)) {
-      continue;
-    }
-    added ??= {};
-    added[field.key] = prefillField(field, record);
-  }
-  return added;
 }
 
 // The edit modal: prefilled from the record's current field values (each
@@ -309,11 +214,15 @@ export function EditRecordModal({
     }
   }
   // A field list that GREW while the dialog stayed open — the custom-field
-  // catalog landing after Edit was pressed. Seeded from the reading the form
-  // opened on, not the live prop, so a background refetch cannot slip a
-  // newer value in beside the ones already on screen.
+  // catalog landing after Edit was pressed.
+  //
+  // Harmless on the render the block above also fires on, which is why it
+  // needs no guard against it: `values` there still holds the PREVIOUS state
+  // (React has not applied the setter yet), so every field reads as missing
+  // and is re-derived from the SAME live record the seed above just used.
+  // The two agree by construction rather than by ordering.
   if (open) {
-    const missing = seedMissingFields(fields, opened, values);
+    const missing = seedMissingFields(fields, record, values);
     if (missing) {
       setValues({ ...values, ...missing });
     }
