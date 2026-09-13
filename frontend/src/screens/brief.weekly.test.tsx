@@ -340,7 +340,7 @@ describe("BriefScreen — the weekly retrospective", () => {
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: en["brief.panel.weekly"] }),
+      screen.getByRole("heading", { name: en["brief.panel.weekly"], level: 2 }),
     ).toBeTruthy();
   });
 });
@@ -421,7 +421,8 @@ describe("BriefScreen — the week's sentence", () => {
 
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
-    await screen.findByText(en["brief.weekly.noNarrative"]);
+    await screen.findByText(en["brief.weekly.dealsWon"]);
+    expect(screen.queryByText(en["brief.weekly.noNarrative"])).toBeNull();
     // The mirror of the tinted case: no model wrote anything here, so nothing
     // wears the mark that says one did.
     expect(weeklySection().querySelector(".panel-ai")).toBeNull();
@@ -536,10 +537,10 @@ describe("BriefScreen — the week against the one before", () => {
   // The strip is read ACROSS as one comparison, so its width is the claim. At
   // ten slots it folded into two ranks at 1280 and stopped being one reading —
   // which is what #3709 reported.
-  it("draws five slots, not the ten the week has figures for", async () => {
+  it("keeps seven outcome readings above supporting activity", async () => {
     const strip = await mount(withPrior);
 
-    expect(strip.querySelectorAll(".stat-card")).toHaveLength(5);
+    expect(strip.querySelectorAll(".stat-card")).toHaveLength(7);
   });
 
   // The five are the week's OUTCOMES: what the rep planned and kept, what
@@ -592,13 +593,11 @@ describe("BriefScreen — the week against the one before", () => {
   // figures and a reader who wants them has to be able to find them — a strip
   // that got shorter by dropping readings would be a worse answer than the row
   // that folded.
-  it("keeps the other five figures, under the strip", async () => {
+  it("keeps supporting activity below the outcome strip", async () => {
     const strip = await mount(withPrior);
 
     for (const key of [
       "brief.weekly.tasksDelivered",
-      "brief.weekly.dealsMoved",
-      "brief.weekly.dealsLost",
       "brief.weekly.decided",
       "brief.weekly.queueWorked",
     ] as const) {

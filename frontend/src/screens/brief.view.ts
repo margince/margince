@@ -27,7 +27,12 @@ export type BriefView = (typeof VIEWS)[number];
 export const SCOPES = ["mine", "team"] as const;
 export type BriefScope = (typeof SCOPES)[number];
 
-export type BriefAddress = Readonly<{ view: BriefView; scope: BriefScope }>;
+export type BriefAddress = Readonly<{
+  view: BriefView;
+  scope: BriefScope;
+  week?: string;
+  team?: string;
+}>;
 
 /** The address a reader who has chosen nothing is at. */
 export const DEFAULT_ADDRESS: BriefAddress = { view: "morning", scope: "mine" };
@@ -67,7 +72,12 @@ export function addressFrom(params: UrlParams, offered: boolean): BriefAddress {
   // the server would refuse the team read anyway, and a dial stuck on a scope
   // the page cannot fill is a page that looks broken.
   const reachable = scopesFor(view, offered).includes(asked);
-  return { view, scope: reachable ? asked : DEFAULT_ADDRESS.scope };
+  return {
+    view,
+    scope: reachable ? asked : DEFAULT_ADDRESS.scope,
+    ...(params.get("week") ? { week: params.get("week") } : {}),
+    ...(params.get("team") ? { team: params.get("team") } : {}),
+  };
 }
 
 /**
@@ -86,6 +96,8 @@ export function paramsFor(address: BriefAddress): UrlParams {
   if (address.scope !== DEFAULT_ADDRESS.scope) {
     params.set(SCOPE_PARAM, address.scope);
   }
+  if (address.week) params.set("week", address.week);
+  if (address.team) params.set("team", address.team);
   return params;
 }
 

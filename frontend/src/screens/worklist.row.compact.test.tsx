@@ -105,7 +105,7 @@ describe("a worklist row at list density", () => {
     // last and the reader had no way to see what went.
     const inline = container.querySelectorAll(".worklist-row-inline");
     expect(inline).toHaveLength(1);
-    expect(inline[0].textContent).toContain(
+    expect(inline[0].textContent).not.toContain(
       en["worklist.consequence.deal_drifts"],
     );
     expect(inline[0].textContent).toContain(" · ");
@@ -123,7 +123,9 @@ describe("a worklist row at list density", () => {
       }),
     );
 
-    const trigger = screen.getByRole("button", { name: /more/ });
+    const trigger = screen.getByRole("button", {
+      name: en["brief.row.details"],
+    });
     await user.click(trigger);
 
     const panel = await screen.findByRole("region");
@@ -138,7 +140,9 @@ describe("a worklist row at list density", () => {
     const user = userEvent.setup();
     render(row({ because: MANY_REASONS }));
 
-    const trigger = screen.getByRole("button", { name: /more/ });
+    const trigger = screen.getByRole("button", {
+      name: en["brief.row.details"],
+    });
     await user.click(trigger);
     expect(await screen.findByRole("region")).toBeTruthy();
 
@@ -155,7 +159,9 @@ describe("a worklist row at list density", () => {
     const { container } = render(row());
 
     expect(container.querySelector(".worklist-row-inline")).toBeNull();
-    expect(screen.queryByRole("button", { name: /more/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["brief.row.details"] }),
+    ).toBeNull();
   });
 
   // The reader's own mark stays a glyph on the trailing edge at this density:

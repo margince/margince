@@ -48,7 +48,7 @@ func TestAStaleUnfundedWaitLeavesTheTopBand(t *testing.T) {
 
 // Money keeps a long wait in the day. Where a deal is open the silence IS the
 // problem, and demoting it would hide the case the rep most needs.
-func TestAnOpenDealKeepsALongWaitInTheTopBand(t *testing.T) {
+func TestAnOpenDealKeepsALongWaitInRecovery(t *testing.T) {
 	waiting := WaitingCustomer{
 		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000c2"),
 		Subject:     "Re: the contract",
@@ -58,8 +58,8 @@ func TestAnOpenDealKeepsALongWaitInTheTopBand(t *testing.T) {
 
 	row := classifyWaiting(waiting, rankInstant)
 
-	if row.item.Level != levelWaiting {
-		t.Fatalf("a forty-day wait on an OPEN deal was demoted to level %d", row.item.Level)
+	if row.item.Level != levelMaterialRisk {
+		t.Fatalf("an old open-deal wait should require revenue recovery, got level %d", row.item.Level)
 	}
 }
 

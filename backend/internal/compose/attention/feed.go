@@ -168,7 +168,10 @@ type Service struct {
 	// means the question has no answer, and resolveOwner refuses rather than
 	// admits. A lane whose absence widened a scope would be a security hole
 	// wearing the shape of a missing feature.
-	teammates Teammates
+	teammates   Teammates
+	namedTeams  NamedTeams
+	weeklyPlans WeeklyPlans
+	planRows    []ranked
 	// leads is the inbound leads still owed a first reply. Optional in the
 	// ordinary way: nil is a feed that does not read leads at all, which the
 	// queue reports as an absent source rather than as an empty one.

@@ -3,9 +3,16 @@
 
 import { useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
 import { PanelBody } from "../design-system/panel";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
 import { useT } from "../i18n";
+import { problemMessageOf } from "./common";
+import { useRecordTargets } from "./recordtargets";
 import { useAddCommitment } from "./weeklyplan.queries";
 
 // One more thing the week is FOR, typed into the plan it belongs to.
@@ -17,11 +24,23 @@ import { useAddCommitment } from "./weeklyplan.queries";
 export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const add = useAddCommitment();
+  const { search, kindOf } = useRecordTargets();
+  const [record, setRecord] = useState<RecordPickerCandidate | null>(null);
+  const type = record ? kindOf(record.id) : null;
   const [label, setLabel] = useState("");
   const [dueOn, setDueOn] = useState<ISODate | "">("");
 
   return (
     <PanelBody>
+      <RecordPicker
+        label={t("brief.plan.select")}
+        searchTargets={search}
+        selected={record}
+        onPick={(next) => {
+          setRecord(next);
+          if (label === "" && next) setLabel(next.name);
+        }}
+      />
       <Field label={t("plan.new.label")} required>
         {(control) => (
           <TextInput
@@ -49,6 +68,13 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
           padding and nothing else, so bare siblings sat against each other on
           the line under the last field with no gap and no alignment of their
           own. */}
+      {add.isError && (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={problemMessageOf(add.error, t)}
+        />
+      )}
       <div className="form-actions">
         <Button variant="ghost" onClick={onDone}>
           {t("plan.new.cancel")}
@@ -59,7 +85,13 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
               // An empty date is no date, not an empty string: the contract
               // types due_on as nullable, and "" is neither a date nor an
               // absence.
-              { label, due_on: dueOn === "" ? null : dueOn },
+              {
+                label,
+                due_on: dueOn === "" ? null : dueOn,
+                ...(record && type
+                  ? { linked_record: { type, id: record.id } }
+                  : {}),
+              },
               {
                 onSuccess: () => {
                   setLabel("");

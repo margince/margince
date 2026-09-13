@@ -4,7 +4,8 @@
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
-import { Badge, StatCard } from "../design-system/atoms";
+import { useUrlParams } from "../app/urlstate";
+import { Badge, Disclosure, StatCard } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
@@ -55,7 +56,10 @@ export function WeeklySection() {
   const recordZone = useRecordZone();
   // undefined = the most recent. A chosen week is a different read, keyed
   // separately, so moving between weeks does not overwrite the cache of either.
-  const [week, setWeek] = useState<string | undefined>(undefined);
+  const [params, setParams] = useUrlParams();
+  const week = params.get("week");
+  const setWeek = (next: string) =>
+    setParams(new Map([...params, ["week", next]]));
   const review = useWeeklyReview(week);
   const index = useWeeklyReviewIndex();
 
@@ -150,13 +154,8 @@ export function WeeklySection() {
  * in fact nobody looked.
  */
 function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
-  const t = useT();
   if (!review.narrated_at) {
-    return (
-      <p className="brief-weekly-narrative brief-weekly-narrative-absent t-caption">
-        {t("brief.weekly.noNarrative")}
-      </p>
-    );
+    return null;
   }
   if (!review.narrative) {
     return null;
@@ -321,43 +320,24 @@ function WeeklyBody({
           body's own stack sets the interval — before this each paid a browser
           margin and an empty state's padding on top of it, which put two
           sentences 40px apart with nothing between them. */}
-      <PanelBody className="brief-weekly-week">
-        <WeeklyNarrative review={review} />
-        {/* Where the week was landing, before what the rep did about it: a
-            retrospective is read outcome-first, and the counts below answer
-            "what did I do" against the figure this answers "about what". */}
-        <OutlookPanel
-          outlook={review.outlook ?? []}
-          locale={locale}
-          horizon={horizon}
-          onHorizon={setHorizon}
-          onOpenForecast={() => openAnalyticsSection("forecast")}
-        />
-      </PanelBody>
-      {/* How well the week went, after where it was landing and before the
-          outcome strip's tallies. Absent blocks draw nothing at all — the
-          panel never substitutes zeros for work the rep did not have. */}
-      <ScorecardPanel scorecard={review.scorecard} />
-      {/* What the week TAUGHT, after how well it went. Last because it is the
-          only part of the retrospective that is a claim rather than a count,
-          and a reader should meet the numbers before the lessons drawn from
-          them. */}
-      <LearningsPanel learnings={review.learnings} />
-      {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
-          is a table wearing a strip's clothes — at 1280 the row folded to two
-          ranks of five and stopped being one reading at all (#3709).
-          These five are the week's outcomes: what the rep planned and kept,
-          what closed, how fast new business was answered, whether meetings led
-          anywhere, and what did not get finished. The other five are workings
-          — how the queue was worked, how proposals were decided — and they
-          read as a list under the strip, where they are still available to
-          anyone who wants them and no longer compete with the outcomes. */}
       <PanelBody className="brief-weekly-outcomes">
         {/* `compact` because this row is read as ONE glance rather than a
             reading at a time: the roomy tile's floor put half of it below the
             fold on a laptop and left a band of dead space under every figure.
             The scale is untouched — a compact reading is the same reading. */}
         <StatStrip testId="weekly-strip">
+          <StatCard
+            density="compact"
+            label={t("brief.week.lostLabel")}
+            value={formatNumber(c.deals_lost, locale)}
+            detail={since(c.deals_lost, prior?.deals_lost)}
+          />
+          <StatCard
+            density="compact"
+            label={t("brief.week.movedLabel")}
+            value={formatNumber(c.deals_moved, locale)}
+            detail={since(c.deals_moved, prior?.deals_moved)}
+          />
           <StatCard
             density="compact"
             label={t("brief.weekly.planCommitmentsKept")}
@@ -416,7 +396,9 @@ function WeeklyBody({
             detail={since(c.tasks_carried_over, prior?.tasks_carried_over)}
           />
         </StatStrip>
-        <WeeklyWorkings counts={c} />
+        <Disclosure summary={t("brief.readings.summary")}>
+          <WeeklyWorkings counts={c} />
+        </Disclosure>
       </PanelBody>
       {review.deals.length > 0 && (
         <PanelBody>
@@ -451,6 +433,39 @@ function WeeklyBody({
           </ul>
         </PanelBody>
       )}
+      <Disclosure summary={t("brief.week.supporting")}>
+        <PanelBody className="brief-weekly-week">
+          <WeeklyNarrative review={review} />
+          {/* Where the week was landing, before what the rep did about it: a
+            retrospective is read outcome-first, and the counts below answer
+            "what did I do" against the figure this answers "about what". */}
+          <OutlookPanel
+            outlook={review.outlook ?? []}
+            locale={locale}
+            horizon={horizon}
+            onHorizon={setHorizon}
+            onOpenForecast={() => openAnalyticsSection("forecast")}
+          />
+        </PanelBody>
+        {/* How well the week went, after where it was landing and before the
+          outcome strip's tallies. Absent blocks draw nothing at all — the
+          panel never substitutes zeros for work the rep did not have. */}
+        <ScorecardPanel scorecard={review.scorecard} />
+        {/* What the week TAUGHT, after how well it went. Last because it is the
+          only part of the retrospective that is a claim rather than a count,
+          and a reader should meet the numbers before the lessons drawn from
+          them. */}
+        <LearningsPanel learnings={review.learnings} />
+        {/* FIVE slots, because a strip is read ACROSS as one comparison and ten
+          is a table wearing a strip's clothes — at 1280 the row folded to two
+          ranks of five and stopped being one reading at all (#3709).
+          These five are the week's outcomes: what the rep planned and kept,
+          what closed, how fast new business was answered, whether meetings led
+          anywhere, and what did not get finished. The other five are workings
+          — how the queue was worked, how proposals were decided — and they
+          read as a list under the strip, where they are still available to
+          anyone who wants them and no longer compete with the outcomes. */}
+      </Disclosure>
     </>
   );
 }

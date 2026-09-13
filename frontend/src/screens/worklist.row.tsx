@@ -32,6 +32,7 @@ import {
   BriefSetAsides,
   useBriefAnswer,
 } from "./worklist.briefverbs";
+import { ApprovalBundleReview } from "./worklist.bundle";
 import {
   comparisonText,
   consequenceText,
@@ -48,6 +49,7 @@ import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
 import { leadFactsText } from "./worklist.leadfacts";
 import { PairDecision } from "./worklist.pair";
+import { PlanWorkActions } from "./worklist.plan";
 import {
   useApproval,
   useNudgeDismissal,
@@ -199,9 +201,6 @@ export function WorklistRow({
   // holds the disposition write for the verbs and the swipe.
   const brief = useBriefAnswer(item);
   const answer = rowAnswer(item, brief);
-  // THE ITEM, READ ONCE. Both columns print these and neither derives anything
-  // of its own, so the densities cannot come to disagree about a title, a
-  // clock or a reason.
   const readings: RowReadings = {
     item,
     title,
@@ -509,6 +508,8 @@ const ANSWER_BY_SOURCE: Partial<
 };
 
 function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
+  if (item.source === "weekly_commitment")
+    return { primary: <PlanWorkActions item={item} /> };
   if (decidable(item)) {
     return { primary: <RowDecision item={item} /> };
   }
@@ -869,10 +870,6 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
   // fire one read per row on arrival to fill cards nobody has opened, and the
   // row above needs none of it to draw its button.
   const approval = useApproval(item.id, open);
-  // A body with no `kind` is not a proposal this card can draw: the kind
-  // chooses the label, the tool chip and the autonomy dot. Treated as a failed
-  // read rather than rendered, because the alternative is a throw that takes
-  // the whole day's page down over one malformed answer.
   const usable = approval.data?.kind ? approval.data : undefined;
   return (
     <div className="worklist-row-decision">
@@ -893,7 +890,9 @@ function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
         returnFocusTo={() => opener.current}
       >
         <h2 id={titleId}>{t("worklist.decision.title")}</h2>
-        {usable ? (
+        {usable?.bundle_id ? (
+          <ApprovalBundleReview approval={usable} />
+        ) : usable ? (
           <ApprovalRow
             approval={usable}
             extraInvalidateKeys={[worklistKey]}

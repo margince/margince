@@ -13,6 +13,7 @@ import { DataTable } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { TeamPlanReview } from "./brief.teamplan";
 import { CoachingMoves } from "./worklist.coaching";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type TeamBoardMember, useTeamBoard } from "./worklist.queries";
@@ -115,12 +116,14 @@ function count(value: number | undefined) {
 export function TeamBoard({
   onOwner,
   onUnassigned,
+  teamId,
 }: Readonly<{
   onOwner: (userId: string) => void;
   onUnassigned: () => void;
+  teamId?: string;
 }>) {
   const t = useT();
-  const board = useTeamBoard(true);
+  const board = useTeamBoard(true, teamId);
   // A board that could not be read says so. It never reads as an empty team:
   // the server refuses rather than answering zeros, and a surface that drew the
   // refusal as "nobody is carrying anything" would be the same lie one lane
@@ -181,7 +184,14 @@ export function TeamBoard({
                     {
                       key: "name",
                       header: t("worklist.board.member"),
-                      render: (row) => row.name,
+                      render: (row) => (
+                        <>
+                          {row.name}
+                          {teamId && row.id && (
+                            <TeamPlanReview owner={row.id} name={row.name} />
+                          )}
+                        </>
+                      ),
                     },
                     {
                       key: "waiting",

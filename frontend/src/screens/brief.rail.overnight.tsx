@@ -4,7 +4,7 @@
 import { ArrowRight } from "lucide-react";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button } from "../design-system/atoms";
+import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDate, formatNumber } from "../format/format";
@@ -200,49 +200,6 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
       })}
       className="rail-panel"
     >
-      <DigestCount
-        label={t("brief.digestSynced")}
-        value={capture.messages_synced ?? 0}
-      />
-      {/* The two counts that name a set of RECORDS, so they open it. The door
-          sorts newest-first rather than bounding by date: `created_at` is a
-          declared sort on both lists and neither endpoint has a "created on
-          this day" filter, so overnight's rows land at the top of a longer list
-          rather than being the whole of it. That is a superset, which is the
-          honest direction to be wrong in — the reader sees the ones this figure
-          counted and more besides, not fewer. The messages-synced count above
-          has no list surface at all and keeps no door. */}
-      <DigestCount
-        label={t("brief.digestContacts")}
-        value={capture.contacts_created ?? 0}
-        onOpen={() =>
-          navigate({ screen: "contacts" }, new Map([["sort", "-created_at"]]))
-        }
-      />
-      <DigestCount
-        label={t("brief.digestCompanies")}
-        value={capture.companies_created ?? 0}
-        onOpen={() =>
-          navigate({ screen: "companies" }, new Map([["sort", "-created_at"]]))
-        }
-      />
-      <DigestCount
-        label={t("brief.digestDedupe")}
-        value={review.dedupe_open ?? 0}
-        onOpen={() => navigate({ screen: "worklist" })}
-      />
-      <PanelBody>
-        <p className="t-caption">
-          {t("brief.digestClassify", {
-            commitments: formatNumber(
-              review.classify?.commitments ?? 0,
-              locale,
-            ),
-            meetings: formatNumber(review.classify?.meetings ?? 0, locale),
-            noise: formatNumber(review.classify?.noise ?? 0, locale),
-          })}
-        </p>
-      </PanelBody>
       {projects && <DigestProjectsBlock projects={projects} />}
       {unhealthy.length > 0 && (
         <PanelBody>
@@ -275,6 +232,54 @@ function DigestBody({ digest }: Readonly<{ digest: MorningDigest }>) {
           </Callout>
         </PanelBody>
       )}
+      <Disclosure summary={t("brief.digestSynced")}>
+        <DigestCount
+          label={t("brief.digest.messages")}
+          value={capture.messages_synced ?? 0}
+        />
+        {/* The two counts that name a set of RECORDS, so they open it. The door
+          sorts newest-first rather than bounding by date: `created_at` is a
+          declared sort on both lists and neither endpoint has a "created on
+          this day" filter, so overnight's rows land at the top of a longer list
+          rather than being the whole of it. That is a superset, which is the
+          honest direction to be wrong in — the reader sees the ones this figure
+          counted and more besides, not fewer. The messages-synced count above
+          has no list surface at all and keeps no door. */}
+        <DigestCount
+          label={t("brief.digestContacts")}
+          value={capture.contacts_created ?? 0}
+          onOpen={() =>
+            navigate({ screen: "contacts" }, new Map([["sort", "-created_at"]]))
+          }
+        />
+        <DigestCount
+          label={t("brief.digestCompanies")}
+          value={capture.companies_created ?? 0}
+          onOpen={() =>
+            navigate(
+              { screen: "companies" },
+              new Map([["sort", "-created_at"]]),
+            )
+          }
+        />
+        <DigestCount
+          label={t("brief.digestDedupe")}
+          value={review.dedupe_open ?? 0}
+          onOpen={() => navigate({ screen: "worklist" })}
+        />
+        <PanelBody>
+          <p className="t-caption">
+            {t("brief.digestClassify", {
+              commitments: formatNumber(
+                review.classify?.commitments ?? 0,
+                locale,
+              ),
+              meetings: formatNumber(review.classify?.meetings ?? 0, locale),
+              noise: formatNumber(review.classify?.noise ?? 0, locale),
+            })}
+          </p>
+        </PanelBody>
+      </Disclosure>
     </Panel>
   );
 }

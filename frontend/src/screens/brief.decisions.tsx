@@ -3,20 +3,13 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  approvalDotTier,
-  KIND_TO_VERB,
-  useAgentTierMap,
-} from "../app/autonomy";
+import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
 import { navigate } from "../app/router";
 import type {
   DecisionCardLabels,
   DecisionStatusLabels,
 } from "../design-system/decisioncard";
-import {
-  DecisionStatusChip,
-  DecisionToolChip,
-} from "../design-system/decisioncard";
+import { DecisionStatusChip } from "../design-system/decisioncard";
 import {
   DecisionDeck,
   type DecisionDeckItem,
@@ -24,7 +17,7 @@ import {
 } from "../design-system/decisiondeck";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { SectionState } from "../design-system/surfacestate";
-import { AutonomyDot, confidenceLevel } from "../design-system/trust";
+import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -45,6 +38,7 @@ import {
 import { commitTray } from "./brief.decisions.commit";
 import { problemMessageOf, provenanceOf, useViewerId } from "./common";
 import { worklistLaneHref } from "./worklist.header";
+import { worklistKey } from "./worklist.queries";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
 // what is in it.
@@ -77,7 +71,7 @@ function deckLabels(
   locale: Parameters<typeof formatDateTime>[1],
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
-    accept: t("trust.accept"),
+    accept: t("brief.approval.approve"),
     edit: t("trust.edit"),
     reject: t("decision.reject"),
     // The deck is the one surface where "later" is a real answer: it is the top
@@ -153,6 +147,7 @@ export function DecisionsSection({
   nowMs,
   state,
   onAlreadyDecided,
+  expanded = false,
 }: Readonly<{
   items: readonly DecisionDeckItem[];
   nowMs: number;
@@ -160,6 +155,7 @@ export function DecisionsSection({
    *  see; a failure or a wait is the deck's to draw, not the column's. */
   state: SectionState;
   onAlreadyDecided: () => void;
+  expanded?: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -172,6 +168,7 @@ export function DecisionsSection({
   // than the mutation's error, because the mutation SUCCEEDED — it carried the
   // outcomes of the items that did go.
   const [failure, setFailure] = useState<string | null>(null);
+  const [alreadyDecided, setAlreadyDecided] = useState(false);
 
   const commit = useMutation({
     // The staged verdicts and the items they answer for BOTH arrive as
@@ -180,6 +177,7 @@ export function DecisionsSection({
     // been invalidated.
     mutationFn: commitTray,
     onSuccess: (result) => {
+      setAlreadyDecided(result.alreadyDecided);
       if (result.alreadyDecided) {
         onAlreadyDecided();
       }
@@ -191,6 +189,7 @@ export function DecisionsSection({
         return;
       }
       setFailure(null);
+      queryClient.invalidateQueries({ queryKey: worklistKey });
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
@@ -209,7 +208,9 @@ export function DecisionsSection({
     : commit.isError || failure !== null
       ? "failed"
       : "idle";
-  const notice = commit.isError ? problemMessageOf(commit.error, t) : failure;
+  const notice = commit.isError
+    ? problemMessageOf(commit.error, t)
+    : (failure ?? (alreadyDecided ? t("decision.alreadyDecided") : null));
 
   return (
     // No `aria-label` here. The panel inside is a titled region and names
@@ -254,7 +255,10 @@ export function DecisionsSection({
             </a>
           </p>
         )}
-        labels={deckLabels(t, plural, locale)}
+        labels={{
+          ...deckLabels(t, plural, locale),
+          ...(expanded ? { compactRow: undefined } : {}),
+        }}
         state={state}
         loadingLabel={t("brief.panel.decisions")}
         commitState={commitState}
@@ -288,10 +292,6 @@ export function DecisionsSection({
                   <span className="t-caption">
                     {approvalKindLabel(shared.kind, t)}
                   </span>
-                  <DecisionToolChip
-                    verb={KIND_TO_VERB[shared.kind]}
-                    label={(verb) => t("decision.viaTool", { verb })}
-                  />
                 </>
               )}
               <DecisionStatusChip
@@ -309,7 +309,7 @@ export function DecisionsSection({
             shared.proposedBy === undefined
               ? undefined
               : provenanceOf(shared.proposedBy, viewerId),
-          confidence: confidenceLevel(shared.confidence) ?? undefined,
+
           display: resolveDisplay(
             approval.kind,
             (approval.proposed_change ?? {}) as Record<string, unknown>,

@@ -125,6 +125,8 @@ function hasFoot(
 
 export function PlanSection() {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -215,7 +217,17 @@ export function PlanSection() {
     <section id="brief-plan">
       <Panel
         title={t("plan.title")}
-        sub={t("plan.sub")}
+        sub={
+          plan.data
+            ? t("brief.plan.period", {
+                date: formatDate(
+                  plan.data.local_week_start,
+                  locale,
+                  recordZone,
+                ),
+              })
+            : t("plan.sub")
+        }
         titleAction={
           editable && !adding ? (
             <Button onClick={() => setAdding(true)}>{t("plan.add")}</Button>

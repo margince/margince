@@ -40,6 +40,9 @@ function resultOf(
     // what it was worth.
     return { key: "brief.week.won", values: { count: String(c.deals_won) } };
   }
+  if (c.deals_lost > 0) {
+    return { key: "brief.week.lost", values: { count: String(c.deals_lost) } };
+  }
   if (c.deals_moved > 0) {
     return {
       key: "brief.week.moved",
@@ -51,6 +54,26 @@ function resultOf(
       key: "brief.week.met",
       values: { count: String(c.meetings_held) },
     };
+  }
+  if (c.leads_answered_in_target > 0) {
+    return {
+      key: "brief.week.responses",
+      values: { count: String(c.leads_answered_in_target) },
+    };
+  }
+  if (c.leads_routed > 0) {
+    return {
+      key: "brief.week.leads",
+      values: { count: String(c.leads_routed) },
+    };
+  }
+  if (
+    c.tasks_done > 0 ||
+    c.commitments_kept > 0 ||
+    c.proposals_accepted > 0 ||
+    c.proposals_rejected > 0
+  ) {
+    return { key: "brief.week.workRecorded", values: {} };
   }
   return null;
 }

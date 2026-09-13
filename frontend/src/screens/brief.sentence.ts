@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { consequenceText, itemTitle, rowHref } from "./worklist.copy";
+import { itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence, composed from the rows the page is showing.
@@ -72,24 +72,11 @@ export function sentenceParts(template: string): readonly SentencePart[] {
 /** How many rows the sentence is allowed to name. */
 const NAMED = 1;
 
-/**
- * What the DECISIONS DECK above already answers, and this page therefore does
- * not count twice.
- *
- * ONE spelling for the whole Brief. The sentence names the lead row and the
- * section below draws it, so a rule kept in two places would let the sentence
- * open with a decision the section deliberately did not show — which is the
- * duplication that rule exists to stop, reappearing one element higher.
- */
-const DECK_ANSWERS = "approval";
-
-/** The rows this page is answerable for, in the server's order. */
+/** The agenda includes approvals, using the worklist's existing review action. */
 export function waitingRows(
   day: Worklist | undefined,
 ): readonly WorklistItem[] {
-  // The optional chain reaches the FIELD, not just the payload: an answer that
-  // carried no queue must draw nothing rather than throw.
-  return day?.queue?.filter((item) => item.source !== DECK_ANSWERS) ?? [];
+  return day?.queue ?? [];
 }
 
 /**
@@ -133,23 +120,19 @@ export function briefSentence(
     lead: itemTitle(lead, t, locale),
     rest: String(waiting.length - NAMED),
   };
-  const consequence = consequenceText(lead, t);
-  if (consequence) {
-    values.consequence = consequence;
-  }
   // The row's OWN destination, through the helper the feed's rows are linked
   // by. A second rule for where the lead goes would let the sentence open a
   // record the row under it does not.
   const leadHref = rowHref(lead);
   if (waiting.length === NAMED || partial) {
     return {
-      key: consequence ? "brief.sentence.oneWithCost" : "brief.sentence.one",
+      key: "brief.sentence.one",
       values,
       leadHref,
     };
   }
   return {
-    key: consequence ? "brief.sentence.manyWithCost" : "brief.sentence.many",
+    key: "brief.sentence.many",
     values,
     leadHref,
   };

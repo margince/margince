@@ -41,8 +41,12 @@ func (h Handlers) GetAttention(w http.ResponseWriter, r *http.Request) {
 // No parameters: whose team it is comes from the principal, so a reader cannot
 // ask about somebody else's. The row-scope tier that admits the read is checked
 // in the service, beside the roster it draws.
-func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-	out, err := h.svc.TeamBoard(r.Context())
+func (h Handlers) GetTeamBoard(w http.ResponseWriter, r *http.Request, params crmcontracts.GetTeamBoardParams) {
+	var team ids.UUID
+	if params.Team != nil {
+		team = ids.UUID(*params.Team)
+	}
+	out, err := h.svc.NamedTeamBoard(r.Context(), team)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

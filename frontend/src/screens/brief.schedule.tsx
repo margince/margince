@@ -4,10 +4,11 @@
 import { Badge } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatTimeOfDay } from "../format/format";
+import { formatDateTime, formatTimeOfDay } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { isUnprepared, itemTitle, rowHref } from "./worklist.copy";
+import { sourceComplete } from "./brief.facts";
+import { isUnprepared, itemTitle, moveHref, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The two rail panels the morning is read alongside: what the day is booked
@@ -44,7 +45,12 @@ export function scheduleIsEmpty(
   day: Worklist | undefined,
   state: SectionState,
 ): boolean {
-  return answered(state) && rowsFrom(day, MEETING).length === 0;
+  return (
+    answered(state) &&
+    day !== undefined &&
+    sourceComplete(day, MEETING) &&
+    rowsFrom(day, MEETING).length === 0
+  );
 }
 
 /** Whether this rep has no task due today. Same contract as above. */
@@ -52,7 +58,12 @@ export function tasksIsEmpty(
   day: Worklist | undefined,
   state: SectionState,
 ): boolean {
-  return answered(state) && rowsFrom(day, TASK).length === 0;
+  return (
+    answered(state) &&
+    day !== undefined &&
+    sourceComplete(day, TASK) &&
+    rowsFrom(day, TASK).length === 0
+  );
 }
 
 /**
@@ -95,6 +106,9 @@ export function SchedulePanel({
           // quiet line cannot report one morning in two vocabularies.
           emptyLabel={t("brief.rail.quietSchedule")}
         >
+          {meetings.length === 0 && answered(state) && (
+            <PanelRow>{t("brief.feed.incomplete")}</PanelRow>
+          )}
           {meetings.map((item) => (
             <PanelRow key={item.id} className="rail-schedule-row">
               <span className="t-caption rail-schedule-when">
@@ -128,6 +142,7 @@ export function PromisesPanel({
   state,
 }: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (tasksIsEmpty(day, state)) {
     return null;
   }
@@ -143,6 +158,13 @@ export function PromisesPanel({
           {tasks.map((item) => (
             <PanelRow key={item.id} className="rail-promise-row">
               <Title item={item} />
+              <span className="t-caption">
+                {item.due_at
+                  ? t("brief.task.due", {
+                      date: formatDateTime(item.due_at, locale, viewerZone()),
+                    })
+                  : t("brief.task.undated")}
+              </span>
             </PanelRow>
           ))}
         </SurfaceState>
@@ -156,7 +178,7 @@ function Title({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const { locale } = useLocale();
   const title = itemTitle(item, t, locale);
-  const href = rowHref(item);
+  const href = rowHref(item) ?? (item.move ? moveHref(item) : undefined);
   return href ? (
     <a className="entity-link t-body" href={href}>
       {title}

@@ -55,3 +55,16 @@
   display: block;
   margin-top: var(--space-1);
 }
+
+/* Dates and evidence remain readable beside the action, including on a phone. */
+.brief-feed-list .worklist-row-line {
+  flex-wrap: wrap;
+}
+.brief-feed-list .worklist-row-title {
+  flex-basis: 100%;
+  white-space: normal;
+}
+.brief-feed-list .worklist-row-inline {
+  white-space: normal;
+  overflow: visible;
+}

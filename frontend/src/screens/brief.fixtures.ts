@@ -619,6 +619,7 @@ export function meetingRow(
   return {
     id,
     source: "meeting",
+    kind: prepared ? "prepared" : "unprepared",
     level: 3,
     category: "meetings",
     title: "Weber GmbH · quarterly review",
@@ -749,7 +750,14 @@ export function readingsDay(
       ...summary,
     },
     sources_unavailable: [],
-    reach: [],
+    reach: counts
+      .filter((entry) => entry.category === "meetings")
+      .map((entry) => ({
+        source: "meeting",
+        considered: entry.considered,
+        shown: entry.shown,
+        more_available: entry.more_available,
+      })),
     counts,
     readings: {
       changed_since_brief: 0,
@@ -822,4 +830,17 @@ export function boundedDecisions(
   shown: number,
 ): WorklistCount {
   return { category: "decisions", considered, shown, more_available: true };
+}
+
+export function taskRow(id: string, title: string): WorklistItem {
+  return {
+    id,
+    source: "task",
+    level: 2,
+    category: "tasks",
+    title,
+    because: [],
+    consequence: "task_slips",
+    actions: ["complete", "open"],
+  };
 }

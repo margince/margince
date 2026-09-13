@@ -179,17 +179,14 @@ describe("BriefScreen — the context rail", () => {
   // The panel keeps its box wherever it has something to SAY. Past the end of
   // Brief's one page an empty list is "nothing on the page we read" rather than
   // "nothing has gone quiet", and that caveat is content.
-  it("keeps the watch panel when the ranked queue ended short", async () => {
+  it("does not duplicate risks in a second panel on a partial page", async () => {
     stubApi({
       "GET /worklist": () =>
         jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
-    render(<BriefScreen />);
-    expect(
-      await screen.findByRole("region", {
-        name: en["brief.panel.remainingRisk"],
-      }),
-    ).toBeTruthy();
+    const { container } = render(<BriefScreen />);
+    await screen.findByText(en["brief.feed.title"]);
+    expect(container.querySelector("#brief-watch")).toBeNull();
   });
 
   const digestBase = {
@@ -223,7 +220,7 @@ describe("BriefScreen — the context rail", () => {
     expect(screen.getByText("Companies created")).toBeTruthy();
     expect(
       screen.getByText(
-        "Classified overnight: 4 commitments · 2 meetings · 30 noise",
+        "Classified: 4 promises, 2 meetings, 30 messages without a sales action.",
       ),
     ).toBeTruthy();
     await user.click(screen.getByText("Duplicates to review"));

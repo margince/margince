@@ -131,7 +131,7 @@ func keepsRow(row ranked, want crmcontracts.WorklistFilter) bool {
 		// urgent, so pinning hygiene to the top of a morning must not grow the
 		// figure OR the list it opens — and the two cannot drift, because there
 		// is one spelling of "urgent" and this is a call to it.
-		return semanticLevelOf(row) <= levelPromise
+		return urgentWork(row)
 	case filterExceptDecisions:
 		return !alreadyACard(row)
 	case filterChangedSinceBrief:

@@ -19,12 +19,16 @@ import { UNASSIGNED } from "./worklist.queries";
  * the same gate the Worklist's own board uses. The board is drawn on the tier
  * the server admits it on, so the control and the refusal cannot disagree.
  */
-export function BriefTeamBoard({ offered }: Readonly<{ offered: boolean }>) {
+export function BriefTeamBoard({
+  offered,
+  teamId,
+}: Readonly<{ offered: boolean; teamId?: string }>) {
   if (!offered) {
     return null;
   }
   return (
     <TeamBoard
+      teamId={teamId}
       // Whose day, in the address. `#/worklist/<userId>` opens that contact's
       // queue directly — without it a row could only reach the Worklist and
       // leave the reader to pick the same contact a second time, which is a row

@@ -1,3 +1,7 @@
+import { sourceName } from "./worklist.sources";
+
+export { sourceName } from "./worklist.sources";
+
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
 import { calendarDay, middayInstant } from "../format/calendarday";
@@ -53,20 +57,7 @@ export function subjectHref(item: WorklistItem): string | undefined {
   return routeHash(ENTITY[subject.type].route(subject.id));
 }
 
-// Where a row goes when it names no record of its own.
-//
-// Most rows point at a record and reach it through the entity registry. A few
-// name a QUEUE instead — a data-subject request is worked on the privacy
-// screen and nowhere else — and without a destination those rows are a
-// sentence a reader cannot follow, on the one lane whose whole argument is a
-// legal clock somebody has to answer.
-//
-// A destination is not a verb: these rows still offer no action, because the
-// queue cannot perform one. It is the difference between telling somebody
-// where a room is and claiming to have opened the door.
-// Through settingsAddress, not a path spelled here: the settings registry
-// decides whether a tab sits under the admin segment, and a second spelling of
-// that decision would keep pointing at the old address the day it moves.
+// Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsHref("privacy")),
   // A rule that failed, and the page that lists the rules.
@@ -444,8 +435,12 @@ export function whenText(
   now: Date,
 ): string | null {
   if (!item.due_at) {
-    return null;
+    return item.source === "task" ? t("brief.task.undated") : null;
   }
+  if (item.source === "weekly_commitment")
+    return t("worklist.when.due", {
+      when: formatDate(item.due_at, locale, record),
+    });
   const key = whenKeyFor(item);
   if (key === null) {
     return null;
@@ -468,7 +463,15 @@ function whenKeyFor(
   if (item.source === "meeting") {
     return "worklist.when.starts";
   }
-  if (item.source === "task") {
+  if (
+    [
+      "task",
+      "conversation_claim",
+      "weekly_commitment",
+      "dsr",
+      "notice_case",
+    ].includes(item.source)
+  ) {
     return "worklist.when.due";
   }
   return null;
@@ -697,7 +700,8 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
   }
-  return t(`worklist.untitled.${item.source}` as const);
+  const title = t(`worklist.untitled.${item.source}` as const);
+  return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
 
 // Which source could not be read, and why, in words.
@@ -727,12 +731,6 @@ export function sourceUnavailableText(
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
-export function sourceName(source: string, t: T): string {
-  return knownSource(source as WorklistItem["source"])
-    ? t(`worklist.untitled.${source as keyof typeof KNOWN_SOURCES}`)
-    : t("worklist.untitled.generic");
-}
-
 // The sources this build can name without its own sentence.
 //
 // Exported so a gate over these sentences derives its corpus from here rather
@@ -744,6 +742,7 @@ export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   task: true,
+  weekly_commitment: true,
   brief_item: true,
   conversation_claim: true,
   customer_waiting: true,

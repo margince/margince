@@ -6,7 +6,6 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { BRIEF_FEED_LIMIT } from "./brief.feed";
 import { useMorningDigest } from "./brief.queries";
 import { overnightIsEmpty } from "./brief.rail.overnight";
 import { scheduleIsEmpty, tasksIsEmpty } from "./brief.schedule";
@@ -31,7 +30,7 @@ function isRisk(item: WorklistItem): boolean {
 export function remainingRisks(
   day: Worklist | undefined,
 ): readonly WorklistItem[] {
-  return waitingRows(day).slice(BRIEF_FEED_LIMIT).filter(isRisk);
+  return waitingRows(day).filter(isRisk);
 }
 
 export function watchIsEmpty(

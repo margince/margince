@@ -169,9 +169,10 @@ func (s *Service) Worklist(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(night.scores, night.cutoff)
+	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
-		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
+		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
 	// The step each deal row suggests, read for the CUT page rather than the
@@ -216,6 +217,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
+	rows = append(rows, s.planRows...)
 	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
 	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -362,6 +364,10 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+	}
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(

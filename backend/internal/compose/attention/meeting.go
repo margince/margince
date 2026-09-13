@@ -72,8 +72,11 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	// not read arrives with an empty body for a reason that is not preparation,
 	// and `meetingPrep` refuses to guess; an absent kind is that refusal
 	// reaching the page, where it draws nothing.
-	if meeting.PrepKnown && meeting.NeedsPrep {
-		kind := meetingKindUnprepared
+	if meeting.PrepKnown {
+		kind := "prepared"
+		if meeting.NeedsPrep {
+			kind = meetingKindUnprepared
+		}
 		item.Kind = &kind
 	}
 	// Whose calendar it came off, where one claims it. Absent for a meeting
@@ -127,7 +130,11 @@ func classifyMeeting(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
 		reasons = append(reasons, reason("meeting_unprepared", nil))
 	}
-	row := base(item, level, "meetings", "meeting_unprepared")
+	consequence := "none"
+	if item.Kind != nil && *item.Kind == meetingKindUnprepared {
+		consequence = "meeting_unprepared"
+	}
+	row := base(item, level, "meetings", crmcontracts.WorklistItemConsequence(consequence))
 	// The way into the brief, where the row named a contact to read it on. Both
 	// ids travel because neither names it alone: the activity says WHICH
 	// meeting, the contact says WHOSE page it opens on.

@@ -48,7 +48,8 @@ func readingsOf(
 	bounds map[crmcontracts.WorklistItemSource]bool,
 	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
-	out := crmcontracts.WorklistReadings{}
+	unpriced := unpricedDeals(considered)
+	out := crmcontracts.WorklistReadings{UnpricedDeals: &unpriced}
 	// A priced deal is one the estate could state a comparable figure for. An
 	// unpriced one is LEFT OUT rather than added as zero: a deal nobody recorded
 	// an amount for is not a deal worth nothing, and counting it as nothing
@@ -177,4 +178,22 @@ func readingsOf(
 		}
 	}
 	return out
+}
+
+func unpricedDeals(rows []ranked) int {
+	priced := map[openapi_types.UUID]bool{}
+	for _, row := range rows {
+		if row.item.Category != crmcontracts.WorklistItemCategoryDealsAtRisk || row.item.Subject == nil {
+			continue
+		}
+		id := row.item.Subject.Id
+		priced[id] = priced[id] || row.hasExpected
+	}
+	count := 0
+	for _, known := range priced {
+		if !known {
+			count++
+		}
+	}
+	return count
 }

@@ -238,6 +238,8 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 	out := make([]crmcontracts.WorklistItem, 0, len(rows))
 	for i, row := range rows {
 		item := row.item
+		urgent := urgentWork(row)
+		item.Urgent = &urgent
 		// Every row but the last says what it beat, and how. The last has
 		// nothing below it, so it says nothing rather than inventing a
 		// comparison against a row that is not there.

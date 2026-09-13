@@ -131,7 +131,7 @@ describe("weekSentence — what the closed week says about itself", () => {
   // would read as a page that failed to load.
   it("calls a week with nothing in it quiet, and still names its debt", () => {
     expect(say(week({}))).toBe(en["brief.week.quiet"]);
-    expect(say(week({ tasks_carried_over: 2 }))).toContain("quiet");
+    expect(say(week({ tasks_carried_over: 2 }))).toContain("No completed work");
     expect(say(week({ tasks_carried_over: 2 }))).toContain("2 tasks");
   });
 });

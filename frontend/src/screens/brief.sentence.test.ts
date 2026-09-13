@@ -86,32 +86,32 @@ describe("the opening sentence", () => {
   // The deck above answers approvals. A sentence opening with a decision the
   // section below deliberately did not draw would put the page's first words on
   // a row it does not show.
-  it("skips the decisions the deck answers when picking the lead", () => {
+  it("names approvals in the same agenda as other work", () => {
     const rows = day([
       item({ id: "a", source: "approval", title: "Confirm the close date" }),
       item({ id: "b", title: "Aster Handel" }),
     ]);
 
-    expect(leadOf(rows)?.id).toBe("b");
-    expect(waitingRows(rows)).toHaveLength(1);
+    expect(leadOf(rows)?.id).toBe("a");
+    expect(waitingRows(rows)).toHaveLength(2);
     const sentence = briefSentence(rows, t, "en");
     expect(
       // A key that renders no row title, for the case where no sentence was
       // composed at all: the assertion is about what the sentence does NOT
       // name, and a missing sentence names nothing either.
       t(sentence?.key ?? "brief.glance.intro", sentence?.values),
-    ).not.toContain("Confirm the close date");
+    ).toContain("Confirm the close date");
   });
 
   // A day whose only row IS a decision reads as clear HERE, because the deck is
   // where it is answered — not as an empty product.
-  it("reads a deck-only morning as clear rather than as nothing at all", () => {
+  it("does not call an approval-only morning clear", () => {
     const sentence = briefSentence(
       day([item({ source: "approval" })]),
       t,
       "en",
     );
-    expect(sentence?.key).toBe("brief.sentence.clear");
+    expect(sentence?.key).toBe("brief.sentence.one");
   });
 
   // A ROW TITLE IS A CLAUSE, NOT A NOUN PHRASE. itemTitle returns whole
@@ -145,7 +145,7 @@ describe("the opening sentence", () => {
       item({ id: "d", source: "approval" }),
     ]);
 
-    expect(briefSentence(rows, t, "en")?.values.rest).toBe("2");
+    expect(briefSentence(rows, t, "en")?.values.rest).toBe("3");
   });
 
   it("names no remainder when the lead is the only row", () => {

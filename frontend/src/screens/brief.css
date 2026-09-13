@@ -341,3 +341,8 @@
   overflow: hidden;
   text-wrap: pretty;
 }
+
+.brief-summary,
+.brief-coverage {
+  margin-block: var(--space-3);
+}

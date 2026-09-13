@@ -238,7 +238,7 @@ describe("the brief readings strip", () => {
   // card would pass on a card that never resolves either way.
   it("does not print missing risk values as zero", () => {
     draw({ revenue_at_risk_minor: null, revenue_currency: "EUR" });
-    expect(screen.getByText(en["brief.readings.pipelineNoRead"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.noDealWork"])).toBeTruthy();
   });
 
   // BOTH figures, and neither of them a target. `open` is the face value of
@@ -252,7 +252,7 @@ describe("the brief readings strip", () => {
   it("does not price a risk figure without its currency", () => {
     draw({ revenue_at_risk_minor: 42000000, revenue_currency: null });
     expect(screen.queryByText(/420k/i)).toBeNull();
-    expect(screen.getByText(en["brief.readings.pipelineNoRead"])).toBeTruthy();
+    expect(screen.getByText(en["brief.readings.unpriced"])).toBeTruthy();
   });
 
   // THE one way this card can be wrong without looking wrong. The scope is left

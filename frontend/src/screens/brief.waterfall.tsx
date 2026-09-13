@@ -1,8 +1,9 @@
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { EmptyState, SegmentedControl, StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { Waterfall, type WaterfallStep } from "../design-system/waterfall";
-import { formatMoneyOrAbsent } from "../format/format";
+import { formatDate, formatMoneyOrAbsent } from "../format/format";
 import { type Locale, useT } from "../i18n";
 
 type Review = components["schemas"]["WeeklyReview"];
@@ -32,6 +33,7 @@ export function OutlookPanel({
   onOpenForecast: () => void;
 }>) {
   const t = useT();
+  const zone = useRecordZone();
 
   // A review written before a forecast was composed carries none. Said in
   // words, because a week nobody forecast and a week that landed on nothing
@@ -52,6 +54,12 @@ export function OutlookPanel({
 
   return (
     <>
+      <p className="t-caption">
+        {t("brief.forecast.period", {
+          start: formatDate(shown.period_start, locale, zone),
+          end: formatDate(shown.period_end, locale, zone),
+        })}
+      </p>
       <SegmentedControl
         label={t("brief.weekly.outlook")}
         value={shown.period_kind}

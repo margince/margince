@@ -1,0 +1,154 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useId, useState } from "react";
+import { useRecordZone } from "../app/recordzone";
+import { Button, Field, Modal, Textarea } from "../design-system/atoms";
+import { PanelRow } from "../design-system/panel";
+import { SurfaceState } from "../design-system/surfacestate";
+import { formatDate } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { problemMessageOf } from "./common";
+import { EntityRef } from "./entityref";
+import {
+  useAnswerCommitment,
+  useTeammateWeeklyPlan,
+  type WeeklyPlanCommitment,
+} from "./weeklyplan.queries";
+
+export function TeamPlanReview({
+  owner,
+  name,
+}: Readonly<{ owner: string; name: string }>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button small variant="ghost" onClick={() => setOpen(true)}>
+        {t("brief.team.plan")}
+      </Button>
+      {open && (
+        <TeamPlanDialog
+          owner={owner}
+          name={name}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function TeamPlanDialog({
+  owner,
+  name,
+  onClose,
+}: Readonly<{ owner: string; name: string; onClose: () => void }>) {
+  const t = useT();
+  const plan = useTeammateWeeklyPlan(owner);
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const headingId = useId();
+  return (
+    <Modal open labelledBy={headingId} onClose={onClose}>
+      <h2 id={headingId}>{t("brief.team.planFor", { name })}</h2>
+      {plan.data && (
+        <p>
+          {t("brief.plan.period", {
+            date: formatDate(plan.data.local_week_start, locale, zone),
+          })}
+        </p>
+      )}
+      <SurfaceState
+        state={
+          plan.isPending
+            ? "loading"
+            : plan.isError
+              ? "failed"
+              : !plan.data
+                ? "empty"
+                : "ready"
+        }
+        loadingLabel={t("plan.loading")}
+        emptyLabel={t("plan.none")}
+        detail={{ onRetry: () => void plan.refetch() }}
+      >
+        {plan.data?.commitments.length === 0 && <p>{t("plan.none")}</p>}
+        {plan.data?.commitments.map((commitment) => (
+          <TeamCommitment
+            key={commitment.id}
+            owner={owner}
+            commitment={commitment}
+            editable={plan.data?.status === "open"}
+          />
+        ))}
+      </SurfaceState>
+    </Modal>
+  );
+}
+
+function TeamCommitment({
+  owner,
+  commitment,
+  editable,
+}: Readonly<{
+  owner: string;
+  commitment: WeeklyPlanCommitment;
+  editable: boolean;
+}>) {
+  const t = useT();
+  const answer = useAnswerCommitment(owner);
+  const [response, setResponse] = useState(commitment.manager_response ?? "");
+  return (
+    <PanelRow>
+      <div>
+        <p>{commitment.label}</p>
+        {commitment.linked_record && (
+          <EntityRef
+            kind={commitment.linked_record.type}
+            id={commitment.linked_record.id}
+          />
+        )}
+        {commitment.help_requested && (
+          <>
+            <p>{commitment.help_requested}</p>
+            {editable ? (
+              <>
+                <Field label={t("brief.team.response")}>
+                  {(control) => (
+                    <Textarea
+                      {...control}
+                      value={response}
+                      maxLength={2000}
+                      onChange={(event) => setResponse(event.target.value)}
+                    />
+                  )}
+                </Field>
+                <Button
+                  small
+                  pending={answer.isPending}
+                  disabled={
+                    response.trim() === "" ||
+                    response === commitment.manager_response
+                  }
+                  onClick={() =>
+                    answer.mutate({
+                      id: commitment.id,
+                      managerResponse: response,
+                    })
+                  }
+                >
+                  {t("brief.team.saveResponse")}
+                </Button>
+              </>
+            ) : (
+              <p>{commitment.manager_response}</p>
+            )}
+            {answer.isError && (
+              <p role="alert">{problemMessageOf(answer.error, t)}</p>
+            )}
+          </>
+        )}
+      </div>
+    </PanelRow>
+  );
+}

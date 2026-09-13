@@ -274,10 +274,15 @@ describe("the Brief's dials", () => {
 
       await screen.findByRole("group", { name: en["brief.view.label"] });
       await waitFor(() => {
-        const main = view.container.querySelector(".brief-main");
         expect(
-          main?.querySelectorAll("section, .panel").length ?? 0,
-        ).toBeGreaterThan(0);
+          view.container.querySelector(".brief-wrap")?.textContent,
+        ).not.toBe("");
+        if (hash.includes("scope=team"))
+          expect(screen.getByText(en["brief.team.none"])).toBeTruthy();
+        else
+          expect(
+            view.container.querySelector(".brief-main, #brief-weekly"),
+          ).toBeTruthy();
       });
       cleanup();
       vi.unstubAllGlobals();
@@ -302,7 +307,7 @@ describe("the Brief's dials", () => {
     // The greeting, and then the sentence. Nothing between them and nothing
     // above the greeting — which is the whole of what the block draws now.
     const glance = screen.getByTestId("brief-glance");
-    expect(glance.children).toHaveLength(2);
+    expect(glance.children).toHaveLength(3);
     expect(glance.firstElementChild?.tagName).toBe("H1");
     // And no clock. The time the queue was read was the one thing here that
     // moved on its own, and a substring read is what catches it coming back in
@@ -346,42 +351,11 @@ describe("the Brief's dials", () => {
   });
 });
 
-it("uses team data for the greeting, readings and priority feed", async () => {
+it("the team view does not describe a personal queue as team work", async () => {
   stubBrief(["mine", "team"]);
-  const fallback = globalThis.fetch;
-  vi.stubGlobal(
-    "fetch",
-    async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = new URL(
-        input instanceof Request ? input.url : String(input),
-        "https://test.local",
-      );
-      if (url.pathname.endsWith("/worklist")) {
-        const team = url.searchParams.get("scope") === "team";
-        const day: Worklist = {
-          ...readingsDay({}, [
-            {
-              ...waitingRow(),
-              title: team ? "Team renewal" : "My customer",
-              email_summary: undefined,
-            },
-          ]),
-          scope: team ? "team" : "mine",
-          scope_options: ["mine", "team"],
-        };
-        return jsonResponse(day);
-      }
-      return fallback(input, init);
-    },
-  );
-  render(<BriefScreen />);
-  await screen.findAllByText("My customer");
-  await userEvent.click(
-    screen.getByRole("button", { name: en["brief.scope.team"] }),
-  );
-  await screen.findAllByText("Team renewal");
-  expect(screen.queryByText("My customer")).toBeNull();
-  expect(
-    screen.getByRole("region", { name: en["brief.feed.teamTitle"] }),
-  ).toBeTruthy();
+  globalThis.location.hash = "#/brief?scope=team";
+  const { container } = render(<BriefScreen />);
+  await screen.findByRole("group", { name: en["brief.scope.label"] });
+  expect(container.querySelector("#brief-today")).toBeNull();
+  expect(screen.queryByTestId("brief-readings")).toBeNull();
 });

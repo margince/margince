@@ -172,7 +172,7 @@ func categoryOfSource(source crmcontracts.WorklistItemSource) crmcontracts.Workl
 		return "deals_at_risk"
 	case sourceMeeting, sourceMeetingOutcome:
 		return "meetings"
-	case sourceTask, "conversation_claim":
+	case sourceTask, sourceWeeklyCommitment, "conversation_claim":
 		return "tasks"
 	case "approval", "dedupe_candidate", "introduction_request":
 		// An introduction ask is a colleague waiting on this reader to decide,

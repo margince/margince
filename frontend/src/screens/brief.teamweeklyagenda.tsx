@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
+import { routeHash } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EntityRef } from "./entityref";
+import { TeamPlanReview } from "./brief.teamplan";
 import type {
   TeamWeeklyFocusKind,
   TeamWeeklyRep,
@@ -185,12 +186,24 @@ export function AgendaPanel({
               {formatNumber(index + 1, locale)}
             </span>
             <span className="teamweekly-agenda-name">
-              <EntityRef kind="user" id={rep.user_id} name={rep.display_name} />
+              <a
+                className="entity-link"
+                href={routeHash({ screen: "worklist", id: rep.user_id })}
+              >
+                {rep.display_name}
+              </a>
+              <TeamPlanReview owner={rep.user_id} name={rep.display_name} />
             </span>
             <span className="teamweekly-agenda-focus">
               <Badge
                 quiet
-                tone={CELEBRATED.has(rep.focus_kind) ? "success" : "warn"}
+                tone={
+                  rep.focus_kind === "quiet_week"
+                    ? undefined
+                    : CELEBRATED.has(rep.focus_kind)
+                      ? "success"
+                      : "warn"
+                }
               >
                 {t(FOCUS_LABEL[rep.focus_kind])}
               </Badge>

@@ -15590,6 +15590,7 @@ const (
 	WorklistItemSourceSyncHealth          WorklistItemSource = "sync_health"
 	WorklistItemSourceTask                WorklistItemSource = "task"
 	WorklistItemSourceUndelivered         WorklistItemSource = "undelivered"
+	WorklistItemSourceWeeklyCommitment    WorklistItemSource = "weekly_commitment"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemSource enum.
@@ -15640,6 +15641,8 @@ func (e WorklistItemSource) Valid() bool {
 	case WorklistItemSourceTask:
 		return true
 	case WorklistItemSourceUndelivered:
+		return true
+	case WorklistItemSourceWeeklyCommitment:
 		return true
 	default:
 		return false
@@ -15722,6 +15725,7 @@ const (
 	WorklistReachSourceSyncHealth          WorklistReachSource = "sync_health"
 	WorklistReachSourceTask                WorklistReachSource = "task"
 	WorklistReachSourceUndelivered         WorklistReachSource = "undelivered"
+	WorklistReachSourceWeeklyCommitment    WorklistReachSource = "weekly_commitment"
 )
 
 // Valid indicates whether the value is a known member of the WorklistReachSource enum.
@@ -15772,6 +15776,8 @@ func (e WorklistReachSource) Valid() bool {
 	case WorklistReachSourceTask:
 		return true
 	case WorklistReachSourceUndelivered:
+		return true
+	case WorklistReachSourceWeeklyCommitment:
 		return true
 	default:
 		return false
@@ -39261,6 +39267,9 @@ type WorklistItem struct {
 	// A receipt for an approval the system decided offers no `undo`: that decision is already revisitable through the record it named. This is for a change made with nobody asked — the close-date sweep's corrections — where the receipt is the only telling and so has to carry the way back with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 
+	// Urgent Whether this work contributes to the urgent summary, independent of a personal pin.
+	Urgent *bool `json:"urgent,omitempty"`
+
 	// Verdict How the deal behind a row is STANDING, beside the move that acts on it.
 	//
 	// The move says what to do; this says what the reader is walking into. A row
@@ -39637,6 +39646,9 @@ type WorklistReadings struct {
 	// counting it here tells them a contact is blocked on an answer they are not
 	// able to give.
 	Review int `json:"review"`
+
+	// UnpricedDeals Distinct flagged deals excluded from the known value because no comparable expected value was available.
+	UnpricedDeals *int `json:"unpriced_deals,omitempty"`
 }
 
 // WorklistReason One fact behind an item's rank, as a typed pair rather than a sentence: the
@@ -39660,8 +39672,10 @@ type WorklistReasonKind string
 // into an empty queue, because "there is nothing" and "I could not look" are
 // different answers and only one of them means the day is clear.
 type WorklistSourceUnavailable struct {
-	Reason WorklistSourceUnavailableReason `json:"reason"`
-	Source string                          `json:"source"`
+	// Category Worklist category affected by this missing source.
+	Category *string                         `json:"category,omitempty"`
+	Reason   WorklistSourceUnavailableReason `json:"reason"`
+	Source   string                          `json:"source"`
 }
 
 // WorklistSourceUnavailableReason defines model for WorklistSourceUnavailable.Reason.
@@ -45039,6 +45053,12 @@ type GetResponseMetricsParams struct {
 	// describing how the workspace works now and starts averaging over a change in
 	// how it works.
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// GetTeamBoardParams defines parameters for GetTeamBoard.
+type GetTeamBoardParams struct {
+	// Team A named live team; uses the weekly review's team visibility rule. Omit for the caller's shared teams.
+	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
 }
 
 // CreateAcquisitionSourceJSONRequestBody defines body for CreateAcquisitionSource for application/json ContentType.
@@ -57474,7 +57494,7 @@ type ServerInterface interface {
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
 	// (GET /worklist/team)
-	GetTeamBoard(w http.ResponseWriter, r *http.Request)
+	GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -61395,7 +61415,7 @@ func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request
 
 // One row per teammate — who is carrying what, so a lead can see where to help.
 // (GET /worklist/team)
-func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetTeamBoard(w http.ResponseWriter, r *http.Request, params GetTeamBoardParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89107,6 +89127,9 @@ func (siw *ServerInterfaceWrapper) GetResponseMetrics(w http.ResponseWriter, r *
 // GetTeamBoard operation middleware
 func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -89115,8 +89138,24 @@ func (siw *ServerInterfaceWrapper) GetTeamBoard(w http.ResponseWriter, r *http.R
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeamBoardParams
+
+	// ------------- Optional query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTeamBoard(w, r)
+		siw.Handler.GetTeamBoard(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -11978,6 +11978,11 @@ paths:
         alone, which says plainly that nobody has been put on a team with them; an empty
         board would read as an outage.
       x-agent-access: human-only
+      parameters:
+        - in: query
+          name: team
+          schema: { type: string, format: uuid }
+          description: A named live team; uses the weekly review's team visibility rule. Omit for the caller's shared teams.
       responses:
         '200':
           description: The team's load.
@@ -45174,7 +45179,7 @@ components:
       properties:
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: 'Which producer these numbers are about. The same vocabulary as an item source.'
         considered:
           type: integer
@@ -45727,6 +45732,10 @@ components:
             one currency. A client must not format a figure whose units it cannot name:
             with this absent the amount is not money yet, and drawing it as money is the
             error the conversion seam exists to prevent.
+        unpriced_deals:
+          type: integer
+          minimum: 0
+          description: Distinct flagged deals excluded from the known value because no comparable expected value was available.
         buyer_replies:
           type: integer
           minimum: 0
@@ -45933,7 +45942,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, batch]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, customer_waiting, lead_response, deal_at_risk, meeting, relationship_decay, failed_approval, dsr, notice_case, sync_health, capture_health, ai_work_health, bounce, undelivered, automation_run, notice, introduction_request, meeting_outcome, weekly_commitment, batch]
           description: |
             Which producer raised it, and therefore which endpoint its verbs go to.
 
@@ -45944,6 +45953,9 @@ components:
           type: string
           enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
+        urgent:
+          type: boolean
+          description: Whether this work contributes to the urgent summary, independent of a personal pin.
         owner:
           $ref: '#/components/schemas/WorklistOwner'
         destination:
@@ -46767,6 +46779,9 @@ components:
       required: [source, reason]
       properties:
         source: { type: string }
+        category:
+          type: string
+          description: Worklist category affected by this missing source.
         reason: { type: string, enum: [withheld, failed] }
     KnowledgeCorpus:
       type: object

@@ -52,6 +52,6 @@ func (s Server) GetTeamExceptions(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetTeamBoard forwards the manager's read of the same work.
-func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request) {
-	s.attentionHandlers.GetTeamBoard(w, r)
+func (s Server) GetTeamBoard(w http.ResponseWriter, r *http.Request, params crmcontracts.GetTeamBoardParams) {
+	s.attentionHandlers.GetTeamBoard(w, r, params)
 }

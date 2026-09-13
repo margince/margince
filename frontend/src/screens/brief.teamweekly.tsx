@@ -3,22 +3,22 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, EmptyState, StatCard } from "../design-system/atoms";
+import { useUrlParams } from "../app/urlstate";
+import { Badge, Disclosure, StatCard } from "../design-system/atoms";
+import { DateInput, isISODate } from "../design-system/dateinput";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
-import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
 import { openAnalyticsSection } from "./analytics.address";
+import { BriefTeamSelect } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
-  useTeams,
   useTeamWeeklyReview,
 } from "./teamweekly.queries";
 
@@ -28,91 +28,6 @@ import "./brief.teamweekly.css";
 // this says what last week WAS, so two weeks compare and neither moves under
 // the comparison.
 
-/**
- * The bars the reader is told they were measured against.
- *
- * Declared constants rather than numbers buried in a condition, because the
- * headline states a verdict and a verdict has to name its bar — "answered in
- * time on 9 of 10 leads" is a reading, "first response is healthy" is a claim,
- * and the second one is only honest if the reader can see where the line was
- * drawn.
- */
-const HEALTHY_RATE = 0.9;
-const WEAK_RATE = 0.7;
-
-/** A rate, or null when nothing was due — zero of zero is not zero per cent. */
-function rate(part: number, whole: number): number | null {
-  return whole === 0 ? null : part / whole;
-}
-
-/** One reading, with what it was measured against carried beside it. */
-type Reading = Readonly<{
-  key: MessageKey;
-  value: number;
-  verdict: "healthy" | "weak" | "middling";
-}>;
-
-function readingOf(key: MessageKey, value: number | null): Reading | null {
-  if (value === null) {
-    return null;
-  }
-  const verdict =
-    value >= HEALTHY_RATE
-      ? "healthy"
-      : value <= WEAK_RATE
-        ? "weak"
-        : "middling";
-  return { key, value, verdict };
-}
-
-/**
- * The two clauses of the headline: the healthiest reading and the weakest.
- *
- * Both come from the stored snapshot, so the sentence cannot disagree with the
- * figures under it. When no reading is decided either way the caller says the
- * plainest true thing instead — a verdict the data does not support is worse
- * than no verdict.
- */
-export function headlineReadings(
-  review: TeamWeeklyReview,
-): Readonly<{ best: Reading | null; worst: Reading | null }> {
-  if (review.counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
-    return { best: null, worst: null };
-  const counts = review.counts;
-  const readings = [
-    readingOf(
-      "teamweekly.reading.nextStep",
-      rate(counts.meetings_with_next_step, counts.meetings_held),
-    ),
-    readingOf(
-      "teamweekly.reading.commitments",
-      rate(counts.commitments_kept, counts.commitments_due),
-    ),
-  ].filter((reading): reading is Reading => reading !== null);
-
-  return {
-    best: pick(readings, "healthy", (a, b) => a.value > b.value),
-    worst: pick(readings, "weak", (a, b) => a.value < b.value),
-  };
-}
-
-/** The one reading of a verdict that `beats` every other of the same verdict. */
-function pick(
-  readings: readonly Reading[],
-  verdict: Reading["verdict"],
-  beats: (a: Reading, b: Reading) => boolean,
-): Reading | null {
-  return readings.reduce<Reading | null>(
-    (best, reading) =>
-      reading.verdict !== verdict
-        ? best
-        : best === null || beats(reading, best)
-          ? reading
-          : best,
-    null,
-  );
-}
-
 export function TeamWeeklySection({
   teamId,
   week,
@@ -121,79 +36,61 @@ export function TeamWeeklySection({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const answer = useTeamWeeklyReview(teamId, week);
-
-  const state = answer.isPending
-    ? "loading"
-    : answer.isError
-      ? "unavailable"
-      : "ready";
   const review = answer.data?.kind === "review" ? answer.data.review : null;
-
-  return (
-    <section id="brief-team-weekly">
-      <Panel
-        title={t("teamweekly.title")}
-        sub={
-          review
-            ? t("teamweekly.weekOf", {
-                team: review.team_name,
-                day: formatDate(review.local_week_start, locale, recordZone),
-              })
-            : undefined
-        }
-        titleAction={
-          review ? <Badge quiet>{t("teamweekly.frozen")}</Badge> : undefined
-        }
-      >
+  if (!review)
+    return (
+      <Panel title={t("teamweekly.title")}>
         <SurfaceState
-          state={state}
-          emptyLabel={t("teamweekly.empty")}
+          state={
+            answer.isPending
+              ? "loading"
+              : answer.isError
+                ? "unavailable"
+                : "ready"
+          }
           loadingLabel={t("teamweekly.loading")}
+          emptyLabel={t("teamweekly.empty")}
           detail={{ onRetry: () => void answer.refetch() }}
         >
-          {answer.data?.kind === "absent" && (
-            <PanelBody>
-              <p>
-                {answer.data.why === "forbidden"
-                  ? t("teamweekly.forbidden")
-                  : t("teamweekly.noSnapshot")}
-              </p>
-            </PanelBody>
-          )}
-          {review && (
-            <>
-              <PanelBody className="teamweekly-reading">
-                <Headline review={review} />
-                {review.counts.reps_counted > 0 && (
-                  <AgendaSummary review={review} />
-                )}
-                <Coverage review={review} />
-              </PanelBody>
-              {/* The strip pays the pane's inset like everything else in it.
-                  As a direct child of the panel it ran edge to edge, so the
-                  readings sat a pixel off the pane's own border while the
-                  sentence above them was inset by the body's gutter. */}
-              {review.counts.reps_counted > 0 && (
-                <>
-                  <PanelBody>
-                    <Scorecard review={review} />
-                  </PanelBody>
-                  <Movement review={review} />
-                </>
-              )}
-            </>
-          )}
+          <PanelBody>
+            {t(
+              answer.data?.kind === "absent" && answer.data.why === "forbidden"
+                ? "teamweekly.forbidden"
+                : "teamweekly.noSnapshot",
+            )}
+          </PanelBody>
         </SurfaceState>
       </Panel>
-      {/* Where the team's week was landing, before the agenda: a lead reads
-          the outcome first and the conversation it implies second. The SAME
-          panel the rep's retrospective draws — a second one would be two
-          answers to "what does a landing look like". */}
-      {review && review.counts.reps_counted > 0 && (
-        <TeamOutlook review={review} />
-      )}
-      {review && review.counts.reps_counted > 0 && (
-        <AgendaPanel review={review} />
+    );
+  const measured = review.counts.reps_counted > 0;
+  return (
+    <section id="brief-team-weekly">
+      <p>
+        {t("teamweekly.weekOf", {
+          team: review.team_name,
+          day: formatDate(review.local_week_start, locale, recordZone),
+        })}
+      </p>
+      <Coverage review={review} />
+      {!measured && <Headline review={review} />}
+      {measured && <AgendaPanel review={review} />}
+      {measured && (
+        <Disclosure summary={t("brief.week.supporting")}>
+          <Panel
+            title={t("teamweekly.title")}
+            titleAction={<Badge quiet>{t("teamweekly.frozen")}</Badge>}
+          >
+            <PanelBody className="teamweekly-reading">
+              <Headline review={review} />
+              <AgendaSummary review={review} />
+            </PanelBody>
+            <PanelBody>
+              <Scorecard review={review} />
+            </PanelBody>
+            <Movement review={review} />
+          </Panel>
+          <TeamOutlook review={review} />
+        </Disclosure>
       )}
     </section>
   );
@@ -224,37 +121,33 @@ function TeamOutlook({
 function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { best, worst } = headlineReadings(review);
-
-  if (review.counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0) {
+  const counts = review.counts;
+  if (counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
     return (
       <h3 className="teamweekly-headline">
         {t(
-          review.counts.reps_counted === 0
+          counts.reps_counted === 0
             ? "teamweekly.headline.unmeasured"
             : "teamweekly.headline.partial",
         )}
       </h3>
     );
-  }
-  if (!best && !worst) {
+  const n = (value: number) => formatNumber(value, locale);
+  if (counts.meetings_held === 0 && counts.commitments_due === 0)
     return (
       <h3 className="teamweekly-headline">{t("teamweekly.headline.plain")}</h3>
     );
-  }
   return (
     <h3 className="teamweekly-headline">
-      {best &&
-        t("teamweekly.headline.healthy", {
-          reading: t(best.key),
-          pct: formatNumber(Math.round(best.value * 100), locale),
-          bar: formatNumber(Math.round(HEALTHY_RATE * 100), locale),
+      {counts.meetings_held > 0 &&
+        t("brief.team.meetingRate", {
+          done: n(counts.meetings_with_next_step),
+          total: n(counts.meetings_held),
         })}{" "}
-      {worst &&
-        t("teamweekly.headline.weak", {
-          reading: t(worst.key),
-          pct: formatNumber(Math.round(worst.value * 100), locale),
-          bar: formatNumber(Math.round(WEAK_RATE * 100), locale),
+      {counts.commitments_due > 0 &&
+        t("brief.team.commitmentRate", {
+          done: n(counts.commitments_kept),
+          total: n(counts.commitments_due),
         })}
     </h3>
   );
@@ -438,54 +331,30 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * be refused every team is a control that exists to fail.
  */
 export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
+  const [params, setParams] = useUrlParams();
   const t = useT();
-  const teams = useTeams();
-  const [teamId, setTeamId] = useState("");
-  if (!offered) {
-    return null;
-  }
-  const options = (teams.data ?? []).map((team) => ({
-    value: team.id,
-    label: team.name,
-  }));
-  // One team is not a choice. Reading it straight skips a control whose only
-  // option is the one already showing.
-  const chosen = teamId || (options.length === 1 ? options[0].value : "");
-  // Whether the reader is actually being ASKED. A read still in flight and a
-  // scope that reaches no team both leave the picker undrawn, and the page
-  // under it must not then tell somebody to choose from a control that is not
-  // there — an instruction nobody can follow is worse than a quiet page.
-  const asking = options.length > 1;
+  const week = params.get("week") ?? "";
+  if (!offered) return null;
   return (
-    <div className="teamweekly-view">
-      {asking && (
-        // Held to a reading width. A dropdown stretched across the work column
-        // is a 1400px control whose face carries four words, and the page under
-        // it then reads as a toolbar with nothing beneath.
-        <div className="teamweekly-pick">
-          <Select
-            options={options}
-            value={chosen}
-            onChange={setTeamId}
-            placeholder={t("teamweekly.pickTeam")}
-            aria-label={t("teamweekly.pickTeam")}
-          />
-        </div>
-      )}
-      {chosen !== "" && <TeamWeeklySection teamId={chosen} />}
-      {/* The page while the question is still open. Blank, it read as a
-          surface whose content had failed to arrive; this says the page is
-          waiting on the reader and names what it is waiting for. */}
-      {asking && chosen === "" && (
-        <Panel title={t("teamweekly.title")}>
-          {/* In a BODY: an empty state is a sentence here, not a stage, and
-              `panel.css` caps it to the body's interval and drops the inset
-              card's own ground — a second surface inside the pane. */}
-          <PanelBody>
-            <EmptyState>{t("teamweekly.chooseTeam")}</EmptyState>
-          </PanelBody>
-        </Panel>
-      )}
-    </div>
+    <>
+      <DateInput
+        aria-label={t("brief.team.week")}
+        value={isISODate(week) ? week : ""}
+        onChange={(event) => {
+          const next = new Map(params);
+          if (isISODate(event.target.value)) {
+            const day = new Date(`${event.target.value}T12:00:00Z`);
+            day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+            next.set("week", day.toISOString().slice(0, 10));
+          } else next.delete("week");
+          setParams(next);
+        }}
+      />
+      <BriefTeamSelect>
+        {(team) => (
+          <TeamWeeklySection teamId={team} week={params.get("week")} />
+        )}
+      </BriefTeamSelect>
+    </>
   );
 }
