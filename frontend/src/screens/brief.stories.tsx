@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import {
   type Approval,
@@ -95,6 +96,13 @@ function brief({
     };
     installFetchStub({
       "GET /me": meRoute({}),
+      "GET /approvals": () =>
+        jsonResponse({
+          data: approvals.filter(
+            (approval) => approval.bundle_id && !decided.has(approval.id),
+          ),
+          page: { next_cursor: null, has_more: false },
+        }),
       ...approvalRoutes,
       "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
       "GET /weekly-reviews/latest": () =>
@@ -172,7 +180,7 @@ export const DecisionOpened: Story = {
   render: brief({ approvals: [singles[1]] }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
-    await drawer.findByRole("button", { name: "Approve" });
+    await drawer.findByRole("button", { name: en["brief.approval.approve"] });
   },
 };
 
@@ -181,7 +189,7 @@ export const DecisionApproved: Story = {
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await userEvent.click(
-      await drawer.findByRole("button", { name: "Approve" }),
+      await drawer.findByRole("button", { name: en["brief.approval.approve"] }),
     );
     await waitFor(() =>
       expect(
@@ -198,6 +206,13 @@ export const NoDecisions: Story = {
 
 export const ExpiredDecision: Story = {
   render: brief({ approvals: [lapsed] }),
+  play: async ({ canvasElement }) => {
+    const drawer = await openDecision(canvasElement);
+    await drawer.findAllByText(en["decision.expired"]);
+    await expect(
+      drawer.queryByRole("button", { name: en["brief.approval.email"] }),
+    ).toBeNull();
+  },
 };
 
 // ── The rail ────────────────────────────────────────────────────────────────
