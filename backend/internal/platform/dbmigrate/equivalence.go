@@ -21,10 +21,8 @@ package dbmigrate
 //
 // An entry admits the version on the way DOWN as well as up, so the two byte
 // sequences must also ROLL BACK compatibly — the down half that ships will run
-// against a database whose up half was the other sequence. The entry below
-// satisfies that the simplest way there is: only the up file was edited, so the
-// down halves are byte-identical. An entry whose down half differs needs that
-// checked separately, and equal up-schemas do not imply it.
+// against a database whose up half was the other sequence. Entries whose down
+// half differs need that checked separately; equal up-schemas do not imply it.
 var equivalentContent = map[string]map[string][]equivalence{
 	"core": {
 		// 1789122755 is the migration that renamed the company record type's
@@ -39,6 +37,14 @@ var equivalentContent = map[string]map[string][]equivalence{
 		"1789122755": {{
 			applied: "1c6205d459b647ad8c3ae1cbac41ec19ad12d48e8186b2be2abdf8d68a59ed79",
 			source:  "c3f55e24d2d4bb724f53d125e27b4d0a2410033015fd08dfd9b0a92e52898785",
+		}},
+		// Both versions rename the same rows. The current up and down temporarily
+		// disable the last-activity triggers during that update, then re-enable
+		// them. Schema dumps match after each up, each down, and the current down
+		// applied to the old up; no schema change remains for an existing database.
+		"1789170001": {{
+			applied: "416edd1aa2a69937fc7be3c3faf77eb64367f22707d1df038a0df7f9205fe1a2",
+			source:  "8d574fbe51796a818cb7ff938c766ceb152142ea4265090e2eaf445cb6c5d776",
 		}},
 	},
 }

@@ -232,48 +232,60 @@ func TestARevertOfAnUnverifiableRowIsAdmitted(t *testing.T) {
 	}
 }
 
-// A database that applied content named in supersededDigests reached the schema
-// the current source builds, so it migrates on rather than stranding.
-//
-// The refusal case is what gives this one teeth: an unrelated mismatch on the
-// SAME version must still be refused, or the entry would read as "stop checking
-// this migration" rather than "this one earlier byte sequence is equivalent".
-func TestSupersededContentIsAdmittedAndNothingElseIs(t *testing.T) {
+func TestContactRenameAcceptsThePreviouslyShippedContent(t *testing.T) {
 	t.Parallel()
-	const version = "1789122755"
-	m := Migration{
-		Version: version,
-		Name:    "the_record_type_is_called_company",
-		UpSQL:   readMigration(t, version+"_the_record_type_is_called_company.up.sql"),
-		DownSQL: readMigration(t, version+"_the_record_type_is_called_company.down.sql"),
+	// This is the fingerprint recorded before the trigger optimization. Keep
+	// it independent of the catalog so removing the allowance fails this test.
+	applied := "416edd1aa2a69937fc7be3c3faf77eb64367f22707d1df038a0df7f9205fe1a2"
+	for _, m := range loadNamespaceMigrations(t, "core") {
+		if m.Version != "1789170001" {
+			continue
+		}
+		ledger := map[string]appliedRow{m.Version: {name: m.Name, digest: &applied}}
+		if err := assertContentMatches("core", ledger, m); err != nil {
+			t.Fatalf("an existing contact database cannot start: %v", err)
+		}
+		return
 	}
+	t.Fatal("the shipped contact rename migration is missing")
+}
 
-	// The digest the broken content recorded on every database that applied it.
-	admitted := equivalentContent["core"][version][0].applied
-	if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err != nil {
-		t.Errorf("a database holding applied-but-equivalent content refused: %v — it reached the "+
-			"schema this source builds and has nowhere else to go", err)
-	}
+// Every recorded equivalent digest is admitted only for its exact source and
+// namespace. Unrelated applied content and later source edits remain errors.
+func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
+	t.Parallel()
+	for _, m := range loadNamespaceMigrations(t, "core") {
+		for _, entry := range equivalentContent["core"][m.Version] {
+			t.Run(m.Version+"/"+entry.applied, func(t *testing.T) {
+				version := m.Version
+				admitted := entry.applied
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err != nil {
+					t.Errorf("a database holding applied-but-equivalent content refused: %v — it reached the "+
+						"schema this source builds and has nowhere else to go", err)
+				}
 
-	// Some OTHER applied content on the same version is still a mismatch.
-	stranger := "bb" + strings.Repeat("0", 62)
-	if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &stranger}}, m); err == nil {
-		t.Error("applied content that is not the recorded one was admitted — an entry excuses one " +
-			"known byte sequence, not every database on this version")
-	}
+				// Some OTHER applied content on the same version is still a mismatch.
+				stranger := "bb" + strings.Repeat("0", 62)
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &stranger}}, m); err == nil {
+					t.Error("applied content that is not the recorded one was admitted — an entry excuses one " +
+						"known byte sequence, not every database on this version")
+				}
 
-	// And the entry must expire when the SOURCE changes again. Without this the
-	// first excused edit would excuse every later one nobody checked.
-	edited := m
-	edited.UpSQL += "\n-- a further edit, which is a new claim\n"
-	if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, edited); err == nil {
-		t.Error("a FURTHER edit to this migration was admitted because the database held the " +
-			"equivalent content — an entry names one source, not permission to keep editing")
-	}
+				// And the entry must expire when the SOURCE changes again. Without this the
+				// first excused edit would excuse every later one nobody checked.
+				edited := m
+				edited.UpSQL += "\n-- a further edit, which is a new claim\n"
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, edited); err == nil {
+					t.Error("a FURTHER edit to this migration was admitted because the database held the " +
+						"equivalent content — an entry names one source, not permission to keep editing")
+				}
 
-	// The allowance is per namespace, so custom's same version is unaffected.
-	if err := assertContentMatches("custom", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err == nil {
-		t.Error("a core equivalence admitted the same version in the custom namespace")
+				// The allowance is per namespace, so custom's same version is unaffected.
+				if err := assertContentMatches("custom", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err == nil {
+					t.Error("a core equivalence admitted the same version in the custom namespace")
+				}
+			})
+		}
 	}
 }
 
@@ -331,15 +343,6 @@ func loadNamespaceMigrations(t *testing.T, namespace string) []Migration {
 		t.Fatalf("loading the %s migrations: %v", namespace, err)
 	}
 	return migrations
-}
-
-func readMigration(t *testing.T, name string) string {
-	t.Helper()
-	body, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "core", name))
-	if err != nil {
-		t.Fatalf("reading %s: %v", name, err)
-	}
-	return string(body)
 }
 
 // A version this database never applied has no content to disagree about.
