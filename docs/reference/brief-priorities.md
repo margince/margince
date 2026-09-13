@@ -75,7 +75,7 @@ Context opens independently of the overview. Closing it restores keyboard focus 
 
 ## Attribution and commitments
 
-New stage-change notifications carry the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications. The reader sees their own changes as “You”, other human changes by the member's resolved name, and machine changes by actor type. Legacy notifications without origin explicitly say the original actor was not recorded; ownership is never substituted for authorship.
+New stage-change notifications carry the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications. The reader sees their own changes as “You”, other human changes by the member's resolved name, and machine changes by actor type. Stage updates use the deal name once, then the recorded from/to stages and who changed them. Historical notices recover these facts through the exact notice-created event’s causation link to the stage-change event. Recorded stage names take precedence; without a snapshot, only a never-edited stage configuration supplies a name. Edited configurations remain unknown, without comparing clocks. Missing history is stated plainly; ownership is never substituted for authorship.
 
 Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
 

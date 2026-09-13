@@ -272,26 +272,30 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	}
 	dealName := deal.Name
 	if dealName == "" {
-		dealName = "A deal you own"
+		dealName = "Deal"
 	}
-	body := fmt.Sprintf("%s moved to a new pipeline stage.", dealName)
-	var change struct {
-		From *string `json:"from_stage_name"`
-		To   *string `json:"to_stage_name"`
-	}
+	body := "Stage changed. The previous and new stages are unavailable."
+	var change crmcontracts.PublicEventDealStageChanged
 	if len(ev.Payload) > 0 {
 		if err := json.Unmarshal(ev.Payload, &change); err != nil {
 			return workflow.Effect{}, fmt.Errorf("automation: decoding the stage change: %w", err)
 		}
-		if change.From != nil && change.To != nil {
-			body = fmt.Sprintf("Stage changed: %s → %s.", *change.From, *change.To)
+		if change.FromStageName != nil && change.ToStageName != nil {
+			body = fmt.Sprintf("%s → %s", *change.FromStageName, *change.ToStageName)
 		}
+	}
+	origin := noticeOrigin(ev)
+	if origin != nil {
+		origin.StageChange = &struct {
+			FromName *string `json:"from_name,omitempty"`
+			ToName   *string `json:"to_name,omitempty"`
+		}{FromName: change.FromStageName, ToName: change.ToStageName}
 	}
 	args, err := json.Marshal(notifyArgs{
 		Recipient: *deal.OwnerID,
-		Origin:    noticeOrigin(ev),
+		Origin:    origin,
 		DedupeKey: w.IdempotencyKey(ev),
-		Subject:   fmt.Sprintf("%s changed stage", dealName),
+		Subject:   dealName,
 		Body:      body,
 	})
 	if err != nil {

@@ -45,9 +45,11 @@ export function noticeDetail(
       .filter(Boolean)
       .join(" ");
   const actor = noticeActor(origin, viewer, t);
-  return [t("home.change.by", { actor }), item.detail]
-    .filter(Boolean)
-    .join(" · ");
+  const change = origin.stage_change;
+  const detail = change
+    ? `${change.from_name || t("home.change.stageUnknown")} → ${change.to_name || t("home.change.stageUnknown")}`
+    : item.detail;
+  return [detail, t("home.change.by", { actor })].filter(Boolean).join(" · ");
 }
 
 function noticeActor(

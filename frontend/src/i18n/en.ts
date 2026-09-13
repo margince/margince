@@ -16,9 +16,9 @@ export const en = {
   "home.receipt.confidence": "Updated forecast confidence",
   "home.receipt.forecast": "Forecast category changed",
   "home.task.yours": "You need to {action}",
-  "home.change.unknown":
-    "The original actor was not recorded for this older notification.",
-  "home.change.unidentified": "An unidentified actor",
+  "home.change.unknown": "We don’t know who made this change.",
+  "home.change.stageUnknown": "Unknown stage",
+  "home.change.unidentified": "Unknown",
   "home.change.by": "Changed by: {actor}",
   "brief.focus.context": "View details",
   "brief.focus.back": "Back to Focus",

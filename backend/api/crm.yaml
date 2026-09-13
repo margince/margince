@@ -44790,9 +44790,15 @@ components:
 
     NoticeOrigin:
       type: object
-      description: The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+      description: The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
       required: [event_id, actor_type, actor_id, occurred_at]
       properties:
+        stage_change:
+          type: object
+          description: Stage names at the time of the move. Missing names remain unknown; the current deal stage is never substituted.
+          properties:
+            from_name: { type: string }
+            to_name: { type: string }
         event_id: { type: string, format: uuid }
         actor_type: { type: string }
         actor_id: { type: string, description: "Original typed principal identifier, such as human:<user UUID> or system:<process>." }

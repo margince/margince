@@ -142,6 +142,10 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/worklist.reader.test.ts",
+    why: "Pins different viewer and record zones to prove a delayed notification dates the original change in the viewer’s zone.",
+  },
+  {
     file: "screens/installation-settings.regional.stories.tsx",
     why: "The fixture supplies the contract-required installation timezone alongside regional settings.",
   },

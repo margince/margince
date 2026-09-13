@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { translate } from "../i18n";
 import { taskRow } from "./brief.fixtures";
+import { whenText } from "./worklist.copy";
 import { noticeDetail, readerTask } from "./worklist.reader";
 
 const t = (
@@ -50,10 +51,70 @@ it("attributes the original change, including self and legacy unknowns", () => {
     },
   };
   expect(noticeDetail(notice, viewer, t)).toBe(
-    "Changed by: You · Qualified → Won",
+    "Qualified → Won · Changed by: You",
   );
   expect(noticeDetail(notice, undefined, t)).toContain("Dana Weiss");
   expect(
     noticeDetail({ ...notice, notice_origin: undefined }, viewer, t),
-  ).toContain("not recorded");
+  ).toContain("We don’t know who made this change.");
+});
+
+it("renders the recorded stages in each language without inventing a missing stage", () => {
+  const notice = {
+    ...task,
+    source: "notice" as const,
+    detail: "Outdated message",
+    notice_origin: {
+      event_id: "event",
+      actor_type: "human",
+      actor_id: "human:reader",
+      occurred_at: "2026-09-07T10:00:00Z",
+      stage_change: { from_name: "Qualified", to_name: "Won" },
+    },
+  };
+  expect(noticeDetail(notice, viewer, t)).toBe(
+    "Qualified → Won · Changed by: You",
+  );
+  for (const [language, missing] of [
+    ["en", "Unknown stage"],
+    ["de", "Unbekannte Phase"],
+    ["vi", "Giai đoạn không rõ"],
+  ] as const) {
+    const translated = noticeDetail(
+      {
+        ...notice,
+        notice_origin: {
+          ...notice.notice_origin,
+          stage_change: { from_name: "Qualified" },
+        },
+      },
+      viewer,
+      (key, values) => translate(language, key, values),
+    );
+    expect(translated).toContain(`Qualified → ${missing}`);
+    expect(translated).not.toContain("Outdated message");
+  }
+});
+
+it("dates the original change, not its later delivery", () => {
+  expect(
+    whenText(
+      {
+        ...task,
+        source: "notice",
+        occurred_at: "2026-09-14T10:00:00Z",
+        notice_origin: {
+          event_id: "event",
+          actor_type: "human",
+          actor_id: "reader",
+          occurred_at: "2026-09-07T10:00:00Z",
+        },
+      },
+      t,
+      "en",
+      "Europe/Berlin",
+      "UTC",
+      new Date("2026-09-14T10:00:00Z"),
+    ),
+  ).toBe("07/09/2026, 12:00");
 });

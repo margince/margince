@@ -405,16 +405,8 @@ export function dealFactsText(
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-// The MOMENT a dated row is racing: when a meeting starts, when a task is due.
-//
-// `due_at` reached the client on both and nothing read it. A meeting said
-// "starting shortly" — the same three words whether it began in four minutes or
-// in fifty — so the one row a rep has to open BEFORE a wall-clock time was the
-// row that would not say the time. A task said "Overdue" and left the reader to
-// go and find out by how long.
-//
-// The two are one function because they are one question to the reader: what
-// clock am I against. What differs is only which side of now the answer is on.
+// Notices retain the original change date even when delivery happens later.
+// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
@@ -434,6 +426,8 @@ export function whenText(
   record: string,
   now: Date,
 ): string | null {
+  if (item.source === "notice" && item.notice_origin)
+    return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }

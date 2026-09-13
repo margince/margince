@@ -243,7 +243,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   ],
   vi: [
     // The human who made a change, not a CRM contact record.
-    "home.change.unknown",
     "home.change.by",
     // "Người khác" — SOMEBODY ELSE, a third party who passed on this reader's
     // details. The privacy notice is addressed to a human being and says so:
