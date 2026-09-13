@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal } from "../design-system/atoms";
@@ -111,7 +111,12 @@ export function ContractForm({
   // DIFF against it rather than a snapshot of the whole slice: no cf_ column
   // is clearable, so sending every untouched empty field would be sending a
   // clear the server refuses.
-  const [openedCustom, setOpenedCustom] = useState<Record<string, string>>({});
+  // The RAW stored slice the form opened on, not the converted strings the
+  // controls hold. customFieldsToPatch puts the baseline through
+  // customFieldFormValue itself, so handing it an already-converted value
+  // converts a currency twice: a stored 10000 became "100", was re-converted
+  // to "1", and a genuine edit to 1 then compared EQUAL and vanished.
+  const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
   // The scale the amount field reads and writes in. A recorded agreement keeps
   // its OWN currency (draftOf preserves it); a new one takes the installation's
@@ -133,22 +138,47 @@ export function ContractForm({
   // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
-      const seeded = customFormValues(
-        cf.formFields,
-        cf.recordSlice(contract ?? {}),
-      );
-      setDraft({ ...draftOf(contract), customValues: seeded });
-      setOpenedCustom(seeded);
+      setDraft(draftOf(contract));
+      setOpenedCustom({});
       setFile(undefined);
     }
-    // The catalog can land AFTER the form opens — the schema read runs beside
-    // the contract's — so seeding only on open would leave an agreement's
-    // existing custom values out of a form that opened first.
-    //
-    // Keyed on the field COUNT, never on cf.fields: the hook rebuilds that
-    // array with .filter() on every render, so a dependency on it re-seeds on
-    // every render and throws away whatever the reader has typed.
-  }, [open, contract?.id, cf.formFields.length]);
+  }, [open, contract?.id]);
+
+  // The custom half, seeded SEPARATELY from the terms above.
+  //
+  // Two reasons it cannot ride in the effect beside them. The catalog can land
+  // after the form opens — the schema read runs beside the contract's — so an
+  // agreement's existing answers would be missing from a form that opened
+  // first. And re-running the whole seed when it arrives would throw away the
+  // terms the reader had already typed, and the file they had already picked.
+  //
+  // `seededFor` is the catalog this draft was filled from. A catalog that
+  // swaps one field for another keeps the same COUNT, so a count would leave
+  // the draft holding a retired field's value while the controls draw the new
+  // one; the column names cannot collide that way.
+  const catalogKey = cf.fields.map((field) => field.column_name).join(",");
+  const seededFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      seededFor.current = null;
+      return;
+    }
+    if (seededFor.current === catalogKey) {
+      return;
+    }
+    seededFor.current = catalogKey;
+    // RAW for the baseline, converted for the controls. customFieldsToPatch
+    // puts the baseline through customFieldFormValue itself, so handing it an
+    // already-converted value converts a currency twice — a stored 10000 reads
+    // as "100", re-converts to "1", and a genuine edit to 1 compares EQUAL and
+    // disappears without a trace.
+    const stored = cf.recordSlice(contract ?? {});
+    setOpenedCustom(stored);
+    setDraft((current) => ({
+      ...current,
+      customValues: customFormValues(cf.formFields, stored),
+    }));
+  }, [open, catalogKey, contract, cf]);
 
   // The draft is a VARIABLE, never a closure over render state: a click that
   // lands before React re-arms the mutation's options would otherwise submit
@@ -161,7 +191,11 @@ export function ContractForm({
             submitted.draft,
             cf.toPatch(submitted.draft.customValues, openedCustom),
           )
-        : await createContract(companyId, submitted.draft);
+        : await createContract(
+            companyId,
+            submitted.draft,
+            cf.toBody(submitted.draft.customValues),
+          );
       if (submitted.file) {
         // A SECOND request, which can fail on its own. The agreement is saved
         // by then, so a failure here says the FILE did not attach rather than

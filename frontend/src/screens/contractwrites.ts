@@ -12,9 +12,15 @@ type Contract = components["schemas"]["Contract"];
 export async function createContract(
   companyId: string,
   draft: ContractDraft,
+  // The workspace's own answers, already through coerceWrite. Passed in rather
+  // than read here: contractBody is a pure function with no catalog, and the
+  // column's writer wants minor units and a JSON boolean, not the strings the
+  // controls hold. Spreading the draft's raw strings instead — which this did
+  // briefly — let the server drop every one of them and answer 201.
+  custom: Record<string, unknown> = {},
 ): Promise<string> {
   const { data, error } = await api.POST("/contracts", {
-    body: contractBody(companyId, draft),
+    body: { ...contractBody(companyId, draft), ...custom },
   });
   if (error) {
     throwProblem(error);

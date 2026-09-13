@@ -361,10 +361,6 @@ function ProjectActions({
       <OverflowMenu label={t("record.moreActions")}>
         {/* Worded — a bare pencil among sentences names nothing to a reader. */}
         <EditAction<Project>
-          // Remount when the catalog lands: the modal seeds its values from
-          // `record` once, so an Edit opened before the schema answered would
-          // hold blank custom fields until it was closed and opened again.
-          key={cf.formFields.length}
           labelled
           disabledReasonId={refusedReasonId}
           label={t("project.edit")}
