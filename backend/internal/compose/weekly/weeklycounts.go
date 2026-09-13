@@ -108,8 +108,10 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 
 // Both the weekly counts and the funnel scorecard use the arrival cohort and
 // the same closing instant. A missing breach stamp does not prove an SLA target.
-const responseRecordedInWeekSQL = `l.first_response_at < $%[2]d`
-const breachRecordedInWeekSQL = `l.sla_breached_at < $%[2]d`
+const (
+	responseRecordedInWeekSQL = `l.first_response_at < $%[2]d`
+	breachRecordedInWeekSQL   = `l.sla_breached_at < $%[2]d`
+)
 
 // countWeekLeads counts how the week's inbound leads were answered.
 //

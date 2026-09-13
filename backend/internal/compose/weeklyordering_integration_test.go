@@ -102,5 +102,4 @@ func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 	if len(review.Outlook) != 3 {
 		t.Fatalf("scheduled forecast horizons missing: %d", len(review.Outlook))
 	}
-
 }
