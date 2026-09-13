@@ -199,6 +199,9 @@ func ActivityContentClause(ctx context.Context, alias string, arg func(any) int)
 // grant access to evidence that the reader can no longer open.
 func activityContentAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
 	own := activityAudienceArm(p, alias, arg)
+	// Reassignment hands over the reminder, never a grant to its source email.
+	own = fmt.Sprintf("(%s OR (%s.source_system = '%s' AND %s.assignee_id = $%d))",
+		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
 	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)

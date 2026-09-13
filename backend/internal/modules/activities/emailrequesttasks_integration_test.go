@@ -199,3 +199,42 @@ func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *tes
 		t.Fatal("archived reminder was recaptured")
 	}
 }
+
+func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var task ids.UUID
+	if err := e.owner.QueryRow(e.as(), `SELECT id FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1`, source).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	manager, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing manager")
+	}
+	manager.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true, Update: true}
+	receiver := ids.From[ids.UserKind](e.other)
+	if _, err := store.UpdateActivity(principal.WithActor(e.as(), manager), ids.From[ids.ActivityKind](task), UpdateActivityInput{AssigneeID: &receiver}); err != nil {
+		t.Fatal(err)
+	}
+	manager.UserID, manager.ID = e.other, "human:"+e.other.String()
+	recipient := principal.WithActor(e.as(), manager)
+	got, err := store.GetActivity(recipient, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Subject == nil || *got.Subject != "Send the report" {
+		t.Fatal("new assignee cannot read the reminder")
+	}
+	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
+	got, err = store.GetActivity(recipient, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Subject != nil {
+		t.Fatal("reassignment granted access to revoked source evidence")
+	}
+}
