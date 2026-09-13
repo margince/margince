@@ -34125,6 +34125,20 @@ export interface components {
             label?: string;
         };
         /**
+         * @description Up to six actionable priorities from the scoped day, selected before filtering
+         *     or pagination and ordered by the queue's server ranking. Routine maintenance
+         *     and future tasks do not fill spare places. Pins remain explicit choices.
+         *     Source coverage and failures are reported on the enclosing worklist; these
+         *     counts describe the candidates actually read, not an exhaustive installation.
+         */
+        WorklistFocus: {
+            items: components["schemas"]["WorklistItem"][];
+            /** @description Eligible cards before the six-card cut; a grouped card counts once. */
+            total: number;
+            /** @description Urgent underlying work items not individually named by focus cards, using the same units as summary.urgent. A group does not certify the urgency of each member. */
+            urgent_remaining: number;
+        };
+        /**
          * @description The rep's day, ranked. One list rather than fourteen lanes, because a reader
          *     cannot compare the position of one lane with another to work out that an item
          *     several screens down matters more.
@@ -34159,6 +34173,7 @@ export interface components {
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
+            focus?: components["schemas"]["WorklistFocus"];
             /** @description Sources that could not be included, and why. Empty is the honest common case. */
             sources_unavailable: components["schemas"]["WorklistSourceUnavailable"][];
             walk?: components["schemas"]["WorklistWalk"];

@@ -45,7 +45,7 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/worklist")) {
+      if (new URL(url, "https://test.local").pathname.endsWith("/worklist")) {
         READS.push(url.replace(/^.*\/v1/, ""));
       }
       return session(input);

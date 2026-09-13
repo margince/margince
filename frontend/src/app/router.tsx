@@ -293,11 +293,11 @@ export function navigate(route: Route, dials?: UrlParams): void {
  * It fires no `hashchange`, so the store has to be told; app/urlstate.ts's
  * `replaceParams` is the same write for the QUERY half and says the same thing.
  */
-export function navigateReplacing(route: Route): void {
+export function navigateReplacing(route: Route, dials?: UrlParams): void {
   globalThis.history.replaceState(
     globalThis.history.state,
     "",
-    routeHash(route),
+    dials ? hashWithParams(routeHash(route), dials) : routeHash(route),
   );
   announce();
 }

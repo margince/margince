@@ -5,7 +5,6 @@ import {
   Handshake,
   Home,
   Layers2,
-  ListTodo,
   type LucideIcon,
   Sparkles,
   UserPlus,
@@ -74,7 +73,16 @@ export type NavGroup = {
 };
 
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { items: [{ screen: "brief", labelKey: "nav.brief", icon: Home }] },
+  {
+    items: [
+      {
+        screen: "brief",
+        labelKey: "nav.brief",
+        icon: Home,
+        aliases: ["worklist", "today"],
+      },
+    ],
+  },
   {
     headingKey: "nav.group.records",
     items: [
@@ -115,7 +123,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       // A checklist rather than a sunrise: what this surface holds is the work
       // that waits on a contact, and `Sun` says "morning" — which is the Brief's
       // claim, not this one.
-      { screen: "worklist", labelKey: "nav.today", icon: ListTodo },
       // The body of work a deal is about. It starts during the deal and
       // outlives close-won, so what it belongs to is the work rather than the
       // record of the sale: a project in delivery has no deal column to stand

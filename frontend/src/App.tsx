@@ -256,8 +256,10 @@ const ShareScreen = lazy(
     import("./screens/share").then((m) => ({ default: m.ShareScreen })),
   ),
 );
-const WorklistScreen = lazy(() =>
-  import("./screens/worklist").then((m) => ({ default: m.WorklistScreen })),
+const WorklistRedirect = lazy(() =>
+  import("./screens/brief.queue").then((m) => ({
+    default: m.WorklistRedirect,
+  })),
 );
 
 // safeDecode tolerates malformed percent-encoding (e.g. a stray "%2" from a
@@ -463,7 +465,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // One segment, and it is WHOSE day — the door a team board row needs. The
     // other three dials stay state: putting one of four in the address would
     // make it describe a fraction of what the reader is looking at.
-    worklist: ({ id }) => <WorklistScreen opensOn={id} />,
+    worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names

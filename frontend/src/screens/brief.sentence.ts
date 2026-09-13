@@ -76,7 +76,7 @@ const NAMED = 1;
 export function waitingRows(
   day: Worklist | undefined,
 ): readonly WorklistItem[] {
-  return (day?.queue ?? []).filter((item) => !isBriefUpdate(item));
+  return day?.focus?.items ?? [];
 }
 
 /**
@@ -92,14 +92,12 @@ export function briefSentence(
   t: (key: MessageKey, values?: Record<string, string>) => string,
   locale: Locale,
 ): BriefSentence | null {
-  if (!day?.queue) {
+  if (!day?.focus) {
     return null;
   }
   const waiting = waitingRows(day);
   const partial = Boolean(
-    day.next_cursor ||
-      day.readings?.more_available ||
-      day.sources_unavailable?.length,
+    day.readings?.more_available || day.sources_unavailable?.length,
   );
   if (waiting.length === 0 && partial) return null;
   if (waiting.length === 0) {

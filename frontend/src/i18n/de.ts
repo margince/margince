@@ -5,6 +5,17 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "brief.focus.context": "Kontext öffnen",
+  "brief.focus.back": "Zurück zum Fokus",
+  "brief.queue.back": "Zurück zur Liste",
+  "brief.queue.open": "Arbeitsliste öffnen",
+  "brief.queue.title": "Arbeitsliste",
+  "brief.queue.close": "Zurück zum Briefing",
+  "brief.focus.urgentRemaining_one":
+    "{count} weitere dringende Aufgabe in der Liste",
+  "brief.focus.urgentRemaining_other":
+    "{count} weitere dringende Aufgaben in der Liste",
+  "brief.focus.remaining": "{count} weitere Prioritäten in der Liste",
   "brief.team.planUnavailable":
     "Für {name} ist kein aktueller Plan für Sie verfügbar.",
   "brief.team.noCommitments": "{name} hat in diesem Plan keine Zusagen.",
@@ -15,10 +26,6 @@ export const de = {
     "Laden Sie weitere Einträge, um die übrigen Termine zu sehen.",
   "brief.readings.riskPartial":
     "Nur bekannter Wert; einige Deal-Aufgaben konnten nicht geprüft werden.",
-  "brief.feed.remainingUrgent_one":
-    "{count} dringender Eintrag ist noch nicht geladen.",
-  "brief.feed.remainingUrgent_other":
-    "{count} dringende Einträge sind noch nicht geladen.",
   "brief.readings.unpricedCount_one":
     "{count} Deal hat keinen vergleichbaren Wert und ist ausgeschlossen.",
   "brief.readings.unpricedCount_other":
@@ -99,13 +106,9 @@ export const de = {
   "brief.readings.unavailable": "Unbekannt",
   "brief.feed.incomplete":
     "Keine Einträge geladen. Ein Teil der Arbeit konnte nicht geprüft werden.",
-  "brief.feed.moreUrgentPossible":
-    "Weitere Arbeit ist verfügbar, auch dringende Einträge nach dieser Seite.",
   "brief.feed.fullWorklist": "Vollständige Arbeitsliste öffnen",
-  "brief.feed.showMore": "Weitere anzeigen",
-  "brief.feed.retryMore": "Weitere Einträge erneut laden",
-  "brief.feed.visible_one": "{count} Eintrag geladen",
-  "brief.feed.visible_other": "{count} Einträge geladen",
+  "brief.feed.visible_one": "{count} Fokuskarte",
+  "brief.feed.visible_other": "{count} Fokuskarten",
   "brief.week.workRecorded": "Diese Woche wurde Arbeit erledigt.",
   "brief.week.leads": "{count} Leads zugewiesen.",
   "brief.week.responses": "{count} Leads innerhalb der Zielzeit beantwortet.",
@@ -304,7 +307,6 @@ export const de = {
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
   "nav.deals": "Deals",
-  "nav.today": "Arbeitsliste",
   "nav.analytics": "Analytics",
   "nav.ai": "Margince fragen",
   "nav.settings": "Einstellungen",
@@ -2958,7 +2960,7 @@ export const de = {
   "brief.scope.team": "Team",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
-  "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
+  "brief.sentence.clear": "Keine unmittelbaren Prioritäten gefunden.",
   "brief.sentence.one": "Zuerst: {lead}",
   "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
@@ -2972,11 +2974,12 @@ export const de = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "Keine erledigte Arbeit oder Deal-Bewegung erfasst.",
 
-  "brief.feed.title": "Heute",
+  "brief.feed.title": "Fokus",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Dein Morgen wird gelesen",
-  "brief.feed.clear": "In dieser Ansicht steht keine Arbeit an.",
+  "brief.feed.clear":
+    "Keine unmittelbaren Prioritäten gefunden. Die vollständige Arbeitsliste bleibt verfügbar.",
   "teamweekly.title": "Die Woche des Teams",
   "teamweekly.weekOf": "{team} · Woche ab {day}",
   "teamweekly.frozen": "Eingefroren",

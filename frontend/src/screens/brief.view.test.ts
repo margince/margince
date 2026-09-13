@@ -90,3 +90,20 @@ describe("the Brief's address", () => {
     }
   });
 });
+
+it("changing Brief views preserves the queue's independent address", () => {
+  const queue = new Map([
+    ["queue_scope", "unassigned"],
+    ["owner", "colleague"],
+    ["filter", "tasks"],
+    ["selected", "task-123"],
+  ]);
+  const weekly = paramsFor(
+    { view: "weekly", scope: "team", week: "2026-09-07" },
+    queue,
+  );
+  const morning = paramsFor(DEFAULT_ADDRESS, weekly);
+  expect(morning).toEqual(queue);
+  expect(weekly.get("view")).toBe("weekly");
+  expect(weekly.get("scope")).toBe("team");
+});

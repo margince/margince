@@ -1,8 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { useUrlParams } from "../app/urlstate";
-import { Button } from "../design-system/atoms";
+import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
@@ -13,6 +11,7 @@ import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import { rosterOwnerNaming, useRoster } from "./entityref";
 import { useOpenEmail } from "./openemail";
+import { useWorklistAddress } from "./worklist.address";
 import {
   bandSections,
   canReportEmptyBands,
@@ -27,17 +26,12 @@ import {
 } from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
-import {
-  WORKLIST_FILTER_PARAM,
-  WorklistHeader,
-  worklistFilterFrom,
-} from "./worklist.header";
+import { WORKLIST_FILTER_PARAM, WorklistHeader } from "./worklist.header";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
-  UNASSIGNED,
   useRefreshWalk,
   useWorklist,
   type Worklist,
@@ -103,7 +97,7 @@ function rowIdentity(item: WorklistItem): string {
  * An identity no row can carry: `rowIdentity` joins a source and an id, and no
  * source is empty.
  */
-const NOTHING_IN_HAND = "\u0000none";
+const NOTHING_IN_HAND = "none";
 
 /**
  * The row the pane is about.
@@ -257,6 +251,7 @@ function clearSentence(
 }
 
 function WorklistBody({
+  embedded = false,
   day,
   walk,
   onRefresh,
@@ -275,6 +270,7 @@ function WorklistBody({
   moreFailed,
   onMore,
 }: Readonly<{
+  embedded?: boolean;
   day: Worklist;
   queue: readonly WorklistItem[];
   scope: WorklistScope;
@@ -306,11 +302,12 @@ function WorklistBody({
   // this roster cannot name, which is the one answer this sentence needs: it
   // has a wording that names no one.
   const colleague = rosterOwnerNaming(useRoster("user", owner !== ""))(owner);
-  // The pane belongs to the DAY, so only a row in the day can fill it. A review
-  // row selected here would draw its context beside the Today panel while the
-  // highlighted row sat in the panel below — the two halves of one answer, a
-  // screen apart, with nothing joining them.
-  const selected = rowInHand(sellerWork(queue), selectedId);
+  // Default context follows seller work. An explicit choice may also name a
+  // review row, whose record context must remain reachable from the queue.
+  const selected = rowInHand(
+    selectedId === "" ? sellerWork(queue) : queue,
+    selectedId,
+  );
   // The day cut into the two jobs it holds. `destination` says which, and the
   // server decides it — the counts above the queue are computed from the same
   // field, so a split derived here from `source` or `category` would drift
@@ -368,7 +365,13 @@ function WorklistBody({
           and had to scroll before they could do anything. The stylesheet moves
           this below the queue under 720px, in PAINT only — worklist.layout.ts
           holds why the document order does not follow it. */}
-      <WorklistReadings day={day} onLane={onFilter} />
+      {embedded ? (
+        <Disclosure summary={t("brief.readings.summary")}>
+          <WorklistReadings day={day} onLane={onFilter} />
+        </Disclosure>
+      ) : (
+        <WorklistReadings day={day} onLane={onFilter} />
+      )}
       {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
           in every state — below it the block moved as its own form opened, and
           a lead read three panels of somebody else's morning before the way to
@@ -422,6 +425,8 @@ function WorklistBody({
         // null is still an element, and an element still gets the aside column
         // and its landmark. The rule lives beside the component that obeys it.
         <PageZonesWhenPaned
+          active={selectedId !== ""}
+          onClose={() => onSelect(NOTHING_IN_HAND)}
           pane={
             selected && hasPane(selected) ? (
               <WorklistPane item={selected} />
@@ -603,15 +608,32 @@ function PageZonesWhenPaned({
   queue,
   pane,
   label,
-}: Readonly<{ queue: ReactNode; pane: ReactNode; label: string }>) {
+  active,
+  onClose,
+}: Readonly<{
+  queue: ReactNode;
+  pane: ReactNode;
+  label: string;
+  active: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
   if (!pane) {
     return <>{queue}</>;
   }
   return (
     <PageZones
       shape="aside"
+      className={active ? "worklist-context-open" : "worklist-context-idle"}
       mainClassName="worklist-main"
-      aside={pane}
+      aside={
+        <>
+          <Button className="worklist-context-back" onClick={onClose}>
+            {t("brief.queue.back")}
+          </Button>
+          {pane}
+        </>
+      }
       asideLabel={label}
       main={queue}
     />
@@ -621,6 +643,7 @@ function PageZonesWhenPaned({
 // The Worklist screen.
 export function WorklistScreen({
   opensOn,
+  embedded = false,
 }: Readonly<{
   // What the address asked for, from `#/worklist/<segment>`: a user id opens
   // that contact's queue, and the literal "unassigned" opens the unowned pile.
@@ -630,71 +653,20 @@ export function WorklistScreen({
   // An unassigned path supplies the default scope; an explicit scope query
   // overrides it so the scope dial remains usable after following that link.
   opensOn?: string;
+  embedded?: boolean;
 }> = {}) {
   const t = useT();
-  // The dials are state rather than a stored preference: a scope is a question
-  // about right now, and a remembered one would answer a different question
-  // than the reader asked on their next visit.
-  const [params, setParams] = useUrlParams();
-  const requestedScope = params.get("scope");
-  const scope: WorklistScope =
-    requestedScope === "mine" ||
-    requestedScope === "team" ||
-    requestedScope === "all" ||
-    requestedScope === "unassigned"
-      ? requestedScope
-      : opensOn === UNASSIGNED
-        ? UNASSIGNED
-        : "mine";
-  const setScope = (next: WorklistScope) => {
-    const query = new Map(params);
-    if (next === "mine" && opensOn !== UNASSIGNED) query.delete("scope");
-    else query.set("scope", next);
-    setParams(query);
-  };
-  // The one dial of the four that lives in the ADDRESS, and the reason is a
-  // figure on another screen: Brief's readings each count one of these lanes,
-  // and a reading that names a set is the way into it — which it cannot be
-  // unless the lane is nameable. `?filter=` is the query half, which
-  // `routeIdentity` ignores by design, so this does not disturb the
-  // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
-  // narrowed queue a link somebody can paste, which is what the address is for.
-  //
-  // Scope and filter are shared in links; owner and selection stay local.
-  const filter = worklistFilterFrom(params);
-  const setFilter = (next: WorklistFilter) => {
-    const query = new Map(params);
-    // "all" is the default, so it is spelled by the parameter's ABSENCE — an
-    // address carrying `?filter=all` describes the same view as one carrying
-    // nothing and would be a second spelling of it.
-    if (next === "all") {
-      query.delete(WORKLIST_FILTER_PARAM);
-    } else {
-      query.set(WORKLIST_FILTER_PARAM, next);
-    }
-    setParams(query);
-  };
-  // Whose queue, when it is not the reader's own. Empty means their own day,
-  // which is what every seat sees and the only thing most seats may ask for.
-  const [owner, setOwner] = useState(
-    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
-  );
-  // Which row the context pane is about. Local state, not the address: the
-  // page's other dials are state too, and putting one of the four in the URL
-  // would make the address describe a fraction of what the reader is looking
-  // at. Moving them all there is its own change.
-  const [selectedId, setSelectedId] = useState("");
+  const {
+    scope,
+    filter,
+    owner,
+    selectedId,
+    setScope,
+    setFilter,
+    setOwner,
+    setSelectedId,
+  } = useWorklistAddress(opensOn, embedded);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  // Changing a dial drops the selection. A row chosen under one question is
-  // not a row the reader chose under the next one, and keeping the id means a
-  // row that comes back — a filter switched away and back, a snooze that lifts
-  // — re-opens its pane with nobody having asked it to.
-  const answerWith =
-    <T,>(set: (next: T) => void) =>
-    (next: T) => {
-      setSelectedId("");
-      set(next);
-    };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
@@ -741,6 +713,7 @@ export function WorklistScreen({
       >
         {first && (
           <WorklistBody
+            embedded={embedded}
             day={first}
             walk={walk}
             // Refreshing starts a NEW walk, which is what brings in the work
@@ -753,9 +726,9 @@ export function WorklistScreen({
             filter={filter}
             owner={owner}
             selectedId={selectedId}
-            onScope={answerWith(setScope)}
-            onFilter={answerWith(setFilter)}
-            onOwner={answerWith(setOwner)}
+            onScope={setScope}
+            onFilter={setFilter}
+            onOwner={setOwner}
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}

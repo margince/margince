@@ -2,6 +2,15 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "brief.focus.context": "Open context",
+  "brief.focus.back": "Back to Focus",
+  "brief.queue.back": "Back to queue",
+  "brief.queue.open": "Open work queue",
+  "brief.queue.title": "Work queue",
+  "brief.queue.close": "Back to Brief",
+  "brief.focus.urgentRemaining_one": "{count} more urgent item in the queue",
+  "brief.focus.urgentRemaining_other": "{count} more urgent items in the queue",
+  "brief.focus.remaining": "{count} more priorities in the queue",
   "brief.team.planUnavailable":
     "No current plan is available to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -12,9 +21,6 @@ export const en = {
     "Load more agenda items to see the remaining meetings.",
   "brief.readings.riskPartial":
     "Known value only; some deal work could not be checked.",
-  "brief.feed.remainingUrgent_one": "{count} urgent item is not loaded yet.",
-  "brief.feed.remainingUrgent_other":
-    "{count} urgent items are not loaded yet.",
   "brief.readings.unpricedCount_one":
     "{count} deal has no comparable value and is excluded.",
   "brief.readings.unpricedCount_other":
@@ -91,13 +97,9 @@ export const en = {
   "brief.readings.noDealWork": "No flagged deals",
   "brief.readings.unavailable": "Unknown",
   "brief.feed.incomplete": "No items loaded. Some work could not be checked.",
-  "brief.feed.moreUrgentPossible":
-    "More work is available, including any urgent items beyond this page.",
-  "brief.feed.fullWorklist": "Open full worklist",
-  "brief.feed.showMore": "Show more",
-  "brief.feed.retryMore": "Retry loading more",
-  "brief.feed.visible_one": "{count} item loaded",
-  "brief.feed.visible_other": "{count} items loaded",
+  "brief.feed.fullWorklist": "Open full work queue",
+  "brief.feed.visible_one": "{count} focus card",
+  "brief.feed.visible_other": "{count} focus cards",
   "brief.week.workRecorded": "Work completed this week.",
   "brief.week.leads": "{count} leads assigned.",
   "brief.week.responses": "{count} leads answered within target.",
@@ -301,12 +303,6 @@ export const en = {
   "nav.companies": "Companies",
   "nav.leads": "Leads",
   "nav.deals": "Deals",
-  "nav.today": "Worklist",
-  // The decision lane, one at a time: how far through the reader is, and the
-  // cleared plate the whole surface is built to reach.
-  // The merge decision. Both values survive a merge — choosing a side decides
-  // which record stands and which value is shown first — so the copy never says
-  // "delete", because nothing is deleted.
   "nav.analytics": "Analytics",
   "nav.ai": "Ask Margince",
   "nav.settings": "Settings",
@@ -3049,7 +3045,7 @@ export const en = {
   "brief.scope.team": "Team",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
-  "brief.sentence.clear": "Nothing is waiting on you this morning.",
+  "brief.sentence.clear": "No immediate priorities found.",
   "brief.sentence.one": "First: {lead}",
   "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
@@ -3064,12 +3060,13 @@ export const en = {
   "brief.week.andCarry": "{result} {carry}",
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
-  "brief.feed.title": "Today",
+  "brief.feed.title": "Focus",
   // What is on screen out of what the day holds, on the panel's own line.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Reading your morning",
-  "brief.feed.clear": "No work needs attention in this view.",
+  "brief.feed.clear":
+    "No immediate priorities found. The full queue is available when you need it.",
   "teamweekly.title": "The team's week",
   "teamweekly.weekOf": "{team} · week of {day}",
   "teamweekly.frozen": "Frozen",

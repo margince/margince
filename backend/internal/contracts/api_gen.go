@@ -38622,6 +38622,13 @@ type Worklist struct {
 	// Filter The narrowing this read applied. The same vocabulary the query parameter takes.
 	Filter *WorklistFilter `json:"filter,omitempty"`
 
+	// Focus Up to six actionable priorities from the scoped day, selected before filtering
+	// or pagination and ordered by the queue's server ranking. Routine maintenance
+	// and future tasks do not fill spare places. Pins remain explicit choices.
+	// Source coverage and failures are reported on the enclosing worklist; these
+	// counts describe the candidates actually read, not an exhaustive installation.
+	Focus *WorklistFocus `json:"focus,omitempty"`
+
 	// NextCursor Send this back as `cursor` to continue past the last row of this page. See that
 	// parameter for what a walk does and does not guarantee.
 	//
@@ -39036,6 +39043,21 @@ type WorklistDealVerdictSource string
 // of these four calls. A word invented for it would be the queue deciding a
 // judgement the deal card owns.
 type WorklistDealVerdictStanding string
+
+// WorklistFocus Up to six actionable priorities from the scoped day, selected before filtering
+// or pagination and ordered by the queue's server ranking. Routine maintenance
+// and future tasks do not fill spare places. Pins remain explicit choices.
+// Source coverage and failures are reported on the enclosing worklist; these
+// counts describe the candidates actually read, not an exhaustive installation.
+type WorklistFocus struct {
+	Items []WorklistItem `json:"items"`
+
+	// Total Eligible cards before the six-card cut; a grouped card counts once.
+	Total int `json:"total"`
+
+	// UrgentRemaining Urgent underlying work items not individually named by focus cards, using the same units as summary.urgent. A group does not certify the urgency of each member.
+	UrgentRemaining int `json:"urgent_remaining"`
+}
 
 // WorklistItem One thing to do, with the reason it sits where it sits.
 //

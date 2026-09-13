@@ -22,7 +22,11 @@ it("keeps the work summary open and puts updates beside actionable work", async 
     actions: ["acknowledge" as const],
   };
   stubApi({
-    "GET /worklist": () => jsonResponse(readingsDay({}, [task, notice])),
+    "GET /worklist": () =>
+      jsonResponse({
+        ...readingsDay({}, [task, notice]),
+        focus: { items: [task], total: 1, urgent_remaining: 0 },
+      }),
   });
   const { container } = render(<BriefScreen />);
   await screen.findByText("Send the promised comparison");

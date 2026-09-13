@@ -34,26 +34,33 @@ it("shows one daily agenda, without duplicate tasks, risks or an empty approvals
   expect(container.querySelector("time")).toBeTruthy();
 });
 
-it("appends another page in Today without losing the first page or repeating a boundary row", async () => {
-  let reads = 0;
+it("continues the full queue in a Brief drawer without losing the first page or repeating a boundary row", async () => {
   const first = taskRow("t1", "Call Weber");
   const second = taskRow("t2", "Review Nordwind");
   stubApi({
-    "GET /worklist": () =>
+    "GET /worklist": (_body, query) =>
       jsonResponse(
-        ++reads === 1
+        !query.has("cursor")
           ? { ...readingsDay({}, [first]), next_cursor: "page-two" }
           : readingsDay({}, [first, second]),
       ),
   });
-  const { container } = render(<BriefScreen />);
+  render(<BriefScreen />);
+  await screen.findByText("Call Weber");
   await userEvent.click(
-    await screen.findByRole("button", { name: en["brief.feed.showMore"] }),
+    screen.getByRole("button", { name: en["brief.queue.open"] }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: en["worklist.more"] }),
   );
   await screen.findByText("Review Nordwind");
-  expect(container.querySelectorAll(".worklist-row-title")).toHaveLength(2);
   expect(
-    screen.queryByRole("button", { name: en["brief.feed.showMore"] }),
+    document
+      .querySelector("[role=dialog]")
+      ?.querySelectorAll(".worklist-row-title"),
+  ).toHaveLength(2);
+  expect(
+    screen.queryByRole("button", { name: en["worklist.more"] }),
   ).toBeNull();
 });
 

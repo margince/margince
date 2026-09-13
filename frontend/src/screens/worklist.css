@@ -464,3 +464,18 @@
   display: grid;
   gap: var(--space-1);
 }
+
+.worklist-context-back {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .worklist-context-open > .worklist-main,
+  .worklist-context-idle > aside {
+    display: none;
+  }
+
+  .worklist-context-back {
+    display: inline-flex;
+  }
+}

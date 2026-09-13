@@ -50,6 +50,11 @@ function day(queue: WorklistItem[]): Worklist {
     scope: "mine",
     scope_options: ["mine"],
     queue,
+    focus: {
+      items: queue.slice(0, 6),
+      total: queue.length,
+      urgent_remaining: 0,
+    },
     counts: [],
     reach: [],
     sources_unavailable: [],
@@ -218,7 +223,10 @@ describe("sentenceParts", () => {
 });
 
 it("does not call a partly read empty queue clear", () => {
-  const partial = { ...day([]), next_cursor: "next" };
+  const partial = {
+    ...day([]),
+    sources_unavailable: [{ source: "task", reason: "failed" }],
+  } satisfies Worklist;
   expect(briefSentence(partial, t, "en")).toBeNull();
 });
 
@@ -230,15 +238,22 @@ it("counts actionable rows and keeps informational updates out of the headline",
     urgent: false,
   });
   const task = item({ source: "task", title: "Send the comparison" });
-  const morning = day([notice, task]);
+  const morning = {
+    ...day([notice, task]),
+    focus: { items: [task], total: 1, urgent_remaining: 0 },
+  };
   expect(leadOf(morning)).toBe(task);
   expect(briefSentence(morning, t, "en")).toMatchObject({
     key: "brief.sentence.one",
     values: { rest: "0", lead: "Send the comparison" },
   });
-  expect(briefSentence(day([notice]), t, "en")?.key).toBe(
-    "brief.sentence.clear",
-  );
+  expect(
+    briefSentence(
+      { ...day([notice]), focus: { items: [], total: 0, urgent_remaining: 0 } },
+      t,
+      "en",
+    )?.key,
+  ).toBe("brief.sentence.clear");
   expect(waitingRows(day([{ ...notice, urgent: true }]))).toHaveLength(1);
   expect(waitingRows(day([{ ...notice, level: 0 }]))).toHaveLength(1);
 });

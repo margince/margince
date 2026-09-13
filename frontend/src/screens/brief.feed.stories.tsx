@@ -67,6 +67,11 @@ function day(queue: FeedItem[], urgent: number): Worklist {
       more_available: false,
     },
     queue,
+    focus: {
+      items: queue.slice(0, 6),
+      total: queue.length,
+      urgent_remaining: 0,
+    },
   };
 }
 
@@ -128,4 +133,39 @@ export const Loading: Story = {
 // their morning was clear over a failed read would close the page.
 export const ReadFailed: Story = {
   args: { day: undefined, state: "failed" },
+};
+
+export const QuietFocusWithWorkInQueue: Story = {
+  args: {
+    state: "ready",
+    day: { ...MIXED, focus: { items: [], total: 0, urgent_remaining: 0 } },
+  },
+};
+
+export const UrgentOverflow: Story = {
+  args: {
+    state: "ready",
+    day: {
+      ...MIXED,
+      focus: { items: MIXED.queue, total: 9, urgent_remaining: 5 },
+    },
+  },
+};
+
+export const SixFocusCards: Story = {
+  args: {
+    state: "ready",
+    day: day(
+      [
+        ...MIXED.queue,
+        sectioned(leadRow("lead-3"), "respond_now"),
+        sectioned(meetingRow("meet-2", false), "prepare_conversations"),
+      ],
+      3,
+    ),
+  },
+};
+export const SixFocusCardsPhone: Story = {
+  ...SixFocusCards,
+  tags: ["uat-phone"],
 };

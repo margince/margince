@@ -13,6 +13,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
+import { hasPane } from "./worklist.pane";
 import {
   type Worklist,
   type WorklistItem,
@@ -27,20 +28,16 @@ export function BriefFeed({
   day,
   state,
   changed,
-  onMore,
-  loadingMore = false,
-  moreFailed = false,
   refreshFailed = false,
   onRetry,
+  onContext,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
   changed?: Readonly<{ count: number; href: string }>;
-  onMore?: () => void;
-  loadingMore?: boolean;
-  moreFailed?: boolean;
   refreshFailed?: boolean;
   onRetry?: () => void;
+  onContext?: (item: WorklistItem) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -49,7 +46,7 @@ export function BriefFeed({
   const client = useQueryClient();
   const rows = waitingRows(day);
   const partial = Boolean(
-    day?.next_cursor ||
+    !day?.focus ||
       day?.readings?.more_available ||
       day?.sources_unavailable?.length,
   );
@@ -77,16 +74,7 @@ export function BriefFeed({
             </a>
           ) : undefined
         }
-        footer={
-          day ? (
-            <AgendaFoot
-              day={day}
-              onMore={onMore}
-              loadingMore={loadingMore}
-              moreFailed={moreFailed}
-            />
-          ) : undefined
-        }
+        footer={day ? <AgendaFoot day={day} /> : undefined}
       >
         {refreshFailed && (
           <p role="alert">
@@ -110,7 +98,12 @@ export function BriefFeed({
           {rows.length === 0 && partial && (
             <p className="t-caption">{t("brief.feed.incomplete")}</p>
           )}
-          <AgendaRows rows={rows} onOpenEmail={setOpenEmail} />
+          <AgendaRows
+            rows={rows}
+            onOpenEmail={setOpenEmail}
+            onContext={onContext}
+            focus
+          />
         </SurfaceState>
       </Panel>
       <OpenEmailDrawer
@@ -125,44 +118,31 @@ export function BriefFeed({
   );
 }
 
-function AgendaFoot({
-  day,
-  onMore,
-  loadingMore,
-  moreFailed,
-}: Readonly<{
-  day: Worklist;
-  onMore?: () => void;
-  loadingMore: boolean;
-  moreFailed: boolean;
-}>) {
+function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
-  const rows = day.queue;
   const plural = usePlural();
-  const known = rows.every((item) => item.urgent !== undefined);
-  const loaded = rows.reduce(
-    (sum, item) => sum + (item.urgent ? (item.batch?.count ?? 1) : 0),
-    0,
-  );
-  const hidden = known ? Math.max(0, day.summary.urgent - loaded) : 0;
+  const hidden = day.focus?.urgent_remaining ?? 0;
   return (
     <>
-      {day.next_cursor && onMore && (
-        <Button small pending={loadingMore} onClick={onMore}>
-          {t(moreFailed ? "brief.feed.retryMore" : "brief.feed.showMore")}
-        </Button>
-      )}
       <a className="entity-link" href={worklistLaneHref("all", day.scope)}>
         {t("brief.feed.fullWorklist")}
       </a>
-      {day.next_cursor && (
+      {hidden > 0 && (
+        <a className="entity-link" href={worklistLaneHref("urgent", day.scope)}>
+          {plural("brief.focus.urgentRemaining", hidden, {
+            count: formatNumber(hidden, locale),
+          })}
+        </a>
+      )}
+      {day.focus && day.focus.total > day.focus.items.length && (
         <span className="t-caption">
-          {hidden > 0
-            ? plural("brief.feed.remainingUrgent", hidden, {
-                count: formatNumber(hidden, locale),
-              })
-            : t("brief.feed.moreUrgentPossible")}
+          {t("brief.focus.remaining", {
+            count: formatNumber(
+              day.focus.total - day.focus.items.length,
+              locale,
+            ),
+          })}
         </span>
       )}
     </>
@@ -172,9 +152,13 @@ function AgendaFoot({
 function AgendaRows({
   rows,
   onOpenEmail,
+  focus = false,
+  onContext,
 }: Readonly<{
   rows: readonly WorklistItem[];
   onOpenEmail: (id: string) => void;
+  focus?: boolean;
+  onContext?: (item: WorklistItem) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -184,22 +168,37 @@ function AgendaRows({
       item.level === 6 &&
       (item.source === "notice_case" || item.source === "dsr"),
   );
-  const grouped = new Set(routine.length > 1 ? routine : []);
+  const grouped = new Set(!focus && routine.length > 1 ? routine : []);
   const draw = (item: WorklistItem) => (
     <li key={`${item.source}-${item.id}`}>
-      <WorklistRow
-        item={item}
-        density="compact"
-        owner=""
-        onOpenEmail={onOpenEmail}
-        onReview={() =>
-          navigate({ screen: "worklist" }, new Map([["filter", item.category]]))
+      <Panel
+        footer={
+          focus && onContext && hasPane(item) ? (
+            <Button small variant="ghost" onClick={() => onContext(item)}>
+              {t("brief.focus.context")}
+            </Button>
+          ) : undefined
         }
-      />
+      >
+        <WorklistRow
+          item={item}
+          density="compact"
+          owner=""
+          onOpenEmail={onOpenEmail}
+          onReview={() =>
+            navigate(
+              { screen: "worklist" },
+              new Map([["filter", item.category]]),
+            )
+          }
+        />
+      </Panel>
     </li>
   );
   return (
-    <ol className="brief-feed-list">
+    <ol
+      className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
+    >
       {rows.filter((item) => !grouped.has(item)).map(draw)}
       {grouped.size > 0 && (
         <li>
@@ -208,7 +207,13 @@ function AgendaRows({
               count: formatNumber(routine.length, locale),
             })}
           >
-            <ol className="brief-feed-list">{routine.map(draw)}</ol>
+            <ol
+              className={
+                focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"
+              }
+            >
+              {routine.map(draw)}
+            </ol>
           </Disclosure>
         </li>
       )}

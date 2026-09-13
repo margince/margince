@@ -175,26 +175,13 @@ func (s *Service) Worklist(
 		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	// The step each deal row suggests, read for the CUT page rather than the
-	// whole ranking: a move is drawn and never ranked, so reading one for a row
-	// this caller will not receive spends a query on nothing. dealmoves.go
-	// states why this reads a cache and never assembles.
-	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	// And how each deal row's deal is STANDING, over the same cut page and for
-	// the same reason. Read after the step because the two are independent: a
-	// row can carry a move and no verdict, or a verdict and no move, and neither
-	// absence is a reason to withhold the other. dealstanding.go states the
-	// three-source order and why its floor is no verdict at all.
-	if err := reader.nameTheStanding(ctx, out.Queue, night.findings); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	// And the name beside each owner id, over the same cut page and for the same
-	// reason: a label is drawn and never ranked, so resolving one for a row this
-	// caller will not receive spends a read on nothing.
-	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
-		return crmcontracts.Worklist{}, err
+	if out.Focus != nil {
+		if err := reader.nameWorklistRows(ctx, out.Focus.Items, night.findings); err != nil {
+			return crmcontracts.Worklist{}, err
+		}
 	}
 	return out, nil
 }
@@ -322,8 +309,10 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
+	focusRows := s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	if !opensTheDeck(filter) {
-		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
+		rows = focusRows
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {
@@ -390,6 +379,7 @@ func (s *Service) worklistFrom(
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
+		Focus: &focus,
 		// The headings, in draw order, over the rows this page actually holds.
 		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a
