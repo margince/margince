@@ -2,7 +2,6 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { formatDateTime } from "../format/format";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
 import { readingsDay, taskRow } from "./brief.fixtures";
@@ -72,7 +71,7 @@ it("shows dates and does not repeat the ranking comparator", () => {
   render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
   expect(
     screen.getByText(
-      `due ${formatDateTime(row.due_at, "en", "Europe/Berlin")}`,
+      /due 09\/06\/2026/,
     ),
   ).toBeTruthy();
   expect(screen.queryByText("Why it is here")).toBeNull();

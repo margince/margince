@@ -45,7 +45,6 @@ export const vi = {
   "brief.team.week": "Xem tuần bắt đầu",
   "brief.week.movedLabel": "Thay đổi giai đoạn",
   "brief.week.lostLabel": "Đã mất",
-  "brief.week.outcomes": "Kết quả giao dịch",
   "brief.feed.refreshFailed":
     "Không thể làm mới bản tin. Vẫn hiển thị công việc đã tải lần trước.",
   "brief.feed.remainingUrgent": "Chưa tải {count} mục khẩn cấp.",
@@ -66,10 +65,8 @@ export const vi = {
   "brief.plan.open": "Mở kế hoạch tuần",
   "worklist.source.weekly_commitment": "Cam kết trong tuần",
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
-  "brief.plan.addWork": "Thêm công việc hiện có vào tuần này",
   "brief.plan.select":
     "Tìm giao dịch, khách hàng tiềm năng, liên hệ, công ty hoặc dự án",
-  "brief.plan.link": "Hồ sơ liên quan",
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
   "brief.forecast.period":
     "Kỳ dự báo: {start} – {end}. Được lưu cùng tổng kết tuần này.",
@@ -101,9 +98,6 @@ export const vi = {
   "brief.week.lost": "Mất {count} giao dịch.",
   "brief.row.details": "Chi tiết",
   "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
-  "brief.feed.moreAvailable": "Tiếp tục trong danh sách công việc",
-  "brief.feed.countsPartial":
-    "Ít nhất {items} việc đang chờ · {urgent} việc khẩn cấp",
   "brief.readings.openPriorities": "Xem tất cả ưu tiên",
   "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
   "teamweekly.headline.partial":
@@ -2840,7 +2834,6 @@ export const vi = {
   "offer.viewPdf": "Xem PDF",
   "offer.pdfUnavailable": "Bản triển khai này không tạo được PDF.",
 
-  "decision.viaTool": "qua {verb}",
   "decision.approveEdited": "Duyệt bản đã sửa",
   "decision.reject": "Từ chối",
   "decision.draftSubject": "Tiêu đề",
@@ -2917,10 +2910,7 @@ export const vi = {
   // không do mô hình viết.
   "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
   "brief.sentence.one": "Trước tiên: {lead}",
-  "brief.sentence.oneWithCost": "Trước tiên: {lead} — {consequence}",
-  "brief.sentence.many": "Trước tiên: {lead} Rồi {rest}.",
-  "brief.sentence.manyWithCost":
-    "Trước tiên: {lead} — {consequence} Rồi {rest}.",
+  "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
 
   // Câu mở đầu của Bản tin tuần, dựng từ các con số đã đóng băng.
@@ -2934,21 +2924,10 @@ export const vi = {
     "Chưa ghi nhận công việc hoàn thành hoặc thay đổi giao dịch.",
 
   "brief.feed.title": "Hôm nay",
-  "brief.feed.counts": "{items} đang chờ · {urgent} gấp",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang đọc buổi sáng của bạn",
   "brief.feed.clear": "Không có công việc cần xử lý trong chế độ xem này.",
-  "brief.feed.rest_one": "1 mục khác trong danh sách công việc",
-  "brief.feed.rest_other": "{count} mục khác trong danh sách công việc",
-  "brief.feed.section.respond_now": "Trả lời ngay",
-  "brief.feed.section.prepare_conversations": "Chuẩn bị cho các cuộc trao đổi",
-  "brief.feed.section.move_revenue": "Thúc đẩy doanh thu",
-  "brief.feed.section.build_pipeline": "Xây dựng pipeline",
-  "brief.feed.section.review_and_repair": "Xem xét và khắc phục",
-
-  // Tuần của một nhóm, đóng băng khi tuần khép lại. Hai tuần so sánh được vì
-  // không tuần nào dịch chuyển dưới phép so sánh.
   "teamweekly.title": "Tuần của nhóm",
   "teamweekly.weekOf": "{team} · tuần từ {day}",
   "teamweekly.frozen": "Đã đóng băng",
@@ -2964,12 +2943,6 @@ export const vi = {
     "Thiếu bản tổng kết của {count} thành viên. Các số liệu này bao gồm {counted} thành viên.",
   "teamweekly.ofTotal": "{part} trên {whole}",
   "teamweekly.headline.plain": "Chưa ghi nhận cuộc họp hoặc cam kết đến hạn.",
-  "teamweekly.headline.healthy":
-    "{reading} ở mức tốt là {pct}%, so với ngưỡng {bar}%.",
-  "teamweekly.headline.weak":
-    "{reading} thì không, ở {pct}% so với ngưỡng {bar}%.",
-  "teamweekly.reading.nextStep": "Cuộc họp có bước tiếp theo",
-  "teamweekly.reading.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.firstResponse": "Phản hồi đã ghi nhận",
   "teamweekly.card.firstResponseBasis":
     "{breached} lần vượt thời hạn phản hồi được ghi nhận",
@@ -3093,8 +3066,6 @@ export const vi = {
   "brief.weekly.dealsMoved": "Đã chuyển",
   "brief.weekly.decided": "Bạn đã quyết",
   "brief.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
-  "brief.weekly.noNarrative":
-    "Không có tóm tắt tuần này — Margince chưa chạy lượt nào. Các số liệu bên dưới vẫn là của tuần đó.",
   "brief.weekly.queueWorked": "Danh sách buổi sáng",
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "brief.weekly.sincePrior": "{delta} so với tuần trước",
@@ -3169,7 +3140,6 @@ export const vi = {
   "brief.readings.decisionsBasis": "đề xuất và kiểm tra hồ sơ",
   "brief.readings.decisionsBlocking_one": "1 đang chặn việc với khách",
   "brief.readings.decisionsBlocking_other": "{count} đang chặn việc với khách",
-  "brief.readings.pipelineNoRead": "Không đọc được",
   "brief.snooze.done": "Đã tạm gác đến {at}",
   "brief.snooze.undo": "Hoàn tác",
   "brief.readings.meetings": "Cuộc họp sắp tới",
@@ -4096,8 +4066,6 @@ export const vi = {
   "settings.signatureEdit": "Sửa chữ ký",
   "settings.signatureNone": "Chưa đặt lời kết",
   "settings.signatureCancel": "Hủy",
-  "brief.coverage.line": "Có thể còn công việc: {sources}",
-  "brief.coverage.bounded": "{source}: đã tải {shown}; có thể còn mục khác",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
     "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",

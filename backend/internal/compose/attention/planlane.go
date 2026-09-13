@@ -10,6 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,11 +57,11 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 			Consequence: "promise_breaks", Because: []crmcontracts.WorklistReason{},
 			Actions: []crmcontracts.WorklistItemActions{},
 		}
-		if due.Before(now) {
+		if deadline.Passed(&due, now) {
 			row.Level = levelPromise
 		}
 		stampDeadline(&row, &due, now)
-		copy.planRows = append(copy.planRows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: due.Before(now), occurredAt: now})
+		copy.planRows = append(copy.planRows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})
 	}
 	return &copy, nil
 }

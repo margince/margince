@@ -36,7 +36,6 @@ export const de = {
   "brief.team.week": "Woche ab prüfen",
   "brief.week.movedLabel": "Phasenwechsel",
   "brief.week.lostLabel": "Verloren",
-  "brief.week.outcomes": "Deal-Ergebnisse",
   "brief.feed.refreshFailed":
     "Der Brief konnte nicht aktualisiert werden. Die zuletzt geladene Arbeit wird weiterhin angezeigt.",
   "brief.feed.remainingUrgent":
@@ -59,9 +58,7 @@ export const de = {
   "brief.plan.open": "Wochenplan öffnen",
   "worklist.source.weekly_commitment": "Wochenzusage",
   "worklist.untitled.weekly_commitment": "Wochenzusage",
-  "brief.plan.addWork": "Bestehende Arbeit für diese Woche einplanen",
   "brief.plan.select": "Deal, Lead, Kontakt, Firma oder Projekt suchen",
-  "brief.plan.link": "Zugehöriger Datensatz",
   "brief.plan.period": "Aktueller Plan · Woche ab {date}",
   "brief.forecast.period":
     "Prognosezeitraum: {start} – {end}. Mit diesem Wochenrückblick gespeichert.",
@@ -93,8 +90,6 @@ export const de = {
   "brief.week.lost": "{count} Deals verloren.",
   "brief.row.details": "Details",
   "brief.glance.introTeam": "Das steht heute im Team an.",
-  "brief.feed.moreAvailable": "Weiter zur Aufgabenliste",
-  "brief.feed.countsPartial": "Mindestens {items} offen · {urgent} dringend",
   "brief.readings.openPriorities": "Alle Prioritäten ansehen",
   "teamweekly.focus.deals_at_risk": "Deals wieder voranbringen",
   "teamweekly.headline.partial":
@@ -2869,7 +2864,6 @@ export const de = {
   "offer.pdfUnavailable":
     "PDF-Erzeugung auf diesem Deployment nicht verfügbar.",
 
-  "decision.viaTool": "über {verb}",
   "decision.approveEdited": "Bearbeitet übernehmen",
   "decision.reject": "Ablehnen",
   "decision.draftSubject": "Betreff",
@@ -2947,10 +2941,7 @@ export const de = {
   // Seite zeigt — nie von einem Modell geschrieben.
   "brief.sentence.clear": "Heute Morgen wartet nichts auf dich.",
   "brief.sentence.one": "Zuerst: {lead}",
-  "brief.sentence.oneWithCost": "Zuerst: {lead} — {consequence}",
-  "brief.sentence.many": "Zuerst: {lead} Danach {rest}.",
-  "brief.sentence.manyWithCost":
-    "Zuerst: {lead} — {consequence} Danach {rest}.",
+  "brief.sentence.many": "Zuerst: {lead}. Danach {rest}.",
   "brief.sentence.rest": "{count} weitere",
 
   // Der Einstiegssatz des Wochen-Briefs, aus den eingefrorenen Zahlen gebaut.
@@ -2963,21 +2954,10 @@ export const de = {
   "brief.week.quiet": "Keine erledigte Arbeit oder Deal-Bewegung erfasst.",
 
   "brief.feed.title": "Heute",
-  "brief.feed.counts": "{items} offen · {urgent} dringend",
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Dein Morgen wird gelesen",
   "brief.feed.clear": "In dieser Ansicht steht keine Arbeit an.",
-  "brief.feed.rest_one": "1 weiterer Eintrag in der Arbeitsliste",
-  "brief.feed.rest_other": "{count} weitere in der Arbeitsliste",
-  "brief.feed.section.respond_now": "Jetzt antworten",
-  "brief.feed.section.prepare_conversations": "Gespräche vorbereiten",
-  "brief.feed.section.move_revenue": "Umsatz bewegen",
-  "brief.feed.section.build_pipeline": "Pipeline aufbauen",
-  "brief.feed.section.review_and_repair": "Prüfen und reparieren",
-
-  // Die Woche eines Teams, eingefroren beim Abschluss. Zwei Wochen sind
-  // vergleichbar, weil keine sich unter dem Vergleich bewegt.
   "teamweekly.title": "Die Woche des Teams",
   "teamweekly.weekOf": "{team} · Woche ab {day}",
   "teamweekly.frozen": "Eingefroren",
@@ -2993,12 +2973,6 @@ export const de = {
     "Für {count} Teammitglieder fehlen Wochenaufnahmen. Diese Zahlen umfassen {counted} Mitglieder.",
   "teamweekly.ofTotal": "{part} von {whole}",
   "teamweekly.headline.plain": "Keine Termine oder fälligen Zusagen erfasst.",
-  "teamweekly.headline.healthy":
-    "{reading} ist gesund bei {pct}%, gemessen an einer Schwelle von {bar}%.",
-  "teamweekly.headline.weak":
-    "{reading} ist es nicht, bei {pct}% gegen eine Schwelle von {bar}%.",
-  "teamweekly.reading.nextStep": "Termine mit nächstem Schritt",
-  "teamweekly.reading.commitments": "Planzusagen eingehalten",
   "teamweekly.card.firstResponse": "Erfasste Antworten",
   "teamweekly.card.firstResponseBasis":
     "{breached} erfasste Überschreitungen der Antwortzeit",
@@ -3128,8 +3102,6 @@ export const de = {
   "brief.weekly.dealsMoved": "Bewegt",
   "brief.weekly.decided": "Von dir entschieden",
   "brief.weekly.acceptedRejected": "{accepted} ja · {rejected} nein",
-  "brief.weekly.noNarrative":
-    "Keine Zusammenfassung dieser Woche — Margince hat keinen Durchgang gemacht. Die Zahlen unten sind trotzdem die der Woche.",
   "brief.weekly.queueWorked": "Morgen-Liste",
   "brief.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
   "brief.weekly.sincePrior": "{delta} ggü. Vorwoche",
@@ -3204,7 +3176,6 @@ export const de = {
   "brief.readings.decisionsBasis": "Vorschläge und Datenprüfungen",
   "brief.readings.decisionsBlocking_one": "1 hält Kundenarbeit auf",
   "brief.readings.decisionsBlocking_other": "{count} halten Kundenarbeit auf",
-  "brief.readings.pipelineNoRead": "Nicht lesbar",
   "brief.snooze.done": "Zurückgestellt bis {at}",
   "brief.snooze.undo": "Rückgängig",
   "brief.readings.meetings": "Anstehende Termine",
@@ -4146,9 +4117,6 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
-  "brief.coverage.line": "Möglicherweise weitere Arbeit: {sources}",
-  "brief.coverage.bounded":
-    "{source}: {shown} geladen; weitere Einträge möglich",
   "delivery.morningLabel": "Ihr Tagesbriefing",
   "delivery.morningHelp":
     "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",

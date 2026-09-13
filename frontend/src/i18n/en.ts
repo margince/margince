@@ -32,7 +32,6 @@ export const en = {
   "brief.team.week": "Review week starting",
   "brief.week.movedLabel": "Stage changes",
   "brief.week.lostLabel": "Lost",
-  "brief.week.outcomes": "Deal outcomes",
   "brief.feed.refreshFailed":
     "The brief could not refresh. The last loaded work is still shown.",
   "brief.feed.remainingUrgent": "{count} urgent items are not loaded yet.",
@@ -53,9 +52,7 @@ export const en = {
   "brief.plan.open": "Open weekly plan",
   "worklist.source.weekly_commitment": "Weekly commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
-  "brief.plan.addWork": "Add existing work to this week",
   "brief.plan.select": "Find a deal, lead, contact, company or project",
-  "brief.plan.link": "Related record",
   "brief.plan.period": "Current plan · week of {date}",
   "brief.forecast.period":
     "Forecast period: {start} – {end}. Saved with this weekly review.",
@@ -86,8 +83,6 @@ export const en = {
   "brief.week.lost": "{count} deals lost.",
   "brief.row.details": "Details",
   "brief.glance.introTeam": "Here is your team’s day.",
-  "brief.feed.moreAvailable": "Continue on the worklist",
-  "brief.feed.countsPartial": "At least {items} waiting · {urgent} urgent",
   "brief.readings.openPriorities": "View all priorities",
   "teamweekly.focus.deals_at_risk": "Deal recovery",
   "teamweekly.headline.partial":
@@ -2946,7 +2941,6 @@ export const en = {
   // reader told four names for one surface has been told none. Copy that has to
   // point at it says what the reader does there ("waiting on you", "wait for
   // your decision") rather than inventing a fifth noun for the place.
-  "decision.viaTool": "via {verb}",
   "decision.approveEdited": "Approve edited",
   "decision.reject": "Reject",
   "decision.draftSubject": "Subject",
@@ -3038,12 +3032,7 @@ export const en = {
   // never model-written, so it cannot say what the rows contradict.
   "brief.sentence.clear": "Nothing is waiting on you this morning.",
   "brief.sentence.one": "First: {lead}",
-  "brief.sentence.oneWithCost": "First: {lead} — {consequence}",
-  "brief.sentence.many": "First: {lead} Then {rest}.",
-  "brief.sentence.manyWithCost": "First: {lead} — {consequence} Then {rest}.",
-  // The tail of the sentence, which is a LINK to the day's own order: the
-  // whole clause is the control, because a bare numeral is a two-character
-  // press target and reads as a figure rather than as a way anywhere.
+  "brief.sentence.many": "First: {lead}. Then {rest}.",
   "brief.sentence.rest": "{count} more",
 
   // The weekly Brief's opening sentence, composed from the counts the week was
@@ -3058,24 +3047,10 @@ export const en = {
 
   "brief.feed.title": "Today",
   // What is on screen out of what the day holds, on the panel's own line.
-  "brief.feed.counts": "{items} waiting · {urgent} urgent",
-  // What has MOVED since the brief was written, as a badge beside the title
-  // and a link to exactly those rows. It replaced a titled notice above the
-  // readings that named three rows the feed draws in full directly below it.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Reading your morning",
   "brief.feed.clear": "No work needs attention in this view.",
-  "brief.feed.rest_one": "1 more on the worklist",
-  "brief.feed.rest_other": "{count} more on the worklist",
-  "brief.feed.section.respond_now": "Respond now",
-  "brief.feed.section.prepare_conversations": "Prepare conversations",
-  "brief.feed.section.move_revenue": "Move revenue",
-  "brief.feed.section.build_pipeline": "Build pipeline",
-  "brief.feed.section.review_and_repair": "Review and repair",
-
-  // A team's week, frozen when it closed. Two weeks compare because neither
-  // moves under the comparison.
   "teamweekly.title": "The team's week",
   "teamweekly.weekOf": "{team} · week of {day}",
   "teamweekly.frozen": "Frozen",
@@ -3091,12 +3066,6 @@ export const en = {
     "Snapshots are missing for {count} team members. These figures cover {counted} members.",
   "teamweekly.ofTotal": "{part} of {whole}",
   "teamweekly.headline.plain": "No meetings or due commitments were recorded.",
-  "teamweekly.headline.healthy":
-    "{reading} is healthy at {pct}%, against a bar of {bar}%.",
-  "teamweekly.headline.weak":
-    "{reading} is not, at {pct}% against a bar of {bar}%.",
-  "teamweekly.reading.nextStep": "Meetings with a next step",
-  "teamweekly.reading.commitments": "Plan commitments kept",
   "teamweekly.card.firstResponse": "Recorded responses",
   "teamweekly.card.firstResponseBasis":
     "{breached} recorded response-target breaches",
@@ -3224,8 +3193,6 @@ export const en = {
   "brief.weekly.dealsMoved": "Moved",
   "brief.weekly.decided": "You decided",
   "brief.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
-  "brief.weekly.noNarrative":
-    "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
   "brief.weekly.queueWorked": "Morning queue",
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "brief.weekly.sincePrior": "{delta} vs last week",
@@ -3321,7 +3288,6 @@ export const en = {
   // The cell's hover line. The title has room for a quarter and nothing more,
   // so the full range lives here — and where the figure is the whole
   // company's rather than this reader's, whose pipeline it is.
-  "brief.readings.pipelineNoRead": "Could not be read",
   "brief.snooze.done": "Set aside until {at}",
   "brief.snooze.undo": "Undo",
   "brief.readings.meetings": "Upcoming meetings",
@@ -4275,14 +4241,6 @@ export const en = {
   "settings.signatureNone": "No sign-off set",
   "settings.signatureCancel": "Cancel",
   // One line under the readings strip, naming what the day could not read.
-  "brief.coverage.line": "More work may be available: {sources}",
-  // What the page HAS of a bounded source, and that more exists. Never a
-  // shortfall between two figures: `considered` is itself a floor where a
-  // source was bounded, so naming both read "8 shown of at least 8 read" —
-  // a sentence that claims something is held back and then accounts for all
-  // of it.
-  "brief.coverage.bounded":
-    "{source}: {shown} loaded; additional items may be available",
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
     "Whether the day's brief also arrives by email. It is on your Brief page either way.",

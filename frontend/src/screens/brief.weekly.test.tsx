@@ -422,7 +422,7 @@ describe("BriefScreen — the week's sentence", () => {
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
     await screen.findByText(en["brief.weekly.dealsWon"]);
-    expect(screen.queryByText(en["brief.weekly.noNarrative"])).toBeNull();
+    expect(screen.queryByTestId("weekly-narrative")).toBeNull();
     // The mirror of the tinted case: no model wrote anything here, so nothing
     // wears the mark that says one did.
     expect(weeklySection().querySelector(".panel-ai")).toBeNull();
@@ -448,7 +448,7 @@ describe("BriefScreen — the week's sentence", () => {
     await screen.findByText(en["brief.weekly.tasksDelivered"]);
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
-    expect(screen.queryByText(en["brief.weekly.noNarrative"])).toBeNull();
+    expect(screen.queryByTestId("weekly-narrative")).toBeNull();
   });
 });
 

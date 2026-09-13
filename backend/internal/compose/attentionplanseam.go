@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -62,7 +63,7 @@ func (s attentionWeeklyPlan) DuePlan(ctx context.Context, owner ids.UUID, now ti
 		due := time.Date(date.Year(), date.Month(), date.Day(), 23, 59, 59, 0, location)
 		localNow := now.In(due.Location())
 		tomorrow := time.Date(localNow.Year(), localNow.Month(), localNow.Day()+1, 0, 0, 0, 0, due.Location())
-		if !due.Before(tomorrow) {
+		if !deadline.Passed(&due, tomorrow) {
 			continue
 		}
 		row := attention.PlanWork{ID: commitment.ID, OwnerID: plan.OwnerID, Label: commitment.Label, DueAt: due}

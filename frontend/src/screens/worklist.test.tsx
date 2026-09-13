@@ -609,11 +609,13 @@ describe("what the ranked queue tells a reader", () => {
       expect(container.querySelector(".worklist-row-decision")).toBeTruthy();
     });
     // Not answerable until the reader asks: the queue draws no Accept.
-    expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve email" })).toBeNull();
     await userEvent.click(
       await screen.findByRole("button", { name: "Decide" }),
     );
-    expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Approve email" }),
+    ).toBeTruthy();
   });
 
   it("names the source it could not read rather than counting it", async () => {
@@ -624,9 +626,7 @@ describe("what the ranked queue tells a reader", () => {
     );
     renderWorklist();
 
-    expect(
-      await screen.findByText(/mailbox connection needs attention/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Mailbox connections/i)).toBeTruthy();
   });
 
   it("writes the day's figures in the reader's own notation", async () => {

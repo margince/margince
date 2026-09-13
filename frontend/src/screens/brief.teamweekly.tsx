@@ -11,6 +11,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
@@ -334,6 +335,7 @@ export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
   const [params, setParams] = useUrlParams();
   const t = useT();
   const week = params.get("week") ?? "";
+  const zone = useRecordZone();
   if (!offered) return null;
   return (
     <>
@@ -343,9 +345,12 @@ export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
         onChange={(event) => {
           const next = new Map(params);
           if (isISODate(event.target.value)) {
-            const day = new Date(`${event.target.value}T12:00:00Z`);
-            day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
-            next.set("week", day.toISOString().slice(0, 10));
+            const day = new Date(middayInstant(event.target.value, zone));
+            const weekday = new Date(
+              `${event.target.value}T12:00:00Z`,
+            ).getUTCDay();
+            day.setUTCDate(day.getUTCDate() - ((weekday + 6) % 7));
+            next.set("week", calendarDay(day, zone));
           } else next.delete("week");
           setParams(next);
         }}

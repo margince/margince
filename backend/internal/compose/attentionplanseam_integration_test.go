@@ -6,11 +6,16 @@
 package compose
 
 import (
-	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/weeklyplan"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/weeklyplan"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestPlanAgendaUsesStoredDatesAndCompletion(t *testing.T) {
@@ -81,5 +86,49 @@ func TestNamedTeamRosterDoesNotIncludeAnotherTeam(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("selected team's member was omitted")
+	}
+}
+
+func TestNamedTeamRosterRequiresTheCallersLiveTeamScope(t *testing.T) {
+	e := integration.Setup(t)
+	seam := newTeammatesSeam(e.Pool)
+	team := integration.RepPerms
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, team)
+	if members, _, err := seam.LiveMembersOfTeam(ctx, e.Team1); err != nil || len(members) == 0 {
+		t.Fatalf("own live team: %d members, %v", len(members), err)
+	}
+	if _, _, err := seam.LiveMembersOfTeam(ctx, e.Team2); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("other team: %v", err)
+	}
+	own := team
+	own.RowScope = principal.RowScopeOwn
+	if _, _, err := seam.LiveMembersOfTeam(e.As(e.Rep1, []ids.UUID{e.Team1}, own), e.Team1); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("own-only scope: %v", err)
+	}
+}
+
+func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	zone := "America/New_York"
+	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
+		t.Fatal(err)
+	}
+	store := weeklyPlanStore(e.Pool)
+	now := time.Date(2026, 3, 8, 6, 30, 0, 0, time.UTC)
+	if _, err := store.StartWeek(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	date := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)
+	if _, err := store.AddCommitment(ctx, now, weeklyplan.NewCommitment{Label: "Confirm the next step", DueOn: &date}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := (attentionWeeklyPlan{store: store, pool: e.Pool}).DuePlan(ctx, ids.UUID{}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := time.Date(2026, 3, 9, 3, 59, 59, 0, time.UTC)
+	if len(rows) != 1 || !rows[0].DueAt.Equal(expected) {
+		t.Fatalf("DST local end of day: %+v; expected %v", rows, expected)
 	}
 }
