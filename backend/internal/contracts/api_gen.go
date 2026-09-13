@@ -20249,7 +20249,7 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
-	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
 
 	// OccurredAt When a done_for_you receipt actually happened.
@@ -31769,7 +31769,7 @@ type NoticeCaseState string
 // deliberately absent — a contact may not raise a notice that looks like the system spoke.
 type NoticeKind string
 
-// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 type NoticeOrigin struct {
 	// ActorId Original typed principal identifier, such as human:<user UUID> or system:<process>.
 	ActorId        string              `json:"actor_id"`
@@ -31779,6 +31779,12 @@ type NoticeOrigin struct {
 	OccurredAt     time.Time           `json:"occurred_at"`
 	OnBehalfOf     *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 	OnBehalfOfName *string             `json:"on_behalf_of_name,omitempty"`
+
+	// StageChange Stage names at the time of the move. Missing names remain unknown; the current deal stage is never substituted.
+	StageChange *struct {
+		FromName *string `json:"from_name,omitempty"`
+		ToName   *string `json:"to_name,omitempty"`
+	} `json:"stage_change,omitempty"`
 }
 
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
@@ -39406,7 +39412,7 @@ type WorklistItem struct {
 	// for it.
 	Move *WorklistMove `json:"move,omitempty"`
 
-	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
 	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
 
 	// OccurredAt When the thing being reported happened.

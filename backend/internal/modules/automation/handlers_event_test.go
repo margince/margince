@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -127,7 +129,7 @@ func TestStageChangeNotifyMatchFiresOnEveryStageMove(t *testing.T) {
 func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	owner := ids.NewV7()
 	dealID := ids.NewV7()
-	fields, err := json.Marshal(dealOwnerFields{OwnerID: &owner})
+	fields, err := json.Marshal(dealOwnerFields{OwnerID: &owner, Name: "Fleet renewal"})
 	if err != nil {
 		t.Fatalf("marshal fixture fields: %v", err)
 	}
@@ -136,7 +138,7 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 		Fields: fields,
 	}}
 	w := stageChangeNotify{ex: Executors{Provider: provider}}
-	ev := workflow.Event{Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
+	ev := workflow.Event{ID: ids.NewV7(), Actor: events.Actor{Type: "human", ID: "human:" + owner.String()}, OccurredAt: time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC), Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
 
 	eff, err := w.Plan(context.Background(), ev)
 	if err != nil {
@@ -159,10 +161,10 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	if args.Recipient != owner {
 		t.Errorf("notify recipient = %v, want the deal's real owner %v", args.Recipient, owner)
 	}
-	if args.Body != "Stage changed: Discovery → Proposal." {
+	if args.Body != "Discovery → Proposal" {
 		t.Fatalf("the notice must name the recorded transition: %s", args.Body)
 	}
-	if args.Subject == "" || args.Body == "" {
+	if args.Subject != "Fleet renewal" || args.Origin == nil || args.Origin.StageChange == nil || *args.Origin.StageChange.FromName != "Discovery" || *args.Origin.StageChange.ToName != "Proposal" {
 		t.Error("notify subject/body is empty — a human reading the inbox needs to know why they were notified")
 	}
 }

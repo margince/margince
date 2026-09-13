@@ -33810,8 +33810,13 @@ export interface components {
             /** @description How many introduction asks the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the ones lapsing soonest, which is the order this lane pages in. */
             introductions?: number;
         };
-        /** @description The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded. */
+        /** @description The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link. */
         NoticeOrigin: {
+            /** @description Stage names at the time of the move. Missing names remain unknown; the current deal stage is never substituted. */
+            stage_change?: {
+                from_name?: string;
+                to_name?: string;
+            };
             /** Format: uuid */
             event_id: string;
             actor_type: string;

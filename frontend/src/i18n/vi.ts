@@ -28,9 +28,9 @@ export const vi = {
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
   "home.receipt.forecast": "Đã thay đổi nhóm dự báo",
   "home.task.yours": "Bạn cần: {action}",
-  "home.change.unknown":
-    "Thông báo cũ này không ghi lại người thực hiện thay đổi.",
-  "home.change.unidentified": "tác nhân chưa xác định",
+  "home.change.unknown": "Chưa rõ ai đã thực hiện thay đổi này.",
+  "home.change.stageUnknown": "Giai đoạn không rõ",
+  "home.change.unidentified": "Không rõ",
   "home.change.by": "Người thực hiện: {actor}",
   "brief.focus.context": "Mở ngữ cảnh",
   "brief.focus.back": "Quay lại ưu tiên",

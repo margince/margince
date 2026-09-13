@@ -13,12 +13,20 @@ afterEach(() => {
 it("keeps the summary visible and puts informational updates after the priorities", async () => {
   const task = taskRow("task-one", "Send the promised comparison");
   const notice = {
-    ...taskRow("notice-one", "Northstar changed stage"),
+    ...taskRow("notice-one", "Northstar"),
     source: "notice" as const,
     category: "system" as const,
     level: 6,
     urgent: false,
-    detail: "Northstar moved to a new pipeline stage.",
+    detail: "Obsolete delivery text",
+    notice_origin: {
+      event_id: "stage-event",
+      actor_type: "human",
+      actor_id: "human:colleague",
+      actor_name: "Dana Weiss",
+      occurred_at: "2026-09-07T10:00:00Z",
+      stage_change: { from_name: "Qualified", to_name: "Won" },
+    },
     actions: ["acknowledge" as const],
   };
   stubApi({
@@ -36,11 +44,15 @@ it("keeps the summary visible and puts informational updates after the prioritie
   expect(summary.closest("details")).toBeNull();
   expect(summary.closest(".brief-overview")).toBeTruthy();
   expect(container.querySelector("#brief-today")?.textContent).not.toContain(
-    "Northstar changed stage",
+    "Northstar",
   );
   expect(
     container.querySelector(".brief-followthrough")?.textContent,
-  ).toContain("Northstar changed stage");
+  ).toContain("Northstar");
+  expect(container.textContent).toContain(
+    "Qualified → Won · Changed by: Dana Weiss",
+  );
+  expect(container.textContent).not.toContain("Obsolete delivery text");
   expect(container.textContent).toContain("Agenda updated");
   expect(container.textContent).not.toContain("Some work may be missing");
 });

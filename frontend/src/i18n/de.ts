@@ -20,8 +20,9 @@ export const de = {
   "home.receipt.forecast": "Prognosekategorie geändert",
   "home.task.yours": "Deine Aufgabe: {action}",
   "home.change.unknown":
-    "Für diese ältere Benachrichtigung wurde nicht gespeichert, wer die Änderung vorgenommen hat.",
-  "home.change.unidentified": "ein unbekannter Akteur",
+    "Wir wissen nicht, wer diese Änderung vorgenommen hat.",
+  "home.change.stageUnknown": "Unbekannte Phase",
+  "home.change.unidentified": "Unbekannt",
   "home.change.by": "Verantwortlich: {actor}",
   "brief.focus.context": "Kontext öffnen",
   "brief.focus.back": "Zurück zum Fokus",

@@ -30,8 +30,16 @@ function noticeItem(): WorklistItem {
     category: "tasks",
     level: 4,
     consequence: "task_slips",
-    title: "A deal you own changed stage",
-    detail: "Acme Renewal moved to a new pipeline stage.",
+    title: "Acme Renewal",
+    detail: "Qualified → Won",
+    notice_origin: {
+      event_id: "01a079ad-04cc-7328-b9e6-6598af8648f7",
+      actor_type: "human",
+      actor_id: "human:rep",
+      actor_name: "Dana Weiss",
+      occurred_at: "2026-09-07T10:00:00Z",
+      stage_change: { from_name: "Qualified", to_name: "Won" },
+    },
     because: [],
     actions: ["acknowledge"],
   };
