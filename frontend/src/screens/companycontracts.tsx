@@ -26,6 +26,7 @@ import {
   isTerminalContractStatus,
 } from "./contractlifecycle";
 import { useContractPaper } from "./contractpaper";
+import { ContractTerm, ContractTerms } from "./contractterms";
 import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -313,6 +314,7 @@ function ContractRow({
           )}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
+          <ContractTerms contract={contract} />
           {/* A bare EntityRef here would read as a company name or a contact —
               the other siblings on this line are all self-identifying by
               format (a mono number, a date range, a state pill), and a deal's
@@ -559,25 +561,4 @@ export function basisLabel(contract: Contract): MessageKey | "" {
   return contract.value_basis === "annualized_12m"
     ? "contracts.value.perYear"
     : "contracts.value.total";
-}
-
-// The term as the two dates that bound it. Absent dates say so in words: a
-// blank column reads as "not loaded", and an agreement whose term nobody
-// recorded is a real and common state — it is entered from an invoice as
-// often as from the paper.
-function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const on = (date: string) => formatDate(date, locale, recordZone);
-  if (!contract.starts_on && !contract.ends_on) {
-    return <span className="t-caption">{t("contracts.noTerm")}</span>;
-  }
-  return (
-    <span className="rec-term-dates">
-      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
-      {" – "}
-      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
-    </span>
-  );
 }
