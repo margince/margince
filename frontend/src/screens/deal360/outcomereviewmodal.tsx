@@ -21,6 +21,7 @@ export function OutcomeReviewModal({
   dealId,
   closingOccurrenceId,
   template,
+  prefill,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -31,6 +32,13 @@ export function OutcomeReviewModal({
   // filed against the wrong outcome.
   closingOccurrenceId: string;
   template: ReviewTemplate;
+  // Answers already written elsewhere, keyed by question key. The close dialog
+  // asks for a reason before it will close a deal, and that reason answers the
+  // review's own first question in different words — so it arrives here as a
+  // starting point rather than being typed twice. Seeded on the OPENING edge
+  // like every other value in this form, and fully editable afterwards: it is
+  // a draft of the answer, not the answer.
+  prefill?: Readonly<Record<string, string>>;
 }>) {
   const t = useT();
   const headingId = useId();
@@ -69,9 +77,16 @@ export function OutcomeReviewModal({
   // questions were about a closing that is no longer the one in play.
   const [draftClosing, setDraftClosing] = useState(closingOccurrenceId);
 
+  // The prefill as it is RIGHT NOW, readable from the effect WITHOUT the
+  // effect depending on it. Depending on the object would re-seed the form
+  // under a reader mid-edit every time the caller re-rendered, because an
+  // object literal is a new identity each time.
+  const prefillRef = useRef(prefill);
+  prefillRef.current = prefill;
+
   useEffect(() => {
     if (open) {
-      setAnswers({});
+      setAnswers({ ...prefillRef.current });
       setBody("");
       setSubmissionId(crypto.randomUUID());
       setDraftClosing(closingOccurrenceId);
