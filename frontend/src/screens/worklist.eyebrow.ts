@@ -23,6 +23,7 @@ const BRIEF_SIGNALS = [
  * no translation, which would render the key itself.
  */
 export function eyebrowKeyFor(item: WorklistItem): MessageKey {
+  if (item.source === "notice") return "brief.updates.title";
   if (item.source === "weekly_commitment")
     return "worklist.source.weekly_commitment";
   if (item.source === "brief_item" && item.kind) {
@@ -31,6 +32,7 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
       return `worklist.signal.${signal}` as MessageKey;
     }
   }
+  if (item.source === "brief_item") return "search.kind.deal";
   return `worklist.category.${item.category}` as MessageKey;
 }
 

@@ -1024,6 +1024,24 @@ func (e AnalyticsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for AppliedDealChangeReviewKind.
+const (
+	AppliedDealChangeReviewKindCloseDate AppliedDealChangeReviewKind = "close_date"
+	AppliedDealChangeReviewKindStage     AppliedDealChangeReviewKind = "stage"
+)
+
+// Valid indicates whether the value is a known member of the AppliedDealChangeReviewKind enum.
+func (e AppliedDealChangeReviewKind) Valid() bool {
+	switch e {
+	case AppliedDealChangeReviewKindCloseDate:
+		return true
+	case AppliedDealChangeReviewKindStage:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyTagRequestEntityType.
 const (
 	ApplyTagRequestEntityTypeCompany ApplyTagRequestEntityType = "company"
@@ -19201,6 +19219,22 @@ type AnnotateBriefRequest struct {
 	Narrative *string `json:"narrative,omitempty"`
 }
 
+// AppliedDealChangeReview The recorded automatic change and its current review state.
+type AppliedDealChangeReview struct {
+	Accepted  bool                        `json:"accepted"`
+	CanAccept bool                        `json:"can_accept"`
+	CanUndo   bool                        `json:"can_undo"`
+	Kind      AppliedDealChangeReviewKind `json:"kind"`
+	Reversed  bool                        `json:"reversed"`
+	Version   int64                       `json:"version"`
+
+	// Writable Whether this reader may write this deal.
+	Writable bool `json:"writable"`
+}
+
+// AppliedDealChangeReviewKind defines model for AppliedDealChangeReview.Kind.
+type AppliedDealChangeReviewKind string
+
 // AppliedUndo What a receipt needs to offer a way back from a change nobody was asked about.
 type AppliedUndo struct {
 	// AuditLogId The change to put back, through the record-history restore route.
@@ -33590,6 +33624,9 @@ type Receipt struct {
 	// OccurredAt When it happened.
 	OccurredAt time.Time `json:"occurred_at"`
 
+	// Review The recorded automatic change and its current review state.
+	Review *AppliedDealChangeReview `json:"review,omitempty"`
+
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
 	Subject *AttentionSubject `json:"subject,omitempty"`
 
@@ -42385,6 +42422,11 @@ type AdvanceDealParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// AcceptAppliedDealChangeParams defines parameters for AcceptAppliedDealChange.
+type AcceptAppliedDealChangeParams struct {
+	IfMatch string `json:"If-Match"`
 }
 
 // ListDealDocumentsParams defines parameters for ListDealDocuments.
@@ -56466,6 +56508,9 @@ type ServerInterface interface {
 	// Advance a deal to a new stage (audit-logged with prior + next stage).
 	// (POST /deals/{id}/advance)
 	AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id, params AdvanceDealParams)
+	// Accept a recorded automatic deal change.
+	// (POST /deals/{id}/applied-changes/{changeId}/accept)
+	AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams)
 	// Who covers this deal, and what is wrong with how it is covered.
 	// (GET /deals/{id}/coverage)
 	GetDealCoverage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -59358,6 +59403,12 @@ func (_ Unimplemented) UpdateDeal(w http.ResponseWriter, r *http.Request, id Id,
 // Advance a deal to a new stage (audit-logged with prior + next stage).
 // (POST /deals/{id}/advance)
 func (_ Unimplemented) AdvanceDeal(w http.ResponseWriter, r *http.Request, id Id, params AdvanceDealParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept a recorded automatic deal change.
+// (POST /deals/{id}/applied-changes/{changeId}/accept)
+func (_ Unimplemented) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id Id, changeId openapi_types.UUID, params AcceptAppliedDealChangeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -74744,6 +74795,77 @@ func (siw *ServerInterfaceWrapper) AdvanceDeal(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AdvanceDeal(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AcceptAppliedDealChange operation middleware
+func (siw *ServerInterfaceWrapper) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "changeId" -------------
+	var changeId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "changeId", chi.URLParam(r, "changeId"), &changeId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "changeId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AcceptAppliedDealChangeParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AcceptAppliedDealChange(w, r, id, changeId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90207,6 +90329,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deals/{id}/advance", wrapper.AdvanceDeal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/applied-changes/{changeId}/accept", wrapper.AcceptAppliedDealChange)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/coverage", wrapper.GetDealCoverage)

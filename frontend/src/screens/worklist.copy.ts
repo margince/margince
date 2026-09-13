@@ -563,9 +563,6 @@ const NAVIGABLE_MOVES = new Set([
  * control only where the operand its verb needs is present. One carrying no
  * `activity_id` names nothing to answer — schema-valid, since the field is
  * optional for the verbs that take no record, and undrawable all the same.
- *
- * `draft_email` needs none: an opening outreach is a first message to a contact,
- * and there is no earlier record for it to name.
  */
 function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
   return (
@@ -592,6 +589,9 @@ function briefHref(item: WorklistItem): string | undefined {
 }
 
 export function moveHref(item: WorklistItem): string | undefined {
+  // Older servers attached a deal move to its task too. Keep the task action
+  // consistent while client and server versions can differ.
+  if (item.source === "task") return undefined;
   const move = item.move;
   if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
@@ -665,6 +665,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   // A group names itself by what it holds and how much: "43 likely automated
   // senders" is the whole row, and a reader decides whether to open it from
   // that sentence alone.
+  if (item.source === "brief_item" && !item.title && item.subject?.label) {
+    return item.subject.label;
+  }
   if (item.batch) {
     // "200+" where the read stopped at its own bound. A floor printed as a
     // total is a wrong number rather than a bounded one, and the reader has no

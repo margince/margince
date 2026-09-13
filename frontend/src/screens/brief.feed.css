@@ -58,13 +58,31 @@
 
 /* Dates and evidence remain readable beside the action, including on a phone. */
 .brief-feed-list .worklist-row-line {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
 }
-.brief-feed-list .worklist-row-title {
-  flex-basis: 100%;
+
+.brief-feed-list .worklist-row-line > .worklist-row-title {
+  flex-wrap: wrap;
+  overflow: visible;
   white-space: normal;
 }
+
+.brief-feed-list .worklist-row-line > .worklist-row-title > a {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .brief-feed-list .worklist-row-inline {
   white-space: normal;
   overflow: visible;
+}
+
+.brief-feed-list .worklist-row-verdict,
+.brief-feed-list .worklist-row-notice {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

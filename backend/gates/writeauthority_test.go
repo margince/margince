@@ -96,6 +96,8 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/deals:readAppliedChangeReviews": "reads receipt state for the brief and for acceptance; it never mutates a deal. AcceptAppliedChange has already locked and passed EnsureWritable on the deal before using this read to reject stale or superseded changes. The public batch reader must remain available to colleagues with read-only access and reports write authority separately through WriteAuthorityClauseFor",
+
 	"internal/modules/deals:currentClosingOccurrence": "the probe that decides whether the deal's " +
 		"CLOSING MAY BE NAMED, never whether the caller may change the deal. It is read-only about " +
 		"a fact history already holds, and it writes nothing. Its callers on the write path have " +

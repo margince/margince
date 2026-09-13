@@ -83,6 +83,7 @@ func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou
 func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
 		Id:         openapi_types.UUID(receipt.ID),
+		Review:     receipt.Review,
 		Kind:       receipt.Kind,
 		Summary:    receipt.Summary,
 		OccurredAt: receipt.OccurredAt,

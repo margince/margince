@@ -14,6 +14,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -77,6 +78,10 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 	for _, correction := range corrections {
 		decided = append(decided, correctionReceipt(correction))
 	}
+	decided, err = r.withChangeReviews(ctx, decided)
+	if err != nil {
+		return nil, err
+	}
 	// Newest first across BOTH sources: merged by appending, the corrections
 	// would sit under every approval however recent, and the reader's most
 	// recent news would be the furthest down the card.
@@ -91,13 +96,18 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 
 // correctionReceipt renders one applied correction as a card.
 //
-// The summary names the deal and the reason rather than the fields: a rep reads
-// "because nobody has answered since June", and which columns moved is what the
-// Undo restores rather than what the sentence is about.
+// A changed date names both values; confidence-only changes must not claim
+// the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
-	summary := fmt.Sprintf("Corrected the close date on %q", c.DealName)
+	summary := fmt.Sprintf("Updated close-date confidence on %q", c.DealName)
+	if slices.Contains(c.Fields, "expected_close_date") {
+		summary = fmt.Sprintf("Changed the close date on %q: %s → %s", c.DealName, correctionDate(c.BeforeClose), correctionDate(c.AfterClose))
+	}
+	if slices.Contains(c.Fields, "forecast_category") {
+		summary += ". Forecast category also changed"
+	}
 	if c.Basis != "" {
-		summary = fmt.Sprintf("Corrected the close date on %q — %s", c.DealName, c.Basis)
+		summary += " — " + c.Basis
 	}
 	return attention.Receipt{
 		ID:         c.AuditLogID,
@@ -167,4 +177,38 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		out = append(out, receipt)
 	}
 	return out
+}
+
+func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []attention.Receipt) ([]attention.Receipt, error) {
+	keys := make([]deals.AppliedChangeKey, 0, len(receipts))
+	for _, receipt := range receipts {
+		if receipt.TargetType == approvalTargetDeal && (receipt.Kind == deals.StageProgressionKind || receipt.Undo != nil) {
+			keys = append(keys, deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipt.TargetID), ChangeID: receipt.ID})
+		}
+	}
+	if len(keys) == 0 {
+		return receipts, nil
+	}
+	reviews, err := r.deals.AppliedChangeReviews(ctx, keys)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, err
+	}
+	for i := range receipts {
+		key := deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipts[i].TargetID), ChangeID: receipts[i].ID}
+		if review, ok := reviews[key]; ok {
+			receipts[i].Review = &review
+		} else if receipts[i].TargetType == approvalTargetDeal {
+			// The approval reader already authorized the receipt. A missing review
+			// cannot erase that history or offer a restore against unverified state.
+			receipts[i].Undo = nil
+		}
+	}
+	return receipts, nil
+}
+
+func correctionDate(value *string) string {
+	if value == nil {
+		return "not set"
+	}
+	return *value
 }

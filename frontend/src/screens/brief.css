@@ -346,3 +346,12 @@
 .brief-coverage {
   margin-block: var(--space-3);
 }
+
+.brief-rail .brief-readings {
+  margin: 0;
+}
+
+.brief-change {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

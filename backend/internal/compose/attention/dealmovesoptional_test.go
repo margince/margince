@@ -52,6 +52,7 @@ func TestADealRefusalCostsTheStepAndNotTheQueue(t *testing.T) {
 	deal := ids.NewV7()
 	row := func() []crmcontracts.WorklistItem {
 		return []crmcontracts.WorklistItem{{
+			Source: "deal_at_risk",
 			Subject: &crmcontracts.AttentionSubject{
 				Type: subjectDeal, Id: openapi_types.UUID(deal),
 			},

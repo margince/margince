@@ -534,6 +534,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/deal-rooms/{id}/threads/{threadId}/resolve":                   {Op: "resolveDealRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals":                                                        {Op: "createDeal", Access: "tool", Tool: "create_record", RecordType: "deal", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/deals/{id}/advance":                                           {Op: "advanceDeal", Access: "tool", Tool: "advance_deal", RecordType: "deal", Tier: "dynamic", Scope: "write"},
+	"POST /v1/deals/{id}/applied-changes/{changeId}/accept":                 {Op: "acceptAppliedDealChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/offers":                                            {Op: "createOffer", Access: "tool", Tool: "create_record", RecordType: "offer", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/deals/{id}/outcome-reviews":                                   {Op: "createDealOutcomeReview", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/deals/{id}/role-proposals":                                    {Op: "proposeDealRoles", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

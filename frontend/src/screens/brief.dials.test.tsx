@@ -47,7 +47,9 @@ function worklist(scopeOptions: Worklist["scope_options"]) {
   return {
     ...day,
     scope_options: scopeOptions,
-    sources_unavailable: [{ source: "calendar", reason: "not_connected" }],
+    sources_unavailable: [
+      { source: "meeting", reason: "failed", category: "meetings" },
+    ],
   };
 }
 

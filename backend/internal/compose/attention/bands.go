@@ -41,7 +41,7 @@ const (
 // already produces. Spelled here so the client is told the sequence rather than
 // inferring it from the rows it happens to receive: a day with no `now` rows
 // must still draw its remaining bands in this order.
-var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandReview}
+var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandReview}
 
 // bandOfRow says which heading a row sits under.
 //
@@ -151,11 +151,8 @@ func bandsOf(items []crmcontracts.WorklistItem) []crmcontracts.WorklistBand {
 // A band this build does not know sorts last rather than first: an unknown
 // heading must not push real work off the top of the page.
 func bandRank(band string) int {
-	// Prospecting and existing obligations compete on their facts. Their
-	// presentation labels must not override a deadline or a deal's value.
-	if band == bandKeepMomentum {
-		return bandRank(bandBuildPipeline)
-	}
+	// Existing customer work precedes routine prospecting. A lead with a real
+	// response deadline already belongs to the urgent band.
 	for i, known := range bandOrder {
 		if known == band {
 			return i

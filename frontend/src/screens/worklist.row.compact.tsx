@@ -71,7 +71,12 @@ export function CompactRowLine({
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
   // leave a reader no way to see what went.
-  const inline = [readings.when, readings.facts, ...said]
+  const inline = [
+    readings.when,
+    item.move?.action === "draft_reply" ? t("brief.reply.owed") : null,
+    readings.facts,
+    ...said,
+  ]
     .filter((part): part is string => part !== null && part !== "")
     .join(" · ");
   const tip = useTruncationTooltip<HTMLSpanElement>(inline);
@@ -83,7 +88,7 @@ export function CompactRowLine({
       </p>,
     );
   }
-  if (readings.detail) {
+  if (readings.detail && item.source !== "notice") {
     rest.push(
       <p className="t-caption" key="detail">
         {readings.detail}
@@ -97,9 +102,7 @@ export function CompactRowLine({
       </p>,
     );
   }
-  if (item.verdict) {
-    rest.push(<VerdictLine key="verdict" verdict={item.verdict} zone={zone} />);
-  }
+
   return (
     <div className="worklist-row-line">
       <p className="t-body worklist-row-title">
@@ -128,6 +131,10 @@ export function CompactRowLine({
           {tip.tip}
         </span>
       )}
+      {item.source === "notice" && readings.detail && (
+        <p className="t-caption worklist-row-notice">{readings.detail}</p>
+      )}
+      <VerdictLine verdict={item.verdict} zone={zone} />
       {rest.length > 0 && (
         <Popover
           // NO `variant`: the catalog's own direction for a trigger that reads

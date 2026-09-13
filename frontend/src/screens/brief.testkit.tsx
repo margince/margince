@@ -78,6 +78,12 @@ const DEFAULTS: Routes = {
   // empty page carries no `readings` and no `counts`, and a screen reading a
   // required field off it fails in a way no server could produce.
   "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+  "GET /worklist/handled": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      receipts: [],
+      truncated: false,
+    }),
   // The plan panel reads `commitments` off this, which the contract marks
   // required. The generic empty page carries none, so an unrouted read would
   // fail the panel in a way no server could produce — the same reason
