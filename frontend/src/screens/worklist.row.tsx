@@ -547,11 +547,9 @@ function rowAnswer(item: WorklistItem, brief: BriefAnswer): RowPlacement {
   }
   // The one decided step a link cannot take.
   //
-  // Every other move the server sends already reaches the reader, as an anchor
-  // through moveHref — draft_reply and draft_email open the composer,
-  // open_task and open_meeting_brief open what they name. `create_task` POSTS a
-  // task body, which is a write and not a destination, so NAVIGABLE_MOVES
-  // excludes it and the row could name the step and offer no way to take it.
+  // Reply moves open their conversation or composer; other navigable moves
+  // open the task or meeting they name. Creating a task needs the deal
+  // status card’s writer rather than a destination.
   //
   // The button is the deal status card's own, mounted a second time rather than
   // written again: one answer to "what does Add this task do", on the two

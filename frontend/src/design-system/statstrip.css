@@ -147,15 +147,13 @@
     padding: var(--space-3) 0;
     min-block-size: 0;
     display: grid;
-    grid-template-columns: 1fr auto;
-    /* The reading's own words lead, the figure and its door stack on the
-       trailing edge. Two rows rather than one so the door keeps its 24px AA
-       target without setting the row's height: a foot beside a figure on one
-       line would be the widest thing on the row and push the label to a
-       second. */
+    grid-template-columns: minmax(0, 1fr) auto;
+    /* The action has its own line so a long verb cannot squeeze the label
+       or its explanation out of a narrow rail. */
     grid-template-areas:
       "label figure"
-      "basis foot";
+      "basis basis"
+      "foot foot";
     align-items: center;
     column-gap: var(--space-4);
     row-gap: 0;
@@ -171,14 +169,16 @@
   }
   .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-foot {
     grid-area: foot;
-    justify-self: end;
+    justify-self: start;
   }
   .stat-strip:has(.stat-card-compact) .stat-card-compact > .stat-card-detail {
     grid-area: basis;
-    /* ONE line in a row this short: at two it doubles the row's height, and a
-       basis that needs two lines has a receipt for the rest of it. */
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .stat-strip:has(.stat-card-compact) .stat-card-label-text {
+    display: block;
+    overflow: visible;
   }
   .stat-strip:has(.stat-card-compact) > * + * {
     border-block-start: 1px solid var(--paneEdge);

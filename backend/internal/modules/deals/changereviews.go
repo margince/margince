@@ -65,7 +65,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	}
 	query := storekit.SQLf(`
  WITH requested AS (SELECT * FROM unnest($%d::uuid[], $%d::uuid[]) AS r(deal_id, change_id)),
- visible AS (SELECT d.id, d.version, d.stage_id, to_jsonb(d) AS fields, (%s) AS writable FROM deal d WHERE (%s))
+ visible AS (SELECT d.id, d.version, d.stage_id, to_jsonb(d) AS fields, (%s) AS writable FROM deal d WHERE (%s) AND d.id = ANY($%d::uuid[]))
  SELECT c.deal_id, c.audit_log_id, 'close_date', c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
         d.version, c.reversed_at IS NULL,
         c.reversed_at IS NULL AND NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND d.fields->f.key IS DISTINCT FROM f.value), d.writable
@@ -80,7 +80,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
  FROM stage_progression_outcome o JOIN visible d ON d.id = o.deal_id
  JOIN requested r ON r.deal_id = o.deal_id AND r.change_id = o.approval_id
  LEFT JOIN stage_progression_policy p ON p.pipeline_id = o.pipeline_id AND p.from_stage_id = o.from_stage_id AND p.to_stage_id = o.to_stage_id
- WHERE o.outcome IN ('auto_applied', 'reversed')`, dealsPos, changesPos, writable, scope, nowPos)
+ WHERE o.outcome IN ('auto_applied', 'reversed')`, dealsPos, changesPos, writable, scope, dealsPos, nowPos)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err

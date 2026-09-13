@@ -243,3 +243,26 @@ export const CompactFoldsToRows: Story = {
     </StatStrip>
   ),
 };
+
+export const CompactInANarrowRail: Story = {
+  render: () => (
+    <div style={{ maxWidth: 280 }}>
+      <StatStrip>
+        <StatCard
+          density="compact"
+          label="Leads to contact"
+          value="2"
+          detail="Assigned and awaiting your first reply"
+          onOpen={() => {}}
+          openLabel="Review leads owed a reply"
+        />
+        <StatCard
+          density="compact"
+          label="Deal value needing attention"
+          value="No flagged deals"
+          detail="Expected deal value; excludes unpriced deals"
+        />
+      </StatStrip>
+    </div>
+  ),
+};

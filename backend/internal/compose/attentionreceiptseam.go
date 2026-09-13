@@ -197,7 +197,7 @@ func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []att
 		key := deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipts[i].TargetID), ChangeID: receipts[i].ID}
 		if review, ok := reviews[key]; ok {
 			receipts[i].Review = &review
-		} else {
+		} else if receipts[i].TargetType == approvalTargetDeal {
 			// The approval reader already authorized the receipt. A missing review
 			// cannot erase that history or offer a restore against unverified state.
 			receipts[i].Undo = nil
