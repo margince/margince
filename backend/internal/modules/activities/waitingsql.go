@@ -122,9 +122,8 @@ const waitingRepliesSQL = `
 	       -- eligibility that depended on the reader would make the same message
 	       -- engaged for one colleague and cold for another.
 	       -- The classifier's answer, or empty when nobody has judged this
-	       -- message. Absence is never evidence: an unjudged row ranks exactly
-	       -- as it did before the column existed.
-	       coalesce(a.owed_verdict, ''),
+	       -- message. Uncertain intent remains reviewable without claiming priority.
+	       coalesce(a.owed_verdict, ''), coalesce(a.capture_label, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.
@@ -200,6 +199,11 @@ const waitingRepliesSQL = `
 	   -- workspace-wide Worklist read.
 	   AND (%[11]s)
 	   AND a.thread_key IS NOT NULL
+	   AND NOT EXISTS (SELECT 1 FROM activity request_task
+	     WHERE request_task.source_system = 'email_request'
+	       AND request_task.source_activity_id = a.id
+       AND (request_task.is_done OR (request_task.archived_at IS NULL
+         AND (request_task.assignee_id = $%[10]d OR $%[10]d = '00000000-0000-0000-0000-000000000000'::uuid))))
 	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
 	   --
 	   -- The horizon and the caller's staleness rule have to agree about money,
@@ -270,15 +274,7 @@ const waitingRepliesSQL = `
 	              OR machine.address ILIKE '%%donotreply%%'
 	              OR machine.address ILIKE '%%notification%%'
 	              OR machine.address ILIKE '%%mailer-daemon%%'))
-	   AND NOT EXISTS (
-	         SELECT 1 FROM activity later
-	          WHERE later.thread_key = a.thread_key
-	            AND later.kind = a.kind
-	            AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	            AND later.direction = 'outbound'
-	            AND later.archived_at IS NULL
-	            AND later.occurred_at <= $%[1]d
-	            AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
+	   AND %[18]s
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity newer
 	          WHERE newer.thread_key = a.thread_key

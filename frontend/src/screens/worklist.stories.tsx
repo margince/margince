@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { WorklistScreen } from "./worklist";
@@ -406,11 +407,16 @@ export const ALeadsDay: Story = {
 // "50" over a number that is really 50-or-more would not go looking, which is
 // the one direction this surface must not get wrong.
 export const ATeamBiggerThanTheBoardCanCount: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "My team" }),
+    );
+  },
   render: () => {
     stubDay(
       {
         as_of: "2026-08-31T09:00:00Z",
-        scope: "mine",
+        scope: "team",
         scope_options: ["mine", "unassigned", "team", "all"],
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
         sources_unavailable: [],

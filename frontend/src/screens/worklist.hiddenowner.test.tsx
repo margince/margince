@@ -3,22 +3,11 @@
 
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { day, renderWorklist, stub } from "./worklist.testkit";
 
-// Whose hidden work the guardrail is about.
-//
-// The panel says what the queue is NOT showing, which makes it the one surface
-// where attributing a figure to the wrong contact does the most damage: a reader
-// checking whether their day is honest is told about somebody else's.
-//
-// The endpoint takes no owner and no scope. It derives its subject from the
-// authenticated principal, so wherever the queue beside it is about somebody
-// else, the panel is still answering about the reader — and there are TWO ways
-// to leave your own day, reached by different controls.
-//
-// Apart from worklist.test.tsx because that file is over the 1000-line ceiling
-// (frontend/AGENTS.md) and these cases are one question of their own.
+// Broad visibility diagnostics must not describe a personal or named queue.
 
 afterEach(() => {
   cleanup();
@@ -106,16 +95,16 @@ describe("the hidden-backlog panel is about the reader", () => {
     expect(hiddenRequests()).toEqual([]);
   });
 
-  // And it IS drawn on the reader's own day, where the figure is about them.
-  // Without this the assertion above passes on a panel deleted outright.
-  it("draws the hidden-backlog panel on the reader's own day", async () => {
-    stub(day({ scope_options: ["mine", "team"] }));
+  it("shows the broad diagnostic only after selecting all visible work", async () => {
+    const user = userEvent.setup();
+    stub(day({ scope_options: ["mine", "team", "all"] }));
     renderWorklist("en");
-
+    await screen.findByText("Nothing is waiting on you.");
+    expect(hiddenRequests()).toEqual([]);
+    await user.click(screen.getAllByRole("button", { name: "All" })[0]);
     expect(
       await screen.findByText("What the queue is not showing"),
     ).toBeTruthy();
-    // It asked, which is what makes the silence above mean something.
     await waitFor(() => expect(hiddenRequests().length).toBeGreaterThan(0));
   });
 });

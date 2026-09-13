@@ -266,7 +266,7 @@ func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 // thread sharing a timestamp are ordinary — and without the tie-break both
 // halves of "newest inbound, no later outbound" are wrong at once.
 func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
-	if strings.Count(waitingRepliesSQL, ".id) > (a.occurred_at, a.id)") != 2 {
+	if strings.Count(waitingRepliesSQL+unansweredConversationSQL("$%[1]d"), ".id) > (a.occurred_at, a.id)") != 2 {
 		t.Fatal("the waiting query compares timestamps alone, so equal-second messages answer wrongly")
 	}
 }
@@ -275,7 +275,7 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 // Mail carries the sender's own Date header: a message dated in the future must
 // not suppress a thread that is genuinely waiting now.
 func TestTheWaitingQueryIsBoundedByTheReadInstant(t *testing.T) {
-	if strings.Count(waitingRepliesSQL, "occurred_at <= $%[1]d") != 3 {
+	if strings.Count(waitingRepliesSQL+unansweredConversationSQL("$%[1]d"), "occurred_at <= $%[1]d") != 3 {
 		t.Fatal("a future-dated message can suppress a thread that is waiting now")
 	}
 }

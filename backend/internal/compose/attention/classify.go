@@ -262,7 +262,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	//
 	// Money outranks it, exactly as it does for staleness: an open deal on the
 	// thread is a stronger claim than any header the sender chose to send.
-	unproven := !waiting.Engaged && !waiting.HasOpenDeal
+	unproven := !waiting.Engaged && !waiting.HasOpenDeal && !waiting.ConfirmedRequest
 	if unproven {
 		level = levelRoutine
 	}
@@ -284,18 +284,10 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	if elsewhere {
 		level = levelRoutine
 	}
-	// A message that asks us nothing. A report, a receipt, a statement: the
-	// sender wrote and nobody replied, both true, and neither makes it work.
-	//
-	// DEMOTED, never dropped — the same floor capture_label sits under, and for
-	// a sharper reason here: this is one model call's opinion about a customer's
-	// mail. A wrong one costs a scroll. An UNJUDGED message is not demoted at
-	// all: a classifier that never ran, ran out of budget or answered below its
-	// confidence floor must leave the queue exactly as it found it.
-	//
-	// Money outranks it, like every other demotion here.
-	informational := waiting.AsksNothing && !waiting.HasOpenDeal
-	if informational {
+	// Informational and unconfirmed messages stay reviewable without claiming
+	// priority. A deal's value cannot turn an acknowledgement into an obligation.
+	informational := waiting.AsksNothing
+	if informational || waiting.ActionUnconfirmed {
 		level = levelRoutine
 	}
 	because := []crmcontracts.WorklistReason{
@@ -323,6 +315,9 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     because,
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
+	if informational || waiting.ActionUnconfirmed || elsewhere {
+		row.Consequence = "none"
+	}
 	// The subject travels because the row exists at all only for a reader the
 	// content gate admitted: a message this reader may not read produces no
 	// row, rather than a row with its words removed.
@@ -335,14 +330,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 	row.EmailSummary = waiting.EmailSummary
 	// The record the reply would be about, most specific first: the deal a
 	// thread belongs to says more than the company it is filed under.
-	switch {
-	case !waiting.DealID.IsZero():
-		row.Subject = subjectOf(subjectDeal, waiting.DealID)
-	case !waiting.ContactID.IsZero():
-		row.Subject = subjectOf("contact", waiting.ContactID)
-	case !waiting.CompanyID.IsZero():
-		row.Subject = subjectOf("company", waiting.CompanyID)
-	}
+	row.Subject = waitingSubject(waiting)
 	if openableSubject(row.Subject) {
 		row.Actions = append(row.Actions, crmcontracts.WorklistItemActions(actionOpen))
 		// Answering where the reader is standing, offered only for an EMAIL. The
@@ -449,7 +437,7 @@ func dropDealsAlreadyWaiting(rows []ranked) []ranked {
 }
 
 // classifyTask: work already agreed. Overdue is the fact that moves it; a task
-// nobody dated is real work and is not today's.
+// without a date stays actionable without claiming an invented deadline.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	// A due customer obligation needs attention even if its deal is small.
@@ -492,5 +480,18 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// which now also puts an outside-team colleague's user id on the wire
 		// through the owner field. One assignee, read by both.
 		owner: assigneeID(item.AssigneeId),
+	}
+}
+
+func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
+	switch {
+	case !waiting.DealID.IsZero():
+		return subjectOf(subjectDeal, waiting.DealID)
+	case !waiting.ContactID.IsZero():
+		return subjectOf("contact", waiting.ContactID)
+	case !waiting.CompanyID.IsZero():
+		return subjectOf("company", waiting.CompanyID)
+	default:
+		return nil
 	}
 }

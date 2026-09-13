@@ -18,6 +18,7 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -316,10 +317,12 @@ export function TaskDetailModal({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  // The meeting the task came from, open in its own reader over this dialog.
+  // Keep the task open while reading its original evidence.
   const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
         params: { path: { id: activityId } },
@@ -351,12 +354,6 @@ export function TaskDetailModal({
         {task && (
           <div className="form-stack">
             {task.body && <p className="t-body">{task.body}</p>}
-            {/* The record the promise was read out of. The body names it in
-              words — "committed to this in the meeting transcript (line 6)" —
-              and the sentence alone left the only route back through the
-              record's history and an exact-subject search. The reader below
-              asks the server for the meeting under this seat's own scope, so
-              somebody who may not open it is told so there rather than here. */}
             {task.source_activity_id && (
               <div>
                 <Button
@@ -409,7 +406,7 @@ export function TaskDetailModal({
         )}
       </div>
       {openSource && (
-        <SourceMeeting
+        <SourceActivity
           activityId={openSource}
           onClose={() => setOpenSource(null)}
         />
@@ -418,16 +415,8 @@ export function TaskDetailModal({
   );
 }
 
-/**
- * The meeting a task was read out of.
- *
- * It asks GET /activities/{id}, not the email presentation: that endpoint
- * refuses anything whose kind is not `email` — with a 404, so a reader clicking
- * through to a MEETING would have been told it does not exist. The plain
- * activity read serves every kind and carries the same row scope, so a reader
- * who may not see the meeting still gets the refusal that is theirs to get.
- */
-function SourceMeeting({
+/** Resolve the original kind before choosing its reader. */
+function SourceActivity({
   activityId,
   onClose,
 }: Readonly<{ activityId: string; onClose: () => void }>) {
@@ -437,6 +426,8 @@ function SourceMeeting({
   const titleId = useId();
   const query = useQuery({
     queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
         params: { path: { id: activityId } },
@@ -448,6 +439,15 @@ function SourceMeeting({
     },
   });
   const meeting: Activity | undefined = query.data;
+  if (meeting?.kind === "email") {
+    return (
+      <OpenEmailDrawer
+        activityId={activityId}
+        zone={recordZone}
+        onClose={onClose}
+      />
+    );
+  }
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <h2 id={titleId} className="t-h2 modal-title">

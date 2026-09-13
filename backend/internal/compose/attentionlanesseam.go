@@ -366,13 +366,12 @@ func (f attentionDealFacts) Figures(
 // dropped, and a copy that stops happening is invisible — the lane still
 // returns the right NUMBER of rows, each one just quietly missing a fact.
 func taskFromActivity(row crmcontracts.Activity) attention.Task {
-	due := *row.DueAt
 	linkType, linkID := primaryLink(row)
 	task := attention.Task{
 		LeadResponseEscalation: row.SourceSystem != nil && *row.SourceSystem == leadSLATaskSource,
 		ID:                     ids.UUID(row.Id),
 		Subject:                subjectOfActivity(row),
-		DueAt:                  &due,
+		DueAt:                  row.DueAt,
 		LinkType:               linkType,
 		LinkID:                 linkID,
 	}

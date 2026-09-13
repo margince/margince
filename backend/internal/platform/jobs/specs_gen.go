@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "f474c7b0f0e65162a928618bb66669d5f174e67da25bc12f7c43f23e7718722c"
+const JobContractHash = "900ba0c8cb9a47f94298e47cb57e2761b2df628adc3a84cf22c8069b591f6e92"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -560,7 +560,7 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Cadence:      Cadence{Fixed: 1 * time.Hour},
-		Registration: Registration{When: []string{"OwedBrain"}},
+		Registration: Registration{When: []string{"OwedBrain"}, AbsentRegistersAnyway: true},
 	},
 	"participant_backfill": {
 		Kind:      "participant_backfill",

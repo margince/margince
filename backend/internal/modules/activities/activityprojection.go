@@ -247,6 +247,5 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 			summary.Preview = &preview
 		}
 	}
-	summary.Move = moveOf(a)
 	return &summary
 }

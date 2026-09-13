@@ -36,7 +36,7 @@ var eligibilityColumns = []string{"is_agent", "seat_type", "archived_at"}
 // assigneeEligibilityWriters are the two places allowed to ask whether a seat
 // may RECEIVE work, each with why it is not the other.
 //
-// auth.assigneeEligible is the rule itself, asked of a destination a caller
+// auth.AssigneeEligibleSQL is the rule itself, asked of a destination a caller
 // named. contacts/leadrouting.go asks the same question of a configured pool
 // under the system principal, where the caller-scope half of the rule has no
 // meaning — routing has no caller to be scoped to. They are kept in step by
@@ -52,7 +52,7 @@ var assigneeEligibilityWriters = map[string]string{
 // A seat's fitness to receive work is spelled in exactly two places, and both
 // ask the same thing.
 //
-// The claim in auth.assigneeEligible's comment is what this holds: the rule has
+// The claim in auth.AssigneeEligibleSQL's comment is what this holds: the rule has
 // one spelling. Before it, routing checked status and archival while
 // the manual path checked status, archival, agent and seat type, so the
 // machine could place a lead on a seat a colleague was forbidden to assign to.
@@ -140,7 +140,7 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 	var body string
 	ast.Inspect(file, func(n ast.Node) bool {
 		fn, ok := n.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "assigneeEligible" {
+		if !ok || fn.Name.Name != "AssigneeEligibleSQL" {
 			return true
 		}
 		src, readErr := os.ReadFile(path)
@@ -151,14 +151,14 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		return false
 	})
 	if body == "" {
-		t.Fatal("assigneeEligible is gone from assignscope.go: the rule it holds has moved and this gate has not")
+		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
 	}
 	for _, half := range []string{
 		"status = 'active'", "archived_at IS NULL", "NOT %[1]s.is_agent",
 		"seat_type <> 'read'", "ownerPredicate",
 	} {
 		if !strings.Contains(body, half) {
-			t.Errorf("assigneeEligible no longer asks %q. Each clause refuses a seat that cannot do the "+
+			t.Errorf("AssigneeEligibleSQL no longer asks %q. Each clause refuses a seat that cannot do the "+
 				"work, or scopes the destination to the assigner's own reach; dropping one widens who may "+
 				"be handed a record without any test naming what was widened.", half)
 		}

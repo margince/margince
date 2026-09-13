@@ -54,7 +54,7 @@ export function ContactReadings({
   const omitted = new Set(view.sections_omitted ?? []);
   return (
     <ReadingsGrid label={t("contact.readings.title")} testId="contact-readings">
-      <MoveCard
+      <LastMessageCard
         view={view}
         withheld={omitted.has("last_touch")}
         locale={locale}
@@ -95,14 +95,9 @@ function withheldCard(label: string, t: Translate) {
   return <StatCard label={label} value={t("record.notShown")} />;
 }
 
-// Whose move it is, read from the two directions. They are separate facts and
-// the card keeps them separate: the value says who wrote last and how long
-// ago, the detail says what the other side did.
-//
-// Quiet is a claim about THEM and only them: an account we wrote to yesterday
-// and one we have not heard from in a month can share a last-touch date, and
-// only the second is a relationship going cold.
-function MoveCard({
+// Contact-wide recency describes the latest message, not whose task is next.
+// Separate conversations can leave both sides with something to do.
+function LastMessageCard({
   view,
   withheld,
   locale,
@@ -113,7 +108,7 @@ function MoveCard({
   locale: Locale;
   t: Translate;
 }>) {
-  const label = t("contact.readings.move");
+  const label = t("contact.readings.lastMessage");
   if (withheld) {
     return withheldCard(label, t);
   }
@@ -123,7 +118,7 @@ function MoveCard({
   // the card agrees with the thread beside it and does not drift while a tab
   // is left open.
   const asOf = new Date(view.as_of);
-  const theirs = inbound && (!outbound || inbound > outbound);
+  const inboundLast = inbound && (!outbound || inbound > outbound);
   const basis = (
     <FactList
       facts={[
@@ -153,17 +148,15 @@ function MoveCard({
       />
     );
   }
-  if (theirs) {
-    // They wrote last, so the move is ours. The detail says how long we have
-    // let it stand.
+  if (inboundLast) {
+    // Direction is evidence; an obligation needs the conversation and its intent.
     return (
       <StatCard
         label={label}
-        value={t("contact.readings.yourMove")}
+        value={t("contact.readings.fromThem")}
         detail={t("contact.readings.lastFromThem", {
           when: relativeDays(inbound, t, locale, asOf),
         })}
-        tone="warn"
         {...basisProps}
       />
     );
@@ -179,9 +172,7 @@ function MoveCard({
   return (
     <StatCard
       label={label}
-      value={
-        quiet ? t("contact.readings.quiet") : t("contact.readings.theirMove")
-      }
+      value={quiet ? t("contact.readings.quiet") : t("contact.readings.fromUs")}
       detail={
         inbound
           ? t("contact.readings.lastFromThem", {

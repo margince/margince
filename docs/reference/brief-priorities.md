@@ -88,3 +88,44 @@ The nightly repair replaces missing or overdue dates. It retains a valid future 
 Installation settings place date and time notation beside base currency. Date options are interface-language default, DD.MM.YYYY, MM/DD/YYYY and YYYY-MM-DD. Time options are interface-language default, 24-hour and 12-hour. Shared formatters apply the preference throughout the authenticated interface, including typed close-date receipts, without changing stored values or their reporting/record timezone. Native date-input editing remains governed by the browser.
 
 The canonical destination is `#/home` in every language. Visible navigation is localized (Home, Startseite, Trang chủ). Older `#/brief` links preserve their query parameters while redirecting to Home. Existing Worklist links still open the queue with their owner and filters.
+
+## Personal relevance and email requests
+
+Mine means the reader's responsibilities for managers and individual contributors alike.
+Access to a record does not assign its work. Team oversight is selected explicitly;
+team exceptions follow live team membership, and broad backlog diagnostics appear only
+under All. Manager authority does not grant access to colleagues' private correspondence.
+
+| Surface | Personal scope | Wider scope |
+| --- | --- | --- |
+| Focus and deal drill-down | Owned deals, assigned tasks and confirmed incoming requests | Select the queue's team or all scope explicitly |
+| Team board and exceptions | Absent | Team members and visible unassigned work, under existing grants |
+| Overnight | Own imported mail and owned projects, revalidated when read | Does not become a team feed merely because the reader manages colleagues |
+| Contact conversations | Same stored thread grouped together | Each original retains its content gate |
+
+Unanswered does not mean actionable. Focus requires an `asks_us` verdict and a
+`commitment` capture label. Missing, conflicting, informational or meeting-only
+classification remains reviewable without claiming urgency, even on an open deal.
+A confirmed first request needs no previous outbound message to deserve attention.
+The classifier reads the sender's new words rather than quoted earlier requests.
+
+The hourly request pass creates one undated personal task for a confirmed unanswered
+request with exactly one directly addressed importing seat. It preserves the source
+message and record links, honors the recipient's set-aside state, and never invents a
+deadline. Existing verdicts can be processed without a configured model. Private and
+restricted mail remains outside this automatic classification flow. Ambiguous assignment
+is left for review rather than guessed.
+
+The reminder replaces its source email in the assignee’s queue. Completion settles
+the request for every reader. Archiving an incomplete reminder makes the original
+request reviewable again, without creating another task; reopening remains explicit. A reply
+settles only its own conversation and does not prove a promised deliverable was completed.
+The task remains until handled. Its source action opens the original email reader, and
+removing access to the source also withholds the derived task text.
+
+When no classifier is available, uncertain mail stays in the conversation review
+queue. It does not claim Focus priority or a confirmed team obligation. Outbound
+intent is not classified by this pass: a sent acknowledgement does not prove that
+the recipient owes an answer. Email move therefore remains unknown (`none`) unless
+there is positive request evidence. The wire retains older move values for client
+compatibility; the current producer never infers them from direction alone.

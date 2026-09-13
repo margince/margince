@@ -118,6 +118,9 @@ func (s *Service) teamLoad(ctx context.Context, roster []TeamMember, asOf time.T
 			return teamCounts{}, err
 		}
 		for _, customer := range waiting {
+			if customer.AsksNothing || customer.ActionUnconfirmed {
+				continue
+			}
 			row := load.counts[customer.OwnerID]
 			row.Waiting++
 			load.counts[customer.OwnerID] = row

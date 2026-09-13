@@ -294,3 +294,39 @@ describe("the contact page's memory card", () => {
     expect(screen.queryByRole("button", { name: /Call prep/ })).toBeNull();
   });
 });
+
+it("groups replies by conversation without clearing another request from the same contact", () => {
+  const reply = emailRow({
+    id: "reply",
+    thread_key: "answered",
+    direction: "outbound",
+    occurred_at: "2026-08-30T09:00:00Z",
+    email_summary: emailSummary({
+      activity_id: "reply",
+      subject: "Competitor question",
+      direction: "outbound",
+      move: "none",
+    }),
+  });
+  const question = emailRow({
+    id: "question",
+    thread_key: "answered",
+    email_summary: emailSummary({
+      activity_id: "question",
+      subject: "Competitor question",
+      move: "none",
+    }),
+  });
+  const request = emailRow({
+    thread_key: "report",
+    email_summary: emailSummary({
+      subject: "Please send the report",
+      move: "needs_reply",
+    }),
+  });
+  renderCard(viewWith([reply, question, request]), vi.fn());
+  expect(screen.getAllByText("Competitor question")).toHaveLength(1);
+  expect(screen.getByText("2 messages")).toBeTruthy();
+  expect(screen.getByText("Please send the report")).toBeTruthy();
+  expect(screen.queryByText("Replied")).toBeNull();
+});

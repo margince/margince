@@ -50,6 +50,19 @@ const contact: components["schemas"]["Contact"] = {
 // the message reads here exactly as it does on the timeline. The preview and
 // the body differ on purpose: the card shows the preview and the drawer holds
 // the whole thing.
+const requestSummary: NonNullable<Activity["email_summary"]> = {
+  activity_id: "01a05500-0000-7000-8000-00000000ee01",
+  occurred_at: "2026-08-29T09:15:00Z",
+  version: 4,
+  subject: "Re: the renewal quote",
+  preview: "Can you hold the price until Friday?",
+  counterparty: "Dana Buyer",
+  direction: "inbound",
+  display_status: "team",
+  move: "needs_reply",
+  attachment_count: 0,
+};
+
 const email: Activity = {
   id: "01a05500-0000-7000-8000-00000000ee01",
   kind: "email",
@@ -62,18 +75,7 @@ const email: Activity = {
   occurred_at: "2026-08-29T09:15:00Z",
   version: 4,
   is_done: false,
-  email_summary: {
-    activity_id: "01a05500-0000-7000-8000-00000000ee01",
-    occurred_at: "2026-08-29T09:15:00Z",
-    version: 4,
-    subject: "Re: the renewal quote",
-    preview: "Can you hold the price until Friday?",
-    counterparty: "Dana Buyer",
-    direction: "inbound",
-    display_status: "team",
-    move: "needs_reply",
-    attachment_count: 0,
-  },
+  email_summary: requestSummary,
   ...CAPTURED,
 };
 
@@ -172,4 +174,38 @@ export const Empty: Story = { render: card([]) };
 export const WithRowsDark: Story = {
   ...WithRows,
   globals: { theme: "dark" },
+};
+
+export const AnsweredConversationAndSeparateRequest: Story = {
+  render: card([
+    {
+      ...email,
+      id: "reply",
+      thread_key: "answered",
+      direction: "outbound",
+      occurred_at: AT,
+      email_summary: {
+        ...requestSummary,
+        activity_id: "reply",
+        direction: "outbound",
+        move: "none",
+      },
+    },
+    {
+      ...email,
+      id: "question",
+      thread_key: "answered",
+      email_summary: {
+        ...requestSummary,
+        activity_id: "question",
+        move: "none",
+      },
+    },
+    {
+      ...email,
+      thread_key: "report",
+      subject: "Please send the report",
+      email_summary: { ...requestSummary, subject: "Please send the report" },
+    },
+  ]),
 };

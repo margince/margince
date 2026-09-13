@@ -68,7 +68,8 @@ type WaitingReply struct {
 	// before the column existed, because a classifier that has not run, has run
 	// out of budget or answered below its confidence floor must not change what
 	// a rep sees.
-	OwedVerdict string
+	OwedVerdict  string
+	CaptureLabel string
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -289,7 +290,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				neverRelaxed, neverRelaxed,
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
 				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
-				fmt.Sprintf("$%d", arg(readerAddresses))), args...)
+				fmt.Sprintf("$%d", arg(readerAddresses)),
+				unansweredConversationSQL(fmt.Sprintf("$%d", instant))), args...)
 		if err != nil {
 			return err
 		}
@@ -299,7 +301,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
 				&row.ContactID, &row.CompanyID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.AddressedElsewhere,
+				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 				&row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}

@@ -201,29 +201,10 @@ func availableSummary(
 		far = parties.from
 	}
 	summary.Counterparty = counterpartyOf(far)
-	summary.Move = moveOf(activity)
+	if activity.EmailSummary != nil {
+		summary.Move = activity.EmailSummary.Move
+	}
 	return summary
-}
-
-// moveOf says whose turn it is, from the message's DIRECTION alone.
-//
-// It does not ask whether anyone answered, so an inbound mail the rep replied
-// to a month ago still reads needs_reply. That is the limit of one row read by
-// itself: the answer lives on a later message, which this function is not
-// given. Named rather than dressed up, because a rep works their day from this
-// field — reading the thread is what would close it (margince#3784).
-func moveOf(activity crmcontracts.Activity) crmcontracts.EmailSummaryMove {
-	if activity.Direction == nil {
-		return crmcontracts.EmailSummaryMoveNone
-	}
-	switch *activity.Direction {
-	case crmcontracts.ActivityDirectionInbound:
-		return crmcontracts.EmailSummaryMoveNeedsReply
-	case crmcontracts.ActivityDirectionOutbound:
-		return crmcontracts.EmailSummaryMoveWaitingForThem
-	default:
-		return crmcontracts.EmailSummaryMoveNone
-	}
 }
 
 // callerIsSenderSeat answers whether this caller is the seat the message went

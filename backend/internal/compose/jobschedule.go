@@ -158,6 +158,7 @@ func operatorInterval(cfg JobRunnerConfig, kind, path string) time.Duration {
 // other direction — a declared path with no entry — is a fitness test.
 func configDependencies(cfg JobRunnerConfig) map[string]bool {
 	return map[string]bool{
+		"OwedBrain":              cfg.OwedBrain != nil,
 		"AgentScheduler.Service": cfg.AgentScheduler.Service != nil,
 		// The part sweep proves an attachment's bytes are durable before it
 		// removes them from the provider original, so a role with no object
@@ -165,7 +166,6 @@ func configDependencies(cfg JobRunnerConfig) map[string]bool {
 		"Blobstore":        cfg.Blobstore != nil,
 		"ChannelVault":     cfg.ChannelVault != nil,
 		"ClassifyBrain":    cfg.ClassifyBrain != nil,
-		"OwedBrain":        cfg.OwedBrain != nil,
 		"DeepReadBrain":    cfg.DeepReadBrain != nil,
 		"AccountScanBrain": cfg.AccountScanBrain != nil,
 		"Embedder":         cfg.Embedder != nil,

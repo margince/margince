@@ -487,56 +487,27 @@ function WorklistBody({
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
       <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
-      {/* A LEAD'S READ OF THE TEAM, below the reader's own day.
-
-          Who opens this page decides the order. A rep opens it for their own
-          morning, and every seat on the page is a rep first — a lead reading
-          their team is also somebody with customers waiting on them. So the
-          day comes first for everybody, and the team follows it for the few
-          who can see it. These panels led the page once, which put three
-          panels a rep is refused above the queue they came for and pushed the
-          first row's verb off the fold.
-
-          Within the group: WHAT is going wrong, then WHO is carrying what. A
-          lead reads the exceptions to decide where to intervene; the board
-          answers the second question, and answering it first asks them to
-          infer the trouble from three counts per teammate. Same tier and same
-          condition, read off `scope_options` so the control and the refusal
-          cannot disagree — a rep is refused both. */}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamExceptionsPanel
-          enabled={day.scope_options.includes("team")}
-          onOwner={onOwner}
-        />
-      )}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamBoard
-          onOwner={onOwner}
-          onUnassigned={() => onScope("unassigned")}
-        />
-      )}
-      {/* What the queue is NOT showing. Beside the team board because it is the
-          same reader's question — a lead asking whether the day their team sees
-          is the day their team has — and on the same tier for the same reason.
-
-          On the reader's OWN day only. The endpoint takes no owner and no
-          scope: it derives its subject from the authenticated principal, so
-          wherever the queue beside it is about somebody else, this panel is
-          still answering about the reader. "412 hidden from you" stood on a
-          page headed with a colleague's name and read as THEIR backlog — on
-          the one surface whose whole job is to say what a queue is hiding.
-
-          BOTH ways of leaving your own day are guarded, because there are two
-          and they are reached by different controls. `owner` is the drill-down
-          into a named colleague; `scope` is the picker beside it, and the team
-          board's own "show me the unowned pile" moves the scope while leaving
-          the owner empty. Guarding the drill-down alone left the same wrong
-          figure standing under the unassigned and team queues.
-
-          Answering it FOR a colleague is a different feature needing a
-          different endpoint. Until that exists, saying nothing beats saying the
-          wrong contact's number under their name. */}
-      {owner === "" && scope === "mine" && (
+      {/* Team oversight belongs to the explicitly selected wider scope. */}
+      {owner === "" &&
+        scope !== "mine" &&
+        scope !== "unassigned" &&
+        day.scope_options.includes("team") && (
+          <TeamExceptionsPanel
+            enabled={day.scope_options.includes("team")}
+            onOwner={onOwner}
+          />
+        )}
+      {owner === "" &&
+        scope !== "mine" &&
+        scope !== "unassigned" &&
+        day.scope_options.includes("team") && (
+          <TeamBoard
+            onOwner={onOwner}
+            onUnassigned={() => onScope("unassigned")}
+          />
+        )}
+      {/* This diagnostic counts all readable history, not personal obligations. */}
+      {owner === "" && scope === "all" && (
         <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       )}
       {/* LAST, and open. A reader opens this page to find what to do next;

@@ -44,16 +44,16 @@ function card(grid: HTMLElement, label: string): HTMLElement {
   return found;
 }
 
-describe("whose move it is", () => {
-  it("is ours when they wrote last", () => {
+describe("what the latest message tells us", () => {
+  it("names the sender without claiming an obligation", () => {
     const grid = show(
       view({
         last_inbound_at: "2026-08-20T10:00:00Z",
         last_outbound_at: "2026-08-01T10:00:00Z",
       }),
     );
-    const move = card(grid, "Whose move");
-    expect(within(move).getByText("Yours")).toBeTruthy();
+    const move = card(grid, "Last message");
+    expect(within(move).getByText("From them")).toBeTruthy();
     expect(within(move).getByText("last from them: 4 days")).toBeTruthy();
   });
 
@@ -75,7 +75,7 @@ describe("whose move it is", () => {
       } as unknown as Partial<Contact360>),
     );
     const user = userEvent.setup();
-    const move = card(grid, "Whose move");
+    const move = card(grid, "Last message");
     await user.click(within(move).getByRole("button", { name: "Evidence" }));
     expect(screen.getByText("Reciprocity")).toBeTruthy();
     expect(screen.getByText("2 in · 1 out")).toBeTruthy();
@@ -88,7 +88,9 @@ describe("whose move it is", () => {
         last_outbound_at: "2026-08-22T10:00:00Z",
       }),
     );
-    expect(within(card(grid, "Whose move")).getByText("Theirs")).toBeTruthy();
+    expect(
+      within(card(grid, "Last message")).getByText("From us"),
+    ).toBeTruthy();
   });
 
   it("reads gone quiet once their silence outlasts the rail's own span", () => {
@@ -101,7 +103,7 @@ describe("whose move it is", () => {
       }),
     );
     expect(
-      within(card(grid, "Whose move")).getByText("Gone quiet"),
+      within(card(grid, "Last message")).getByText("Gone quiet"),
     ).toBeTruthy();
   });
 
@@ -109,29 +111,29 @@ describe("whose move it is", () => {
     // We wrote yesterday and they have never written: theirs to answer, with
     // no alarm yet — the same fourteen days a contact who HAS written gets.
     const grid = show(view({ last_outbound_at: "2026-08-23T10:00:00Z" }));
-    const move = card(grid, "Whose move");
-    expect(within(move).getByText("Theirs")).toBeTruthy();
+    const move = card(grid, "Last message");
+    expect(within(move).getByText("From us")).toBeTruthy();
     expect(within(move).getByText("nothing from them yet")).toBeTruthy();
   });
 
   it("reads a first word left unanswered past the span as gone quiet", () => {
     const grid = show(view({ last_outbound_at: "2026-08-01T10:00:00Z" }));
     expect(
-      within(card(grid, "Whose move")).getByText("Gone quiet"),
+      within(card(grid, "Last message")).getByText("Gone quiet"),
     ).toBeTruthy();
   });
 
   it("says nothing was ever exchanged rather than inventing a side", () => {
     const grid = show(view());
     expect(
-      within(card(grid, "Whose move")).getByText("Never spoken"),
+      within(card(grid, "Last message")).getByText("Never spoken"),
     ).toBeTruthy();
   });
 
   it("says the reading is withheld, never that there is none", () => {
     const grid = show(view({ sections_omitted: ["last_touch"] }));
     expect(
-      within(card(grid, "Whose move")).getByText("Not shown"),
+      within(card(grid, "Last message")).getByText("Not shown"),
     ).toBeTruthy();
   });
 });

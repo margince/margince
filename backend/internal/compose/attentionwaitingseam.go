@@ -117,8 +117,10 @@ func (w attentionWaiting) Unanswered(
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the
 			// queue never needs the word.
-			AsksNothing: row.OwedVerdict == activities.OwedVerdictInformsUs,
-			OwnerID:     row.OwnerID,
+			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
+			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs && row.CaptureLabel == string(crmcontracts.ActivityCaptureLabelCommitment),
+			ActionUnconfirmed: row.OwedVerdict == "" || row.CaptureLabel != string(crmcontracts.ActivityCaptureLabelCommitment),
+			OwnerID:           row.OwnerID,
 		})
 	}
 	return out, cut, nil

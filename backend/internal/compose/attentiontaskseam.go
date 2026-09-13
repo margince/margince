@@ -35,7 +35,7 @@ type attentionTasks struct{ store *activities.Store }
 func openTasksDueBy(
 	ctx context.Context, until time.Time, scope attention.TaskScope, owner ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
-	in := activities.ListActivitiesInput{OpenAndDueBy: &until}
+	in := activities.ListActivitiesInput{OpenAndDueBy: &until, IncludeEmailRequests: true}
 	switch scope {
 	case attention.TasksMine:
 		actor, ok := principal.Actor(ctx)
@@ -85,14 +85,6 @@ func (t attentionTasks) OpenForViewer(
 	}
 	open := make([]attention.Task, 0, len(rows))
 	for _, row := range rows {
-		// The filter above answers only dated rows, so this skip is unreachable
-		// today. It is here because the alternative to a skip is a nil deref
-		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
-		// clause one package away — too far for the next reader of this loop to
-		// see it.
-		if row.DueAt == nil {
-			continue
-		}
 		open = append(open, taskFromActivity(row))
 	}
 	return open, nil
@@ -119,9 +111,6 @@ func (t attentionTasks) UpcomingForViewer(
 	}
 	upcoming := make([]attention.Task, 0, len(rows))
 	for _, row := range rows {
-		if row.DueAt == nil {
-			continue
-		}
 		upcoming = append(upcoming, taskFromActivity(row))
 	}
 	return upcoming, nil

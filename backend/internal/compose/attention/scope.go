@@ -397,6 +397,10 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) []ranked {
 	if err != nil {
 		return nil
 	}
+	return rowsForRoster(rows, roster)
+}
+
+func rowsForRoster(rows []ranked, roster []TeamMember) []ranked {
 	team := make(map[ids.UUID]bool, len(roster))
 	for _, member := range roster {
 		team[member.UserID] = true
