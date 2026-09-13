@@ -33295,7 +33295,7 @@ export interface components {
             tasks_completed?: number;
             /** @description Tasks assigned to this rep that fell due in the week. */
             tasks_due: number;
-            /** @description And were finished inside it. */
+            /** @description Of tasks due that week, those completed before its closing boundary, including early completions. */
             tasks_done: number;
             /** @description Assigned tasks due before the closing boundary and still unfinished at that boundary. */
             tasks_carried_over: number;

@@ -44158,7 +44158,7 @@ components:
           minimum: 0
           description: Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed.
         tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
-        tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
+        tasks_done: { type: integer, minimum: 0, description: 'Of tasks due that week, those completed before its closing boundary, including early completions.' }
         tasks_carried_over: { type: integer, minimum: 0, description: 'Assigned tasks due before the closing boundary and still unfinished at that boundary.' }
         deals_moved: { type: integer, minimum: 0, description: 'Deals that changed stage, excluding those that closed.' }
         deals_won: { type: integer, minimum: 0 }

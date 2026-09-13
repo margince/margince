@@ -38416,7 +38416,7 @@ type WeeklyReviewCounts struct {
 	// TasksCompleted Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed.
 	TasksCompleted *int `json:"tasks_completed,omitempty"`
 
-	// TasksDone And were finished inside it.
+	// TasksDone Of tasks due that week, those completed before its closing boundary, including early completions.
 	TasksDone int `json:"tasks_done"`
 
 	// TasksDue Tasks assigned to this rep that fell due in the week.
