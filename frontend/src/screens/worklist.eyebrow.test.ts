@@ -34,15 +34,15 @@ describe("the word above a queue row", () => {
 
   // A signal from a newer build must not reach `t` with a key nothing
   // translates, which renders the key itself on the page.
-  it("falls back to the category for a signal it does not know", () => {
+  it("does not invent risk for a signal it does not know", () => {
     expect(
       eyebrowKeyFor(row({ source: "brief_item", kind: "invented_later" })),
-    ).toBe("worklist.category.deals_at_risk");
+    ).toBe("search.kind.deal");
   });
 
   it("falls back when the night named nothing", () => {
     expect(eyebrowKeyFor(row({ source: "brief_item" }))).toBe(
-      "worklist.category.deals_at_risk",
+      "search.kind.deal",
     );
   });
 

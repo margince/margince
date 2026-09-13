@@ -592,6 +592,7 @@ function briefHref(item: WorklistItem): string | undefined {
 }
 
 export function moveHref(item: WorklistItem): string | undefined {
+  if (item.source === "task") return undefined;
   const move = item.move;
   if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
@@ -665,6 +666,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   // A group names itself by what it holds and how much: "43 likely automated
   // senders" is the whole row, and a reader decides whether to open it from
   // that sentence alone.
+  if (item.source === "brief_item" && !item.title && item.subject?.label) {
+    return item.subject.label;
+  }
   if (item.batch) {
     // "200+" where the read stopped at its own bound. A floor printed as a
     // total is a wrong number rather than a bounded one, and the reader has no

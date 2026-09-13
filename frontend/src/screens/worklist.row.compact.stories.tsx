@@ -167,7 +167,9 @@ export const MoreOpen: Story = {
     const canvas = within(canvasElement);
     // By ROLE and by its own name: the count IS the trigger, so a frame that
     // reached for it by class would pass over a press a reader cannot make.
-    await userEvent.click(await canvas.findByRole("button", { name: /more/ }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Details" }),
+    );
   },
 };
 
@@ -185,6 +187,24 @@ export const NothingBesideTheName: Story = {
       consequence: "none",
       deal: undefined,
       detail: undefined,
+    }),
+  },
+  render: (args) => {
+    stubRow();
+    return <WorklistRow {...args} />;
+  },
+};
+
+export const VisibleStandingAndReason: Story = {
+  args: {
+    ...COMPACT,
+    item: dealRow({
+      verdict: {
+        source: "deal_status",
+        standing: "drifting",
+        line: "The buyer has not answered the proposal; agree a next step before the forecast date.",
+        as_of: "2026-09-13T08:00:00Z",
+      },
     }),
   },
   render: (args) => {

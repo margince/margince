@@ -143,6 +143,8 @@ function brief({
       // The screen reads this before it draws anything: the team toggle, the
       // coverage line and the readings strip are all cuts of this one answer.
       "GET /worklist": () => jsonResponse(day),
+      "GET /worklist/handled": () =>
+        jsonResponse({ as_of: day.as_of, receipts: [], truncated: false }),
       "POST /reports/deals-by-stage": () => pipeline(),
       ...extra,
     });

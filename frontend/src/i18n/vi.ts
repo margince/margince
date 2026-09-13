@@ -87,7 +87,18 @@ export const vi = {
   "brief.coverage.more":
     "Có thể còn mục trong {source}. Mở danh sách công việc đầy đủ để xem khu vực này.",
   "brief.coverage.retry": "Làm mới bản tin",
-  "brief.coverage.summary": "Có thể thiếu công việc",
+  "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
+  "brief.createdAt": "Bản tin được tạo {when}",
+  "brief.updatedAt": "Lịch việc cập nhật {when}",
+  "brief.changes.superseded":
+    "Cơ hội này đã thay đổi lần nữa. Mở cơ hội để xem trạng thái hiện tại.",
+  "brief.changes.title": "Thay đổi được thực hiện cho bạn",
+  "brief.changes.accept": "Chấp nhận",
+  "brief.changes.accepted": "Đã chấp nhận",
+  "brief.changes.undone": "Đã hoàn tác",
+  "brief.changes.empty":
+    "Không có thay đổi nào được thực hiện cho bạn trong 24 giờ qua.",
+  "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
   "brief.readings.summary": "Tổng quan công việc",
   "brief.readings.unpriced": "Chưa có giá trị",
@@ -117,7 +128,7 @@ export const vi = {
   "worklist.lead.noTarget": "chưa đặt mục tiêu phản hồi",
   "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không nằm trong dự báo",
-  "worklist.deal.provisional": "ngày chốt dự kiến {date} — xác nhận hoặc sửa",
+  "worklist.deal.provisional": "dự kiến chốt {date} — chưa xác nhận",
   "brief.readings.openRisk": "Xem công việc về cơ hội",
   "brief.readings.riskBasis":
     "giá trị giao dịch kỳ vọng; không gồm giao dịch chưa định giá",
@@ -9360,7 +9371,7 @@ export const vi = {
   "worklist.because.waiting_days.value_other": "đã chờ {value} ngày",
   "worklist.because.overdue": "quá hạn",
   "worklist.because.due_today": "đến hạn hôm nay",
-  "worklist.because.closing_soon": "có ngày chốt",
+  "worklist.because.closing_soon": "dự kiến chốt trong hai tuần",
   "worklist.because.expected_revenue":
     "một deal đang mở phụ thuộc vào liên hệ này",
   "worklist.because.expected_revenue.value": "trị giá {value}",
@@ -9433,7 +9444,7 @@ export const vi = {
   "worklist.untitled.approval": "Một quyết định đang chờ",
   "worklist.untitled.dedupe_candidate": "Hai bản ghi trông giống nhau",
   "worklist.untitled.task": "Một công việc",
-  "worklist.untitled.brief_item": "Đêm qua đã chọn mục này",
+  "worklist.untitled.brief_item": "Xem xét cơ hội",
   "worklist.untitled.conversation_claim": "Một lời hứa của bạn",
   "worklist.untitled.customer_waiting": "Ai đó đang chờ trả lời",
   "worklist.untitled.lead_response": "Một khách tiềm năng",
@@ -9533,7 +9544,7 @@ export const vi = {
   "worklist.batch.held_draft": "{count} bản nháp đang chờ gửi",
   "worklist.untitled.batch": "Một nhóm quyết định thường lệ",
   "worklist.verb.review_batch": "Xem lại",
-  "worklist.verb.draft_reply": "Mở để trả lời",
+  "worklist.verb.draft_reply": "Đọc và trả lời",
   // Nơi trình soạn thảo thực sự mở ra, động từ là HÀNH ĐỘNG.
   "worklist.verb.draft_reply_now": "Soạn câu trả lời",
   // Một thư ĐẦU TIÊN, không phải câu trả lời cho thư đã có.

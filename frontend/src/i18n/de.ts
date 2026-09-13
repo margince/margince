@@ -82,7 +82,18 @@ export const de = {
   "brief.coverage.more":
     "Möglicherweise gibt es weitere Einträge unter {source}. Diesen Bereich in der vollständigen Arbeitsliste prüfen.",
   "brief.coverage.retry": "Brief aktualisieren",
-  "brief.coverage.summary": "Möglicherweise fehlt Arbeit",
+  "brief.reply.owed": "Kunde wartet auf Ihre Antwort",
+  "brief.createdAt": "Brief erstellt {when}",
+  "brief.updatedAt": "Agenda aktualisiert {when}",
+  "brief.changes.superseded":
+    "Dieser Deal wurde erneut geändert. Öffnen Sie ihn, um den aktuellen Stand zu prüfen.",
+  "brief.changes.title": "Änderungen für Sie",
+  "brief.changes.accept": "Akzeptieren",
+  "brief.changes.accepted": "Akzeptiert",
+  "brief.changes.undone": "Rückgängig gemacht",
+  "brief.changes.empty":
+    "In den letzten 24 Stunden wurden keine Änderungen für Sie vorgenommen.",
+  "brief.updates.title": "Neuigkeiten",
   "brief.task.undated": "Kein Fälligkeitsdatum",
   "brief.readings.summary": "Arbeitsübersicht",
   "brief.readings.unpriced": "Wert nicht verfügbar",
@@ -111,8 +122,7 @@ export const de = {
   "worklist.lead.noTarget": "kein Antwortziel festgelegt",
   "worklist.lead.lastTouch": "letzte Aktivität {date}",
   "worklist.deal.omitted": "nicht in der Prognose",
-  "worklist.deal.provisional":
-    "vorläufiger Abschluss {date} — bestätigen oder ändern",
+  "worklist.deal.provisional": "Geplanter Abschluss {date} — unbestätigt",
   "brief.readings.openRisk": "Dealaufgaben prüfen",
   "brief.readings.riskBasis":
     "erwarteter Deal-Wert; Deals ohne Bewertung sind nicht enthalten",
@@ -9486,7 +9496,8 @@ export const de = {
   "worklist.because.waiting_days.value_other": "wartet seit {value} Tagen",
   "worklist.because.overdue": "überfällig",
   "worklist.because.due_today": "heute fällig",
-  "worklist.because.closing_soon": "hat ein Abschlussdatum",
+  "worklist.because.closing_soon":
+    "Abschluss innerhalb von zwei Wochen erwartet",
   "worklist.because.expected_revenue": "ein offener Deal hängt daran",
   "worklist.because.expected_revenue.value": "Wert {value}",
   "worklist.because.material": "über dem üblichen offenen Deal",
@@ -9564,7 +9575,7 @@ export const de = {
   "worklist.untitled.approval": "Eine Entscheidung wartet",
   "worklist.untitled.dedupe_candidate": "Zwei Datensätze sehen gleich aus",
   "worklist.untitled.task": "Eine Aufgabe",
-  "worklist.untitled.brief_item": "Die Nacht hat das herausgesucht",
+  "worklist.untitled.brief_item": "Deal prüfen",
   "worklist.untitled.conversation_claim": "Eine Zusage von dir",
   "worklist.untitled.customer_waiting": "Jemand wartet auf Antwort",
   "worklist.untitled.lead_response": "Ein Lead",
@@ -9676,7 +9687,7 @@ export const de = {
   "worklist.batch.held_draft": "{count} Entwürfe warten auf Freigabe",
   "worklist.untitled.batch": "Eine Gruppe Routineentscheidungen",
   "worklist.verb.review_batch": "Durchsehen",
-  "worklist.verb.draft_reply": "Zum Antworten öffnen",
+  "worklist.verb.draft_reply": "Lesen und antworten",
   // Wo der Editor wirklich aufgeht, ist das Verb die HANDLUNG.
   "worklist.verb.draft_reply_now": "Antwort entwerfen",
   // Eine ERSTE Nachricht, keine Antwort auf eine bestehende.

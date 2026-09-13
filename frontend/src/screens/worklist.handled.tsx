@@ -30,7 +30,7 @@ import { useLocale, useT } from "../i18n";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
-import { ReceiptUndo } from "./worklist.receiptundo";
+import { ReceiptReview } from "./worklist.receiptreview";
 
 export function HandledForYouPanel() {
   const t = useT();
@@ -124,7 +124,7 @@ export function HandledForYouPanel() {
                     // is nothing here to take back.
                     key: "undo",
                     header: t("worklist.handled.wayBack"),
-                    render: (row: Receipt) => <ReceiptUndo receipt={row} />,
+                    render: (row: Receipt) => <ReceiptReview receipt={row} />,
                   },
                 ]}
               />

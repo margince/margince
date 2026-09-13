@@ -136,7 +136,7 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 		Fields: fields,
 	}}
 	w := stageChangeNotify{ex: Executors{Provider: provider}}
-	ev := workflow.Event{Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}}
+	ev := workflow.Event{Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
 
 	eff, err := w.Plan(context.Background(), ev)
 	if err != nil {
@@ -158,6 +158,9 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	}
 	if args.Recipient != owner {
 		t.Errorf("notify recipient = %v, want the deal's real owner %v", args.Recipient, owner)
+	}
+	if args.Body != "Stage changed: Discovery → Proposal." {
+		t.Fatalf("the notice must name the recorded transition: %s", args.Body)
 	}
 	if args.Subject == "" || args.Body == "" {
 		t.Error("notify subject/body is empty — a human reading the inbox needs to know why they were notified")

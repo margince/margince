@@ -15,6 +15,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useCanWrite } from "../app/capability";
 import { isEntityKind } from "../app/entity";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
@@ -25,6 +26,7 @@ import { type Receipt, worklistKey } from "./worklist.queries";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();
+  const writable = useCanWrite("deal", "update");
   const client = useQueryClient();
   // What the server said when it refused the press. A greyed control with no
   // sentence tells the reader nothing about why their undo did not happen.
@@ -73,6 +75,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   // timeline rather than a 360 record — and the restore route is addressed by
   // record. A subject naming something else gets no control instead of a
   // request built on a path that does not exist.
+  if (!writable) return null;
   const subject = receipt.subject;
   if (!subject || !isEntityKind(subject.type)) {
     return null;
@@ -94,7 +97,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
           })
         }
       >
-        {t("history.undo.action")}
+        {t("common.undo")}
       </Button>
       {refused && <p className="t-caption">{refused}</p>}
     </>

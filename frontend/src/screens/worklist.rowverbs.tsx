@@ -54,6 +54,7 @@ export function RowActs({
   primary,
   equals,
   onReview,
+  onOpenEmail,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
@@ -77,6 +78,7 @@ export function RowActs({
   equals?: ReactNode;
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
+  onOpenEmail?: (id: string) => void;
 }>) {
   return (
     <div className="worklist-row-acts">
@@ -88,6 +90,7 @@ export function RowActs({
           href={href}
           density={density}
           move={moveHref(item)}
+          onOpenEmail={onOpenEmail}
         />
       )}
       {/* The reader's own override, on every row that can carry one. It is not
@@ -157,13 +160,19 @@ function RowVerbs({
   href,
   density,
   move,
+  onOpenEmail,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
   density?: "compact";
   move: string | undefined;
+  onOpenEmail?: (id: string) => void;
 }>) {
   const t = useT();
+  const replyActivity =
+    item.move?.action === "draft_reply" ? item.move.activity_id : undefined;
+  const readReply =
+    replyActivity && onOpenEmail && item.subject?.type !== "contact";
   const drawn = new Set<string>();
   type Verb = {
     action: WorklistItem["actions"][number];
@@ -210,15 +219,21 @@ function RowVerbs({
     <>
       {/* The step the product already worked out, offered where the reader is
           standing rather than on a screen they have to go and find. */}
-      {move && (
-        <a className={NAVIGATING_VERB} href={move}>
-          {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
+      {readReply ? (
+        <Button small onClick={() => onOpenEmail(replyActivity)}>
+          {t("worklist.verb.draft_reply")}
+        </Button>
+      ) : (
+        move && (
+          <a className={NAVIGATING_VERB} href={move}>
+            {/* THE LABEL MOVES WITH THE ROUTE AND WITH THE VERB. Where the
               address opens the composer the label is the act; where it only
               reaches the record it says so. And it names the verb the SERVER
               chose, so an opening outreach is not offered as a reply to a
               conversation nobody has had. */}
-          {moveLabel(item, t)}
-        </a>
+            {moveLabel(item, t)}
+          </a>
+        )
       )}
       {verbs.map(({ action, destination }) => (
         <a key={action} className={NAVIGATING_VERB} href={destination}>

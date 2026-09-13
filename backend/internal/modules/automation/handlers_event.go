@@ -274,10 +274,23 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	if dealName == "" {
 		dealName = "A deal you own"
 	}
+	body := fmt.Sprintf("%s moved to a new pipeline stage.", dealName)
+	var change struct {
+		From *string `json:"from_stage_name"`
+		To   *string `json:"to_stage_name"`
+	}
+	if len(ev.Payload) > 0 {
+		if err := json.Unmarshal(ev.Payload, &change); err != nil {
+			return workflow.Effect{}, fmt.Errorf("automation: decoding the stage change: %w", err)
+		}
+		if change.From != nil && change.To != nil {
+			body = fmt.Sprintf("Stage changed: %s → %s.", *change.From, *change.To)
+		}
+	}
 	args, err := json.Marshal(notifyArgs{
 		Recipient: *deal.OwnerID,
-		Subject:   "A deal you own changed stage",
-		Body:      fmt.Sprintf("%s moved to a new pipeline stage.", dealName),
+		Subject:   fmt.Sprintf("%s changed stage", dealName),
+		Body:      body,
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)

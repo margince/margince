@@ -296,6 +296,7 @@ export function WorklistRow({
             keeps one x down the whole queue. worklist.rowverbs.tsx states why
             it is the tail of the line rather than its head. */}
         <RowActs
+          onOpenEmail={onOpenEmail}
           item={item}
           href={href}
           density={density}

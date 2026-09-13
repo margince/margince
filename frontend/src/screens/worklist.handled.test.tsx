@@ -6,6 +6,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { HandledForYouPanel } from "./worklist.handled";
@@ -82,7 +83,7 @@ describe("what was handled for the reader", () => {
     await screen.findByText('Corrected the close date on "Ablösung Checkout"');
 
     expect(
-      screen.getByRole("button", { name: en["history.undo.action"] }),
+      await screen.findByRole("button", { name: en["common.undo"] }),
     ).toBeTruthy();
   });
 
@@ -113,7 +114,7 @@ describe("what was handled for the reader", () => {
     await screen.findByText(en["worklist.handled.putBackDone"]);
 
     expect(
-      screen.queryByRole("button", { name: en["history.undo.action"] }),
+      screen.queryByRole("button", { name: en["common.undo"] }),
     ).toBeNull();
   });
 
@@ -249,11 +250,18 @@ function stubHandled(body: unknown) {
   vi.stubGlobal(
     "fetch",
     vi.fn(
-      async () =>
-        new Response(JSON.stringify(body), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
+      async (input: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            String(input instanceof Request ? input.url : input).endsWith("/me")
+              ? meFixture({ allow: { deal: ["read", "update"] } })
+              : body,
+          ),
+          {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          },
+        ),
     ),
   );
 }

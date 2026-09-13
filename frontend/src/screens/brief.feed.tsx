@@ -41,7 +41,7 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const rows = waitingRows(day);
+  const rows = waitingRows(day).filter((item) => !isBriefUpdate(item));
   const partial = Boolean(
     day?.next_cursor ||
       day?.readings?.more_available ||
@@ -204,5 +204,26 @@ function AgendaRows({
         </li>
       )}
     </ol>
+  );
+}
+
+export function isBriefUpdate(item: WorklistItem): boolean {
+  return item.source === "notice" && item.level !== 0 && !item.urgent;
+}
+
+export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {
+  const t = useT();
+  const rows = waitingRows(day).filter(isBriefUpdate);
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  if (rows.length === 0) return null;
+  return (
+    <Panel title={t("brief.updates.title")}>
+      <AgendaRows rows={rows} onOpenEmail={setOpenEmail} />
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+      />
+    </Panel>
   );
 }

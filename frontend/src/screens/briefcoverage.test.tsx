@@ -12,17 +12,14 @@ it("renders nothing for a complete read", () => {
   const { container } = render(<BriefCoverage day={readingsDay({}, [])} />);
   expect(container.innerHTML).toBe("");
 });
-it("names the affected source without technical limit prose", () => {
+it("does not turn a bounded scan or withheld source into a generic alarm", () => {
   const day = readingsDay({}, []);
   day.reach = [
     { source: "notice", considered: 8, shown: 8, more_available: true },
   ];
-  render(<BriefCoverage day={day} />);
-  expect(screen.getByText(en["brief.coverage.summary"])).toBeTruthy();
-  expect(screen.getByText(/More Notices may be available/)).toBeTruthy();
-  expect(document.body.textContent).not.toMatch(
-    /Read to a limit|A notice for you|8 shown/,
-  );
+  day.sources_unavailable = [{ source: "dsr", reason: "withheld" }];
+  const { container } = render(<BriefCoverage day={day} />);
+  expect(container.innerHTML).toBe("");
 });
 it("offers refresh for a failed source and names it", async () => {
   const day = readingsDay({}, []);
@@ -31,8 +28,8 @@ it("offers refresh for a failed source and names it", async () => {
   ];
   const retry = vi.fn();
   render(<BriefCoverage day={day} onRetry={retry} />);
-  await userEvent.click(screen.getByText(en["brief.coverage.summary"]));
-  await userEvent.click(
+  const user = userEvent.setup();
+  await user.click(
     screen.getByRole("button", { name: en["brief.coverage.retry"] }),
   );
   expect(retry).toHaveBeenCalledOnce();

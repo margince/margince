@@ -1401,6 +1401,9 @@ type PublicEventDealStageChanged struct {
 	// FromStageId Stage the deal left (absent on first placement).
 	FromStageId *openapi_types.UUID `json:"from_stage_id,omitempty"`
 
+	// FromStageName The stage name when the move happened, when available.
+	FromStageName *string `json:"from_stage_name,omitempty"`
+
 	// FromStatus Deal status before the move (open | won | lost).
 	FromStatus string `json:"from_status"`
 
@@ -1415,6 +1418,9 @@ type PublicEventDealStageChanged struct {
 
 	// ToStageId Stage the deal entered.
 	ToStageId openapi_types.UUID `json:"to_stage_id"`
+
+	// ToStageName The destination name when the move happened, when available.
+	ToStageName *string `json:"to_stage_name,omitempty"`
 
 	// ToStatus Deal status after the move (open | won | lost) — the field the automation trigger keys on (automation/handlers_event.go).
 	ToStatus string `json:"to_status"`

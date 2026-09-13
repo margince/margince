@@ -93,8 +93,8 @@ func TestClassifyBriefItemNamesTheCloseDateLikeItsRiskLaneSibling(t *testing.T) 
 	if hasReasonKind(got.item.Because, "overdue") {
 		t.Fatalf("because = %+v, overdue is the badge's job (item.Overdue), not a because reason here", got.item.Because)
 	}
-	if !hasReasonKind(got.item.Because, "closing_soon") {
-		t.Fatalf("because = %+v, wanted closing_soon — the same reason classifyRisk gives the identical fact", got.item.Because)
+	if hasReasonKind(got.item.Because, "closing_soon") {
+		t.Fatalf("a close date three months out is not closing soon: %+v", got.item.Because)
 	}
 	if got.deadlineAt.IsZero() {
 		t.Fatal("deadlineAt is zero even with a close date set; a far-future date must still reach the ordering")
@@ -147,7 +147,7 @@ func TestABriefItemsConsequenceComesFromItsSignal(t *testing.T) {
 	// A run stored before the signal existed carries none, and gets the answer
 	// it always got rather than a guess.
 	old := classifyBriefItem(item("b2", "brief_item"), rankInstant, dayMoney{})
-	if old.item.Consequence != "deal_drifts" {
-		t.Errorf("a signalless entry = %q, want the answer it always had", old.item.Consequence)
+	if old.item.Consequence != "none" {
+		t.Errorf("a signalless entry = %q, must not invent drift without a signal", old.item.Consequence)
 	}
 }

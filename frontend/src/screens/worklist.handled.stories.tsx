@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { HandledForYouPanel } from "./worklist.handled";
 
@@ -82,6 +83,8 @@ const aBusyMorning: HandledData = {
 function stubHandled(answer: () => Promise<Response>) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/me"))
+      return jsonResponse(meFixture({ allow: { deal: ["read", "update"] } }));
     return url.includes("/worklist/handled")
       ? answer()
       : jsonResponse({ data: [] });

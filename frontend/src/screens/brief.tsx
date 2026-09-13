@@ -2,17 +2,20 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useUrlParams } from "../app/urlstate";
-import { Disclosure } from "../design-system/atoms";
 import { PageZones } from "../design-system/pagezones";
+import { Panel, PanelBody } from "../design-system/panel";
+import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
-import { useT } from "../i18n";
+import { viewerZone } from "../format/timezone";
+import { useLocale, useT } from "../i18n";
 import { changedSinceBrief } from "./brief.changed";
+import { BriefChanges } from "./brief.changes";
 import { BriefDials } from "./brief.dials";
 import { briefDay } from "./brief.facts";
-import { BriefFeed } from "./brief.feed";
+import { BriefFeed, BriefUpdates } from "./brief.feed";
 import { BriefGlance } from "./brief.glance";
 import { PlanSection } from "./brief.plan";
-import { useWeeklyReview } from "./brief.queries";
+import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { OvernightPanel } from "./brief.rail.overnight";
 import { BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
@@ -93,6 +96,8 @@ function PersonalMorning({
   query,
 }: Readonly<{ query: ReturnType<typeof useWorklist> }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const brief = useMorningBrief();
   const day = briefDay(query.data?.pages);
   const state = query.isPending
     ? "loading"
@@ -100,17 +105,7 @@ function PersonalMorning({
       ? "failed"
       : "ready";
   return (
-    <>
-      {day && (
-        <Disclosure
-          summary={t("brief.readings.summary")}
-          className="brief-summary"
-        >
-          <BriefReadingsStrip day={day} />
-        </Disclosure>
-      )}
-      {day && <BriefCoverage day={day} onRetry={() => void query.refetch()} />}
-      <PageZones
+    <PageZones
         shape="aside"
         mainClassName="brief-main"
         asideClassName="brief-rail"
@@ -129,11 +124,39 @@ function PersonalMorning({
         }
         aside={
           <>
+            {day && (
+              <Panel
+                title={t("brief.readings.summary")}
+                className="brief-summary"
+              >
+                <PanelBody>
+                  {brief.data?.generated_at && (
+                    <p className="t-caption">
+                      {t("brief.createdAt", {
+                        when: formatDateTime(
+                          brief.data.generated_at,
+                          locale,
+                          viewerZone(),
+                        ),
+                      })}
+                    </p>
+                  )}
+                  <p className="t-caption">
+                    {t("brief.updatedAt", {
+                      when: formatDateTime(day.as_of, locale, viewerZone()),
+                    })}
+                  </p>
+                </PanelBody>
+                <BriefReadingsStrip day={day} />
+                <BriefCoverage day={day} onRetry={() => void query.refetch()} />
+              </Panel>
+            )}
+            <BriefChanges />
             <SchedulePanel day={day} state={state} />
+            <BriefUpdates day={day} />
             <OvernightPanel />
           </>
         }
       />
-    </>
   );
 }

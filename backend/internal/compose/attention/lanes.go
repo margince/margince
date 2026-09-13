@@ -197,6 +197,7 @@ type Receipts interface {
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
+	Review     *crmcontracts.AppliedDealChangeReview
 	ID         ids.UUID
 	Kind       string
 	Summary    string

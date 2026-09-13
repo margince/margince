@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
 import { useT } from "../i18n";
@@ -267,4 +268,24 @@ export const TheLineOnAPhone: Story = {
       </div>
     ),
   ],
+};
+
+export const ReplyToANamedDealConversation: Story = {
+  args: {
+    onOpenEmail: fn(),
+    item: {
+      ...waitingRow(),
+      subject: {
+        type: "deal",
+        id: "01a00000-0000-7000-8000-000000000001",
+        label: "Northstar renewal",
+      },
+      move: {
+        action: "draft_reply",
+        activity_id: "01a00000-0000-7000-8000-000000000002",
+      },
+    },
+    href: "#/deals/01a00000-0000-7000-8000-000000000001",
+    owner: "",
+  },
 };

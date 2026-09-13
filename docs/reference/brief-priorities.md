@@ -1,6 +1,6 @@
 # Morning and weekly brief priorities
 
-The personal morning brief draws all loaded rows of the server-ranked worklist, including proposals to approve and dated weekly commitments. Show more appends the next page in place; the headline and work summary use the same answer. Tasks and flagged deals have one agenda placement. Routine privacy work can be expanded together without losing its deadlines or actions.
+The personal morning brief draws all loaded rows of the server-ranked worklist, including proposals to approve and dated weekly commitments. Nonurgent informational notices appear in Updates beside Today; pinned notices retain their chosen position. Work summary stays open in the context column. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. Show more appends the next page in place; the headline and work summary use the same answer. Tasks and flagged deals have one agenda placement. Routine privacy work can be expanded together without losing its deadlines or actions.
 
 The team morning is a named-team board with routes to each member’s work and current plan. Morning and Weekly retain the same team selection in the URL. The board roster is resolved through live membership and reader authority; workspace-wide unassigned work is not attributed to a named team.
 
@@ -8,7 +8,7 @@ The team morning is a named-team board with routes to each member’s work and c
 
 Fresh waiting customers and approaching response deadlines retain precedence. Waiting threads older than fourteen days are recovery work: linked open deals retain material-risk priority, other old threads become routine. Privacy obligations enter the preparation window seven days before the actual deadline; the legal deadline itself is unchanged. Overdue or due-today tasks outside generic lead prospecting are urgent obligations. Deal recovery enters the urgent-work band when the deal is material relative to the priced risk population, or when its expected close is overdue or within fourteen days. The dated rule applies to equal-value, single-deal and unpriced portfolios too.
 
-The prospecting and existing-work labels share ranking precedence. Deadlines, value and the remaining server tie-breaks decide between them. Clients preserve the order and may repeat section labels; they must not regroup the queue by label.
+Existing customer work precedes routine prospecting. Actual response deadlines and urgent obligations still lead both. Within each band, deadlines, value and the remaining server tie-breaks decide the order. Clients preserve that order.
 
 A provisional close is a reason to confirm or revise the forecast, not evidence of a customer commitment. Cards retain the provisional flag and forecast category, including an omitted forecast. The deal-work reading reports known deal value in the selected queue with an explicit incompleteness qualification; it includes opportunities as well as recovery, and is not a risk-adjusted forecast or expected revenue.
 
@@ -18,9 +18,9 @@ The agenda has no separate remaining-risk panel or fixed five-row prefix. The ri
 
 ## What the daily brief can claim
 
-Dates and record context stay on the row. Details contain supporting evidence, not comparisons of raw ranking timestamps. Pinning changes personal order without changing the server’s urgent classification.
+Dates, reply direction, deal standing and its reason stay on the row. Details contain supporting evidence, not comparisons of raw ranking timestamps. A task never inherits a deal-level recommendation. Pinning changes personal order without changing the server’s urgent classification.
 
-Upcoming meetings count calendar entries, excluding past meetings awaiting outcomes. Preparation is unknown unless the source explicitly establishes it. A source failure is not a zero; incomplete sources are named separately from pagination. Deal values exclude unpriced deals and state their count.
+Upcoming meetings count calendar entries, excluding past meetings awaiting outcomes. Preparation is unknown unless the source explicitly establishes it. A source failure is not a zero; failed sources are named with a retry. Permission exclusions and bounded scans do not produce a generic alarm; counts retain their bounds and pagination remains explicit. Deal values exclude unpriced deals and state their count.
 
 Open weekly commitments with an intentional due date enter Today on that date in the installation timezone. Done uses the existing plan writer and invalidates the agenda. Undated, future and completed commitments stay out of the due lane. Creating a commitment can link an existing CRM record through the shared record picker. Team leads can read a member’s current plan and answer help requests through the existing permission-checked writer.
 
@@ -35,3 +35,15 @@ New team snapshots include deal recovery in their agenda, after requests for hel
 ## Validation
 
 Regression tests cover dated risk without a materiality advantage, retained lead follow-ups, response deadlines outranking recovery, personal/team scope, zero and partial weekly coverage, and response timestamps on the week boundary. Real-Postgres tests cover an overdue deal behind more than one hundred current deals, and the shared response cutoff in both weekly projections.
+
+## Reviewing automatic changes
+
+Changes made for you shows recorded work, its subject, reason and occurrence time.
+Close-date corrections name the old and new date when the date changed; a change
+in confidence alone is not described as a date change. Automatic stage moves use
+the progression ledger's guarded reversal; date corrections use record history's
+correction restore. Accept records a durable, audited review of that exact change
+and retains its applied values. It does not replay the change or turn an unconfirmed
+forecast into a customer commitment. Reversed and superseded changes cannot be
+accepted. A generic stage notification is information, not evidence that an agent
+changed the deal. New notifications retain the actual stage names at occurrence.

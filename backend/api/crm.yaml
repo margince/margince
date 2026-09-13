@@ -5180,6 +5180,36 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /deals/{id}/stage-evidence ------------------------
+  /deals/{id}/applied-changes/{changeId}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: changeId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Deals]
+      operationId: acceptAppliedDealChange
+      summary: Accept a recorded automatic deal change.
+      description: |
+        Records the human's acceptance of a close-date correction (audit id) or
+        automatic stage progression (approval id). It keeps the applied values;
+        acceptance is an audited review decision, not another application of the change.
+        Requires the displayed deal version. A reversed or superseded change is refused.
+      x-agent-access: human-only
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: 'Accepted, including a repeated acceptance.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/stage-progressions/{approvalId}/revert:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45283,6 +45313,19 @@ components:
           type: boolean
           description: 'True when more was done than was read. The list is a floor, not a total.'
 
+    AppliedDealChangeReview:
+      type: object
+      description: The recorded automatic change and its current review state.
+      required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
+      properties:
+        kind: { type: string, enum: [close_date, stage] }
+        accepted: { type: boolean }
+        reversed: { type: boolean }
+        version: { type: integer, format: int64 }
+        can_undo: { type: boolean }
+        can_accept: { type: boolean }
+        writable: { type: boolean, description: Whether this reader may write this deal. }
+
     Receipt:
       type: object
       description: |
@@ -45299,6 +45342,8 @@ components:
         occurred_at: { type: string, format: date-time, description: 'When it happened.' }
         subject:
           $ref: '#/components/schemas/AttentionSubject'
+        review:
+          $ref: '#/components/schemas/AppliedDealChangeReview'
         undo:
           allOf: [{ $ref: '#/components/schemas/AppliedUndo' }]
           description: >-

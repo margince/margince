@@ -59,8 +59,7 @@ var rankSteps = []rankStep{
 	},
 	{
 		name: "band",
-		// Urgent work leads and review follows. The two agreed-work labels share
-		// precedence, so their deadlines and deal facts decide the order.
+		// Urgent work leads, then existing customer work, then routine prospecting.
 		decides: func(a, b ranked) (bool, bool) {
 			ai, bi := bandRank(bandOfRow(a)), bandRank(bandOfRow(b))
 			return ai != bi, ai < bi

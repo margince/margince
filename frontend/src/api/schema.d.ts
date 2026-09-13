@@ -3440,6 +3440,33 @@ export interface paths {
         patch: operations["updateStage"];
         trace?: never;
     };
+    "/deals/{id}/applied-changes/{changeId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a recorded automatic deal change.
+         * @description Records the human's acceptance of a close-date correction (audit id) or
+         *     automatic stage progression (approval id). It keeps the applied values;
+         *     acceptance is an audited review decision, not another application of the change.
+         *     Requires the displayed deal version. A reversed or superseded change is refused.
+         */
+        post: operations["acceptAppliedDealChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/stage-progressions/{approvalId}/revert": {
         parameters: {
             query?: never;
@@ -34290,6 +34317,19 @@ export interface components {
             /** @description True when more was done than was read. The list is a floor, not a total. */
             truncated: boolean;
         };
+        /** @description The recorded automatic change and its current review state. */
+        AppliedDealChangeReview: {
+            /** @enum {string} */
+            kind: "close_date" | "stage";
+            accepted: boolean;
+            reversed: boolean;
+            /** Format: int64 */
+            version: number;
+            can_undo: boolean;
+            can_accept: boolean;
+            /** @description Whether this reader may write this deal. */
+            writable: boolean;
+        };
         /**
          * @description One completed act, and the record it was about.
          *
@@ -34313,6 +34353,7 @@ export interface components {
              */
             occurred_at: string;
             subject?: components["schemas"]["AttentionSubject"];
+            review?: components["schemas"]["AppliedDealChangeReview"];
             /**
              * @description The way back, on a receipt for work that was APPLIED rather than approved.
              *     A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
@@ -41418,6 +41459,35 @@ export interface operations {
                     "application/json": components["schemas"]["Stage"];
                 };
             };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    acceptAppliedDealChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                changeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted, including a repeated acceptance. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];

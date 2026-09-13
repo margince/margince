@@ -339,3 +339,20 @@ func TestARefusedReadFailsThePage(t *testing.T) {
 		t.Fatalf("a refused read answered %v, wanted the refusal to travel", err)
 	}
 }
+
+func TestLinkedTasksDoNotInheritDealRecommendations(t *testing.T) {
+	dealID := ids.NewV7()
+	reader := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{dealID: cardMove("open_task", nil)}}
+	svc := (&Service{}).WithDealMoves(reader)
+	task := riskRow(dealID)
+	task.Source = "task"
+	notice := riskRow(dealID)
+	notice.Source = "notice"
+	queue := []crmcontracts.WorklistItem{task, notice, riskRow(dealID)}
+	if err := svc.nameTheStep(context.Background(), queue); err != nil {
+		t.Fatal(err)
+	}
+	if queue[0].Move != nil || queue[1].Move != nil || queue[2].Move == nil {
+		t.Fatalf("only deal work may inherit the deal's recommendation: %+v", queue)
+	}
+}

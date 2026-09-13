@@ -3021,6 +3021,7 @@ BEGIN
 END;
 
 public.deal_correction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.deal_correction.accepted_at timestamp with time zone gen=- def=-
 public.deal_correction.applied_at timestamp with time zone NOT NULL gen=- def=now()
 public.deal_correction.asking text NOT NULL gen=- def=-
 public.deal_correction.audit_log_id uuid NOT NULL gen=- def=-
@@ -5738,6 +5739,7 @@ public.stage_exit_criterion_stage_key_live_ux CREATE UNIQUE INDEX stage_exit_cri
 public.stage_id_pipeline_unique CREATE UNIQUE INDEX stage_id_pipeline_unique ON public.stage USING btree (id, pipeline_id)
 public.stage_pkey CREATE UNIQUE INDEX stage_pkey ON public.stage USING btree (id)
 public.stage_progression_outcome acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.stage_progression_outcome.accepted_at timestamp with time zone gen=- def=-
 public.stage_progression_outcome.approval_id uuid NOT NULL gen=- def=-
 public.stage_progression_outcome.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.stage_progression_outcome.deal_id uuid NOT NULL gen=- def=-

@@ -374,6 +374,10 @@ export interface components {
              * @description Stage the deal entered.
              */
             to_stage_id: string;
+            /** @description The stage name when the move happened, when available. */
+            from_stage_name?: string;
+            /** @description The destination name when the move happened, when available. */
+            to_stage_name?: string;
             /** @description Deal status before the move (open | won | lost). */
             from_status: string;
             /** @description Deal status after the move (open | won | lost) — the field the automation trigger keys on (automation/handlers_event.go). */

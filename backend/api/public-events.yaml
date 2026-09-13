@@ -834,6 +834,12 @@ components:
           type: string
           format: uuid
           description: Stage the deal entered.
+        from_stage_name:
+          type: string
+          description: The stage name when the move happened, when available.
+        to_stage_name:
+          type: string
+          description: The destination name when the move happened, when available.
         from_status:
           type: string
           description: Deal status before the move (open | won | lost).

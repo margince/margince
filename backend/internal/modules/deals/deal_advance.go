@@ -275,9 +275,12 @@ func announceStageAdvance(
 	if err != nil {
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		dealStageChangedPayload(current, in.ToStageID, status, winProbability,
-			frozenFxFromPatch(p, current))); err != nil {
+	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	args := []any{current.StageId, in.ToStageID}
+	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
+		return fmt.Errorf("read the stage names for the change: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
 		return fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
 	return nil
