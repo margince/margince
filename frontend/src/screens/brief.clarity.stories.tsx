@@ -88,7 +88,7 @@ const rows: WorklistItem[] = [
 ];
 
 const meta: Meta<typeof BriefScreen> = {
-  title: "Shell/Brief clarity",
+  title: "Shell/Home clarity",
   component: BriefScreen,
   parameters: { layout: "fullscreen" },
 };

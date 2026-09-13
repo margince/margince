@@ -4,12 +4,6 @@
 // The account's work in flight: one line per open deal, written from that
 // record's own facts.
 //
-// This replaced a written account brief. On an account carrying several
-// engagements the brief blended them — correspondence about one deal became a
-// sentence about another, and a figure read out of the blend had nowhere to be
-// checked. So every line is one record's own story, and the header above them
-// counts and nothing else.
-//
 // Deals only. The account's projects have exactly one home on the record —
 // the ProjectLinks section, which also holds attach and detach — and a second
 // list of them here was a second answer to "which bodies of work is this part
@@ -32,6 +26,7 @@ import {
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatMoneyOrAbsent,
@@ -408,7 +403,11 @@ function DealLine({
         {deal.expected_close_date && (
           <span>
             {t("co.work.closes", {
-              date: formatDate(deal.expected_close_date, locale, zone),
+              date: formatDate(
+                middayInstant(deal.expected_close_date, zone),
+                locale,
+                zone,
+              ),
             })}
           </span>
         )}

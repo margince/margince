@@ -17,6 +17,7 @@ import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { useMe } from "./common";
 import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { hasMoveControl, MoveButton } from "./movebutton";
 import {
@@ -56,6 +57,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
+import { noticeDetail, readerTask } from "./worklist.reader";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
 import { RowActs } from "./worklist.rowverbs";
 import { syncHealthDetail } from "./worklist.synchealth";
@@ -150,7 +152,8 @@ export function WorklistRow({
   // moment the reader is racing on their own clock.
   const recordZone = useRecordZone();
   const href = rowHref(item);
-  const title = itemTitle(item, t, locale);
+  const viewer = useMe(false).data?.user;
+  const title = itemTitle(readerTask(item, viewer, t), t, locale);
   const facts =
     dealFactsText(item, t, locale, zone) ??
     leadFactsText(item, t, locale, zone);
@@ -165,7 +168,7 @@ export function WorklistRow({
   const detail =
     item.source === "sync_health"
       ? syncHealthDetail(item.kind, item.detail, t)
-      : item.detail;
+      : noticeDetail(item, viewer, t);
   // The badged reasons are drawn as badges above and left out here, so one
   // meeting does not report the same finding twice in two registers. The when
   // line takes `due_today` the same way when it is drawn: the moment names the

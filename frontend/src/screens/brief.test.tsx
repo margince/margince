@@ -48,7 +48,7 @@ it("continues the full queue in a Brief drawer without losing the first page or 
   render(<BriefScreen />);
   await screen.findByText("Call Weber");
   await userEvent.click(
-    screen.getByRole("button", { name: en["brief.queue.open"] }),
+    screen.getByRole("button", { name: en["brief.queue.title"] }),
   );
   await userEvent.click(
     await screen.findByRole("button", { name: en["worklist.more"] }),

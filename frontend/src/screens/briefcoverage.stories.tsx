@@ -7,7 +7,7 @@ import { BriefCoverage } from "./briefcoverage";
 import { StoryProviders } from "./story-utils";
 
 const meta: Meta<typeof BriefCoverage> = {
-  title: "Shell/Brief coverage",
+  title: "Shell/Home coverage",
   component: BriefCoverage,
   decorators: [
     (Story) => (

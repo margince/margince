@@ -8881,6 +8881,30 @@ func (e InstallationSettingsBaseLanguage) Valid() bool {
 	}
 }
 
+// Defines values for InstallationSettingsDateFormat.
+const (
+	InstallationSettingsDateFormatDmy    InstallationSettingsDateFormat = "dmy"
+	InstallationSettingsDateFormatLocale InstallationSettingsDateFormat = "locale"
+	InstallationSettingsDateFormatMdy    InstallationSettingsDateFormat = "mdy"
+	InstallationSettingsDateFormatYmd    InstallationSettingsDateFormat = "ymd"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsDateFormat enum.
+func (e InstallationSettingsDateFormat) Valid() bool {
+	switch e {
+	case InstallationSettingsDateFormatDmy:
+		return true
+	case InstallationSettingsDateFormatLocale:
+		return true
+	case InstallationSettingsDateFormatMdy:
+		return true
+	case InstallationSettingsDateFormatYmd:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsForecastForwardMeasure.
 const (
 	InstallationSettingsForecastForwardMeasureSettingsForwardMeasureCommitEvidence InstallationSettingsForecastForwardMeasure = "commit_evidence"
@@ -8896,6 +8920,27 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstallationSettingsTimeFormat.
+const (
+	InstallationSettingsTimeFormatLocale InstallationSettingsTimeFormat = "locale"
+	InstallationSettingsTimeFormatN12h   InstallationSettingsTimeFormat = "12h"
+	InstallationSettingsTimeFormatN24h   InstallationSettingsTimeFormat = "24h"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsTimeFormat enum.
+func (e InstallationSettingsTimeFormat) Valid() bool {
+	switch e {
+	case InstallationSettingsTimeFormatLocale:
+		return true
+	case InstallationSettingsTimeFormatN12h:
+		return true
+	case InstallationSettingsTimeFormatN24h:
 		return true
 	default:
 		return false
@@ -13822,6 +13867,30 @@ func (e UpdateInstallationSettingsRequestBaseLanguage) Valid() bool {
 	}
 }
 
+// Defines values for UpdateInstallationSettingsRequestDateFormat.
+const (
+	UpdateInstallationSettingsRequestDateFormatDmy    UpdateInstallationSettingsRequestDateFormat = "dmy"
+	UpdateInstallationSettingsRequestDateFormatLocale UpdateInstallationSettingsRequestDateFormat = "locale"
+	UpdateInstallationSettingsRequestDateFormatMdy    UpdateInstallationSettingsRequestDateFormat = "mdy"
+	UpdateInstallationSettingsRequestDateFormatYmd    UpdateInstallationSettingsRequestDateFormat = "ymd"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestDateFormat enum.
+func (e UpdateInstallationSettingsRequestDateFormat) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestDateFormatDmy:
+		return true
+	case UpdateInstallationSettingsRequestDateFormatLocale:
+		return true
+	case UpdateInstallationSettingsRequestDateFormatMdy:
+		return true
+	case UpdateInstallationSettingsRequestDateFormatYmd:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateInstallationSettingsRequestForecastForwardMeasure.
 const (
 	UpdateInstallationSettingsRequestForecastForwardMeasureCommitEvidence UpdateInstallationSettingsRequestForecastForwardMeasure = "commit_evidence"
@@ -13837,6 +13906,27 @@ func (e UpdateInstallationSettingsRequestForecastForwardMeasure) Valid() bool {
 	case UpdateInstallationSettingsRequestForecastForwardMeasureManagerCall:
 		return true
 	case UpdateInstallationSettingsRequestForecastForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateInstallationSettingsRequestTimeFormat.
+const (
+	UpdateInstallationSettingsRequestTimeFormatLocale UpdateInstallationSettingsRequestTimeFormat = "locale"
+	UpdateInstallationSettingsRequestTimeFormatN12h   UpdateInstallationSettingsRequestTimeFormat = "12h"
+	UpdateInstallationSettingsRequestTimeFormatN24h   UpdateInstallationSettingsRequestTimeFormat = "24h"
+)
+
+// Valid indicates whether the value is a known member of the UpdateInstallationSettingsRequestTimeFormat enum.
+func (e UpdateInstallationSettingsRequestTimeFormat) Valid() bool {
+	switch e {
+	case UpdateInstallationSettingsRequestTimeFormatLocale:
+		return true
+	case UpdateInstallationSettingsRequestTimeFormatN12h:
+		return true
+	case UpdateInstallationSettingsRequestTimeFormatN24h:
 		return true
 	default:
 		return false
@@ -20159,6 +20249,9 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
+	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
+
 	// OccurredAt When a done_for_you receipt actually happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`
 
@@ -21832,6 +21925,15 @@ type ClaimEvidenceEntityType string
 // Reporting an imported row as a connector record or a contact's assertion would be a
 // claim about where it came from that nobody made. Raised upstream.
 type ClaimEvidenceSourceKind string
+
+// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
+type CloseDateChange struct {
+	After           *string `json:"after,omitempty"`
+	Basis           *string `json:"basis,omitempty"`
+	Before          *string `json:"before,omitempty"`
+	DateChanged     bool    `json:"date_changed"`
+	ForecastChanged bool    `json:"forecast_changed"`
+}
 
 // ColdStartField One read-back field. EVERY field carries a non-empty `evidence_snippet` + `confidence`, or it is
 // omitted (the no-guess gate). `source_kind` says where the evidence lives; `source_url` is present
@@ -29534,6 +29636,9 @@ type InstallationSettings struct {
 	// for one reader keeps that reader's language.
 	BaseLanguage InstallationSettingsBaseLanguage `json:"base_language"`
 
+	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+	DateFormat *InstallationSettingsDateFormat `json:"date_format,omitempty"`
+
 	// DeadWorkBannerHours How far back the maintenance banner looks before it calls dead work a problem, in
 	// hours. 24 by default, bounded above by River's own seven-day retention — a window
 	// past that cannot narrow anything, since every terminal row still there is inside it.
@@ -29599,6 +29704,9 @@ type InstallationSettings struct {
 	// here that could turn it off and strand everybody.
 	SignInProviders []SignInProvider `json:"sign_in_providers"`
 
+	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+	TimeFormat *InstallationSettingsTimeFormat `json:"time_format,omitempty"`
+
 	// Timezone IANA zone name every reporting period boundary is computed in (not a user's own
 	// display timezone, which is per-user).
 	Timezone string `json:"timezone"`
@@ -29613,6 +29721,9 @@ type InstallationSettings struct {
 // for one reader keeps that reader's language.
 type InstallationSettingsBaseLanguage string
 
+// InstallationSettingsDateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+type InstallationSettingsDateFormat string
+
 // InstallationSettingsForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. A setting
 // rather than a fixed choice, because it is a question about how this installation
 // SELLS rather than about the software: a team with a disciplined commit stage means
@@ -29625,6 +29736,9 @@ type InstallationSettingsBaseLanguage string
 // added to what is already won; with no current call the read falls back to
 // `commit_evidence` and says so in the landing's `caveat`.
 type InstallationSettingsForecastForwardMeasure string
+
+// InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+type InstallationSettingsTimeFormat string
 
 // InstallationSetup defines model for InstallationSetup.
 type InstallationSetup struct {
@@ -31655,6 +31769,18 @@ type NoticeCaseState string
 // deliberately absent — a contact may not raise a notice that looks like the system spoke.
 type NoticeKind string
 
+// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+type NoticeOrigin struct {
+	// ActorId Original typed principal identifier, such as human:<user UUID> or system:<process>.
+	ActorId        string              `json:"actor_id"`
+	ActorName      *string             `json:"actor_name,omitempty"`
+	ActorType      string              `json:"actor_type"`
+	EventId        openapi_types.UUID  `json:"event_id"`
+	OccurredAt     time.Time           `json:"occurred_at"`
+	OnBehalfOf     *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+	OnBehalfOfName *string             `json:"on_behalf_of_name,omitempty"`
+}
+
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
@@ -33615,6 +33741,9 @@ type RbacObjectGrant struct {
 // about one, and an empty subject is a real state rather than a missing field — a
 // client draws the summary alone rather than inventing something to open.
 type Receipt struct {
+	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
+	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
+
 	// Id The completed act, as its own surface spells it.
 	Id openapi_types.UUID `json:"id"`
 
@@ -37195,6 +37324,9 @@ type UpdateInstallationSettingsRequest struct {
 	// nothing already written, so artifacts stay in the language they were written in.
 	BaseLanguage *UpdateInstallationSettingsRequestBaseLanguage `json:"base_language,omitempty"`
 
+	// DateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+	DateFormat *UpdateInstallationSettingsRequestDateFormat `json:"date_format,omitempty"`
+
 	// DeadWorkBannerHours How far back the maintenance banner looks before it calls dead work a problem, in
 	// hours. 24 by default, bounded above by River's own seven-day retention — a window
 	// past that cannot narrow anything, since every terminal row still there is inside it.
@@ -37232,6 +37364,9 @@ type UpdateInstallationSettingsRequest struct {
 	// Name Rename the company.
 	Name *string `json:"name,omitempty"`
 
+	// TimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+	TimeFormat *UpdateInstallationSettingsRequestTimeFormat `json:"time_format,omitempty"`
+
 	// Timezone The IANA reporting zone.
 	Timezone *string `json:"timezone,omitempty"`
 }
@@ -37240,10 +37375,16 @@ type UpdateInstallationSettingsRequest struct {
 // nothing already written, so artifacts stay in the language they were written in.
 type UpdateInstallationSettingsRequestBaseLanguage string
 
+// UpdateInstallationSettingsRequestDateFormat Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+type UpdateInstallationSettingsRequestDateFormat string
+
 // UpdateInstallationSettingsRequestForecastForwardMeasure Which remaining-pipeline reading a projected landing is built from. Never frozen:
 // it is applied on READ and stores nothing, so changing it re-computes every landing
 // at once and re-means no stored row.
 type UpdateInstallationSettingsRequestForecastForwardMeasure string
+
+// UpdateInstallationSettingsRequestTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+type UpdateInstallationSettingsRequestTimeFormat string
 
 // UpdateIntegrationsSettingsRequest A sparse provider-posture patch (admin/ops).
 type UpdateIntegrationsSettingsRequest struct {
@@ -39261,6 +39402,9 @@ type WorklistItem struct {
 	// that stopped answering is not a deal's problem at all, so the card has no word
 	// for it.
 	Move *WorklistMove `json:"move,omitempty"`
+
+	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+	NoticeOrigin *NoticeOrigin `json:"notice_origin,omitempty"`
 
 	// OccurredAt When the thing being reported happened.
 	OccurredAt *time.Time `json:"occurred_at,omitempty"`

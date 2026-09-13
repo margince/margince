@@ -18,6 +18,7 @@ import {
   readingsDay,
   report,
   singles,
+  taskRow,
   WEEK_START,
   type WeeklyReview,
   type Worklist,
@@ -152,7 +153,8 @@ function brief({
 }
 
 const meta: Meta<typeof BriefScreen> = {
-  title: "Shell/Brief",
+  parameters: { layout: "fullscreen" },
+  title: "Shell/Home",
   component: BriefScreen,
 };
 export default meta;
@@ -283,4 +285,59 @@ export const PipelinePartial: Story = {
     approvals: [],
     pipeline: () => report(pipelineRows, 4),
   }),
+};
+
+const promise = taskRow(
+  "promise",
+  "Prepare a comparison showing two products and both translation options.",
+);
+const otherPromise = {
+  ...taskRow(
+    "other-promise",
+    "Prepare the revised comparison sheet for the same customer.",
+  ),
+  due_at: "2026-09-11T21:59:59Z",
+};
+export const SixPriorities: Story = {
+  render: brief({
+    approvals: [],
+    day: readingsDay({}, [
+      promise,
+      otherPromise,
+      ...[1, 2, 3, 4].map((n) =>
+        taskRow(`followup-${n}`, `Follow up on customer commitment ${n}`),
+      ),
+    ]),
+  }),
+};
+export const TaskEvidence: Story = {
+  render: brief({
+    approvals: [],
+    day: readingsDay({}, [promise, otherPromise]),
+    extra: {
+      "GET /activities/promise": () =>
+        jsonResponse({
+          id: "promise",
+          kind: "task",
+          subject: promise.title,
+          body: "Original commitment from the first meeting: prepare both translation variants by 9 September. A later meeting may record a separate deadline; confirm which commitment remains before closing either task.",
+          occurred_at: "2026-09-07T10:00:00Z",
+          version: 1,
+          is_done: false,
+        }),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      (
+        await within(canvasElement).findAllByRole("button", {
+          name: en["brief.focus.context"],
+        })
+      )[0],
+    );
+  },
+};
+export const SixPrioritiesPhone: Story = {
+  ...SixPriorities,
+  tags: ["uat-phone"],
 };

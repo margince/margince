@@ -10,7 +10,7 @@ import {
 } from "./worklist.receiptreview.fixtures";
 
 const meta: Meta<typeof BriefChanges> = {
-  title: "Shell/Brief changes",
+  title: "Shell/Home changes",
   component: BriefChanges,
 };
 export default meta;

@@ -63,6 +63,7 @@ import { StageLadder, type StageStep } from "../design-system/stageladder";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDuration,
@@ -181,13 +182,8 @@ import { TagsPanel } from "./tagspanel";
 import { TimelineActions } from "./timelineactions";
 import { groupChronology } from "./timelinegroups";
 
-// Deal surfaces (B-EP09.11a/b/c): the five-stage Kanban with drag-to-advance
-// (terminal stages are a 🟡 confirm, AC-deal-6), the board↔table segmented
-// control over the SAME fetched set (no reload), and the deal 360 with the
-// stage stepper and the live pending-approval staged cards. Weighting math
-// stays out of the UI beyond same-currency page-local sub-lines: a mixed-
-// currency column renders no sum (the FX rule: never sum native minors
-// across currencies).
+// Kanban, table and deal detail share the fetched records and approval flow.
+// Mixed-currency columns never sum native minor units; weighting stays server-side.
 
 type Deal = components["schemas"]["Deal"];
 type Company = components["schemas"]["Company"];
@@ -267,14 +263,8 @@ type DealFilters = {
   overlay: boolean;
 };
 
-// The two dials this screen owns beyond the shared list vocabulary.
-//
-// `pipeline_id` is already a wire parameter name, so the address and the
-// endpoint say it the same way. `view` is the screen's own, because which of
-// the board and the table is drawn changes nothing about which deals exist —
-// and it is why these two are held out of the list codec rather than passed
-// through it: read as filters they would be sent to /deals, which takes
-// neither.
+// Drawing mode and pipeline selection are URL dials, not deal-list filters.
+
 const PIPELINE_PARAM = "pipeline_id";
 const VIEW_PARAM = "view";
 
@@ -1611,7 +1601,11 @@ function dealColumns(
       sort: "expected_close_date",
       cell: (deal) =>
         deal.expected_close_date
-          ? formatDate(deal.expected_close_date, locale, recordZone)
+          ? formatDate(
+              middayInstant(deal.expected_close_date, recordZone),
+              locale,
+              recordZone,
+            )
           : null,
     },
     {
@@ -2742,7 +2736,11 @@ function DealTable({ deals }: Readonly<{ deals: Deal[] }>) {
             header: t("deals.close"),
             render: (deal: Deal) =>
               deal.expected_close_date
-                ? formatDate(deal.expected_close_date, locale, recordZone)
+                ? formatDate(
+                    middayInstant(deal.expected_close_date, recordZone),
+                    locale,
+                    recordZone,
+                  )
                 : null,
           },
           {

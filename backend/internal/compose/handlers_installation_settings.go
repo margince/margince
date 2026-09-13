@@ -100,6 +100,14 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		Timezone:     req.Timezone,
 		BaseCurrency: req.BaseCurrency,
 	}
+	if req.DateFormat != nil {
+		value := string(*req.DateFormat)
+		patch.DateFormat = &value
+	}
+	if req.TimeFormat != nil {
+		value := string(*req.TimeFormat)
+		patch.TimeFormat = &value
+	}
 	if req.BaseLanguage != nil {
 		// The generated enum refuses an unknown value at the edge, so a code
 		// that reaches here is one the contract admits. The entry validates it
@@ -167,6 +175,10 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:     h.maxUploadBytes,
 		SignInProviders:    h.signInProviders(s.EnabledOidcProviders),
 	}
+	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
+	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
+	out.DateFormat = &dateFormat
+	out.TimeFormat = &timeFormat
 	if s.BaseCurrencyLockedReason != "" {
 		reason := s.BaseCurrencyLockedReason
 		out.BaseCurrencyLockedReason = &reason

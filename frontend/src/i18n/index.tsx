@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
+import { useDateTimePreferences } from "../format/preferences";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
 import { vi } from "./vi";
@@ -380,11 +381,12 @@ export function LocaleProvider({
 }
 
 export function useLocale(): LocaleContextValue {
+  useDateTimePreferences();
   return useContext(LocaleContext);
 }
 
 export function useT() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   // NARROW on purpose: a core key, and a typo in one is a compile error. The
   // union a unit needs is added at the published surface (src/surface/index.ts)
   // rather than here, because `ReturnType<typeof useT>` is the parameter type
@@ -414,7 +416,7 @@ export type Translator = ReturnType<typeof useT>;
  * and a base is not a key — `t("share.teamMembers")` names nothing.
  */
 export function usePlural() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   return (base: PluralBase, count: number, params?: Record<string, string>) =>
     translatePlural(locale, base, count, params);
 }
@@ -423,6 +425,6 @@ export type PluralTranslator = ReturnType<typeof usePlural>;
 
 /** `pluralKey` bound to the reader's locale, for a caller that carries keys. */
 export function usePluralKey() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   return (base: PluralBase, count: number) => pluralKey(locale, base, count);
 }

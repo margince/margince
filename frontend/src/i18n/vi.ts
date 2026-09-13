@@ -14,12 +14,20 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "home.receipt.date": "Ngày chốt: {before} → {after}",
+  "home.receipt.undated": "Chưa có ngày",
+  "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
+  "home.receipt.forecast": "Đã thay đổi nhóm dự báo",
+  "home.task.yours": "Bạn cần: {action}",
+  "home.change.unknown":
+    "Thông báo cũ này không ghi lại người thực hiện thay đổi.",
+  "home.change.unidentified": "tác nhân chưa xác định",
+  "home.change.by": "Người thực hiện: {actor}",
   "brief.focus.context": "Mở ngữ cảnh",
   "brief.focus.back": "Quay lại ưu tiên",
   "brief.queue.back": "Quay lại danh sách",
-  "brief.queue.open": "Mở danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
-  "brief.queue.close": "Quay lại bản tin",
+  "brief.queue.close": "Về Trang chủ",
   "brief.focus.urgentRemaining_one":
     "Còn {count} việc khẩn cấp trong danh sách",
   "brief.focus.urgentRemaining_other":
@@ -307,7 +315,7 @@ export const vi = {
   "autonomy.auto": "tự động thực thi",
   "autonomy.confirm": "xác nhận trước",
 
-  "nav.brief": "Bản tóm tắt",
+  "nav.brief": "Trang chủ",
   "nav.contacts": "Liên hệ",
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
@@ -2922,7 +2930,7 @@ export const vi = {
   // của trang đó mà vẫn còn ai đó thay đổi được.
   "plan.title": "Cam kết tuần này",
   // Hai nút chuyển của bản tóm tắt: bản nào, và của ai.
-  "brief.view.label": "Bản tóm tắt nào",
+  "brief.view.label": "Chế độ xem Trang chủ",
   "brief.view.morning": "Buổi sáng",
   "brief.view.weekly": "Tuần",
   "brief.scope.label": "Bản tóm tắt của ai",
@@ -4087,7 +4095,7 @@ export const vi = {
   "settings.signatureCancel": "Hủy",
   "delivery.morningLabel": "Bản tóm tắt buổi sáng",
   "delivery.morningHelp":
-    "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên trang Tóm tắt.",
+    "Bản tóm tắt trong ngày có được gửi qua email hay không. Dù sao nó cũng có trên Trang chủ.",
   "delivery.weeklyLabel": "Đánh giá hằng tuần",
   "delivery.weeklyHelp": "Đánh giá thứ Hai có được gửi qua email hay không.",
   "delivery.byEmail": "Qua email",
@@ -7681,6 +7689,17 @@ export const vi = {
   "installationSettings.currencyTitle": "Tiền tệ",
   "installationSettings.currencySub":
     "Đơn vị tiền tệ duy nhất mà mọi số liệu tổng hợp quy đổi về.",
+  "installationSettings.dateFormat": "Định dạng ngày",
+  "installationSettings.timeFormat": "Định dạng giờ",
+  "installationSettings.formatsHint":
+    "Áp dụng trên toàn bộ giao diện. Ngày và múi giờ đã lưu không thay đổi.",
+  "installationSettings.dateFormat.locale": "Theo ngôn ngữ giao diện",
+  "installationSettings.dateFormat.dmy": "NN.TT.NNNN · 23.09.2026",
+  "installationSettings.dateFormat.mdy": "TT/NN/NNNN · 09/23/2026",
+  "installationSettings.dateFormat.ymd": "NNNN-TT-NN · 2026-09-23",
+  "installationSettings.timeFormat.locale": "Theo ngôn ngữ giao diện",
+  "installationSettings.timeFormat.24h": "24 giờ · 17:30",
+  "installationSettings.timeFormat.12h": "12 giờ · 05:30 CH",
   "installationSettings.name": "Tên tổ chức",
   "installationSettings.nameHint":
     "Hiển thị ở mọi nơi sản phẩm gọi tên tổ chức của bạn.",

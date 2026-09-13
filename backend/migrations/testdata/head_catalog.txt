@@ -4504,6 +4504,7 @@ public.notice.notice_pkey PRIMARY KEY (id)
 public.notice.notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.notice.notice_subject_present CHECK ((subject <> ''::text))
 public.notice.notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
+public.notice.origin jsonb gen=- def=-
 public.notice.read_at timestamp with time zone gen=- def=-
 public.notice.recipient_user_id uuid NOT NULL gen=- def=-
 public.notice.subject text NOT NULL gen=- def=-

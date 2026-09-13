@@ -147,7 +147,8 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	// changed since is simply the date this deal has — there is no card to keep
 	// alive, because the correction was applied when it was made and the
 	// receipt said so that morning.
-	if !hygiene.Flagged {
+	if !hygiene.Flagged || (!hygiene.Downgrade && cand.expectedClose != nil &&
+		dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
 		return closeDateMemberChecked, nil
 	}
 
@@ -269,13 +270,9 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
 	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
 		setForecastCategory(p, cand.forecastCat, category, notched)
-		// The date moves on this tier too, which is the change: a deal nobody
-		// has touched carries a date nobody believes, and leaving it while
-		// notching the forecast corrected the number and left the calendar
-		// lying. Both are the sweep's estimate, both are marked provisional,
-		// and both are on one Undo.
+		// A future date stays intact while confidence is reviewed.
 		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-		if !cand.provisional {
+		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
 			p.Set("close_date_provisional", false, true)
 		}
 	}, map[string]any{

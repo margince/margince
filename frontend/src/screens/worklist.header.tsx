@@ -122,7 +122,7 @@ export function worklistLaneHref(
     ["queue", "1"],
   ]);
   if (scope !== "mine") params.set("queue_scope", scope);
-  return hashWithParams(routeHash({ screen: "brief" }), params);
+  return hashWithParams(routeHash({ screen: "home" }), params);
 }
 
 /**

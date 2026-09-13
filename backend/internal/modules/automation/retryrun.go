@@ -243,8 +243,14 @@ func eventFromEnvelope(raw []byte, workspace ids.UUID) (workflow.Event, error) {
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return workflow.Event{}, fmt.Errorf("decoding the stored trigger event: %w", err)
 	}
+	return workflowEvent(env, workspace), nil
+}
+
+// Live delivery and redrive preserve the same original author and occurrence.
+func workflowEvent(env kevents.Envelope, workspace ids.UUID) workflow.Event {
 	return workflow.Event{
 		ID:          env.EventID,
+		Actor:       env.Actor,
 		Type:        env.Type,
 		WorkspaceID: workspace,
 		OccurredAt:  env.OccurredAt,
@@ -253,5 +259,5 @@ func eventFromEnvelope(raw []byte, workspace ids.UUID) (workflow.Event, error) {
 			ID:   env.Entity.ID,
 		},
 		Payload: env.Payload,
-	}, nil
+	}
 }

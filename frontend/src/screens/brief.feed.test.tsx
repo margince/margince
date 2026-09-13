@@ -51,7 +51,7 @@ it("opens the full queue instead of growing focus when more pages exist", () => 
     screen
       .getByRole("link", { name: en["brief.feed.fullWorklist"] })
       .getAttribute("href"),
-  ).toBe("#/brief?filter=all&queue=1");
+  ).toBe("#/home?filter=all&queue=1");
 });
 
 it("warns about urgent work beyond the loaded page using server urgency facts", () => {

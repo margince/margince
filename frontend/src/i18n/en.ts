@@ -2,12 +2,20 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
-  "brief.focus.context": "Open context",
+  "home.receipt.date": "Close date: {before} → {after}",
+  "home.receipt.undated": "No date",
+  "home.receipt.confidence": "Updated forecast confidence",
+  "home.receipt.forecast": "Forecast category changed",
+  "home.task.yours": "You need to {action}",
+  "home.change.unknown":
+    "The original actor was not recorded for this older notification.",
+  "home.change.unidentified": "An unidentified actor",
+  "home.change.by": "Changed by: {actor}",
+  "brief.focus.context": "View details",
   "brief.focus.back": "Back to Focus",
   "brief.queue.back": "Back to queue",
-  "brief.queue.open": "Open work queue",
   "brief.queue.title": "Work queue",
-  "brief.queue.close": "Back to Brief",
+  "brief.queue.close": "Back to Home",
   "brief.focus.urgentRemaining_one": "{count} more urgent item in the queue",
   "brief.focus.urgentRemaining_other": "{count} more urgent items in the queue",
   "brief.focus.remaining": "{count} more priorities in the queue",
@@ -298,7 +306,7 @@ export const en = {
   "autonomy.auto": "auto-execute",
   "autonomy.confirm": "confirm-first",
 
-  "nav.brief": "Brief",
+  "nav.brief": "Home",
   "nav.contacts": "Contacts",
   "nav.companies": "Companies",
   "nav.leads": "Leads",
@@ -3037,7 +3045,7 @@ export const en = {
   // of that page anybody can still change.
   "plan.title": "This week’s commitments",
   // The Brief's two dials. Which brief, and whose.
-  "brief.view.label": "Which brief",
+  "brief.view.label": "Home view",
   "brief.view.morning": "Morning",
   "brief.view.weekly": "Weekly",
   "brief.scope.label": "Whose brief",
@@ -4252,7 +4260,7 @@ export const en = {
   // One line under the readings strip, naming what the day could not read.
   "delivery.morningLabel": "Your morning brief",
   "delivery.morningHelp":
-    "Whether the day's brief also arrives by email. It is on your Brief page either way.",
+    "Whether the day's brief also arrives by email. It is on Home either way.",
   "delivery.weeklyLabel": "Your weekly review",
   "delivery.weeklyHelp": "Whether Monday's review also arrives by email.",
   "delivery.byEmail": "By email",
@@ -7890,6 +7898,17 @@ export const en = {
   "installationSettings.currencyTitle": "Currency",
   "installationSettings.currencySub":
     "The one currency every roll-up converts amounts to.",
+  "installationSettings.dateFormat": "Date format",
+  "installationSettings.timeFormat": "Time format",
+  "installationSettings.formatsHint":
+    "Applies throughout the interface. Stored dates and timezones stay the same.",
+  "installationSettings.dateFormat.locale": "Use interface language",
+  "installationSettings.dateFormat.dmy": "DD.MM.YYYY · 23.09.2026",
+  "installationSettings.dateFormat.mdy": "MM/DD/YYYY · 09/23/2026",
+  "installationSettings.dateFormat.ymd": "YYYY-MM-DD · 2026-09-23",
+  "installationSettings.timeFormat.locale": "Use interface language",
+  "installationSettings.timeFormat.24h": "24-hour · 17:30",
+  "installationSettings.timeFormat.12h": "12-hour · 05:30 pm",
   "installationSettings.name": "Company name",
   "installationSettings.nameHint":
     "Shown wherever the product names your company.",

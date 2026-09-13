@@ -142,6 +142,14 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "screens/installation-settings.regional.stories.tsx",
+    why: "The fixture supplies the contract-required installation timezone alongside regional settings.",
+  },
+  {
+    file: "format/preferences.test.tsx",
+    why: "Regional notation must preserve explicit timezone and midnight fixtures.",
+  },
+  {
     file: "screens/worklist.leadfacts.test.ts",
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },

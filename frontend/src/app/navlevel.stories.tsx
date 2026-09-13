@@ -47,7 +47,7 @@ const SETTINGS: NavSection = {
   ],
 };
 
-const primary = railTrail({ screen: "brief" })[0];
+const primary = railTrail({ screen: "home" })[0];
 const settings = railTrail({ screen: "settings", id: "account" }, SETTINGS);
 
 function level(

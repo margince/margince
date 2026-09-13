@@ -28,7 +28,7 @@ afterEach(() => {
 // on the address that shows it — the dial itself is tested in
 // brief.dials.test.tsx.
 beforeEach(() => {
-  window.location.hash = "#/brief?view=weekly";
+  window.location.hash = "#/home?view=weekly";
 });
 
 // ── The week just gone ──

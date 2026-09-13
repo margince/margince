@@ -44,6 +44,7 @@ const ALIASES: Partial<Record<SettingsPageId, readonly string[]>> = {
     "signature",
     "profile",
     "brief",
+    "home",
     "theme",
     "appearance",
   ],

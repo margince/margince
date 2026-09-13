@@ -49,7 +49,7 @@ function panel(routes: RouteMap = DIGEST_ROUTES) {
 }
 
 const meta: Meta = {
-  title: "Shell/Brief overnight",
+  title: "Shell/Home overnight",
 };
 export default meta;
 type Story = StoryObj;

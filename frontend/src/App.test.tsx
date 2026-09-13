@@ -294,7 +294,7 @@ describe("locale switch", () => {
       "Deutsch",
     );
 
-    window.location.hash = "#/brief";
+    window.location.hash = "#/home";
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Kontakte" })).toBeTruthy(),
     );

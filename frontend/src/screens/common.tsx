@@ -84,9 +84,10 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // card, and role-aware affordances all read the same probe. The server binds
 // the installation's singleton company itself (ADR-0061) — the
 // probe needs nothing but the session cookie.
-export function useMe() {
+export function useMe(enabled = true) {
   return useQuery({
     queryKey: ["me"],
+    enabled,
     staleTime: 5 * 60_000,
     // A role change does not revoke live sessions, so this snapshot is the one
     // cache entry that must not sit stale for its full staleTime: the UI now

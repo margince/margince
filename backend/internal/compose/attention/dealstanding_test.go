@@ -317,3 +317,17 @@ func TestABriefEntryWithNoFindingContributesNothing(t *testing.T) {
 		t.Error("an unannotated brief entry produced a finding key")
 	}
 }
+
+func TestATaskDoesNotInheritTheLinkedDealsVerdict(t *testing.T) {
+	dealID := ids.NewV7()
+	svc := (&Service{}).WithDealStandings(&stubDealStandings{standings: map[ids.UUID]DealStanding{dealID: standingOf("blocked", "Legal has not returned the DPA.")}})
+	task := riskRow(dealID)
+	task.Source = crmcontracts.WorklistItemSourceTask
+	queue := []crmcontracts.WorklistItem{task, riskRow(dealID)}
+	if err := svc.nameTheStanding(context.Background(), queue, nil); err != nil {
+		t.Fatal(err)
+	}
+	if queue[0].Verdict != nil || queue[1].Verdict == nil {
+		t.Fatal("deal health must describe the deal, not its task")
+	}
+}

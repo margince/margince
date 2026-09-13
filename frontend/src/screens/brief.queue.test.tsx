@@ -21,7 +21,7 @@ it("redirects legacy owner links without losing their filter or email", async ()
   render(<WorklistRedirect opensOn="colleague" />);
   await waitFor(() =>
     expect(window.location.hash).toBe(
-      "#/brief?email=message&filter=changed_since_brief&owner=colleague&queue=1",
+      "#/home?email=message&filter=changed_since_brief&owner=colleague&queue=1",
     ),
   );
 });
@@ -29,7 +29,7 @@ it("redirects legacy owner links without losing their filter or email", async ()
 it("keeps queue scope separate from the weekly team brief and closes with Escape", async () => {
   const user = userEvent.setup();
   window.location.hash =
-    "#/brief?view=weekly&scope=team&queue=1&queue_scope=unassigned";
+    "#/home?view=weekly&scope=team&queue=1&queue_scope=unassigned";
   const scopes: (string | null)[] = [];
   stubApi({
     "GET /worklist": (_body, query) => {
@@ -49,14 +49,14 @@ it("keeps queue scope separate from the weekly team brief and closes with Escape
 
 it("restores the queue opener's keyboard focus after closing", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/brief";
+  window.location.hash = "#/home";
   stubApi({
     "GET /worklist": () =>
       jsonResponse(readingsDay({}, [taskRow("t", "Call Weber")])),
   });
   render(<BriefScreen />);
   await screen.findByText("Call Weber");
-  const opener = screen.getByRole("button", { name: en["brief.queue.open"] });
+  const opener = screen.getByRole("button", { name: en["brief.queue.title"] });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await user.click(
@@ -68,7 +68,7 @@ it("restores the queue opener's keyboard focus after closing", async () => {
 
 it("opens a review row's context without excluding it as non-selling work", async () => {
   const user = userEvent.setup();
-  window.location.hash = "#/brief?queue=1";
+  window.location.hash = "#/home?queue=1";
   const review: components["schemas"]["WorklistItem"] = {
     ...taskRow("privacy", "Review the disclosure"),
     source: "notice_case",
@@ -91,4 +91,38 @@ it("opens a review row's context without excluding it as non-selling work", asyn
     screen.getByRole("complementary", { name: en["worklist.pane.title"] }),
   ).toBeTruthy();
   expect(window.location.hash).toContain("selected=notice_case-privacy");
+});
+
+it("opens a task's evidence without replacing the Home overview", async () => {
+  const user = userEvent.setup();
+  window.location.hash = "#/home";
+  const task = taskRow("evidence-task", "Prepare the comparison");
+  stubApi({
+    "GET /worklist": () => jsonResponse(readingsDay({}, [task])),
+    "GET /activities/evidence-task": () =>
+      jsonResponse({
+        id: task.id,
+        kind: "task",
+        subject: task.title,
+        body: "Original commitment: prepare two variants by Friday.",
+        occurred_at: "2026-09-01T10:00:00Z",
+        version: 1,
+        is_done: false,
+      }),
+  });
+  render(<BriefScreen />);
+  const focus = await screen.findByRole("region", { name: "Focus" });
+  const opener = await screen.findByRole("button", {
+    name: en["brief.focus.context"],
+  });
+  await user.click(opener);
+  expect(
+    await screen.findByText(
+      "Original commitment: prepare two variants by Friday.",
+    ),
+  ).toBeTruthy();
+  expect(focus.isConnected).toBe(true);
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(opener);
 });

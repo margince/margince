@@ -41,7 +41,7 @@ function QueueFrame() {
           truncated: false,
         }),
     });
-    window.location.hash = "#/brief?queue=1";
+    window.location.hash = "#/home?queue=1";
     announceAddressChanged();
     return () => {
       window.location.hash = before;
@@ -56,7 +56,7 @@ function QueueFrame() {
 }
 
 const meta: Meta<typeof BriefQueue> = {
-  title: "Shell/Brief work queue",
+  title: "Shell/Home work queue",
   component: BriefQueue,
   render: () => <QueueFrame />,
 };

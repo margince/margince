@@ -5,12 +5,20 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "home.receipt.date": "Abschlussdatum: {before} → {after}",
+  "home.receipt.undated": "Kein Datum",
+  "home.receipt.confidence": "Prognosesicherheit aktualisiert",
+  "home.receipt.forecast": "Prognosekategorie geändert",
+  "home.task.yours": "Deine Aufgabe: {action}",
+  "home.change.unknown":
+    "Für diese ältere Benachrichtigung wurde nicht gespeichert, wer die Änderung vorgenommen hat.",
+  "home.change.unidentified": "ein unbekannter Akteur",
+  "home.change.by": "Verantwortlich: {actor}",
   "brief.focus.context": "Kontext öffnen",
   "brief.focus.back": "Zurück zum Fokus",
   "brief.queue.back": "Zurück zur Liste",
-  "brief.queue.open": "Arbeitsliste öffnen",
   "brief.queue.title": "Arbeitsliste",
-  "brief.queue.close": "Zurück zum Briefing",
+  "brief.queue.close": "Zur Startseite",
   "brief.focus.urgentRemaining_one":
     "{count} weitere dringende Aufgabe in der Liste",
   "brief.focus.urgentRemaining_other":
@@ -302,7 +310,7 @@ export const de = {
   "autonomy.auto": "automatisch",
   "autonomy.confirm": "erst bestätigen",
 
-  "nav.brief": "Briefing",
+  "nav.brief": "Startseite",
   "nav.contacts": "Kontakte",
   "nav.companies": "Firmen",
   "nav.leads": "Leads",
@@ -2952,7 +2960,7 @@ export const de = {
   // einzige Teil dieser Seite, den noch jemand ändern kann.
   "plan.title": "Zusagen für diese Woche",
   // Die zwei Regler des Briefings: welches, und für wen.
-  "brief.view.label": "Welches Briefing",
+  "brief.view.label": "Startseitenansicht",
   "brief.view.morning": "Morgen",
   "brief.view.weekly": "Woche",
   "brief.scope.label": "Wessen Briefing",
@@ -4135,9 +4143,9 @@ export const de = {
   "settings.signatureEdit": "Signatur bearbeiten",
   "settings.signatureNone": "Keine Grußformel gesetzt",
   "settings.signatureCancel": "Abbrechen",
-  "delivery.morningLabel": "Ihr Tagesbriefing",
+  "delivery.morningLabel": "Dein Tagesbriefing",
   "delivery.morningHelp":
-    "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf Ihrer Briefing-Seite steht es ohnehin.",
+    "Ob das Briefing des Tages zusätzlich per E-Mail kommt. Auf deiner Startseite steht es ohnehin.",
   "delivery.weeklyLabel": "Ihr Wochenrückblick",
   "delivery.weeklyHelp":
     "Ob der Rückblick am Montag zusätzlich per E-Mail kommt.",
@@ -7774,6 +7782,17 @@ export const de = {
   "installationSettings.currencyTitle": "Währung",
   "installationSettings.currencySub":
     "Die eine Währung, in die jede Auswertung alle Beträge umrechnet.",
+  "installationSettings.dateFormat": "Datumsformat",
+  "installationSettings.timeFormat": "Zeitformat",
+  "installationSettings.formatsHint":
+    "Gilt für die gesamte Oberfläche. Gespeicherte Daten und Zeitzonen bleiben gleich.",
+  "installationSettings.dateFormat.locale": "Sprache der Oberfläche verwenden",
+  "installationSettings.dateFormat.dmy": "TT.MM.JJJJ · 23.09.2026",
+  "installationSettings.dateFormat.mdy": "MM/TT/JJJJ · 09/23/2026",
+  "installationSettings.dateFormat.ymd": "JJJJ-MM-TT · 2026-09-23",
+  "installationSettings.timeFormat.locale": "Sprache der Oberfläche verwenden",
+  "installationSettings.timeFormat.24h": "24 Stunden · 17:30",
+  "installationSettings.timeFormat.12h": "12 Stunden · 05:30 PM",
   "installationSettings.name": "Name der Firma",
   "installationSettings.nameHint":
     "Wird überall dort angezeigt, wo das Produkt Ihre Firma benennt.",

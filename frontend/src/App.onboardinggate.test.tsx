@@ -47,7 +47,7 @@ function json(body: unknown, status = 200): Response {
 // The addresses the gate and the restore each send the reader to. A hash this
 // app answers that neither of them chose is not part of the disagreement.
 const GATE_TARGET = "#/onboarding/company";
-const BRIEF = "#/brief";
+const BRIEF = "#/home";
 
 /**
  * An installation whose wizard row says `complete`, with or without the profile

@@ -133,7 +133,7 @@ function OutlookFrame({
 }
 
 const meta: Meta<typeof WeeklySection> = {
-  title: "Shell/Brief weekly review",
+  title: "Shell/Home weekly review",
   component: WeeklySection,
 };
 export default meta;

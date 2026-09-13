@@ -26,7 +26,7 @@ export function PlanWorkActions({ item }: Readonly<{ item: WorklistItem }>) {
           variant="ghost"
           small
           onClick={() =>
-            navigate({ screen: "brief" }, new Map([["view", "weekly"]]))
+            navigate({ screen: "home" }, new Map([["view", "weekly"]]))
           }
         >
           {t("brief.plan.open")}

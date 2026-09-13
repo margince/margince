@@ -143,7 +143,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   if (!installation) {
     return (
       <>
-        <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
+        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <span className="ws-chip">
             <Logomark />
           </span>
@@ -173,7 +173,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       <>
         <a
           className="ws ws-logo"
-          href="#/brief"
+          href="#/home"
           aria-label={t("shell.companyLogoAria", {
             company: installation.display_name,
           })}
@@ -198,7 +198,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
     <>
       <a
         className="ws"
-        href="#/brief"
+        href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}

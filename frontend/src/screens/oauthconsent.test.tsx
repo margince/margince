@@ -358,7 +358,7 @@ describe("OAuthConsent — what a refused consent is handed back", () => {
     );
     // A rail-less screen with no forward action still needs an exit — this
     // is the app's own "brief" route, never the client's callback.
-    expect(globalThis.location.hash).toBe("#/brief");
+    expect(globalThis.location.hash).toBe("#/home");
   });
 
   it("renders invalid_request even though the consent-request read fails", async () => {

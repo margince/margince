@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -43,9 +44,11 @@ func decodeActionArgs[T any](args json.RawMessage) (T, error) {
 // itself read (a deal's owner, an escalation target), never from anything
 // a counterparty typed.
 type notifyArgs struct {
-	Recipient ids.UUID `json:"recipient"`
-	Subject   string   `json:"subject"`
-	Body      string   `json:"body"`
+	DedupeKey string                     `json:"dedupe_key,omitempty"`
+	Origin    *crmcontracts.NoticeOrigin `json:"origin,omitempty"`
+	Recipient ids.UUID                   `json:"recipient"`
+	Subject   string                     `json:"subject"`
+	Body      string                     `json:"body"`
 }
 
 // applyNotify is notify's executor: a nil Notifier answers
@@ -65,7 +68,7 @@ func applyNotify(ctx context.Context, notifier Notifier, action workflow.Action)
 	// The action's own target, so the notice names the record the firing was
 	// about. "A deal you own changed stage" is true of every deal a rep owns,
 	// and the sentence alone left a reader with nothing to open.
-	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body, action.Target)
+	return notifier.Notify(ctx, in.Recipient, in.Subject, in.Body, action.Target, in.DedupeKey, in.Origin)
 }
 
 // draftEmailArgs names what draft_email hands to Comms: Target is the

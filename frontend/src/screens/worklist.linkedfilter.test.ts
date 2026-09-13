@@ -46,7 +46,7 @@ describe("the filters that arrive by link", () => {
       const query = new URLSearchParams(href.slice(href.indexOf("?") + 1));
       const params = new Map(query.entries());
 
-      expect(href.startsWith("#/brief?")).toBe(true);
+      expect(href.startsWith("#/home?")).toBe(true);
       expect(worklistFilterFrom(params)).toBe(filter);
       expect(query.get("queue")).toBe("1");
     }

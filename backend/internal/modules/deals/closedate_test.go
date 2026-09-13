@@ -120,17 +120,23 @@ func TestCloseDateActionTiers(t *testing.T) {
 		// a stage-velocity estimate: 🟢 buys promptness, never the claim
 		// that a buyer agreed to the replacement.
 		{"clear overdue auto-applies provisionally", activeDeal(datep(-12)), CloseDateActionAutoApply, true, false},
-		{"forecast-bearing overdue goes provisional",
-			commit(activeDeal(datep(-12))), CloseDateActionProvisionalConfirm, true, false},
+		{
+			"forecast-bearing overdue goes provisional",
+			commit(activeDeal(datep(-12))), CloseDateActionProvisionalConfirm, true, false,
+		},
 		{"late stage overdue goes provisional", func() CloseDateInput {
 			in := activeDeal(datep(-12))
 			in.StageWinProbability = 60
 			return in
 		}(), CloseDateActionProvisionalConfirm, true, false},
-		{"missing date goes provisional",
-			activeDeal(nil), CloseDateActionProvisionalConfirm, true, false},
-		{"unrealistic-soon goes provisional",
-			activeDeal(datep(5)), CloseDateActionProvisionalConfirm, true, false},
+		{
+			"missing date goes provisional",
+			activeDeal(nil), CloseDateActionProvisionalConfirm, true, false,
+		},
+		{
+			"unrealistic-soon retains the recorded date",
+			activeDeal(datep(5)), CloseDateActionProvisionalConfirm, false, false,
+		},
 		// A paused deal still must not claim a past date (§11 edge case):
 		// the wait suppresses quiet, not overdue — 🟡, never 🟢-silent.
 		{"paused overdue commit deal goes provisional", func() CloseDateInput {
@@ -192,9 +198,11 @@ func TestProposedCloseDateUsesVelocityAndStageFloor(t *testing.T) {
 		velocity  float64
 		wantDays  int
 	}{
+		{"one-week floor for fast stages", 1, 0.5, 7},
+		{"fractional weeks round up", 2, 7.1, 21},
 		{"fallback velocity, two stages", 2, 0, 2 * CloseDateStageDays},
-		{"observed velocity outranks the fallback", 2, 18, 36},
-		{"at least one stage-worth even on the last stage", 0, 18, 18},
+		{"observed velocity outranks the fallback", 2, 18, 42},
+		{"at least one stage-worth even on the last stage", 0, 18, 21},
 	}
 	for _, c := range cases {
 		got := proposedCloseDate(today, c.remaining, c.velocity)
@@ -302,5 +310,13 @@ func TestAnUnchangedForecastCategoryIsNotWritten(t *testing.T) {
 		if p.Empty() == c.wantWrite {
 			t.Errorf("%s: patch empty = %v, want a write = %v", c.name, p.Empty(), c.wantWrite)
 		}
+	}
+}
+
+func TestActiveDealRetainsNearFutureDateWithoutMakingItProvisional(t *testing.T) {
+	in := activeDeal(datep(5))
+	got := CloseDateAssessment(in, closeClock, time.UTC)
+	if !hasFlag(got, CloseDateUnrealisticSoon) || got.ProposedClose == nil || !got.ProposedClose.Equal(*in.ExpectedClose) || got.Provisional {
+		t.Fatalf("near-future commitment was replaced: %+v", got)
 	}
 }

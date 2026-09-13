@@ -794,7 +794,7 @@ export const PhoneMoreSheet: Story = {
  * grid column alone would have been third to the eye and last to the keyboard.
  */
 function PhoneBarExample() {
-  const route: Route = { screen: "brief" };
+  const route: Route = { screen: "home" };
   const { openSearch, palette } = usePaletteSeam();
   return (
     <div className="app railexpanded">

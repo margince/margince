@@ -28,9 +28,9 @@ type Story = StoryObj<typeof CommandPalette>;
 const COMMANDS: Command[] = [
   {
     id: "screen:brief",
-    label: "Brief",
+    label: "Home",
     type: "screen",
-    route: { screen: "brief" },
+    route: { screen: "home" },
   },
   {
     id: "screen:deals",

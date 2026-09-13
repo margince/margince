@@ -82,11 +82,12 @@ func (s *Service) HandledForYou(ctx context.Context) (crmcontracts.HandledForYou
 // handledReceipt is one completed act on the wire.
 func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
-		Id:         openapi_types.UUID(receipt.ID),
-		Review:     receipt.Review,
-		Kind:       receipt.Kind,
-		Summary:    receipt.Summary,
-		OccurredAt: receipt.OccurredAt,
+		Id:              openapi_types.UUID(receipt.ID),
+		Review:          receipt.Review,
+		CloseDateChange: receipt.CloseDateChange,
+		Kind:            receipt.Kind,
+		Summary:         receipt.Summary,
+		OccurredAt:      receipt.OccurredAt,
 	}
 	// The record it was about, where the act named one. Not every approval is
 	// about a record, and an absent subject is a real state — the client draws

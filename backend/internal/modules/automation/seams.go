@@ -15,6 +15,7 @@ import (
 	"errors"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -108,7 +109,7 @@ type Notifier interface {
 	//
 	// The zero value is a notice about no record — the honest answer for a
 	// firing with nothing to open — and the transport writes no target at all.
-	Notify(ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef) error
+	Notify(ctx context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string, origin *crmcontracts.NoticeOrigin) error
 }
 
 // ErrNoNotificationTransport is notify's honest answer when no Notifier

@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { hashWithParams, type UrlParams } from "./urlstate";
 
@@ -29,7 +29,7 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // not be exhausted, and that exhaustiveness is the thing stopping a destination
 // existing in the router and being missing from the dispatch.
 export const SCREENS = [
-  "brief",
+  "home",
   "contacts",
   "companies",
   "partners",
@@ -106,7 +106,7 @@ export function parseHash(hash: string): Route {
     .split("/")
     .filter(Boolean);
   if (parts.length === 0) {
-    return { screen: "brief" };
+    return { screen: "home" };
   }
   const [screen, id, id2, id3] = parts;
   // The day's surface moved from `today` to `worklist`, and a rep's bookmark
@@ -122,11 +122,9 @@ export function parseHash(hash: string): Route {
   if (screen === "reports") {
     return { screen: "analytics", id, id2, id3 };
   }
-  // The morning handover is addressed `#/brief`; `#/home` was its address for
-  // long enough to be bookmarked and pasted into staging links, and the page
-  // behind it is the same page, so the segments ride along unchanged.
-  if (screen === "home") {
-    return { screen: "brief", id, id2, id3 };
+  // Home is language-neutral; previously shared Brief links keep their state.
+  if (screen === "brief") {
+    return { screen: "home", id, id2, id3 };
   }
   // The account's contact tab is addressed `contacts`, and a link already sent
   // to a colleague names it `contacts`. The account and anything below the tab
@@ -179,7 +177,7 @@ export function routeHash(route: Route): string {
 const WHOLE_ADDRESS = 4;
 
 const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
-  brief: WHOLE_ADDRESS,
+  home: WHOLE_ADDRESS,
   // #/contacts/<contact>/<tab> — the six contact tabs are a view of one contact,
   // and they are the reason this table exists.
   contacts: 2,
@@ -481,5 +479,14 @@ export function useHash(): string {
 }
 
 export function useRoute(): Route {
-  return parseHash(useHash());
+  const hash = useHash();
+  useEffect(() => {
+    if (/^#\/?brief(?:[/?]|$)/.test(hash)) {
+      navigateReplacing(
+        parseHash(hash),
+        new Map(new URLSearchParams(hash.split("?")[1])),
+      );
+    }
+  }, [hash]);
+  return parseHash(hash);
 }

@@ -42,7 +42,7 @@ import type { Route, Screen } from "./router";
 // A screen here is a screen that passes `title`, and the two must move together
 // or the page is named twice at heading level.
 export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
-  "brief",
+  "home",
   "tags",
   "contacts",
   "companies",

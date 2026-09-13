@@ -1,5 +1,11 @@
 import type { Locale, Translator } from "../i18n";
+import { middayInstant } from "./calendarday";
 import { minorUnitDigits, toMajorUnits } from "./minorunits";
+import {
+  dateTimePreferences,
+  formatPreferredDate,
+  hourCycle,
+} from "./preferences";
 
 // The presentation edge (architecture/10 §1–3): everything here formats
 // ALREADY-stored values — minor units, UTC instants, IR-provided base
@@ -184,27 +190,7 @@ export function formatRate(value: number, locale: Locale): string {
   }).format(value);
 }
 
-/**
- * The month's own name in the reader's language, from Intl rather than a table
- * of our own — a list of twelve month names per locale is a translation file
- * that goes stale, and the platform already ships them.
- *
- * The day is fixed at the 1st and the year is arbitrary: only the month is
- * rendered, and a month name does not depend on either.
- *
- * `timeZone: "UTC"` is load-bearing, not tidiness. The instant is MINTED in UTC
- * (`Date.UTC`), so formatting it on the reader's own clock reads it back in a
- * different zone than it was written in — and midnight on the 1st is the worst
- * possible instant for that, because any zone behind UTC lands on the last day
- * of the PREVIOUS month. In America/New_York this returned "December" for
- * month 1, so the fiscal-year picker offered a label one month off the value it
- * saved.
- *
- * This is not a moment anybody is reading in their own zone: the argument is a
- * month NUMBER, not a point in time, and the date is scaffolding for Intl's
- * month table. Reading it back in the zone it was written in is what makes the
- * scaffolding cancel out.
- */
+/** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
 export function monthName(month: number, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     month: "long",
@@ -414,6 +400,13 @@ export function isRenderableZone(zone: string): boolean {
   }
 }
 
+// Calendar dates are not UTC-midnight instants: their day survives every zone.
+function displayDay(value: string, zone: string): Date {
+  return new Date(
+    /^\d{4}-\d{2}-\d{2}$/.test(value) ? middayInstant(value, zone) : value,
+  );
+}
+
 // Zone-by-purpose (architecture/10 §2): personal deadlines localize to the
 // USER zone, reporting-period labels bucket on the WORKSPACE zone — the
 // caller picks the purpose, this helper only attaches the zone.
@@ -423,12 +416,13 @@ export function formatDate(
   zone: string,
 ): string {
   assertIanaZone(zone);
-  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+  const formatter = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(utcIso));
+  });
+  return formatPreferredDate(formatter, displayDay(utcIso, zone));
 }
 
 /**
@@ -449,7 +443,7 @@ export function formatDayLong(
     weekday: "long",
     day: "numeric",
     month: "long",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
 // A date a reader SCANS rather than keys into a form — a record's header
@@ -463,29 +457,18 @@ export function formatDateAbbrev(
   locale: Locale,
   zone: string,
 ): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return formatDate(utcIso, locale, zone);
   assertIanaZone(zone);
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
-/**
- * A day and its month, with NO year — "21 Aug".
- *
- * For a date the surrounding text already places in time: a row inside a
- * period the reader picked, an employment span whose years are printed beside
- * it, a meeting the page has already called the next one. `formatDateAbbrev`
- * is the same rendering WITH the year and is the right one everywhere the
- * reader cannot tell which year is meant from the context.
- *
- * Four screens carried a byte-identical private copy of this before it lived
- * here, each with its own `undefined` locale — so the same contact record
- * printed its dates in the browser's guessed locale on four surfaces and in
- * the reader's chosen one nowhere.
- */
+/** A day and month for dates whose surrounding period already supplies the year. */
 export function formatDayMonth(
   utcIso: string,
   locale: Locale,
@@ -496,7 +479,7 @@ export function formatDayMonth(
     timeZone: zone,
     day: "numeric",
     month: "short",
-  }).format(new Date(utcIso));
+  }).format(displayDay(utcIso, zone));
 }
 
 /**
@@ -518,6 +501,7 @@ export function formatTimeOfDay(
     timeZone: zone,
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: hourCycle(),
   }).format(new Date(utcIso));
 }
 
@@ -527,6 +511,9 @@ export function formatDateTime(
   zone: string,
 ): string {
   assertIanaZone(zone);
+  if (dateTimePreferences().dateFormat !== "locale") {
+    return `${formatDate(utcIso, locale, zone)}, ${formatTimeOfDay(utcIso, locale, zone)}`;
+  }
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     timeZone: zone,
     day: "2-digit",
@@ -534,6 +521,7 @@ export function formatDateTime(
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: hourCycle(),
   }).format(new Date(utcIso));
 }
 

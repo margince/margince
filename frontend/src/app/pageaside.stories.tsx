@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { RecordView } from "../design-system/composed";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -120,3 +121,30 @@ export const Folded: Story = {
  *  inert — a switch for a pane that does not exist would be a control that
  *  does nothing. */
 export const Empty: Story = { render: page(false, true) };
+
+function ControlledQueue() {
+  const [open, setOpen] = useState(false);
+  return (
+    <LocaleProvider>
+      <PageAsideProvider>
+        <PageAsideToggle
+          controlled={{
+            open,
+            label: "Work queue",
+            onToggle: () => setOpen(!open),
+          }}
+        />
+      </PageAsideProvider>
+    </LocaleProvider>
+  );
+}
+export const WorkQueueControl: Story = {
+  render: () => <ControlledQueue />,
+  play: async ({ canvasElement }) => {
+    const toggle = within(canvasElement).getByRole("button", {
+      name: "Work queue",
+    });
+    await userEvent.click(toggle);
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  },
+};

@@ -60,7 +60,7 @@ const ROUTES: RouteMap = {
 };
 
 const meta: Meta<typeof DecisionsSection> = {
-  title: "Shell/Brief decisions",
+  title: "Shell/Home decisions",
   component: DecisionsSection,
   parameters: { layout: "padded" },
   decorators: [

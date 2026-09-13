@@ -1,3 +1,4 @@
+import { useRecordZone } from "../app/recordzone";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -9,11 +10,13 @@ import { useLocale, useT } from "../i18n";
 import { EntityRef } from "./entityref";
 import { listReadState } from "./worklist.listread";
 import { useHandledForYou } from "./worklist.queries";
+import { receiptSummary } from "./worklist.receiptcopy";
 import { ReceiptReview } from "./worklist.receiptreview";
 
 export function BriefChanges() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const query = useHandledForYou();
   const receipts = query.data?.receipts;
   return (
@@ -30,7 +33,9 @@ export function BriefChanges() {
               {receipt.subject?.type === "deal" && (
                 <EntityRef kind="deal" id={receipt.subject.id} />
               )}
-              <p className="t-body">{receipt.summary}</p>
+              <p className="t-body">
+                {receiptSummary(receipt, t, locale, recordZone)}
+              </p>
               <p className="t-caption">
                 {formatDateTime(receipt.occurred_at, locale, viewerZone())}
               </p>

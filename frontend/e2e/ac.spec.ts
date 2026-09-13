@@ -93,7 +93,7 @@ test.beforeEach(async ({ page }) => {
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
 
 const CORE_SCREENS = [
-  "brief",
+  "home",
   "contacts",
   "companies",
   "deals",
@@ -257,7 +257,7 @@ function accountTrigger(page: Page) {
 test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   // evaluateAll never waits — anchor on the rendered count first, or the
   // read races the auth splash and sees an empty rail.
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
@@ -341,7 +341,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
@@ -355,7 +355,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
 });
 
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
@@ -382,7 +382,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
 test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
@@ -411,7 +411,7 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
   // The language is a preference of this contact rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
@@ -1232,7 +1232,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     page,
   }) => {
     // The native seed (this file's global beforeEach) never renders it.
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await expect(page.locator(".badge-accent")).toHaveCount(0);
 
     // Same route both times, so a plain goto would be a same-document hash
@@ -1575,7 +1575,7 @@ test.describe("§3.8: 390px mobile", () => {
   // 12vh with a 320px list had about two rows left under a software keyboard.
   // Its rows are thumb targets, which is the half a screenshot cannot assert.
   test("the palette is a workable sheet at 390px", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -1852,7 +1852,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel opens clear of the bar and fits 390px", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1887,7 +1887,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-shell-8: the agent's panel states what the agent can reach", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1906,7 +1906,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel closes on Escape and hands focus back to the orb", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1930,7 +1930,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
   test("no AA violations with the agent's panel open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.getByRole("button", { name: "Expand the agent panel" }).click();
@@ -2214,7 +2214,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // every axe pass above measures a page with the dialog closed, so the
   // surface a reader reaches from any screen in the product was unmeasured.
   test("no AA violations with the command palette open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");

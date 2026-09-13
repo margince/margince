@@ -20,7 +20,7 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
       next.set("queue_scope", params.get("scope") ?? "mine");
     else if (opensOn === "unassigned") next.set("queue_scope", "unassigned");
     if (opensOn && opensOn !== "unassigned") next.set("owner", opensOn);
-    navigateReplacing({ screen: "brief" }, next);
+    navigateReplacing({ screen: "home" }, next);
   }, [opensOn, params]);
   return null;
 }

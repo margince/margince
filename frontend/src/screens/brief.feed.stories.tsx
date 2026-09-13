@@ -24,7 +24,7 @@ import { StoryProviders } from "./story-utils";
 // tokens, so a header that reads on paper can go flat on the dark ground.
 
 const meta: Meta<typeof BriefFeed> = {
-  title: "Shell/Brief today",
+  title: "Shell/Home today",
   component: BriefFeed,
   parameters: { layout: "padded" },
   decorators: [

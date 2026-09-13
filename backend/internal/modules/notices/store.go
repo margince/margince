@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,6 +42,7 @@ func NewStore(db *database.DB) *Store {
 
 // Notice is one durable line addressed to one contact.
 type Notice struct {
+	Origin    *crmcontracts.NoticeOrigin
 	ID        ids.UUID
 	Kind      string
 	Subject   string
@@ -67,6 +70,7 @@ func (t Target) Named() bool { return t.Type != "" && !t.ID.IsZero() }
 // notice, and five positional strings is where a caller starts passing the
 // subject as the body.
 type NewNotice struct {
+	Origin    *crmcontracts.NoticeOrigin
 	Recipient ids.UserID
 	Kind      string
 	Subject   string
@@ -131,6 +135,7 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	body := truncate(in.Body, bodyBound)
 	id := ids.NewV7()
 	target := in.Target
+	origin := in.Origin
 	var createdAt time.Time
 	var dedupe *string
 	if in.DedupeKey != "" {
@@ -153,14 +158,20 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 		//
 		// created_at is the column's own default, so the insert returns it
 		// rather than the caller stamping a second clock beside it.
+		args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, origin}
+		holders := make([]string, len(args))
+		for i := range args {
+			holders[i] = "$" + strconv.Itoa(i+1)
+		}
+		placeholders := strings.Join(holders, ", ")
 		row := tx.QueryRow(ctx, `
 			INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
-			                    dedupe_key, target_type, target_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			                    dedupe_key, target_type, target_id, origin)
+			VALUES (`+placeholders+`)
 			ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 			DO NOTHING
 			RETURNING created_at`,
-			id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID)
+			args...)
 		switch err := row.Scan(&createdAt); {
 		case errors.Is(err, pgx.ErrNoRows):
 			// Already recorded. Answer the notice that STANDS — all of it, not
@@ -179,10 +190,10 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 			var storedType *string
 			var storedID *ids.UUID
 			if err := tx.QueryRow(ctx, `
-				SELECT id, kind, subject, body, target_type, target_id, created_at FROM notice
+				SELECT id, kind, subject, body, target_type, target_id, created_at, origin FROM notice
 				 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
 				in.Recipient, in.DedupeKey,
-			).Scan(&id, &kind, &subject, &body, &storedType, &storedID, &createdAt); err != nil {
+			).Scan(&id, &kind, &subject, &body, &storedType, &storedID, &createdAt, &origin); err != nil {
 				return err
 			}
 			target = Target{}
@@ -210,7 +221,7 @@ func (s *Store) insertNotice(ctx context.Context, in NewNotice, evidence map[str
 	}
 	return Notice{
 		ID: id, Kind: kind, Subject: subject, Body: body,
-		Target: target, CreatedAt: createdAt,
+		Target: target, CreatedAt: createdAt, Origin: origin,
 	}, nil
 }
 
@@ -230,7 +241,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	var unread []Notice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, `
-			SELECT id, kind, subject, body, target_type, target_id, created_at
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
 			 ORDER BY created_at DESC, id DESC
@@ -247,7 +258,7 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 			var targetType *string
 			var targetID *ids.UUID
 			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-				&targetType, &targetID, &n.CreatedAt); scanErr != nil {
+				&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
 				return scanErr
 			}
 			if targetType != nil && targetID != nil {

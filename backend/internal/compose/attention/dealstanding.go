@@ -125,7 +125,8 @@ func dealsWantingAStanding(queue []crmcontracts.WorklistItem) []ids.UUID {
 // Unlike needsDealMove this does not skip a row that already carries a verdict:
 // nothing else writes this field, so there is never one to preserve.
 func needsDealStanding(item crmcontracts.WorklistItem) (ids.UUID, bool) {
-	if item.Subject == nil || item.Subject.Type != subjectDeal {
+	// A task has its own completion state; the linked deal's health is not a verdict on that obligation.
+	if item.Source == crmcontracts.WorklistItemSourceTask || item.Subject == nil || item.Subject.Type != subjectDeal {
 		return ids.UUID{}, false
 	}
 	return ids.UUID(item.Subject.Id), true

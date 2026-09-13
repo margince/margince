@@ -249,7 +249,7 @@ describe("PageTitle", () => {
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
+    const { container } = render(<PageTitle route={{ screen: "home" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });

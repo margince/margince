@@ -106,7 +106,7 @@ function part(node: React.ReactNode, routes: RouteMap = RAIL_ROUTES) {
 }
 
 const meta: Meta = {
-  title: "Shell/Brief parts",
+  title: "Shell/Home parts",
 };
 export default meta;
 type Story = StoryObj;

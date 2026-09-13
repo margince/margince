@@ -662,7 +662,7 @@ function LoginForm({
       // user followed stays; only a bare entry lands on the Brief.
       const hash = globalThis.location?.hash ?? "";
       if (!hash || hash === "#" || hash === "#/") {
-        navigate({ screen: "brief" });
+        navigate({ screen: "home" });
       }
     },
     onError: (error) => {
