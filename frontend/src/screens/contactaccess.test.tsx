@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { en } from "../i18n/en";
 import { useContact360 } from "./contact360";
 import { ContactAccess } from "./contactaccess";
 
@@ -268,7 +269,9 @@ describe("ContactAccess", () => {
     await user.click(
       await screen.findByRole("button", { name: /share with the company/i }),
     );
-    await screen.findByRole("alert");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      en["edit.versionSkew"],
+    );
     await user.click(
       screen.getByRole("button", { name: /share with the company/i }),
     );

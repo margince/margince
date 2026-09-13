@@ -98,7 +98,9 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
       </span>
       {setVisibility.isError && (
         <span role="alert" className="form-error">
-          {problemMessageOf(setVisibility.error, t)}
+          {isVersionSkewOf(setVisibility.error)
+            ? t("edit.versionSkew")
+            : problemMessageOf(setVisibility.error, t)}
         </span>
       )}
     </section>
