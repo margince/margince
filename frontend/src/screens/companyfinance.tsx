@@ -94,8 +94,13 @@ export function hasFinance(lifecycle?: string): boolean {
 export function CompanyFinanceCard({
   companyId,
   lifecycle,
+  readOnly = false,
 }: Readonly<{
   companyId: string;
+  // The company's own write refusal, threaded from the record page. Only the
+  // billing-contacts panel reads it: every other reading on this card comes
+  // from an accounting source nobody edits here.
+  readOnly?: boolean;
   // The account's lifecycle. A target, a prospect or an opportunity has never
   // been invoiced, so the card is ABSENT for them rather than empty (FIN-AC-3)
   // — an empty finance card on a company we have never billed is a question
@@ -189,7 +194,11 @@ export function CompanyFinanceCard({
           account with no connector at all is exactly when a reader wants it.
           Inside the state wrapper it would disappear behind "no financial
           source connected", which says nothing about the recipient. */}
-      <BillingContactsPanel contacts={summary.billing_contacts} />
+      <BillingContactsPanel
+        contacts={summary.billing_contacts}
+        companyId={companyId}
+        readOnly={readOnly}
+      />
     </div>
   );
 }

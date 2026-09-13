@@ -32,6 +32,7 @@ export const Populated: Story = {
   render: () => (
     <StoryProviders>
       <BillingContactsPanel
+        companyId="o-1"
         contacts={[
           pat,
           {
@@ -61,7 +62,7 @@ export const Populated: Story = {
 export const NobodyNamed: Story = {
   render: () => (
     <StoryProviders>
-      <BillingContactsPanel contacts={[]} />
+      <BillingContactsPanel companyId="o-1" contacts={[]} />
     </StoryProviders>
   ),
 };

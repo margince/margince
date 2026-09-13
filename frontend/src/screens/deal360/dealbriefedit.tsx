@@ -133,7 +133,13 @@ export function DealBriefEdit({
             {t("deals.cancel")}
           </Button>
           <Button
-            onClick={() => void submit()}
+            onClick={() => {
+              // The mutation already HOLDS the failure — the alert above renders
+              // from its `isError`. What is swallowed here is only the promise
+              // `mutateAsync` returns, which is otherwise an unhandled rejection
+              // for a refusal the reader is already looking at.
+              submit().catch(() => {});
+            }}
             disabled={save.isPending || tooLong || unchanged}
           >
             {t("deal.briefSave")}
