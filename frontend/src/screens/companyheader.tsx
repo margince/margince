@@ -30,6 +30,7 @@ import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companies";
 import { DecisionsChip } from "./companyapprovals";
 import {
   addressFrom,
+  companyEditComparison,
   companyEditFields,
   mapCompanyUpdate,
   searchCompanyTargets,
@@ -46,6 +47,7 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { saveIndependentEdit } from "./independentedit";
 import { LogActivityAction } from "./logactivity";
 import { MergeAction } from "./merge";
 import { EmailVerb } from "./recordemail";
@@ -570,60 +572,58 @@ function CompanyEditAction({
       ]}
       record={{
         id: company.id,
+        original: company,
         version: company.version,
         display_name: company.display_name,
         owner_id: company.owner_id ?? "",
         legal_name: company.legal_name ?? "",
         industry: company.industry ?? "",
         size_band: company.size_band ?? "",
-        // Both stage fields prefill from the live record. relationship_types
-        // is a REPLACE-SET: an unseeded multiselect collects as the empty
-        // string, which mapCompanyUpdate reads as the honest empty set, so saving
-        // an unrelated field would clear every type the account has.
+        // Seed the replace-set so an untouched picker preserves every type.
         lifecycle: company.lifecycle ?? "",
         relationship_types: joinMultiselectValue(
           company.relationship_types ?? [],
         ),
         linkedin_url: company.linkedin_url ?? "",
         ...addressFrom(company.address),
-        // The repeatable domains field prefills from the company's live set;
-        // its rows are string-keyed, so the primary flag stringifies to
-        // match the "true"/"" the primary radio writes.
+        // Repeatable cells use form strings, including the primary flag.
         domains: (company.domains ?? []).map((domain) => ({
           domain: domain.domain,
           is_primary: String(domain.is_primary),
         })),
-        // The domains as the RECORD held them, carried with the rest of this
-        // reading so the replace-set diff is taken against the same moment the
-        // rows were prefilled from. The mapper wants the record's own shape,
-        // which the prefilled rows above have already been stringified out of;
-        // the form never reads this key, because prefill walks the field list.
+        // Domain replace-set comparison uses the original API shape.
         domains_at_open: company.domains ?? [],
         ...cf.recordSlice(company),
       }}
       update={async (values, rows, opened) => {
-        const { data, error } = await api.PATCH("/companies/{id}", {
-          params: {
-            path: { id: company.id },
-            ...ifMatch(requireVersion(opened?.version)),
-          },
-          body: {
+        return saveIndependentEdit({
+          opened,
+          patch: {
             ...mapCompanyUpdate(
               values,
               rows ?? {},
               opened?.domains_at_open as Company["domains"],
             ),
-            // A DIFF, like the core half above. recordSlice is what the form
-            // prefilled from, so it is what "unchanged" is measured against —
-            // a snapshot here sends `null` for every empty custom field, which
-            // the API reads as an instruction to clear a column nobody touched.
+            // Late custom fields carry the baseline the form actually showed.
             ...cf.toPatch(values, opened ?? {}),
           },
+          project: companyEditComparison,
+          read: async () => {
+            const { data, error } = await api.GET("/companies/{id}", {
+              params: { path: { id: company.id } },
+            });
+            if (error) throwProblem(error);
+            return data;
+          },
+          write: async (body, version) => {
+            const { data, error } = await api.PATCH("/companies/{id}", {
+              params: { path: { id: company.id }, ...ifMatch(version) },
+              body,
+            });
+            if (error) throwProblem(error);
+            return data;
+          },
         });
-        if (error) {
-          throwProblem(error);
-        }
-        return data;
       }}
       invalidate="companies"
       recordKey="company"
