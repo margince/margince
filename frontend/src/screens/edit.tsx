@@ -176,6 +176,40 @@ function prefillRowsFromRecord(
   return rows;
 }
 
+// The fields a form has no answer for yet, seeded from the record.
+//
+// A screen's field list can GROW while the dialog is open: the custom-field
+// catalog is a second request, so a record page that opens Edit before it
+// lands renders the core fields and then gains the workspace's own. The seed
+// above cannot cover them — it fires on the open transition and on a change of
+// record, and a late catalog is neither — so without this the new control
+// shows blank over a stored value, and the diff that follows reads that blank
+// as "unchanged" and writes nothing. The reader sees an empty field and has no
+// way to tell that from one nobody filled in.
+//
+// Only keys the values do not already carry are filled, which is what makes
+// this safe to run on every render: an answer the reader typed is an entry, so
+// it is never overwritten, and neither is a prefilled one. That is the same
+// guarantee the transition seed protects by refusing to key off `fields`.
+function seedMissingFields(
+  fields: CreateField[],
+  record: Record<string, unknown>,
+  values: Record<string, string>,
+): Record<string, string> | null {
+  let added: Record<string, string> | null = null;
+  for (const field of fields) {
+    if (field.divider || field.type === "repeatable") {
+      continue;
+    }
+    if (Object.hasOwn(values, field.key)) {
+      continue;
+    }
+    added ??= {};
+    added[field.key] = prefillField(field, record);
+  }
+  return added;
+}
+
 // The edit modal: prefilled from the record's current field values (each
 // field's key projected off the record, coerced to a string; a field the
 // record doesn't carry starts blank rather than throwing). The screen's
@@ -272,6 +306,16 @@ export function EditRecordModal({
       setValues(prefillFromRecord(fields, record));
       setRows(prefillRowsFromRecord(fields, record));
       setOpened(record);
+    }
+  }
+  // A field list that GREW while the dialog stayed open — the custom-field
+  // catalog landing after Edit was pressed. Seeded from the reading the form
+  // opened on, not the live prop, so a background refetch cannot slip a
+  // newer value in beside the ones already on screen.
+  if (open) {
+    const missing = seedMissingFields(fields, opened, values);
+    if (missing) {
+      setValues({ ...values, ...missing });
     }
   }
 

@@ -15,6 +15,7 @@ import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { throwProblem } from "./common";
+import type { CreateField } from "./create";
 import { EditAction, EditRecordModal } from "./edit";
 
 // The shared edit-record form (the mirror of create): a record prefills the
@@ -387,5 +388,98 @@ describe("what an edit is a reading of", () => {
     };
     expect(live.full_name).toBe("Alice Cooper");
     expect(opened.full_name).toBe("Alice");
+  });
+  it("seeds a field that arrives after the dialog opened", async () => {
+    // The custom-field catalog is a second request. A reader who presses Edit
+    // before it lands gets the control once it does — and it must carry the
+    // stored value, not a blank that the diff would then read as unchanged.
+    const seen: Record<string, unknown>[] = [];
+    function Screen() {
+      const [fieldList, setFieldList] = useState<CreateField[]>(fields);
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setFieldList([
+                ...fields,
+                { key: "cf_tier", labelText: "Tier", type: "text" },
+              ])
+            }
+          >
+            catalog
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fieldList}
+            record={{ ...record, cf_tier: "Strategic" }}
+            savedMessage="saved"
+            invalidate="contacts"
+            recordKey="contact"
+            update={async (values) => {
+              seen.push(values);
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "catalog" }));
+
+    // On screen, holding the record's value rather than a blank.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Tier")).toHaveValue("Strategic"),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]?.cf_tier).toBe("Strategic");
+  });
+
+  it("leaves what the reader typed alone when the field list grows", async () => {
+    // The same late catalog, but the reader has already edited a field the
+    // form had from the start. Seeding the newcomer must not re-seed that one.
+    function Screen() {
+      const [fieldList, setFieldList] = useState<CreateField[]>(fields);
+      return (
+        <>
+          <Button
+            onClick={() =>
+              setFieldList([
+                ...fields,
+                { key: "cf_tier", labelText: "Tier", type: "text" },
+              ])
+            }
+          >
+            catalog
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={fieldList}
+            record={{ ...record, cf_tier: "Strategic" }}
+            savedMessage="saved"
+            invalidate="contacts"
+            recordKey="contact"
+            update={vi.fn(async () => ({ id: "p1" }))}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const name = screen.getByLabelText(en["create.fullName"], { exact: false });
+    await userEvent.clear(name);
+    await userEvent.type(name, "Alice Cooper");
+    await userEvent.click(screen.getByRole("button", { name: "catalog" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Tier")).toHaveValue("Strategic"),
+    );
+    expect(name).toHaveValue("Alice Cooper");
   });
 });
