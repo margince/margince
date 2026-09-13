@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan, useRecordWriteRefusal } from "../app/capability";
+import { useCan } from "../app/capability";
 import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -31,6 +31,7 @@ import {
 } from "./customfields.form";
 import { EditAction } from "./edit";
 import { useOpenEmail } from "./openemail";
+import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectHealth } from "./projecthealth";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
@@ -150,9 +151,8 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // may write the project and not its activities, and hide valid ones from a
   // task's own author whenever the project is read-only.
   const canUpdateTask = useCan("activity", "update");
-  // Read HERE and handed down, so the schema request runs BESIDE the project's
-  // rather than after it: an edit opened before this landed would otherwise
-  // offer a form with no custom fields on it.
+  // Read here and handed down: the schema request then runs BESIDE the
+  // project's rather than after it.
   const cf = useObjectCustomFields("project");
   return (
     <RecordView
@@ -311,15 +311,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
  * verb as the loudest control on the page: it draws in the danger colour, and
  * with nothing green beside it the eye went there first.
  */
-// useProjectVerbRefusal answers why this project's own verbs — edit, archive,
-// assign, share, the phase stepper, the rail cards — are refused, or undefined
-// when they are not.
-//
-// `writable` is what the server's write gate would answer on a mutation, and
-// the contract asks a client to draw or withhold affordances by it so a reader
-// is never offered a control the save refuses. Absent reads as NOT writable:
-// a response from a server too old to send the field fails closed.
-//
+
 // Archived comes first because it is the reason a reader can act on, by
 // restoring the record.
 //
@@ -330,13 +322,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
 // `writeAuthorityPredicate` treats an ownerless row as nobody's to change. So
 // here `writable` is the whole answer, and second-guessing it would offer
 // controls the save refuses with nothing a reader could do about it.
-function useProjectVerbRefusal(project: Project): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("project", project, {
-    archived: t("project.archivedReadOnly"),
-    notYours: t("project.notYoursToChange"),
-  });
-}
 
 // refusedReasonId is the id of the sentence the BAND renders, passed in rather
 // than minted here: every verb but Email lives inside the OverflowMenu, and a
@@ -376,6 +361,10 @@ function ProjectActions({
       <OverflowMenu label={t("record.moreActions")}>
         {/* Worded — a bare pencil among sentences names nothing to a reader. */}
         <EditAction<Project>
+          // Remount when the catalog lands: the modal seeds its values from
+          // `record` once, so an Edit opened before the schema answered would
+          // hold blank custom fields until it was closed and opened again.
+          key={cf.formFields.length}
           labelled
           disabledReasonId={refusedReasonId}
           label={t("project.edit")}
@@ -396,10 +385,9 @@ function ProjectActions({
                 path: { id: project.id },
                 ...ifMatch(requireVersion(opened?.version)),
               },
-              // Diffed against what the form OPENED on, never the seeded
-              // record: no cf_* column is clearable, so a snapshot diff sends
-              // every untouched empty custom field as a clear and the save is
-              // refused outright.
+              // Diffed against what the form OPENED on: no cf_ column is
+              // clearable, so a snapshot diff sends every untouched empty one
+              // as a clear and the save is refused outright.
               body: {
                 ...mapProjectUpdate(values),
                 ...cf.toPatch(values, opened ?? {}),

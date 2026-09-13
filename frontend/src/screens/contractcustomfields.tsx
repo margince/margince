@@ -21,8 +21,11 @@ export function ContractCustomFields({
   onChange,
 }: Readonly<{
   fields: CreateField[];
-  values: Record<string, unknown>;
-  onChange: (next: Record<string, unknown>) => void;
+  // FORM strings, not stored values. Every converter in customfields.form.ts
+  // reads and writes what the control holds — a currency field's major units,
+  // a boolean's "true" — and the stored shape is derived from that afterwards.
+  values: Record<string, string>;
+  onChange: (next: Record<string, string>) => void;
 }>) {
   const t = useT();
   // The divider the catalog injects names the section on forms that already
@@ -40,7 +43,7 @@ export function ContractCustomFields({
             fieldControl(
               field,
               control,
-              stringValue(values[field.key]),
+              values[field.key] ?? "",
               (next) => onChange({ ...values, [field.key]: next }),
               t,
             )
@@ -49,14 +52,4 @@ export function ContractCustomFields({
       ))}
     </>
   );
-}
-
-// The draft holds what the record holds — a number, a boolean, null — and the
-// controls read and write strings. Null and undefined are the SAME empty here:
-// a field nobody has answered and one somebody cleared both render blank.
-function stringValue(raw: unknown): string {
-  if (raw === null || raw === undefined) {
-    return "";
-  }
-  return String(raw);
 }
