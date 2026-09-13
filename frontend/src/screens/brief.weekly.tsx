@@ -1,4 +1,3 @@
-import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -12,6 +11,7 @@ import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { ProvenanceTag } from "../design-system/trust";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,

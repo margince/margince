@@ -1,12 +1,13 @@
-import { middayInstant } from "../format/calendarday";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
+import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { middayInstant } from "../format/calendarday";
 import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
@@ -53,6 +54,7 @@ function TeamPlanDialog({
 }: Readonly<{ owner: string; name: string; onClose: () => void }>) {
   const t = useT();
   const plan = useTeammateWeeklyPlan(owner);
+  const canAnswer = useCanWrite("weekly_plan", "update");
   const { locale } = useLocale();
   const zone = useRecordZone();
   const headingId = useId();
@@ -92,7 +94,7 @@ function TeamPlanDialog({
             key={commitment.id}
             owner={owner}
             commitment={commitment}
-            editable={plan.data?.status === "open"}
+            editable={canAnswer && plan.data?.status === "open"}
           />
         ))}
       </SurfaceState>
@@ -111,11 +113,25 @@ function TeamCommitment({
 }>) {
   const t = useT();
   const answer = useAnswerCommitment(owner);
+  const { locale } = useLocale();
+  const zone = useRecordZone();
   const [response, setResponse] = useState(commitment.manager_response ?? "");
   return (
     <PanelRow>
       <div>
         <p>{commitment.label}</p>
+        <p>{t(`plan.state.${commitment.state}`)}</p>
+        {commitment.due_on && (
+          <p>
+            {t("plan.due", {
+              day: formatDate(
+                middayInstant(commitment.due_on, zone),
+                locale,
+                zone,
+              ),
+            })}
+          </p>
+        )}
         {commitment.linked_record && (
           <EntityRef
             kind={commitment.linked_record.type}

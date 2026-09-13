@@ -29,7 +29,7 @@ export type ClosedDeal = Readonly<{
  * reason, and a win with no paperwork behind it has to name one. The review
  * then asks the same question again in its own words ("Why did we lose?"),
  * from a panel nothing points to, on a page the reader has usually left.
- * People answered the close and never saw the review, so the fuller answer
+ * Users answered the close and never saw the review, so the fuller answer
  * was missing on exactly the deals somebody had already thought about.
  *
  * This offers it while the deal is still in mind, with that first answer

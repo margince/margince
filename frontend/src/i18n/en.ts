@@ -3252,7 +3252,7 @@ export const en = {
   "brief.glance.eveningAnon": "Good evening.",
   "brief.glance.night": "Still at it, {name}.",
   "brief.glance.nightAnon": "Still at it.",
-  "brief.glance.introWeekly": "This is the week you just closed.",
+  "brief.glance.introWeekly": "Review results and plan your next steps.",
   "brief.glance.intro": "Here is your day.",
   "brief.panel.decisions": "Proposals to approve",
   "brief.panel.overnight": "Overnight",

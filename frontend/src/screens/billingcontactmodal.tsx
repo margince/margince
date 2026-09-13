@@ -27,8 +27,8 @@ const ROLE_OPTIONS: { value: BillingContactRole; label: MessageKey }[] = [
  * Naming who handles this company's invoices, or changing the capacity one of
  * them holds.
  *
- * One modal for both. They ask the same question — which person, in which
- * capacity — and differ only in whether the person is already chosen: a role
+ * One modal for both. They ask the same question — which contact, in which
+ * capacity — and differ only in whether the contact is already chosen: a role
  * change keeps the edge and moves it, so the contact is fixed and shown rather
  * than searched for again.
  */
@@ -98,7 +98,7 @@ export function BillingContactModal({
           <div className="field">
             <span className="t-label">{t("billing.who")}</span>
             {/* Fixed, not searchable. Changing WHO would be a different edge —
-                take this one off and name the other person instead. */}
+                take this one off and name the other contact instead. */}
             <p>{editing.full_name}</p>
           </div>
         ) : (

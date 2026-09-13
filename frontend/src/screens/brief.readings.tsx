@@ -173,7 +173,7 @@ function LaneReading({
   const card = (
     <StatCard
       label={label}
-      value={marked ? `${figure}+` : figure}
+      value={readingFigure(figure, marked)}
       tone={warn ? "warn" : undefined}
       detail={basis}
       // The whole plate is read as ONE glance, so every slot on it keeps the
@@ -433,6 +433,10 @@ function meetingsReading(day: Worklist): MeetingsReading {
   };
 }
 
+function readingFigure(value: string, lowerBound: boolean) {
+  return lowerBound ? `${value}+` : value;
+}
+
 // This value describes the same scoped work as the rest of the brief.
 function RiskReading({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
@@ -457,7 +461,10 @@ function RiskReading({ day }: Readonly<{ day: Worklist }>) {
       label={t("brief.readings.risk")}
       value={
         amount != null && currency
-          ? `${formatMoneyCompact(amount, currency, locale)}${incomplete ? "+" : ""}`
+          ? readingFigure(
+              formatMoneyCompact(amount, currency, locale),
+              incomplete,
+            )
           : t(
               count === 0 && complete && amount == null
                 ? "brief.readings.noDealWork"

@@ -1,16 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The row at LIST DENSITY: one line, and everything it cannot carry one press
-// away.
-//
-// Its own file rather than a branch inside `worklist.row.tsx` because what
-// differs between the two densities is the TEXT COLUMN's layout and nothing
-// else — the rank, the kind, the verbs and the thumb surface around it are the
-// row's either way. Every reading this draws arrives already made, so there is
-// no second derivation of a title, a clock or a reason here: the row reads the
-// item once and both densities print the same answers.
-//
+// Compact rows share their title, dates and actions with the full worklist.
+// Details expose supporting evidence; sorting diagnostics stay off the agenda.
+
 import type { ReactNode } from "react";
 import { Badge } from "../design-system/atoms";
 import { Popover } from "../design-system/popover";
@@ -56,20 +49,7 @@ export type RowReadings = Readonly<{
   zone: string;
 }>;
 
-/**
- * The one line, and the press that opens the rest of it.
- *
- * THE TITLE IS THE LINK. The default row draws the way to the record as a verb
- * of its own beside the work; at this density that verb and the title would be
- * two controls on one line reaching the same page, so the name carries it and
- * `RowVerbs` withholds the duplicate (worklist.rowverbs.tsx).
- *
- * NOTHING IS DISCARDED, which is the same shape the default row's fold has: the
- * line says as much as it fits and the count behind it covers everything else
- * the row holds — the reasons that did not fit, why it outranked the row below,
- * the supporting sentence, a group's members, the deal's standing. A count that
- * named only the reasons would promise less than the press delivers.
- */
+/** The linked title opens the record; optional details contain its evidence. */
 export function CompactRowLine({
   readings,
   named,

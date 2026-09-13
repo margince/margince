@@ -18,24 +18,8 @@ import type { Deal } from "./brief.queries";
 import { OvernightPanel } from "./brief.rail.overnight";
 import type { WorklistItem } from "./worklist.queries";
 
-// Brief's context rail (screens/brief.rail.tsx): what the night shift did, and
-// what has gone quiet. Both READ, and each gated on its OWN query — which is the
-// property these cases exist to hold: a transient failure in one panel must
-// never blank another, and a panel with no answer yet must draw nothing rather
-// than a row of zeros.
-//
-// The open pipeline's money was a third panel here and is not any more. Brief
-// now asks one financial question rather than two that disagreed: this rail
-// computed its own open-pipeline total beside an Analytics screen answering the
-// same question over a different population, and a reader meeting both had no
-// way to tell which was wrong.
-//
-// Split out of brief.test.tsx at the 1000-line ceiling (frontend/CLAUDE.md), on
-// the seam the screen itself is built along: the work column and its readings
-// are that file, the rail beside them is this one. The stub harness is spelled
-// again here rather than shared, the same way every screen suite in this tree
-// carries its own — a test file that imported another test file would run its
-// neighbour's cases a second time.
+// Context panels keep their own loading and failure states so a failed source
+// cannot erase an independently available answer.
 
 afterEach(() => {
   cleanup();

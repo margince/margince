@@ -1,4 +1,3 @@
-import { useToast } from "../design-system/toast";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -18,6 +17,7 @@ import {
 } from "../design-system/decisiondeck";
 import { Panel, PanelBody } from "../design-system/panel";
 import type { SectionState } from "../design-system/surfacestate";
+import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatCountdown } from "../format/now";

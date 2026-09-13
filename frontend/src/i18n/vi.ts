@@ -3123,7 +3123,8 @@ export const vi = {
   "brief.glance.eveningAnon": "Chào buổi tối.",
   "brief.glance.night": "Vẫn đang làm việc, {name}.",
   "brief.glance.nightAnon": "Vẫn đang làm việc.",
-  "brief.glance.introWeekly": "Đây là tuần bạn vừa khép lại.",
+  "brief.glance.introWeekly":
+    "Xem lại kết quả và lên kế hoạch cho các bước tiếp theo.",
   "brief.glance.intro": "Đây là ngày của bạn.",
   "brief.panel.decisions": "Đề xuất cần phê duyệt",
   "brief.panel.overnight": "Qua đêm",

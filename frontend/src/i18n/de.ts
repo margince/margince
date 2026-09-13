@@ -3161,7 +3161,8 @@ export const de = {
   "brief.glance.eveningAnon": "Guten Abend.",
   "brief.glance.night": "Noch im Einsatz, {name}.",
   "brief.glance.nightAnon": "Noch im Einsatz.",
-  "brief.glance.introWeekly": "Das ist deine abgeschlossene Woche.",
+  "brief.glance.introWeekly":
+    "Prüfe die Ergebnisse und plane deine nächsten Schritte.",
   "brief.glance.intro": "Das ist dein Tag.",
   "brief.panel.decisions": "Vorschläge zur Freigabe",
   "brief.panel.overnight": "Über Nacht",
