@@ -14,8 +14,8 @@ import { settingsHref } from "./settingsrouting";
  * to be below the fold as on screen. Naming the case in the address is what
  * closes that gap.
  *
- * `case` rather than `dsr`: the address is read by people, and the queue calls
- * these cases in every sentence it draws.
+ * `case` rather than `dsr`: the address is read by whoever follows the link,
+ * and the queue calls these cases in every sentence it draws.
  */
 export const CASE_PARAM = "case";
 

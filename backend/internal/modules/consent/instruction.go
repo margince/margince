@@ -11,15 +11,15 @@ package consent
 // send.
 //
 // THIS IS NOT A CONSENT GRANT AND IS NEVER RECORDED AS ONE. The refusal stays
-// exactly where it is; this row sits beside it saying a contact overrode it, who
+// exactly where it is; this row sits beside it saying somebody overrode it, who
 // they were, and what they said their reason was. A subject asking later why
 // they received a message must be shown the refusal AND the decision, not a
 // grant nobody made.
 //
-// WHAT THIS SLICE DOES NOT DO. Nothing executes on an instruction yet. The row
-// can be written and revoked and that is all — the send path that consumes one
-// is its own change, and landing the record first means the authority question
-// is settled before anything can act on the answer.
+// WHAT SPENDS ONE IS ELSEWHERE. This file writes and revokes the row; the act
+// of sending on it lives in instructionconsume.go, reached from staging through
+// Gate.AuthorizeDirectedExecutionTx. The record landed a slice before anything
+// could act on it, so the authority question was settled first.
 
 import (
 	"context"
@@ -121,7 +121,7 @@ type Instruction struct {
 //
 // GATED ON THREE THINGS, and each answers a different question.
 //
-// RequireHuman, because the claim is that a CONTACT took responsibility. An
+// RequireHuman, because the claim is that a HUMAN BEING took responsibility. An
 // agent acting under somebody's passport inherits their grants, so without this
 // an agent could mint the very record that says a human decided — which is the
 // one assertion this table exists to make truthfully.

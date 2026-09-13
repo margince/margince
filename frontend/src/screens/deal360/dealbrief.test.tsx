@@ -84,7 +84,7 @@ it("saves the brief alone, pinned to the version it read", async () => {
   // back what this modal never showed the reader and overwrite with it.
   expect(sent).toHaveLength(1);
   expect(sent[0].body).toEqual({ description: "Three warehouses." });
-  // Unpinned is last-write-wins, which for prose two people might both be
+  // Unpinned is last-write-wins, which for prose two colleagues might both be
   // rewriting is the loss worth refusing.
   expect(sent[0].ifMatch).toBe("2");
 });
