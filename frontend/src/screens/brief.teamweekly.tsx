@@ -11,7 +11,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { middayInstant } from "../format/calendarday";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -390,7 +390,7 @@ function WeekPicker({ week }: Readonly<{ week?: string }>) {
         if (isISODate(event.target.value)) {
           const day = new Date(`${event.target.value}T12:00:00Z`);
           day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
-          next.set("week", day.toISOString().slice(0, 10));
+          next.set("week", calendarDay(day, "UTC"));
         } else next.delete("week");
         setParams(next);
       }}
