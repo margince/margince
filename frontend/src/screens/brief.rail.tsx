@@ -11,7 +11,13 @@ import { useMorningDigest } from "./brief.queries";
 import { overnightIsEmpty } from "./brief.rail.overnight";
 import { scheduleIsEmpty, tasksIsEmpty } from "./brief.schedule";
 import { waitingRows } from "./brief.sentence";
-import { dealFactsText, itemTitle, rowHref } from "./worklist.copy";
+import {
+  dealFactsText,
+  itemTitle,
+  phrasedReasons,
+  reasonText,
+  rowHref,
+} from "./worklist.copy";
 import { worklistLaneHref } from "./worklist.header";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
@@ -60,9 +66,9 @@ export function WatchPanel({
         day && (
           <a
             className="entity-link"
-            href={worklistLaneHref("deals_at_risk", day.scope)}
+            href={worklistLaneHref("except_decisions", day.scope)}
           >
-            {t("brief.readings.openRisk")}
+            {t("brief.readings.openPriorities")}
           </a>
         )
       }
@@ -80,6 +86,12 @@ export function WatchPanel({
               </a>
               <p className="t-caption">
                 {dealFactsText(item, t, locale, viewerZone())}
+              </p>
+              <p className="t-caption">
+                {phrasedReasons(item, false)
+                  .map((reason) => reasonText(reason, t, locale, viewerZone()))
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </PanelRow>
           ))}

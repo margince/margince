@@ -225,7 +225,9 @@ export function BriefGlance({
               ? scope === "team"
                 ? "brief.glance.introTeamWeekly"
                 : "brief.glance.introWeekly"
-              : "brief.glance.intro",
+              : scope === "team"
+                ? "brief.glance.introTeam"
+                : "brief.glance.intro",
           )}
         </p>
       )}

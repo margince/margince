@@ -2,6 +2,10 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "brief.glance.introTeam": "Here is your team’s day.",
+  "brief.feed.moreAvailable": "Continue on the worklist",
+  "brief.feed.countsPartial": "At least {items} waiting · {urgent} urgent",
+  "brief.readings.openPriorities": "View all priorities",
   "teamweekly.focus.deals_at_risk": "Deal recovery",
   "teamweekly.headline.partial":
     "Partial coverage. These figures describe the reps counted below.",
@@ -11,9 +15,9 @@ export const en = {
   "worklist.lead.lastTouch": "last activity {date}",
   "worklist.deal.omitted": "omitted from forecast",
   "worklist.deal.provisional": "provisional close {date} — confirm or revise",
-  "brief.readings.openRisk": "Review deal risks",
+  "brief.readings.openRisk": "Review deal work",
   "brief.readings.riskBasis": "Known value in this queue; may be incomplete",
-  "brief.readings.risk": "Deal value at risk",
+  "brief.readings.risk": "Deal value needing attention",
   "brief.panel.remainingRisk": "More deals needing attention",
   "brief.glance.introTeamWeekly": "Review your team’s recorded week.",
   "brief.feed.teamTitle": "Team priorities",

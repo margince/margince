@@ -101,10 +101,15 @@ export function BriefFeed({
         sub={
           urgent === undefined
             ? undefined
-            : t("brief.feed.counts", {
-                items: formatNumber(all.length, locale),
-                urgent: formatNumber(urgent, locale),
-              })
+            : t(
+                day?.next_cursor
+                  ? "brief.feed.countsPartial"
+                  : "brief.feed.counts",
+                {
+                  items: formatNumber(all.length, locale),
+                  urgent: formatNumber(urgent, locale),
+                },
+              )
         }
         titleAction={
           changed ? (
@@ -129,9 +134,11 @@ export function BriefFeed({
                 className="entity-link"
                 href={worklistLaneHref("except_decisions", day.scope)}
               >
-                {plural("brief.feed.rest", rest, {
-                  count: formatNumber(rest, locale),
-                })}
+                {day.next_cursor
+                  ? t("brief.feed.moreAvailable")
+                  : plural("brief.feed.rest", rest, {
+                      count: formatNumber(rest, locale),
+                    })}
               </a>
               {restKinds.length > 1 && (
                 // ONLY where the kinds differ. Over a remainder that is all one
@@ -164,7 +171,7 @@ export function BriefFeed({
           // A READ THAT LANDED ON NOTHING is `empty`; a read that has not
           // landed is not. Saying "nothing is waiting" over a read that failed
           // would send a rep away believing their morning was clear.
-          state={state === "ready" && drawn.length === 0 ? "empty" : state}
+          state={feedState(day, state, drawn.length)}
           emptyLabel={t("brief.feed.clear")}
           loadingLabel={t("brief.feed.loading")}
         >
@@ -213,6 +220,16 @@ export function BriefFeed({
       />
     </section>
   );
+}
+
+function feedState(
+  day: Worklist | undefined,
+  state: SectionState,
+  count: number,
+): SectionState {
+  if (state !== "ready") return state;
+  if (day?.next_cursor || day?.readings?.more_available) return "partial";
+  return count === 0 ? "empty" : "ready";
 }
 
 /**

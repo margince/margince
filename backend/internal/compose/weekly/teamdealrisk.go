@@ -7,9 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The agenda reads the same frozen deal scorecard as the rep's review.

@@ -220,3 +220,8 @@ describe("sentenceParts", () => {
     }
   });
 });
+
+it("does not call a partly read empty queue clear", () => {
+  const partial = { ...day([]), next_cursor: "next" };
+  expect(briefSentence(partial, t, "en")).toBeNull();
+});

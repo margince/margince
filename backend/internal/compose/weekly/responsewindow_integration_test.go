@@ -6,12 +6,14 @@
 package weekly
 
 import (
+	"testing"
+	"time"
+
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"testing"
-	"time"
 )
 
 func TestAResponseAfterTheWeekClosedDoesNotImproveThatWeek(t *testing.T) {

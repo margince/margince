@@ -169,6 +169,8 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 // task filed under this lead, while the lead is on the page owing a reply, is
 // about that reply. The notice is left alone — it is read-once and personal,
 // and it names no lead to match on.
+// Fold only when the lead exposes the deadline the task would otherwise carry.
+// Disabling a response policy does not cancel an existing dated activity.
 func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	owed := map[string]bool{}
 	for _, row := range rows {

@@ -100,7 +100,7 @@ func quietDealScanWithClock(pool *pgxpool.Pool, quietForDays int, clock func() t
 		if err != nil {
 			return nil, false, err
 		}
-		sort := "expected_close_date"
+		sort := acceptFieldExpectedClose
 		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, CloseBefore: &today, Sort: &sort, Limit: &limit})
 		if err != nil {
 			return nil, false, err

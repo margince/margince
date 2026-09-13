@@ -1,6 +1,6 @@
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -400,7 +400,11 @@ export function dealFactsText(
           ? "worklist.deal.provisional"
           : "worklist.deal.closes",
         {
-          date: formatDate(deal.expected_close_date, locale, zone),
+          date: formatDate(
+            middayInstant(deal.expected_close_date, zone),
+            locale,
+            zone,
+          ),
         },
       ),
     );

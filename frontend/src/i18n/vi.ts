@@ -14,6 +14,11 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "brief.glance.introTeam": "Đây là công việc hôm nay của nhóm.",
+  "brief.feed.moreAvailable": "Tiếp tục trong danh sách công việc",
+  "brief.feed.countsPartial":
+    "Ít nhất {items} việc đang chờ · {urgent} việc khẩn cấp",
+  "brief.readings.openPriorities": "Xem tất cả ưu tiên",
   "teamweekly.focus.deals_at_risk": "Khôi phục tiến độ cơ hội",
   "teamweekly.headline.partial":
     "Dữ liệu chưa đầy đủ. Các số liệu này chỉ mô tả những thành viên được tính bên dưới.",
@@ -23,10 +28,10 @@ export const vi = {
   "worklist.lead.lastTouch": "hoạt động gần nhất {date}",
   "worklist.deal.omitted": "không nằm trong dự báo",
   "worklist.deal.provisional": "ngày chốt dự kiến {date} — xác nhận hoặc sửa",
-  "brief.readings.openRisk": "Xem rủi ro cơ hội",
+  "brief.readings.openRisk": "Xem công việc về cơ hội",
   "brief.readings.riskBasis":
     "Giá trị đã biết trong danh sách này; có thể chưa đầy đủ",
-  "brief.readings.risk": "Giá trị cơ hội có rủi ro",
+  "brief.readings.risk": "Giá trị cơ hội cần chú ý",
   "brief.panel.remainingRisk": "Các cơ hội khác cần chú ý",
   "brief.glance.introTeamWeekly": "Xem lại tuần được ghi nhận của nhóm.",
   "brief.feed.teamTitle": "Ưu tiên của nhóm",

@@ -535,3 +535,12 @@ describe("the morning feed", () => {
     expect(row.getAttribute("aria-haspopup")).toBe("dialog");
   });
 });
+
+it("keeps an empty first page open when more work exists", () => {
+  const partial = { ...day([]), next_cursor: "next" };
+  render(<BriefFeed day={partial} state="ready" />);
+  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  expect(
+    screen.getByRole("link", { name: en["brief.feed.moreAvailable"] }),
+  ).toBeTruthy();
+});

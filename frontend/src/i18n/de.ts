@@ -5,6 +5,10 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "brief.glance.introTeam": "Das steht heute im Team an.",
+  "brief.feed.moreAvailable": "Weiter zur Aufgabenliste",
+  "brief.feed.countsPartial": "Mindestens {items} offen · {urgent} dringend",
+  "brief.readings.openPriorities": "Alle Prioritäten ansehen",
   "teamweekly.focus.deals_at_risk": "Deals wieder voranbringen",
   "teamweekly.headline.partial":
     "Unvollständige Abdeckung. Diese Zahlen betreffen die unten erfassten Mitarbeitenden.",
@@ -15,10 +19,10 @@ export const de = {
   "worklist.deal.omitted": "nicht in der Prognose",
   "worklist.deal.provisional":
     "vorläufiger Abschluss {date} — bestätigen oder ändern",
-  "brief.readings.openRisk": "Dealrisiken prüfen",
+  "brief.readings.openRisk": "Dealaufgaben prüfen",
   "brief.readings.riskBasis":
     "Bekannter Wert in dieser Liste; möglicherweise unvollständig",
-  "brief.readings.risk": "Gefährdeter Dealwert",
+  "brief.readings.risk": "Dealwert mit Handlungsbedarf",
   "brief.panel.remainingRisk": "Weitere Deals mit Handlungsbedarf",
   "brief.glance.introTeamWeekly": "Die erfasste Woche deines Teams.",
   "brief.feed.teamTitle": "Prioritäten im Team",

@@ -8,7 +8,7 @@ Actual waiting customers and approaching response deadlines retain precedence. O
 
 The prospecting and existing-work labels share ranking precedence. Deadlines, value and the remaining server tie-breaks decide between them. Clients preserve the order and may repeat section labels; they must not regroup the queue by label.
 
-A provisional close is a reason to confirm or revise the forecast, not evidence of a customer commitment. Cards retain the provisional flag and forecast category, including an omitted forecast. The risk reading reports known deal value in the selected queue with an explicit incompleteness qualification; it is not a forecast or expected revenue.
+A provisional close is a reason to confirm or revise the forecast, not evidence of a customer commitment. Cards retain the provisional flag and forecast category, including an omitted forecast. The deal-work reading reports known deal value in the selected queue with an explicit incompleteness qualification; it includes opportunities as well as recovery, and is not a risk-adjusted forecast or expected revenue.
 
 Only a task written by the lead SLA escalation duplicates a dated first-response row. Other lead-linked tasks keep their own identity, due date and actions. A lead without a configured response target still appears as prospecting, with company, status, administered source label and last activity where available, and no invented deadline.
 

@@ -7,11 +7,12 @@ package compose
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"testing"
-	"time"
 )
 
 func TestOverdueDealIsFoundBehindMoreThanOnePageOfCurrentDeals(t *testing.T) {

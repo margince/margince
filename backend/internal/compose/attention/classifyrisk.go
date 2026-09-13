@@ -48,7 +48,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
 	}
 	// A close date calls for recovery or requalification, including when provisional.
-	if item.DueAt != nil {
+	if recoveryDue(item, asOf) {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{

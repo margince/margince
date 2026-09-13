@@ -1,2 +1,4 @@
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE team_weekly_review_rep DROP CONSTRAINT team_weekly_review_rep_focus_kind_check;
 ALTER TABLE team_weekly_review_rep ADD CONSTRAINT team_weekly_review_rep_focus_kind_check CHECK (focus_kind IN ('help_requested', 'leads_breached', 'commitments_missed', 'meetings_without_next_step', 'deals_at_risk', 'strong_week', 'quiet_week'));

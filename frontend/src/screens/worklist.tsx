@@ -627,9 +627,8 @@ export function WorklistScreen({
   // Both are doors a team board row needs — a row that could only reach this
   // page would ask the reader to pick the same thing a second time.
   //
-  // It SEEDS the dials and nothing more. They stay state afterwards and the
-  // address does not follow them, for the reason the dials give below: an
-  // address carrying one of four would describe a fraction of what is on screen.
+  // An unassigned path supplies the default scope; an explicit scope query
+  // overrides it so the scope dial remains usable after following that link.
   opensOn?: string;
 }> = {}) {
   const t = useT();
@@ -639,16 +638,17 @@ export function WorklistScreen({
   const [params, setParams] = useUrlParams();
   const requestedScope = params.get("scope");
   const scope: WorklistScope =
-    opensOn === UNASSIGNED
-      ? UNASSIGNED
-      : requestedScope === "team" ||
-          requestedScope === "all" ||
-          requestedScope === "unassigned"
-        ? requestedScope
+    requestedScope === "mine" ||
+    requestedScope === "team" ||
+    requestedScope === "all" ||
+    requestedScope === "unassigned"
+      ? requestedScope
+      : opensOn === UNASSIGNED
+        ? UNASSIGNED
         : "mine";
   const setScope = (next: WorklistScope) => {
     const query = new Map(params);
-    if (next === "mine") query.delete("scope");
+    if (next === "mine" && opensOn !== UNASSIGNED) query.delete("scope");
     else query.set("scope", next);
     setParams(query);
   };
@@ -660,8 +660,7 @@ export function WorklistScreen({
   // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
   // narrowed queue a link somebody can paste, which is what the address is for.
   //
-  // Scope, owner and the selected row stay state. Moving all four is still its
-  // own change; this moves the one that another surface has to be able to say.
+  // Scope and filter are shared in links; owner and selection stay local.
   const filter = worklistFilterFrom(params);
   const setFilter = (next: WorklistFilter) => {
     const query = new Map(params);

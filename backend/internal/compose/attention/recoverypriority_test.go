@@ -4,10 +4,11 @@
 package attention
 
 import (
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"testing"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestDatedDealRecoveryDoesNotDependOnPortfolioValue(t *testing.T) {
@@ -71,5 +72,16 @@ func TestOrdinaryFollowupForAnOwedLeadKeepsItsDeadlineAndAction(t *testing.T) {
 	}
 	if rows[1].item.Source != crmcontracts.WorklistItemSourceTask {
 		t.Fatal("follow-up no longer resolves its task action")
+	}
+}
+
+func TestDisablingTheResponseTargetDoesNotEraseAnOutstandingTaskDeadline(t *testing.T) {
+	leadID := ids.NewV7()
+	dueAt := rankInstant.Add(-time.Hour)
+	lead := classifyLead(OwedLead{ID: leadID}, rankInstant)
+	task := taskItem(Task{ID: ids.NewV7(), LeadResponseEscalation: true, Subject: "Response follow-up", LinkType: "lead", LinkID: leadID, DueAt: &dueAt}, rankInstant, rankInstant.AddDate(0, 0, 7), time.UTC)
+	rows := dropEscalationTasksAlreadyOwed([]ranked{lead, classifyTask(task, rankInstant)})
+	if len(rows) != 2 || rows[1].item.DueAt == nil || !rows[1].item.DueAt.Equal(dueAt) {
+		t.Fatal("turning off a policy erased the outstanding activity's deadline")
 	}
 }

@@ -79,7 +79,7 @@ const risk: WorklistItem = {
   level: 3,
   title: "Warehouse renewal",
   consequence: "deal_drifts",
-  because: [],
+  because: [{ kind: "quiet_days", value: { kind: "days", days: 40 } }],
   actions: ["open"],
   subject: { type: "deal", id: "risk" },
   deal: { amount_minor: 8900000, currency: "EUR", quiet_days: 40 },
