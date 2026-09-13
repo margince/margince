@@ -202,6 +202,17 @@ export function EditRecordModal({
   // same transition as they are, so the three cannot describe different
   // moments of the record.
   const [opened, setOpened] = useState(record);
+  // Whether the block below already seeded this render, and why it must not
+  // run again when it did.
+  //
+  // `values` is never CLEARED on close — only replaced on open. So on a reopen
+  // it still holds the previous session's answers, and this render they are
+  // still the ones in hand: React has not applied the setter above yet. The
+  // pass below would read those stale answers as present, skip them, and merge
+  // them back over the fresh seed — submitting the old name against the NEW
+  // version, which is the version the server checks. A lost update that passes
+  // the concurrency test is worse than one that fails it.
+  let seededThisRender = false;
   if (open !== seededOpen || (open && record.id !== seededFor)) {
     setSeededOpen(open);
     setSeededFor(open ? record.id : null);
@@ -211,20 +222,20 @@ export function EditRecordModal({
       setValues(prefillFromRecord(fields, record));
       setRows(prefillRowsFromRecord(fields, record));
       setOpened(record);
+      seededThisRender = true;
     }
   }
   // A field list that GREW while the dialog stayed open — the custom-field
-  // catalog landing after Edit was pressed.
-  //
-  // Harmless on the render the block above also fires on, which is why it
-  // needs no guard against it: `values` there still holds the PREVIOUS state
-  // (React has not applied the setter yet), so every field reads as missing
-  // and is re-derived from the SAME live record the seed above just used.
-  // The two agree by construction rather than by ordering.
-  if (open) {
-    const missing = seedMissingFields(fields, record, values);
-    if (missing) {
-      setValues({ ...values, ...missing });
+  // catalog landing after Edit was pressed. The seed above already covered
+  // every field it knew about, so this runs on the renders after it.
+  if (open && !seededThisRender) {
+    const seeded = seedMissingFields(fields, record, values);
+    if (seeded) {
+      setValues({ ...values, ...seeded.form });
+      // The baseline grows with the form. A field the opening reading never
+      // carried would otherwise make a genuine clear compare equal to it and
+      // vanish from the patch — see seedMissingFields.
+      setOpened((current) => ({ ...current, ...seeded.raw }));
     }
   }
 

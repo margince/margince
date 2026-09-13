@@ -101,16 +101,30 @@ export function prefillRowsFromRecord(
 // puts "" over a stored value and changes nothing but the reader's belief.
 //
 // Which is safe here for the same reason the `hasOwn` check is: a key with no
-// entry has nothing on screen to overwrite. `opened` stays the write's
-// baseline and version — this only ever writes into `values`, never into it,
-// so the diff still compares against the raw reading and a currency is not
-// converted twice (see contractform.tsx, which learned that the hard way).
+// entry has nothing on screen to overwrite.
+//
+// TWO maps come back, and the second is not optional bookkeeping. The write
+// diffs the form against `opened`, and a baseline MISSING the key is not the
+// same as one holding no value — except that customFieldsToPatch normalises
+// both to "" (customFieldFormValue maps null and undefined alike). So a reader
+// who clears a late-seeded field submits "", the absent baseline normalises to
+// "", the two compare equal, and the clear is dropped from the body while the
+// save reports success. Extending the baseline as the form is seeded keeps the
+// two describing one reading.
+//
+// `raw` holds the RECORD's own value, never the form string: toPatch converts
+// the baseline itself, so handing it a converted currency converts twice — a
+// stored 10000 reads as "100", re-converts to "1", and a genuine edit to 1
+// compares equal and disappears (contractform.tsx learned that the hard way).
 export function seedMissingFields(
   fields: CreateField[],
   record: Record<string, unknown>,
   values: Record<string, string>,
-): Record<string, string> | null {
-  let added: Record<string, string> | null = null;
+): { form: Record<string, string>; raw: Record<string, unknown> } | null {
+  let seeded: {
+    form: Record<string, string>;
+    raw: Record<string, unknown>;
+  } | null = null;
   for (const field of fields) {
     if (field.divider || field.type === "repeatable") {
       continue;
@@ -118,8 +132,9 @@ export function seedMissingFields(
     if (Object.hasOwn(values, field.key)) {
       continue;
     }
-    added ??= {};
-    added[field.key] = prefillField(field, record);
+    seeded ??= { form: {}, raw: {} };
+    seeded.form[field.key] = prefillField(field, record);
+    seeded.raw[field.key] = record[field.key];
   }
-  return added;
+  return seeded;
 }

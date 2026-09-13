@@ -426,7 +426,12 @@ describe("what an edit is a reading of", () => {
     row,
   }: Readonly<{
     catalog: CreateField[];
-    onUpdate: (values: Record<string, unknown>) => void;
+    // Handed the form's answers AND the reading they are diffed against —
+    // a test about the baseline cannot see it from the values alone.
+    onUpdate: (
+      values: Record<string, unknown>,
+      opened?: Record<string, unknown>,
+    ) => void;
     row: Record<string, unknown>;
   }>) {
     const [known, setKnown] = useState<CreateField[]>([]);
@@ -443,8 +448,8 @@ describe("what an edit is a reading of", () => {
           savedMessage="saved"
           invalidate="contacts"
           recordKey="contact"
-          update={async (values) => {
-            onUpdate(values);
+          update={async (values, _rows, opened) => {
+            onUpdate(values, opened);
             return { id: "p1" };
           }}
         />
@@ -514,6 +519,119 @@ describe("what an edit is a reading of", () => {
     );
     // The newcomer is seeded; the answer already on screen is not re-read.
     expect(name).toHaveValue("Alice Cooper");
+  });
+
+  it("carries a clear of a late-seeded field into the patch", async () => {
+    // The write diffs the form against the reading it opened on. A field the
+    // opening reading never carried — the catalog had not answered yet — would
+    // otherwise make a genuine clear compare EQUAL to the absent baseline
+    // (customFieldFormValue normalises null and "" alike) and drop out of the
+    // body, while the save reports success.
+    //
+    // Asserts the patch CARRIES the key, not that the column ends up empty:
+    // coerceWrite turns a cleared field into null and the backend refuses null
+    // on a cf_ column, which is a separate, pre-existing gap.
+    const seen: { values: Record<string, unknown>; opened?: unknown }[] = [];
+    render(
+      <LateCatalogScreen
+        catalog={[TIER]}
+        row={{ cf_tier: "Strategic" }}
+        onUpdate={(values, opened) => seen.push({ values, opened })}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "catalog" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Tier")).toHaveValue("Strategic"),
+    );
+
+    await userEvent.clear(screen.getByLabelText("Tier"));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+
+    const { values, opened } = seen[0] as {
+      values: { cf_tier?: string };
+      opened: Record<string, unknown>;
+    };
+    // The form submits the cleared string, and the baseline it is diffed
+    // against holds the STORED value — so the two differ and the clear is a
+    // real change rather than a no-op.
+    expect(values.cf_tier).toBe("");
+    expect(opened.cf_tier).toBe("Strategic");
+  });
+
+  it("reopens on the new reading after a refetch while closed", async () => {
+    // values are NOT cleared on close — only reseeded on open. So on a REOPEN
+    // the additive pass sees the previous session's answers as present, skips
+    // them, and merges them over the seed the transition just queued. The form
+    // then submits a stale name against the CURRENT version, which is the
+    // version the server checks: a lost update that passes concurrency.
+    const seen: { values: Record<string, unknown>; opened?: unknown }[] = [];
+    function Screen() {
+      const [live, setLive] = useState({
+        id: "p1",
+        version: 1,
+        full_name: "Alice",
+      });
+      const [known, setKnown] = useState<CreateField[]>([]);
+      return (
+        <>
+          <Button
+            onClick={() => {
+              setLive({ id: "p1", version: 2, full_name: "Updated" });
+              setKnown([TIER]);
+            }}
+          >
+            refetch
+          </Button>
+          <EditAction<{ id: string }>
+            label="Edit"
+            fields={[...fields, ...known]}
+            record={{
+              ...live,
+              ...(known.length ? { cf_tier: "Strategic" } : {}),
+            }}
+            savedMessage="saved"
+            invalidate="contacts"
+            recordKey="contact"
+            update={async (values, _rows, opened) => {
+              seen.push({ values, opened });
+              return { id: "p1" };
+            }}
+          />
+        </>
+      );
+    }
+
+    render(<Screen />);
+    // A first session, opened and closed — this is what leaves values behind.
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["create.cancel"] }),
+    );
+    // The record moves on while the dialog is closed.
+    await userEvent.click(screen.getByRole("button", { name: "refetch" }));
+    // Reopen: the form must show the NEW reading, not the old session's.
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText(en["create.fullName"], { exact: false }),
+      ).toHaveValue("Updated"),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: en["record.save"] }),
+    );
+    await waitFor(() => expect(seen).toHaveLength(1));
+    const { values, opened } = seen[0] as {
+      values: { full_name?: string };
+      opened: { version?: number };
+    };
+    // One reading: a v2 version must not be paired with v1's name.
+    expect(values.full_name).toBe("Updated");
+    expect(opened.version).toBe(2);
   });
 
   it("opens on one reading when the record changed while it was closed", async () => {
