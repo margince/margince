@@ -15,7 +15,7 @@ GO ?= go
 # The deterministic script gates `check-backend` fans out. One list, one
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
-ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
+ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-api-entrypoint \
   test-dev-cleanup \
   test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
   test-review-coverage \

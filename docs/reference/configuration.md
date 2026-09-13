@@ -778,6 +778,29 @@ credential this DSN names must be the same owner role `cmd/migrate` uses.
 Configured, it also gains the api's `/readyz` `customfields-schema-pool`
 probe.
 
+### Enabling custom fields on an installation
+
+`make dev` supplies the selected stack's owner DSN to the API's schema pool,
+including the isolated database name in a linked worktree. The ordinary API
+pool still uses the app role; the schema credential is not exported to the
+worker or frontend. Configure the dev database through `OWNER_DSN`/`APP_DSN`
+or their environment fallbacks, rather than overriding the schema database.
+
+The container API entrypoint defaults `MARGINCE_SCHEMA_DSN` to
+`MARGINCE_OWNER_DSN`. A direct API launch bypasses both launchers and must set
+`MARGINCE_SCHEMA_DSN` explicitly, using the owner role for the same database as
+the app connection. The annotated setting is in [`.env.example`](../../.env.example).
+
+If adding a field reports “operation custom-field schema changes is specified
+but not yet implemented”, the API was started without this pool. Configure it
+and restart the API; no database reset or field-name change is needed. The
+startup log confirms `api custom-field schema changes enabled (schema pool configured)`.
+Then check `/readyz` and, on a rehearsal installation, create a picklist through
+Settings, save a value, and read it back. The ordinary ready response alone is
+not proof that the pool was configured: an omitted optional dependency has no
+readiness probe. A configured pool is checked and makes readiness fail if its
+connection fails.
+
 ## cmd/migrate — schema migrations
 
 ```
