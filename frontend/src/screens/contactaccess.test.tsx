@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
+import { useContact360 } from "./contact360";
 import { ContactAccess } from "./contactaccess";
 
 type Contact = components["schemas"]["Contact"];
@@ -66,14 +67,19 @@ function stub(
   );
 }
 
-function draw(contact: Contact) {
+function LiveContactAccess() {
+  const view = useContact360(base.id);
+  return view.data ? <ContactAccess contact={view.data.contact} /> : null;
+}
+
+function draw(contact?: Contact) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <ContactAccess contact={contact} />
+        {contact ? <ContactAccess contact={contact} /> : <LiveContactAccess />}
         <ToastRegion />
       </ToastProvider>
     </QueryClientProvider>,
@@ -219,6 +225,62 @@ describe("ContactAccess", () => {
     expect(
       screen.queryByText("The company can see this contact now."),
     ).toBeNull();
+  });
+
+  it("refreshes a stale version, then shares and makes private again", async () => {
+    const user = userEvent.setup();
+    let version = 7;
+    let visibility: "owner" | "workspace" = "owner";
+    const writes: { version: string | null; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (!(input instanceof Request))
+          throw new Error("Expected an API request");
+        if (input.method === "PATCH") {
+          const body: unknown = await input.json();
+          writes.push({ version: input.headers.get("If-Match"), body });
+          version++;
+          if (writes.length === 1)
+            return json({ status: 409, code: "version_skew" }, 409);
+          if (
+            typeof body === "object" &&
+            body !== null &&
+            "visibility" in body &&
+            (body.visibility === "owner" || body.visibility === "workspace")
+          ) {
+            visibility = body.visibility;
+          }
+          return json({});
+        }
+        return json({
+          contact: {
+            ...base,
+            version,
+            visibility,
+            writable: true,
+            owner_id: "u1",
+          },
+        });
+      }),
+    );
+    draw();
+    await user.click(
+      await screen.findByRole("button", { name: /share with the company/i }),
+    );
+    await screen.findByRole("alert");
+    await user.click(
+      screen.getByRole("button", { name: /share with the company/i }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /make private/i }),
+    );
+    await screen.findByText("Only you");
+    expect(writes).toEqual([
+      { version: "7", body: { visibility: "workspace" } },
+      { version: "8", body: { visibility: "workspace" } },
+      { version: "9", body: { visibility: "owner" } },
+    ]);
   });
 
   it("draws nothing at all when the server sent no visibility", () => {

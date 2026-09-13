@@ -7,7 +7,7 @@ import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { VisibilityLine } from "../design-system/visibility";
 import { useT } from "../i18n";
-import { problemMessageOf, throwProblem } from "./common";
+import { isVersionSkewOf, problemMessageOf, throwProblem } from "./common";
 import "./contactaccess.css";
 
 type Contact = components["schemas"]["Contact"];
@@ -39,6 +39,11 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
         throwProblem(error);
       }
       return { id, visibility };
+    },
+    onError: async (error, { id }) => {
+      if (isVersionSkewOf(error)) {
+        await queryClient.invalidateQueries({ queryKey: ["contact360", id] });
+      }
     },
     onSuccess: async ({ id, visibility }) => {
       toast.show(
