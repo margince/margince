@@ -27,13 +27,13 @@ function noticeItem(): WorklistItem {
   return {
     id: "n1",
     source: "notice",
-    category: "tasks",
-    level: 4,
-    consequence: "task_slips",
+    category: "system",
+    level: 6,
+    consequence: "none",
     title: "Acme Renewal",
     detail: "Qualified → Won",
     notice_origin: {
-      event_id: "01a079ad-04cc-7328-b9e6-6598af8648f7",
+      event_id: "01920000-0000-7000-8000-000000000001",
       actor_type: "human",
       actor_id: "human:rep",
       actor_name: "Dana Weiss",
