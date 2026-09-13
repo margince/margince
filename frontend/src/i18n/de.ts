@@ -6636,6 +6636,8 @@ export const de = {
   "cf.obj.company": "Firma",
   "cf.obj.contact": "Kontakt",
   "cf.obj.lead": "Lead",
+  "cf.obj.project": "Projekt",
+  "cf.obj.contract": "Vertrag",
   "cf.listLabel": "Felder auf {object}",
   "cf.col.field": "Feld",
   "cf.col.type": "Typ",
@@ -6650,6 +6652,10 @@ export const de = {
     "Noch keine benutzerdefinierten Felder auf Kontakt. Die Kernfelder decken den Kontaktdatensatz ab; füge eines hinzu, wenn du mehr erfasst.",
   "cf.empty.lead":
     "Noch keine benutzerdefinierten Felder auf Lead. Ein Feld, das du hier hinzufügst, erscheint auch, sobald ein Lead zu einem Kontakt befördert wird.",
+  "cf.empty.project":
+    "Noch keine benutzerdefinierten Felder auf Projekt. Füge eines hinzu, wenn du etwas zur Lieferung festhältst, das die Standardfelder nicht abdecken.",
+  "cf.empty.contract":
+    "Noch keine benutzerdefinierten Felder auf Vertrag. Füge eines hinzu für eine Einordnung, die eure Verträge tragen und die Standardkonditionen nicht abbilden.",
   "cf.type.text": "Text",
   "cf.type.number": "Zahl",
   "cf.type.date": "Datum",

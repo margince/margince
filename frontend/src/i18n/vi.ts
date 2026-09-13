@@ -6560,6 +6560,8 @@ export const vi = {
   "cf.obj.company": "Công ty",
   "cf.obj.contact": "Liên hệ",
   "cf.obj.lead": "Lead",
+  "cf.obj.project": "Dự án",
+  "cf.obj.contract": "Hợp đồng",
   "cf.listLabel": "Các trường trên {object}",
   "cf.col.field": "Trường",
   "cf.col.type": "Loại",
@@ -6574,6 +6576,10 @@ export const vi = {
     "Chưa có trường tuỳ chỉnh nào trên Liên hệ. Các trường lõi đã bao quát bản ghi liên hệ; hãy thêm một trường nếu bạn theo dõi thêm.",
   "cf.empty.lead":
     "Chưa có trường tuỳ chỉnh nào trên Lead. Trường bạn thêm ở đây cũng xuất hiện khi một lead được chuyển thành liên hệ trong CRM.",
+  "cf.empty.project":
+    "Chưa có trường tuỳ chỉnh nào trên Dự án. Hãy thêm một trường nếu bạn theo dõi điều gì đó về việc triển khai mà các trường chuẩn chưa bao quát.",
+  "cf.empty.contract":
+    "Chưa có trường tuỳ chỉnh nào trên Hợp đồng. Hãy thêm một trường cho cách phân loại mà hợp đồng của bạn mang theo nhưng điều khoản chuẩn không thể hiện.",
   "cf.type.text": "Văn bản",
   "cf.type.number": "Số",
   "cf.type.date": "Ngày",

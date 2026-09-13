@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   apiKey,
+  CF_OBJECTS,
   columnName,
   ddlPreview,
   looksStructural,
@@ -8,6 +9,24 @@ import {
 } from "./customfields.logic";
 
 describe("custom-fields logic", () => {
+  // The picker's set IS the contract's, in both directions. A one-way check
+  // would pass while the screen quietly lagged the engine, which is exactly
+  // what happened: project and contract were accepted by the backend and
+  // unnameable here, so the only way to define a field on either was the API.
+  // CfObject is the generated type, so a narrowed list fails to compile and a
+  // widened contract fails here.
+  it("offers every object the custom-field contract admits", () => {
+    const admitted = [
+      "contact",
+      "company",
+      "deal",
+      "lead",
+      "project",
+      "contract",
+    ] as const;
+    expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
+  });
+
   it("slugs a label to a snake_case identifier", () => {
     expect(slug("Contract end date")).toBe("contract_end_date");
     expect(slug("  Budget  ceiling! ")).toBe("budget_ceiling");

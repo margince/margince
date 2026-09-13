@@ -13,13 +13,9 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import {
-  type ContractDraft,
-  ContractTermsFields,
-  draftProblem,
-  pricedIn,
-} from "./contractform";
+import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
+import { ContractTermsFields } from "./contracttermsfields";
 
 // margince#3286: the three transitions a signed agreement actually goes
 // through after it is first recorded — renew, assert a status, record a

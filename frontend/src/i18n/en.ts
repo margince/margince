@@ -6805,6 +6805,8 @@ export const en = {
   "cf.obj.company": "Company",
   "cf.obj.contact": "Contact",
   "cf.obj.lead": "Lead",
+  "cf.obj.project": "Project",
+  "cf.obj.contract": "Contract",
   "cf.listLabel": "Fields on {object}",
   "cf.col.field": "Field",
   "cf.col.type": "Type",
@@ -6819,6 +6821,10 @@ export const en = {
     "No custom fields on Contact yet. Core fields cover the contact record; add one if you track more.",
   "cf.empty.lead":
     "No custom fields on Lead yet. A field you add here also appears once a lead is promoted to a contact.",
+  "cf.empty.project":
+    "No custom fields on Project yet. Add one if you track something about delivery the core fields do not cover.",
+  "cf.empty.contract":
+    "No custom fields on Contract yet. Add one for a classification your agreements carry that the standard terms do not.",
   "cf.type.text": "Text",
   "cf.type.number": "Number",
   "cf.type.date": "Date",

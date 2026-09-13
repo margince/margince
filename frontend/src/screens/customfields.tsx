@@ -33,6 +33,7 @@ import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AuditEntryLine } from "./audit";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
   CF_OBJECTS,
@@ -287,26 +288,6 @@ export function FieldBuilder({
 // every key is checked against the catalog at compile time — a mapped
 // `Object.fromEntries` would need a cast to get back to Record<Option, string>,
 // and a cast is exactly what stops a missing translation being a build error.
-function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
-  return {
-    text: t("cf.type.text"),
-    number: t("cf.type.number"),
-    date: t("cf.type.date"),
-    currency: t("cf.type.currency"),
-    picklist: t("cf.type.picklist"),
-    boolean: t("cf.type.boolean"),
-  };
-}
-
-function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
-  return {
-    deal: t("cf.obj.deal"),
-    company: t("cf.obj.company"),
-    contact: t("cf.obj.contact"),
-    lead: t("cf.obj.lead"),
-  };
-}
-
 type CustomField = components["schemas"]["CustomField"];
 type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];

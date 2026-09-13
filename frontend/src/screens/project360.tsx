@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan, useRecordWriteRefusal } from "../app/capability";
+import { useCan } from "../app/capability";
 import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -24,8 +24,14 @@ import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
+import { CustomFieldsPanel } from "./customfields.card";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "./customfields.form";
 import { EditAction } from "./edit";
 import { useOpenEmail } from "./openemail";
+import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
 import { ProjectHealth } from "./projecthealth";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
@@ -145,6 +151,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // may write the project and not its activities, and hide valid ones from a
   // task's own author whenever the project is read-only.
   const canUpdateTask = useCan("activity", "update");
+  // Read here and handed down: the schema request then runs BESIDE the
+  // project's rather than after it.
+  const cf = useObjectCustomFields("project");
   return (
     <RecordView
       // WHO is on this work comes first, then the paperwork. The column used
@@ -180,6 +189,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             <ProjectContractsCard view={view} />
             <ProjectDocumentsCard view={view} />
             <PhaseHistoryCard view={view} />
+            <CustomFieldsPanel object="project" record={project} />
           </>
         ) : undefined
       }
@@ -201,6 +211,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <ProjectActions
           project={project}
           refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          cf={cf}
         />
       }
       // In the header row, where a reader looks for a record's verbs — as the
@@ -300,15 +311,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
  * verb as the loudest control on the page: it draws in the danger colour, and
  * with nothing green beside it the eye went there first.
  */
-// useProjectVerbRefusal answers why this project's own verbs — edit, archive,
-// assign, share, the phase stepper, the rail cards — are refused, or undefined
-// when they are not.
-//
-// `writable` is what the server's write gate would answer on a mutation, and
-// the contract asks a client to draw or withhold affordances by it so a reader
-// is never offered a control the save refuses. Absent reads as NOT writable:
-// a response from a server too old to send the field fails closed.
-//
+
 // Archived comes first because it is the reason a reader can act on, by
 // restoring the record.
 //
@@ -319,13 +322,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
 // `writeAuthorityPredicate` treats an ownerless row as nobody's to change. So
 // here `writable` is the whole answer, and second-guessing it would offer
 // controls the save refuses with nothing a reader could do about it.
-function useProjectVerbRefusal(project: Project): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("project", project, {
-    archived: t("project.archivedReadOnly"),
-    notYours: t("project.notYoursToChange"),
-  });
-}
 
 // refusedReasonId is the id of the sentence the BAND renders, passed in rather
 // than minted here: every verb but Email lives inside the OverflowMenu, and a
@@ -335,7 +331,12 @@ function useProjectVerbRefusal(project: Project): string | undefined {
 function ProjectActions({
   project,
   refusedReasonId,
-}: Readonly<{ project: Project; refusedReasonId?: string }>) {
+  cf,
+}: Readonly<{
+  project: Project;
+  refusedReasonId?: string;
+  cf: ObjectCustomFields;
+}>) {
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
@@ -364,20 +365,29 @@ function ProjectActions({
           disabledReasonId={refusedReasonId}
           label={t("project.edit")}
           savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-          fields={projectFields(t, {
-            companies,
-            me: me.data?.user.id ?? "",
-            currentOwner: project.owner_id ?? null,
-            mode: "edit",
-          })}
-          record={projectEditRecord(project)}
+          fields={[
+            ...projectFields(t, {
+              companies,
+              me: me.data?.user.id ?? "",
+              currentOwner: project.owner_id ?? null,
+              mode: "edit",
+            }),
+            ...cf.formFields,
+          ]}
+          record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
           update={async (values, _rows, opened) => {
             const { data, error } = await api.PATCH("/projects/{id}", {
               params: {
                 path: { id: project.id },
                 ...ifMatch(requireVersion(opened?.version)),
               },
-              body: mapProjectUpdate(values),
+              // Diffed against what the form OPENED on: no cf_ column is
+              // clearable, so a snapshot diff sends every untouched empty one
+              // as a clear and the save is refused outright.
+              body: {
+                ...mapProjectUpdate(values),
+                ...cf.toPatch(values, opened ?? {}),
+              },
             });
             if (error) {
               throwProblem(error);

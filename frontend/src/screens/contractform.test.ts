@@ -14,6 +14,7 @@ const DRAFT = {
   noticePeriodDays: "",
   paymentTermDays: "",
   signedOn: "",
+  customValues: {},
 };
 
 describe("contractBody", () => {

@@ -83,5 +83,9 @@ export function renewDraftOf(predecessor: Contract): ContractDraft {
     noticePeriodDays: "",
     paymentTermDays: "",
     signedOn: "",
+    // Not inherited, for the reason every other term above is not: a renewal
+    // is a fresh negotiation, and a workspace field carried across it would be
+    // a classification nobody chose this time.
+    customValues: {},
   };
 }

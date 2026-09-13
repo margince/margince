@@ -93,8 +93,7 @@
 560 frontend/src/screens/users-access.tsx
 561 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
-573 frontend/src/screens/project360.tsx
-564 frontend/src/screens/companycontracts.tsx
+564 frontend/src/screens/project360.tsx
 589 frontend/src/app/palette.tsx
 591 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx
@@ -112,7 +111,7 @@
 666 frontend/src/screens/record360/citations.tsx
 594 frontend/src/screens/approvalkind.ts
 670 frontend/src/screens/entityref.tsx
-633 frontend/src/screens/contractform.tsx
+560 frontend/src/screens/contractform.tsx
 671 frontend/src/screens/users-admin.tsx
 676 frontend/src/screens/worklist.dispositions.tsx
 682 frontend/src/screens/contactcards.tsx
@@ -137,7 +136,7 @@
 906 frontend/src/screens/leadvocab.tsx
 906 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 906 frontend/src/screens/settingscatalog.ts
-938 frontend/src/screens/customfields.tsx
+919 frontend/src/screens/customfields.tsx
 940 frontend/src/screens/contacts.tsx
 941 frontend/src/screens/contactprovider.tsx
 948 frontend/src/screens/share.tsx

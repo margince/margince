@@ -380,7 +380,7 @@ describe("CustomFieldsAdmin", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the four object chips and the selected object's fields", async () => {
+  it("renders every object chip and the selected object's fields", async () => {
     vi.stubGlobal(
       "fetch",
       customFieldsBackend([field({ id: "d1", label: "Renewal date" })], [], []),
@@ -389,7 +389,14 @@ describe("CustomFieldsAdmin", () => {
     await waitFor(() =>
       expect(screen.getByText("Renewal date")).toBeInTheDocument(),
     );
-    for (const name of [/Deal/, /Company/, /Contact/, /Lead/]) {
+    for (const name of [
+      /Deal/,
+      /Company/,
+      /Contact/,
+      /Lead/,
+      /Project/,
+      /Contract/,
+    ]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
   });

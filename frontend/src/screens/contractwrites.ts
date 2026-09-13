@@ -12,9 +12,15 @@ type Contract = components["schemas"]["Contract"];
 export async function createContract(
   companyId: string,
   draft: ContractDraft,
+  // The workspace's own answers, already through coerceWrite. Passed in rather
+  // than read here: contractBody is a pure function with no catalog, and the
+  // column's writer wants minor units and a JSON boolean, not the strings the
+  // controls hold. Spreading the draft's raw strings instead — which this did
+  // briefly — let the server drop every one of them and answer 201.
+  custom: Record<string, unknown> = {},
 ): Promise<string> {
   const { data, error } = await api.POST("/contracts", {
-    body: contractBody(companyId, draft),
+    body: { ...contractBody(companyId, draft), ...custom },
   });
   if (error) {
     throwProblem(error);
@@ -29,6 +35,11 @@ export async function createContract(
 export async function patchContract(
   contract: Contract,
   draft: ContractDraft,
+  // What the custom fields held when the form opened. The named terms above
+  // send explicit nulls to clear; the custom half cannot — no cf_ column is
+  // clearable — so it travels as a diff and an untouched empty field is
+  // simply absent rather than a clear the server refuses.
+  customPatch: Record<string, unknown> = {},
 ): Promise<string> {
   const { error } = await api.PATCH("/contracts/{id}", {
     params: { path: { id: contract.id } },
@@ -47,6 +58,7 @@ export async function patchContract(
           ? draft.currency
           : null,
       value_basis: draft.valueBasis,
+      ...customPatch,
       starts_on: draft.startsOn || null,
       ends_on: draft.endsOn || null,
       renewal_on: draft.renewalOn || null,

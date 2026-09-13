@@ -12,6 +12,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, useMe, useSorMode } from "./common";
 import { CreateAction } from "./create";
+import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -130,9 +131,12 @@ export function useCompanyOptions(): ProjectCompanyOption[] {
   return companies.data?.data ?? [];
 }
 
-async function createProject(values: Record<string, string>): Promise<Project> {
+async function createProject(
+  values: Record<string, string>,
+  custom: Record<string, unknown>,
+): Promise<Project> {
   const { data, error } = await api.POST("/projects", {
-    body: mapProjectCreate(values),
+    body: { ...mapProjectCreate(values), ...custom },
   });
   if (error) {
     throwProblem(error);
@@ -150,19 +154,23 @@ function NewProjectAction({
   me,
 }: Readonly<{ companies: ProjectCompanyOption[]; me: string }>) {
   const t = useT();
+  const cf = useObjectCustomFields("project");
   return (
     <CreateAction
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
-      create={createProject}
+      create={(values) => createProject(values, cf.toBody(values))}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
-      fields={projectFields(t, {
-        companies,
-        me,
-        currentOwner: null,
-        mode: "create",
-      })}
+      fields={[
+        ...projectFields(t, {
+          companies,
+          me,
+          currentOwner: null,
+          mode: "create",
+        }),
+        ...cf.formFields,
+      ]}
     />
   );
 }
