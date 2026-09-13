@@ -172,16 +172,16 @@ export const DecisionOpened: Story = {
   render: brief({ approvals: [singles[1]] }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
-    await drawer.findByRole("button", { name: "Accept" });
+    await drawer.findByRole("button", { name: "Approve" });
   },
 };
 
-export const DecisionAccepted: Story = {
+export const DecisionApproved: Story = {
   render: brief({ approvals: [singles[1]] }),
   play: async ({ canvasElement }) => {
     const drawer = await openDecision(canvasElement);
     await userEvent.click(
-      await drawer.findByRole("button", { name: "Accept" }),
+      await drawer.findByRole("button", { name: "Approve" }),
     );
     await waitFor(() =>
       expect(
