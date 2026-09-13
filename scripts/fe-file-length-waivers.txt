@@ -80,7 +80,6 @@
 513 frontend/src/design-system/relationshipmap.tsx
 513 frontend/src/screens/contact360.tsx
 514 frontend/src/screens/documentextraction.tsx
-514 frontend/src/screens/projectsections.tsx
 516 frontend/src/design-system/margince-workbench.tsx
 516 frontend/src/design-system/richtext.tsx
 525 frontend/src/screens/onboarding-backread.tsx
@@ -95,7 +94,7 @@
 561 frontend/src/screens/worklist.queries.ts
 571 frontend/src/screens/capture-activity.tsx
 573 frontend/src/screens/project360.tsx
-583 frontend/src/screens/companycontracts.tsx
+564 frontend/src/screens/companycontracts.tsx
 589 frontend/src/app/palette.tsx
 591 frontend/src/screens/adddocument.tsx
 592 frontend/src/screens/rates.tsx

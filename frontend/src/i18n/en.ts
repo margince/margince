@@ -1346,6 +1346,13 @@ export const en = {
   "contracts.form.basis": "This value is",
   "contracts.form.arr": "Annual recurring revenue",
   "contracts.form.arrMonthly": "Monthly equivalent:",
+  // The two agreement terms a READ surface states. "Net 30" and "Due on
+  // receipt" are what the paper says; the form's own labels end in "(days)"
+  // because they name an input, and a reading that said so would be odd.
+  "contracts.terms.net": "Net {days}",
+  "contracts.terms.onReceipt": "Due on receipt",
+  "contracts.terms.arr": "{amount}/year",
+  "contracts.terms.monthly": "({amount}/month)",
   "contracts.basis.total": "the total for the whole term",
   "contracts.basis.annual": "twelve months of an open-ended agreement",
   "contracts.form.startsOn": "Starts",

@@ -1249,6 +1249,10 @@ export const vi = {
   "contracts.form.basis": "Gi\u00e1 tr\u1ecb n\u00e0y l\u00e0",
   "contracts.form.arr": "Doanh thu định kỳ hằng năm",
   "contracts.form.arrMonthly": "Tương đương hàng tháng:",
+  "contracts.terms.net": "Thanh to\u00e1n trong {days} ng\u00e0y",
+  "contracts.terms.onReceipt": "Thanh to\u00e1n ngay",
+  "contracts.terms.arr": "{amount}/n\u0103m",
+  "contracts.terms.monthly": "({amount}/th\u00e1ng)",
   "contracts.basis.total":
     "t\u1ed5ng gi\u00e1 tr\u1ecb c\u1ea3 k\u1ef3 h\u1ea1n",
   "contracts.basis.annual":
