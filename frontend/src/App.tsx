@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
+import { DateFormatsProvider } from "./app/dateformats";
 import {
   composedScreens,
   EXTENSION_SCREEN,
@@ -339,7 +340,7 @@ function ShareRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
 // successful sign-in from this route would leave the reader signed in but still
 // looking at a login form.
 function ResetRoute() {
-  return <AuthScreen onAuthed={() => navigate({ screen: "brief" })} />;
+  return <AuthScreen onAuthed={() => navigate({ screen: "home" })} />;
 }
 
 // #/ext/<unit> (ADR-0120) — the composed extension tier's one route into the
@@ -446,7 +447,7 @@ type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
 // gets. A fallback arm cannot tell an unwired screen from an unknown address.
 const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
   {
-    brief: () => <BriefScreen />,
+    home: () => <BriefScreen />,
     // The tab rides the URL, so it survives a reload and can be linked to.
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
@@ -930,28 +931,26 @@ function AuthedApp({
   }
 
   return (
-    <RecordZoneProvider zone={recordZone.zone}>
-      {/* An address pressed on any screen writes from here: the composer is
+    <DateFormatsProvider>
+      <RecordZoneProvider zone={recordZone.zone}>
+        {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
-      <WriteToHost>
-        <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-          <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-        </AuthedShell>
-      </WriteToHost>
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        commands={commands}
-      />
-    </RecordZoneProvider>
+        <WriteToHost>
+          <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+            <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+          </AuthedShell>
+        </WriteToHost>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          commands={commands}
+        />
+      </RecordZoneProvider>
+    </DateFormatsProvider>
   );
 }
 
-// The shell for a reader who has a session. It is a separate component so the
-// route warm-up runs only once past the login screen, and so a badge read added
-// back here fires no unauthenticated request on the login path. No primary-nav
-// row badges today (app/nav.ts BADGE_SCREENS): Today reports its own counts on
-// the page rather than on its row.
+// Route warm-up runs only after login.
 // Fetches the route chunks in the background, once, for a reader who is past
 // the login screen. It runs at idle so it never competes with the screen the
 // reader is actually looking at, and with a deadline so a busy tab cannot defer

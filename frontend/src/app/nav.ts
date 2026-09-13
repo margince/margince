@@ -76,7 +76,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     items: [
       {
-        screen: "brief",
+        screen: "home",
         labelKey: "nav.brief",
         icon: Home,
         aliases: ["worklist", "today"],
@@ -181,7 +181,7 @@ export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 // is the same distance every destination this list omits already is, and what
 // the centre cell buys instead is the agent reachable without opening anything.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
-  "brief",
+  "home",
   "contacts",
   "deals",
 ]);
@@ -244,7 +244,7 @@ export function opensCreateForm(route: Route): boolean {
 // The rest of the app is scanned ACROSS — a list, a board, a table — and the
 // cap only ever pushed columns off the right edge there.
 export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
-  "brief",
+  "home",
   "worklist",
   "filters",
   "analytics",

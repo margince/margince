@@ -139,10 +139,14 @@ export function usePageAside(available = true): { open: boolean } {
  * finds it in the same place on every record. Renders nothing when no screen
  * supplies a pane.
  */
-export function PageAsideToggle() {
+export function PageAsideToggle({
+  controlled,
+}: Readonly<{
+  controlled?: { open: boolean; label: string; onToggle: () => void };
+}> = {}) {
   const t = useT();
   const { filled, collapsed, toggle } = usePageAsideState();
-  if (!filled) {
+  if (!filled && !controlled) {
     return null;
   }
   // Named, not a bare glyph: this control ends a row of words and a lone
@@ -153,11 +157,11 @@ export function PageAsideToggle() {
   return (
     <Button
       className="record-details-toggle"
-      aria-pressed={!collapsed}
-      onClick={toggle}
+      aria-pressed={controlled?.open ?? !collapsed}
+      onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {t("record.panel.details")}
+      {controlled?.label ?? t("record.panel.details")}
     </Button>
   );
 }

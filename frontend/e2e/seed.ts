@@ -2616,7 +2616,7 @@ export async function mockApi(
     // Without it the catch-all's list envelope reaches
     // formatMoneyCompact(data.open_minor, data.base_currency, locale)
     // unguarded — unlike the weighted figure beside it, which is wrapped in
-    // formatMoneyOrAbsent — so an undefined currency took the whole #/brief
+    // formatMoneyOrAbsent — so an undefined currency took the whole #/home
     // shell down with it.
     if (path === "/forecast") {
       return json({

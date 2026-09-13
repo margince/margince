@@ -103,7 +103,7 @@
   height: 100%;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 640px) {
   .brief-focus-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -135,4 +135,25 @@
 .brief-focus-grid .worklist-row-text,
 .brief-focus-grid .worklist-row-acts {
   order: 0;
+  flex: none;
+}
+
+.brief-focus-grid > li > .panel {
+  display: flex;
+  flex-direction: column;
+}
+.brief-focus-grid .panel-foot {
+  margin-top: auto;
+}
+.brief-focus-grid .worklist-row-title {
+  font-weight: var(--fw-medium);
+}
+
+/* Swipe gestures keep a real wrapper on phones; it follows the card layout. */
+.brief-focus-grid .swipe-row {
+  flex: none;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
 }

@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  globalThis.location.hash = "#/brief";
+  globalThis.location.hash = "#/home";
 });
 
 // One waiting customer, under the scopes this case is about. Built on the shared
@@ -158,7 +158,7 @@ describe("the Brief's dials", () => {
   // The work column already switches on the view. The rail did not, because it
   // is drawn once outside that branch and nothing asserted otherwise.
   it("leaves the morning's rail off the weekly", async () => {
-    globalThis.location.hash = "#/brief?view=weekly";
+    globalThis.location.hash = "#/home?view=weekly";
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
@@ -191,7 +191,7 @@ describe("the Brief's dials", () => {
   // weekly a rep saw today's urgent count stacked on top of a week that had
   // closed.
   it("leaves the morning's readings and coverage line off the weekly", async () => {
-    globalThis.location.hash = "#/brief?view=weekly";
+    globalThis.location.hash = "#/home?view=weekly";
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
@@ -265,10 +265,10 @@ describe("the Brief's dials", () => {
   // address resolved.
   it("draws a surface under every combination it offers", async () => {
     for (const hash of [
-      "#/brief",
-      "#/brief?view=weekly",
-      "#/brief?scope=team",
-      "#/brief?scope=team&view=weekly",
+      "#/home",
+      "#/home?view=weekly",
+      "#/home?scope=team",
+      "#/home?scope=team&view=weekly",
     ]) {
       globalThis.location.hash = hash;
       stubBrief(["mine", "team"]);
@@ -320,7 +320,7 @@ describe("the Brief's dials", () => {
 
     cleanup();
     vi.unstubAllGlobals();
-    globalThis.location.hash = "#/brief?view=weekly";
+    globalThis.location.hash = "#/home?view=weekly";
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
@@ -342,7 +342,7 @@ describe("the Brief's dials", () => {
 
     cleanup();
     vi.unstubAllGlobals();
-    globalThis.location.hash = "#/brief?view=weekly";
+    globalThis.location.hash = "#/home?view=weekly";
     stubBrief(["mine"]);
     render(<BriefScreen />);
 
@@ -355,7 +355,7 @@ describe("the Brief's dials", () => {
 
 it("the team view does not describe a personal queue as team work", async () => {
   stubBrief(["mine", "team"]);
-  globalThis.location.hash = "#/brief?scope=team";
+  globalThis.location.hash = "#/home?scope=team";
   const { container } = render(<BriefScreen />);
   await screen.findByRole("group", { name: en["brief.scope.label"] });
   expect(container.querySelector("#brief-today")).toBeNull();

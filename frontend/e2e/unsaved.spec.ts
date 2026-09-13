@@ -51,7 +51,7 @@ const typeAndCloseDialog = async (page: Page, name: string) => {
 // Selected by destination rather than by name: this link's accessible name is
 // the installation's own company, which a fixture is free to change, and what
 // the test needs is only that it goes somewhere outside settings.
-const leaveSettings = (page: Page) => page.locator('a[href="#/brief"]').click();
+const leaveSettings = (page: Page) => page.locator('a[href="#/home"]').click();
 
 test("a settings draft holds the page when the reader leaves for another screen", async ({
   page,

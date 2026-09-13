@@ -359,14 +359,12 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 	}
 }
 
-// The quiet tier moves the date, and it must move it somewhere a human can
-// believe: forward of today, and different from what the deal already carried.
-// Writing the same date back is a change that changes nothing, and it would
-// still mark the deal provisional and raise a receipt asking about it.
+// The quiet tier repairs an overdue date to a future estimate. A valid future
+// date is retained; only a replacement should be marked provisional.
 func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 	e := setupCloseDate(t)
-	originalDate := today().AddDate(0, 0, 30)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+	originalDate := today().AddDate(0, 0, -30)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -392,7 +390,7 @@ func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 // from them.
 func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)

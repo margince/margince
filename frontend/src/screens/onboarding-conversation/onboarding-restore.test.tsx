@@ -587,7 +587,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await waitFor(() => {
-      expect(window.location.hash).toBe("#/brief");
+      expect(window.location.hash).toBe("#/home");
     });
   });
 });
@@ -748,7 +748,7 @@ describe("finishing the connect act", () => {
       screen.getByRole("button", { name: /Continue without a mailbox/ }),
     );
     await waitFor(() => {
-      expect(window.location.hash).toBe("#/brief");
+      expect(window.location.hash).toBe("#/home");
     });
     const writes = requestsTo(calls, "/onboarding/state", "PUT");
     const body = (await writes[writes.length - 1].clone().json()) as Record<

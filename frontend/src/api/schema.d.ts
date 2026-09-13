@@ -15869,6 +15869,16 @@ export interface components {
              */
             base_language: "en" | "de" | "vi";
             /**
+             * @description Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+             * @enum {string}
+             */
+            date_format?: "locale" | "dmy" | "mdy" | "ymd";
+            /**
+             * @description Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+             * @enum {string}
+             */
+            time_format?: "locale" | "24h" | "12h";
+            /**
              * @description The month the installation's business year begins, 1..12. January (1) is the
              *     default, which is the calendar year every installation reported by before this
              *     setting existed.
@@ -15966,6 +15976,16 @@ export interface components {
              * @enum {string}
              */
             base_language?: "en" | "de" | "vi";
+            /**
+             * @description Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.
+             * @enum {string}
+             */
+            date_format?: "locale" | "dmy" | "mdy" | "ymd";
+            /**
+             * @description Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
+             * @enum {string}
+             */
+            time_format?: "locale" | "24h" | "12h";
             /**
              * @description The month the installation's business year begins, 1..12. Never frozen: it cuts
              *     reports on read and stores nothing, so moving it re-labels every period report at
@@ -33788,6 +33808,20 @@ export interface components {
             /** @description How many introduction asks the lane is CARRYING — the bounded page, as the other lanes report. A reader past the bound sees the ones lapsing soonest, which is the order this lane pages in. */
             introductions?: number;
         };
+        /** @description The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded. */
+        NoticeOrigin: {
+            /** Format: uuid */
+            event_id: string;
+            actor_type: string;
+            /** @description Original typed principal identifier, such as human:<user UUID> or system:<process>. */
+            actor_id: string;
+            actor_name?: string;
+            /** Format: uuid */
+            on_behalf_of?: string;
+            on_behalf_of_name?: string;
+            /** Format: date-time */
+            occurred_at: string;
+        };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
          *     the record that owns it. The client routes a verb to that owner's endpoint — this
@@ -33795,6 +33829,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
             /**
@@ -34345,6 +34380,14 @@ export interface components {
             /** @description Whether this reader may write this deal. */
             writable: boolean;
         };
+        /** @description Recorded close-date correction values, formatted at the presentation edge. */
+        CloseDateChange: {
+            date_changed: boolean;
+            forecast_changed: boolean;
+            before?: string;
+            after?: string;
+            basis?: string;
+        };
         /**
          * @description One completed act, and the record it was about.
          *
@@ -34353,6 +34396,7 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            close_date_change?: components["schemas"]["CloseDateChange"];
             /**
              * Format: uuid
              * @description The completed act, as its own surface spells it.
@@ -34965,6 +35009,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
             /**

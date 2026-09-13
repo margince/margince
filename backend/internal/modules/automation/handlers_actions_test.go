@@ -9,6 +9,7 @@ import (
 	"errors"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -78,6 +79,8 @@ type notifyCall struct {
 	recipient     ids.UUID
 	subject, body string
 	target        datasource.EntityRef
+	dedupe        string
+	origin        *crmcontracts.NoticeOrigin
 }
 
 type fakeNotifier struct {
@@ -86,9 +89,9 @@ type fakeNotifier struct {
 }
 
 func (f *fakeNotifier) Notify(
-	_ context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef,
+	_ context.Context, recipient ids.UUID, subject, body string, target datasource.EntityRef, dedupe string, origin *crmcontracts.NoticeOrigin,
 ) error {
-	f.calls = append(f.calls, notifyCall{recipient, subject, body, target})
+	f.calls = append(f.calls, notifyCall{recipient, subject, body, target, dedupe, origin})
 	return f.err
 }
 

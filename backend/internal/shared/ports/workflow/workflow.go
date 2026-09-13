@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -89,6 +90,7 @@ type Trigger struct {
 // instance's validated params — the editor's parameterization reaches
 // the run here.
 type Event struct {
+	Actor       events.Actor
 	ID          ids.UUID
 	Type        string
 	WorkspaceID ids.UUID

@@ -110,12 +110,13 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 		summary += " — " + c.Basis
 	}
 	return attention.Receipt{
-		ID:         c.AuditLogID,
-		Kind:       deals.CloseDateCorrectionKind,
-		Summary:    summary,
-		OccurredAt: c.AppliedAt,
-		TargetType: approvalTargetDeal,
-		TargetID:   c.DealID.UUID,
+		ID:              c.AuditLogID,
+		CloseDateChange: correctionValues(c),
+		Kind:            deals.CloseDateCorrectionKind,
+		Summary:         summary,
+		OccurredAt:      c.AppliedAt,
+		TargetType:      approvalTargetDeal,
+		TargetID:        c.DealID.UUID,
 		Undo: &attention.ReceiptUndo{
 			AuditLogID: c.AuditLogID,
 			Version:    c.Version,

@@ -10,7 +10,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("keeps the work summary open and puts updates beside actionable work", async () => {
+it("keeps the summary visible and puts informational updates after the priorities", async () => {
   const task = taskRow("task-one", "Send the promised comparison");
   const notice = {
     ...taskRow("notice-one", "Northstar changed stage"),
@@ -30,15 +30,17 @@ it("keeps the work summary open and puts updates beside actionable work", async 
   });
   const { container } = render(<BriefScreen />);
   await screen.findByText("Send the promised comparison");
-  const summary = await screen.findByText("Work summary");
+  const summary = await screen.findByRole("region", {
+    name: "Your morning, in five readings",
+  });
   expect(summary.closest("details")).toBeNull();
-  expect(summary.closest(".brief-rail")).toBeTruthy();
+  expect(summary.closest(".brief-overview")).toBeTruthy();
   expect(container.querySelector("#brief-today")?.textContent).not.toContain(
     "Northstar changed stage",
   );
-  expect(container.querySelector(".brief-rail")?.textContent).toContain(
-    "Northstar changed stage",
-  );
+  expect(
+    container.querySelector(".brief-followthrough")?.textContent,
+  ).toContain("Northstar changed stage");
   expect(container.textContent).toContain("Agenda updated");
   expect(container.textContent).not.toContain("Some work may be missing");
 });

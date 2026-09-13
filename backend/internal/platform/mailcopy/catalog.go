@@ -240,9 +240,9 @@ func morningLines(line writeLine) {
 		"Womit du anfängst:",
 		"Bắt đầu với:")
 	line(func(c *Copy) *string { return &c.MorningAndMore },
-		"and %d more in the brief",
-		"und %d weitere im Briefing",
-		"và %d mục khác trong bản tóm tắt")
+		"and %d more on Home",
+		"und %d weitere auf der Startseite",
+		"và %d mục khác trên Trang chủ")
 	line(func(c *Copy) *string { return &c.MorningQuiet },
 		"Nothing is waiting on you this morning.",
 		"Heute Morgen wartet nichts auf dich.",

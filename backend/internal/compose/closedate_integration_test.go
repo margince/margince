@@ -453,14 +453,8 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	}
 }
 
-// A deal nobody has touched is notched down AND re-dated.
-//
-// It used to keep its date: only the invariant forced one onto a quiet deal,
-// on the reading that an optimistic re-date on top of a downgrade said too
-// much. That left the forecast corrected and the calendar lying, which is the
-// half a rep actually reads. Both move now, both are the sweep's estimate, and
-// both are on one Undo.
-func TestCloseDateSweepDowngradesAndRedatesAQuietDeal(t *testing.T) {
+// Quietness lowers confidence while a recorded future date stays intact.
+func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	e := setupCloseDate(t)
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
@@ -476,14 +470,11 @@ func TestCloseDateSweepDowngradesAndRedatesAQuietDeal(t *testing.T) {
 	if swept.forecastCat == nil || *swept.forecastCat != "best_case" {
 		t.Errorf("forecast_category = %v, want best_case (one notch down from commit)", swept.forecastCat)
 	}
-	if swept.expectedClose == nil || swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, still the original %s — a deal nobody has touched carries "+
-			"a date nobody believes, and notching the forecast while leaving the "+
-			"calendar alone corrects the number and leaves the date lying",
-			swept.expectedClose, originalDate.Format(time.DateOnly))
+	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date = %v, want retained %s", swept.expectedClose, originalDate)
 	}
-	if !swept.provisional {
-		t.Error("the replacement is the sweep's own estimate and must say so")
+	if swept.provisional {
+		t.Error("retaining the date must not make a human date provisional")
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+

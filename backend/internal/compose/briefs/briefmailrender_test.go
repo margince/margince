@@ -87,7 +87,7 @@ func TestAnUndescribedItemIsCountedAndNeverInvented(t *testing.T) {
 	if !strings.Contains(body, "The buyer replied and nobody has answered.") {
 		t.Errorf("the described item is missing:\n%s", body)
 	}
-	if !strings.Contains(body, "and 2 more in the brief") {
+	if !strings.Contains(body, "and 2 more on Home") {
 		t.Errorf("the two undescribed items were not counted:\n%s", body)
 	}
 	// No UUID reaches a reader: words on a page rather than information.
@@ -108,7 +108,7 @@ func TestTheListIsCappedAndSaysHowMuchItLeftOut(t *testing.T) {
 	if got := strings.Count(body, "  · "); got != mailItemCap {
 		t.Errorf("the list drew %d lines, want the cap of %d:\n%s", got, mailItemCap, body)
 	}
-	if !strings.Contains(body, "and 3 more in the brief") {
+	if !strings.Contains(body, "and 3 more on Home") {
 		t.Errorf("the tail does not count what was left out:\n%s", body)
 	}
 }

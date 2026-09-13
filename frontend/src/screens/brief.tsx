@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useState } from "react";
+import { PageAsideToggle } from "../app/pageaside";
 import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
-import { Button } from "../design-system/atoms";
+import { Button, Modal } from "../design-system/atoms";
 import { PageZones } from "../design-system/pagezones";
-import { Panel, PanelBody } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -30,8 +30,10 @@ import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection } from "./brief.weekly";
 import { BriefCoverage } from "./briefcoverage";
 import { useMe } from "./common";
+import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { WorklistPane } from "./worklist.pane";
-import { useWorklist } from "./worklist.queries";
+import { useWorklist, worklistKey } from "./worklist.queries";
+import { readerTask } from "./worklist.reader";
 import "./brief.css";
 
 export function BriefScreen() {
@@ -53,26 +55,45 @@ export function BriefScreen() {
         <BriefGlance
           view={address.view}
           scope={address.scope}
-          day={address.scope === "mine" ? day : undefined}
+          day={
+            address.scope === "mine" && day
+              ? {
+                  ...day,
+                  focus: day.focus
+                    ? {
+                        ...day.focus,
+                        items: day.focus.items.map((item) =>
+                          readerTask(item, me.data?.user, t),
+                        ),
+                      }
+                    : undefined,
+                }
+              : undefined
+          }
           week={address.scope === "mine" ? review.data : undefined}
           firstName={firstName}
           now={new Date(nowMs)}
         />
-        <BriefDials
-          address={address}
-          offered={teamOffered}
-          onChange={(next) => setParams(paramsFor(next, params))}
-        />
+        <div className="brief-controls">
+          <BriefDials
+            address={address}
+            offered={teamOffered}
+            onChange={(next) => setParams(paramsFor(next, params))}
+          />
+          <PageAsideToggle
+            controlled={{
+              open: params.get("queue") === "1",
+              label: t("brief.queue.title"),
+              onToggle: () => {
+                const next = new Map(params);
+                if (next.get("queue") === "1") next.delete("queue");
+                else next.set("queue", "1");
+                navigate({ screen: "home" }, next);
+              },
+            }}
+          />
+        </div>
       </div>
-      <Button
-        onClick={() => {
-          const next = new Map(params);
-          next.set("queue", "1");
-          navigate({ screen: "brief" }, next);
-        }}
-      >
-        {t("brief.queue.open")}
-      </Button>
       <BriefBody address={address} teamOffered={teamOffered} query={query} />
       <BriefQueue />
     </div>
@@ -115,97 +136,97 @@ function PersonalMorning({
   const { locale } = useLocale();
   const brief = useMorningBrief();
   const [selected, setSelected] = useState("");
-  const contextRegion = useRef<HTMLDivElement>(null);
-  const contextOpener = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const update = useTaskUpdate([worklistKey]);
   const day = briefDay(query.data?.pages);
   const context = day?.focus?.items.find(
     (item) => `${item.source}-${item.id}` === selected,
   );
-  const contextIdentity = context ? `${context.source}-${context.id}` : "";
-  useLayoutEffect(() => {
-    if (contextIdentity) contextRegion.current?.focus();
-    else if (contextOpener.current) {
-      contextOpener.current.focus();
-      contextOpener.current = null;
-    }
-  }, [contextIdentity]);
   const state = query.isPending
     ? "loading"
     : query.isError && !day
       ? "failed"
       : "ready";
   return (
-    <PageZones
-      shape="aside"
-      className={context ? "brief-context-open" : undefined}
-      mainClassName="brief-main"
-      asideClassName="brief-rail"
-      asideLabel={t("brief.rail")}
-      main={
-        <BriefFeed
-          day={day}
-          onContext={(item) => {
-            contextOpener.current =
-              document.activeElement instanceof HTMLElement
-                ? document.activeElement
-                : null;
-            setSelected(`${item.source}-${item.id}`);
-          }}
-          state={state}
-          changed={changedSinceBrief(day)}
-          refreshFailed={query.isRefetchError}
-          onRetry={() => void query.refetch()}
-        />
-      }
-      aside={
-        context ? (
-          <div ref={contextRegion} tabIndex={-1}>
-            <Button onClick={() => setSelected("")}>
-              {t("brief.focus.back")}
-            </Button>
-            <WorklistPane item={context} />
-          </div>
-        ) : (
-          <>
-            {day && (
-              <Panel
-                title={t("brief.readings.summary")}
-                className="brief-summary"
-              >
-                <PanelBody>
-                  {brief.data?.generated_at && (
-                    <p className="t-caption">
-                      {t("brief.createdAt", {
-                        when: formatDateTime(
-                          brief.data.generated_at,
-                          locale,
-                          viewerZone(),
-                        ),
-                      })}
-                    </p>
-                  )}
-                  <p className="t-caption">
-                    {t("brief.updatedAt", {
-                      when: formatDateTime(day.as_of, locale, viewerZone()),
-                    })}
-                  </p>
-                </PanelBody>
-                <PanelBody>
-                  <BriefReadingsStrip day={day} />
-                  <BriefCoverage
-                    day={day}
-                    onRetry={() => void query.refetch()}
-                  />
-                </PanelBody>
-              </Panel>
+    <>
+      <BriefFeed
+        day={day}
+        onContext={(item) => setSelected(`${item.source}-${item.id}`)}
+        state={state}
+        changed={changedSinceBrief(day)}
+        refreshFailed={query.isRefetchError}
+        onRetry={() => void query.refetch()}
+      />
+      {day && (
+        <div className="brief-overview">
+          <BriefReadingsStrip day={day} />
+          <BriefCoverage day={day} onRetry={() => void query.refetch()} />
+          <p className="t-caption brief-freshness">
+            {t("brief.updatedAt", {
+              when: formatDateTime(day.as_of, locale, viewerZone()),
+            })}
+            {brief.data?.generated_at && (
+              <>
+                {" "}
+                ·{" "}
+                {t("brief.createdAt", {
+                  when: formatDateTime(
+                    brief.data.generated_at,
+                    locale,
+                    viewerZone(),
+                  ),
+                })}
+              </>
             )}
+          </p>
+        </div>
+      )}
+      <PageZones
+        shape="aside"
+        className="brief-followthrough"
+        mainClassName="brief-main"
+        asideClassName="brief-rail"
+        asideLabel={t("brief.rail")}
+        main={
+          <>
             <BriefChanges />
-            <SchedulePanel day={day} state={state} />
             <BriefUpdates day={day} />
+          </>
+        }
+        aside={
+          <>
+            <SchedulePanel day={day} state={state} />
             <OvernightPanel />
           </>
-        )
-      }
-    />
+        }
+      />
+      {context?.source === "task" ? (
+        <TaskDetailModal
+          activityId={context.id}
+          readOnly={!context.actions.includes("complete")}
+          update={update}
+          onClose={() => setSelected("")}
+        />
+      ) : (
+        <Modal
+          open={Boolean(context)}
+          onClose={() => setSelected("")}
+          labelledBy={titleId}
+          placement="right"
+        >
+          <div className="drawer-head brief-queue-head">
+            <h2 id={titleId} className="t-h2">
+              {t("brief.focus.context")}
+            </h2>
+            <Button variant="ghost" onClick={() => setSelected("")}>
+              {t("brief.focus.back")}
+            </Button>
+          </div>
+          <div className="drawer-body">
+            {context && <WorklistPane item={context} />}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }

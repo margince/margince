@@ -100,7 +100,7 @@ function ConsentErrorCard({
     <Card>
       <h1>{t(titleKey)}</h1>
       <p>{t(bodyKey)}</p>
-      <Button variant="ghost" onClick={() => navigate({ screen: "brief" })}>
+      <Button variant="ghost" onClick={() => navigate({ screen: "home" })}>
         {t("consent.backToApp")}
       </Button>
     </Card>

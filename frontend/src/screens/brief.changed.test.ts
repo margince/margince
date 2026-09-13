@@ -60,7 +60,7 @@ describe("changedSinceBrief", () => {
   // and why the count is now taken by running it.
   it("points at exactly the rows it counted", () => {
     expect(changedSinceBrief(day(1))?.href).toBe(
-      "#/brief?filter=changed_since_brief&queue=1",
+      "#/home?filter=changed_since_brief&queue=1",
     );
   });
 });

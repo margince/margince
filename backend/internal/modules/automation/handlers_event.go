@@ -289,6 +289,8 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	}
 	args, err := json.Marshal(notifyArgs{
 		Recipient: *deal.OwnerID,
+		Origin:    noticeOrigin(ev),
+		DedupeKey: w.IdempotencyKey(ev),
 		Subject:   fmt.Sprintf("%s changed stage", dealName),
 		Body:      body,
 	})

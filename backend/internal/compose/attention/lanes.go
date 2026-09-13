@@ -197,11 +197,12 @@ type Receipts interface {
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
-	Review     *crmcontracts.AppliedDealChangeReview
-	ID         ids.UUID
-	Kind       string
-	Summary    string
-	OccurredAt time.Time
+	CloseDateChange *crmcontracts.CloseDateChange
+	Review          *crmcontracts.AppliedDealChangeReview
+	ID              ids.UUID
+	Kind            string
+	Summary         string
+	OccurredAt      time.Time
 	// The record the decision was about, carried from the approval it came
 	// from. A reader told the system sent something on their behalf wants the
 	// account it went to, and the card offers `open` only when this names one.
@@ -431,6 +432,7 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
+	Origin  *crmcontracts.NoticeOrigin
 	ID      ids.UUID
 	Kind    string
 	Subject string

@@ -342,7 +342,6 @@
   text-wrap: pretty;
 }
 
-.brief-summary,
 .brief-coverage {
   margin-block: var(--space-3);
 }
@@ -354,12 +353,6 @@
 .brief-change {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-@media (max-width: 800px) {
-  .brief-context-open > .brief-main {
-    display: none;
-  }
 }
 
 .brief-queue-head {
@@ -386,5 +379,39 @@
 @media (max-width: 1000px) {
   .brief-queue-body .page-zones-aside {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.brief-overview {
+  margin-block: var(--space-5);
+}
+.brief-overview .brief-readings {
+  margin-bottom: var(--space-2);
+}
+.brief-freshness {
+  margin: var(--space-2) 0;
+}
+.brief-followthrough {
+  margin-top: var(--space-6);
+}
+.brief-wrap > .record-details-toggle {
+  margin-left: auto;
+}
+
+.brief-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding-block: var(--space-6);
+}
+.brief-controls .brief-dials {
+  margin: 0;
+}
+@media (max-width: 720px) {
+  .brief-controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-block: 0 var(--space-4);
   }
 }

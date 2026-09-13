@@ -69,7 +69,7 @@ const MACHINE_QUALIFIER: Partial<
 // carries the typed principal id, not a bare uuid. Comparing the raw column to
 // a bare user id is how "You" silently stopped rendering — the strings could
 // never be equal.
-const HUMAN_ACTOR_PREFIX = "human:";
+export const HUMAN_ACTOR_PREFIX = "human:";
 
 // actorAttribution decides WHO a row is attributed to, as the label a reader
 // sees and the qualifier under it.
@@ -78,7 +78,7 @@ const HUMAN_ACTOR_PREFIX = "human:";
 // identifier is never the label: attribution exists so somebody can be asked
 // about a change, and a passport uuid cannot be asked anything. `identifier` is
 // the machine's id, carried only when it is the one thing left to show.
-function actorAttribution(
+export function actorAttribution(
   entry: ActorFields,
   meUserId: string | undefined,
 ): {

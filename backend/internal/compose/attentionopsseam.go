@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -17,9 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionDSRs binds the compliance lane to the consent module's own thin
@@ -207,17 +211,48 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 }
 
 // attentionNotices binds the notices lane to the store's own per-user read.
-type attentionNotices struct{ store *notices.Store }
+type attentionNotices struct {
+	store *notices.Store
+	users *identity.Service
+}
 
 func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
 	unread, err := a.store.UnreadFor(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
+	seats := []ids.UserID{}
+	for _, notice := range unread {
+		if notice.Origin != nil && notice.Origin.OnBehalfOf != nil {
+			seats = append(seats, ids.From[ids.UserKind](ids.UUID(*notice.Origin.OnBehalfOf)))
+		}
+		if notice.Origin != nil && notice.Origin.ActorType == string(principal.PrincipalHuman) {
+			if id, parseErr := ids.Parse(strings.TrimPrefix(notice.Origin.ActorId, "human:")); parseErr == nil {
+				seats = append(seats, ids.From[ids.UserKind](id))
+			}
+		}
+	}
+	names, err := a.users.SeatNames(ctx, seats)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]attention.UnreadNotice, 0, len(unread))
 	for _, notice := range unread {
+		if notice.Origin != nil && notice.Origin.ActorType == string(principal.PrincipalHuman) {
+			if id, parseErr := ids.Parse(strings.TrimPrefix(notice.Origin.ActorId, "human:")); parseErr == nil {
+				if name := names[id]; name != "" {
+					notice.Origin.ActorName = &name
+				}
+			}
+		}
+		if notice.Origin != nil && notice.Origin.OnBehalfOf != nil {
+			if name := names[ids.UUID(*notice.Origin.OnBehalfOf)]; name != "" {
+				notice.Origin.OnBehalfOfName = &name
+			}
+		}
 		out = append(out, attention.UnreadNotice{
 			ID:         notice.ID,
+			Origin:     notice.Origin,
 			Kind:       notice.Kind,
 			Subject:    notice.Subject,
 			Body:       notice.Body,

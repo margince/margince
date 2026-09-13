@@ -23175,6 +23175,14 @@ components:
             It does not govern everything a model writes: correspondence keeps the language of
             the correspondence, so a German thread still gets a German reply, and a brief cached
             for one reader keeps that reader's language.
+        date_format:
+          type: string
+          enum: [locale, dmy, mdy, ymd]
+          description: 'Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.'
+        time_format:
+          type: string
+          enum: [locale, 24h, 12h]
+          description: 'Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.'
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -23280,6 +23288,14 @@ components:
           description: |
             The language shared AI writing is written in. Never frozen: changing it re-means
             nothing already written, so artifacts stay in the language they were written in.
+        date_format:
+          type: string
+          enum: [locale, dmy, mdy, ymd]
+          description: 'Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.'
+        time_format:
+          type: string
+          enum: [locale, 24h, 12h]
+          description: 'Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.'
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -44768,6 +44784,18 @@ components:
             soonest, which is the order this lane pages in.
 
 
+    NoticeOrigin:
+      type: object
+      description: The original change behind a notification, distinct from the automation delivering it. Absent on legacy notifications whose origin was not recorded.
+      required: [event_id, actor_type, actor_id, occurred_at]
+      properties:
+        event_id: { type: string, format: uuid }
+        actor_type: { type: string }
+        actor_id: { type: string, description: "Original typed principal identifier, such as human:<user UUID> or system:<process>." }
+        actor_name: { type: string }
+        on_behalf_of: { type: string, format: uuid }
+        on_behalf_of_name: { type: string }
+        occurred_at: { type: string, format: date-time }
     AttentionItem:
       type: object
       description: |
@@ -44777,6 +44805,7 @@ components:
         adds none.
       required: [id, source, actions]
       properties:
+        notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
@@ -45351,6 +45380,17 @@ components:
         can_accept: { type: boolean }
         writable: { type: boolean, description: Whether this reader may write this deal. }
 
+    CloseDateChange:
+      type: object
+      description: Recorded close-date correction values, formatted at the presentation edge.
+      required: [date_changed, forecast_changed]
+      properties:
+        date_changed: { type: boolean }
+        forecast_changed: { type: boolean }
+        before: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        after: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        basis: { type: string }
+
     Receipt:
       type: object
       description: |
@@ -45361,6 +45401,7 @@ components:
         client draws the summary alone rather than inventing something to open.
       required: [id, kind, summary, occurred_at]
       properties:
+        close_date_change: { $ref: '#/components/schemas/CloseDateChange' }
         id: { type: string, format: uuid, description: 'The completed act, as its own surface spells it.' }
         kind: { type: string, description: "The producer's own sub-type — for the label, never for authority." }
         summary: { type: string, description: 'What was done, in the words the act itself recorded.' }
@@ -46009,6 +46050,7 @@ components:
         browser does not.
       required: [id, source, category, level, actions, because, consequence]
       properties:
+        notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string

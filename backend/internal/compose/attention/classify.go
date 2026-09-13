@@ -82,15 +82,16 @@ func base(
 	consequence crmcontracts.WorklistItemConsequence,
 ) crmcontracts.WorklistItem {
 	return crmcontracts.WorklistItem{
-		Id:          item.Id,
-		Source:      crmcontracts.WorklistItemSource(item.Source),
-		Category:    category,
-		Level:       level,
-		Consequence: consequence,
-		Kind:        item.Kind,
-		Title:       item.Title,
-		Detail:      item.Detail,
-		CauseRef:    item.CauseRef,
+		Id:           item.Id,
+		Source:       crmcontracts.WorklistItemSource(item.Source),
+		Category:     category,
+		Level:        level,
+		Consequence:  consequence,
+		Kind:         item.Kind,
+		Title:        item.Title,
+		Detail:       item.Detail,
+		NoticeOrigin: item.NoticeOrigin,
+		CauseRef:     item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the
 		// client came to interpolate an identity into a sentence.

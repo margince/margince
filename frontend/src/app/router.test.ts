@@ -7,8 +7,8 @@ import { parseHash, routeHash, routeIdentity } from "./router";
 
 describe("parseHash", () => {
   it("parses a bare screen with no id", () => {
-    expect(parseHash("#/brief")).toEqual({
-      screen: "brief",
+    expect(parseHash("#/home")).toEqual({
+      screen: "home",
       id: undefined,
       id2: undefined,
     });
@@ -40,15 +40,15 @@ describe("parseHash", () => {
   });
 
   it("falls back to the Brief when the hash is empty", () => {
-    expect(parseHash("")).toEqual({ screen: "brief" });
-    expect(parseHash("#/")).toEqual({ screen: "brief" });
+    expect(parseHash("")).toEqual({ screen: "home" });
+    expect(parseHash("#/")).toEqual({ screen: "home" });
   });
 
-  // `#/home` was the Brief's address long enough to reach bookmarks and staging
+  // `#/brief` was Home's address long enough to reach bookmarks and staging
   // links, and it answers the same page rather than Not Found.
   it("answers the Brief's former address with the Brief", () => {
-    expect(parseHash("#/home")).toEqual({
-      screen: "brief",
+    expect(parseHash("#/brief")).toEqual({
+      screen: "home",
       id: undefined,
       id2: undefined,
       id3: undefined,
@@ -56,7 +56,7 @@ describe("parseHash", () => {
   });
 
   it("round-trips the Brief's own address", () => {
-    expect(routeHash(parseHash("#/brief"))).toBe("#/brief");
+    expect(routeHash(parseHash("#/brief"))).toBe("#/home");
   });
 
   // A hash is text a human can type, so a screen name that no longer typechecks
@@ -76,7 +76,7 @@ describe("parseHash", () => {
 
 describe("routeHash", () => {
   it("serializes a bare screen", () => {
-    expect(routeHash({ screen: "brief" })).toBe("#/brief");
+    expect(routeHash({ screen: "home" })).toBe("#/home");
   });
 
   it("serializes a two-segment route", () => {
@@ -180,7 +180,7 @@ describe("routeIdentity", () => {
       "#/contacts/p-1/deals",
       "#/settings/admin/users",
       "#/share/deal/d-1",
-      "#/brief",
+      "#/home",
     ]) {
       const route = parseHash(hash);
       expect(parseHash(routeIdentity(route)).screen).toBe(route.screen);

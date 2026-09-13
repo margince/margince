@@ -173,7 +173,7 @@ function AgendaRows({
     <li key={`${item.source}-${item.id}`}>
       <Panel
         footer={
-          focus && onContext && hasPane(item) ? (
+          focus && onContext && (hasPane(item) || item.source === "task") ? (
             <Button small variant="ghost" onClick={() => onContext(item)}>
               {t("brief.focus.context")}
             </Button>

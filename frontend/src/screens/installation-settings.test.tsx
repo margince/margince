@@ -10,8 +10,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DateFormatsProvider } from "../app/dateformats";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { LocaleProvider } from "../i18n";
+import { formatDate } from "../format/format";
+import { LocaleProvider, useLocale } from "../i18n";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Installation: the company's name, reporting zone and base
@@ -409,4 +411,34 @@ describe("InstallationSettingsCard", () => {
     expect(refusal.className).toContain("field-error");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
+});
+
+it("saves regional formats together and updates existing date readers", async () => {
+  const user = userEvent.setup();
+  const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+  vi.stubGlobal("fetch", fetchMock);
+  function DateReading() {
+    const { locale } = useLocale();
+    return <p>{formatDate("2026-09-23T17:30:00Z", locale, "UTC")}</p>;
+  }
+  render(
+    <DateFormatsProvider>
+      <InstallationSettingsCard />
+      <DateReading />
+    </DateFormatsProvider>,
+  );
+  const dialog = await openFrom(user, /edit date format/i);
+  await user.click(
+    within(dialog).getByRole("combobox", { name: /date format/i }),
+  );
+  await user.click(screen.getByRole("option", { name: /DD.MM.YYYY/ }));
+  await user.click(
+    within(dialog).getByRole("combobox", { name: /time format/i }),
+  );
+  await user.click(screen.getByRole("option", { name: /24-hour/ }));
+  await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+  await waitFor(() =>
+    expect(patch()).toEqual({ date_format: "dmy", time_format: "24h" }),
+  );
+  expect(await screen.findByText("23.09.2026")).toBeTruthy();
 });

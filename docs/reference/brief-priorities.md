@@ -1,6 +1,6 @@
-# Morning and weekly brief priorities
+# Home: morning and weekly priorities
 
-The personal morning brief draws up to six server-selected Focus cards, including actionable proposals and commitments due today. Informational notices appear in Updates; pinned notices retain their chosen position. Work summary stays open in the overview context column, which selected contact context replaces. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. The headline names the same focus cards. The full queue opens on demand in Brief and owns filtering and pagination. Future tasks and routine privacy work remain available there with their deadlines and actions.
+The personal morning brief draws up to six server-selected Focus cards, including actionable proposals and commitments due today. Informational notices appear in Updates; pinned notices retain their chosen position. The six priorities lead the page; supporting readings follow them. Task evidence opens in the shared task dialog, and contact context opens in a separate drawer, preserving the overview. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. The headline names the same focus cards. The full queue opens on demand in Home and owns filtering and pagination. Future tasks and routine privacy work remain available there with their deadlines and actions.
 
 The team morning is a named-team board with routes to each member’s work and current plan. Morning and Weekly retain the same team selection in the URL. The board roster is resolved through live membership and reader authority; workspace-wide unassigned work is not attributed to a named team.
 
@@ -66,10 +66,25 @@ page. Source bounds and failed or withheld reads retain their separate coverage
 meaning. Neither an exhausted page nor a complete focus projection certifies
 that every source was fully read.
 
-Brief is the daily navigation entry. Its work queue opens in a right drawer,
+Home is the daily navigation entry. Its work queue opens in a right drawer,
 with the existing scope, owner, filters, paging, actions, coaching and reviews.
 The queue has its own `queue_scope` dial so it cannot change the Morning/Weekly
 view behind it. Old `#/worklist` and owner/unassigned links redirect to the same
-Brief queue state; the API contract and domain writers remain available.
-Contact context replaces Brief's overview rail while selected. On a narrow
-screen context has a back control and the queue stays mounted to retain place.
+Home queue state; the API contract and domain writers remain available.
+Context opens independently of the overview. Closing it restores keyboard focus to its opener. The queue keeps its own filtering and scroll state.
+
+## Attribution and commitments
+
+New stage-change notifications carry the original event actor and occurrence time through live and retry dispatch. Delivery still writes as the automation, and a recipient/event key prevents duplicate notifications. The reader sees their own changes as “You”, other human changes by the member's resolved name, and machine changes by actor type. Legacy notifications without origin explicitly say the original actor was not recorded; ownership is never substituted for authorship.
+
+Task responsibility comes from the assigned user ID. Recognized reader-prefixed task wording is presented as “You need to …”, without rewriting the stored promise. Details retain the original wording and evidence. Similar tasks from distinct transcripts or deadlines remain separate obligations; text similarity alone cannot establish supersession.
+
+## Stable close dates
+
+The nightly repair replaces missing or overdue dates. It retains a valid future date, including a provisional estimate from an earlier sweep. Quietness may lower forecast confidence without moving the date. A replacement is today plus observed median stage days multiplied by remaining open stages, rounded up to whole weeks, with a minimum of seven days. Without sufficient history the fallback is fourteen days per stage. All generated replacement dates remain provisional; existing opt-outs, reversal memory and review controls still apply.
+
+## Regional presentation and links
+
+Installation settings place date and time notation beside base currency. Date options are interface-language default, DD.MM.YYYY, MM/DD/YYYY and YYYY-MM-DD. Time options are interface-language default, 24-hour and 12-hour. Shared formatters apply the preference throughout the authenticated interface, including typed close-date receipts, without changing stored values or their reporting/record timezone. Native date-input editing remains governed by the browser.
+
+The canonical destination is `#/home` in every language. Visible navigation is localized (Home, Startseite, Trang chủ). Older `#/brief` links preserve their query parameters while redirecting to Home. Existing Worklist links still open the queue with their owner and filters.

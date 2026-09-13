@@ -34,38 +34,14 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
+import {
+  RegionalSettingsFields,
+  RegionalSettingsRows,
+} from "./installation-settings.regional";
 
-// The installation settings surface (ADR-0090): the company's name,
-// the IANA zone every reporting period is computed in, the ISO-4217 base
-// currency every roll-up converts to, the language AI writes the shared record
-// in, and the month its business year begins. Every role reads them — a rep reading amounts benefits from
-// knowing which currency they are in — and only admin/ops may change them, so
-// the facts are READ on the card for everyone and the verb that changes them is
-// refused with a reason for everyone else. Refusing without a reason is the
-// failure mode this avoids: it is indistinguishable from a bug, and a reader
-// cannot act on it either way.
-//
-// FIVE ROWS AND ONE FORM. The card is a list of decisions — what the
-// company is called, when its periods start, which currency every amount
-// is re-expressed in, which language AI writes for the whole team in, and when
-// its financial year turns over — so each
-// is a row that shows its own answer, which is what lets a reader audit the
-// installation by travelling one column. The EDITING is one act: the server
-// takes ONE sparse PATCH, so the fields are submitted together with one Save,
-// and that belongs in a dialog rather than on the card (design-system README,
-// `SettingList` / `SettingRow`: a control needing two inputs submitted together
-// goes behind a verb, which keeps every row an answer). Each row's Edit opens
-// that one dialog with its own field focused, so the verb beside a fact leads
-// to the fact.
-//
-// The base currency carries a state the others do not: it stops being
-// changeable once a conversion rate has been frozen against it — by a closed
-// deal, a sent offer, a mirrored invoice, a contract, a commission entry or a
-// loaded rate sheet (ADR-0085 §7). The server reports that as a flag and a
-// reason, so the row and the field both carry the reason — an operator learns
-// why before typing a value they cannot save, rather than discovering it from
-// a 422. The base language never freezes: changing it re-means nothing already
-// written.
+// Installation facts are readable by every role; only admin/ops may change them.
+// Each row opens the shared sparse-patch form with its own field focused.
+// A frozen base currency remains visible with the server's reason in both views.
 
 // Both shapes come from the generated contract rather than being restated
 // here: a hand-written copy would drift the first time the contract gains a
@@ -82,6 +58,8 @@ const EDITABLE_FACTS = [
   "timezone",
   "base_currency",
   "base_language",
+  "date_format",
+  "time_format",
   "fiscal_year_start_month",
   "forecast_forward_measure",
 ] as const;
@@ -380,6 +358,7 @@ function InstallationSettingsForm({
               t("installationSettings.baseCurrency"),
             )}
           />
+          <RegionalSettingsRows settings={settings} editVerb={editVerb} />
           <SettingRow
             label={t("installationSettings.baseLanguage")}
             description={t("installationSettings.baseLanguageHint")}
@@ -591,6 +570,12 @@ function InstallationProfileDialog({
           )}
         </Field>
 
+        <RegionalSettingsFields
+          draft={draft}
+          canManage={canManage}
+          refused={refused}
+          onChange={onChange}
+        />
         <div data-fact="base_language">
           <Field
             label={t("installationSettings.baseLanguage")}

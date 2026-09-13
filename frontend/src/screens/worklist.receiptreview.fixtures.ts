@@ -29,6 +29,13 @@ export const automaticDateReceipt: Receipt = {
   ...automaticStageReceipt,
   id: "01a00000-0000-7000-8000-000000000012",
   kind: "close_date_correction",
+  close_date_change: {
+    date_changed: true,
+    forecast_changed: false,
+    before: "2026-09-01",
+    after: "2026-09-27",
+    basis: "The previous date passed without a signed agreement.",
+  },
   summary:
     "Changed the close date on PIM Rollout: 2026-09-01 → 2026-09-27 — the previous date passed without a signed agreement.",
   undo: {

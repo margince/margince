@@ -302,6 +302,8 @@ func Definitions() []settings.Definition {
 		Timezone,
 		BaseCurrency,
 		BaseLanguage,
+		DateFormat,
+		TimeFormat,
 		Country,
 		FiscalYearStartMonth,
 		DeadWorkBannerHours,
