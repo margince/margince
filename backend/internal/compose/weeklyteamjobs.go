@@ -3,18 +3,17 @@
 
 package compose
 
-// The weekly job's third phase: freezing each team's week.
+// The weekly job's measurement phase: freezing each team's week.
 //
 // Its own file because it is a different subject from the per-rep pass beside
-// it — that one measures one contact under their own authority, this one totals
-// contacts already measured and stamps who was on the team. It runs LAST for a
-// reason stated at its call site: a snapshot assembled while reps were still
-// being measured would freeze a team that was half-counted.
+// it — personal reviews measure one member under their own authority, while
+// this totals the measured members before optional model or mail calls.
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,7 +32,7 @@ import (
 // it: the read is of frozen rows the team's own contacts wrote, and the tier gate
 // on TeamReview is what stops an own-scoped seat asking for one.
 func (w *weeklyGenerateWorker) snapshotTeams(
-	ctx context.Context, wsID ids.UUID, now time.Time,
+	ctx context.Context, wsID ids.UUID, now time.Time, failedMembers map[ids.UUID]bool,
 ) []error {
 	teams, err := w.liveTeams(ctx)
 	if err != nil {
@@ -41,6 +40,9 @@ func (w *weeklyGenerateWorker) snapshotTeams(
 	}
 	var failures []error
 	for _, team := range teams {
+		if slices.ContainsFunc(team.candidates, func(id ids.UUID) bool { return failedMembers[id] }) {
+			continue
+		}
 		if err := w.snapshotTeam(ctx, wsID, team, now); err != nil {
 			failures = append(failures, fmt.Errorf("team weekly for %s: %w", team.id, err))
 		}
@@ -52,11 +54,8 @@ func (w *weeklyGenerateWorker) snapshotTeams(
 type liveTeam struct {
 	id   ids.UUID
 	name string
-	// lead is a member seat the snapshot is assembled under. Any member does:
-	// the read is of frozen rows their own team wrote, and the alternative — a
-	// system principal — bypasses both the object grant and the row scope,
-	// which is exactly the authority a snapshot must not be assembled with.
-	lead ids.UUID
+	// Authority is resolved per candidate; UUID order does not identify a lead.
+	candidates []ids.UUID
 }
 
 // liveTeams lists the workspace's live teams with a member to act as.
@@ -68,7 +67,7 @@ func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error
 	var teams []liveTeam
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT t.id, t.name, min(u.id::text)
+			SELECT t.id, t.name, array_agg(u.id::text ORDER BY u.id)
 			  FROM team t
 			  JOIN team_membership m ON m.team_id = t.id
 			  JOIN app_user u ON u.id = m.user_id
@@ -82,15 +81,17 @@ func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error
 		defer rows.Close()
 		for rows.Next() {
 			var team liveTeam
-			var lead string
-			if err := rows.Scan(&team.id, &team.name, &lead); err != nil {
+			var candidates []string
+			if err := rows.Scan(&team.id, &team.name, &candidates); err != nil {
 				return err
 			}
-			parsed, err := ids.Parse(lead)
-			if err != nil {
-				return err
+			for _, candidate := range candidates {
+				id, err := ids.Parse(candidate)
+				if err != nil {
+					return err
+				}
+				team.candidates = append(team.candidates, id)
 			}
-			team.lead = parsed
 			teams = append(teams, team)
 		}
 		return rows.Err()
@@ -105,14 +106,30 @@ func (w *weeklyGenerateWorker) liveTeams(ctx context.Context) ([]liveTeam, error
 func (w *weeklyGenerateWorker) snapshotTeam(
 	ctx context.Context, wsID ids.UUID, team liveTeam, now time.Time,
 ) error {
-	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, team.lead)
+	for _, candidate := range team.candidates {
+		err := w.snapshotTeamAs(ctx, wsID, team, candidate, now)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			continue
+		}
+		if errors.Is(err, apperrors.ErrNotFound) {
+			w.log.WarnContext(ctx, "team review unavailable to candidate", "team", team.id, "user", candidate, "cause", err)
+			continue
+		}
+		return err
+	}
+	w.log.InfoContext(ctx, "no authorized member can measure the team's week", "team", team.id)
+	return nil
+}
+
+func (w *weeklyGenerateWorker) snapshotTeamAs(ctx context.Context, wsID ids.UUID, team liveTeam, candidate ids.UUID, now time.Time) error {
+	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, candidate)
 	if err != nil {
 		return fmt.Errorf("resolving the member's authority: %w", err)
 	}
 	memberCtx := principal.WithActor(ctx, principal.Principal{
 		Type:        principal.PrincipalHuman,
-		ID:          "human:" + team.lead.String(),
-		UserID:      team.lead,
+		ID:          "human:" + candidate.String(),
+		UserID:      candidate,
 		SeatType:    seat,
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
@@ -124,19 +141,7 @@ func (w *weeklyGenerateWorker) snapshotTeam(
 		return err
 	}
 	_, _, err = w.engine.AssembleTeamFor(memberCtx, team.id, team.name, members, now)
-	if err != nil {
-		// A seat whose role grants no deal read has no team week to assemble,
-		// for the reason measureFor gives about its own rep: it is a
-		// configuration rather than a fault, and failing here would make one
-		// such team cost the workspace its other snapshots.
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			w.log.InfoContext(ctx, "no team weekly for a team whose members' roles do not grant reading deals",
-				"team", team.id, "workspace", wsID)
-			return nil
-		}
-		return err
-	}
-	return nil
+	return err
 }
 
 // teamMembers lists who was on the team, for freezing into the snapshot.

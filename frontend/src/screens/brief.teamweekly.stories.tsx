@@ -121,3 +121,19 @@ export const NothingMoved: Story = {
       }),
   }),
 };
+
+export const NoPriorityIsNotInactivity: Story = {
+  render: panel({
+    "GET /teams": () =>
+      jsonResponse({ data: [team], page: { has_more: false } }),
+    "GET /weekly-reviews/team": () =>
+      jsonResponse({
+        ...teamWeek,
+        reps: teamWeek.reps.map((rep) => ({
+          ...rep,
+          focus_kind: "quiet_week",
+          focus_label: "A quiet week",
+        })),
+      }),
+  }),
+};

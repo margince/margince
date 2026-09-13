@@ -79,3 +79,20 @@ export const ClipboardRefused: Story = {
     }
   },
 };
+
+export const NoRecordedPriority: Story = {
+  render: () => (
+    <StoryProviders>
+      <AgendaPanel
+        review={{
+          ...teamWeek,
+          reps: teamWeek.reps.map((rep) => ({
+            ...rep,
+            focus_kind: "quiet_week",
+            focus_label: "A quiet week",
+          })),
+        }}
+      />
+    </StoryProviders>
+  ),
+};

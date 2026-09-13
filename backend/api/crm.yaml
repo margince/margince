@@ -43804,7 +43804,7 @@ components:
         answered_in_target:
           type: integer
           minimum: 0
-          description: Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured.
+          description: Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
         breached: { type: integer, minimum: 0 }
         meetings_booked:
           type: integer
@@ -44153,9 +44153,13 @@ components:
                  meetings_held, meetings_with_next_step,
                  commitments_due, commitments_kept]
       properties:
+        tasks_completed:
+          type: integer
+          minimum: 0
+          description: Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed.
         tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
-        tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
-        tasks_carried_over: { type: integer, minimum: 0, description: 'Still open now and older than the week: work postponed at least twice.' }
+        tasks_done: { type: integer, minimum: 0, description: 'Of tasks due that week, those completed before its closing boundary, including early completions.' }
+        tasks_carried_over: { type: integer, minimum: 0, description: 'Assigned tasks due before the closing boundary and still unfinished at that boundary.' }
         deals_moved: { type: integer, minimum: 0, description: 'Deals that changed stage, excluding those that closed.' }
         deals_won: { type: integer, minimum: 0 }
         deals_lost: { type: integer, minimum: 0 }
@@ -44183,9 +44187,9 @@ components:
           type: integer
           minimum: 0
           description: |
-            Of those, leads with a first response recorded before the week closed and no breach
-            recorded by then. This is a recorded-response count, not a measured SLA success rate:
-            no breach stamp can also mean the installation had no response target configured.
+            Of those, leads with a first response recorded before the week closed, including late
+            responses. Breaches are counted separately. The legacy field name is retained for
+            compatibility; the figure is a recorded-response count, not an SLA success rate.
         leads_breached: { type: integer, minimum: 0, description: 'And the ones whose target ran out.' }
         meetings_held:
           type: integer
@@ -44197,9 +44201,9 @@ components:
           type: integer
           minimum: 0
           description: |
-            Of those, the ones that left a task behind against a record the meeting was also filed
-            under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
-            is the pattern this figure exists to make visible.
+            Of those, meetings with a readable task explicitly linked through source_activity_id
+            and created between the meeting and the week closing. Never greater than
+            `meetings_held`. Missing linkage does not prove that no follow-up happened.
 
     WeeklyReviewDeal:
       type: object

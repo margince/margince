@@ -241,18 +241,21 @@ function wonPace(
   review: WeeklyReview,
   locale: Locale,
   t: Translator,
+  zone: string,
 ): string | undefined {
   const pipeline = review.pipeline;
   if (pipeline === undefined) {
     return undefined;
   }
   const value = formatMoney(pipeline.won_minor, pipeline.currency, locale);
-  const before = review.prior?.pipeline;
-  if (before === undefined || before.currency !== pipeline.currency) {
+  const prior = review.prior;
+  const before = prior?.pipeline;
+  if (!prior || before === undefined || before.currency !== pipeline.currency) {
     return value;
   }
   return t("brief.weekly.wonVsPrior", {
     value,
+    week: formatDate(middayInstant(prior.local_week_start, zone), locale, zone),
     delta: formatSignedMoney(
       pipeline.won_minor - before.won_minor,
       pipeline.currency,
@@ -314,6 +317,14 @@ function WeeklyBody({
       <span className="brief-weekly-delta t-caption">
         {t("brief.weekly.sincePrior", {
           delta: formatSignedNumber(delta, locale),
+          week: formatDate(
+            middayInstant(
+              review.prior?.local_week_start ?? review.local_week_start,
+              recordZone,
+            ),
+            locale,
+            recordZone,
+          ),
         })}
       </span>
     );
@@ -326,11 +337,20 @@ function WeeklyBody({
           margin and an empty state's padding on top of it, which put two
           sentences 40px apart with nothing between them. */}
       <PanelBody className="brief-weekly-outcomes">
+        <p className="t-sub">{t("brief.weekly.basis")}</p>
         {/* `compact` because this row is read as ONE glance rather than a
             reading at a time: the roomy tile's floor put half of it below the
             fold on a laptop and left a band of dead space under every figure.
             The scale is untouched — a compact reading is the same reading. */}
         <StatStrip testId="weekly-strip">
+          {c.tasks_completed !== undefined && (
+            <StatCard
+              density="compact"
+              label={t("brief.weekly.tasksCompleted")}
+              value={formatNumber(c.tasks_completed, locale)}
+              detail={since(c.tasks_completed, prior?.tasks_completed)}
+            />
+          )}
           <StatCard
             density="compact"
             label={t("brief.week.lostLabel")}
@@ -346,40 +366,37 @@ function WeeklyBody({
           <StatCard
             density="compact"
             label={t("brief.weekly.planCommitmentsKept")}
-            value={t("brief.weekly.ofDue", {
-              done: formatNumber(c.commitments_kept, locale),
-              due: formatNumber(c.commitments_due, locale),
-            })}
+            value={
+              c.commitments_due === 0
+                ? t("brief.weekly.noCommitments")
+                : t("brief.weekly.ofDue", {
+                    done: formatNumber(c.commitments_kept, locale),
+                    due: formatNumber(c.commitments_due, locale),
+                  })
+            }
             detail={since(c.commitments_kept, prior?.commitments_kept)}
           />
           <StatCard
             density="compact"
             label={t("brief.weekly.dealsWon")}
             value={formatNumber(c.deals_won, locale)}
-            // What those wins were WORTH, at each deal's own close-time rate.
-            //
-            // The count alone says a week of five small renewals and a week of
-            // one company-making deal are the same week. The money was
-            // computed, FX-converted, stored with the currency it is in, and
-            // served — and read by nothing until now.
-            //
-            // It rides the won slot rather than taking a sixth: five is what a
-            // strip can be read across as one comparison, and a tenth slot
-            // folded the row into two ranks at 1280 (#3709). The one detail
-            // line carries the value AND its change against the week before,
-            // which is the pace reading — it belongs here rather than on the
-            // morning, whose strip is bound to one same-set population.
+            // Value uses the frozen close-time exchange rates.
             detail={
-              wonPace(review, locale, t) ?? since(c.deals_won, prior?.deals_won)
+              wonPace(review, locale, t, recordZone) ??
+              since(c.deals_won, prior?.deals_won)
             }
           />
           <StatCard
             density="compact"
             label={t("brief.weekly.leadsAnswered")}
-            value={t("brief.weekly.ofRouted", {
-              answered: formatNumber(c.leads_answered_in_target, locale),
-              routed: formatNumber(c.leads_routed, locale),
-            })}
+            value={
+              c.leads_routed === 0
+                ? t("brief.weekly.noLeads")
+                : t("brief.weekly.ofRouted", {
+                    answered: formatNumber(c.leads_answered_in_target, locale),
+                    routed: formatNumber(c.leads_routed, locale),
+                  })
+            }
             detail={since(
               c.leads_answered_in_target,
               prior?.leads_answered_in_target,
@@ -388,10 +405,14 @@ function WeeklyBody({
           <StatCard
             density="compact"
             label={t("brief.weekly.meetingsHeld")}
-            value={t("brief.weekly.ofMeetings", {
-              withStep: formatNumber(c.meetings_with_next_step, locale),
-              held: formatNumber(c.meetings_held, locale),
-            })}
+            value={
+              c.meetings_held === 0
+                ? t("brief.weekly.noMeetings")
+                : t("brief.weekly.ofMeetings", {
+                    withStep: formatNumber(c.meetings_with_next_step, locale),
+                    held: formatNumber(c.meetings_held, locale),
+                  })
+            }
             detail={since(c.meetings_held, prior?.meetings_held)}
           />
           <StatCard

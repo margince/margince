@@ -98,23 +98,14 @@ const dealScoreSQL = `
 		      SELECT 1 FROM activity_link tl
 		        JOIN activity task ON task.id = tl.activity_id
 		       WHERE tl.deal_id = o.id AND task.kind = 'task'
-		         AND task.archived_at IS NULL
+		         AND task.archived_at IS NULL AND (%[11]s)
 		         -- The task as the week CLOSED, not as it stands now. A task
 		         -- ticked off on Monday was still the deal's open next step on
 		         -- Sunday, and reading is_done today erases it from the week that
 		         -- earned it. Created-after is excluded for the mirror reason: a
 		         -- task written on Monday was not Sunday's next step.
 		         AND task.created_at < $%[2]d
-		         -- Done BEFORE the cutoff means it was not the deal's open next
-		         -- step then. done_at travels with is_done and is CLEARED when a
-		         -- task is reopened, so a task finished in-week and reopened after
-		         -- carries no stamp: is_done is false and the task counts, which
-		         -- is right — it was open at the cutoff either way only if it was
-		         -- not finished before it, and a cleared stamp cannot say it was.
-		         -- The residual gap is a task finished in-week, reopened after, and
-		         -- finished again: the second stamp is post-cutoff, so it counts.
-		         AND NOT (task.is_done AND task.done_at IS NOT NULL
-		                  AND task.done_at < $%[2]d))),
+                 AND (%[13]s IS NULL OR %[13]s >= $%[2]d))),
 		  (SELECT count(*) FROM open_deals),
 		  (SELECT count(*) FROM open_deals o
 		    WHERE (SELECT count(DISTINCT pl.contact_id)
@@ -122,7 +113,7 @@ const dealScoreSQL = `
 		             JOIN activity act ON act.id = dl.activity_id
 		             JOIN activity_link pl ON pl.activity_id = dl.activity_id
 		            WHERE dl.deal_id = o.id AND pl.contact_id IS NOT NULL
-		              AND act.archived_at IS NULL
+		              AND act.archived_at IS NULL AND (%[12]s)
 		              -- BOUNDED AT BOTH ENDS. The lower bound is the 30-day
 		              -- coverage window; the upper is the cutoff, without which
 		              -- two contacts who first spoke to the deal on Monday would

@@ -6527,6 +6527,7 @@ public.weekly_review.prior_review_id uuid gen=- def=-
 public.weekly_review.proposals_accepted integer NOT NULL gen=- def=0
 public.weekly_review.proposals_rejected integer NOT NULL gen=- def=0
 public.weekly_review.tasks_carried_over integer NOT NULL gen=- def=0
+public.weekly_review.tasks_completed integer gen=- def=-
 public.weekly_review.tasks_done integer NOT NULL gen=- def=0
 public.weekly_review.tasks_due integer NOT NULL gen=- def=0
 public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_start)
@@ -6545,6 +6546,7 @@ public.weekly_review.weekly_review_new_counts_are_tallies CHECK (((leads_routed 
 public.weekly_review.weekly_review_next_steps_were_meetings CHECK ((meetings_with_next_step <= meetings_held))
 public.weekly_review.weekly_review_pkey PRIMARY KEY (id)
 public.weekly_review.weekly_review_prior_fkey FOREIGN KEY (prior_review_id) REFERENCES weekly_review(id) ON DELETE SET NULL
+public.weekly_review.weekly_review_tasks_completed_check CHECK ((tasks_completed >= 0))
 public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.weekly_review_deal.amount_minor_at_close bigint gen=- def=-

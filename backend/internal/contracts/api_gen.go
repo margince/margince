@@ -38382,9 +38382,9 @@ type WeeklyReviewCounts struct {
 	DealsMoved int `json:"deals_moved"`
 	DealsWon   int `json:"deals_won"`
 
-	// LeadsAnsweredInTarget Of those, leads with a first response recorded before the week closed and no breach
-	// recorded by then. This is a recorded-response count, not a measured SLA success rate:
-	// no breach stamp can also mean the installation had no response target configured.
+	// LeadsAnsweredInTarget Of those, leads with a first response recorded before the week closed, including late
+	// responses. Breaches are counted separately. The legacy field name is retained for
+	// compatibility; the figure is a recorded-response count, not an SLA success rate.
 	LeadsAnsweredInTarget int `json:"leads_answered_in_target"`
 
 	// LeadsBreached And the ones whose target ran out.
@@ -38397,9 +38397,9 @@ type WeeklyReviewCounts struct {
 	// week can be judged by, and counting it would credit a conversation that never occurred.
 	MeetingsHeld int `json:"meetings_held"`
 
-	// MeetingsWithNextStep Of those, the ones that left a task behind against a record the meeting was also filed
-	// under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
-	// is the pattern this figure exists to make visible.
+	// MeetingsWithNextStep Of those, meetings with a readable task explicitly linked through source_activity_id
+	// and created between the meeting and the week closing. Never greater than
+	// `meetings_held`. Missing linkage does not prove that no follow-up happened.
 	MeetingsWithNextStep int `json:"meetings_with_next_step"`
 
 	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
@@ -38410,10 +38410,13 @@ type WeeklyReviewCounts struct {
 	// ProposalsRejected The same, rejected.
 	ProposalsRejected int `json:"proposals_rejected"`
 
-	// TasksCarriedOver Still open now and older than the week: work postponed at least twice.
+	// TasksCarriedOver Assigned tasks due before the closing boundary and still unfinished at that boundary.
 	TasksCarriedOver int `json:"tasks_carried_over"`
 
-	// TasksDone And were finished inside it.
+	// TasksCompleted Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed.
+	TasksCompleted *int `json:"tasks_completed,omitempty"`
+
+	// TasksDone Of tasks due that week, those completed before its closing boundary, including early completions.
 	TasksDone int `json:"tasks_done"`
 
 	// TasksDue Tasks assigned to this rep that fell due in the week.
@@ -38681,7 +38684,7 @@ type WeeklyScorecardLeadBlock struct {
 	// only where it ended and could report at most one of them.
 	Advanced int `json:"advanced"`
 
-	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured.
+	// AnsweredInTarget Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate.
 	AnsweredInTarget int `json:"answered_in_target"`
 	Breached         int `json:"breached"`
 	Disqualified     int `json:"disqualified"`

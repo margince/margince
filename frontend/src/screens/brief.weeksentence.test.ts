@@ -135,3 +135,15 @@ describe("weekSentence — what the closed week says about itself", () => {
     expect(say(week({ tasks_carried_over: 2 }))).toContain("2 tasks");
   });
 });
+
+it("recognizes completed undated work in the weekly headline", () => {
+  const review = week({});
+  review.counts.tasks_completed = 1;
+  expect(say(review)).toBe(en["brief.week.workRecorded"]);
+});
+
+it("recognizes obligations delivered early even without an in-week completion", () => {
+  const review = week({ tasks_due: 3, tasks_done: 3 });
+  review.counts.tasks_completed = 0;
+  expect(say(review)).toBe(en["brief.week.workRecorded"]);
+});

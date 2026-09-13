@@ -5,6 +5,15 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Register: informal "du",
 // natural spoken-adjacent German, no translationese, no corporate filler.
 export const de = {
+  "brief.weekly.tasksCompleted": "Aufgaben erledigt",
+  "teamweekly.noPriority": "Die erfassten Kennzahlen zeigen keine Priorität",
+  "teamweekly.basis":
+    "Mitgliederübersichten der erfassten Woche. Aktuelle Pläne und Arbeitslisten zeigen die heutigen Aufgaben.",
+  "brief.weekly.noMeetings": "Keine erfasst",
+  "brief.weekly.noLeads": "Keine eingegangen",
+  "brief.weekly.noCommitments": "Keine fällig",
+  "brief.weekly.basis":
+    "Erfasste CRM-Arbeit dieser abgeschlossenen Woche. Fehlende Einträge belegen keine Inaktivität.",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.undated": "Kein Datum",
   "home.receipt.confidence": "Prognosesicherheit aktualisiert",
@@ -3006,8 +3015,9 @@ export const de = {
   "teamweekly.card.firstResponse": "Erfasste Antworten",
   "teamweekly.card.firstResponseBasis":
     "{breached} erfasste Überschreitungen der Antwortzeit",
-  "teamweekly.card.meetings": "Termine mit nächstem Schritt",
-  "teamweekly.card.meetingsBasis": "der gehaltenen Termine",
+  "teamweekly.card.meetings": "Termine mit verknüpfter Folgeaufgabe",
+  "teamweekly.card.meetingsBasis":
+    "explizite Aufgabenverknüpfung vor Wochenende erfasst",
   "teamweekly.card.commitments": "Planzusagen eingehalten",
   "teamweekly.card.commitmentsBasis": "des Zugesagten",
   "teamweekly.card.won": "Gewonnen",
@@ -3034,12 +3044,12 @@ export const de = {
     "Dieser Browser gibt die Zwischenablage nicht frei",
   "teamweekly.agenda.copyFailed": "Markier die Liste und kopier sie von Hand.",
   "teamweekly.focus.help_requested": "Hat um Hilfe gebeten",
-  "teamweekly.focus.leads_breached": "Leads blieben unbeantwortet",
+  "teamweekly.focus.leads_breached": "Antwortfristen überschritten",
   "teamweekly.focus.commitments_missed": "Planzusagen verpasst",
   "teamweekly.focus.meetings_without_next_step":
-    "Termine ohne nächsten Schritt",
+    "Nachweis der Nachbereitung fehlt",
   "teamweekly.focus.strong_week": "Zum Nachmachen",
-  "teamweekly.focus.quiet_week": "Eine ruhige Woche",
+  "teamweekly.focus.quiet_week": "Keine Priorität erkannt",
 
   "plan.sub": "Was du dir vorgenommen hast — und was du dafür brauchst.",
   "plan.loading": "Plan wird gelesen",
@@ -3134,12 +3144,12 @@ export const de = {
   "brief.weekly.acceptedRejected": "{accepted} ja · {rejected} nein",
   "brief.weekly.queueWorked": "Morgen-Liste",
   "brief.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
-  "brief.weekly.sincePrior": "{delta} ggü. Vorwoche",
-  "brief.weekly.wonVsPrior": "{value} · {delta} zur Vorwoche",
+  "brief.weekly.sincePrior": "{delta} ggü. Woche ab {week}",
+  "brief.weekly.wonVsPrior": "{value} · {delta} ggü. Woche ab {week}",
   "brief.weekly.leadsAnswered": "Erfasste Lead-Antworten",
   "brief.weekly.ofRouted": "{answered} von {routed}",
   "brief.weekly.planCommitmentsKept": "Planzusagen eingehalten",
-  "brief.weekly.meetingsHeld": "Meetings mit nächstem Schritt",
+  "brief.weekly.meetingsHeld": "Termine mit verknüpfter Folgeaufgabe",
   "brief.weekly.ofMeetings": "{withStep} von {held}",
   "brief.weekly.carriedOver": "Übernommen",
   "brief.weekly.outcome.moved": "bewegt",

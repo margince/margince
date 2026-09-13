@@ -68,6 +68,7 @@ function resultOf(
     };
   }
   if (
+    (c.tasks_completed ?? 0) > 0 ||
     c.tasks_done > 0 ||
     c.commitments_kept > 0 ||
     c.proposals_accepted > 0 ||

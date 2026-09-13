@@ -11,7 +11,7 @@ package weekly
 // neither moves under the comparison.
 //
 // It reads only reviews that are already written, which is why the job runs it
-// as a third phase: a snapshot assembled while reps are still being measured
+// after individual measurement: a snapshot assembled while reps are still being measured
 // would freeze a team that was half-counted, and nothing afterwards would say
 // so.
 
@@ -36,11 +36,11 @@ import (
 const (
 	// They asked. Nothing outranks a request already made.
 	FocusHelpRequested = "help_requested"
-	// A customer waited past the target and nobody answered.
+	// A customer waited past the response target, even if answered later.
 	FocusLeadsBreached = "leads_breached"
 	// They planned a week and did not keep it.
 	FocusCommitmentsMissed = "commitments_missed"
-	// Meetings happened and left nothing behind.
+	// Meetings have no explicit follow-up recorded.
 	FocusMeetingsWithoutNextStep = "meetings_without_next_step"
 	// Nothing to fix, and something to copy. Without this a healthy rep
 	// produces no row at all, and a page promising one focus per rep would
@@ -124,6 +124,9 @@ type TeamRep struct {
 func (e *Engine) AssembleTeamFor(
 	ctx context.Context, teamID ids.UUID, teamName string, members []TeamMember, now time.Time,
 ) (TeamReview, bool, error) {
+	if err := e.mayReadTeam(ctx, teamID); err != nil {
+		return TeamReview{}, false, err
+	}
 	var review TeamReview
 	var created bool
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -136,6 +139,13 @@ func (e *Engine) AssembleTeamFor(
 		review = TeamReview{
 			TeamID: teamID, TeamName: teamName,
 			LocalWeekStart: week, AsOf: now.UTC(),
+		}
+		var measured bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM team_weekly_review WHERE team_id=$1 AND local_week_start=$2 AND reps_counted>0)`, teamID, week).Scan(&measured); err != nil {
+			return err
+		}
+		if measured {
+			return nil
 		}
 		if err := gatherTeamWeek(ctx, tx, &review, members); err != nil {
 			return err
@@ -229,6 +239,7 @@ func gatherTeamWeek(
 		counts, memberMoney, help, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			review.RepsUnread++
+			money.Known = false
 			continue
 		}
 		if err != nil {
@@ -236,7 +247,7 @@ func gatherTeamWeek(
 		}
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)
-		if !memberMoney.Known {
+		if !memberMoney.Known || (money.Currency != "" && money.Currency != memberMoney.Currency) {
 			money.Known = false
 		} else if money.Known {
 			money.Currency = memberMoney.Currency
@@ -304,16 +315,16 @@ func focusFor(counts Counts, help int, recovery string) (kind, label string) {
 			counts.CommitmentsKept, counts.CommitmentsDue)
 	case recovery != "":
 		return FocusDealsAtRisk, recovery
-	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
-		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s left without a next step",
-			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))
 	case counts.DealsWon > 0:
 		return FocusStrongWeek, fmt.Sprintf("Won %s — worth asking how",
 			plural(counts.DealsWon, "deal"))
 	case counts.CommitmentsDue > 0 && counts.CommitmentsDue == counts.CommitmentsKept:
 		return FocusStrongWeek, fmt.Sprintf("Kept every commitment (%d)", counts.CommitmentsDue)
+	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
+		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s have no linked follow-up recorded",
+			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))
 	default:
-		return FocusQuietWeek, "A quiet week"
+		return FocusQuietWeek, "No priority indicated by the recorded metrics"
 	}
 }
 

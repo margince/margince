@@ -2,6 +2,15 @@
 // (compile-time via satisfies, runtime via i18n.test.ts). Placeholders use
 // {name} and are filled by t(key, params).
 export const en = {
+  "brief.weekly.tasksCompleted": "Tasks completed",
+  "teamweekly.noPriority": "No priority indicated by the recorded metrics",
+  "teamweekly.basis":
+    "Member summaries for the recorded week. Current plans and work queues show today’s responsibilities.",
+  "brief.weekly.noMeetings": "None recorded",
+  "brief.weekly.noLeads": "None received",
+  "brief.weekly.noCommitments": "None due",
+  "brief.weekly.basis":
+    "Recorded CRM work for this closed week. Missing records do not establish inactivity.",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.undated": "No date",
   "home.receipt.confidence": "Updated forecast confidence",
@@ -3093,8 +3102,9 @@ export const en = {
   "teamweekly.card.firstResponse": "Recorded responses",
   "teamweekly.card.firstResponseBasis":
     "{breached} recorded response-target breaches",
-  "teamweekly.card.meetings": "Meetings with a next step",
-  "teamweekly.card.meetingsBasis": "of the meetings held",
+  "teamweekly.card.meetings": "Meetings with linked follow-up",
+  "teamweekly.card.meetingsBasis":
+    "explicit task links recorded before week end",
   "teamweekly.card.commitments": "Plan commitments kept",
   "teamweekly.card.commitmentsBasis": "of what was owed",
   "teamweekly.card.won": "Won",
@@ -3120,12 +3130,11 @@ export const en = {
   "teamweekly.agenda.copyFailedTitle": "This browser refused the clipboard",
   "teamweekly.agenda.copyFailed": "Select the list and copy it by hand.",
   "teamweekly.focus.help_requested": "Asked for help",
-  "teamweekly.focus.leads_breached": "Leads went unanswered",
+  "teamweekly.focus.leads_breached": "Response targets missed",
   "teamweekly.focus.commitments_missed": "Plan commitments missed",
-  "teamweekly.focus.meetings_without_next_step":
-    "Meetings left without a next step",
+  "teamweekly.focus.meetings_without_next_step": "Follow-up evidence missing",
   "teamweekly.focus.strong_week": "Worth copying",
-  "teamweekly.focus.quiet_week": "A quiet week",
+  "teamweekly.focus.quiet_week": "No priority identified",
 
   "plan.sub": "What you said you would do, and what you need to do it.",
   "plan.loading": "Reading your plan",
@@ -3219,12 +3228,12 @@ export const en = {
   "brief.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
   "brief.weekly.queueWorked": "Morning queue",
   "brief.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
-  "brief.weekly.sincePrior": "{delta} vs last week",
-  "brief.weekly.wonVsPrior": "{value} · {delta} vs prior week",
+  "brief.weekly.sincePrior": "{delta} vs week of {week}",
+  "brief.weekly.wonVsPrior": "{value} · {delta} vs week of {week}",
   "brief.weekly.leadsAnswered": "Recorded lead responses",
   "brief.weekly.ofRouted": "{answered} of {routed}",
   "brief.weekly.planCommitmentsKept": "Plan commitments kept",
-  "brief.weekly.meetingsHeld": "Meetings with a next step",
+  "brief.weekly.meetingsHeld": "Meetings with linked follow-up",
   "brief.weekly.ofMeetings": "{withStep} of {held}",
   "brief.weekly.carriedOver": "Carried over",
   "brief.weekly.outcome.moved": "moved",

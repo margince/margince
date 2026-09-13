@@ -49,16 +49,17 @@ type Input struct {
 
 // Counts is the week's tallies, exactly as the review stored them.
 type Counts struct {
-	TasksDue            int `json:"tasks_due"`
-	TasksDone           int `json:"tasks_done"`
-	TasksCarriedOver    int `json:"tasks_carried_over"`
-	DealsMoved          int `json:"deals_moved"`
-	DealsWon            int `json:"deals_won"`
-	DealsLost           int `json:"deals_lost"`
-	ProposalsAccepted   int `json:"proposals_accepted"`
-	ProposalsRejected   int `json:"proposals_rejected"`
-	BriefItemsActed     int `json:"brief_items_acted"`
-	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	TasksCompleted      *int `json:"tasks_completed,omitempty"`
+	TasksDue            int  `json:"tasks_due"`
+	TasksDone           int  `json:"tasks_done"`
+	TasksCarriedOver    int  `json:"tasks_carried_over"`
+	DealsMoved          int  `json:"deals_moved"`
+	DealsWon            int  `json:"deals_won"`
+	DealsLost           int  `json:"deals_lost"`
+	ProposalsAccepted   int  `json:"proposals_accepted"`
+	ProposalsRejected   int  `json:"proposals_rejected"`
+	BriefItemsActed     int  `json:"brief_items_acted"`
+	BriefItemsDismissed int  `json:"brief_items_dismissed"`
 	// The lead and meeting outcomes the scorecard already reports. Without
 	// them a week spent answering new business and sitting in meetings — real
 	// work, and often the whole of an SDR's week — reached the narrator as a
@@ -78,7 +79,7 @@ type Counts struct {
 // this answers is whether "nothing happened" could be true, and any non-zero
 // count settles it.
 func (c Counts) quiet() bool {
-	return c.TasksDue == 0 && c.TasksDone == 0 && c.TasksCarriedOver == 0 &&
+	return (c.TasksCompleted == nil || *c.TasksCompleted == 0) && c.TasksDue == 0 && c.TasksDone == 0 && c.TasksCarriedOver == 0 &&
 		c.DealsMoved == 0 && c.DealsWon == 0 && c.DealsLost == 0 &&
 		c.ProposalsAccepted == 0 && c.ProposalsRejected == 0 &&
 		c.BriefItemsActed == 0 && c.BriefItemsDismissed == 0 &&

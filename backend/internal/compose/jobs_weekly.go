@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -32,7 +33,7 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 		// finds one already there, and that read takes the same team gate a
 		// lead's does — it runs under a MEMBER's own authority, not the system
 		// principal, so it must be able to answer the membership question.
-		engine:   weekly.NewEngine(pool, newTeammatesSeam(pool)),
+		engine:   newWeeklyEngine(pool),
 		pool:     pool,
 		users:    identity.NewService(pool),
 		now:      time.Now,
@@ -41,4 +42,11 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 		learner:  learner,
 		mail:     mail,
 	})
+}
+
+// Web reads and scheduled measurements bind the same plan and forecast sources.
+func newWeeklyEngine(pool *pgxpool.Pool) *weekly.Engine {
+	return weekly.NewEngine(pool, newTeammatesSeam(pool)).
+		WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
+		WithForecast(NewWeeklyForecast(forecasting.NewStore(InstallationDB(pool))))
 }

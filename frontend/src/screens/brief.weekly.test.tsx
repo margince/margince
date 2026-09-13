@@ -508,8 +508,19 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"].replace("{delta}", "+2"),
+      en["brief.weekly.sincePrior"]
+        .replace("{delta}", "+2")
+        .replace("{week}", "22/06/2026"),
     );
+  });
+
+  it("names an older comparison week when a report is missing in between", async () => {
+    const strip = await mount({
+      ...withPrior,
+      prior: { ...withPrior.prior, local_week_start: "2026-06-01" },
+    });
+    expect(strip.textContent).toContain("+2 vs week of 01/06/2026");
+    expect(strip.textContent).not.toContain("vs last week");
   });
 
   // A week that stayed exactly level is a real answer. Printing "+0" dresses it
@@ -518,7 +529,9 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"].replace("{delta}", "±0"),
+      en["brief.weekly.sincePrior"]
+        .replace("{delta}", "±0")
+        .replace("{week}", "22/06/2026"),
     );
   });
 

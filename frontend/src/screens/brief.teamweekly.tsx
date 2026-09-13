@@ -12,7 +12,12 @@ import { Meter } from "../design-system/readings";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
 import { calendarDay, middayInstant } from "../format/calendarday";
-import { formatDate, formatMoney, formatNumber } from "../format/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { openAnalyticsSection } from "./analytics.address";
 import { BriefTeamSelect } from "./brief.teamselect";
@@ -40,32 +45,37 @@ export function TeamWeeklySection({
   const review = answer.data?.kind === "review" ? answer.data.review : null;
   if (!review)
     return (
-      <Panel title={t("teamweekly.title")}>
-        <SurfaceState
-          state={
-            answer.isPending
-              ? "loading"
-              : answer.isError
-                ? "unavailable"
-                : "ready"
-          }
-          loadingLabel={t("teamweekly.loading")}
-          emptyLabel={t("teamweekly.empty")}
-          detail={{ onRetry: () => void answer.refetch() }}
-        >
-          <PanelBody>
-            {t(
-              answer.data?.kind === "absent" && answer.data.why === "forbidden"
-                ? "teamweekly.forbidden"
-                : "teamweekly.noSnapshot",
-            )}
-          </PanelBody>
-        </SurfaceState>
-      </Panel>
+      <>
+        <WeekPicker week={week} />
+        <Panel title={t("teamweekly.title")}>
+          <SurfaceState
+            state={
+              answer.isPending
+                ? "loading"
+                : answer.isError
+                  ? "unavailable"
+                  : "ready"
+            }
+            loadingLabel={t("teamweekly.loading")}
+            emptyLabel={t("teamweekly.empty")}
+            detail={{ onRetry: () => void answer.refetch() }}
+          >
+            <PanelBody>
+              {t(
+                answer.data?.kind === "absent" &&
+                  answer.data.why === "forbidden"
+                  ? "teamweekly.forbidden"
+                  : "teamweekly.noSnapshot",
+              )}
+            </PanelBody>
+          </SurfaceState>
+        </Panel>
+      </>
     );
   const measured = review.counts.reps_counted > 0;
   return (
     <section id="brief-team-weekly">
+      <WeekPicker week={week ?? review.local_week_start} />
       <p>
         {t("teamweekly.weekOf", {
           team: review.team_name,
@@ -76,6 +86,14 @@ export function TeamWeeklySection({
           ),
         })}
       </p>
+      <p className="t-sub">{t("teamweekly.basis")}</p>
+      {measured && (
+        <p className="t-caption">
+          {t("brief.weekly.written", {
+            at: formatDateTime(review.generated_at, locale, recordZone),
+          })}
+        </p>
+      )}
       <Coverage review={review} />
       <Headline review={review} />
       {measured && <AgendaPanel review={review} />}
@@ -351,34 +369,31 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * be refused every team is a control that exists to fail.
  */
 export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
-  const [params, setParams] = useUrlParams();
-  const t = useT();
-  const week = params.get("week") ?? "";
-  const zone = useRecordZone();
+  const [params] = useUrlParams();
   if (!offered) return null;
   return (
-    <>
-      <DateInput
-        aria-label={t("brief.team.week")}
-        value={isISODate(week) ? week : ""}
-        onChange={(event) => {
-          const next = new Map(params);
-          if (isISODate(event.target.value)) {
-            const day = new Date(middayInstant(event.target.value, zone));
-            const weekday = new Date(
-              `${event.target.value}T12:00:00Z`,
-            ).getUTCDay();
-            day.setUTCDate(day.getUTCDate() - ((weekday + 6) % 7));
-            next.set("week", calendarDay(day, zone));
-          } else next.delete("week");
-          setParams(next);
-        }}
-      />
-      <BriefTeamSelect>
-        {(team) => (
-          <TeamWeeklySection teamId={team} week={params.get("week")} />
-        )}
-      </BriefTeamSelect>
-    </>
+    <BriefTeamSelect>
+      {(team) => <TeamWeeklySection teamId={team} week={params.get("week")} />}
+    </BriefTeamSelect>
+  );
+}
+
+function WeekPicker({ week }: Readonly<{ week?: string }>) {
+  const [params, setParams] = useUrlParams();
+  const t = useT();
+  return (
+    <DateInput
+      aria-label={t("brief.team.week")}
+      value={week && isISODate(week) ? week : ""}
+      onChange={(event) => {
+        const next = new Map(params);
+        if (isISODate(event.target.value)) {
+          const day = new Date(`${event.target.value}T12:00:00Z`);
+          day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+          next.set("week", calendarDay(day, "UTC"));
+        } else next.delete("week");
+        setParams(next);
+      }}
+    />
   );
 }

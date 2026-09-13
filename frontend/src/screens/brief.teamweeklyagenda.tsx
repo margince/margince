@@ -167,7 +167,11 @@ export function AgendaPanel({
 }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
-  const rows = agendaRows(review);
+  const rows = agendaRows(review).map((rep) =>
+    rep.focus_kind === "quiet_week"
+      ? { ...rep, focus_label: t("teamweekly.noPriority") }
+      : rep,
+  );
   return (
     <Panel
       title={t("teamweekly.agenda.title")}

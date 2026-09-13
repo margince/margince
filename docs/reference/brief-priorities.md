@@ -129,3 +129,49 @@ intent is not classified by this pass: a sent acknowledgement does not prove tha
 the recipient owes an answer. Email move therefore remains unknown (`none`) unless
 there is positive request evidence. The wire retains older move values for client
 compatibility; the current producer never infers them from direction alone.
+
+## Weekly measurement and recovery
+
+Personal reports summarize the member's recorded responsibilities even when that
+member is a manager. Team reports are an explicit management view of member
+summaries, gated by live team authority; they do not expose private message text.
+Ownership is resolved when the report is generated. Once measured, the report
+retains that attribution and roster rather than following later reassignments.
+
+The reporting window is the complete local Monday-to-Sunday week. A completion
+at the following Monday's midnight belongs to the next week. Completed tasks
+include undated work and earlier overdue work, separately from the ratio of tasks
+due that week. Older snapshots have no completed-task measurement, rather than
+an invented zero. Carryover includes tasks due during or before the reviewed week
+that were unfinished at its closing boundary.
+
+A recorded lead response includes a late response; breach counts remain separate.
+A breach therefore does not mean a lead remains unanswered. Meeting follow-up
+counts require an explicit source link to a readable task created before week end.
+A task sharing a contact or account is insufficient evidence. Missing linkage is
+a recording gap, not proof that the member failed to follow up. The same content
+permission checks apply to task and contact evidence in the deal scorecard.
+
+Personal and team measurements wait until Monday's configured review hour;
+catch-up also runs on Sunday. Both complete before optional model calls and mail.
+Configured narration, observations and unattempted delivery remain independently
+reachable on retries. Unconfigured services do not keep measured members due.
+A team waits when one of its members failed measurement on the current pass.
+The job selects a member with team read authority rather than assuming any
+member can read a team report. A team report with zero measured members can be replaced by its first
+measurement, retaining its ID and recording the correction in the audit trail.
+Its roster is captured at that first measurement. A nonempty snapshot, including
+explicitly partial coverage, remains frozen.
+
+A team total is unavailable if a member snapshot is missing, cannot be converted, or uses a
+different currency. Comparisons name the actual earlier report's week, which may
+not be the immediately preceding week. An absence of coaching signals says no
+priority was identified; it makes no claim about productivity or inactivity.
+Current-plan and work-queue links explicitly refer to today's responsibilities.
+
+Older frozen reports retain the measurement rules used when they were created.
+Missing meeting documentation ranks below recorded wins or kept commitments.
+
+The scheduled writer and web reader share the composed weekly engine, including
+plan settlement and forecast snapshots. A refused forecast does not discard the
+member's recorded-work report.

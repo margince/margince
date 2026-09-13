@@ -32,7 +32,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
@@ -210,9 +209,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The membership seam decides which team's week a lead may open: the
 		// team id arrives from the request, and nothing on the row narrows it
 		// to the reader.
-		weeklyHandlers: weekly.NewHandlers(weekly.NewEngine(pool, newTeammatesSeam(pool)).
-			WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
-			WithForecast(NewWeeklyForecast(forecasting.NewStore(InstallationDB(pool))))),
+		weeklyHandlers: weekly.NewHandlers(newWeeklyEngine(pool)),
 		// ONE spelling of "which Monday": the plan and the review beside it must
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.
