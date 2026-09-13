@@ -164,7 +164,21 @@ ALTER TABLE ai_feedback ADD CONSTRAINT ai_feedback_subject_type_check
 
 ALTER TABLE activity_link DROP CONSTRAINT activity_link_entity_type_check;
 ALTER TABLE activity_link DROP CONSTRAINT activity_link_shape;
+-- The two last-activity triggers are switched off for this one statement.
+-- Changing the stored word does not change which contact, deal, company or
+-- project a link points at, so the last_activity_at values they maintain
+-- cannot change either. Left on, they run refresh_last_activity_for_link
+-- twice per row (OLD and NEW), each a scan over activity_link for the
+-- contact, the deal and every reached company: on an installation with
+-- tens of thousands of links that is minutes of CPU inside a transaction
+-- that holds ACCESS EXCLUSIVE on most of the schema, long enough for an
+-- orchestrator's liveness probe to kill the migrating container and start
+-- the whole thing again.
+ALTER TABLE activity_link DISABLE TRIGGER activity_link_last_activity;
+ALTER TABLE activity_link DISABLE TRIGGER activity_link_project_last_activity;
 UPDATE activity_link SET entity_type = 'person' WHERE entity_type = 'contact';
+ALTER TABLE activity_link ENABLE TRIGGER activity_link_last_activity;
+ALTER TABLE activity_link ENABLE TRIGGER activity_link_project_last_activity;
 ALTER TABLE activity_link ADD CONSTRAINT activity_link_entity_type_check
   CHECK (entity_type IN ('person', 'company', 'deal', 'lead', 'project'));
 ALTER TABLE activity_link ADD CONSTRAINT activity_link_shape
