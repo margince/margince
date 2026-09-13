@@ -100,6 +100,13 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC(),
 			LearningsState: LearningsNotRun,
 		}
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM weekly_review WHERE user_id=$1 AND local_week_start=$2)`, userID, weekStart).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return nil
+		}
 		if err := e.measureWeek(ctx, tx, &review, now, start, end); err != nil {
 			return err
 		}

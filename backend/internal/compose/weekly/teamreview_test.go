@@ -55,12 +55,12 @@ var focusRules = []struct {
 	{"a lead went past", Counts{LeadsRouted: 3, LeadsBreached: 1}, 0, "", FocusLeadsBreached},
 	{"missed commitments", Counts{CommitmentsDue: 3, CommitmentsKept: 1}, 0, "", FocusCommitmentsMissed},
 	{"deal recovery", Counts{DealsWon: 2}, 0, "Forecast downgraded on 1 deal", FocusDealsAtRisk},
+	{"won something", Counts{DealsWon: 2}, 0, "", FocusStrongWeek},
 	{
 		"meetings with no next step",
 		Counts{MeetingsHeld: 2, MeetingsWithNextStep: 1},
 		0, "", FocusMeetingsWithoutNextStep,
 	},
-	{"won something", Counts{DealsWon: 2}, 0, "", FocusStrongWeek},
 	{"nothing happened", Counts{}, 0, "", FocusQuietWeek},
 }
 
@@ -143,5 +143,19 @@ func TestATeamWeekWithoutAForecastSendsNoOutlook(t *testing.T) {
 	wire := teamReviewToWire(TeamReview{TeamName: "Team One"})
 	if wire.Outlook != nil {
 		t.Fatalf("no forecast means no outlook on the wire, got %d horizons", len(*wire.Outlook))
+	}
+}
+
+func TestActivityWithoutACoachingSignalDoesNotMeanAQuietWeek(t *testing.T) {
+	kind, label := focusFor(Counts{DealsMoved: 12, LeadsRouted: 8, LeadsAnsweredInTarget: 8}, 0, "")
+	if kind != FocusQuietWeek || label != "No priority indicated by the recorded metrics" {
+		t.Fatalf("unsupported productivity verdict: %s / %s", kind, label)
+	}
+}
+
+func TestRecordedSuccessOutranksMissingMeetingDocumentation(t *testing.T) {
+	kind, _ := focusFor(Counts{DealsWon: 1, MeetingsHeld: 5}, 0, "")
+	if kind != FocusStrongWeek {
+		t.Fatalf("won deal overshadowed by recording gaps: %s", kind)
 	}
 }

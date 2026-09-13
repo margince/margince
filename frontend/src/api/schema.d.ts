@@ -32979,7 +32979,7 @@ export interface components {
             advanced: number;
             disqualified: number;
             promoted: number;
-            /** @description Leads arriving this week with a first response recorded before the week closed and no breach recorded by then. Absence of a breach does not establish that a target was configured. */
+            /** @description Leads arriving this week with a first response recorded before the week closed, including late responses. Breaches are counted separately. This is not an SLA success rate. */
             answered_in_target: number;
             breached: number;
             /**
@@ -33291,11 +33291,13 @@ export interface components {
             pipeline?: components["schemas"]["WeeklyReviewPipeline"];
         };
         WeeklyReviewCounts: {
+            /** @description Tasks completed during the week, including undated and previously overdue tasks. Absent on reports created before this measure existed. */
+            tasks_completed?: number;
             /** @description Tasks assigned to this rep that fell due in the week. */
             tasks_due: number;
             /** @description And were finished inside it. */
             tasks_done: number;
-            /** @description Still open now and older than the week: work postponed at least twice. */
+            /** @description Assigned tasks due before the closing boundary and still unfinished at that boundary. */
             tasks_carried_over: number;
             /** @description Deals that changed stage, excluding those that closed. */
             deals_moved: number;
@@ -33325,9 +33327,9 @@ export interface components {
             /** @description Inbound leads routed to this rep during the week. */
             leads_routed: number;
             /**
-             * @description Of those, leads with a first response recorded before the week closed and no breach
-             *     recorded by then. This is a recorded-response count, not a measured SLA success rate:
-             *     no breach stamp can also mean the installation had no response target configured.
+             * @description Of those, leads with a first response recorded before the week closed, including late
+             *     responses. Breaches are counted separately. The legacy field name is retained for
+             *     compatibility; the figure is a recorded-response count, not an SLA success rate.
              */
             leads_answered_in_target: number;
             /** @description And the ones whose target ran out. */
@@ -33338,9 +33340,9 @@ export interface components {
              */
             meetings_held: number;
             /**
-             * @description Of those, the ones that left a task behind against a record the meeting was also filed
-             *     under. Never greater than `meetings_held`. A week of meetings that produced no follow-up
-             *     is the pattern this figure exists to make visible.
+             * @description Of those, meetings with a readable task explicitly linked through source_activity_id
+             *     and created between the meeting and the week closing. Never greater than
+             *     `meetings_held`. Missing linkage does not prove that no follow-up happened.
              */
             meetings_with_next_step: number;
         };

@@ -167,7 +167,7 @@ describe("the agenda on the screen", () => {
         [
           en["teamweekly.agenda.title"],
           "1. Noah Berger — Asked for help on 2 commitments",
-          "2. Lena Fischer — A quiet week",
+          `2. Lena Fischer — ${en["teamweekly.noPriority"]}`,
         ].join("\n"),
       ]),
     );

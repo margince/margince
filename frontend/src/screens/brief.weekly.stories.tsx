@@ -345,3 +345,34 @@ export const Workings: Story = {
     </InTheWeeksPanel>,
   ),
 };
+
+export const GapBeforeComparison: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({
+          ...wholeWeek,
+          prior: { ...wholeWeek.prior, local_week_start: "2026-06-01" },
+        }),
+      [WEEK_START, "2026-06-01"],
+    ),
+  ),
+};
+
+export const CompletedUndatedWork: Story = {
+  render: panel(
+    weekly(
+      () =>
+        jsonResponse({
+          ...firstWeek,
+          counts: {
+            ...firstWeek.counts,
+            tasks_completed: 3,
+            tasks_due: 0,
+            tasks_done: 0,
+          },
+        }),
+      [WEEK_START],
+    ),
+  ),
+};

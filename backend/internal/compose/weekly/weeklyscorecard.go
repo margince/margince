@@ -387,6 +387,14 @@ func scoreDeals(
 		scope = sqlUnbounded
 	}
 
+	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
+	if err != nil {
+		return nil, err
+	}
+	activityScope, err := auth.ActivityContentClause(ctx, "act", arg)
+	if err != nil {
+		return nil, err
+	}
 	block := &DealBlock{}
 	var present bool
 	// Nullable on its own: a present block whose deals all stayed put has no
@@ -395,7 +403,8 @@ func scoreDeals(
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, sincePos, stakeholdersPos,
 		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
-		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
+		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,

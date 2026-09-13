@@ -49,16 +49,22 @@ func TestAnUnnarratedWeekIsStillDueForNarration(t *testing.T) {
 			"that was down when the week closed could never write one")
 	}
 
-	// Once narrated they drop out: re-narrating would rewrite a sentence the
-	// rep has already read.
-	if _, err := owner.Exec(ctx,
-		`UPDATE weekly_review SET narrative = 'Weber signed.', narrated_at = now() WHERE id = $1`,
-		reviewID); err != nil {
-		t.Fatal(err)
+	for _, tc := range []struct {
+		patch string
+		due   bool
+	}{
+		{`narrative = 'Recorded work.', narrated_at = now()`, true},
+		{`learnings_state = 'insufficient_evidence', learned_at = now()`, true},
+		{`mail_attempted_at = now()`, false},
+	} {
+		if _, err := owner.Exec(ctx, `UPDATE weekly_review SET `+tc.patch+` WHERE id=$1`, reviewID); err != nil {
+			t.Fatal(err)
+		}
+		if got := slices.Contains(repsDue(t, e, week), e.Rep1); got != tc.due {
+			t.Fatalf("after %s due=%v want %v", tc.patch, got, tc.due)
+		}
 	}
-	if slices.Contains(repsDue(t, e, week), e.Rep1) {
-		t.Error("a narrated review is still selected, so a later tick would rewrite the sentence")
-	}
+
 }
 
 // repsDue runs the production candidate query.
@@ -68,11 +74,40 @@ func repsDue(t *testing.T, e *integration.Env, week time.Time) []ids.UUID {
 	err := database.WithWorkspaceTx(e.As(e.Rep1, nil, integration.AdminPerms), e.Pool,
 		func(tx pgx.Tx) error {
 			var err error
-			due, err = repsWithoutAReviewFor(context.Background(), tx, week)
+			w := &weeklyGenerateWorker{narrator: &weeklyMeasurementProbe{}, learner: &weeklyMeasurementProbe{}, mail: WeeklyMailConfig{Mailer: &countingMailer{}}}
+			due, err = w.repsWithoutAReviewFor(context.Background(), tx, week)
 			return err
 		})
 	if err != nil {
 		t.Fatalf("reading who is due: %v", err)
 	}
 	return due
+}
+
+func TestAnInstallationWithoutOptionalLanesOnlyMeasuresOnce(t *testing.T) {
+	e := integration.Setup(t)
+	w := teamSnapshotWorker(e)
+	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
+	if err := w.measureWorkspace(e.Admin(), e.WS, teamJobClock); err != nil {
+		t.Fatal(err)
+	}
+	due, err := w.repsDueTheirReview(e.Admin(), e.WS, teamJobClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		if slices.Contains(due, user) {
+			t.Fatal("unconfigured services keep a measured member due")
+		}
+	}
+	w.learner = &weeklyMeasurementProbe{}
+	due, err = w.repsDueTheirReview(e.Admin(), e.WS, teamJobClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, user := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		if !slices.Contains(due, user) {
+			t.Fatal("newly configured observations did not become reachable")
+		}
+	}
 }

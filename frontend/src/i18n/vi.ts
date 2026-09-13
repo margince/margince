@@ -14,6 +14,15 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "brief.weekly.tasksCompleted": "Công việc đã hoàn thành",
+  "teamweekly.noPriority": "Các chỉ số đã ghi nhận chưa cho thấy ưu tiên",
+  "teamweekly.basis":
+    "Tổng kết thành viên cho tuần được ghi nhận. Kế hoạch và hàng đợi hiện tại thể hiện trách nhiệm hôm nay.",
+  "brief.weekly.noMeetings": "Chưa ghi nhận",
+  "brief.weekly.noLeads": "Không có khách mới",
+  "brief.weekly.noCommitments": "Không có mục đến hạn",
+  "brief.weekly.basis":
+    "Công việc CRM đã ghi nhận trong tuần đã kết thúc. Thiếu bản ghi không có nghĩa là không làm việc.",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.undated": "Chưa có ngày",
   "home.receipt.confidence": "Đã cập nhật độ tin cậy dự báo",
@@ -2977,8 +2986,9 @@ export const vi = {
   "teamweekly.card.firstResponse": "Phản hồi đã ghi nhận",
   "teamweekly.card.firstResponseBasis":
     "{breached} lần vượt thời hạn phản hồi được ghi nhận",
-  "teamweekly.card.meetings": "Cuộc họp có bước tiếp theo",
-  "teamweekly.card.meetingsBasis": "trên số cuộc họp đã diễn ra",
+  "teamweekly.card.meetings": "Cuộc họp có việc tiếp theo liên kết",
+  "teamweekly.card.meetingsBasis":
+    "liên kết công việc được ghi trước cuối tuần",
   "teamweekly.card.commitments": "Cam kết kế hoạch đã giữ",
   "teamweekly.card.commitmentsBasis": "trên số đã cam kết",
   "teamweekly.card.won": "Thắng",
@@ -3004,12 +3014,11 @@ export const vi = {
     "Trình duyệt này không cho phép truy cập bộ nhớ tạm",
   "teamweekly.agenda.copyFailed": "Hãy chọn danh sách và tự sao chép.",
   "teamweekly.focus.help_requested": "Đã nhờ giúp đỡ",
-  "teamweekly.focus.leads_breached": "Lead không được trả lời",
+  "teamweekly.focus.leads_breached": "Quá hạn phản hồi",
   "teamweekly.focus.commitments_missed": "Cam kết kế hoạch bị bỏ lỡ",
-  "teamweekly.focus.meetings_without_next_step":
-    "Cuộc họp không có bước tiếp theo",
+  "teamweekly.focus.meetings_without_next_step": "Thiếu bằng chứng theo dõi",
   "teamweekly.focus.strong_week": "Đáng để học theo",
-  "teamweekly.focus.quiet_week": "Một tuần yên ắng",
+  "teamweekly.focus.quiet_week": "Chưa xác định ưu tiên",
 
   "plan.sub": "Điều bạn đã cam kết, và điều bạn cần để làm được.",
   "plan.loading": "Đang đọc kế hoạch của bạn",
@@ -3099,12 +3108,12 @@ export const vi = {
   "brief.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
   "brief.weekly.queueWorked": "Danh sách buổi sáng",
   "brief.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
-  "brief.weekly.sincePrior": "{delta} so với tuần trước",
-  "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần trước",
+  "brief.weekly.sincePrior": "{delta} so với tuần từ {week}",
+  "brief.weekly.wonVsPrior": "{value} · {delta} so với tuần từ {week}",
   "brief.weekly.leadsAnswered": "Phản hồi khách tiềm năng đã ghi nhận",
   "brief.weekly.ofRouted": "{answered} trên {routed}",
   "brief.weekly.planCommitmentsKept": "Cam kết kế hoạch đã giữ",
-  "brief.weekly.meetingsHeld": "Cuộc họp có bước tiếp theo",
+  "brief.weekly.meetingsHeld": "Cuộc họp có việc tiếp theo liên kết",
   "brief.weekly.ofMeetings": "{withStep} trên {held}",
   "brief.weekly.carriedOver": "Chuyển tiếp",
   "brief.weekly.outcome.moved": "đã chuyển",

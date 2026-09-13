@@ -71,7 +71,7 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 // the one thing a record of a past week must never do.
 const reviewSelect = `
 	SELECT id, user_id, local_week_start, generated_at, as_of,
-	       tasks_due, tasks_done, tasks_carried_over,
+	       tasks_due, tasks_done, tasks_carried_over, tasks_completed,
 	       deals_moved, deals_won, deals_lost,
 	       proposals_accepted, proposals_rejected,
 	       brief_items_acted, brief_items_dismissed,
@@ -92,7 +92,7 @@ func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
 	var currency *string
 	switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
 		&review.GeneratedAt, &review.AsOf,
-		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
+		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver, &c.TasksCompleted,
 		&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 		&c.ProposalsAccepted, &c.ProposalsRejected,
 		&c.BriefItemsActed, &c.BriefItemsDismissed,
@@ -232,6 +232,7 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 	add("user_id", review.UserID)
 	add("local_week_start", review.LocalWeekStart)
 	add("as_of", review.AsOf)
+	add("tasks_completed", c.TasksCompleted)
 	add("tasks_due", c.TasksDue)
 	add("tasks_done", c.TasksDone)
 	add("tasks_carried_over", c.TasksCarriedOver)

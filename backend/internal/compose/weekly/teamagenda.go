@@ -28,8 +28,8 @@ var focusPriority = []string{
 	FocusLeadsBreached,
 	FocusCommitmentsMissed,
 	FocusDealsAtRisk,
-	FocusMeetingsWithoutNextStep,
 	FocusStrongWeek,
+	FocusMeetingsWithoutNextStep,
 	FocusQuietWeek,
 }
 

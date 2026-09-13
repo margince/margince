@@ -399,12 +399,13 @@ var tableOwners = map[string]string{
 	// a weekly row on brief_run would become "the latest brief" to the reader
 	// that decides the next morning's overnight window, and weekly content on
 	// brief_item would be cascaded away by deleting a deal.
-	"weekly_review":             "internal/compose/weekly",
-	"team_weekly_review":        "internal/compose/weekly",
-	"team_weekly_review_rep":    "internal/compose/weekly",
-	"assurance_run_finding":     "internal/modules/assurance",
-	"assurance_run":             "internal/modules/assurance",
-	"assurance_source_coverage": "internal/modules/assurance",
+	"weekly_review":              "internal/compose/weekly",
+	"team_weekly_review":         "internal/compose/weekly",
+	"team_weekly_review_outlook": "internal/compose/weekly",
+	"team_weekly_review_rep":     "internal/compose/weekly",
+	"assurance_run_finding":      "internal/modules/assurance",
+	"assurance_run":              "internal/modules/assurance",
+	"assurance_source_coverage":  "internal/modules/assurance",
 	// One pass of assurance over a scope, and what each finding contributed to
 	// that pass's task. They belong to assurance because a cycle is a window
 	// over its own findings; the TASK is an ordinary activity the caller mints
