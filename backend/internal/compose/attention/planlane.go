@@ -16,6 +16,7 @@ import (
 
 const sourceWeeklyCommitment = "weekly_commitment"
 
+// PlanWork retains the plan writer’s identity so agenda completion settles the same obligation.
 type PlanWork struct {
 	ID      ids.UUID
 	OwnerID ids.UUID
@@ -24,10 +25,12 @@ type PlanWork struct {
 	Subject *crmcontracts.AttentionSubject
 }
 
+// WeeklyPlans supplies due commitments through the plan store’s read authority.
 type WeeklyPlans interface {
 	DuePlan(context.Context, ids.UUID, time.Time) ([]PlanWork, error)
 }
 
+// WithWeeklyPlans connects weekly planning to the shared attention ranking.
 func (s *Service) WithWeeklyPlans(plans WeeklyPlans) *Service {
 	s.weeklyPlans = plans
 	return s
@@ -36,12 +39,12 @@ func (s *Service) WithWeeklyPlans(plans WeeklyPlans) *Service {
 // Plan work joins the same ranking used by the browser and the worklist tool.
 // The request copy carries it; the shared service never holds a reader's plan.
 func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *crmcontracts.WorklistSourceUnavailable) {
-	copy := *s
+	scoped := *s
 	if s.weeklyPlans == nil || s.taskScope == TasksUnassigned {
-		return &copy, nil
+		return &scoped, nil
 	}
 	if s.taskScope == TasksVisible {
-		return &copy, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld}
+		return &scoped, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: crmcontracts.WorklistSourceUnavailableReasonWithheld}
 	}
 	entries, err := s.weeklyPlans.DuePlan(ctx, s.taskOwner, now)
 	if err != nil {
@@ -49,9 +52,9 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			reason = crmcontracts.WorklistSourceUnavailableReasonWithheld
 		}
-		return &copy, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: reason}
+		return &scoped, &crmcontracts.WorklistSourceUnavailable{Source: sourceWeeklyCommitment, Reason: reason}
 	}
-	copy.planRows = make([]ranked, 0, len(entries))
+	scoped.planRows = make([]ranked, 0, len(entries))
 	for _, entry := range entries {
 		due := entry.DueAt
 		row := crmcontracts.WorklistItem{
@@ -61,7 +64,7 @@ func (s *Service) readingPlan(ctx context.Context, now time.Time) (*Service, *cr
 			Actions: []crmcontracts.WorklistItemActions{},
 		}
 		stampDeadline(&row, &due, now)
-		copy.planRows = append(copy.planRows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})
+		scoped.planRows = append(scoped.planRows, ranked{item: row, owner: entry.OwnerID, ownerRef: ownedBy(entry.OwnerID), deadlineAt: due, overdue: deadline.Passed(&due, now), occurredAt: now})
 	}
-	return &copy, nil
+	return &scoped, nil
 }

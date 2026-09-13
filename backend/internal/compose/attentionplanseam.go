@@ -10,6 +10,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -18,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type attentionWeeklyPlan struct {
@@ -58,7 +59,7 @@ func (s attentionWeeklyPlan) DuePlan(ctx context.Context, owner ids.UUID, now ti
 	}
 	out := []attention.PlanWork{}
 	for _, commitment := range plan.Commitments {
-		if commitment.State != "open" || commitment.DueOn == nil {
+		if commitment.State != weeklyplan.StateOpen || commitment.DueOn == nil {
 			continue
 		}
 		// A date-only promise remains on time throughout that date in the plan's zone.
