@@ -165,7 +165,6 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 			t.Fatal("detail disagreed with the list")
 		}
 	}
-
 }
 
 func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *testing.T) {
