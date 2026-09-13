@@ -18,8 +18,10 @@ func TestDatedDealRecoveryDoesNotDependOnPortfolioValue(t *testing.T) {
 			provisional := true
 			omitted := "omitted"
 			closes := rankInstant.AddDate(0, 0, 14)
-			risk := RiskyDeal{DealID: ids.NewV7(), QuietDays: 71, ExpectedCloseDate: &closes,
-				CloseDateProvisional: &provisional, ForecastCategory: &omitted}
+			risk := RiskyDeal{
+				DealID: ids.NewV7(), QuietDays: 71, ExpectedCloseDate: &closes,
+				CloseDateProvisional: &provisional, ForecastCategory: &omitted,
+			}
 			if priced {
 				risk.AmountMinor = &value
 			}

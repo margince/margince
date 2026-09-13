@@ -44979,7 +44979,7 @@ components:
         client already holds the pipelines vocabulary and writes the label in the
         reader's own language; a label composed server-side would not be.
       properties:
-        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a person.' }
+        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
         forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid, description: "The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent." }
         amount_minor: { type: [integer, 'null'], format: int64 }
@@ -46730,7 +46730,7 @@ components:
         and a reader must not multiply them together expecting the product to equal a
         risk-adjusted figure the API does not compute.
       properties:
-        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a person.' }
+        close_date_provisional: { type: [boolean, 'null'], description: 'True when the close date has not been confirmed by a colleague.' }
         forecast_category: { type: [string, 'null'], description: 'The recorded forecast category, including omitted.' }
         stage_id: { type: [string, 'null'], format: uuid }
         amount_minor: { type: [integer, 'null'], format: int64 }

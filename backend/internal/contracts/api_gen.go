@@ -19983,7 +19983,7 @@ type AttentionCounts struct {
 type AttentionDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
-	// CloseDateProvisional True when the close date has not been confirmed by a person.
+	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
 	CloseDateProvisional *bool   `json:"close_date_provisional,omitempty"`
 	Currency             *string `json:"currency,omitempty"`
 
@@ -38879,7 +38879,7 @@ type WorklistCountCategory string
 type WorklistDealFacts struct {
 	AmountMinor *int64 `json:"amount_minor,omitempty"`
 
-	// CloseDateProvisional True when the close date has not been confirmed by a person.
+	// CloseDateProvisional True when the close date has not been confirmed by a colleague.
 	CloseDateProvisional *bool               `json:"close_date_provisional,omitempty"`
 	Currency             *string             `json:"currency,omitempty"`
 	ExpectedCloseDate    *openapi_types.Date `json:"expected_close_date,omitempty"`

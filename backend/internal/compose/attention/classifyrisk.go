@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
 // classifyRisk weighs both value and the time available for deal recovery.
@@ -78,7 +79,8 @@ func recoveryDue(item crmcontracts.AttentionItem, asOf time.Time) bool {
 	if item.DueAt == nil {
 		return false
 	}
-	return !item.DueAt.After(asOf.AddDate(0, 0, recoveryHorizonDays))
+	horizon := asOf.AddDate(0, 0, recoveryHorizonDays)
+	return deadline.Passed(item.DueAt, horizon) || item.DueAt.Equal(horizon)
 }
 
 // dealFactsOf carries the deal's own figures onto the queue row. The lane feed

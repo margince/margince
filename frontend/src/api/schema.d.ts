@@ -33993,7 +33993,7 @@ export interface components {
          *     reader's own language; a label composed server-side would not be.
          */
         AttentionDealFacts: {
-            /** @description True when the close date has not been confirmed by a person. */
+            /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
             /** @description The recorded forecast category, including omitted. */
             forecast_category?: string | null;
@@ -35594,7 +35594,7 @@ export interface components {
          *     risk-adjusted figure the API does not compute.
          */
         WorklistDealFacts: {
-            /** @description True when the close date has not been confirmed by a person. */
+            /** @description True when the close date has not been confirmed by a colleague. */
             close_date_provisional?: boolean | null;
             /** @description The recorded forecast category, including omitted. */
             forecast_category?: string | null;
