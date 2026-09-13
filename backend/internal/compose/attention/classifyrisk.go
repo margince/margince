@@ -49,7 +49,7 @@ func classifyRisk(item crmcontracts.AttentionItem, asOf time.Time, bar materialB
 		row.Because = append(row.Because, reason("quiet_days", daysValue(quiet)))
 	}
 	// A close date calls for recovery or requalification, including when provisional.
-	if recoveryDue(item, asOf) {
+	if closingSoon(item, asOf) {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	return ranked{
@@ -185,4 +185,10 @@ func moneyOf(minor int64, deal *crmcontracts.AttentionDealFacts) *crmcontracts.W
 		money.Currency = deal.Currency
 	}
 	return money
+}
+
+// The overdue flag is the deal engine's calendar-aware verdict. A past close
+// date must not be described as an expected close in the coming fortnight.
+func closingSoon(item crmcontracts.AttentionItem, asOf time.Time) bool {
+	return recoveryDue(item, asOf) && (item.Overdue == nil || !*item.Overdue)
 }

@@ -73,8 +73,6 @@ export const en = {
   "brief.team.none":
     "No teams available. Add a team in Settings to review its work.",
   "brief.week.supporting": "Metrics, forecast and observations",
-  "brief.coverage.more":
-    "More {source} may be available. Open the full worklist to review this area.",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer waiting for your reply",
   "brief.createdAt": "Brief created {when}",

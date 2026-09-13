@@ -96,9 +96,8 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 
 // correctionReceipt renders one applied correction as a card.
 //
-// The summary names the deal and the reason rather than the fields: a rep reads
-// "because nobody has answered since June", and which columns moved is what the
-// Undo restores rather than what the sentence is about.
+// A changed date names both values; confidence-only changes must not claim
+// the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	summary := fmt.Sprintf("Updated close-date confidence on %q", c.DealName)
 	if slices.Contains(c.Fields, "expected_close_date") {
@@ -181,21 +180,30 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 }
 
 func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []attention.Receipt) ([]attention.Receipt, error) {
-	out := make([]attention.Receipt, 0, len(receipts))
+	keys := make([]deals.AppliedChangeKey, 0, len(receipts))
 	for _, receipt := range receipts {
-		if receipt.TargetType == "deal" && (receipt.Kind == deals.StageProgressionKind || receipt.Undo != nil) {
-			review, err := r.deals.AppliedChangeReview(ctx, ids.From[ids.DealKind](receipt.TargetID), receipt.ID)
-			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-				continue
-			}
-			if err != nil {
-				return nil, err
-			}
-			receipt.Review = &review
+		if receipt.TargetType == approvalTargetDeal && (receipt.Kind == deals.StageProgressionKind || receipt.Undo != nil) {
+			keys = append(keys, deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipt.TargetID), ChangeID: receipt.ID})
 		}
-		out = append(out, receipt)
 	}
-	return out, nil
+	if len(keys) == 0 {
+		return receipts, nil
+	}
+	reviews, err := r.deals.AppliedChangeReviews(ctx, keys)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, err
+	}
+	for i := range receipts {
+		key := deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipts[i].TargetID), ChangeID: receipts[i].ID}
+		if review, ok := reviews[key]; ok {
+			receipts[i].Review = &review
+		} else {
+			// The approval reader already authorized the receipt. A missing review
+			// cannot erase that history or offer a restore against unverified state.
+			receipts[i].Undo = nil
+		}
+	}
+	return receipts, nil
 }
 
 func correctionDate(value *string) string {

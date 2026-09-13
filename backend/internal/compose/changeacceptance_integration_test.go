@@ -28,6 +28,12 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	key := deals.AppliedChangeKey{DealID: dealID, ChangeID: change}
+	wrong := deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](e.Rep2), ChangeID: change}
+	batch, err := e.Deals.AppliedChangeReviews(e.Admin(), []deals.AppliedChangeKey{key, wrong})
+	if err != nil || len(batch) != 1 || batch[key] != review {
+		t.Fatalf("batch review must bind each change to its deal: %+v, %v", batch, err)
+	}
 	if review.Accepted || !review.CanAccept || !review.CanUndo {
 		t.Fatalf("new correction: %+v", review)
 	}
@@ -44,7 +50,7 @@ func TestAcceptanceRecordsOneDecisionForTheDisplayedCorrection(t *testing.T) {
 		t.Fatalf("acceptance was not persisted: %+v, %v", accepted, err)
 	}
 	var audits, events int
-	if err := e.owner.QueryRow(context.Background(), `SELECT count(*), count(o.id) FROM audit_log a LEFT JOIN event_outbox o ON o.envelope->'trace'->>'audit_log_id' = a.id::text WHERE a.entity_id = $1 AND a.after ? 'accepted_change_id'`, deal).Scan(&audits, &events); err != nil {
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*), count(o.id) FROM audit_log a LEFT JOIN event_outbox o ON o.envelope->'trace'->>'audit_log_id' = a.id::text WHERE a.entity_id = $1 AND a.after ? 'applied_change'`, deal).Scan(&audits, &events); err != nil {
 		t.Fatal(err)
 	}
 	if audits != 1 || events != 1 {

@@ -292,13 +292,9 @@ describe("what the ranked queue tells a reader", () => {
     // The concept's sharpest example: a €160,100 deal reduced to "no contact
     // for 83 days". The money was on the wire the whole time.
     expect(await screen.findByText(/160,100/)).toBeTruthy();
-    const reply = screen.getByRole("link", { name: "Open to reply" });
-    // The verb says where it GOES, because that is what pressing it does: the
-    // composer lives on the record behind its own button, and a label promising
-    // a draft would overstate the click.
-    expect(reply.getAttribute("href")).toBe(
-      "#/deals/01a05500-0000-7000-8000-00000000bbbb",
-    );
+    expect(
+      screen.getByRole("button", { name: en["worklist.verb.draft_reply"] }),
+    ).toBeTruthy();
   });
 
   it("sends a privacy request to the case it names", async () => {
@@ -1025,10 +1021,11 @@ describe("the draft_reply verb says what the click does", () => {
     stub(day({ queue: [replyRow("deal", "d-1")] }));
     renderWorklist();
 
-    const link = await screen.findByRole("link", {
-      name: en["worklist.verb.draft_reply"],
-    });
-    expect(link.getAttribute("href")).not.toContain("compose=");
+    expect(
+      await screen.findByRole("button", {
+        name: en["worklist.verb.draft_reply"],
+      }),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("link", {
         name: en["worklist.verb.draft_reply_now"],

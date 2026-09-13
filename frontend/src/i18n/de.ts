@@ -79,8 +79,6 @@ export const de = {
   "brief.team.none":
     "Keine Teams verfügbar. Ein Team in den Einstellungen anlegen, um seine Arbeit zu prüfen.",
   "brief.week.supporting": "Kennzahlen, Prognose und Beobachtungen",
-  "brief.coverage.more":
-    "Möglicherweise gibt es weitere Einträge unter {source}. Diesen Bereich in der vollständigen Arbeitsliste prüfen.",
   "brief.coverage.retry": "Brief aktualisieren",
   "brief.reply.owed": "Kunde wartet auf Ihre Antwort",
   "brief.createdAt": "Brief erstellt {when}",

@@ -151,3 +151,17 @@ func TestABriefItemsConsequenceComesFromItsSignal(t *testing.T) {
 		t.Errorf("a signalless entry = %q, must not invent drift without a signal", old.item.Consequence)
 	}
 }
+
+func TestAnOverdueCloseIsNeverDescribedAsComingSoon(t *testing.T) {
+	overdue := true
+	date := rankInstant.Add(-30 * 24 * time.Hour)
+	item := crmcontracts.AttentionItem{Source: "brief_item", DueAt: &date, Overdue: &overdue}
+	for _, row := range []ranked{classifyBriefItem(item, rankInstant, dayMoney{}), classifyRisk(item, rankInstant, materialBar{}, dayMoney{})} {
+		if hasReasonKind(row.item.Because, "closing_soon") {
+			t.Fatalf("an overdue close was described as upcoming: %+v", row.item.Because)
+		}
+		if row.item.Overdue == nil || !*row.item.Overdue {
+			t.Fatal("the overdue close lost its overdue state")
+		}
+	}
+}

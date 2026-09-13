@@ -36,7 +36,7 @@ import (
 // property of the DEAL, not of which lane put it on the queue today.
 func classifyBriefItem(item crmcontracts.AttentionItem, asOf time.Time, money dayMoney) ranked {
 	row := base(item, levelAgreed, "deals_at_risk", briefConsequence(item))
-	if item.DueAt != nil && !item.DueAt.After(asOf.Add(14*24*time.Hour)) {
+	if closingSoon(item, asOf) {
 		row.Because = append(row.Because, reason("closing_soon", nil))
 	}
 	expected, known := expectedRevenue(item, money)

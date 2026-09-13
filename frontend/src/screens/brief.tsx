@@ -106,57 +106,59 @@ function PersonalMorning({
       : "ready";
   return (
     <PageZones
-        shape="aside"
-        mainClassName="brief-main"
-        asideClassName="brief-rail"
-        asideLabel={t("brief.rail")}
-        main={
-          <BriefFeed
-            day={day}
-            state={state}
-            changed={changedSinceBrief(day)}
-            onMore={() => void query.fetchNextPage()}
-            loadingMore={query.isFetchingNextPage}
-            moreFailed={query.isFetchNextPageError}
-            refreshFailed={query.isRefetchError}
-            onRetry={() => void query.refetch()}
-          />
-        }
-        aside={
-          <>
-            {day && (
-              <Panel
-                title={t("brief.readings.summary")}
-                className="brief-summary"
-              >
-                <PanelBody>
-                  {brief.data?.generated_at && (
-                    <p className="t-caption">
-                      {t("brief.createdAt", {
-                        when: formatDateTime(
-                          brief.data.generated_at,
-                          locale,
-                          viewerZone(),
-                        ),
-                      })}
-                    </p>
-                  )}
+      shape="aside"
+      mainClassName="brief-main"
+      asideClassName="brief-rail"
+      asideLabel={t("brief.rail")}
+      main={
+        <BriefFeed
+          day={day}
+          state={state}
+          changed={changedSinceBrief(day)}
+          onMore={() => void query.fetchNextPage()}
+          loadingMore={query.isFetchingNextPage}
+          moreFailed={query.isFetchNextPageError}
+          refreshFailed={query.isRefetchError}
+          onRetry={() => void query.refetch()}
+        />
+      }
+      aside={
+        <>
+          {day && (
+            <Panel
+              title={t("brief.readings.summary")}
+              className="brief-summary"
+            >
+              <PanelBody>
+                {brief.data?.generated_at && (
                   <p className="t-caption">
-                    {t("brief.updatedAt", {
-                      when: formatDateTime(day.as_of, locale, viewerZone()),
+                    {t("brief.createdAt", {
+                      when: formatDateTime(
+                        brief.data.generated_at,
+                        locale,
+                        viewerZone(),
+                      ),
                     })}
                   </p>
-                </PanelBody>
+                )}
+                <p className="t-caption">
+                  {t("brief.updatedAt", {
+                    when: formatDateTime(day.as_of, locale, viewerZone()),
+                  })}
+                </p>
+              </PanelBody>
+              <PanelBody>
                 <BriefReadingsStrip day={day} />
                 <BriefCoverage day={day} onRetry={() => void query.refetch()} />
-              </Panel>
-            )}
-            <BriefChanges />
-            <SchedulePanel day={day} state={state} />
-            <BriefUpdates day={day} />
-            <OvernightPanel />
-          </>
-        }
-      />
+              </PanelBody>
+            </Panel>
+          )}
+          <BriefChanges />
+          <SchedulePanel day={day} state={state} />
+          <BriefUpdates day={day} />
+          <OvernightPanel />
+        </>
+      }
+    />
   );
 }

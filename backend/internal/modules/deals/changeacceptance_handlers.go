@@ -4,13 +4,16 @@
 package deals
 
 import (
+	"net/http"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
-	"net/http"
 )
 
+// AcceptAppliedDealChange records the human’s review against the displayed version.
 func (h Handlers) AcceptAppliedDealChange(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, changeID openapi_types.UUID, _ crmcontracts.AcceptAppliedDealChangeParams) {
 	version, ok := httperr.IfMatchVersion(w, r)
 	if !ok {

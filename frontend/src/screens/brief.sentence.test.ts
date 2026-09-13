@@ -221,3 +221,24 @@ it("does not call a partly read empty queue clear", () => {
   const partial = { ...day([]), next_cursor: "next" };
   expect(briefSentence(partial, t, "en")).toBeNull();
 });
+
+it("counts actionable rows and keeps informational updates out of the headline", () => {
+  const notice = item({
+    source: "notice",
+    title: "Northstar changed stage",
+    level: 6,
+    urgent: false,
+  });
+  const task = item({ source: "task", title: "Send the comparison" });
+  const morning = day([notice, task]);
+  expect(leadOf(morning)).toBe(task);
+  expect(briefSentence(morning, t, "en")).toMatchObject({
+    key: "brief.sentence.one",
+    values: { rest: "0", lead: "Send the comparison" },
+  });
+  expect(briefSentence(day([notice]), t, "en")?.key).toBe(
+    "brief.sentence.clear",
+  );
+  expect(waitingRows(day([{ ...notice, urgent: true }]))).toHaveLength(1);
+  expect(waitingRows(day([{ ...notice, level: 0 }]))).toHaveLength(1);
+});

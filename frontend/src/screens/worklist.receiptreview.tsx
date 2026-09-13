@@ -65,7 +65,7 @@ export function ReceiptReview({ receipt }: Readonly<{ receipt: Receipt }>) {
       action,
     });
   return (
-    <div className="brief-change-actions">
+    <div className="card-actions">
       {review.can_undo &&
         (review.kind === "close_date" ? (
           <ReceiptUndo receipt={receipt} />

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button, Disclosure } from "../design-system/atoms";
@@ -10,9 +11,13 @@ import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
-import { waitingRows } from "./brief.sentence";
+import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+import {
+  type Worklist,
+  type WorklistItem,
+  worklistKey,
+} from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
 import "./worklist.css";
@@ -41,7 +46,8 @@ export function BriefFeed({
   const { locale } = useLocale();
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const rows = waitingRows(day).filter((item) => !isBriefUpdate(item));
+  const client = useQueryClient();
+  const rows = waitingRows(day);
   const partial = Boolean(
     day?.next_cursor ||
       day?.readings?.more_available ||
@@ -111,6 +117,9 @@ export function BriefFeed({
         activityId={openEmail}
         zone={viewerZone()}
         onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void client.invalidateQueries({ queryKey: worklistKey })
+        }
       />
     </section>
   );
@@ -207,14 +216,11 @@ function AgendaRows({
   );
 }
 
-export function isBriefUpdate(item: WorklistItem): boolean {
-  return item.source === "notice" && item.level !== 0 && !item.urgent;
-}
-
 export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {
   const t = useT();
-  const rows = waitingRows(day).filter(isBriefUpdate);
+  const rows = (day?.queue ?? []).filter(isBriefUpdate);
   const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const client = useQueryClient();
   if (rows.length === 0) return null;
   return (
     <Panel title={t("brief.updates.title")}>
@@ -223,6 +229,9 @@ export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {
         activityId={openEmail}
         zone={viewerZone()}
         onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void client.invalidateQueries({ queryKey: worklistKey })
+        }
       />
     </Panel>
   );

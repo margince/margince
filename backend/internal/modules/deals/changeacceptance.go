@@ -10,14 +10,19 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+type acceptedChangeAudit struct {
+	ID       string `json:"id"`
+	Accepted bool   `json:"accepted"`
+}
 
 // AcceptAppliedChange records agreement with one applied change, not a new
 // approval or a replay of its effects. The audit records the deciding human.
@@ -54,8 +59,9 @@ func (s *Store) AcceptAppliedChange(ctx context.Context, dealID ids.DealID, chan
 		if err := stampChangeAccepted(ctx, tx, dealID, changeID, review.Kind); err != nil {
 			return err
 		}
-		after := map[string]any{"accepted_change_id": changeID.String()}
-		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID, map[string]any{"accepted_change_id": nil}, after)
+		before := map[string]any{"applied_change": acceptedChangeAudit{ID: changeID.String(), Accepted: false}}
+		after := map[string]any{"applied_change": acceptedChangeAudit{ID: changeID.String(), Accepted: true}}
+		auditID, err := storekit.Audit(ctx, tx, "update", "deal", dealID.UUID, before, after)
 		if err != nil {
 			return err
 		}
@@ -80,51 +86,30 @@ func stampChangeAccepted(ctx context.Context, tx pgx.Tx, dealID ids.DealID, chan
 }
 
 func readAppliedChangeReview(ctx context.Context, tx pgx.Tx, dealID ids.DealID, changeID ids.UUID, now time.Time) (crmcontracts.AppliedDealChangeReview, error) {
-	var out crmcontracts.AppliedDealChangeReview
-	args := []any{dealID.UUID, changeID, now}
-	query := storekit.SQLf(`
- SELECT 'close_date', c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
-        d.version, c.reversed_at IS NULL,
-        c.reversed_at IS NULL AND NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND to_jsonb(d)->f.key IS DISTINCT FROM f.value)
- FROM deal_correction c JOIN deal d ON d.id = c.deal_id JOIN audit_log a ON a.id = c.audit_log_id
- WHERE c.deal_id = $%d AND c.audit_log_id = $%d
- UNION ALL
- SELECT 'stage', o.accepted_at IS NOT NULL, o.reversed_at IS NOT NULL,
-        d.version, o.outcome = 'auto_applied' AND o.reversed_at IS NULL
-          AND d.stage_id = o.to_stage_id
-          AND $%d::timestamptz < o.decided_at + make_interval(hours => coalesce(o.undo_window_hours, p.undo_window_hours, 72)),
-        o.outcome = 'auto_applied' AND o.reversed_at IS NULL AND d.stage_id = o.to_stage_id
- FROM stage_progression_outcome o JOIN deal d ON d.id = o.deal_id
- LEFT JOIN stage_progression_policy p ON p.pipeline_id = o.pipeline_id AND p.from_stage_id = o.from_stage_id AND p.to_stage_id = o.to_stage_id
- WHERE o.deal_id = $%d AND o.approval_id = $%d AND o.outcome IN ('auto_applied', 'reversed')`, len(args)-2, len(args)-1, len(args), len(args)-2, len(args)-1)
-	err := tx.QueryRow(ctx, query, args...).Scan(&out.Kind, &out.Accepted, &out.Reversed, &out.Version, &out.CanUndo, &out.CanAccept)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return out, apperrors.ErrNotFound
+	key := AppliedChangeKey{DealID: dealID, ChangeID: changeID}
+	reviews, err := readAppliedChangeReviews(ctx, tx, []AppliedChangeKey{key}, now)
+	if err != nil {
+		return crmcontracts.AppliedDealChangeReview{}, err
 	}
-	out.CanUndo = out.CanUndo && out.CanAccept
-	return out, err
+	review, ok := reviews[key]
+	if !ok {
+		return review, apperrors.ErrNotFound
+	}
+	return review, nil
 }
 
-// AppliedChangeReview re-gates the record even when the caller already read a
-// receipt; that receipt may have survived a permission or ownership change.
+// AppliedChangeReview shares the batch reader's scope and current-state checks.
 func (s *Store) AppliedChangeReview(ctx context.Context, dealID ids.DealID, changeID ids.UUID) (crmcontracts.AppliedDealChangeReview, error) {
-	var out crmcontracts.AppliedDealChangeReview
-	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return out, err
+	key := AppliedChangeKey{DealID: dealID, ChangeID: changeID}
+	reviews, err := s.AppliedChangeReviews(ctx, []AppliedChangeKey{key})
+	if err != nil {
+		return crmcontracts.AppliedDealChangeReview{}, err
 	}
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, dealID.UUID); err != nil {
-			return err
-		}
-		var err error
-		out, err = readAppliedChangeReview(ctx, tx, dealID, changeID, s.clock())
-		if err != nil {
-			return err
-		}
-		out.Writable, err = auth.WritableBy(ctx, tx, dealTable, dealID.UUID)
-		return err
-	})
-	return out, err
+	review, ok := reviews[key]
+	if !ok {
+		return review, apperrors.ErrNotFound
+	}
+	return review, nil
 }
 
 // Correction reversal takes the correction lock before the deal lock. Acceptance

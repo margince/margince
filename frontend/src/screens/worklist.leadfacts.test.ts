@@ -56,6 +56,6 @@ it("keeps a provisional close on its calendar date in both hemispheres", () => {
   const east = dealFactsText(item, t, "en", "Asia/Bangkok");
   expect(west).toEqual(east);
   expect(west).toContain("27/09/2026");
-  expect(west).toContain("confirm or revise");
+  expect(west).toContain("unconfirmed");
   expect(west).toContain("omitted from forecast");
 });

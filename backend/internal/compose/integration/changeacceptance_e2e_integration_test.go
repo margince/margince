@@ -6,8 +6,9 @@
 package integration
 
 import (
-	"github.com/margince/margince/backend/internal/compose"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 func TestAnAutomaticStageMoveCanBeAcceptedWithoutMovingItAgain(t *testing.T) {

@@ -76,7 +76,7 @@ const NAMED = 1;
 export function waitingRows(
   day: Worklist | undefined,
 ): readonly WorklistItem[] {
-  return day?.queue ?? [];
+  return (day?.queue ?? []).filter((item) => !isBriefUpdate(item));
 }
 
 /**
@@ -147,4 +147,9 @@ export function briefSentence(
  */
 export function leadOf(day: Worklist | undefined): WorklistItem | undefined {
   return waitingRows(day)[0];
+}
+
+/** Informational notices live in the rail; pins and urgent notices keep priority. */
+export function isBriefUpdate(item: WorklistItem): boolean {
+  return item.source === "notice" && item.level !== 0 && !item.urgent;
 }

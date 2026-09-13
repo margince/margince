@@ -84,8 +84,6 @@ export const vi = {
     "Kỳ dự báo: {start} – {end}. Được lưu cùng tổng kết tuần này.",
   "brief.team.none": "Chưa có nhóm. Thêm nhóm trong Cài đặt để xem công việc.",
   "brief.week.supporting": "Chỉ số, dự báo và nhận xét",
-  "brief.coverage.more":
-    "Có thể còn mục trong {source}. Mở danh sách công việc đầy đủ để xem khu vực này.",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.createdAt": "Bản tin được tạo {when}",
