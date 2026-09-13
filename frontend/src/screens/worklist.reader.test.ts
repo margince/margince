@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { translate } from "../i18n";
 import { taskRow } from "./brief.fixtures";
+import { whenText } from "./worklist.copy";
 import { noticeDetail, readerTask } from "./worklist.reader";
 
 const t = (
@@ -93,4 +94,27 @@ it("renders the recorded stages in each language without inventing a missing sta
     expect(translated).toContain(`Qualified → ${missing}`);
     expect(translated).not.toContain("Outdated message");
   }
+});
+
+it("dates the original change, not its later delivery", () => {
+  expect(
+    whenText(
+      {
+        ...task,
+        source: "notice",
+        occurred_at: "2026-09-14T10:00:00Z",
+        notice_origin: {
+          event_id: "event",
+          actor_type: "human",
+          actor_id: "reader",
+          occurred_at: "2026-09-07T10:00:00Z",
+        },
+      },
+      t,
+      "en",
+      "Europe/Berlin",
+      "UTC",
+      new Date("2026-09-14T10:00:00Z"),
+    ),
+  ).toBe("07/09/2026, 12:00");
 });

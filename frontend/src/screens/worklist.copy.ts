@@ -434,6 +434,8 @@ export function whenText(
   record: string,
   now: Date,
 ): string | null {
+  if (item.source === "notice" && item.notice_origin)
+    return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
   if (!item.due_at) {
     return item.source === "task" ? t("brief.task.undated") : null;
   }
