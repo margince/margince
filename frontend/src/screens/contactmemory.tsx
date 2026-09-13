@@ -3,14 +3,20 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { activityTimeline } from "../design-system/activitytimeline";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { EmailEntry } from "../design-system/emailentry";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatDayMonth, formatTimeOfDay } from "../format/format";
+import {
+  formatDayMonth,
+  formatNumber,
+  formatTimeOfDay,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { contactTabRoute } from "./contacttab";
 import { interactionIcon, useInteractionLabel } from "./interactionchrome";
+import { groupChronology } from "./timelinegroups";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
 //
@@ -159,7 +165,13 @@ export function ContactMemory({
               <span className="pe-memory-summary">{row.summary}</span>
             </span>
           )}
-          {row.status ? (
+          {row.messageCount != null && row.messageCount > 1 ? (
+            <span className="t-caption">
+              {t("co.spine.exchangeCount", {
+                count: formatNumber(row.messageCount, locale),
+              })}
+            </span>
+          ) : row.status ? (
             <Badge tone={row.tone}>{row.statusLabel}</Badge>
           ) : (
             <span />
@@ -190,6 +202,7 @@ export function ContactMemory({
 }
 
 type Row = {
+  messageCount?: number;
   key: string;
   date: string;
   time: string;
@@ -296,9 +309,7 @@ function fromEntry(
   };
 }
 
-// The deterministic floor: one captured activity is one entry, its subject the
-// title and its body the summary. It is what the card shows when no thread
-// summary has been generated — plainer, never blank.
+// Without a generated summary, reuse the chronology’s conversation grouping.
 function foldActivities(
   view: Contact360,
   t: ReturnType<typeof useT>,
@@ -306,49 +317,53 @@ function foldActivities(
   locale: Locale,
   recordZone: string,
 ): Row[] {
-  const rows = view.activities?.data ?? [];
-  return rows
-    .filter((row) => !isFuture(row))
-    .map((row) => {
-      const status = statusOf(row, view);
-      const withheldRow = row.content_state === "withheld";
-      return {
-        key: row.id,
-        date: formatDayMonth(row.occurred_at, locale, recordZone),
-        time: formatTimeOfDay(row.occurred_at, locale, recordZone),
-        activityId: row.id,
-        kind: row.kind,
-        channelProvider: row.channel_provider ?? null,
-        channel: channelKeyOf(row.kind, row.channel_provider),
-        channelLabel: interactionLabel(row.kind, row.channel_provider),
-        // Withheld is read from the row's own state rather than trusted to
-        // have been stripped. The server does strip it — both readers of the
-        // activity table null the subject and the body together — but this
-        // card would otherwise fall through to row.subject, and a fallback
-        // chain that only holds because of what the server sends is one
-        // response away from printing a subject it should not.
-        title: withheldRow
-          ? t("email.withheldSubject")
-          : (row.email_summary?.subject ??
-            row.subject ??
-            interactionLabel(row.kind, row.channel_provider)),
-        // The server's own preview for an email, composed with the same
-        // splitter the drawer folds with — so this card and the message it
-        // opens cannot disagree about where the sender's words end.
-        summary: withheldRow
-          ? ""
-          : row.email_summary
-            ? (row.email_summary.preview ?? "")
-            : (row.body ?? ""),
-        // A retained email draws the canonical row. The title and summary
-        // above stay filled for it: they are what the segmented filter reads,
-        // and what the row falls back to if a server has not caught up.
-        emailSummary: row.email_summary ?? null,
-        status,
-        statusLabel: statusLabel(status, t),
-        tone: toneFor(status),
-      };
-    });
+  const rows = (view.activities?.data ?? []).filter(
+    (row) => row.kind !== "task" && !isFuture(row),
+  );
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return groupChronology(activityTimeline(rows)).flatMap((group) => {
+    const row = byId.get(group.entries[0].id);
+    if (!row) return [];
+    const status = statusOf(row, rows);
+    const withheldRow = row.content_state === "withheld";
+    return {
+      key: row.id,
+      messageCount: group.entries.length,
+      date: formatDayMonth(row.occurred_at, locale, recordZone),
+      time: formatTimeOfDay(row.occurred_at, locale, recordZone),
+      activityId: row.id,
+      kind: row.kind,
+      channelProvider: row.channel_provider ?? null,
+      channel: channelKeyOf(row.kind, row.channel_provider),
+      channelLabel: interactionLabel(row.kind, row.channel_provider),
+      // Withheld is read from the row's own state rather than trusted to
+      // have been stripped. The server does strip it — both readers of the
+      // activity table null the subject and the body together — but this
+      // card would otherwise fall through to row.subject, and a fallback
+      // chain that only holds because of what the server sends is one
+      // response away from printing a subject it should not.
+      title: withheldRow
+        ? t("email.withheldSubject")
+        : (row.email_summary?.subject ??
+          row.subject ??
+          interactionLabel(row.kind, row.channel_provider)),
+      // The server's own preview for an email, composed with the same
+      // splitter the drawer folds with — so this card and the message it
+      // opens cannot disagree about where the sender's words end.
+      summary: withheldRow
+        ? ""
+        : row.email_summary
+          ? (row.email_summary.preview ?? "")
+          : (row.body ?? ""),
+      // A retained email draws the canonical row. The title and summary
+      // above stay filled for it: they are what the segmented filter reads,
+      // and what the row falls back to if a server has not caught up.
+      emailSummary: row.email_summary ?? null,
+      status,
+      statusLabel: statusLabel(status, t),
+      tone: toneFor(status),
+    };
+  });
 }
 
 // A meeting that has not happened is not memory. It is on the strip and in the
@@ -357,13 +372,21 @@ function isFuture(row: Activity): boolean {
   return new Date(row.occurred_at).getTime() > Date.now();
 }
 
-// Whether anybody answered. Derived from the two directions the page already
-// read, so it agrees with the strip above it.
-function statusOf(row: Activity, view: Contact360): string | null {
+// Only an answer on this conversation settles it; a contact can owe several replies.
+function statusOf(row: Activity, rows: readonly Activity[]): string | null {
+  if (row.email_summary)
+    return row.email_summary.move === "needs_reply" ? "unanswered" : null;
   if (row.direction === "inbound") {
     const answered =
-      view.last_outbound_at != null &&
-      new Date(view.last_outbound_at) > new Date(row.occurred_at);
+      row.thread_key != null &&
+      rows.some(
+        (other) =>
+          other.thread_key === row.thread_key &&
+          other.kind === row.kind &&
+          other.channel_provider === row.channel_provider &&
+          other.direction === "outbound" &&
+          new Date(other.occurred_at) > new Date(row.occurred_at),
+      );
     return answered ? "replied" : "unanswered";
   }
   return null;

@@ -147,7 +147,7 @@ func heldByAnother(ctx context.Context, task crmcontracts.Activity) bool {
 // terms: a deadline still ahead, one already behind, or none at all.
 func openPromiseWhyNow(now time.Time, task crmcontracts.Activity) string {
 	if task.DueAt == nil {
-		return fmt.Sprintf("Promised on %s with no date set. It stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
+		return fmt.Sprintf("Task recorded on %s with no date set. It stays open until you do it or close it.", task.OccurredAt.Format("2 Jan"))
 	}
 	if past, ok := deadline.DaysPast(task.DueAt, now); ok {
 		return fmt.Sprintf("Due %d days ago and still open.", past)

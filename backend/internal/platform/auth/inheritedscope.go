@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // ActivityAvailableClause is the predicate under which an activity is in the
@@ -191,7 +192,23 @@ func ActivityContentClause(ctx context.Context, alias string, arg func(any) int)
 	if p.Type == principal.PrincipalSystem {
 		return discover, nil
 	}
-	return discover + " AND " + activityAudienceArm(p, alias, arg), nil
+	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
+}
+
+// Source availability is independent of the task's audience. A reminder cannot
+// grant access to evidence that the reader can no longer open.
+func activityContentAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
+	own := activityAudienceArm(p, alias, arg)
+	// Reassignment hands over the reminder, never a grant to its source email.
+	own = fmt.Sprintf("(%s OR coalesce(%s.source_system = '%s' AND %s.assignee_id = $%d, false))",
+		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
+	// A captured request is a personal reminder of its source, not a new grant
+	// to that correspondence. Archiving or restricting the source withholds it.
+	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
+	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`'
+	 OR EXISTS (SELECT 1 FROM activity request_source
+	   WHERE request_source.id = %[1]s.source_activity_id AND request_source.archived_at IS NULL
+	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source)
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the
@@ -207,7 +224,7 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 	if p.Type == principal.PrincipalSystem {
 		return "TRUE", nil
 	}
-	return activityAudienceArm(p, alias, arg), nil
+	return activityContentAudienceArm(p, alias, arg), nil
 }
 
 // activityAudienceArm renders the audience membership test for one human (or

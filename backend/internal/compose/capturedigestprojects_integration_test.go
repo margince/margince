@@ -59,12 +59,12 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	now := time.Now().UTC()
 	company := e.SeedCompany(t, "Digest Client", nil)
 
-	moved := b.seedDigestProject(t, "Moved overnight", company, nil)
+	moved := b.seedDigestProject(t, "Moved overnight", company, &e.Rep1)
 	if _, err := e.Projects.AdvanceProjectPhase(admin, moved, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhasePursuing}); err != nil {
 		t.Fatalf("advance the project: %v", err)
 	}
 	due := now.Add(72 * time.Hour)
-	promised := b.seedDigestProject(t, "Promised overnight", company, nil)
+	promised := b.seedDigestProject(t, "Promised overnight", company, &e.Rep1)
 	b.fileOnProject(t, "task", promised, now, &due)
 	b.fileOnProject(t, "task", promised, now, &due)
 	quiet := b.seedDigestProject(t, "Gone quiet", company, &e.Rep1)
@@ -73,14 +73,20 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	}
 	b.fileOnProject(t, "meeting", quiet, now.AddDate(0, 0, -40), nil)
 	// Touched last week: in flight, recently active, in no list.
-	busy := b.seedDigestProject(t, "Busy", company, nil)
+	busy := b.seedDigestProject(t, "Busy", company, &e.Rep1)
 	if _, err := e.Projects.AdvanceProjectPhase(admin, busy, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
 		t.Fatalf("advance the busy project: %v", err)
 	}
 	b.fileOnProject(t, "call", busy, now.AddDate(0, 0, -7), nil)
 
+	other := b.seedDigestProject(t, "Colleague project", company, &e.Rep2)
+	if _, err := e.Projects.AdvanceProjectPhase(admin, other, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
+		t.Fatal(err)
+	}
+	b.fileOnProject(t, "meeting", other, now.AddDate(0, 0, -40), nil)
 	granted := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), projectReadingAuthority{}, keyvault.NewMemory()).
 		WithDigestProjects(digestProjectsSource)
+	b.handlers.registry = granted
 	if err := granted.BuildDigests(b.human, now); err != nil {
 		t.Fatalf("BuildDigests: %v", err)
 	}
@@ -97,6 +103,9 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	// the advances are what a reader acts on, and they lead.
 	moves := map[string]string{}
 	for _, change := range projects.PhaseChanges {
+		if change.Name == "Colleague project" {
+			t.Fatal("a readable colleague project entered the personal digest")
+		}
 		if change.FromPhase != nil {
 			moves[change.Name] = *change.FromPhase + "→" + change.ToPhase
 		}
@@ -111,6 +120,10 @@ func TestMorningDigestCarriesTheProjectsSection(t *testing.T) {
 	if len(projects.GoneQuiet) != 1 || projects.GoneQuiet[0].Name != "Gone quiet" ||
 		ids.UUID(projects.GoneQuiet[0].ProjectId) != quiet.UUID {
 		t.Fatalf("gone quiet = %+v, want Gone quiet alone (Busy was touched last week)", projects.GoneQuiet)
+	}
+	b.handlers.registry = b.registry
+	if _, revoked := b.readDigest(t, nil); revoked.Projects != nil {
+		t.Fatal("cached projects survived revoking project.read")
 	}
 	silent := projects.GoneQuiet[0]
 	if silent.DaysQuiet < 39 || silent.DaysQuiet > 41 || silent.OwnerId == nil || ids.UUID(*silent.OwnerId) != e.Rep1 {
@@ -139,7 +152,7 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 	b := setupBackfillWire(t)
 	e := b.env
 	company := e.SeedCompany(t, "Digest Client", nil)
-	quiet := b.seedDigestProject(t, "Gone quiet", company, nil)
+	quiet := b.seedDigestProject(t, "Gone quiet", company, &e.Rep1)
 	if _, err := e.Projects.AdvanceProjectPhase(e.Admin(), quiet, projects.AdvanceProjectPhaseInput{ToPhase: projects.PhaseDelivering}); err != nil {
 		t.Fatalf("advance: %v", err)
 	}
@@ -156,6 +169,7 @@ func TestMorningDigestOmitsTheProjectsSectionWithoutTheProjectGrant(t *testing.T
 
 	granted := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), projectReadingAuthority{}, keyvault.NewMemory()).
 		WithDigestProjects(digestProjectsSource)
+	b.handlers.registry = granted
 	if err := granted.BuildDigests(b.human, now); err != nil {
 		t.Fatalf("BuildDigests with project.read: %v", err)
 	}

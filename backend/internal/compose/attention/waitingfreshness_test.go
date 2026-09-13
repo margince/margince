@@ -289,21 +289,16 @@ func TestAnEngagedWaitLeadsAndClaimsNoMissingHistory(t *testing.T) {
 	}
 }
 
-// A message that asks us nothing is demoted, and an unjudged one is not.
-//
-// The two cases that must NOT move are the point. A classifier that never ran,
-// ran out of budget, or answered below its confidence floor leaves the queue
-// exactly as it found it — absence of a verdict is not evidence, and a queue
-// that quietly reordered itself when a model failed would be worse than one
-// with no classifier at all.
-func TestOnlyAJudgementOfAsksNothingDemotesAWait(t *testing.T) {
+// Explicit information and confirmed requests have different urgency.
+func TestInformationAndConfirmedRequestsRankDifferently(t *testing.T) {
 	at := func(asksNothing bool) ranked {
 		return classifyWaiting(WaitingCustomer{
-			ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000e1"),
-			Subject:     "Monthly reporting",
-			Since:       rankInstant.Add(-2 * 24 * time.Hour),
-			Engaged:     true,
-			AsksNothing: asksNothing,
+			ActivityID:       ids.MustParse("01a05500-0000-7000-8000-0000000000e1"),
+			Subject:          "Monthly reporting",
+			Since:            rankInstant.Add(-2 * 24 * time.Hour),
+			Engaged:          true,
+			AsksNothing:      asksNothing,
+			ConfirmedRequest: !asksNothing,
 		}, rankInstant)
 	}
 
@@ -312,17 +307,13 @@ func TestOnlyAJudgementOfAsksNothingDemotesAWait(t *testing.T) {
 	} else if !hasReason(judged.item, "asks_nothing") {
 		t.Error("the demoted row does not say why")
 	}
-	if unjudged := at(false); unjudged.item.Level != levelWaiting {
-		t.Errorf("an unjudged wait was demoted to level %d — absence of a "+
-			"verdict must change nothing", unjudged.item.Level)
+	if confirmed := at(false); confirmed.item.Level != levelWaiting {
+		t.Errorf("a confirmed request was demoted to level %d", confirmed.item.Level)
 	}
 }
 
-// Money outranks the verdict, as it outranks every other demotion here.
-//
-// A statement on a thread with an open deal is still worth a rep's eye: the
-// classifier judges the message, and the deal is a fact about the relationship.
-func TestAnOpenDealKeepsAnInformationalWaitInTheTopBand(t *testing.T) {
+// Deal ownership does not turn a statement into an obligation.
+func TestAnOpenDealDoesNotMakeAnInformationalMessageAnObligation(t *testing.T) {
 	funded := classifyWaiting(WaitingCustomer{
 		ActivityID:  ids.MustParse("01a05500-0000-7000-8000-0000000000e2"),
 		Subject:     "Statement of account",
@@ -332,8 +323,8 @@ func TestAnOpenDealKeepsAnInformationalWaitInTheTopBand(t *testing.T) {
 		HasOpenDeal: true,
 	}, rankInstant)
 
-	if funded.item.Level != levelWaiting {
-		t.Errorf("a funded wait was demoted to level %d by a verdict", funded.item.Level)
+	if funded.item.Level != levelRoutine {
+		t.Errorf("informational mail claimed an obligation at level %d", funded.item.Level)
 	}
 }
 
@@ -386,5 +377,21 @@ func TestAFreshWaitAddressedToTheReaderStillLeadsTheDay(t *testing.T) {
 	if row := classifyWaiting(waiting, rankInstant); row.item.Level != levelWaiting {
 		t.Errorf("a fresh wait addressed to the reader ranked %d, want the top band — "+
 			"the case above proves nothing if everything is demoted", row.item.Level)
+	}
+}
+
+func TestAConfirmedFirstRequestDeservesAttention(t *testing.T) {
+	row := classifyWaiting(WaitingCustomer{Since: rankInstant.Add(-time.Hour), ConfirmedRequest: true}, rankInstant)
+	if row.item.Level != levelWaiting {
+		t.Fatalf("first confirmed request was demoted to %d", row.item.Level)
+	}
+}
+
+func TestUncertainMailNeverClaimsPriorityThroughEngagementOrMoney(t *testing.T) {
+	for _, funded := range []bool{false, true} {
+		row := classifyWaiting(WaitingCustomer{Since: rankInstant.Add(-time.Hour), Engaged: true, HasOpenDeal: funded, ActionUnconfirmed: true}, rankInstant)
+		if row.item.Level != levelRoutine {
+			t.Fatalf("unconfirmed message claimed level %d", row.item.Level)
+		}
 	}
 }

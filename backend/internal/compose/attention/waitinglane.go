@@ -128,15 +128,13 @@ type WaitingCustomer struct {
 	// fixture that says nothing about them, both mean "no evidence this is
 	// somebody else's" — which must not demote a live customer.
 	AddressedElsewhere bool
-	// AsksNothing says a classifier judged this message to inform rather than
-	// to ask — a report, a receipt, a statement.
-	//
-	// A BOOLEAN, not the verdict word, and the difference is the point: an
-	// unjudged message and one judged to be asking must rank identically, so
-	// the two cases that leave the ranking alone collapse into one value here.
-	// A verdict string would put activities' vocabulary in this package and give
-	// the queue a second place to spell it.
+	// AsksNothing is an explicit informational verdict. ActionUnconfirmed also
+	// covers missing or conflicting classification; neither claims Focus priority.
 	AsksNothing bool
+	// ConfirmedRequest lets a first message establish an obligation without reply history.
+	ConfirmedRequest bool
+	// ActionUnconfirmed keeps unclassified or conflicting evidence out of Focus.
+	ActionUnconfirmed bool
 	// OwnerID is who owes this reply, resolved by the module from the record
 	// the thread is filed under.
 	//

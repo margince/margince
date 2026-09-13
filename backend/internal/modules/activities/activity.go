@@ -43,7 +43,9 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 }
 
 type LogActivityInput struct {
-	Kind string
+	// Internal creation policy; public activity input cannot set an audience.
+	audienceMembers []AudienceMember
+	Kind            string
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
 	// one. Separate from Kind because they answer separate questions: what sort
@@ -272,13 +274,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, map[string]any{fieldKind: in.Kind, fieldSubject: in.Subject})
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	// activity.captured is the first-class verb — emitted instead of a
-	// generic activity.created, never in addition (events.md §1).
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(in.Kind, in.ChannelProvider)); err != nil {
+	if err := recordInitialActivity(ctx, tx, id, in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)

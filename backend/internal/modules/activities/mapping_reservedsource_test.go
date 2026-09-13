@@ -94,3 +94,12 @@ func TestActivityLogInputAcceptsAnOrdinarySource(t *testing.T) {
 		t.Errorf("Source = %q, want it carried through", in.Source)
 	}
 }
+
+func TestActivityLogInputRefusesInternalRequestProvenance(t *testing.T) {
+	reserved := provenance.EmailRequestSource
+	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: "task", SourceSystem: &reserved, SourceId: strPtr("request-1")})
+	var refused *provenance.ReservedError
+	if !errors.As(err, &refused) {
+		t.Fatalf("internal request source was writable: %v", err)
+	}
+}

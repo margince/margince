@@ -172,6 +172,8 @@ type ListActivitiesInput struct {
 	// work for a given instant, and a queue that promised today's list would be
 	// lying if it carried the undated backlog too.
 	OpenAndDueBy *time.Time
+	// IncludeEmailRequests adds undated captured requests to the execution queue, not overdue counts.
+	IncludeEmailRequests bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.
 	//

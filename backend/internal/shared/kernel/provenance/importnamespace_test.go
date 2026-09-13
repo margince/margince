@@ -16,7 +16,7 @@ import (
 // caller who can write it can pre-plant a row under an incumbent record
 // id and have a later import treat the real record as already landed.
 func TestReservedSourceSystem(t *testing.T) {
-	for _, reserved := range []string{"mirror:hubspot", "mirror:salesforce", "mirror:"} {
+	for _, reserved := range []string{"mirror:hubspot", "mirror:salesforce", "mirror:", provenance.EmailRequestSource} {
 		if !provenance.ReservedSourceSystem(reserved) {
 			t.Errorf("%q must be refused from a client write", reserved)
 		}

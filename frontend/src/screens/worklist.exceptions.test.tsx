@@ -5,6 +5,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
@@ -236,6 +237,9 @@ describe("the page answers what before who", () => {
       }),
     );
     renderWorklist();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "My team" }),
+    );
 
     const exceptions = await screen.findByText(en["worklist.exceptions.title"]);
     const board = await screen.findByText(en["worklist.board.title"]);

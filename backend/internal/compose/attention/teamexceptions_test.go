@@ -150,3 +150,21 @@ func materialDeal() ranked {
 		materialBar{minor: 100_000_00, known: true},
 		dayMoney{})
 }
+
+func TestTeamExceptionsExcludeReadableDealsOutsideTheLiveRoster(t *testing.T) {
+	svc := unboundService()
+	member, stranger := ids.NewV7(), ids.NewV7()
+	due := rankInstant.Add(-24 * time.Hour)
+	svc.teammates = roster{{UserID: member, DisplayName: "The teammate"}}
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{
+		{DealID: ids.NewV7(), Name: "Team deal", OwnerID: &member, ExpectedCloseDate: &due, CloseOverdue: true},
+		{DealID: ids.NewV7(), Name: "Other team deal", OwnerID: &stranger, ExpectedCloseDate: &due, CloseOverdue: true},
+	}}
+	got, err := svc.TeamExceptions(aLead())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Exceptions) != 1 || got.Exceptions[0].Owner.Id == nil || ids.UUID(*got.Exceptions[0].Owner.Id) != member {
+		t.Fatalf("team exceptions escaped the live roster: %+v", got)
+	}
+}

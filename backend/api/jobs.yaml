@@ -398,7 +398,7 @@ kinds:
     timeout: 15m
     opts_owner: caller
     cadence: 1h
-    registration: {when: [OwedBrain], absent: registers_nothing}
+    registration: {when: [OwedBrain], absent: registers_anyway}
     reason: >-
       Hourly, like the capture-label pass it is modelled on, and for the same
       reason: the backlog is a query, so a caught-up tenant costs one cheap

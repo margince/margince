@@ -51,17 +51,28 @@ func (s *Service) TeamExceptions(ctx context.Context) (crmcontracts.TeamExceptio
 		// looked.
 		return crmcontracts.TeamExceptions{}, apperrors.ErrPermissionDenied
 	}
+	roster, rosterCut, err := s.teammates.LiveTeammatesOfCaller(ctx)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
 	day, err := s.Assemble(ctx)
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	found := exceptionsFor(classifyDay(day, day.AsOf, dayMoney{}), day.AsOf)
+	if err := s.nameTheMoney(ctx, &day); err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
+	money, err := s.priceTheDay(ctx, day)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
+	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,
-		Truncated:  len(found) > exceptionsBound,
+		Truncated:  rosterCut || len(found) > exceptionsBound,
 	}
-	if out.Truncated {
+	if len(found) > exceptionsBound {
 		out.Exceptions = found[:exceptionsBound]
 	}
 	return out, nil

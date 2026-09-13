@@ -33,7 +33,7 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 	return "owner_id", "owner_not_assignable", e.Error()
 }
 
-// assigneeEligible is the destination arm, and it is deliberately NOT the
+// AssigneeEligibleSQL is the destination arm, and it is deliberately NOT the
 // write arm.
 //
 // A seat may be handed work when it is a live human seat that can do the work —
@@ -49,7 +49,7 @@ func (e *AssigneeNotAllowedError) FieldFault() (field, code, message string) {
 // names ONE record; it says who may change that row, never who may receive
 // other rows. Reading it here would let a single write share on one lead widen
 // the assigner's whole destination pool.
-func assigneeEligible(p principal.Principal, alias string, arg func(any) int) string {
+func AssigneeEligibleSQL(p principal.Principal, alias string, arg func(any) int) string {
 	return fmt.Sprintf(
 		`%[1]s.status = 'active' AND %[1]s.archived_at IS NULL
 		   AND NOT %[1]s.is_agent AND %[1]s.seat_type <> 'read'
@@ -81,7 +81,7 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 		`SELECT EXISTS (SELECT 1 FROM (
 		   SELECT id AS owner_id, status, archived_at, is_agent, seat_type
 		   FROM app_user WHERE id = $%d) u WHERE %s)`,
-		destPos, assigneeEligible(p, "u", arg)), args...).Scan(&permitted); err != nil {
+		destPos, AssigneeEligibleSQL(p, "u", arg)), args...).Scan(&permitted); err != nil {
 		return err
 	}
 	return refuseIneligibleAssignee(permitted)
