@@ -16,6 +16,7 @@ package weekly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -185,7 +187,9 @@ func (e *Engine) measureWeek(
 	// ticks inside a week do not re-settle a commitment the rep completed
 	// after the first pass.
 	if e.plan != nil {
-		if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+		c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now)
+		// A seat without plan authority still has recorded work to review.
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
 	}

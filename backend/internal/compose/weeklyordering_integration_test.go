@@ -103,3 +103,23 @@ func TestScheduledMeasurementIncludesTheRealPlanOutcome(t *testing.T) {
 		t.Fatalf("scheduled forecast horizons missing: %d", len(review.Outlook))
 	}
 }
+
+func TestReadOnlyPlanAuthorityStillReceivesRecordedWork(t *testing.T) {
+	e := integration.Setup(t)
+	seedManagerRoles(t, e, e.Rep1, e.Rep2, e.Rep3)
+	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,weekly_plan}','{"read":true,"update":false}'::jsonb) WHERE key='team_lead_under_test'`)
+	w := teamSnapshotWorker(e)
+	if err := w.measureWorkspace(e.Admin(), e.WS, teamJobClock); err != nil {
+		t.Fatal(err)
+	}
+	review, err := w.engine.LatestReview(e.As(e.Rep1, nil, integration.AdminPerms), nil)
+	if err != nil {
+		t.Fatalf("read-only member lost their recorded-work review: %v", err)
+	}
+	if review.ID.IsZero() || review.Counts.CommitmentsDue != 0 {
+		t.Fatalf("unexpected read-only review: %+v", review)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM weekly_plan`) != 0 {
+		t.Fatal("read-only report created a plan")
+	}
+}

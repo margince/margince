@@ -197,8 +197,8 @@ func (w *weeklyGenerateWorker) measureFor(
 		// make one such seat cost the whole workspace its retrospectives, and
 		// River would retry into the same refusal every pass.
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			w.log.InfoContext(ctx, "no weekly review for a seat whose role does not grant reading deals",
-				"user", userID, "workspace", wsID)
+			w.log.InfoContext(ctx, "weekly review withheld by the member authority",
+				"user", userID, "workspace", wsID, "cause", err)
 			return mailableReview{}, nil
 		}
 		return mailableReview{}, err
