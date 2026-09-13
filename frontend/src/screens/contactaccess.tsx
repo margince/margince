@@ -64,7 +64,11 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
   );
   const mayChange = Boolean(contact.writable) && !contact.archived_at;
   return (
-    <div className="contact-access" title={description}>
+    <section
+      className="contact-access"
+      aria-label={t("contactAccess.title")}
+      title={description}
+    >
       <VisibilityLine
         state={isPrivate ? "private" : "team"}
         action={
@@ -97,6 +101,6 @@ export function ContactAccess({ contact }: Readonly<{ contact: Contact }>) {
           {problemMessageOf(setVisibility.error, t)}
         </span>
       )}
-    </div>
+    </section>
   );
 }
