@@ -108,7 +108,11 @@ func (w *weeklyGenerateWorker) snapshotTeam(
 ) error {
 	for _, candidate := range team.candidates {
 		err := w.snapshotTeamAs(ctx, wsID, team, candidate, now)
-		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			continue
+		}
+		if errors.Is(err, apperrors.ErrNotFound) {
+			w.log.WarnContext(ctx, "team review unavailable to candidate", "team", team.id, "user", candidate, "cause", err)
 			continue
 		}
 		return err

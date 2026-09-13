@@ -141,3 +141,9 @@ it("recognizes completed undated work in the weekly headline", () => {
   review.counts.tasks_completed = 1;
   expect(say(review)).toBe(en["brief.week.workRecorded"]);
 });
+
+it("recognizes obligations delivered early even without an in-week completion", () => {
+  const review = week({ tasks_due: 3, tasks_done: 3 });
+  review.counts.tasks_completed = 0;
+  expect(say(review)).toBe(en["brief.week.workRecorded"]);
+});

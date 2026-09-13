@@ -56,7 +56,10 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
         WITH tasks AS (
           SELECT a.*, %[6]s AS completed_at FROM activity a
            WHERE a.kind='task' AND a.archived_at IS NULL
-             AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s))
+             AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
+             AND ((a.due_at >= $%[1]d AND a.due_at < $%[2]d)
+               OR a.done_at >= $%[1]d OR (a.due_at < $%[2]d AND NOT a.is_done)
+               OR a.updated_at >= $%[2]d))
         SELECT
           (SELECT count(*) FROM tasks WHERE completed_at >= $%[1]d AND completed_at < $%[2]d),
           (SELECT count(*) FROM tasks WHERE due_at >= $%[1]d AND due_at < $%[2]d),

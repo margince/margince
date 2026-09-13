@@ -325,8 +325,10 @@ func (w *weeklyGenerateWorker) repsDueTheirReview(
 // uq_weekly_review_user_week is what makes a second review impossible, and a
 // rep who gains one between this read and the write simply joins it.
 func (w *weeklyGenerateWorker) repsWithoutAReviewFor(ctx context.Context, tx pgx.Tx, week time.Time) ([]ids.UUID, error) {
-	args := []any{week, w.narrator != nil, w.learner != nil, w.mail.Mailer != nil}
-	bind := func(index int) string { return fmt.Sprintf("$%d", index+1) }
+	var args []any
+	bind := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
+	weekBind := bind(week)
+	narratorBind, learnerBind, mailBind := bind(w.narrator != nil), bind(w.learner != nil), bind(w.mail.Mailer != nil)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT u.id
 		FROM app_user u
@@ -340,7 +342,7 @@ func (w *weeklyGenerateWorker) repsWithoutAReviewFor(ctx context.Context, tx pgx
 			  AND (NOT %s::boolean OR wr.narrated_at IS NOT NULL)
 			  AND (NOT %s::boolean OR wr.learnings_state <> 'not_run')
 			  AND (NOT %s::boolean OR wr.mail_attempted_at IS NOT NULL))
-		ORDER BY u.id`, bind(0), bind(1), bind(2), bind(len(args)-1)), args...)
+		ORDER BY u.id`, weekBind, narratorBind, learnerBind, mailBind), args...)
 	if err != nil {
 		return nil, err
 	}
