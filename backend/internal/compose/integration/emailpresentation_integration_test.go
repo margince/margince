@@ -302,8 +302,8 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 	if got.EmailSummary.Preview == nil || *got.EmailSummary.Preview != "Können wir Dienstag sprechen?" {
 		t.Errorf("preview = %v, want the sentence without the sign-off", got.EmailSummary.Preview)
 	}
-	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
-		t.Errorf("move = %v on an inbound message, want needs_reply", got.EmailSummary.Move)
+	if got.EmailSummary.Move != crmcontracts.EmailSummaryMoveNone {
+		t.Errorf("move = %v on an unclassified message; direction alone establishes no obligation", got.EmailSummary.Move)
 	}
 
 	subject := "a call"
