@@ -94,7 +94,7 @@ test("turning several dials does not bury the way out", async ({ page }) => {
   );
 
   await page.goBack();
-  await expect(page).toHaveURL(/#\/brief$/);
+  await expect(page).toHaveURL(/#\/home$/);
 });
 
 test("Forward returns to the list Back left", async ({ page }) => {

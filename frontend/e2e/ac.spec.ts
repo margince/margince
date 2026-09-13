@@ -240,21 +240,23 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical ten, in order: Brief alone, then records / work / intelligence.
-// Not upstream's set: Automations is not a destination here (it is set-and-forget
-// configuration on Settings → AI). These are the TRANSLATED words a contact
-// reads rather than the route ids the router matches — `home` presents as
-// Briefing, and no row here may be satisfied by its slug.
-//
-// The count and the list are both spelled out on purpose. NAV_GROUPS in
-// src/app/nav.ts is the source of the rail; deriving this from it would assert
-// only that the rail renders itself, so a destination added there is meant to
-// fail here until somebody says what a contact now reads and where.
-//
-// Arbeitsliste LEADS the work group and is the only door to the work that waits
-// on a contact: decisions to answer, tasks to finish and duplicates to merge are
-// lanes inside it rather than rows of their own.
-test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
+// The translated destinations are an acceptance expectation, independent of
+// NAV_GROUPS: importing production's list would only prove it renders itself.
+// Home owns the work queue; the queue opens in a drawer rather than occupying
+// a second sidebar destination.
+const primaryDestinations = [
+  "Startseite",
+  "Kontakte",
+  "Firmen",
+  "Leads",
+  "Deals",
+  "Projekte",
+  "Filter & Ansichten",
+  "Analytics",
+  "Margince fragen",
+];
+
+test("AC-shell-1: the rail renders the primary destinations in order", async ({
   page,
 }) => {
   await page.goto("/#/home");
@@ -263,24 +265,15 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
   // while the foot's Settings door rides the same `.navitem` geometry without
   // being one of them.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
   const labels = await page
     .locator("nav.rail .navlevel a.navitem")
     .evaluateAll((links) =>
       links.map((link) => link.getAttribute("aria-label")),
     );
-  expect(labels).toEqual([
-    "Briefing",
-    "Kontakte",
-    "Firmen",
-    "Leads",
-    "Deals",
-    "Arbeitsliste",
-    "Projekte",
-    "Filter & Ansichten",
-    "Analytics",
-    "Margince fragen",
-  ]);
+  expect(labels).toEqual(primaryDestinations);
 });
 
 test("AC-shell-2: exactly one rail item is active and tracks the route", async ({
@@ -367,7 +360,9 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
 });
 
 // The account menu carries what belongs to the CONTACT rather than to the page:
@@ -1691,17 +1686,20 @@ test.describe("§3.8: 390px mobile", () => {
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
     // Nothing to answer until it is opened: the queue draws no verdict button.
-    await expect(page.getByRole("button", { name: "Übernehmen" })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: "E-Mail freigeben", exact: true }),
+    ).toHaveCount(0);
 
     await page.getByRole("button", { name: "Entscheiden" }).first().click();
 
-    const decision = page.getByRole("dialog");
+    const decision = page.getByRole("dialog", {
+      name: "Deine Entscheidung",
+      exact: true,
+    });
     await expect(decision).toBeVisible();
     // The same card the record page draws, with its verdicts on it.
     await expect(
-      decision.getByRole("button", { name: "Übernehmen" }),
+      decision.getByRole("button", { name: "E-Mail freigeben", exact: true }),
     ).toBeVisible();
   });
 

@@ -85,5 +85,5 @@ test("discarding leaves for the screen the reader asked for", async ({
 
   await page.getByRole("button", { name: /verwerfen/i }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page).toHaveURL(/#\/brief$/);
+  await expect(page).toHaveURL(/#\/home$/);
 });
