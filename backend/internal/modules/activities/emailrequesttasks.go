@@ -16,11 +16,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
-const EmailRequestTaskSource = "email_request"
+const EmailRequestTaskSource = provenance.EmailRequestSource
 
 // capture_import proves mailbox delivery, not who was addressed. Participant
 // user IDs are stamped by import too; only addresses or the mapper's To header

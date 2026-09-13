@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WithEmailRowFacts fills in what a page's email rows say beyond the message
@@ -32,19 +31,10 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	}
 	applyAttachmentCounts(page, counts)
 
-	states, err := DeliveryStatesFor(ctx, tx, emailIDs)
+	states, err := EmailStatesFor(ctx, tx, emailIDs)
 	if err != nil {
 		return err
 	}
-	applyDeliveryStates(page, states)
-	moves, err := EmailMovesFor(ctx, tx, emailIDs)
-	if err != nil {
-		return err
-	}
-	for i := range page {
-		if summary := page[i].EmailSummary; summary != nil && summary.DisplayStatus != crmcontracts.EmailAccessStatusWithheld {
-			summary.Move = moves[ids.UUID(page[i].Id)]
-		}
-	}
+	applyEmailStates(page, states)
 	return nil
 }

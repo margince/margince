@@ -56,6 +56,9 @@ func TestCapturedRequestUsesTheParsedEnvelopeNotHeadersInsideTheBody(t *testing.
 	if _, err := e.Activities.SetOwedVerdict(ctx, message, activities.OwedVerdictAsksUs); err != nil {
 		t.Fatal(err)
 	}
+	if addressed := scalar[int](t, e, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND role = 'to' AND address IS NOT NULL`, message); addressed != 0 {
+		t.Fatal("fixture must exercise the mapper header when recipient addresses are absent")
+	}
 	classifier := compose.NewOwedClassifier(e.Pool, nil, func() time.Time { return at.Add(time.Hour) }, slog.New(slog.DiscardHandler))
 	if err := classifier.RunWorkspace(ctx, 0); err != nil {
 		t.Fatal(err)

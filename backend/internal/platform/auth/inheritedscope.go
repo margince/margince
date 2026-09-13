@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // ActivityAvailableClause is the predicate under which an activity is in the
@@ -201,7 +202,7 @@ func activityContentAudienceArm(p principal.Principal, alias string, arg func(an
 	// A captured request is a personal reminder of its source, not a new grant
 	// to that correspondence. Archiving or restricting the source withholds it.
 	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
-	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> 'email_request'
+	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`'
 	 OR EXISTS (SELECT 1 FROM activity request_source
 	   WHERE request_source.id = %[1]s.source_activity_id AND request_source.archived_at IS NULL
 	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source)

@@ -200,13 +200,17 @@ func accountTaskCard(now time.Time, step crmcontracts.Company360NextStep, late b
 		Id:    &step.ActivityId,
 		Label: step.Subject,
 	}}
+	whyNow := owedWhyNow(now, step.DueAt)
+	if step.DueAt == nil {
+		whyNow = "Open task with no date set. It stays open until somebody does it or closes it."
+	}
 	moment := crmcontracts.ContactMoment{
 		ClaimKey:            momentKey("moment:account_promise_task", step.ActivityId),
 		Rule:                ruleFor(late),
 		RuleVersion:         ptrOf(momentRuleVersion),
 		EvidenceFingerprint: accountFingerprint(evidence),
 		Headline:            owedHeadline("", step.Subject),
-		WhyNow:              owedWhyNow(now, step.DueAt),
+		WhyNow:              whyNow,
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		RecommendedAction:   openTheTask(step),

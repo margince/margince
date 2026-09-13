@@ -81,7 +81,14 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 		t.Fatal("creation audit failed to record the personal audience")
 	}
 	done := true
-	if _, err := store.UpdateActivity(asClassifier(e), ids.From[ids.ActivityKind](task), UpdateActivityInput{IsDone: &done}); err != nil {
+	assignee, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing assignee")
+	}
+	assignee.Permissions.Objects["activity"] = principal.ObjectGrant{Read: true, Update: true}
+	assignee.Permissions.RowScope = principal.RowScopeOwn
+	assignee.Permissions.RoleKeys = nil
+	if _, err := store.UpdateActivity(principal.WithActor(e.as(), assignee), ids.From[ids.ActivityKind](task), UpdateActivityInput{IsDone: &done}); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
@@ -148,14 +155,17 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	if got[answered].Move != crmcontracts.EmailSummaryMoveNone || got[info].Move != crmcontracts.EmailSummaryMoveNone {
 		t.Fatal("answered or informational email still claimed a reply")
 	}
-	// The detail and list share the same fact.
-	detail, err := store.GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](answered), nil)
-	if err != nil {
-		t.Fatal(err)
+	// Both positive and negative obligations agree on the list and the detail.
+	for _, id := range []ids.UUID{first, answered, info} {
+		detail, err := store.GetEmailPresentation(e.as(), ids.From[ids.ActivityKind](id), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if detail.Summary.Move != got[id].Move {
+			t.Fatal("detail disagreed with the list")
+		}
 	}
-	if detail.Summary.Move != got[answered].Move {
-		t.Fatal("detail disagreed with the list")
-	}
+
 }
 
 func TestArchivingAnUnfinishedEmailTaskRestoresTheRequestWithoutRecapture(t *testing.T) {

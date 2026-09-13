@@ -24,33 +24,46 @@ func unansweredConversationSQL(asOf string) string {
        AND (later.occurred_at, later.id) > (a.occurred_at, a.id))`
 }
 
-// EmailMovesFor reads confirmed obligations after the caller's content gate.
-// Completing a captured reminder settles it; direction alone proves no request.
-func EmailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID]crmcontracts.EmailSummaryMove, error) {
+// EmailRowState keeps obligation and delivery facts in one page-batched read.
+type EmailRowState struct {
+	Delivery DeliveryState
+	Move     crmcontracts.EmailSummaryMove
+}
+
+// EmailStatesFor reads confirmed obligations and delivery after the caller's
+// content gate. A captured reminder's completion settles its source request.
+func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (map[ids.UUID]EmailRowState, error) {
+	if len(activityIDs) == 0 {
+		return map[ids.UUID]EmailRowState{}, nil
+	}
 	args := []any{activityIDs}
 	wanted := fmt.Sprintf("$%d", len(args))
-	rows, err := tx.Query(ctx, `SELECT a.id,
-   a.direction = 'inbound' AND a.owed_verdict = 'asks_us'
-   AND a.capture_label = 'commitment'
-   AND `+unansweredConversationSQL("now()")+`
-   AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request'
-     AND task.source_activity_id = a.id AND task.is_done)
-   FROM activity a WHERE a.id = ANY(`+wanted+`)`, args...)
+	rows, err := tx.Query(ctx, `SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
+ delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
+ coalesce(a.direction = 'inbound' AND a.owed_verdict = 'asks_us'
+ AND a.capture_label = 'commitment' AND `+unansweredConversationSQL("now()")+`
+ AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = '`+EmailRequestTaskSource+`'
+ AND task.source_activity_id = a.id AND task.is_done), false)
+ FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
+ WHERE a.id = ANY(`+wanted+`) AND a.restricted_at IS NULL`, args...)
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading email obligations: %w", err)
+		return nil, fmt.Errorf("activities: reading email states: %w", err)
 	}
 	defer rows.Close()
-	out := make(map[ids.UUID]crmcontracts.EmailSummaryMove, len(activityIDs))
+	out := make(map[ids.UUID]EmailRowState, len(activityIDs))
 	for rows.Next() {
 		var id ids.UUID
-		var owed *bool
-		if err := rows.Scan(&id, &owed); err != nil {
+		var state EmailRowState
+		var owed bool
+		if err := rows.Scan(&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
+			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files, &owed); err != nil {
 			return nil, err
 		}
-		out[id] = crmcontracts.EmailSummaryMoveNone
-		if owed != nil && *owed {
-			out[id] = crmcontracts.EmailSummaryMoveNeedsReply
+		state.Move = crmcontracts.EmailSummaryMoveNone
+		if owed {
+			state.Move = crmcontracts.EmailSummaryMoveNeedsReply
 		}
+		out[id] = state
 	}
 	return out, rows.Err()
 }

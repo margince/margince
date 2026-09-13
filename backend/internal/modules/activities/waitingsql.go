@@ -200,7 +200,7 @@ const waitingRepliesSQL = `
 	   AND (%[11]s)
 	   AND a.thread_key IS NOT NULL
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
-	     WHERE request_task.source_system = 'email_request'
+	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[10]d OR $%[10]d = '00000000-0000-0000-0000-000000000000'::uuid))))

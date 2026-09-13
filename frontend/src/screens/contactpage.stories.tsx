@@ -1823,10 +1823,7 @@ export const ProviderNotConfigured: Story = {
 // not reach the section sees — the withheld half is the one a stubbed empty
 // state would silently misreport as "there is none".
 
-// The timeline and the meetings list both read the session, to mark the rows
-// the viewer wrote themselves. The deals tab does not, which is why only two of
-// the three route it: an unrouted /me reads as a malformed session, so every row
-// would be attributed to somebody else and the story would document that.
+// Tabs read the session for viewer attribution and available actions.
 function tabViewer(): void {
   installFetchStub({ "GET /me": meRoute({ contact: ["read"] }) });
 }
@@ -1854,19 +1851,25 @@ export const TabTimelineWithheld: Story = {
 };
 
 export const TabDeals: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactDealsTab view={populated} />
-    </StoryProviders>
-  ),
+  render: () => {
+    tabViewer();
+    return (
+      <StoryProviders>
+        <ContactDealsTab view={populated} />
+      </StoryProviders>
+    );
+  },
 };
 
 export const TabDealsWithheld: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactDealsTab view={withheld} />
-    </StoryProviders>
-  ),
+  render: () => {
+    tabViewer();
+    return (
+      <StoryProviders>
+        <ContactDealsTab view={withheld} />
+      </StoryProviders>
+    );
+  },
 };
 
 export const TabMeetings: Story = {

@@ -174,7 +174,7 @@ func readAudienceImage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (map[s
 	var audience string
 	var reason *string
 	if err := tx.QueryRow(ctx,
-		`SELECT audience, audience_reason FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&audience, &reason); err != nil {
+		`SELECT audience, audience_reason FROM activity WHERE id = $1`, id).Scan(&audience, &reason); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx,
