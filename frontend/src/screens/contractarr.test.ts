@@ -26,6 +26,7 @@ const draft = (over: Partial<ContractDraft>): ContractDraft => ({
   noticePeriodDays: "",
   paymentTermDays: "",
   signedOn: "",
+  customValues: {},
   ...over,
 });
 

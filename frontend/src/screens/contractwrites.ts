@@ -29,6 +29,11 @@ export async function createContract(
 export async function patchContract(
   contract: Contract,
   draft: ContractDraft,
+  // What the custom fields held when the form opened. The named terms above
+  // send explicit nulls to clear; the custom half cannot — no cf_ column is
+  // clearable — so it travels as a diff and an untouched empty field is
+  // simply absent rather than a clear the server refuses.
+  customPatch: Record<string, unknown> = {},
 ): Promise<string> {
   const { error } = await api.PATCH("/contracts/{id}", {
     params: { path: { id: contract.id } },
@@ -47,6 +52,7 @@ export async function patchContract(
           ? draft.currency
           : null,
       value_basis: draft.valueBasis,
+      ...customPatch,
       starts_on: draft.startsOn || null,
       ends_on: draft.endsOn || null,
       renewal_on: draft.renewalOn || null,

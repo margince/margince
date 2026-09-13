@@ -27,6 +27,7 @@ import {
 } from "./contractlifecycle";
 import { useContractPaper } from "./contractpaper";
 import { ContractTerm, ContractTerms } from "./contractterms";
+import { CustomFieldsPanel } from "./customfields.card";
 import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -330,6 +331,12 @@ function ContractRow({
         {/* The paper sits under the agreement's own line: a file is about the
             agreement, not about any one of the facts beside it. */}
         <ContractPaper contractId={contract.id} companyId={companyId} />
+        {/* The workspace's own fields on this agreement, under the paper for
+            the same reason the paper sits under the name: both are about the
+            agreement rather than about any one fact on the line above. Draws
+            nothing when the workspace has defined none, or when this contract
+            answers none of them. */}
+        <CustomFieldsPanel object="contract" record={contract} />
       </div>
       <div className="rec-end">
         {/* The figure and the basis it is stated on, stacked: the amount is

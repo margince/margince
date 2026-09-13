@@ -1,8 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useState } from "react";
 import type { components } from "../api/schema";
-// The installation read every form shares: one query, one key, so the currency
-// this form writes is the same fact the settings screen shows.
 import { useInstallationSettings } from "../app/uploadlimit";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { FileDropzoneControl } from "../design-system/filedropzone";
@@ -13,9 +11,13 @@ import { useT } from "../i18n";
 import { uploadAttachment } from "./attachmentupload";
 import { problemMessageOf } from "./common";
 import { ContractArrField } from "./contractarr";
+// The installation read every form shares: one query, one key, so the currency
+// this form writes is the same fact the settings screen shows.
+import { ContractCustomFields } from "./contractcustomfields";
 import { paperState, useContractPaper } from "./contractpaper";
 import { contractTermsBody } from "./contracttermsbody";
 import { createContract, patchContract } from "./contractwrites";
+import { useObjectCustomFields } from "./customfields.form";
 
 // Recording an agreement.
 //
@@ -56,6 +58,11 @@ export type ContractDraft = {
   noticePeriodDays: string;
   paymentTermDays: string;
   signedOn: string;
+  // The workspace's own fields on this agreement, keyed by cf_ column. Held
+  // apart from the named terms above because their SHAPE is not knowable here:
+  // the catalog decides what exists, so this is the one member the form cannot
+  // spell out.
+  customValues: Record<string, unknown>;
 };
 
 const EMPTY_DRAFT: ContractDraft = {
@@ -75,6 +82,7 @@ const EMPTY_DRAFT: ContractDraft = {
   noticePeriodDays: "",
   paymentTermDays: "",
   signedOn: "",
+  customValues: {},
 };
 
 export function ContractForm({
@@ -98,6 +106,12 @@ export function ContractForm({
   // read is in flight and if it never answers, and undefined stays undefined:
   // guessing a unit is the failure this whole pairing exists to prevent.
   const baseCurrency = useInstallationSettings().data?.base_currency;
+  const cf = useObjectCustomFields("contract");
+  // What the custom fields held when this form opened, raw. The patch is a
+  // DIFF against it rather than a snapshot of the whole slice: no cf_ column
+  // is clearable, so sending every untouched empty field would be sending a
+  // clear the server refuses.
+  const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
   // The scale the amount field reads and writes in. A recorded agreement keeps
   // its OWN currency (draftOf preserves it); a new one takes the installation's
@@ -119,10 +133,17 @@ export function ContractForm({
   // biome-ignore lint/correctness/useExhaustiveDependencies: contract.id decides whether to reseed; the object itself would reseed on every refetch of the same row, discarding an in-progress edit.
   useEffect(() => {
     if (open) {
-      setDraft(draftOf(contract));
+      const seeded = cf.recordSlice(contract ?? {});
+      setDraft({ ...draftOf(contract), customValues: seeded });
+      setOpenedCustom(seeded);
       setFile(undefined);
     }
-  }, [open, contract?.id]);
+    // cf.fields is in the deps because the CATALOG can land after the form
+    // opens: the schema read runs beside the contract's, and seeding only on
+    // open would leave an agreement's existing custom values out of a form
+    // that opened first. Re-seeding on the same open is safe — the slice is
+    // derived from the same contract — and stops once the catalog is stable.
+  }, [open, contract?.id, cf.fields]);
 
   // The draft is a VARIABLE, never a closure over render state: a click that
   // lands before React re-arms the mutation's options would otherwise submit
@@ -130,7 +151,11 @@ export function ContractForm({
   const save = useMutation({
     mutationFn: async (submitted: { draft: ContractDraft; file?: File }) => {
       const id = contract
-        ? await patchContract(contract, submitted.draft)
+        ? await patchContract(
+            contract,
+            submitted.draft,
+            cf.toPatch(asStrings(submitted.draft.customValues), openedCustom),
+          )
         : await createContract(companyId, submitted.draft);
       if (submitted.file) {
         // A SECOND request, which can fail on its own. The agreement is saved
@@ -153,6 +178,14 @@ export function ContractForm({
         queryKey: ["companyContracts", companyId],
       });
       queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
+      // The project 360 draws this agreement too. Without this a value saved
+      // here reaches the account and not the delivery it belongs to, and the
+      // project keeps serving the pre-save row from cache.
+      if (contract?.project_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["project", contract.project_id],
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: ["companyDocuments", companyId],
       });
@@ -177,6 +210,12 @@ export function ContractForm({
         draft={draft}
         setDraft={setDraft}
         currency={contractCurrency}
+      />
+
+      <ContractCustomFields
+        fields={cf.formFields}
+        values={draft.customValues}
+        onChange={(customValues) => setDraft({ ...draft, customValues })}
       />
 
       <SignedFileField
@@ -215,6 +254,17 @@ export function ContractForm({
 // draftOf reads an existing agreement back into the form's shape, so correcting
 // one starts from what is recorded rather than from a blank the reader has to
 // retype — and might get wrong a second time.
+// The draft holds stored values and toPatch compares form STRINGS, so the two
+// meet here rather than in the component: one conversion, at the boundary.
+function asStrings(values: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      value === null || value === undefined ? "" : String(value),
+    ]),
+  );
+}
+
 function draftOf(contract: Contract | undefined): ContractDraft {
   if (!contract) {
     return EMPTY_DRAFT;
@@ -242,6 +292,11 @@ function draftOf(contract: Contract | undefined): ContractDraft {
         ? ""
         : String(contract.payment_term_days),
     signedOn: contract.signed_on ?? "",
+    // The catalog is not readable from a module function, so the stored
+    // custom values are seeded by the form itself once the schema lands.
+    // Empty here rather than absent: the member is required, and a draft that
+    // omitted it would be a draft the form could not construct.
+    customValues: {},
   };
 }
 
@@ -629,5 +684,8 @@ export function contractBody(
     // guess the record could not distinguish from an answer.
     auto_renew: false,
     ...contractTermsBody(draft),
+    // Spread HERE and not through contractTermsBody: that fragment is a Pick
+    // of named keys shared with the renewal, and a renewal inherits nothing.
+    ...draft.customValues,
   };
 }
