@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,7 +24,17 @@ import (
 
 const stageNoticeRepair = "1789335792_stage_notices_recover_the_change_they_report.up.sql"
 
-func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
+type stageNoticeFixture struct {
+	conn         *pgx.Conn
+	ctx, human   context.Context
+	actor        ids.UserID
+	store        *notices.Store
+	event        events.Envelope
+	dealID, toID ids.UUID
+}
+
+func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stageNoticeFixture {
+	t.Helper()
 	e := integration.Setup(t)
 	conn, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
 	if err != nil {
@@ -44,15 +55,15 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: "Qualified", Position: 1, Semantic: "open"})
+	from, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: fromName, Position: 1, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: "Proposal", Position: 2, Semantic: "open"})
+	to, err := store.CreateStage(ctx, deals.CreateStageInput{PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), Name: toName, Position: 2, Semantic: "open"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	deal, err := store.CreateDeal(ctx, deals.CreateDealInput{Name: "Fleet renewal", PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), StageID: ids.From[ids.StageKind](ids.UUID(from.Id)), OwnerID: &actor, Source: "manual"})
+	deal, err := store.CreateDeal(ctx, deals.CreateDealInput{Name: dealName, PipelineID: ids.From[ids.PipelineKind](ids.UUID(pipeline.Id)), StageID: ids.From[ids.StageKind](ids.UUID(from.Id)), OwnerID: &actor, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,12 +75,18 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 	if err := conn.QueryRow(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type' = 'deal.stage_changed'`).Scan(&event); err != nil {
 		t.Fatal(err)
 	}
+	return stageNoticeFixture{conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
+}
+
+func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
+	f := newStageNoticeFixture(t, "Qualified", "Proposal", "Fleet renewal")
+	conn, ctx, human, actor, event := f.conn, f.ctx, f.human, f.actor, f.event
 	// Rewind only the fields old event writers did not record. The causation
 	// chain and actor still come from the production domain and notice writers.
 	if _, err := conn.Exec(ctx, `UPDATE event_outbox SET envelope = jsonb_set(envelope, '{payload}', (envelope->'payload') - 'from_stage_name' - 'to_stage_name') WHERE envelope->>'event_id' = $1`, event.EventID.String()); err != nil {
 		t.Fatal(err)
 	}
-	noticeStore := notices.NewStore(db)
+	noticeStore := f.store
 	in := notices.NewNotice{Recipient: actor, Kind: "automation", Subject: "A deal you own changed stage", Body: "Fleet renewal moved to a new pipeline stage."}
 	linked, err := noticeStore.Create(principal.WithCausationEvent(ctx, event.EventID), in)
 	if err != nil {
@@ -80,18 +97,11 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 		t.Fatal(err)
 	}
 	// A later rename cannot be presented as the earlier name.
-	if _, err := conn.Exec(ctx, `UPDATE stage SET name = 'Renamed', updated_at = $1::timestamptz + interval '1 hour' WHERE id = $2`, event.OccurredAt, to.Id); err != nil {
+	if _, err := conn.Exec(ctx, `UPDATE stage SET name = 'Renamed' WHERE id = $1`, f.toID); err != nil {
 		t.Fatal(err)
 	}
-	repair, err := os.ReadFile("../../migrations/core/" + stageNoticeRepair)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for range 2 {
-		if _, err := conn.Exec(ctx, string(repair)); err != nil {
-			t.Fatal(err)
-		}
-	}
+	f.repair(t)
+	f.repair(t)
 	rows, err := noticeStore.UnreadFor(human, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +112,7 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 	for _, row := range rows {
 		switch row.ID {
 		case linked:
-			if row.Subject != "Fleet renewal" || row.Target.ID != ids.UUID(deal.Id) || row.Origin == nil {
+			if row.Subject != "Fleet renewal" || row.Target.ID != f.dealID || row.Origin == nil {
 				t.Fatalf("missing recovered record: %+v", row)
 			}
 			if row.Origin.ActorId != event.Actor.ID || !row.Origin.OccurredAt.Equal(event.OccurredAt) || ids.UUID(row.Origin.EventId) != event.EventID {
@@ -118,5 +128,52 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 		default:
 			t.Fatalf("unexpected notice: %s", row.ID)
 		}
+	}
+}
+
+func (f stageNoticeFixture) repair(t *testing.T) {
+	t.Helper()
+	repair, err := os.ReadFile("../../migrations/core/" + stageNoticeRepair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.conn.Exec(f.ctx, string(repair)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStageNoticeRepairHandlesUnnamedDealsAndUnboundedStageNames(t *testing.T) {
+	for _, names := range []struct{ label, from, to string }{
+		{"ordinary names", "Qualified", "Proposal"},
+		{"long unicode names", strings.Repeat("商", 1100), strings.Repeat("機", 1100)},
+	} {
+		t.Run(names.label, func(t *testing.T) {
+			f := newStageNoticeFixture(t, names.from, names.to, "")
+			id, err := f.store.Create(principal.WithCausationEvent(f.ctx, f.event.EventID), notices.NewNotice{
+				Recipient: f.actor, Kind: "automation", Subject: "A deal you own changed stage", Body: "Stage changed: " + names.from + " → " + names.to + ".",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Even after a rename, the event's frozen names remain authoritative.
+			if _, err := f.conn.Exec(f.ctx, `UPDATE stage SET name = 'Renamed' WHERE id = $1`, f.toID); err != nil {
+				t.Fatal(err)
+			}
+			f.repair(t)
+			rows, err := f.store.UnreadFor(f.human, 10)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].ID != id || rows[0].Subject != "Deal" {
+				t.Fatalf("fabricated an unnamed deal's title: %+v", rows)
+			}
+			origin := rows[0].Origin
+			if origin == nil || origin.StageChange == nil || origin.StageChange.FromName == nil || origin.StageChange.ToName == nil || *origin.StageChange.FromName != names.from || *origin.StageChange.ToName != names.to {
+				t.Fatalf("lost the complete frozen names: %+v", origin)
+			}
+			if len([]rune(rows[0].Body)) > 2000 {
+				t.Fatal("repair exceeded the notice content bound")
+			}
+		})
 	}
 }

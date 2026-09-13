@@ -164,8 +164,8 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	if args.Body != "Discovery → Proposal" {
 		t.Fatalf("the notice must name the recorded transition: %s", args.Body)
 	}
-	if args.Subject != "Fleet renewal" || args.Origin == nil || args.Origin.StageChange == nil || *args.Origin.StageChange.FromName != "Discovery" || *args.Origin.StageChange.ToName != "Proposal" {
-		t.Error("notify subject/body is empty — a human reading the inbox needs to know why they were notified")
+	if args.Subject != "Fleet renewal" || args.Origin == nil || args.Origin.StageChange == nil || args.Origin.StageChange.FromName == nil || args.Origin.StageChange.ToName == nil || *args.Origin.StageChange.FromName != "Discovery" || *args.Origin.StageChange.ToName != "Proposal" {
+		t.Errorf("notification lost its deal name or recorded transition: %+v", args)
 	}
 }
 
