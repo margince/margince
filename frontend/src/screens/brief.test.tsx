@@ -730,20 +730,16 @@ describe("BriefScreen — a reading in flight is absent, not zero", () => {
     expect(document.querySelector(".brief-feed-list")).toBeTruthy();
   });
 
-  // Brief reads ONE page of deals. Past it every reading taken from those rows is
-  // a floor, and the failure this guards is the quiet one: the same words, a
-  // smaller number, and nothing failing.
-  //
-  // The readings strip no longer counts deals — it is drawn from the worklist
-  // answer, which carries its own bound. What still reads a deals PAGE is the
-  // panel that lists the quiet ones, and that is where the floor has to be said.
   it("reports a bounded queue as partial in the remaining-risk panel", async () => {
     stubApi({
       "GET /worklist": () =>
         jsonResponse({ ...readingsDay({}, []), next_cursor: "next" }),
     });
     render(<BriefScreen />);
-    expect(await screen.findByText("Showing part of the list")).toBeTruthy();
+    const panel = await screen.findByRole("region", {
+      name: en["brief.panel.remainingRisk"],
+    });
+    expect(within(panel).getByText("Showing part of the list")).toBeTruthy();
   });
 
   // What "today" means is the reader's own calendar day, so this is the one case

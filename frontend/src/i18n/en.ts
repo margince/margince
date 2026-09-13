@@ -2989,7 +2989,6 @@ export const en = {
     "{reading} is healthy at {pct}%, against a bar of {bar}%.",
   "teamweekly.headline.weak":
     "{reading} is not, at {pct}% against a bar of {bar}%.",
-  "teamweekly.reading.firstResponse": "First response",
   "teamweekly.reading.nextStep": "Meetings with a next step",
   "teamweekly.reading.commitments": "Plan commitments kept",
   "teamweekly.card.firstResponse": "Recorded responses",
@@ -3185,7 +3184,6 @@ export const en = {
   "brief.rail.quietOvernight": "No overnight digest",
   "brief.rail.quietWatch": "No deal risks found in this queue.",
   "brief.panel.schedule": "Today's schedule",
-  "brief.panel.watch": "Gone quiet",
   "brief.overnight.connectorsUnhealthy": "Connections need attention",
   "brief.overnight.fixConnector": "Fix the connection",
   "brief.readings.label": "Your morning, in five readings",
@@ -3202,7 +3200,6 @@ export const en = {
   "brief.readings.openUrgent": "Review urgent work",
   "brief.readings.openMeetings": "View today's meetings",
   "brief.readings.openLeads": "Review leads owed a reply",
-  "brief.readings.openPipeline": "View pipeline",
   "brief.readings.openDecisions": "Review decisions",
   "brief.readings.urgentBasis": "somebody waiting or a promise breaking",
   "brief.readings.decisions": "Decisions waiting",
@@ -3213,18 +3210,11 @@ export const en = {
   // contact hygiene and nobody is held up by one.
   "brief.readings.decisionsBlocking_one": "1 holding up customer work",
   "brief.readings.decisionsBlocking_other": "{count} holding up customer work",
-  "brief.readings.pipeline": "Pipeline · {quarter}",
   // The same reading where the page cannot name a quarter: the read has not
   // landed, or its period start is not a month this calendar has.
-  "brief.readings.pipelinePlain": "Pipeline",
   // The cell's hover line. The title has room for a quarter and nothing more,
   // so the full range lives here — and where the figure is the whole
   // company's rather than this reader's, whose pipeline it is.
-  "brief.readings.pipelineTipWorkspace": "{period} · whole company",
-  "brief.readings.pipelineBasis": "{weighted} weighted · {priced} priced",
-  "brief.readings.pipelineUnread": "the pipeline could not be read",
-  "brief.readings.pipelineReading": "reading the pipeline",
-  "brief.readings.pipelinePending": "Reading…",
   "brief.readings.pipelineNoRead": "Could not be read",
   "brief.snooze.done": "Set aside until {at}",
   "brief.snooze.undo": "Undo",
