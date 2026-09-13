@@ -3,16 +3,19 @@
 
 //go:build integration
 
-package migrations_test
+package compose
 
 import (
 	"context"
+	"os"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/compose/integration"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -21,24 +24,17 @@ import (
 const stageNoticeRepair = "1789335792_stage_notices_recover_the_change_they_report.up.sql"
 
 func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
-	ownerDSN, appDSN := dsns(t)
-	conn := connect(t, ownerDSN)
-	headSchema(t, conn)
-	if err := testdb.EnsureSchema(context.Background(), conn); err != nil {
-		t.Fatal(err)
-	}
-	pool, err := testdb.Pool(context.Background(), appDSN)
+	e := integration.Setup(t)
+	conn, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { testdb.AssertPoolsQuiesced(t) })
-	ws, actor := ids.NewV7(), ids.New[ids.UserKind]()
-	if _, err := conn.Exec(context.Background(), `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := conn.Exec(context.Background(), `INSERT INTO app_user (id,email,display_name) VALUES ($1,'rep@notice.test','Dana')`, actor); err != nil {
-		t.Fatal(err)
-	}
+	t.Cleanup(func() {
+		if err := conn.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	ws, actor, pool := e.WS, ids.From[ids.UserKind](e.Rep1), e.Pool
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"})
@@ -87,8 +83,15 @@ func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing
 	if _, err := conn.Exec(ctx, `UPDATE stage SET name = 'Renamed', updated_at = $1::timestamptz + interval '1 hour' WHERE id = $2`, event.OccurredAt, to.Id); err != nil {
 		t.Fatal(err)
 	}
-	replayMigration(t, conn, stageNoticeRepair)
-	replayMigration(t, conn, stageNoticeRepair)
+	repair, err := os.ReadFile("../../migrations/core/" + stageNoticeRepair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := conn.Exec(ctx, string(repair)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	rows, err := noticeStore.UnreadFor(human, 10)
 	if err != nil {
 		t.Fatal(err)
