@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/margince/margince/backend/internal/compose/integration"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
