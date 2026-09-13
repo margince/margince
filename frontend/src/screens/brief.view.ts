@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { UrlParams } from "../app/urlstate";
+import { NO_URL_PARAMS, type UrlParams } from "../app/urlstate";
 
 // WHICH BRIEF the reader is looking at, and whose.
 //
@@ -88,8 +88,13 @@ export function addressFrom(params: UrlParams, offered: boolean): BriefAddress {
  * The writer sorts its keys (hashWithParams), so the same state is always the
  * same string.
  */
-export function paramsFor(address: BriefAddress): UrlParams {
-  const params = new Map<string, string>();
+export function paramsFor(
+  address: BriefAddress,
+  existing: UrlParams = NO_URL_PARAMS,
+): UrlParams {
+  const params = new Map(existing);
+  for (const key of [VIEW_PARAM, SCOPE_PARAM, "week", "team"])
+    params.delete(key);
   if (address.view !== DEFAULT_ADDRESS.view) {
     params.set(VIEW_PARAM, address.view);
   }

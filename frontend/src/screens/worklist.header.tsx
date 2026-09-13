@@ -117,9 +117,12 @@ export function worklistLaneHref(
   filter: WorklistFilter,
   scope: WorklistScope = "mine",
 ): string {
-  const params = new Map<string, string>([[WORKLIST_FILTER_PARAM, filter]]);
-  if (scope !== "mine") params.set("scope", scope);
-  return hashWithParams(routeHash({ screen: "worklist" }), params);
+  const params = new Map<string, string>([
+    [WORKLIST_FILTER_PARAM, filter],
+    ["queue", "1"],
+  ]);
+  if (scope !== "mine") params.set("queue_scope", scope);
+  return hashWithParams(routeHash({ screen: "brief" }), params);
 }
 
 /**

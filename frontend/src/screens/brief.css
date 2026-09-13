@@ -355,3 +355,36 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+@media (max-width: 800px) {
+  .brief-context-open > .brief-main {
+    display: none;
+  }
+}
+
+.brief-queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Queue rows respond to the drawer's width, not the viewport behind it. */
+.brief-queue-body .worklist-row {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.brief-queue-body .worklist-row-text,
+.brief-queue-body .worklist-row > .worklist-row-acts {
+  grid-column: 1 / -1;
+}
+
+.brief-queue-body .page-zones-aside {
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.7fr);
+}
+
+@media (max-width: 1000px) {
+  .brief-queue-body .page-zones-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

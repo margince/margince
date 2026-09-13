@@ -14,6 +14,17 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi = {
+  "brief.focus.context": "Mở ngữ cảnh",
+  "brief.focus.back": "Quay lại ưu tiên",
+  "brief.queue.back": "Quay lại danh sách",
+  "brief.queue.open": "Mở danh sách công việc",
+  "brief.queue.title": "Danh sách công việc",
+  "brief.queue.close": "Quay lại bản tin",
+  "brief.focus.urgentRemaining_one":
+    "Còn {count} việc khẩn cấp trong danh sách",
+  "brief.focus.urgentRemaining_other":
+    "Còn {count} việc khẩn cấp trong danh sách",
+  "brief.focus.remaining": "Còn {count} ưu tiên trong danh sách",
   "brief.team.planUnavailable":
     "Bạn không thể xem kế hoạch hiện tại của {name}.",
   "brief.team.noCommitments": "{name} chưa có cam kết trong kế hoạch này.",
@@ -23,8 +34,6 @@ export const vi = {
   "brief.schedule.more": "Tải thêm mục để xem các cuộc họp còn lại.",
   "brief.readings.riskPartial":
     "Chỉ tính giá trị đã biết; chưa kiểm tra được một số công việc về cơ hội.",
-  "brief.feed.remainingUrgent_one": "Chưa tải {count} mục khẩn cấp.",
-  "brief.feed.remainingUrgent_other": "Chưa tải {count} mục khẩn cấp.",
   "brief.readings.unpricedCount_one":
     "{count} cơ hội không có giá trị so sánh được nên không được tính.",
   "brief.readings.unpricedCount_other":
@@ -104,13 +113,9 @@ export const vi = {
   "brief.readings.unavailable": "Chưa rõ",
   "brief.feed.incomplete":
     "Chưa tải được mục nào. Không thể kiểm tra một phần công việc.",
-  "brief.feed.moreUrgentPossible":
-    "Còn công việc khác, có thể gồm các mục khẩn cấp sau trang này.",
   "brief.feed.fullWorklist": "Mở danh sách công việc đầy đủ",
-  "brief.feed.showMore": "Xem thêm",
-  "brief.feed.retryMore": "Thử tải thêm",
-  "brief.feed.visible_one": "Đã tải {count} mục",
-  "brief.feed.visible_other": "Đã tải {count} mục",
+  "brief.feed.visible_one": "{count} thẻ ưu tiên",
+  "brief.feed.visible_other": "{count} thẻ ưu tiên",
   "brief.week.workRecorded": "Có công việc hoàn thành trong tuần.",
   "brief.week.leads": "Đã phân công {count} khách hàng tiềm năng.",
   "brief.week.responses":
@@ -307,7 +312,6 @@ export const vi = {
   "nav.companies": "Công ty",
   "nav.leads": "Lead",
   "nav.deals": "Deals",
-  "nav.today": "Danh sách việc",
   "nav.analytics": "Analytics",
   "nav.ai": "Hỏi Margince",
   "nav.settings": "Cài đặt",
@@ -2926,7 +2930,7 @@ export const vi = {
   "brief.scope.team": "Nhóm",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
-  "brief.sentence.clear": "Sáng nay không có gì đang chờ bạn.",
+  "brief.sentence.clear": "Chưa thấy ưu tiên cần xử lý ngay.",
   "brief.sentence.one": "Trước tiên: {lead}",
   "brief.sentence.many": "Trước tiên: {lead}. Rồi {rest}.",
   "brief.sentence.rest": "{count} mục nữa",
@@ -2941,11 +2945,12 @@ export const vi = {
   "brief.week.quiet":
     "Chưa ghi nhận công việc hoàn thành hoặc thay đổi giao dịch.",
 
-  "brief.feed.title": "Hôm nay",
+  "brief.feed.title": "Ưu tiên",
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang đọc buổi sáng của bạn",
-  "brief.feed.clear": "Không có công việc cần xử lý trong chế độ xem này.",
+  "brief.feed.clear":
+    "Chưa thấy ưu tiên cần xử lý ngay. Bạn vẫn có thể mở danh sách công việc đầy đủ.",
   "teamweekly.title": "Tuần của nhóm",
   "teamweekly.weekOf": "{team} · tuần từ {day}",
   "teamweekly.frozen": "Đã đóng băng",

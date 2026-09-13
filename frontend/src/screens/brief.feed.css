@@ -86,3 +86,53 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Focus cards keep the shared row actions and the server's reading order. */
+.brief-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+  padding: var(--padPanel);
+}
+
+.brief-focus-grid > li {
+  min-width: 0;
+}
+
+.brief-focus-grid > li > .panel {
+  height: 100%;
+}
+
+@media (max-width: 1100px) {
+  .brief-focus-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Cards give the subject a full line and keep controls below its evidence. */
+.brief-focus-grid .panel-row.worklist-row-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.brief-focus-grid .worklist-row-text {
+  width: 100%;
+}
+
+.brief-focus-grid .worklist-row-kind {
+  align-self: flex-start;
+}
+
+.brief-focus-grid .worklist-row-acts {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Keep the mobile card in the same reading order as its desktop version. */
+.brief-focus-grid .worklist-row-text,
+.brief-focus-grid .worklist-row-acts {
+  order: 0;
+}

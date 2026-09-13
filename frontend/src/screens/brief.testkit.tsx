@@ -58,7 +58,7 @@ export type Call = { method: string; path: string; body: unknown };
 
 export type Routes = Record<
   string,
-  (body: unknown) => Response | Promise<Response>
+  (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
 // Every read Brief fans out to, answered honestly by default so each case
@@ -118,7 +118,15 @@ export function stubApi(routes: Routes): Call[] {
     calls.push(call);
     const route = `${call.method} ${call.path}`;
     const handler = routes[route] ?? DEFAULTS[route];
-    return handler ? handler(call.body) : jsonResponse(emptyPage);
+    return handler
+      ? handler(
+          call.body,
+          new URL(
+            input instanceof Request ? input.url : String(input),
+            "https://test.local",
+          ).searchParams,
+        )
+      : jsonResponse(emptyPage);
   });
   vi.stubGlobal("fetch", mock);
   return calls;

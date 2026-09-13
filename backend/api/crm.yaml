@@ -45107,6 +45107,29 @@ components:
         label: { type: string, description: "The record's display name. Absent when the caller may not read it, which is not the same as unnamed." }
 
     # ---- The Worklist: one ranked queue over every producer the day has ----
+    WorklistFocus:
+      type: object
+      description: |
+        Up to six actionable priorities from the scoped day, selected before filtering
+        or pagination and ordered by the queue's server ranking. Routine maintenance
+        and future tasks do not fill spare places. Pins remain explicit choices.
+        Source coverage and failures are reported on the enclosing worklist; these
+        counts describe the candidates actually read, not an exhaustive installation.
+      required: [items, total, urgent_remaining]
+      properties:
+        items:
+          type: array
+          maxItems: 6
+          items: { $ref: '#/components/schemas/WorklistItem' }
+        total:
+          type: integer
+          minimum: 0
+          description: 'Eligible cards before the six-card cut; a grouped card counts once.'
+        urgent_remaining:
+          type: integer
+          minimum: 0
+          description: 'Urgent underlying work items not individually named by focus cards, using the same units as summary.urgent. A group does not certify the urgency of each member.'
+
     Worklist:
       type: object
       description: |
@@ -45138,6 +45161,8 @@ components:
           type: array
           items: { $ref: '#/components/schemas/WorklistItem' }
           description: 'Everything actionable, best-first. The order is the product of this endpoint.'
+        focus:
+          $ref: '#/components/schemas/WorklistFocus'
         sources_unavailable:
           type: array
           items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }

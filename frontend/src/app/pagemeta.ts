@@ -71,6 +71,7 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
 // thing, not the NAV rail) carry their own title key. Every authenticated route
 // resolves to real copy — a raw screen slug is never shown as a page title.
 export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
+  worklist: "nav.brief",
   settings: "nav.settings",
   offers: "nav.offers",
   partners: "nav.partners",

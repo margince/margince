@@ -50,7 +50,7 @@ vi.mock("@composition/extensions", () => ({
 
 // B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
 //
-// It is destinations only: the canonical 13-item nav in order (AC-shell-1b —
+// It is destinations only: the canonical nav in order (AC-shell-1b —
 // Automations left it for Settings → AI while the dedupe queue and the filter
 // builder took rows, which is a UI divergence on the founder's back-fill list),
 // at most one active
@@ -98,7 +98,6 @@ const CANONICAL_ORDER = [
   "Companies",
   "Leads",
   "Deals",
-  "Worklist",
   "Projects",
   "Filters & views",
   "Analytics",
@@ -149,7 +148,7 @@ function railDisplay(container: HTMLElement, selector: string): string {
 }
 
 describe("WorkspaceRail (AC-shell-1/2)", () => {
-  it("renders the canonical 13 items in order, logomark → brief", () => {
+  it("renders the canonical destinations in order, logomark → brief", () => {
     render(<WorkspaceRail route={{ screen: "deals" }} />);
     const brand = within(
       screen.getByRole("navigation", { name: "Primary navigation" }),
@@ -387,22 +386,14 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(cells).toEqual(["Brief", "Contacts", "agent", "Deals", "more"]);
   });
 
-  // The Worklist is the destination the bar gave up for that cell. Off the bar
-  // is not gone: it is a row in the sheet like every other destination the bar
-  // cannot carry, and More reports it as the current page while it is open.
-  it("keeps the Worklist off the bar and in the sheet", async () => {
+  it("keeps Brief on the phone bar and omits the duplicate Worklist destination", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
-    const { container } = render(
-      <WorkspaceRail route={{ screen: "worklist" }} />,
-    );
+    const { container } = render(<WorkspaceRail route={{ screen: "brief" }} />);
     expect(container.querySelectorAll(".navwrap.primary")).toHaveLength(3);
-    expect(
-      container.querySelector(".railmore.active")?.getAttribute("aria-current"),
-    ).toBe("page");
-
     await user.click(screen.getByRole("button", { name: "More" }));
-    expect(levelLabels()).toContain("Worklist");
+    expect(levelLabels()).toContain("Brief");
+    expect(levelLabels()).not.toContain("Worklist");
   });
 
   // The agent is a cell of the BAR, and the bar is not on screen while the sheet

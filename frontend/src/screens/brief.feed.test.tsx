@@ -1,6 +1,5 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
 import { BriefFeed } from "./brief.feed";
@@ -12,39 +11,47 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("shows every loaded row in server order, including rows after five", () => {
+it("renders the server focus even when the queue page contains different rows", () => {
   stubApi({});
   const rows = Array.from({ length: 9 }, (_, index) =>
     taskRow(`task-${index}`, `Call buyer ${index}`),
   );
   const { container } = render(
-    <BriefFeed day={readingsDay({}, rows)} state="ready" />,
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [rows[8]]),
+        focus: { items: rows.slice(0, 6), total: 9, urgent_remaining: 0 },
+      }}
+      state="ready"
+    />,
   );
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
       (row) => row.textContent,
     ),
-  ).toEqual(rows.map((row) => row.title));
-  expect(screen.getByText("9 items loaded")).toBeTruthy();
+  ).toEqual(rows.slice(0, 6).map((row) => row.title));
+  expect(screen.getByText("6 focus cards")).toBeTruthy();
 });
 
-it("continues inline and offers retry if loading the next page failed", async () => {
+it("opens the full queue instead of growing focus when more pages exist", () => {
   stubApi({});
-  const more = vi.fn();
-  const day = {
-    ...readingsDay({}, [taskRow("t", "Call the buyer")]),
-    next_cursor: "next",
-  };
-  render(<BriefFeed day={day} state="ready" onMore={more} />);
-  await userEvent.click(
-    screen.getByRole("button", { name: en["brief.feed.showMore"] }),
+  render(
+    <BriefFeed
+      day={{
+        ...readingsDay({}, [taskRow("t", "Call the buyer")]),
+        next_cursor: "next",
+      }}
+      state="ready"
+    />,
   );
-  expect(more).toHaveBeenCalledOnce();
-  cleanup();
-  render(<BriefFeed day={day} state="ready" onMore={more} moreFailed />);
   expect(
-    screen.getByRole("button", { name: en["brief.feed.retryMore"] }),
-  ).toBeTruthy();
+    screen.queryByRole("button", { name: en["worklist.more"] }),
+  ).toBeNull();
+  expect(
+    screen
+      .getByRole("link", { name: en["brief.feed.fullWorklist"] })
+      .getAttribute("href"),
+  ).toBe("#/brief?filter=all&queue=1");
 });
 
 it("warns about urgent work beyond the loaded page using server urgency facts", () => {
@@ -54,12 +61,12 @@ it("warns about urgent work beyond the loaded page using server urgency facts", 
     <BriefFeed
       day={{
         ...readingsDay({}, [row], [], { urgent: 3 }),
-        next_cursor: "next",
+        focus: { items: [row], total: 4, urgent_remaining: 3 },
       }}
       state="ready"
     />,
   );
-  expect(screen.getByText("3 urgent items are not loaded yet.")).toBeTruthy();
+  expect(screen.getByText("3 more urgent items in the queue")).toBeTruthy();
 });
 
 it("shows dates and does not repeat the ranking comparator", () => {

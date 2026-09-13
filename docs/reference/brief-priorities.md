@@ -1,6 +1,6 @@
 # Morning and weekly brief priorities
 
-The personal morning brief draws all loaded rows of the server-ranked worklist, including proposals to approve and dated weekly commitments. Nonurgent informational notices appear in Updates beside Today; pinned notices retain their chosen position. Work summary stays open in the context column. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. Show more appends the next page in place; the headline and work summary use the same answer. Tasks and flagged deals have one agenda placement. Routine privacy work can be expanded together without losing its deadlines or actions.
+The personal morning brief draws up to six server-selected Focus cards, including actionable proposals and commitments due today. Informational notices appear in Updates; pinned notices retain their chosen position. Work summary stays open in the overview context column, which selected contact context replaces. Brief creation time comes from the stored run; agenda refresh time comes from the live queue. The headline names the same focus cards. The full queue opens on demand in Brief and owns filtering and pagination. Future tasks and routine privacy work remain available there with their deadlines and actions.
 
 The team morning is a named-team board with routes to each member’s work and current plan. Morning and Weekly retain the same team selection in the URL. The board roster is resolved through live membership and reader authority; workspace-wide unassigned work is not attributed to a named team.
 
@@ -14,7 +14,7 @@ A provisional close is a reason to confirm or revise the forecast, not evidence 
 
 Only a task written by the lead SLA escalation duplicates a dated first-response row. Other lead-linked tasks keep their own identity, due date and actions. A lead without a configured response target still appears as prospecting, with company, status, administered source label and last activity where available, and no invented deadline.
 
-The agenda has no separate remaining-risk panel or fixed five-row prefix. The risk engine applies its overdue-close predicate before its bounded scan, and publishes truncation when a candidate source is incomplete.
+Focus eligibility is evaluated before the six-card cap. The risk engine applies its overdue-close predicate before its bounded scan, and publishes truncation when a candidate source is incomplete.
 
 ## What the daily brief can claim
 
@@ -47,3 +47,29 @@ and retains its applied values. It does not replay the change or turn an unconfi
 forecast into a customer commitment. Reversed and superseded changes cannot be
 accepted. A generic stage notification is information, not evidence that an agent
 changed the deal. New notifications retain the actual stage names at occurrence.
+
+## Focus and the work queue
+
+Morning's Focus is an additive `/worklist` projection, selected on the server
+before the queue's filter and page limit. It carries up to six cards in the
+existing rank order. The headline reads exactly those cards. A quiet day has
+zero cards; future tasks and routine maintenance remain in the full queue.
+Pins are explicit exceptions, without changing a row's semantic urgency.
+Meeting preparation is eligible within 24 hours when preparation is missing;
+prepared meetings remain in Schedule. Privacy preparation retains its existing
+seven-day classifier window. Unpriced commercial work remains eligible.
+
+`focus.total` counts eligible cards, with a group counting once.
+`focus.urgent_remaining` counts urgent underlying work not individually named by the cards in the
+same units as `summary.urgent`; it remains visible even without another queue
+page. Source bounds and failed or withheld reads retain their separate coverage
+meaning. Neither an exhausted page nor a complete focus projection certifies
+that every source was fully read.
+
+Brief is the daily navigation entry. Its work queue opens in a right drawer,
+with the existing scope, owner, filters, paging, actions, coaching and reviews.
+The queue has its own `queue_scope` dial so it cannot change the Morning/Weekly
+view behind it. Old `#/worklist` and owner/unassigned links redirect to the same
+Brief queue state; the API contract and domain writers remain available.
+Contact context replaces Brief's overview rail while selected. On a narrow
+screen context has a back control and the queue stays mounted to retain place.

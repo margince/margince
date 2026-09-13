@@ -742,6 +742,11 @@ export function readingsDay(
     scope: "mine",
     scope_options: ["mine"],
     queue,
+    focus: {
+      items: queue.slice(0, 6),
+      total: queue.length,
+      urgent_remaining: 0,
+    },
     summary: {
       urgent: 0,
       due: 0,
