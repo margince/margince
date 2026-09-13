@@ -108,23 +108,9 @@
    boxes stops being a row (below). Nothing here sets a family, a size or a
    weight, and nothing here may. */
 
-/* THE NARROW SHAPE: one full-width ROW per reading, not a grid of boxes.
- *
- * Only for a strip whose slots declare `density="compact"` — a row read as ONE
- * glance. Read off the children with `:has()` rather than taken as a second
- * prop, so the plate and its slots cannot disagree about which shape this is;
- * every other strip in the product keeps its 2-column fold, and there are
- * nineteen of them.
- *
- * Five 190px boxes two-up is 600px of readings before a phone reader reaches
- * the day's own work. As rows — label and basis leading, figure trailing, one
- * hairline between — the same five facts are ~60px each and the eye runs down a
- * single column of figures instead of hunting two.
- *
- * 26rem is where two compact slots stop clearing the width a figure and its
- * clause need side by side; below it the grid's own 2-column fold is what was
- * making the boxes tall.
- */
+/* Compact readings become rows when two cards no longer fit. Labels remain
+   complete, and explanations and actions have separate lines so neither can
+   squeeze the other out of a phone or side rail. */
 @container (max-width: 26rem) {
   .stat-strip:has(.stat-card-compact) {
     grid-template-columns: 1fr;

@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { BriefScreen } from "./brief";
 import {
   type Approval,
   bundle,
   deals,
+  decisionRow,
   digest,
   lapsed,
   NOT_FOUND,
@@ -19,6 +20,8 @@ import {
   WEEK_START,
   type WeeklyReview,
   type Worklist,
+  wholeDecisions,
+  wholeMeetings,
 } from "./brief.fixtures";
 import type { MorningDigest } from "./brief.queries";
 import {
@@ -29,36 +32,13 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Brief — the morning handover, in the states a reader actually arrives at.
-//
-// The page has two moods and the order between them is the whole design: while
-// decisions are waiting they LEAD (they are the only thing here with a
-// deadline), and once the deck is clear the ranked queue leads. Both are frames
-// below, because a catalog that only ever showed one of them would document
-// half a page.
-//
-// Read every frame in BOTH themes with the toolbar's Theme control (it flips
-// `data-theme` exactly the way the shell does). Nothing here is theme-aware in
-// its own right, and that is precisely why it needs looking at: every colour on
-// the deck's urgency edge, the staging tray, the readings strip and the rail's
-// panels is a `color-mix()` of a canonical token, so a surface can be correct in
-// light and wrong in dark.
-//
-// EVERY INSTANT IS FIXED. A fixture built with `new Date()` documents whatever
-// day the catalog was opened on, and the two things on this page that read a
-// clock — the greeting band and a proposal's expiry — would then say something
-// different every time somebody looked. The one exception is deliberate and
-// unavoidable: the greeting reads the real hour, because Brief passes it its own
-// clock. Expiries are therefore either ABSENT (calm, and stable forever) or a
-// fixed instant in the past (the lapsed frame, which stays lapsed).
-
-// ── The harness ─────────────────────────────────────────────────────────────
+// Decisions share the ranked agenda. Their full proposal opens in the same
+// review drawer used by the worklist, and accepting one refreshes the agenda.
+// Fixed fixtures keep both themes and the expired state reproducible.
 
 type Frame = {
-  /** The pending queue. Every frame states it, because "none waiting" is the
-   *  state that flips the page's order and is never a default worth guessing. */
+  /** Proposals available to the agenda and its review drawers. */
   approvals: Approval[];
-  /** The ranked run, or null for the honest 404 (no run has been made yet). */
   /** The nightly digest, or null for the 404 an installation answers before its
    *  first run. */
   digest?: MorningDigest | null;
@@ -79,40 +59,43 @@ type Frame = {
   extra?: RouteMap;
 };
 
-/**
- * One Brief, with every read it fans out to answered.
- *
- * Five independent reads and no combined "my day" endpoint, so each of them is
- * routed on its own here — which is the point rather than bookkeeping: a frame
- * can refuse ONE of them and show that the other four still render.
- */
 function brief({
   approvals,
   digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
-  day = readingsDay(),
+  day,
   extra = {},
 }: Frame) {
   return () => {
-    // Mutable per render so a play() that commits a verdict sees the queue the
-    // commit left behind, rather than the one it started with.
     const decided = new Set<string>();
+    const approvalRoutes: RouteMap = {};
+    for (const approval of approvals) {
+      approvalRoutes[`GET /approvals/${approval.id}`] = () =>
+        jsonResponse(approval);
+      approvalRoutes[`POST /approvals/${approval.id}/approve`] = () => {
+        decided.add(approval.id);
+        return jsonResponse({ ...approval, status: "approved" });
+      };
+    }
+    const morning = () => {
+      if (day) return day;
+      const pending = approvals.filter((approval) => !decided.has(approval.id));
+      const decisions = pending.map((approval) => ({
+        ...decisionRow(approval.id, approval.kind === "send_email"),
+        kind: approval.kind,
+        title: approval.summary ?? approval.kind,
+        due_at: approval.expires_at ?? undefined,
+      }));
+      return readingsDay(
+        { review: pending.length },
+        [...decisions, ...readingsDay().queue],
+        [wholeDecisions(pending.length), wholeMeetings(2)],
+      );
+    };
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /approvals": () =>
-        jsonResponse({
-          data: approvals.filter((approval) => !decided.has(approval.id)),
-          page: { next_cursor: null, has_more: false },
-        }),
-      // Keyed on the fixture's own id: spelling it out here would let a renamed
-      // or reordered fixture fall through to the stub's empty page, which reads
-      // as a successful send and leaves the frame waiting on a card that was
-      // never cleared.
-      [`POST /approvals/${singles[0].id}/approve`]: () => {
-        decided.add(singles[0].id);
-        return jsonResponse({ ...singles[0], status: "approved" });
-      },
+      ...approvalRoutes,
       "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
@@ -142,9 +125,13 @@ function brief({
         }),
       // The screen reads this before it draws anything: the team toggle, the
       // coverage line and the readings strip are all cuts of this one answer.
-      "GET /worklist": () => jsonResponse(day),
+      "GET /worklist": () => jsonResponse(morning()),
       "GET /worklist/handled": () =>
-        jsonResponse({ as_of: day.as_of, receipts: [], truncated: false }),
+        jsonResponse({
+          as_of: morning().as_of,
+          receipts: [],
+          truncated: false,
+        }),
       "POST /reports/deals-by-stage": () => pipeline(),
       ...extra,
     });
@@ -163,74 +150,53 @@ const meta: Meta<typeof BriefScreen> = {
 export default meta;
 type Story = StoryObj<typeof BriefScreen>;
 
-// ── The deck ────────────────────────────────────────────────────────────────
-
-// The morning it was designed for: four decisions waiting (three proposals and
-// one act's bundle), a ranked queue under them, and the context rail beside.
-// Decisions LEAD, because they are the only thing here with a deadline.
-export const MorningDeck: Story = {
+export const DecisionsInToday: Story = {
   render: brief({ approvals: [...singles, ...bundle] }),
 };
 
-// The last card. "0 more behind" is drawn rather than hidden: a reader deciding
-// one at a time is owed the size of what is left, including when it is nothing.
-export const LastCard: Story = {
-  render: brief({ approvals: [singles[0]] }),
+export const OneDecision: Story = {
+  render: brief({ approvals: [singles[1]] }),
 };
 
-/**
- * The verb on the card at the FRONT of the deck.
- *
- * Every pending card carries the same three verbs, so a singular query for one
- * of them rejects the moment the deck holds more than one card — which is every
- * frame these interactions are worth taking. The reader answers the deck from
- * the front, so the first match is the card they are looking at.
- */
-async function answerTopCard(canvas: ReturnType<typeof within>, verb: string) {
-  const [front] = await canvas.findAllByRole("button", { name: verb });
-  await userEvent.click(front);
+async function openDecision(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByRole("button", { name: "Decide" }));
+  return within(
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: "Your decision",
+    }),
+  );
 }
 
-// The tray, which is the undo the backend does not have: a recorded decision
-// cannot be reversed, so the verdict sits here — locally, nothing sent — until
-// somebody presses commit.
-export const StagedTray: Story = {
-  render: brief({ approvals: [...singles] }),
+export const DecisionOpened: Story = {
+  render: brief({ approvals: [singles[1]] }),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await answerTopCard(canvas, "Accept");
-    await canvas.findByText("1 decision staged");
+    const drawer = await openDecision(canvasElement);
+    await drawer.findByRole("button", { name: "Accept" });
   },
 };
 
-// The earned moment: everything the reader answered has gone, and the deck says
-// how many and when. Reached by accepting one and deferring the other — "later"
-// keeps its card pending, which is what leaves the deck with nothing waiting
-// while the queue still holds something.
-export const DeckCleared: Story = {
-  render: brief({ approvals: [singles[0], singles[1]] }),
+export const DecisionAccepted: Story = {
+  render: brief({ approvals: [singles[1]] }),
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await answerTopCard(canvas, "Accept");
-    await answerTopCard(canvas, "Later");
+    const drawer = await openDecision(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Send staged decisions" }),
+      await drawer.findByRole("button", { name: "Accept" }),
     );
-    await canvas.findByText("Deck clear");
+    await waitFor(() =>
+      expect(
+        within(canvasElement).queryByRole("button", { name: "Decide" }),
+      ).toBeNull(),
+    );
+    await within(canvasElement).findByText("2 items loaded");
   },
 };
 
-// Nothing is waiting, so the ORDER FLIPS: the day's feed leads and the deck
-// stands under it saying so. The question has stopped being "what needs me" and
-// become "what do I do first".
-export const RankedQueueLeads: Story = {
+export const NoDecisions: Story = {
   render: brief({ approvals: [] }),
 };
 
-// A proposal that ran out of time. The card keeps its place and its content —
-// the reader still needs to know what was proposed — but the Accept control is
-// gone rather than drawn to be refused.
-export const ExpiredCard: Story = {
+export const ExpiredDecision: Story = {
   render: brief({ approvals: [lapsed] }),
 };
 
