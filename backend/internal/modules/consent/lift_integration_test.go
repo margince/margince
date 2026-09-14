@@ -478,15 +478,16 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 }
 
 // plantNarrowSuppression writes a contact's marketing_objection scoped to ONE
-// consent_purpose, at the given level — the same bypass plantSuppression uses,
+// consent_purpose, at user level — the same bypass plantSuppression uses,
 // because no writer gives a CONTACT a narrow stop yet. Lift takes a ContactID
 // (consentSubject resolves only contact or lead, and LiftInput carries no
 // LeadID field), so the lead-only narrow writer StopForCredentialTx reaches —
 // withdrawalpress.go's named-purpose press — can never produce the row this
 // test needs. Planting it directly is the accepted way this package reaches a
-// row shape no door on this subject type writes yet.
+// row shape no door on this subject type writes yet. Fixed at user level: every
+// lift here overrules a user-level stop, and no case needs another tier.
 func plantNarrowSuppression(
-	t *testing.T, e *channelConsentEnv, contact ids.ContactID, purpose ids.UUID, level string,
+	t *testing.T, e *channelConsentEnv, contact ids.ContactID, purpose ids.UUID,
 ) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -494,7 +495,7 @@ func plantNarrowSuppression(
 		INSERT INTO communication_suppression
 		    (id, contact_id, purpose_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, $2, $3, $4, 'test', 'human:x', $5)`,
-		id, contact, purpose, commsauthz.ReasonObjection, level); err != nil {
+		id, contact, purpose, commsauthz.ReasonObjection, string(commsauthz.LevelUser)); err != nil {
 		t.Fatalf("planting a narrow-purpose suppression: %v", err)
 	}
 	return id
@@ -516,8 +517,8 @@ func TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose(t *testing.T) {
 		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
 		t.Fatal(err)
 	}
-	targeted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID, string(commsauthz.LevelUser))
-	other := plantNarrowSuppression(t, e, e.contact, second, string(commsauthz.LevelUser))
+	targeted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID)
+	other := plantNarrowSuppression(t, e, e.contact, second)
 
 	if err := e.store.Lift(e.ctx, LiftInput{
 		ContactID: e.contact, SuppressionID: targeted, Reason: "they resubscribed to this one on a call",
@@ -547,8 +548,8 @@ func TestALiftReportsARemainingNarrowStopAsStanding(t *testing.T) {
 		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
 		t.Fatal(err)
 	}
-	lifted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID, string(commsauthz.LevelUser))
-	remaining := plantNarrowSuppression(t, e, e.contact, second, string(commsauthz.LevelUser))
+	lifted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID)
+	remaining := plantNarrowSuppression(t, e, e.contact, second)
 
 	if err := e.store.Lift(e.ctx, LiftInput{
 		ContactID: e.contact, SuppressionID: lifted, Reason: "resolved the newsletter complaint",
