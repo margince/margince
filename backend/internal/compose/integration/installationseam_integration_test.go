@@ -147,17 +147,17 @@ func TestAContractsTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 	admin := e.Admin()
 	e.WsExec(t, `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`)
 
-	org := ids.NewV7()
-	e.WsExec(t, `INSERT INTO organization (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, org, e.AdminUser)
+	company := ids.NewV7()
+	e.WsExec(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+		VALUES ($1, $2, 'Anchor GmbH', 'manual', 'human:x')`, company, e.AdminUser)
 
 	starts := time.Date(2026, time.January, 5, 0, 0, 0, 0, time.UTC)
 	_, err := ContractsStore(e.DB(), e.Deals).CreateContract(admin, contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "Framework agreement",
-		StartsOn:       &starts,
-		ValueBasis:     "total",
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "Framework agreement",
+		StartsOn:   &starts,
+		ValueBasis: "total",
+		Source:     "manual",
 	})
 	if err == nil {
 		t.Fatal("the under-contract today resolved with an unresolvable zone stored; " +

@@ -49,7 +49,7 @@ var deferred = gatekit.Waive(map[string]string{
 	"internal/modules/finance/offline.go":           "the offline ledger's demonstration anchor: a fixed instant reduced to a stable date ORIGIN for reproducible synthetic invoices, never a business calendar day to localise. UTC is the whole point — a moving or zoned anchor would rewrite every generated row.",
 	"internal/modules/ai/ratewrite.go":              "the ai_model_rate sheet's effective-day guard and cutoff, the fx_rate sibling. It is an operator-set business day and belongs in the installation zone, but RateStore carries no installation handle to resolve one; giving it the seam deals.Store has is its own change.",
 	"internal/modules/ai/pricing.go":                "normalises the seed price sheet's effective date, the same ai_model_rate day as ratewrite.go. It moves in lockstep with that seam, not before it.",
-	"internal/modules/people/rollupclock.go":        "the open-pipeline rollup's FX as-of day, deliberately UTC today so two readers of one account agree on a rate. A workspace zone meets that goal too and is the right answer, but the pure clock helper must first be threaded a zone.",
+	"internal/modules/contacts/rollupclock.go":      "the open-pipeline rollup's FX as-of day, deliberately UTC today so two readers of one account agree on a rate. A workspace zone meets that goal too and is the right answer, but the pure clock helper must first be threaded a zone.",
 	"internal/modules/automation/handlers_clock.go": "the renewal-reminder window compares a DATE column scanned as UTC midnight against today; today is truncated the SAME way ON PURPOSE so both sides agree. Converting today alone would reintroduce the same-day miss — this moves only in lockstep with the anchor scan in candidates.go.",
 })
 
@@ -270,7 +270,7 @@ func TestOnlyOnePlaceDerivesACalendarDay(t *testing.T) {
 	// The floor sits just under the real corpus (~2800 non-test .go files), not
 	// at a token 500: under-recognition is the one way this must not break
 	// (rule 8), and a walk that silently stopped reading internal/compose —
-	// where org360 and briefs live — would still clear a low floor and report
+	// where company360 and briefs live — would still clear a low floor and report
 	// PASS over a planted truncation. If a refactor legitimately drops the count
 	// below this, lower it deliberately rather than widening the blind spot.
 	if judged < 2500 {

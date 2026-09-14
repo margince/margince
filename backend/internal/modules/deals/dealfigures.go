@@ -210,7 +210,7 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 // Split from the Timezone fetch itself: closedatesweep.go still needs the
 // raw name on its own, to bind into the same transaction's pre-filter query.
 //
-// The load-and-wrap is storekit.LoadZone, the same one contracts and the org360
+// The load-and-wrap is storekit.LoadZone, the same one contracts and the company360
 // strip resolve their day's zone through, so an unresolvable zone reads alike
 // wherever a day is derived.
 func installationZone(tzName string) (*time.Location, error) {
