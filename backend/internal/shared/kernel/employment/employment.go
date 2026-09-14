@@ -26,58 +26,41 @@
 // trusting a flag written months earlier.
 package employment
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
-// IsCurrentSQL is the ONE spelling of "this job is still theirs".
-//
-// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/gates/employmentcurrency_test.go)
-// — it reads every hand-written Go source outside this file for a hand-spelled
-// `ended_at` currency test, so a second definition fails rather than drifting.
-// The census reaches its OWN file too: it exempts the two declarations holding
-// its planted probes and judges everything else, so a currency test written
-// beside them is a finding like any other.
-//
-// `date` is the
-// end-date expression at the call site: a column on a read, the incoming value
-// on a create, the patched-or-existing one on an update.
-//
-// A DATE COMPARISON, not a null check: somebody serving three months' notice
-// still works there. Reading the column's mere presence as "gone" took a contact
-// off their employer's contact list the day their notice was filed, with no way
-// back, because `ended_at` cannot be cleared through the API.
-//
-// `> current_date`, so an employment dated TODAY is already over. That is what
-// `ended_at` means in this schema — 0007 documents NULL as "current/ongoing", so
-// a date that has arrived is a date that has happened — and it is what keeps the
-// rail's "End employment" button doing something the moment it is pressed. A
-// future date is the only case that is not yet a departure, which is exactly the
-// notice period this predicate exists for.
-//
-// current_date, evaluated by Postgres. A Go-side comparison would answer a
-// different question on a server in a different timezone from the database, and
-// every reader of this predicate is SQL that knows only the database's own day.
-//
-// EXPORTED because currency is not decided once and stored. The flag records
-// which employer represents the contact; whether that employment is still current
-// is a function of today's date, so every READER derives it instead of trusting
-// a value written months ago. compose reaches this for the same reason the
-// readers in this package do — one definition, or the copies drift.
-//
-// "One definition" is held by TestEveryEmploymentCurrencyTestUsesTheOneDefinition
-// in backend/gates/employmentcurrency_test.go, and it is written down here because
-// this comment used to say "the only definition of a current employment in this
-// product" with nothing holding it — and it was false eleven times over. Eight
-// statements asked with a bare `ended_at IS NULL`, which is the notice-period
-// defect described above; three more hand-spelled the correct form; one of
-// those compared against a Go clock in the same statement as a half that used
-// Postgres', so one query asked its two questions on two different days.
-//
-// The gate cannot reach five statements in activities, projects and signals: a
-// module never imports a sibling (ADR-0054 §3), so those cannot call this at
-// all until the predicate moves tier. They are ratified by name in the gate,
-// with that reason, rather than left looking clean.
-func IsCurrentSQL(date string) string {
-	return sqlf("(%s IS NULL OR %s > current_date)", date, date)
+var employmentEndColumn = regexp.MustCompile(`^(?:[A-Za-z_][A-Za-z_0-9]*\.)?ended_at$`)
+
+// IsCurrentSQL treats a future departure as a notice period: the contact still works there.
+// A departure day that has arrived is already over, so ending employment today
+// removes it from current-employer views immediately. Postgres owns the clock
+// because every server-side reader evaluates this rule in its transaction.
+// Expression callers provide status and precision explicitly; only a plain
+// ended_at column (optionally qualified) derives its sibling columns.
+// IsCurrentSQL combines assertion and date evidence. A former or unknown
+// employment never becomes current merely because its end date is missing.
+// Legacy rows without an assertion retain the date-based rule. Month precision
+// holds through the whole month; an exact departure day is already departed.
+// Column expressions derive their sibling status/precision columns; write
+// expressions supply those explicitly. Fragments are trusted source SQL.
+// Held by TestEveryEmploymentCurrencyTestUsesTheOneDefinition.
+func IsCurrentSQL(date string, asserted ...string) string {
+	status, precision := "NULL", "NULL"
+	if employmentEndColumn.MatchString(date) {
+		prefix := strings.TrimSuffix(date, "ended_at")
+		status, precision = prefix+"employment_status", prefix+"ended_precision"
+	}
+	if len(asserted) > 0 {
+		status = asserted[0]
+	}
+	if len(asserted) > 1 {
+		precision = asserted[1]
+	}
+	end := sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
+	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
 }
 
 // CurrentPrimarySQL is what a READER of `is_current_primary` means:
@@ -120,8 +103,8 @@ func LiveSlotSQL(alias string) string {
 	if alias != "" {
 		prefix = alias + "."
 	}
-	return sqlf("%skind = 'employment' AND %sended_at IS NULL AND %sarchived_at IS NULL",
-		prefix, prefix, prefix)
+	return sqlf("%skind = 'employment' AND %sended_at IS NULL AND %sarchived_at IS NULL AND coalesce(%semployment_status, 'current') = 'current'",
+		prefix, prefix, prefix, prefix)
 }
 
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:

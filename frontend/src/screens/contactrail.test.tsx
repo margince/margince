@@ -205,7 +205,10 @@ function mount(view: Contact360) {
       if (method === "GET" && url.pathname.endsWith("/relationships")) {
         return json({
           data: (view.employments?.data ?? []).map((employment) => ({
+            ...employment,
             id: employment.relationship_id,
+            started_at: employment.started_at?.slice(0, 10),
+            ended_at: employment.ended_at?.slice(0, 10),
             version: 3,
           })),
           page,

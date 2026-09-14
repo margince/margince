@@ -169,3 +169,36 @@ it("does not offer to clear the owner of a private contact", async () => {
   await user.click(screen.getByRole("combobox"));
   expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
 });
+
+it("adds the first phone from Details without changing email", async () => {
+  const user = userEvent.setup();
+  const sent: unknown[] = [];
+  mount(
+    (body) => {
+      sent.push(body);
+      return jsonResponse(contact);
+    },
+    { ...contact, phones: [] },
+  );
+  await user.click(await screen.findByRole("button", { name: "Change Phone" }));
+  await user.click(screen.getByRole("button", { name: "Add phone" }));
+  await user.type(
+    screen.getByRole("textbox", { name: "Phone" }),
+    "+442079460001",
+  );
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(sent).toEqual([
+      {
+        phones: [
+          {
+            phone: "+442079460001",
+            phone_type: "work",
+            is_primary: false,
+            position: 0,
+          },
+        ],
+      },
+    ]),
+  );
+});

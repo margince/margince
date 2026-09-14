@@ -553,12 +553,8 @@ export function fieldControl(
   );
 }
 
-// A repeatable-row field (emails/phones/domains): each existing row renders
-// its subfields via the same fieldControl every scalar field uses, plus an
-// optional "primary" radio (selecting one clears it on every other row) and a
-// remove button; an "Add" button appends a blank row. Rows live in the
-// second `rows` channel — never merged into `values` — so scalar-only
-// screens stay untouched.
+// Repeated entries stay separate from scalar values; selecting a primary
+// clears the flag on its siblings. New entries inherit the declared type.
 function RepeatableRowsField({
   field,
   formId,
@@ -644,7 +640,13 @@ function RepeatableRowsField({
           </Button>
         </Card>
       ))}
-      <Button small type="button" onClick={() => setRows([...rows, {}])}>
+      <Button
+        small
+        type="button"
+        onClick={() =>
+          setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}])
+        }
+      >
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
     </div>

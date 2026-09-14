@@ -101,11 +101,15 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, contactID i
 		}
 		e := crmcontracts.Contact360Employment{
 			RelationshipId:   openapi_types.UUID(r.ID),
+			Version:          &r.Version,
 			CompanyId:        openapi_types.UUID(r.CompanyID.UUID),
 			IsCurrentPrimary: r.IsCurrentPrimary,
 			Role:             r.Role,
 			StartedAt:        r.StartedAt,
 			EndedAt:          r.EndedAt,
+			EmploymentStatus: employmentEnum[crmcontracts.Contact360EmploymentEmploymentStatus](r.EmploymentStatus),
+			StartedPrecision: employmentEnum[crmcontracts.Contact360EmploymentStartedPrecision](r.StartedPrecision),
+			EndedPrecision:   employmentEnum[crmcontracts.Contact360EmploymentEndedPrecision](r.EndedPrecision),
 		}
 		name, err := s.companyName(ctx, tx, *r.CompanyID)
 		if err != nil {
@@ -133,6 +137,9 @@ func (s *Service) employmentsSection(ctx context.Context, tx pgx.Tx, contactID i
 		// report has_more on a contact holding exactly 25 employments and send
 		// the client to a page that does not exist.
 	}{Data: data, Page: crmcontracts.PageInfo{HasMore: page.HasMore}}
+	if page.NextCursor != "" {
+		out.Employments.Page.NextCursor = &page.NextCursor
+	}
 	return nil
 }
 
@@ -235,4 +242,13 @@ func (s *Service) dealRolesSection(ctx context.Context, tx pgx.Tx, contactID ids
 		Page crmcontracts.PageInfo             `json:"page"`
 	}{Data: data, Page: crmcontracts.PageInfo{HasMore: hasMore}}
 	return nil
+}
+
+// The contacts store has validated these optional status and precision enums.
+func employmentEnum[T ~string](value *string) *T {
+	if value == nil {
+		return nil
+	}
+	out := T(*value)
+	return &out
 }
