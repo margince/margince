@@ -46,3 +46,114 @@
 .brief-feed-list > li + li > .panel-row:first-child::before {
   content: "";
 }
+
+/* What the remainder is made of, under the link that counts it. A block rather
+   than a second inline run: the count IS the link and this is a gloss on it,
+   and side by side a reader reads the two as one sentence and clicks the wrong
+   half. Meta size comes from `t-caption`; this owns only the interval. */
+.brief-feed-rest-kinds {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* Dates and evidence remain readable beside the action, including on a phone. */
+.brief-feed-list .worklist-row-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.brief-feed-list .worklist-row-line > .worklist-row-title {
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
+}
+
+.brief-feed-list .worklist-row-line > .worklist-row-title > a {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.brief-feed-list .worklist-row-inline {
+  white-space: normal;
+  overflow: visible;
+}
+
+.brief-feed-list .worklist-row-verdict,
+.brief-feed-list .worklist-row-notice {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Focus cards keep the shared row actions and the server's reading order. */
+.brief-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+  padding: var(--padPanel);
+}
+
+.brief-focus-grid > li {
+  min-width: 0;
+}
+
+.brief-focus-grid > li > .panel {
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .brief-focus-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Cards give the subject a full line and keep controls below its evidence. */
+.brief-focus-grid .panel-row.worklist-row-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.brief-focus-grid .worklist-row-text {
+  width: 100%;
+}
+
+.brief-focus-grid .worklist-row-kind {
+  align-self: flex-start;
+}
+
+.brief-focus-grid .worklist-row-acts {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Keep the mobile card in the same reading order as its desktop version. */
+.brief-focus-grid .worklist-row-text,
+.brief-focus-grid .worklist-row-acts {
+  order: 0;
+  flex: none;
+}
+
+.brief-focus-grid > li > .panel {
+  display: flex;
+  flex-direction: column;
+}
+.brief-focus-grid .panel-foot {
+  margin-top: auto;
+}
+.brief-focus-grid .worklist-row-title {
+  font-weight: var(--fw-medium);
+}
+
+/* Swipe gestures keep a real wrapper on phones; it follows the card layout. */
+.brief-focus-grid .swipe-row {
+  flex: none;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  width: 100%;
+}

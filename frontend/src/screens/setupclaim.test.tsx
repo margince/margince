@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -22,7 +22,7 @@ function renderClaim(onClaimed = vi.fn()) {
 
 async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/setup token/i), "a-token");
-  await user.type(screen.getByLabelText(/organization name/i), "Acme");
+  await user.type(screen.getByLabelText(/company name/i), "Acme");
   await user.type(screen.getByLabelText(/your name/i), "Ops");
   await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
   await user.type(
@@ -50,16 +50,16 @@ describe("SetupClaimScreen", () => {
     renderClaim();
 
     await user.type(screen.getByLabelText(/setup token/i), "a-token");
-    await user.type(screen.getByLabelText(/organization name/i), "Acme");
+    await user.type(screen.getByLabelText(/company name/i), "Acme");
     await user.type(screen.getByLabelText(/your name/i), "Ops");
     await user.type(screen.getByLabelText(/your email/i), "ops@acme.test");
     await user.type(screen.getByLabelText(/choose a password/i), "short");
 
     // The button is the gate, and the hint says why — a form that lets you
     // press submit and then reports a 422 has wasted the round trip and the
-    // person's attention.
+    // contact's attention.
     expect(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     ).toBeDisabled();
     expect(screen.getByText(/at least 12 characters/i)).toBeInTheDocument();
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("SetupClaimScreen", () => {
 
     await fillValid(user);
     await user.click(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     );
 
     await waitFor(() => expect(onClaimed).toHaveBeenCalledOnce());
@@ -95,7 +95,7 @@ describe("SetupClaimScreen", () => {
     renderClaim();
     await fillValid(user);
     await user.click(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /setup token isn't valid/i,
@@ -110,10 +110,10 @@ describe("SetupClaimScreen", () => {
     renderClaim();
     await fillValid(user);
     await user.click(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /already has an organization/i,
+      /already has a company/i,
     );
   });
 
@@ -125,7 +125,7 @@ describe("SetupClaimScreen", () => {
     renderClaim();
     await fillValid(user);
     await user.click(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     );
     const alert = await screen.findByRole("alert");
     // Telling someone to check fields that are already correct sends them
@@ -142,7 +142,7 @@ describe("SetupClaimScreen", () => {
     const onClaimed = renderClaim();
     await fillValid(user);
     await user.click(
-      screen.getByRole("button", { name: /create the organization/i }),
+      screen.getByRole("button", { name: /create the company/i }),
     );
     await screen.findByRole("alert");
     expect(onClaimed).not.toHaveBeenCalled();

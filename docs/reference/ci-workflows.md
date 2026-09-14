@@ -67,6 +67,44 @@ Nine workflows sit beside the gate, deliberately outside it:
   which reads its evidence from the environment so every arm is drivable from a
   fixture (`make test-review-coverage`).
 
+- **`closing-declaration.yml`** — on `opened`, `reopened`, `edited`,
+  `synchronize` and `ready_for_review`. A pull request declares either an issue
+  it closes or that it closes none.
+
+  **The defect is not a missing reference, it is a reference nothing reads.** A
+  body said in as many words *"Closes the residual half of #548"* and its
+  metadata referenced nothing — GitHub parses a closing keyword only when the
+  issue number follows it directly — so the issue stayed open six days after its
+  fix merged and was re-queued as new work. The author did write it down; they
+  wrote it somewhere nothing reads.
+
+  So it reads `closingIssuesReferences`, the list that actually closes an issue
+  on merge, and never the prose. The `Closes: none` half is what makes it
+  enforceable: most pull requests close no issue and are right not to, and
+  without a way to say so this would either nag them for ever or guess.
+
+  It does **not** try to decide whether a pull request fixes an issue it did not
+  mention. That is the real defect and it is not machine-decidable; the
+  declaration is the affordance that makes a human answer it.
+
+  **Gates nothing**, for the reason `review-coverage.yml` gives: a job that
+  failed on a finding would be a gate whatever its name said. The mechanism is
+  not broken — the habit is patchy — so it warns where the omission happens, and
+  `edited` is a trigger so the comment is **deleted** the moment the author adds
+  the line. Deleted rather than rewritten into a success note: a finding that
+  resolves itself should leave nothing behind, and a permanent "this one
+  declares" line on every pull request that ever forgot one is a worse record
+  than the omission was.
+
+  **A failed metadata query is not an empty one.** Suppressing it would hand the
+  check an empty list and warn a pull request carrying perfectly good closing
+  metadata, which would make the check loudest exactly when it knows least — so
+  it says nothing and exits. Promote it to blocking only if the warning is measurably
+  ignored. Reported by
+  [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh),
+  which reads its evidence from the environment so every arm is drivable from a
+  fixture (`make test-closing-declaration`).
+
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
   `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
@@ -94,7 +132,7 @@ Nine workflows sit beside the gate, deliberately outside it:
   broken lane carrying the commits that landed since the health check was last
   green, with authors ([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)).
   That range is a deliberate over-approximation: naming a dozen candidates is
-  useful, guessing one sends the wrong person looking.
+  useful, guessing one sends the wrong contact looking.
 
   It is also the **only** publisher of `main`'s SonarCloud analysis. The
   push-to-`main` scan is gone and the `merge_group` scan that replaced it only
@@ -219,7 +257,7 @@ Nine workflows sit beside the gate, deliberately outside it:
   below, and this lane surrendered its `github-release` job to it.
   It used to run on **every push to `main`**: about 400 runs a week, ~10
   runner-minutes each on arm64, three jobs apiece drawn from the same
-  20-concurrent org ceiling the PR gates queue in — a full-stack merge already
+  20-concurrent company ceiling the PR gates queue in — a full-stack merge already
   schedules 28 jobs against it. Releasing per commit spent that budget on
   versions nobody asked for, which the epoch-pinned `1970.*` scheme says out
   loud: the repository is under heavy development and has no real releases yet.

@@ -58,10 +58,10 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "HTTP Attach", &e.Rep1)
+	contact := e.SeedContact(t, "HTTP Attach", &e.Rep1)
 
 	// Upload → 201 + Location + the stored metadata.
-	body, ctype := multipartAttachment(t, "person", person.String(), "report.pdf", []byte("PDF-BYTES"))
+	body, ctype := multipartAttachment(t, "contact", contact.String(), "report.pdf", []byte("PDF-BYTES"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -78,7 +78,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	}
 
 	// Upload with a bad entity_type → 422 (not a 500).
-	badBody, badType := multipartAttachment(t, "widget", person.String(), "x.txt", []byte("y"))
+	badBody, badType := multipartAttachment(t, "widget", contact.String(), "x.txt", []byte("y"))
 	badReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", badBody).WithContext(ctx)
 	badReq.Header.Set("Content-Type", badType)
 	badRec := httptest.NewRecorder()
@@ -105,8 +105,8 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 	listRec := httptest.NewRecorder()
 	listReq := httptest.NewRequest(http.MethodGet, "/v1/attachments", nil).WithContext(ctx)
 	h.ListAttachments(listRec, listReq, crmcontracts.ListAttachmentsParams{
-		EntityType: crmcontracts.ListAttachmentsParamsEntityType("person"),
-		EntityId:   openapi_types.UUID(person),
+		EntityType: crmcontracts.ListAttachmentsParamsEntityType("contact"),
+		EntityId:   openapi_types.UUID(contact),
 	})
 	if listRec.Code != http.StatusOK {
 		t.Fatalf("list: status %d", listRec.Code)
@@ -156,7 +156,7 @@ func TestAttachmentHandlersErrorPaths(t *testing.T) {
 	// Upload with no file part → 422.
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
-	if err := mw.WriteField("entity_type", "person"); err != nil {
+	if err := mw.WriteField("entity_type", "contact"); err != nil {
 		t.Fatal(err)
 	}
 	if err := mw.WriteField("entity_id", ids.NewV7().String()); err != nil {
@@ -175,16 +175,16 @@ func TestAttachmentHandlersErrorPaths(t *testing.T) {
 
 	// List for a parent the caller cannot see → 404 (existence-hiding), not an
 	// empty page that would confirm the entity exists. The parent is a
-	// capture-private contact: the one state that hides a person from
+	// capture-private contact: the one state that hides a contact from
 	// another seat.
-	person := e.SeedPerson(t, "Rep1 Only", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
-	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownPersonPerms())
+	contact := e.SeedContact(t, "Rep1 Only", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
+	repCtx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	lr := httptest.NewRecorder()
 	h.ListAttachments(lr, httptest.NewRequest(http.MethodGet, "/v1/attachments", nil).WithContext(repCtx),
 		crmcontracts.ListAttachmentsParams{
-			EntityType: crmcontracts.ListAttachmentsParamsEntityType("person"),
-			EntityId:   openapi_types.UUID(person),
+			EntityType: crmcontracts.ListAttachmentsParamsEntityType("contact"),
+			EntityId:   openapi_types.UUID(contact),
 		})
 	if lr.Code != http.StatusNotFound {
 		t.Errorf("list for an invisible parent: status %d, want 404", lr.Code)
@@ -197,9 +197,9 @@ func TestAttachmentHandlersAnswer501WithoutAStore(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling) // no WithBlobstore
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "No Store", &e.Rep1)
+	contact := e.SeedContact(t, "No Store", &e.Rep1)
 
-	body, ctype := multipartAttachment(t, "person", person.String(), "x.txt", []byte("y"))
+	body, ctype := multipartAttachment(t, "contact", contact.String(), "x.txt", []byte("y"))
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -217,11 +217,11 @@ func attachmentStore(e *Env) (*activities.Store, blobstore.Store) {
 	return e.Activities.WithBlobstore(blob), blob
 }
 
-// ownPersonPerms sees only its own person rows — enough to prove the
-// row-scope gate hides another rep's person from an upload target.
-func ownPersonPerms() principal.Permissions {
+// ownContactPerms sees only its own contact rows — enough to prove the
+// row-scope gate hides another rep's contact from an upload target.
+func ownContactPerms() principal.Permissions {
 	return principal.Permissions{
-		Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Create: true, Update: true, Delete: true}},
+		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Create: true, Update: true, Delete: true}},
 		RowScope: principal.RowScopeOwn,
 	}
 }
@@ -230,12 +230,12 @@ func TestAttachmentUploadThenDownloadRoundTrip(t *testing.T) {
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Attach Target", &e.Rep1)
+	contact := e.SeedContact(t, "Attach Target", &e.Rep1)
 	body := []byte("%PDF-1.4 fake report bytes")
 
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType:  "person",
-		EntityID:    person,
+		EntityType:  "contact",
+		EntityID:    contact,
 		Filename:    "report.pdf",
 		ContentType: "application/pdf",
 		Content:     bytes.NewReader(body),
@@ -272,21 +272,21 @@ func TestAttachmentUploadThenDownloadRoundTrip(t *testing.T) {
 func TestAttachmentUploadDeniedForInvisibleParent(t *testing.T) {
 	e := Setup(t)
 	store, _ := attachmentStore(e)
-	// The person is capture-private to Rep1; Rep3 cannot see it.
-	person := e.SeedPerson(t, "Rep1's Person", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
-	ctx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownPersonPerms())
+	// The contact is capture-private to Rep1; Rep3 cannot see it.
+	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
+	ctx := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 
 	_, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "x.txt", Content: bytes.NewReader([]byte("secret")),
+		EntityType: "contact", EntityID: contact, Filename: "x.txt", Content: bytes.NewReader([]byte("secret")),
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("upload to an invisible parent: err = %v, want ErrNotFound (existence-hiding)", err)
 	}
 	// The denial lands before any row is written: the owner sees no attachment
-	// on the person (and, by the store's RBAC-before-Put ordering, no object).
+	// on the contact (and, by the store's RBAC-before-Put ordering, no object).
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
-	list, _, lerr := store.ListAttachments(owner, "person", person, nil, nil)
+	list, _, lerr := store.ListAttachments(owner, "contact", contact, nil, nil)
 	if lerr != nil {
 		t.Fatalf("ListAttachments: %v", lerr)
 	}
@@ -308,18 +308,18 @@ func TestOpenAttachmentHidesAnInvisibleParent(t *testing.T) {
 	store, _ := attachmentStore(e)
 	// Capture-private to Rep1; Rep3 cannot see it, and neither can anyone
 	// but Rep1 — so Rep1 is the one who uploads.
-	person := e.SeedPerson(t, "Rep1's Person", &e.Rep1)
-	e.MakeCapturePrivate(t, "person", person, e.Rep1)
+	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
+	e.MakeCapturePrivate(t, "contact", contact, e.Rep1)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	uploaded, err := store.UploadAttachment(owner, activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "secret.pdf", Content: bytes.NewReader([]byte("secret bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("secret bytes")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment through the real writer: %v", err)
 	}
 
-	rep3 := e.As(e.Rep3, []ids.UUID{e.Team2}, ownPersonPerms())
+	rep3 := e.As(e.Rep3, []ids.UUID{e.Team2}, ownContactPerms())
 	_, rc, err := store.OpenAttachment(rep3, ids.UUID(uploaded.Id))
 	if rc != nil {
 		defer func() {
@@ -349,10 +349,10 @@ func TestErasurePurgesAttachmentObjects(t *testing.T) {
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "To Be Erased", &e.Rep1)
+	contact := e.SeedContact(t, "To Be Erased", &e.Rep1)
 
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "secret.pdf", Content: bytes.NewReader([]byte("pii bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "secret.pdf", Content: bytes.NewReader([]byte("pii bytes")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
@@ -364,8 +364,8 @@ func TestErasurePurgesAttachmentObjects(t *testing.T) {
 	}
 
 	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blob)
-	if err := eraser.ErasePerson(ctx, person, "test-erasure"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := eraser.EraseContact(ctx, contact, "test-erasure"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	// Art. 17: the subject's attachment bytes must be gone, not only the row.
@@ -379,9 +379,9 @@ func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Config Mismatch", &e.Rep1)
+	contact := e.SeedContact(t, "Config Mismatch", &e.Rep1)
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "f.pdf", Content: bytes.NewReader([]byte("bytes")),
+		EntityType: "contact", EntityID: contact, Filename: "f.pdf", Content: bytes.NewReader([]byte("bytes")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
@@ -392,19 +392,19 @@ func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
 	// a subject whose attachments have objects must FAIL and roll back, never
 	// commit a half-erasure that strands the bytes with their keys deleted.
 	eraser := privacy.NewEraser(e.DB())
-	if err := eraser.ErasePerson(ctx, person, "misconfig"); err == nil {
-		t.Fatal("ErasePerson succeeded with objects present but no store configured — half-erasure risk")
+	if err := eraser.EraseContact(ctx, contact, "misconfig"); err == nil {
+		t.Fatal("EraseContact succeeded with objects present but no store configured — half-erasure risk")
 	}
 
-	// Rolled back: the attachment row survives (still openable) and the person
+	// Rolled back: the attachment row survives (still openable) and the contact
 	// was not anonymized.
 	if _, rc, derr := store.OpenAttachment(ctx, ids.UUID(att.Id)); derr != nil {
 		t.Errorf("attachment row was deleted despite the erasure rolling back: %v", derr)
 	} else if cerr := rc.Close(); cerr != nil {
 		t.Errorf("Close: %v", cerr)
 	}
-	if erased := e.WsCount(t, `SELECT count(*) FROM person WHERE id = $1 AND full_name = 'Erased Subject'`, person); erased != 0 {
-		t.Error("person was anonymized despite the object purge failing — the erasure did not roll back")
+	if erased := e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND full_name = 'Erased Subject'`, contact); erased != 0 {
+		t.Error("contact was anonymized despite the object purge failing — the erasure did not roll back")
 	}
 }
 
@@ -412,15 +412,15 @@ func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Doc Owner", &e.Rep1)
+	contact := e.SeedContact(t, "Doc Owner", &e.Rep1)
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
-		EntityType: "person", EntityID: person, Filename: "a.txt", Content: bytes.NewReader([]byte("hello")),
+		EntityType: "contact", EntityID: contact, Filename: "a.txt", Content: bytes.NewReader([]byte("hello")),
 	})
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
 	}
 
-	before, _, err := store.ListAttachments(ctx, "person", person, nil, nil)
+	before, _, err := store.ListAttachments(ctx, "contact", contact, nil, nil)
 	if err != nil {
 		t.Fatalf("ListAttachments: %v", err)
 	}
@@ -432,7 +432,7 @@ func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
 		t.Fatalf("ArchiveAttachment: %v", err)
 	}
 
-	after, _, err := store.ListAttachments(ctx, "person", person, nil, nil)
+	after, _, err := store.ListAttachments(ctx, "contact", contact, nil, nil)
 	if err != nil {
 		t.Fatalf("ListAttachments after archive: %v", err)
 	}
@@ -455,7 +455,7 @@ func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
 // A file with no content is not a limit one channel dislikes — no send path
 // anywhere can do anything with it. Left to the connector, the provider's
 // refusal reads like a transient condition and the delivery burns its whole
-// retry ladder on a file that will never have bytes; and the person hears about
+// retry ladder on a file that will never have bytes; and the contact hears about
 // it long after they stopped looking at the file. Refused on upload, they hear
 // it while they can still pick the right one.
 //
@@ -465,9 +465,9 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
-	person := e.SeedPerson(t, "Empty Upload", &e.Rep1)
+	contact := e.SeedContact(t, "Empty Upload", &e.Rep1)
 
-	body, ctype := multipartAttachment(t, "person", person.String(), "scan.pdf", []byte{})
+	body, ctype := multipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{})
 	req := httptest.NewRequest(http.MethodPost, "/v1/attachments", body).WithContext(ctx)
 	req.Header.Set("Content-Type", ctype)
 	rec := httptest.NewRecorder()
@@ -484,7 +484,7 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 
 	// One byte is enough to be a file, so the rule is about content and not
 	// about a threshold somebody has to guess.
-	okBody, okType := multipartAttachment(t, "person", person.String(), "scan.pdf", []byte{0x25})
+	okBody, okType := multipartAttachment(t, "contact", contact.String(), "scan.pdf", []byte{0x25})
 	okReq := httptest.NewRequest(http.MethodPost, "/v1/attachments", okBody).WithContext(ctx)
 	okReq.Header.Set("Content-Type", okType)
 	okRec := httptest.NewRecorder()

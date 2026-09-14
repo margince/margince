@@ -31,7 +31,7 @@ import (
 // rung is not defence against that sender; it is refusing to let a single
 // parsing surprise become a stored claim about who somebody IS.
 //
-// Not higher, because the cost of waiting is paid by the person the feature is
+// Not higher, because the cost of waiting is paid by the contact the feature is
 // for: every message that arrives before the threshold is one where their own
 // address is still read as a stranger's.
 const aliasSightingsBeforeClaiming = 2

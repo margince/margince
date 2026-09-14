@@ -369,7 +369,7 @@ func (s *Dispatcher) identity() map[string]any {
 // call answers tools/call. Its return is `any` rather than a result map because
 // a confirm-first call has TWO shapes: the refusal every client understands,
 // and — for a client that declared the Tasks extension on this request — a task
-// handle it can poll until the person decides.
+// handle it can poll until the human decides.
 //
 //craft:ignore naked-any the protocol makes this result polymorphic (CallToolResult or CreateTaskResult) and the framing tells them apart by TYPE — a named wrapper here would be a naked any wearing a hat, and collapsing both into one map would make resultType a member two components read differently
 func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framing) any {

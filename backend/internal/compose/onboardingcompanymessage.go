@@ -13,8 +13,8 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,11 +26,11 @@ var onboardingRequiredFields = []string{fieldDisplayName, fieldOfferSummary, fie
 const onboardingCompanyDraftMaxRunes = 2_000
 
 type onboardingCompanyAssistant struct {
-	state   onboardingStateReader
-	people  onboardingSiteReadReader
-	brain   completer
-	runtime runTransparencyReader
-	rollout *string
+	state    onboardingStateReader
+	contacts onboardingSiteReadReader
+	brain    completer
+	runtime  runTransparencyReader
+	rollout  *string
 	// voice backs the voice act's deterministic context; nil means the
 	// role wired no voice store and the act answers without corpus numbers.
 	voice onboardingVoiceReader
@@ -44,7 +44,7 @@ type onboardingStateReader interface {
 }
 
 type onboardingSiteReadReader interface {
-	GetCompanySiteRead(context.Context, ids.UUID) (people.SiteRead, []people.SiteReadComparison, error)
+	GetCompanySiteRead(context.Context, ids.UUID) (contacts.SiteRead, []contacts.SiteReadComparison, error)
 }
 
 type onboardingConversationContext struct {
@@ -94,7 +94,7 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 	}
 	remaining := remainingOnboardingFields(currentDraft)
 	act := onboardingRequestAct(req)
-	if act != string(crmcontracts.OnboardingActCompany) {
+	if act != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		// The recap acts speak about the company that EXISTS, not about
 		// the resumable draft: a manually saved anchor is a confirmed
 		// company with no required fields left, whatever the draft says.
@@ -163,11 +163,11 @@ func (a *onboardingCompanyAssistant) message(w http.ResponseWriter, r *http.Requ
 // converse routes the message to its act's answer path and returns the
 // reply plus the deterministic attachments the act produced: the
 // detected clarify question (company act) or the act's next action.
-func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontracts.OnboardingCompanyMessageRequest, act, message string, history []model.Message, conversation onboardingConversationContext, research onboardingResearchState, read *people.SiteRead, comparisons []people.SiteReadComparison, runID ids.UUID) (companyReadModelReply, *crmcontracts.OnboardingClarify, *crmcontracts.OnboardingCompanyMessageReplyAvailableAction, error) {
+func (a *onboardingCompanyAssistant) converse(ctx context.Context, req crmcontracts.OnboardingCompanyMessageRequest, act, message string, history []model.Message, conversation onboardingConversationContext, research onboardingResearchState, read *contacts.SiteRead, comparisons []contacts.SiteReadComparison, runID ids.UUID) (companyReadModelReply, *crmcontracts.OnboardingClarify, *crmcontracts.OnboardingCompanyMessageReplyAvailableAction, error) {
 	locale := string(req.Locale)
 	remaining := conversation.RemainingRequired
 	switch {
-	case act != string(crmcontracts.OnboardingActCompany):
+	case act != string(crmcontracts.OnboardingActOnboardingActCompany):
 		voiceCtx, err := a.voiceContext(ctx)
 		if err != nil {
 			return companyReadModelReply{}, nil, nil, err
@@ -249,7 +249,7 @@ func recordedSelection(selection crmcontracts.OnboardingClarifySelection, locale
 // Validity was checked at decode time.
 func onboardingRequestAct(req crmcontracts.OnboardingCompanyMessageRequest) string {
 	if req.Act == nil {
-		return string(crmcontracts.OnboardingActCompany)
+		return string(crmcontracts.OnboardingActOnboardingActCompany)
 	}
 	return string(*req.Act)
 }
@@ -296,7 +296,7 @@ func decodeOnboardingCompanyMessage(w http.ResponseWriter, r *http.Request) (crm
 // non-empty value — the pair it authorizes verbatim.
 func invalidOnboardingSelection(req crmcontracts.OnboardingCompanyMessageRequest) (field, code, detail string) {
 	selection := *req.SelectedOption
-	if onboardingRequestAct(req) != string(crmcontracts.OnboardingActCompany) {
+	if onboardingRequestAct(req) != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		return "selected_option", "invalid", "a clarify selection applies only to the company act"
 	}
 	if strings.TrimSpace(selection.ClarifyId) == "" {
@@ -341,11 +341,11 @@ func oversizedOnboardingDraftField(draft crmcontracts.OnboardingCompanyDraft) st
 	return ""
 }
 
-func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, state identity.OnboardingState) ([]companyReadEvidence, ids.UUID, onboardingResearchState, *people.SiteRead, []people.SiteReadComparison, error) {
+func (a *onboardingCompanyAssistant) onboardingEvidence(ctx context.Context, state identity.OnboardingState) ([]companyReadEvidence, ids.UUID, onboardingResearchState, *contacts.SiteRead, []contacts.SiteReadComparison, error) {
 	if state.SiteReadID == nil {
 		return nil, state.ID, onboardingResearchState{ready: true}, nil, nil, nil
 	}
-	read, comparisons, err := a.people.GetCompanySiteRead(ctx, *state.SiteReadID)
+	read, comparisons, err := a.contacts.GetCompanySiteRead(ctx, *state.SiteReadID)
 	if err != nil {
 		return nil, ids.UUID{}, onboardingResearchState{}, nil, nil, err
 	}
@@ -434,14 +434,14 @@ func onboardingCompanyReply(act string, answer companyReadModelReply, evidence [
 	for i, field := range remaining {
 		out.RemainingRequiredFields[i] = crmcontracts.OnboardingCompanyMessageReplyRemainingRequiredFields(field)
 	}
-	if act != string(crmcontracts.OnboardingActCompany) {
+	if act != string(crmcontracts.OnboardingActOnboardingActCompany) {
 		return out
 	}
 	if len(remaining) > 0 {
 		next := crmcontracts.OnboardingCompanyMessageReplyNextRequiredField(remaining[0])
 		out.NextRequiredField = &next
 	} else if research.ready && !research.confirmed {
-		action := crmcontracts.OnboardingAvailableActionConfirmCompany
+		action := crmcontracts.OnboardingCompanyMessageReplyAvailableActionOnboardingAvailableActionConfirmCompany
 		out.AvailableAction = &action
 	}
 	return out

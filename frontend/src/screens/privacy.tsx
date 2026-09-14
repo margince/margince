@@ -51,6 +51,8 @@ import {
   useRoster,
   useRosterPartial,
 } from "./entityref";
+import { useLinkedCase } from "./privacy.caselink";
+import { LinkedCaseNotice } from "./privacy.caselink.notice";
 import {
   DSR_STATUS_FACETS,
   type DsrStatus,
@@ -312,47 +314,50 @@ export function ConsentPurposesCard() {
   );
 }
 
-// Matches a proper person-id UUID; an external identifier (email, a partner's
+// Matches a proper contact-id UUID; an external identifier (email, a partner's
 // own reference string) never does, so it stays raw mono text rather than a
-// dead EntityRef lookup against a record that was never a person id.
+// dead EntityRef lookup against a record that was never a contact id.
 const SUBJECT_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const DSR_KINDS: readonly DsrKind[] = ["access", "rectify", "erasure"];
 
-// The erasure fulfiller (consent/dsr.go) resolves subject_ref to a person id
+// The erasure fulfiller (consent/dsr.go) resolves subject_ref to a contact id
 // and erases that record — free text there cannot be erased, so an erasure
-// request must be opened against a picked person, never typed in by hand.
-// No purpose-built person-search endpoint exists yet (offers.tsx's org/product
+// request must be opened against a picked contact, never typed in by hand.
+// No purpose-built contact-search endpoint exists yet (offers.tsx's company/product
 // pickers are RecordPicker's only other callers today), so this reuses the
-// person list's own full-text `q` param, exactly as searchOrganizationCandidates
-// reuses /organizations.
-async function searchPersonCandidates(
+// contact list's own full-text `q` param, exactly as searchCompanyCandidates
+// reuses /companies.
+async function searchContactCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/people", {
+  const { data, error } = await api.GET("/contacts", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((person) => ({ id: person.id, name: person.full_name }));
+  return data.data.map((contact) => ({
+    id: contact.id,
+    name: contact.full_name,
+  }));
 }
 
 // G-2: the DSR-open form — kind, subject and deadline committed together, so it
 // is the body of the dialog the queue's "New request" row opens, the same shape
 // PurposeCreateForm takes above. kind flips the subject field's very shape: an
 // erasure locks onto
-// a picked person (RecordPicker, uuid subject_ref) so the create form is
+// a picked contact (RecordPicker, uuid subject_ref) so the create form is
 // physically incapable of producing the free-text-erasure state the server
 // now refuses; access/rectify keep the free-text field the contract's
-// "person id or external identifier" wording actually allows.
+// "contact id or external identifier" wording actually allows.
 function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [kind, setKind] = useState<DsrKind>("access");
   const [subjectRef, setSubjectRef] = useState("");
-  const [person, setPerson] = useState<RecordPickerCandidate | null>(null);
+  const [contact, setContact] = useState<RecordPickerCandidate | null>(null);
   const [dueAt, setDueAt] = useState("");
   // The statutory deadline is minted in the OPERATOR's own zone, the same
   // zone the row later renders it back in (PrivacyInboxCard's tz below) —
@@ -380,7 +385,7 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
       queryClient.invalidateQueries({ queryKey: ["dsrs"] });
       setKind("access");
       setSubjectRef("");
-      setPerson(null);
+      setContact(null);
       setDueAt("");
       onDone();
     },
@@ -394,11 +399,11 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
 
   function changeKind(next: DsrKind) {
     setKind(next);
-    // The subject field's meaning changes with kind (a picked person's uuid
+    // The subject field's meaning changes with kind (a picked contact's uuid
     // vs. free text) — carrying either value across the switch would let a
     // stale value from the OTHER shape ride into the request unnoticed.
     setSubjectRef("");
-    setPerson(null);
+    setContact(null);
     dismissCreateError();
   }
 
@@ -425,10 +430,10 @@ function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
           <span className="t-label">{t("privacy.contact")}</span>
           <RecordPicker
             label={t("privacy.contact")}
-            searchTargets={searchPersonCandidates}
-            selected={person}
+            searchTargets={searchContactCandidates}
+            selected={contact}
             onPick={(candidate) => {
-              setPerson(candidate);
+              setContact(candidate);
               setSubjectRef(candidate.id);
               dismissCreateError();
             }}
@@ -666,7 +671,7 @@ function DsrRow({
   const roster = useRoster("user", expanded);
   const rosterPartial = useRosterPartial("user", expanded);
   // The roster hook serves users and teams alike, so narrow to the entries that
-  // carry a person's name rather than asserting the shape.
+  // carry a contact's name rather than asserting the shape.
   const members = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry ? [entry] : [],
   );
@@ -778,7 +783,7 @@ function DsrRow({
           <div className="form-stack">
             <div className="field">
               {SUBJECT_UUID_RE.test(dsr.subject_ref) ? (
-                <EntityRef kind="person" id={dsr.subject_ref} />
+                <EntityRef kind="contact" id={dsr.subject_ref} />
               ) : (
                 <span className="t-mono">{dsr.subject_ref}</span>
               )}
@@ -859,8 +864,8 @@ function DsrRow({
 }
 
 // This mutation's ONE possible 409: fulfilling an erasure calls into the
-// erasure engine (ErasePerson), and the ONLY thing that engine ever wraps in
-// ErrConflict is a person under statutory legal hold — there is no second
+// erasure engine (EraseContact), and the ONLY thing that engine ever wraps in
+// ErrConflict is a contact under statutory legal hold — there is no second
 // conflict source on this call to confuse it with. So code === "conflict"
 // here is an unambiguous legal-hold signal, not a guess (unlike the
 // consent-purpose or record-grant 409s elsewhere in this codebase, which
@@ -871,7 +876,7 @@ function isLegalHold(problem: unknown): boolean {
 }
 
 // The single most destructive action in the product: fulfilling an erasure
-// permanently wipes a person across the whole system. Follows share.tsx's
+// permanently wipes a contact across the whole system. Follows share.tsx's
 // revoke-confirm id-in-state pattern — ONE modal at the card root (never one
 // per row), gated by a typed "ERASE" rather than a plain confirm click. A
 // legal-hold 409 is a documented, lawful refusal (Art. 17(3)(b)), not a
@@ -1011,11 +1016,9 @@ export function PrivacyInboxCard() {
   // (share.tsx:290's precedent for the same problem on grant expiry).
   const tz = viewerZone();
   const [facet, setFacet] = useState<DsrStatusFacet>("all");
-  // One case open at a time: expandedId lives here (not per-row) so opening
-  // a second row's panel closes the first — the queue itself (sibling rows,
-  // the facet bar) stays on screen throughout; an officer working a case
-  // never loses sight of what else is waiting.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // One case open at a time, and the open one IS the address: the worklist
+  // links here naming a case, so the row it named opens and a link copied back
+  // out reaches the same row (privacy.caselink.ts).
   const createTitleId = useId();
   const [creating, setCreating] = useState(false);
   // Which request is staged for the destructive fulfil, not per-row — same
@@ -1040,7 +1043,7 @@ export function PrivacyInboxCard() {
   // registry beside it from issuing a call that only 403s. It was the literal
   // admin role until the queue got an object of its own.
   const canSee = useCan("privacy_request", "read");
-  const canOpenRequest = useCanWrite("person", "update");
+  const canOpenRequest = useCanWrite("contact", "update");
   // The probe itself, not only its answer. Every capability predicate reads off
   // the /me cache, so it is false while that read is in flight — and branching
   // on `!canSee` alone flashed "the subject queue is not yours" at every
@@ -1083,6 +1086,13 @@ export function PrivacyInboxCard() {
     () => pages?.flatMap((page) => page.data) ?? [],
     [pages],
   );
+  // The open row and the address, kept saying the same thing. It needs the
+  // loaded ids, so it sits below the query rather than beside the other state.
+  const { expandedId, linked, toggle } = useLinkedCase(
+    useMemo(() => rows.map((dsr) => dsr.id), [rows]),
+    query.hasNextPage && !query.isFetchingNextPage,
+    query.fetchNextPage,
+  );
   const facetLabels = useMemo(
     () =>
       Object.fromEntries(
@@ -1119,6 +1129,7 @@ export function PrivacyInboxCard() {
     // measured its own gaps in inline style objects.
     body = (
       <QueryStates query={query} pendingLabel={t("privacy.facetAll")}>
+        <LinkedCaseNotice linked={linked} />
         {rows.length === 0 ? (
           <EmptyState>{t("common.empty")}</EmptyState>
         ) : (
@@ -1129,11 +1140,7 @@ export function PrivacyInboxCard() {
                   key={dsr.id}
                   dsr={dsr}
                   expanded={expandedId === dsr.id}
-                  onToggle={() =>
-                    setExpandedId((current) =>
-                      current === dsr.id ? null : dsr.id,
-                    )
-                  }
+                  onToggle={() => toggle(dsr.id)}
                   nowMs={nowMs}
                   tz={tz}
                   locale={locale}
@@ -1159,10 +1166,10 @@ export function PrivacyInboxCard() {
       // the button's own words repeated. Opening a request is a kind, a subject
       // and a statutory deadline committed together, so the header keeps the
       // verb and the dialog keeps the form.
-      // Opening a request is a POST that asks for `person:update`
+      // Opening a request is a POST that asks for `contact:update`
       // (consent/dsr.go CreateDSR) — a DIFFERENT object from the one that
       // opened this queue, because recording a subject request writes the
-      // person it names. A reader delegated only the inbox was offered the
+      // contact it names. A reader delegated only the inbox was offered the
       // verb and refused it.
       titleAction={
         !canOpenRequest ? null : (

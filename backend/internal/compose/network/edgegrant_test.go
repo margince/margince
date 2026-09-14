@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A coworker set IS the edge: it answers "who else works where this person
+// A coworker set IS the edge: it answers "who else works where this contact
 // works", which is a fact about the pairs. The refusal reaches addAccountGroup,
 // which names the group in groups_omitted.
 //
@@ -26,11 +26,11 @@ func TestTheCoworkerReadRefusesBeforeItReachesAStatement(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	_, _, err := readAccountContacts(ctx, nil, ids.From[ids.PersonKind](ids.NewV7()))
+	_, _, err := readAccountContacts(ctx, nil, ids.From[ids.ContactKind](ids.NewV7()))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("readAccountContacts(no edge grant) = %v, want ErrPermissionDenied", err)
 	}

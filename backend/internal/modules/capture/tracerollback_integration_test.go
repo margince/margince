@@ -36,7 +36,7 @@ func TestAnInvisibleIncumbentIsTracedOnItsOwnTransaction(t *testing.T) {
 	if _, err := sink.Upsert(ctx, rec); err != nil {
 		t.Fatalf("first capture: %v", err)
 	}
-	// Move it out of every reader's reach by linking it to a person somebody
+	// Move it out of every reader's reach by linking it to a contact somebody
 	// else captured privately, then replay: the replay resolves onto a row this principal
 	// cannot see, which is the refusal under test.
 	hideIncumbent(ctx, t, db, "m-incumbent")
@@ -64,29 +64,29 @@ func TestAnInvisibleIncumbentIsTracedOnItsOwnTransaction(t *testing.T) {
 }
 
 // hideIncumbent links a captured activity to a stranger's capture-private
-// person (visibility='owner'), which is what puts it outside this principal's
-// row scope: a person is workspace-readable identity, so ownership alone hides
+// contact (visibility='owner'), which is what puts it outside this principal's
+// row scope: a contact is workspace-readable identity, so ownership alone hides
 // nothing, and an activity has no owner of its own — it inherits the
 // sensitivity of what it attaches to.
 func hideIncumbent(ctx context.Context, t *testing.T, db *database.DB, sourceID string) {
 	t.Helper()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		stranger, personID := ids.NewV7(), ids.NewV7()
+		stranger, contactID := ids.NewV7(), ids.NewV7()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO app_user (id, email, display_name, status)
 			VALUES ($1, $2, 'Stranger', 'active')`, stranger, "stranger-"+stranger.String()+"@example.test"); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
+			INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
 			VALUES ($1, 'Stranger', $2, 'owner', 'manual', 'human:test')`,
-			personID, stranger); err != nil {
+			contactID, stranger); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, person_id)
-			SELECT id, 'person', $2 FROM activity WHERE source_id = $1`,
-			sourceID, personID)
+			INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			SELECT id, 'contact', $2 FROM activity WHERE source_id = $1`,
+			sourceID, contactID)
 		return err
 	}); err != nil {
 		t.Fatalf("hiding the incumbent: %v", err)
@@ -95,7 +95,7 @@ func hideIncumbent(ctx context.Context, t *testing.T, db *database.DB, sourceID 
 
 // ownScopedSinkContext is a capture connector acting for a member who may see
 // only their own records — the ordinary rep seat, and the one for which an
-// incumbent linked to somebody else's capture-private person is out of reach.
+// incumbent linked to somebody else's capture-private contact is out of reach.
 func ownScopedSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 	member := ids.NewV7()
 	ctx = principal.WithWorkspaceID(ctx, ws)
@@ -108,7 +108,7 @@ func ownScopedSinkContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true},
-				"person":   {Create: true, Read: true},
+				"contact":  {Create: true, Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},

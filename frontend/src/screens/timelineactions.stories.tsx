@@ -75,7 +75,7 @@ function Frame({ activity }: Readonly<{ activity: Activity }>) {
           activity={activity}
           entityType="deal"
           entityId="d1"
-          personId="p1"
+          contactId="p1"
         />
       </div>
     </StoryProviders>

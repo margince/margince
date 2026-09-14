@@ -30,7 +30,7 @@ var ErrSetupTokenExists = errors.New("identity: a setup token is already outstan
 // unprovisioned installation, returning the plaintext ONCE — only its hash is
 // stored, so a database copy cannot be replayed into a claim.
 //
-// It refuses on an installation that already holds an organization. That is not
+// It refuses on an installation that already holds a company. That is not
 // belt-and-braces: SetupTokenOutstanding reports what this writes, so a token
 // minted against a live installation would make it answer "claimable" to any
 // stranger, and the SPA would render a claim screen for an installation that
@@ -85,7 +85,7 @@ const (
 //
 // It used to write nothing at all, on the stated grounds that both ledgers
 // carried a NOT NULL tenant column and a setup token exists BEFORE the
-// organization it authorizes creating. ADR-0091 §8 phase D removed that column,
+// company it authorizes creating. ADR-0091 §8 phase D removed that column,
 // so the impediment was gone and the gap was left. What actually stood in the
 // way was the ACTOR: storekit.LogSystem refuses a caller with no principal
 // bound, deliberately, because an unattributed ledger row is worse than none.
@@ -163,7 +163,7 @@ func (s *Service) issueSetupToken(ctx context.Context, policy outstandingPolicy)
 
 // consumeSetupToken spends the outstanding token, refusing anything that is not
 // it. It runs INSIDE the caller's transaction: consuming the token and creating
-// the organization must commit together, or a failed claim would burn the
+// the company must commit together, or a failed claim would burn the
 // credential and leave the installation unclaimable.
 //
 // The UPDATE carries the match in its WHERE clause rather than reading the row
@@ -185,7 +185,7 @@ func consumeSetupToken(ctx context.Context, tx pgx.Tx, presented string) error {
 
 // retireSetupTokens marks every outstanding claim credential spent, in the
 // caller's transaction. Idempotent and unconditional: an installation that
-// holds an organization has nothing left to claim, so a token that survives it
+// holds a company has nothing left to claim, so a token that survives it
 // is a live credential with no legitimate use.
 func retireSetupTokens(ctx context.Context, tx pgx.Tx) error {
 	tag, err := tx.Exec(ctx,
@@ -200,8 +200,8 @@ func retireSetupTokens(ctx context.Context, tx pgx.Tx) error {
 		return nil
 	}
 	// The bootstrap paths reach here BEFORE they bind the actor that created
-	// the organization, and that is the right order: the comment at the call
-	// site says the ORGANIZATION retires the token, not whichever path made it.
+	// the company, and that is the right order: the comment at the call
+	// site says the COMPANY retires the token, not whichever path made it.
 	// So the retirement is a system act unless a caller has already said
 	// otherwise, which the mint path has.
 	ctx = ensureSetupTokenActor(ctx)
@@ -248,18 +248,18 @@ func ensureSetupTokenActor(ctx context.Context) context.Context {
 }
 
 // ErrAlreadyProvisioned means a claim arrived at an installation that already
-// holds an organization. It is reported as itself rather than as a token
+// holds a company. It is reported as itself rather than as a token
 // failure: a caller holding a valid token deserves the true reason, and the
 // fact that an installation is provisioned is not a secret — every request to
 // it already reveals that.
 var ErrAlreadyProvisioned = errors.New("identity: installation is already provisioned")
 
-// ClaimInstallation creates the organization and its first admin from a claim
+// ClaimInstallation creates the company and its first admin from a claim
 // authorized by the setup token, in ONE transaction under the same advisory
 // lock boot takes — so two concurrent claims cannot both succeed, and a claim
-// racing a configured boot cannot produce a second organization.
+// racing a configured boot cannot produce a second company.
 //
-// Consuming the token and creating the organization commit together. Spending
+// Consuming the token and creating the company commit together. Spending
 // it first and creating after would leave an installation unclaimable whenever
 // creation failed — a mistyped currency would burn the only credential that
 // could fix it.

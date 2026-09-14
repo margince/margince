@@ -11,9 +11,9 @@ import { dealRecipientSeat } from "./dealrecipient";
 
 type DealCoverageSeat = components["schemas"]["DealCoverageSeat"];
 
-function seat(over: Partial<DealCoverageSeat> & { person_id: string }) {
+function seat(over: Partial<DealCoverageSeat> & { contact_id: string }) {
   return {
-    person_name: `Person ${over.person_id}`,
+    contact_name: `Contact ${over.contact_id}`,
     role: "user",
     engaged: false,
     ...over,
@@ -23,41 +23,44 @@ function seat(over: Partial<DealCoverageSeat> & { person_id: string }) {
 describe("who a deal's first message is offered to", () => {
   it("takes the champion over an engaged seat and over the first one", () => {
     const seats = [
-      seat({ person_id: "p-first", engaged: true }),
-      seat({ person_id: "p-champ", role: "champion" }),
+      seat({ contact_id: "p-first", engaged: true }),
+      seat({ contact_id: "p-champ", role: "champion" }),
     ];
-    expect(dealRecipientSeat(seats)?.person_id).toBe("p-champ");
+    expect(dealRecipientSeat(seats)?.contact_id).toBe("p-champ");
   });
 
   // A seat somebody has actually spoken with beats one recorded and never
   // contacted: `engaged` means a two-way exchange happened in the window.
   it("takes an engaged seat when no champion is recorded", () => {
     const seats = [
-      seat({ person_id: "p-first" }),
-      seat({ person_id: "p-talking", engaged: true }),
+      seat({ contact_id: "p-first" }),
+      seat({ contact_id: "p-talking", engaged: true }),
     ];
-    expect(dealRecipientSeat(seats)?.person_id).toBe("p-talking");
+    expect(dealRecipientSeat(seats)?.contact_id).toBe("p-talking");
   });
 
   it("falls back to the first seat when nobody is champion or engaged", () => {
-    const seats = [seat({ person_id: "p-first" }), seat({ person_id: "p-2" })];
-    expect(dealRecipientSeat(seats)?.person_id).toBe("p-first");
+    const seats = [
+      seat({ contact_id: "p-first" }),
+      seat({ contact_id: "p-2" }),
+    ];
+    expect(dealRecipientSeat(seats)?.contact_id).toBe("p-first");
   });
 
-  // A null person_name means the caller may not read that person. The seat
-  // still counts toward coverage — how many people carry a deal is not being
+  // A null contact_name means the caller may not read that contact. The seat
+  // still counts toward coverage — how many contacts carry a deal is not being
   // withheld — but addressing a message to them would put a name in the To
   // field that the rest of the product refuses to show this reader.
-  it("skips a seat whose person the reader may not see, champion included", () => {
+  it("skips a seat whose contact the reader may not see, champion included", () => {
     const seats = [
-      seat({ person_id: "p-hidden", role: "champion", person_name: null }),
-      seat({ person_id: "p-visible" }),
+      seat({ contact_id: "p-hidden", role: "champion", contact_name: null }),
+      seat({ contact_id: "p-visible" }),
     ];
-    expect(dealRecipientSeat(seats)?.person_id).toBe("p-visible");
+    expect(dealRecipientSeat(seats)?.contact_id).toBe("p-visible");
   });
 
   it("offers nobody when every seat is unreadable", () => {
-    const seats = [seat({ person_id: "p-hidden", person_name: null })];
+    const seats = [seat({ contact_id: "p-hidden", contact_name: null })];
     expect(dealRecipientSeat(seats)).toBeUndefined();
   });
 

@@ -68,7 +68,7 @@ func TestSeededRBACRoleDocumentsMatchTheCommittedReplayFixture(t *testing.T) {
 //
 // The failure names the resolved path and the regeneration command on purpose:
 // this package reads its artifacts through a relative walk-up, so a future
-// package move surfaces here as a missing file, and the person doing the move
+// package move surfaces here as a missing file, and the contact doing the move
 // needs to be told what to fix rather than handed a bare "no such file".
 func syncArtifact(t *testing.T, path string, want []byte) {
 	t.Helper()

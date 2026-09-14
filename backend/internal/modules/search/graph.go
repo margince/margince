@@ -66,13 +66,26 @@ type graphItem struct {
 // with thousands of links costs the same as one with fifty.
 const graphExpansionLimit = 50
 
-// anchorLinkColumn names the activity_link column an anchor type walks.
-var anchorLinkColumn = map[string]string{
-	string(datasource.EntityPerson):       "person_id",
-	string(datasource.EntityOrganization): "organization_id",
-	string(datasource.EntityDeal):         "deal_id",
-	string(datasource.EntityProject):      "project_id",
-}
+// anchorLinkColumn names the activity_link column an anchor type walks,
+// DERIVED from activityLinkArms rather than listed a second time.
+//
+// EVERY ARM THE LINK SHAPE ADMITS IS WALKABLE. A second list is a list somebody
+// has to remember to extend, and the cost of forgetting is not a missing
+// section: the tool serving this walk tells its caller that what cannot be
+// evidenced is absent rather than inferred, so an anchor the walk does not
+// follow reads as a record nothing has happened to.
+//
+// activityLinkArms is the list held against the DDL's own enum
+// (TestEverySubjectLinkArmIsRanked), which is why the derivation runs in this
+// direction and not the other, and TestEveryLinkableRecordIsWalkableAsAnAnchor
+// holds this map against that same DDL rather than against the list.
+var anchorLinkColumn = func() map[string]string {
+	columns := make(map[string]string, len(activityLinkArms))
+	for _, arm := range activityLinkArms {
+		columns[arm.entity] = arm.column
+	}
+	return columns
+}()
 
 // assembleGraph is the fixed-depth context walk (B-EP05.20a): anchor →
 // linked activities (hop 1) → those activities' other link targets
@@ -136,11 +149,8 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 	if err := auth.Require(ctx, anchorType, principal.ActionRead); err != nil {
 		return nil, err
 	}
-	// anchorLinkColumn is what this walk can READ, not what activity_link can
-	// hold: the link shape has admitted a lead arm since core 0038, and this
-	// walk does not follow it, so a lead anchor's context is its profile alone.
-	// That is an honestly-empty neighborhood rather than a walk silently
-	// skipped — and it is a gap, tracked rather than restated as a property.
+	// Every arm activity_link admits is walkable, so `walkable` now says only
+	// that this anchor is a record activities hang off at all.
 	linkCol, walkable := anchorLinkColumn[anchorType]
 	now := time.Now().UTC()
 
@@ -154,13 +164,13 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 
 	// Who on our team knows this contact (ADR-0078). Without this the
 	// projection is invisible to the assistant: a rep can see the answer
-	// on the person page while the model answering "who should introduce
+	// on the contact page while the model answering "who should introduce
 	// me" has no access to it at all, and confidently says nobody.
 	//
-	// Person anchors only. An organization's or a deal's colleagues are a
+	// Contact anchors only. A company's or a deal's colleagues are a
 	// join across its contacts, which is a compose read — and a module
 	// never imports a sibling to make one.
-	if anchorType == string(datasource.EntityPerson) {
+	if anchorType == string(datasource.EntityContact) {
 		knows, err := whoKnowsSection(ctx, tx, anchorID, maxItems, now)
 		if err != nil {
 			return nil, err
@@ -180,8 +190,8 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		graphSection{name: "recent_touches", items: touches},
 		graphSection{name: "open_tasks", items: openTasks})
 
-	// Hop 2: the other ends of those activities' links — the people
-	// and organizations in the same conversations. Each is
+	// Hop 2: the other ends of those activities' links — the contacts
+	// and companies in the same conversations. Each is
 	// visibility-probed: the walk widens context, never authority.
 	related, err := s.relatedViaLinks(ctx, tx, anchorType, anchorID, activityIDs, maxItems)
 	if err != nil {
@@ -231,8 +241,8 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 	// one that cannot exist.
 	join := "JOIN activity_link l ON l.activity_id = a.id"
 	reach := fmt.Sprintf("l.%s = $%d", linkCol, anchorPos)
-	if linkCol == anchorLinkColumn[string(datasource.EntityOrganization)] {
-		join, reach = "", activityReachesOrg(anchorPos)
+	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
+		join, reach = "", activityReachesCompany(anchorPos)
 	}
 	activitySQL := fmt.Sprintf(`
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, '')
@@ -260,7 +270,7 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		}
 		activityIDs = append(activityIDs, id)
 		// graphItem.id is the polymorphic result column (activity here,
-		// person/organization/deal on the hop-2 sections), so it carries
+		// contact/company/deal on the hop-2 sections), so it carries
 		// the untyped UUID.
 		item := graphItem{
 			entityType: string(datasource.EntityActivity), id: id.UUID, summary: summary,
@@ -288,12 +298,12 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 // last contact and evict the colleague who has worked the account for a year
 // in favour of whoever sent the most recent one-line reply.
 //
-// The anchor's own visibility was already established above, and EdgesForPerson
-// re-gates on the person grant, so a contact the caller cannot read never
+// The anchor's own visibility was already established above, and EdgesForContact
+// re-gates on the contact grant, so a contact the caller cannot read never
 // reaches this and its colleagues are never named.
-func whoKnowsSection(ctx context.Context, tx pgx.Tx, personID ids.UUID, maxItems int, now time.Time) (graphSection, error) {
+func whoKnowsSection(ctx context.Context, tx pgx.Tx, contactID ids.UUID, maxItems int, now time.Time) (graphSection, error) {
 	section := graphSection{name: "who_knows"}
-	edges, err := EdgesForPerson(ctx, tx, personID, graphExpansionLimit)
+	edges, err := EdgesForContact(ctx, tx, contactID, graphExpansionLimit)
 	if err != nil {
 		return section, err
 	}
@@ -363,8 +373,8 @@ func MemberNames(ctx context.Context, tx pgx.Tx, edges []InteractionEdge) (map[i
 // bodies of work an account's correspondence is filed under are what a
 // catch-up on that account is about.
 var relatedSectionOrder = []string{
-	string(datasource.EntityPerson),
-	string(datasource.EntityOrganization),
+	string(datasource.EntityContact),
+	string(datasource.EntityCompany),
 	string(datasource.EntityDeal),
 	string(datasource.EntityProject),
 }
@@ -469,8 +479,8 @@ func sortAndTrim(items *[]graphItem, maxItems int) {
 }
 
 func plural(entity string) string {
-	if strings.HasSuffix(entity, "person") {
-		return "people"
+	if strings.HasSuffix(entity, "contact") {
+		return "contacts"
 	}
 	return entity + "s"
 }

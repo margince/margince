@@ -42,29 +42,29 @@ type subjectFamily struct {
 }
 
 var subjectFamilies = []subjectFamily{
-	{crmcontracts.MeetingPlanTypeRenewalRisk, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRenewalRisk, []string{
 		"renewal", "verlängerung", "churn", "kündigung", "escalation",
 		"eskalation", "complaint", "beschwerde",
 	}},
-	{crmcontracts.MeetingPlanTypeDecision, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDecision, []string{
 		"decision", "entscheidung", "sign-off", "signoff", "board",
 		"steering", "lenkungsausschuss", "freigabe",
 	}},
-	{crmcontracts.MeetingPlanTypeCommercial, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial, []string{
 		"proposal", "offer", "angebot", "pricing", "preis", "quote",
 		"negotiation", "verhandlung", "contract", "vertrag",
 	}},
-	{crmcontracts.MeetingPlanTypeDemo, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDemo, []string{
 		"demo", "walkthrough", "präsentation", "presentation", "showcase",
 	}},
-	{crmcontracts.MeetingPlanTypeDelivery, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery, []string{
 		"kickoff", "kick-off", "onboarding", "status", "weekly", "jour fixe",
 		"sprint", "review", "cutover", "go-live", "abnahme", "retro",
 	}},
-	{crmcontracts.MeetingPlanTypeFirstDiscovery, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery, []string{
 		"discovery", "intro", "kennenlernen", "erstgespräch", "qualification",
 	}},
-	{crmcontracts.MeetingPlanTypeRelationship, []string{
+	{crmcontracts.MeetingPlanTypeValueMeetingPlanTypeRelationship, []string{
 		"coffee", "kaffee", "lunch", "mittagessen", "catch-up", "catch up",
 		"check-in", "networking", "dinner", "abendessen",
 	}},
@@ -83,15 +83,15 @@ func classifyMeeting(in Input) MeetingType {
 	switch {
 	case fromSubject == "" && fromStructure == "":
 		return MeetingType{
-			Value:      crmcontracts.MeetingPlanTypeUnknown,
-			Confidence: crmcontracts.MeetingPlanTierLow,
+			Value:      crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown,
+			Confidence: crmcontracts.MeetingPlanTierMeetingPlanTierLow,
 			Signals:    signals,
 		}
 	case fromSubject == "":
 		// The records say what stage this is at; nobody said what the meeting
 		// is for. That is a reading, not a reading of a statement.
 		return MeetingType{
-			Value: fromStructure, Confidence: crmcontracts.MeetingPlanTierLow, Signals: signals,
+			Value: fromStructure, Confidence: crmcontracts.MeetingPlanTierMeetingPlanTierLow, Signals: signals,
 		}
 	case fromStructure == "" || fromStructure != fromSubject:
 		// A typed subject with nothing agreeing, or with the deal's own stage
@@ -99,12 +99,12 @@ func classifyMeeting(in Input) MeetingType {
 		// confidence is middling rather than pretending the conflict away.
 		return MeetingType{
 			Value:      refineDiscovery(fromSubject, in),
-			Confidence: crmcontracts.MeetingPlanTierMedium, Signals: signals,
+			Confidence: crmcontracts.MeetingPlanTierMeetingPlanTierMedium, Signals: signals,
 		}
 	default:
 		return MeetingType{
 			Value:      refineDiscovery(fromSubject, in),
-			Confidence: crmcontracts.MeetingPlanTierHigh, Signals: signals,
+			Confidence: crmcontracts.MeetingPlanTierMeetingPlanTierHigh, Signals: signals,
 		}
 	}
 }
@@ -134,20 +134,20 @@ func structuralSignalsOf(in Input) (crmcontracts.MeetingPlanTypeValue, []string)
 		stage := strings.ToLower(in.Deal.Stage)
 		switch {
 		case containsAny(stage, "proposal", "angebot", "negotiation", "verhandlung", "commit"):
-			value = crmcontracts.MeetingPlanTypeCommercial
+			value = crmcontracts.MeetingPlanTypeValueMeetingPlanTypeCommercial
 			signals = append(signals, "stage:commercial")
 		case containsAny(stage, "discovery", "qualif"):
-			value = crmcontracts.MeetingPlanTypeFollowupDiscovery
+			value = crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery
 			signals = append(signals, "stage:discovery")
 		case containsAny(stage, "won", "closed"):
-			value = crmcontracts.MeetingPlanTypeDelivery
+			value = crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery
 			signals = append(signals, "stage:closed")
 		}
 	}
 	if value == "" && in.Project != nil && in.Deal == nil {
 		// Work in flight and nothing being sold: this is a delivery meeting,
 		// which is the case the goal section fell silent on for months.
-		value = crmcontracts.MeetingPlanTypeDelivery
+		value = crmcontracts.MeetingPlanTypeValueMeetingPlanTypeDelivery
 		signals = append(signals, "project:no-open-deal")
 	}
 	if firstTimeRoom(in) {
@@ -160,13 +160,13 @@ func structuralSignalsOf(in Input) (crmcontracts.MeetingPlanTypeValue, []string)
 func refineDiscovery(
 	value crmcontracts.MeetingPlanTypeValue, in Input,
 ) crmcontracts.MeetingPlanTypeValue {
-	if value != crmcontracts.MeetingPlanTypeFirstDiscovery {
+	if value != crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery {
 		return value
 	}
 	if firstTimeRoom(in) {
-		return crmcontracts.MeetingPlanTypeFirstDiscovery
+		return crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFirstDiscovery
 	}
-	return crmcontracts.MeetingPlanTypeFollowupDiscovery
+	return crmcontracts.MeetingPlanTypeValueMeetingPlanTypeFollowupDiscovery
 }
 
 // firstTimeRoom reports whether nobody in this room has met us before.

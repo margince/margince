@@ -129,7 +129,7 @@ func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
 	replay, err := e.store.insertNotice(e.engineCtx(), NewNotice{
 		Recipient: e.recipient, Kind: "lead_sla_v2", Subject: "Response overdue",
 		Body: "still overdue", DedupeKey: key,
-		Target: Target{Type: "person", ID: ids.NewV7()},
+		Target: Target{Type: "contact", ID: ids.NewV7()},
 	}, nil)
 	if err != nil {
 		t.Fatalf("second insert: %v", err)
@@ -248,9 +248,9 @@ func TestANoticeCarryingAKeyIsWrittenOncePerRecipient(t *testing.T) {
 	}
 
 	// PER RECIPIENT, and this is where that claim is earned. One breach
-	// escalated to two people is TWO notices and must stay two — a key scoped
+	// escalated to two contacts is TWO notices and must stay two — a key scoped
 	// to the event alone would put the line on whichever Worklist reached it
-	// first and leave the other person told nothing.
+	// first and leave the other contact told nothing.
 	toSomebodyElse := again
 	toSomebodyElse.Recipient = e.other
 	other, err := e.store.Create(e.engineCtx(), toSomebodyElse)
@@ -258,8 +258,8 @@ func TestANoticeCarryingAKeyIsWrittenOncePerRecipient(t *testing.T) {
 		t.Fatalf("Create for the second recipient: %v", err)
 	}
 	if other == first {
-		t.Fatal("the same key addressed to a second person answered the first person's notice — " +
-			"one breach escalated to two people would tell only one of them")
+		t.Fatal("the same key addressed to a second contact answered the first contact's notice — " +
+			"one breach escalated to two contacts would tell only one of them")
 	}
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM notice WHERE dedupe_key = $1`, again.DedupeKey).Scan(&rows); err != nil {
@@ -314,7 +314,7 @@ func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
 		t.Fatalf("write shape: %d audit rows, %d events — want one of each", audits, events)
 	}
 
-	// Only its recipient reads it; another person's lane stays empty.
+	// Only its recipient reads it; another contact's lane stays empty.
 	unread, err := e.store.UnreadFor(e.asUser(e.recipient), 8)
 	if err != nil {
 		t.Fatalf("UnreadFor: %v", err)
@@ -324,13 +324,13 @@ func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
 	}
 	othersView, err := e.store.UnreadFor(e.asUser(e.other), 8)
 	if err != nil {
-		t.Fatalf("UnreadFor as another person: %v", err)
+		t.Fatalf("UnreadFor as another contact: %v", err)
 	}
 	if len(othersView) != 0 {
-		t.Fatalf("another person reads %+v, want nothing", othersView)
+		t.Fatalf("another reader reads %+v, want nothing", othersView)
 	}
 
-	// Another person cannot settle it either — it reads as absent.
+	// Another contact cannot settle it either — it reads as absent.
 	if err := e.store.MarkRead(e.asUser(e.other), id); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("MarkRead by a stranger = %v, want not-found", err)
 	}

@@ -36,7 +36,7 @@ func tickDeclaration() extension.JobDeclaration {
 }
 
 // TestTickPrincipalNamesTheJobAndNoUser pins the shape the tick answers as. The
-// absent fields are the assertion: a UserID here would put a person behind work
+// absent fields are the assertion: a UserID here would put a contact behind work
 // nobody requested, and a SeatType would meter one.
 func TestTickPrincipalNamesTheJobAndNoUser(t *testing.T) {
 	decl := tickDeclaration()
@@ -50,7 +50,7 @@ func TestTickPrincipalNamesTheJobAndNoUser(t *testing.T) {
 		t.Errorf("id = %q, want %q", p.ID, want)
 	}
 	if p.UserID != ids.Nil {
-		t.Errorf("user id = %s, want none: the tick names a job, not a person", p.UserID)
+		t.Errorf("user id = %s, want none: the tick names a job, not a contact", p.UserID)
 	}
 	if p.SeatType != "" {
 		t.Errorf("seat type = %q, want none: no seat is resolved for a tick", p.SeatType)
@@ -80,7 +80,7 @@ func TestTickPrincipalIsRefusedEveryObject(t *testing.T) {
 	}
 
 	ctx := principal.WithActor(context.Background(), p)
-	for _, object := range []string{"person", "deal", "license", "installation_settings"} {
+	for _, object := range []string{"contact", "deal", "license", "installation_settings"} {
 		for _, action := range []principal.Action{
 			principal.ActionCreate, principal.ActionRead, principal.ActionUpdate, principal.ActionDelete,
 		} {
@@ -93,7 +93,7 @@ func TestTickPrincipalIsRefusedEveryObject(t *testing.T) {
 
 // TestTickPrincipalLeavesARowOwnerless holds the audit seam's half: the tick is
 // an actor storekit accepts, and OwnerOrActor answers nil for it, which is the
-// honest owner for a row no person made.
+// honest owner for a row no contact made.
 func TestTickPrincipalLeavesARowOwnerless(t *testing.T) {
 	p := extensionJobPrincipal(tickDeclaration())
 	ctx := principal.WithActor(context.Background(), p)
@@ -106,6 +106,6 @@ func TestTickPrincipalLeavesARowOwnerless(t *testing.T) {
 		t.Errorf("audited actor id = %q, want %q", actor.ID, p.ID)
 	}
 	if owner := storekit.OwnerOrActor(ctx, nil); owner != nil {
-		t.Errorf("owner = %v, want nil: no person is behind a tick", *owner)
+		t.Errorf("owner = %v, want nil: no contact is behind a tick", *owner)
 	}
 }

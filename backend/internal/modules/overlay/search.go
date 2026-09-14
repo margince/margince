@@ -184,8 +184,8 @@ func MirroredEntityTypes() []datasource.EntityType {
 //
 // The answer is always in MIRROR order and always without repeats, whatever
 // order the caller listed them in and however many times. The contract's
-// `types` is a plain array with no uniqueness rule, and `types=person,person`
-// walked literally would read that stream twice — serving every person again,
+// `types` is a plain array with no uniqueness rule, and `types=contact,contact`
+// walked literally would read that stream twice — serving every contact again,
 // since a cursor names a type rather than one of its two appearances.
 func searchableTypes(named []datasource.EntityType) ([]datasource.EntityType, error) {
 	if len(named) == 0 {

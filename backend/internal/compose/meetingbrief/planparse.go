@@ -243,12 +243,12 @@ func keptAsks(raw []replyAsk, known map[Evidence]string) []Ask {
 // top: a hypothesis nobody ranked is not thereby the most likely one.
 func tierOf(raw string) crmcontracts.MeetingPlanTier {
 	switch crmcontracts.MeetingPlanTier(strings.ToLower(strings.TrimSpace(raw))) {
-	case crmcontracts.MeetingPlanTierHigh:
-		return crmcontracts.MeetingPlanTierHigh
-	case crmcontracts.MeetingPlanTierLow:
-		return crmcontracts.MeetingPlanTierLow
+	case crmcontracts.MeetingPlanTierMeetingPlanTierHigh:
+		return crmcontracts.MeetingPlanTierMeetingPlanTierHigh
+	case crmcontracts.MeetingPlanTierMeetingPlanTierLow:
+		return crmcontracts.MeetingPlanTierMeetingPlanTierLow
 	default:
-		return crmcontracts.MeetingPlanTierMedium
+		return crmcontracts.MeetingPlanTierMeetingPlanTierMedium
 	}
 }
 

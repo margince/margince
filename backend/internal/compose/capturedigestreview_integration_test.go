@@ -103,6 +103,7 @@ func (b *backfillWireEnv) buildWith(
 	e := b.env
 	reg := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), authority, keyvault.NewMemory()).
 		WithDigestReview(newDigestReviewSource(e.Pool, approvals.NewService(e.DB())))
+	b.handlers.registry = reg
 	if err := reg.BuildDigests(b.human, now); err != nil {
 		t.Fatalf("BuildDigests: %v", err)
 	}

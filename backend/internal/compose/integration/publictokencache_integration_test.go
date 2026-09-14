@@ -37,6 +37,7 @@ package integration
 //   COVERS: GET /public/preferences/{token}
 //   COVERS: PUT /public/preferences/{token}
 //   COVERS: POST /public/preferences/{token}/unsubscribe
+//   COVERS: POST /public/preferences/{token}/stop
 //   COVERS: GET /public/confirm/{token}
 //   COVERS: POST /public/confirm/{token}
 
@@ -168,6 +169,21 @@ func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 		},
 		{"an empty token", "GET", "/v1/public/preferences/", nil},
 		{"a GET on the one-click verb", "GET", "/v1/public/preferences/" + live + "/unsubscribe", nil},
+		// The stronger stop: an Art. 21 objection rather than a withdrawal. Its
+		// answer names a receipt and whether this press changed anything, both
+		// of which are facts about one subject's request.
+		{
+			"a live token's objection", "POST", "/v1/public/preferences/" + live + "/stop",
+			AnyMap{"action": "stop_all_marketing"},
+		},
+		{
+			"a refused stop", "POST", "/v1/public/preferences/" + live + "/stop",
+			AnyMap{"action": "stop_some_of_it"},
+		},
+		{
+			"an unknown token's stop", "POST", "/v1/public/preferences/pref_does_not_exist/stop",
+			AnyMap{"action": "stop_all_contact"},
+		},
 	})
 	assertClaimed(t, driven, "/public/preferences/")
 
@@ -185,12 +201,12 @@ func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 
 // The confirm edge, across every state its token can be in.
 //
-// Its GET discloses the person's stored record rather than a list of switches,
+// Its GET discloses the contact's stored record rather than a list of switches,
 // so a cached answer here is a larger disclosure than on the preference edge.
 func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 	c := setupConsent(t)
 
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("ask the workspace to mail the confirm link → %d", status)
 	}
@@ -248,7 +264,7 @@ func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 func TestANotBootstrappedInstallationAnswersUncacheable(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t)
 	// No BootstrapWorkspaceSession: the installation has no active
-	// organization, which is what makes the session middleware answer first.
+	// company, which is what makes the session middleware answer first.
 
 	for _, path := range []string{
 		"/v1/public/confirm/sometoken",
@@ -315,7 +331,7 @@ func revokePreferenceTokens(t *testing.T, c *consentEnv) {
 // token itself is real and server-issued; only its clock is moved.
 func freshExpiredConfirmToken(t *testing.T, c *consentEnv) string {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent/confirm-request",
+	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
 		AnyMap{}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("minting a link to expire → %d", status)
 	}

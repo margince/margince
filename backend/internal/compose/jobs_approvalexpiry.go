@@ -117,7 +117,7 @@ func (w *approvalExpiryWorker) Work(ctx context.Context, _ *river.Job[ApprovalEx
 	if marked > 0 {
 		// Louder than the expiry line above deserves to be read as. A human
 		// said yes to each of these and the work did not happen, so a run of
-		// them is an agent path failing to complete rather than people not
+		// them is an agent path failing to complete rather than contacts not
 		// getting round to their inbox.
 		w.logger().InfoContext(ctx, "approval expiry: approvals the assistant never redeemed", "count", marked)
 	}

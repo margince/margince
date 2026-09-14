@@ -7,7 +7,7 @@ package consent
 
 // What happens to a proposal a data subject sends through their confirm link.
 //
-// Before this, it landed in person_confirm_submission and stopped. That table
+// Before this, it landed in contact_confirm_submission and stopped. That table
 // records what was sent — it is not work anybody owns. Nothing gave the request
 // a deadline, nothing put it in the queue the DPO works through, and the
 // subject was handed no reference to quote when chasing it. The statutory
@@ -33,7 +33,7 @@ type caseRow struct {
 	kind      string
 	status    string
 	subject   string
-	person    string
+	contact   string
 	receipt   string
 	channel   string
 	received  time.Time
@@ -45,13 +45,13 @@ type caseRow struct {
 func casesFor(t *testing.T, e *channelConsentEnv) []caseRow {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(), `
-		SELECT kind, status, subject_ref, coalesce(person_id::text, ''),
+		SELECT kind, status, subject_ref, coalesce(contact_id::text, ''),
 		       coalesce(receipt_reference, ''), coalesce(channel, ''),
 		       coalesce(received_at, 'epoch'::timestamptz), due_at,
 		       coalesce(source_submission_id::text, '')
 		  FROM data_subject_request
-		 WHERE person_id = $1
-		 ORDER BY kind`, e.person)
+		 WHERE contact_id = $1
+		 ORDER BY kind`, e.contact)
 	if err != nil {
 		t.Fatalf("reading the rights cases: %v", err)
 	}
@@ -59,7 +59,7 @@ func casesFor(t *testing.T, e *channelConsentEnv) []caseRow {
 	var out []caseRow
 	for rows.Next() {
 		var c caseRow
-		if err := rows.Scan(&c.kind, &c.status, &c.subject, &c.person, &c.receipt,
+		if err := rows.Scan(&c.kind, &c.status, &c.subject, &c.contact, &c.receipt,
 			&c.channel, &c.received, &c.dueAt, &c.fromSubID); err != nil {
 			t.Fatalf("scanning a rights case: %v", err)
 		}
@@ -105,11 +105,11 @@ func TestACorrectionProposalOpensARectificationCase(t *testing.T) {
 		t.Errorf("the case arrived through %q, want %q — the identity checks that follow "+
 			"differ by channel", cases[0].channel, channelConfirmLink)
 	}
-	// FulfilErasure parses subject_ref as a person id, so the two must agree or
+	// FulfilErasure parses subject_ref as a contact id, so the two must agree or
 	// fulfilment breaks on exactly the cases this slice opens.
-	if cases[0].subject != cases[0].person {
-		t.Errorf("subject_ref is %q while person_id is %q — the erasure fulfilment path parses "+
-			"subject_ref and would not find this person", cases[0].subject, cases[0].person)
+	if cases[0].subject != cases[0].contact {
+		t.Errorf("subject_ref is %q while contact_id is %q — the erasure fulfilment path parses "+
+			"subject_ref and would not find this contact", cases[0].subject, cases[0].contact)
 	}
 	if len(receipts) != 1 || receipts[0].Reference == "" {
 		t.Fatalf("%d receipt(s) returned, want 1 with a reference — the subject has nothing to "+
@@ -260,8 +260,8 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 
 	var submissionID ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT source_submission_id FROM data_subject_request WHERE person_id = $1`,
-		e.person).Scan(&submissionID); err != nil {
+		SELECT source_submission_id FROM data_subject_request WHERE contact_id = $1`,
+		e.contact).Scan(&submissionID); err != nil {
 		t.Fatalf("reading the submission the case came from: %v", err)
 	}
 
@@ -278,7 +278,7 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 		}
 	})
 
-	replayed, err := openRightsCaseTx(context.Background(), tx, e.person, submissionID,
+	replayed, err := openRightsCaseTx(context.Background(), tx, e.contact, submissionID,
 		submissionErasure, time.Now())
 	if err != nil {
 		t.Fatalf("replaying the case: %v", err)
@@ -291,7 +291,7 @@ func TestAReplayedProposalOpensNoSecondCase(t *testing.T) {
 
 	var opened int
 	if err := tx.QueryRow(context.Background(),
-		`SELECT count(*) FROM data_subject_request WHERE person_id = $1`, e.person).Scan(&opened); err != nil {
+		`SELECT count(*) FROM data_subject_request WHERE contact_id = $1`, e.contact).Scan(&opened); err != nil {
 		t.Fatalf("counting the cases: %v", err)
 	}
 	if opened != 1 {
@@ -418,8 +418,8 @@ func TestOnlyAReceiptCollisionIsWorthRedrawing(t *testing.T) {
 // first attempt hit, not the abort a second one would have reported.
 func TestAFailureThatIsNotAReceiptCollisionIsNotRedrawn(t *testing.T) {
 	e := setupChannelConsent(t)
-	// A subject with no person row, so the insert fails on the foreign key.
-	stranger := ids.From[ids.PersonKind](ids.NewV7())
+	// A subject with no contact row, so the insert fails on the foreign key.
+	stranger := ids.From[ids.ContactKind](ids.NewV7())
 
 	// The ATTEMPT COUNT is what this asserts, and it has to be: the error alone
 	// cannot tell the two behaviours apart. A rollback that takes leaves the

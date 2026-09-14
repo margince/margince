@@ -108,13 +108,13 @@ type DealBlock struct {
 // count as coverage.
 //
 // Thirty days rather than the review's own week: a deal worked steadily for a
-// month is multi-threaded whether or not the second person happened to appear
+// month is multi-threaded whether or not the second contact happened to appear
 // in the seven days under review, and a week-long window would report a rep as
 // single-threaded for the ordinary reason that they spoke to one of the two
 // this week.
 const multiThreadWindow = 30 * 24 * time.Hour
 
-// minStakeholders is how many distinct people a deal needs to count as
+// minStakeholders is how many distinct contacts a deal needs to count as
 // multi-threaded. Two, because the risk being measured is the single point of
 // failure: one contact who leaves takes the deal with them.
 const minStakeholders = 2
@@ -144,7 +144,7 @@ func scoreWeek(
 // The rungs are the generated contract's own constants, so a status renamed in
 // crm.yaml stops compiling here rather than silently ranking -1. Their ORDER is
 // this list — the contract's enum is alphabetical and says nothing about
-// direction — and it is the SQL mirror of people.LeadStatus.Advances, which is
+// direction — and it is the SQL mirror of contacts.LeadStatus.Advances, which is
 // the Go spelling of the same rule.
 //
 // A terminal or unknown status ranks -1 and so is never a step UP, which is
@@ -167,7 +167,7 @@ func ladderRungSQL(column string) string {
 
 // climbedTheLadderSQL is the predicate for a step UP: both ends on the ladder,
 // and the destination above the origin. The Go spelling of this rule is
-// people.LeadStatus.Advances, and the two must agree — a gate below holds it.
+// contacts.LeadStatus.Advances, and the two must agree — a gate below holds it.
 func climbedTheLadderSQL() string {
 	from, to := ladderRungSQL("from_status"), ladderRungSQL("to_status")
 	return "(" + from + ") >= 0 AND (" + to + ") > (" + from + ")"
@@ -276,11 +276,11 @@ func scoreLeads(
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
 		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
-		      AND l.first_response_at IS NOT NULL AND l.sla_breached_at IS NULL),
+		      AND `+responseRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
 		    WHERE COALESCE(l.routed_at, l.created_at) >= $%[1]d
 		      AND COALESCE(l.routed_at, l.created_at) < $%[2]d
-		      AND l.sla_breached_at IS NOT NULL),
+		      AND `+breachRecordedInWeekSQL+`),
 		  (SELECT count(*) FROM met WHERE status = 'booked' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'no_show' AND NOT partial_pre_history),
@@ -387,6 +387,14 @@ func scoreDeals(
 		scope = sqlUnbounded
 	}
 
+	taskScope, err := auth.ActivityContentClause(ctx, "task", arg)
+	if err != nil {
+		return nil, err
+	}
+	activityScope, err := auth.ActivityContentClause(ctx, "act", arg)
+	if err != nil {
+		return nil, err
+	}
 	block := &DealBlock{}
 	var present bool
 	// Nullable on its own: a present block whose deals all stayed put has no
@@ -395,7 +403,8 @@ func scoreDeals(
 	err = tx.QueryRow(ctx, fmt.Sprintf(dealScoreSQL,
 		startPos, endPos, userPos, sincePos, stakeholdersPos,
 		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
-		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
+		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render as rtlRender, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -102,6 +102,7 @@ describe("where a finished draft leaves the reader", () => {
     stubRoutes();
     render(
       <ComposeModal
+        intent="Discuss pricing"
         entityType="lead"
         entityId="l-1"
         recordAddress="dung.ly@newsky.example"
@@ -116,7 +117,7 @@ describe("where a finished draft leaves the reader", () => {
     editor.scrollIntoView = reveal;
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
     );
     await screen.findByRole("heading", { name: "AI-assisted draft" });
 

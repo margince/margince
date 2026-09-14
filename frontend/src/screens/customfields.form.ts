@@ -148,22 +148,9 @@ export function customFieldsToBody(
 /**
  * The write-body slice as a DIFF against the record the form opened on.
  *
- * `customFieldsToBody` is the right shape for a CREATE, where every field is
- * being stated for the first time. On an UPDATE it is not: an empty field
- * coerces to `null`, the API reads a top-level null as *forget this column*
- * (httperr.ClearedFields), and no `cf_*` column is clearable — so a full
- * snapshot refused every save of any record with an empty custom field, naming
- * a field the person had not touched. That is the same defect the core fields
- * had, in the other half of the same body.
- *
- * Compared on the FORM's own strings, the way the core diff is: a control left
- * alone holds exactly what it was seeded with, and the stored shape (minor
- * units, a boolean, a trimmed string) is derived from that string afterwards.
- *
- * A blank over a stored value is still a change and still travels as null. The
- * API refuses that today — no catalog column is clearable — which is a real gap
- * and a different one: it is about what the custom-field contract can express,
- * not about a form sending fields nobody edited.
+ * Only submitted columns are compared with the opened record. Unchanged and
+ * absent fields are omitted; clearing an existing value sends an explicit null.
+ * The active catalog determines which columns the record store may clear.
  */
 export function customFieldsToPatch(
   values: Record<string, unknown>,
@@ -173,6 +160,7 @@ export function customFieldsToPatch(
   const body: Record<string, unknown> = {};
   for (const field of fields) {
     const column = field.column_name;
+    if (!Object.hasOwn(values, column)) continue;
     // The submitted value is already a form string; the stored one is put into
     // the same spelling first, which is what the control was prefilled with.
     const submitted =
@@ -242,6 +230,9 @@ export function customFieldsRecordSlice(
 // non-empty), a record→prefill slice, and a values→request-body slice.
 export type ObjectCustomFields = {
   fields: CustomField[];
+  loading: boolean;
+  failed: boolean;
+  retry: () => void;
   formFields: CreateField[];
   recordSlice: (record: Record<string, unknown>) => Record<string, unknown>;
   toBody: (values: Record<string, unknown>) => Record<string, unknown>;
@@ -296,6 +287,11 @@ export function useObjectCustomFields(object: CfObject): ObjectCustomFields {
 
   return {
     fields,
+    loading: query.isPending,
+    failed: query.isError,
+    retry: () => {
+      void query.refetch();
+    },
     formFields,
     recordSlice: (record) => customFieldsRecordSlice(record, fields),
     toBody: (values) => customFieldsToBody(values, fields),

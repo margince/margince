@@ -147,7 +147,8 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	// changed since is simply the date this deal has — there is no card to keep
 	// alive, because the correction was applied when it was made and the
 	// receipt said so that morning.
-	if !hygiene.Flagged {
+	if !hygiene.Flagged || (!hygiene.Downgrade && cand.expectedClose != nil &&
+		dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
 		return closeDateMemberChecked, nil
 	}
 
@@ -197,7 +198,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	// a date a customer had given: it counted toward supported forecast claims,
 	// and the rep saw no sign that nobody had confirmed it. Neither path reads
 	// a buyer's message, so neither may call its replacement final — that needs
-	// attributable evidence or a person's answer.
+	// attributable evidence or a contact's answer.
 	//
 	// What still separates the tiers is the AUDIT LABEL, which records the
 	// policy that admitted the deal: auto_apply for a clear-overdue early-stage
@@ -269,13 +270,9 @@ func (c *CloseDateCorrector) downgradeAndReview(
 	review.Basis = c.quietBasis(ctx, cand.id, now, loc)
 	_, wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch) {
 		setForecastCategory(p, cand.forecastCat, category, notched)
-		// The date moves on this tier too, which is the change: a deal nobody
-		// has touched carries a date nobody believes, and leaving it while
-		// notching the forecast corrected the number and left the calendar
-		// lying. Both are the sweep's estimate, both are marked provisional,
-		// and both are on one Undo.
+		// A future date stays intact while confidence is reviewed.
 		setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
-		if !cand.provisional {
+		if !cand.provisional && (cand.expectedClose == nil || !dateOnly(*cand.expectedClose).Equal(*hygiene.ProposedClose)) {
 			p.Set("close_date_provisional", false, true)
 		}
 	}, map[string]any{
@@ -290,7 +287,7 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		// The basis can name a contact and a correspondence date, resolved
 		// under the owner's own permissions on the night it was written. A deal
 		// handed to somebody else later would otherwise show that sentence to a
-		// rep who may hold neither person:read nor activity:read — permissions
+		// rep who may hold neither contact:read nor activity:read — permissions
 		// nothing re-checks, because the text is already stored. The receipt
 		// reader compares this against the deal's owner NOW and withholds the
 		// sentence when they differ.
@@ -307,7 +304,7 @@ func (c *CloseDateCorrector) downgradeAndReview(
 //
 // Asked BEFORE any write, not only before the card. Every tier re-dates the deal
 // first and stages second, so a check living only in ensureStaged would let the
-// sweep rewrite the exact value a person had just undone and merely decline to
+// sweep rewrite the exact value a contact had just undone and merely decline to
 // ask about it — the undo would appear to work and be gone by morning.
 //
 // The downgrade branch asks a different question of the same deal ("is this deal

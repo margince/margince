@@ -46,10 +46,14 @@
  * is the only thing that tells a reader the arrow keys exist, so it cannot be
  * the thing the drawing covers.
  */
+/* One rung up from the row interval: the plate, the count behind it and the
+   keyboard legend are three separate statements about the queue rather than
+   three lines of one paragraph, and at 8px the two captions read as a block
+   hanging off the bottom edge of the card. */
 .ddeck-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 /*
@@ -368,6 +372,28 @@
  * cover it. It stays below the phone nav (30) and the modal overlay (50), which
  * it may not cover either.
  */
+/* IN A PANEL'S FOOT the tray gives up its box.
+ *
+ * The floating shape below is for a deck that IS its page: sticky at the foot
+ * of the viewport, on its own elevated ground, because it is the only undo
+ * there is and a reader who has scrolled a long card must not lose sight of it.
+ * Inside a panel none of that holds — the band is already the panel's own
+ * chrome, edge to edge with a hairline over it, and a bordered box in it read
+ * as a second card overlapping the pane's bottom corners, which is the one
+ * thing this language refuses.
+ *
+ * The band brings the inset, the hairline and the gap; what is left for the
+ * tray is to fill the width. */
+.panel-foot > .ddeck-tray {
+  position: static;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .ddeck-tray {
   position: sticky;
   bottom: var(--stickyBottomInset);
@@ -464,3 +490,17 @@
    leave this reader with three cards drawn exactly on top of each other and no
    way to see that anything is behind the live one — which is removing
    information in the name of removing movement. */
+
+/* A LIST OF DENSE ROWS reads as a list, so the rows sit a rung closer than the
+   full cards do: at the cards' interval, a one-line row has more air around it
+   than content in it, and the column stops reading as one thing. */
+.ddeck-list:has(.dcard[data-density="compact"]) {
+  gap: var(--space-2);
+}
+
+/* The way to the rest of the queue, under the rows it cut. Its own row rather
+   than a footer band, because the deck has no band — and the interval is the
+   list's own, so the link reads as the last thing in the column. */
+.ddeck-list-rest {
+  margin-top: var(--space-3);
+}

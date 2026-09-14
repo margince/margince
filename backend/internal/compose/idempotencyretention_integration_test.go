@@ -29,7 +29,7 @@ func seedSettledClaim(t *testing.T, e *integration.Env, key, ageOffset string) {
 		INSERT INTO idempotency_key
 		  (principal_id, key, endpoint, request_digest,
 		   response_status, response_body, response_content_type, created_at)
-		VALUES ($1, $2, 'POST /v1/people', 'digest',
+		VALUES ($1, $2, 'POST /v1/contacts', 'digest',
 		        201, '{"full_name":"Snapshot Subject","email":"subject@example.org"}',
 		        'application/json', now() - $3::interval)`,
 		"human:"+ids.NewV7().String(), key, ageOffset)

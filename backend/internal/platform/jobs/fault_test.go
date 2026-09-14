@@ -156,7 +156,7 @@ func TestAnUnreachableProviderSaysSoOnTheJobRow(t *testing.T) {
 		t.Errorf("an unreachable provider published %q — the sentence that sends a reader "+
 			"to a log the restart already discarded", got.Error())
 	}
-	if _, vetted := VettedFailure("geocode_organization", got.Error()); !vetted {
+	if _, vetted := VettedFailure("geocode_company", got.Error()); !vetted {
 		t.Errorf("the published sentence %q is not one a reader can classify", got.Error())
 	}
 	// The cause stays reachable underneath, so anything classifying on the

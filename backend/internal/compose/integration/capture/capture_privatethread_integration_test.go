@@ -61,12 +61,12 @@ func TestAPrivateThreadMintsNoContact(t *testing.T) {
 	sync(t, email(aunt, "Aunt Anne", captureOwner, "fam1r@family.example", "fam1@myco.example"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'aunt@family.example'`); n != 0 {
-		t.Fatalf("%d persons for a private correspondent, want 0 — "+
+		t.Fatalf("%d contacts for a private correspondent, want 0 — "+
 			"the classifier already decided this is not the workspace's business", n)
 	}
-	// The mail is kept. A personal thread is already held to the people on it,
+	// The mail is kept. A personal thread is already held to the contacts on it,
 	// and refusing the record is not a reason to lose somebody's family mail.
 	if n := countRows(t, e, `
 		SELECT count(*) FROM activity WHERE source_id = 'fam1r@family.example'`); n != 1 {
@@ -78,7 +78,7 @@ func TestAPrivateThreadMintsNoContact(t *testing.T) {
 	// keyed on the address and the decision was about one thread.
 	//
 	// TestAPrivateThreadDoesNotSettleTheAddressForever is where that matters —
-	// the same person, writing about business, still becomes a contact.
+	// the same contact, writing about business, still becomes a contact.
 	if n := countRows(t, e, `
 		SELECT count(*) FROM capture_pending_counterparty
 		WHERE email = 'aunt@family.example' AND resolved_at IS NOT NULL`); n != 0 {
@@ -87,7 +87,7 @@ func TestAPrivateThreadMintsNoContact(t *testing.T) {
 	}
 }
 
-// The same person, writing about business on a thread nobody judged personal,
+// The same contact, writing about business on a thread nobody judged personal,
 // is an ordinary counterparty.
 //
 // This is what the missing ledger row buys. Had the private thread settled the
@@ -105,9 +105,9 @@ func TestAPrivateThreadDoesNotSettleTheAddressForever(t *testing.T) {
 	sync(t, email(both, "Cousin", captureOwner, "mix1r@family.example", "mix1@myco.example"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'cousin@family.example'`); n != 0 {
-		t.Fatalf("%d persons after the private thread, want 0 — the fixture never reaches the case under test", n)
+		t.Fatalf("%d contacts after the private thread, want 0 — the fixture never reaches the case under test", n)
 	}
 
 	// A second, unjudged thread: they write about work and the owner answers.
@@ -116,9 +116,9 @@ func TestAPrivateThreadDoesNotSettleTheAddressForever(t *testing.T) {
 	sync(t, email(both, "Cousin", captureOwner, "mix2r@family.example", "mix2@myco.example"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'cousin@family.example'`); n != 1 {
-		t.Fatalf("%d persons after a business thread, want 1 — one private conversation "+
+		t.Fatalf("%d contacts after a business thread, want 1 — one private conversation "+
 			"must not refuse somebody forever", n)
 	}
 }
@@ -148,9 +148,9 @@ func TestAThreadHeldForBusinessReasonsStillMintsItsContact(t *testing.T) {
 	sync(t, email(counsel, "Counsel", captureOwner, "leg1r@kanzlei.example", "leg1@myco.example"))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'counsel@kanzlei.example'`); n != 1 {
-		t.Fatalf("%d persons for counsel on a legal thread, want 1 — "+
+		t.Fatalf("%d contacts for counsel on a legal thread, want 1 — "+
 			"a legal hold is about who may read the mail, not about whether they are a contact", n)
 	}
 }
@@ -179,9 +179,9 @@ func TestAStrangerCannotBorrowSomebodyElsesPrivateThread(t *testing.T) {
 		email(captureOwner, "", stranger, "borrow2@myco.example", ""))
 	sync(t, email(stranger, "Vendor", captureOwner, "borrow2r@supplier.example", "borrow2@myco.example"))
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'vendor@supplier.example'`); n != 1 {
-		t.Fatalf("%d persons for a vendor the workspace exchanged mail with, want 1 — "+
+		t.Fatalf("%d contacts for a vendor the workspace exchanged mail with, want 1 — "+
 			"the fixture never reaches the case under test", n)
 	}
 

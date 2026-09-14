@@ -360,7 +360,7 @@ func TestVoiceProfileMutationsRejectAgents(t *testing.T) {
 
 // ∅-query conformance (B-E07.4 acceptance): a second tenant neither
 // reads nor lists the first tenant's voice profile. HTTP can no longer
-// select a tenant (one installation serves one organization,
+// select a tenant (one installation serves one company,
 // A107/ADR-0061), so tenant B exists only as directly seeded rows and
 // the assertion runs through the store — the same RBAC + row-scope path
 // the HTTP surface drives.

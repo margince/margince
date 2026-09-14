@@ -44,17 +44,17 @@ expect:
     is ever asked — so the scenario certified an answer production does not
     give, and the judgment it exists to measure never happened. Nothing else
     changed: the sender is the same courteous cold pitch.
-    Cold outreach carrying every marker of a real person: a full human name, a
+    Cold outreach carrying every marker of a real contact: a full human name, a
     signature block with a company, a street address and a job title, courteous
     prose and no bulk-mail furniture at all — no unsubscribe link, no list
     footer, no promotional formatting. It reads as a named professional writing
-    personally, and that is exactly why it was answered "person" in the field
+    personally, and that is exactly why it was answered "contact" in the field
     and created a junk contact.
     What makes it spam is the DIRECTION of the offer: a stranger this business
     never contacted, pitching their own service, with a referral fee attached.
     A kind of "spam" scores high. "newsletter" is a near miss — the label is
     less precise but both resolve to noise, so no record is made either way.
-    "person" scores zero: it is the answer that shipped the defect.
+    "contact" scores zero: it is the answer that shipped the defect.
   bands:
     certified_min: 70
     degraded_min: 50

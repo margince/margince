@@ -120,7 +120,7 @@ type Signals = Readonly<{
  * What the installation's entitlement adds up to, for a surface that reports
  * rather than enforces.
  *
- * `none` and `refused` are the two a person has to act on, and they are why the
+ * `none` and `refused` are the two a contact has to act on, and they are why the
  * Core carries this at all: an installation with no licence is not a healthy
  * agent with a footnote, it is a standing fault, and the rail used to state it
  * as a grey row at the very bottom that nobody read. `pressing` is the same
@@ -146,7 +146,7 @@ type AiPosture = "configured" | "unconfigured" | "development" | "unknown";
  * queue, because a queue built from half the evidence is the more dangerous of
  * the two to report calmly. Everything else rests at `idle` — proposals
  * WAITING is not a state of its own, it is the agent at rest with a number
- * beside it, and that number is the thing a person acts on.
+ * beside it, and that number is the thing a contact acts on.
  */
 function useAiPosture(): AiPosture {
   const profile = useQuery({
@@ -366,7 +366,7 @@ function modelText(
 }
 
 /**
- * When it happened, as a person would say it.
+ * When it happened, as a contact would say it.
  *
  * A wall-clock stamp answers "at what time", and the question a recap answers is
  * "how long ago" — five rows of `19/08/2026, 10:00` make the reader do the
@@ -398,7 +398,7 @@ function agoFor(iso: string, locale: Locale, now: number): string {
 /**
  * The recap: what the agent has done lately, and the door to the whole trace.
  *
- * Five rows at most. The question a person asks of a background agent is "what
+ * Five rows at most. The question a contact asks of a background agent is "what
  * have you been doing", and five answers it — a sixth turns the panel into a log
  * viewer, which already exists and is better at it.
  *
@@ -896,7 +896,7 @@ function usePanelFrame(
  * knows what a run IS and is the only thing that may name it, and this tab's own
  * count of requests it is holding open to a route whose handler calls a model
  * and waits (`asking`, from api/model-inflight.ts). The projection arrives on a
- * poll, so between a person pressing "Draft with AI" and the next read there was
+ * poll, so between a contact pressing "Draft with AI" and the next read there was
  * a live model call nothing on screen reported: the orb sat at rest through the
  * whole of the work it exists to show. `asking` closes that window and claims
  * nothing else: it ranks BELOW every occurrence the feed carries, so it can

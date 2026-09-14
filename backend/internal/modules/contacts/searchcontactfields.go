@@ -1,0 +1,158 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// Writing a field discovered in a public search RESULT (ADR-0081 / A126).
+//
+// The distinction from the site-read pass next door is the source, and it is
+// the whole point of the seam: nothing here read the page the value points
+// at. A search index returned a title, a snippet and a URL, and those alone
+// carry the fact. That is what lets a LinkedIn profile address reach a
+// contact while the platform itself is never fetched — the address is
+// evidence of where the claim appears, and the deny-list keeps it at that.
+//
+// Everything is fill-only-empty and evidence-backed, exactly as the signature
+// and site-read passes are, so first verdict wins and a human's answer is
+// structurally untouchable.
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// searchFieldSource is the DM-CONV-11 channel for a value read out of a
+// public search result. It is distinct from site_read so a reader can tell a
+// value we found by searching from one we found by reading a page, and so an
+// Art. 14 answer can name which it was.
+const searchFieldSource = "web_search"
+
+// DiscoveredField is one value a public search result asserted, with the
+// result text it was read from.
+type DiscoveredField struct {
+	// Field is the contact_profile_field key — 'linkedin' today; the enum on
+	// the table is what bounds this, not a list here.
+	Field string
+	Value string
+
+	// EvidenceSnippet is the result's own title and description, verbatim.
+	// It is the receipt the reader checks the value against, and it exists
+	// without anyone having fetched Value's page.
+	EvidenceSnippet string
+
+	// SourceRef names the search that found it, so the claim can say which
+	// index answered and when.
+	SourceRef string
+}
+
+// ApplyDiscoveredFields fills empty fields on a contact from public search
+// results. It reports which fields it wrote.
+//
+// Row-scoped like every read that names a record: a contact the caller cannot
+// see is ErrNotFound rather than a silent no-op, because a caller that cannot
+// see the record must not learn it exists by watching a write succeed.
+func (s *Store) ApplyDiscoveredFields(ctx context.Context, contactID ids.ContactID, fields []DiscoveredField) ([]string, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var applied []string
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// LIVE: contact_profile_field is a declared PII table, and Art. 17
+		// erasure stamps archived_at rather than deleting the contact — so an
+		// approved proposal applied afterwards writes the erased subject's
+		// details back into a table the erasure had just cleared.
+		if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID.UUID); err != nil {
+			return err
+		}
+		out, err := fillDiscoveredFields(ctx, tx, contactID, by, fields)
+		if err != nil {
+			return err
+		}
+		applied = out
+		return nil
+	})
+	return applied, err
+}
+
+// fillDiscoveredFields writes the evidence rows and stamps provenance. The
+// evidence row is the admission ticket and first verdict wins, so a search
+// result can never overwrite what a signature, a site read or a human
+// already answered.
+func fillDiscoveredFields(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, by string, fields []DiscoveredField) ([]string, error) {
+	var applied []string
+	// Keyed by FIELD and carrying the value actually written: this becomes the
+	// audit after-image, and field history projects per field from it. A list
+	// of field NAMES here would show the contact's history as a change to a
+	// field called "fields" and never show what was filled in.
+	values := map[string]any{}
+	// The matching before-image, per field. The insert is ON CONFLICT DO
+	// NOTHING, so a field that landed had no value to lose — but "it held
+	// nothing" is a statement the row has to make, and an absent image makes
+	// it only by argument.
+	previous := map[string]any{}
+	for _, f := range fields {
+		value := strings.TrimSpace(f.Value)
+		snippet := strings.TrimSpace(f.EvidenceSnippet)
+		// Evidence-or-omit is enforced here rather than trusted: a value with
+		// no result text behind it is exactly the unciteable claim this seam
+		// exists to refuse.
+		if value == "" || snippet == "" {
+			continue
+		}
+		// A machine fill: a search result claims a field nobody has answered
+		// and never replaces one.
+		landed, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
+			Field: f.Field, Value: value, EvidenceSnippet: snippet, SourceRef: f.SourceRef,
+			Source: searchFieldSource, CapturedBy: by,
+		}, claimUnanswered)
+		if err != nil {
+			return nil, err
+		}
+		if !landed {
+			continue
+		}
+		if err := storekit.StampFields(ctx, tx, entityContact, contactID.UUID, f.SourceRef, by,
+			[]storekit.FieldStamp{{Field: f.Field}}); err != nil {
+			return nil, err
+		}
+		applied = append(applied, f.Field)
+		values[f.Field] = value
+		previous[f.Field] = nil
+	}
+	if len(applied) == 0 {
+		return nil, nil
+	}
+	// The same audit + outbox pair the site and signature writers use. Without
+	// it a search-discovered field lands in the record with no audit row and no
+	// contact.updated — invisible to the field-history projection, and to every
+	// consumer that reacts to a contact changing. A fill nobody can see the
+	// provenance of is the opposite of what this seam is for.
+	//
+	// The images carry the fields; WHERE they came from is context about the
+	// mutation and rides the evidence column, because a source folded into the
+	// after-image projects as a field change that never happened.
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionUpdate, entityContact, contactID.UUID,
+		previous, values, map[string]any{auditKeySource: searchFieldSource})
+	if err != nil {
+		return nil, fmt.Errorf("contacts: auditing the search-discovered fill: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID, crmcontracts.PublicEventContactUpdated{
+		ChangedFields: map[string]any{auditKeyFields: applied, auditKeySource: searchFieldSource},
+	}); err != nil {
+		return nil, fmt.Errorf("contacts: emitting contact.updated for the search fill: %w", err)
+	}
+	return applied, nil
+}

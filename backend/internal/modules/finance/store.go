@@ -31,6 +31,11 @@ type Store struct {
 	// then FREEZES a rate onto rows it will not revisit, so a store that only
 	// looked constructed would write a mistake it cannot take back.
 	baseCurrency BaseCurrencyFunc
+	// billingContacts answers who handles this customer's invoices, bound by
+	// compose because the relationship table belongs to contacts. Nil in an
+	// installation that has not wired it, which serves the card without the
+	// panel rather than failing.
+	billingContacts BillingContactReader
 }
 
 // BaseCurrencyFunc resolves the installation's reporting currency inside a

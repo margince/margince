@@ -2,7 +2,7 @@
 // slot, and the audience control behind it.
 //
 // Lifted out of compose.tsx, which is 3,459 lines and was answering two
-// unrelated questions: how a person writes a message, and what a reader may do
+// unrelated questions: how a contact writes a message, and what a reader may do
 // to one already on a timeline. The writes go through the shared audience
 // service, which is where the thread decision was already spelled a second
 // time.
@@ -46,7 +46,7 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // how the backend already reads it. Gating the composer on an email row instead
 // makes a fresh workspace, whose only rows are logged notes, unable to send at
 // all. A `message` row carries the opposite gate: it is withheld, not always
-// offered, when the person behind it cannot be reached on the transport that
+// offered, when the contact behind it cannot be reached on the transport that
 // carried it (see useChannelReachable).
 //
 // Relink, because an activity shown on a 360 timeline is by construction already
@@ -56,20 +56,20 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 //
 // It owns the two open states so the timeline mapper stays presentational.
 //
-// `extra` is how a surface adds a verb only it can serve — the person page's
+// `extra` is how a surface adds a verb only it can serve — the contact page's
 // meeting brief opens a drawer this file cannot see. It renders before Relink
 // so the row's own subject-matter verbs lead and the corrective ones follow.
 export function TimelineActions({
   activity,
   entityType,
   entityId,
-  personId,
+  contactId,
   extra,
 }: Readonly<{
   activity: Activity;
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   extra?: (activity: Activity) => ReactNode;
 }>) {
   const t = useT();
@@ -82,7 +82,7 @@ export function TimelineActions({
         channelProvider={activity.channel_provider ?? undefined}
         entityType={entityType}
         entityId={entityId}
-        personId={personId}
+        contactId={contactId}
         contentWithheld={activity.content_state === "withheld"}
       />
       {extra?.(activity)}

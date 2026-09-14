@@ -120,7 +120,7 @@ func unavailable(day crmcontracts.Attention) []crmcontracts.WorklistSourceUnavai
 		//
 		// This suppression is WIDER than it should be, and the difference is
 		// worth stating rather than hiding: the DSR read also refuses a reader
-		// who has the admin role but lost `person:read`, and that refusal is
+		// who has the admin role but lost `contact:read`, and that refusal is
 		// real news this list swallows. Telling the two apart needs a reason on
 		// the refusal, which the lane contract does not carry — issue filed.
 		if lane == laneDSR || lane == laneNoticeCase {

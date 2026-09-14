@@ -1,0 +1,115 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// What an enumeration of this module's records may be narrowed by.
+//
+// The NAMES are not authored here. They are the contract's own list-operation
+// parameters, which `backend/tools/gen-recordfields` reads off crm.yaml for the
+// agent surface to publish; what this file adds is the half the contract cannot
+// know — which of them this store can actually answer, and the field each one
+// narrows. The composition root publishes the intersection, so a filter
+// declared by the contract and answered by no store is offered by neither.
+//
+// A contract parameter absent below is absent on purpose, and absent is not
+// the same as unanswerable. What this set decides is narrower than what a store
+// can answer: which names a TOOL publishes. Every one of them is rendered into
+// the tool listing each step of a run re-sends, so growing it is the
+// catalog-budget decision, not something a store learning to bind one more
+// filter settles on its own.
+//
+// `tag` and `domain` narrow through link predicates over rows this module holds
+// in another table rather than through a column of its own, which is why they
+// read as store detail rather than as filters. A caller cannot see the
+// difference, and it is not one the vocabulary makes: what a name has to be is
+// answerable, not cheap to answer. `min_score` is a threshold rather than an
+// equality match, and the only one here — it is why the binding set spells a
+// number at all.
+
+import (
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+)
+
+// The filter names this module answers, spelled once each. They are wire names
+// — a caller's query parameter — which is why they are not the column
+// constants they happen to match today.
+const (
+	filterOwnerID          = "owner_id"
+	filterLifecycle        = "lifecycle"
+	filterRelationshipType = "relationship_type"
+	filterStatus           = "status"
+	filterTag              = "tag_id"
+	filterTagMode          = "tag_mode"
+	filterDomain           = "domain"
+	filterMinScore         = "min_score"
+	filterPartnerRole      = "partner_role"
+	filterCertStatus       = "cert_status"
+)
+
+var contactListFilters = storekit.FilterSet[ListContactsInput]{
+	filterOwnerID: storekit.FilterID(func(in *ListContactsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterTag:     storekit.FilterIDList[ids.TagKind](func(in *ListContactsInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListContactsInput, v *string) {
+		in.TagMode = tagModeOrDefault(v)
+	}),
+}
+
+var companyListFilters = storekit.FilterSet[ListCompaniesInput]{
+	filterDomain:    storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Domain = v }),
+	filterLifecycle: storekit.FilterWord(func(in *ListCompaniesInput, v *string) { in.Lifecycle = v }),
+	filterOwnerID:   storekit.FilterID(func(in *ListCompaniesInput, id *ids.UserID) { in.OwnerID = id }),
+	filterRelationshipType: storekit.FilterWord(
+		func(in *ListCompaniesInput, v *string) { in.RelationshipType = v }),
+	filterTag: storekit.FilterIDList[ids.TagKind](func(in *ListCompaniesInput, v []ids.UUID) { in.TagIDs = v }),
+	filterTagMode: storekit.FilterWord(func(in *ListCompaniesInput, v *string) {
+		in.TagMode = tagModeOrDefault(v)
+	}),
+}
+
+// Partner lists by role and certification, the two dials GET /partners already
+// publishes. There is no text index behind a partner, so these are the whole
+// vocabulary rather than a narrowing of a broader search.
+var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
+	filterPartnerRole: storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.PartnerRole = v }),
+	filterCertStatus:  storekit.FilterWord(func(in *ListPartnersInput, v *string) { in.CertStatus = v }),
+}
+
+var leadListFilters = storekit.FilterSet[ListLeadsInput]{
+	filterMinScore: storekit.FilterNumber(func(in *ListLeadsInput, v *int) { in.MinScore = v }),
+	filterOwnerID:  storekit.FilterID(func(in *ListLeadsInput, id *ids.UserID) { in.OwnerID = id }),
+	filterStatus:   storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Status = v }),
+}
+
+// ListFilters names what SearchEntity can narrow one entity type by. An entity
+// type this module lists by nothing answers an empty vocabulary rather than
+// nil, so a caller reads "no filters here" instead of "no such record type".
+func (p *Provider) ListFilters(t datasource.EntityType) []string {
+	switch t {
+	case datasource.EntityContact:
+		return contactListFilters.Names()
+	case datasource.EntityCompany:
+		return companyListFilters.Names()
+	case datasource.EntityLead:
+		return leadListFilters.Names()
+	case datasource.EntityPartner:
+		return partnerListFilters.Names()
+	default:
+		return nil
+	}
+}
+
+// tagModeOrDefault reads a stored mode, falling back to `any`.
+//
+// A saved view is not a request: it has no caller to refuse to, and a view
+// that stopped opening because somebody hand-edited its mode would be worse
+// than one that opens on the contract's own default.
+func tagModeOrDefault(raw *string) storekit.TagMode {
+	mode, err := storekit.ParseTagMode(raw)
+	if err != nil {
+		return storekit.TagModeAny
+	}
+	return mode
+}

@@ -155,8 +155,8 @@ func toContractLicenseHolder(license licensecheck.License, now time.Time) crmcon
 		// that reads only this one still warns.
 		RenewalDue: license.InGrace || !license.Expiry.After(now.Add(renewalWindow)),
 	}
-	if license.Org != "" {
-		holder.Org = &license.Org
+	if license.Company != "" {
+		holder.Company = &license.Company
 	}
 	if license.ContactName != "" {
 		holder.ContactName = &license.ContactName

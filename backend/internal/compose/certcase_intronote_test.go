@@ -215,10 +215,10 @@ func TestAForbiddenPhraseIsCaughtWhateverItsCase(t *testing.T) {
 	}
 }
 
-// A fixture missing any of the three people the note cannot be written without
+// A fixture missing any of the three contacts the note cannot be written without
 // describes a call the product never makes, and is refused before a model is
 // paid for.
-func TestAFixtureMissingAPersonTheNoteNeedsIsRefused(t *testing.T) {
+func TestAFixtureMissingAContactTheNoteNeedsIsRefused(t *testing.T) {
 	t.Parallel()
 	for name, fixture := range map[string]string{
 		"no recipient": `{"colleague":"Sofia Meier","requester":"Jonas Weber"}`,

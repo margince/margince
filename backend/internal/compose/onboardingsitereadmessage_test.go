@@ -16,7 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -91,16 +91,16 @@ func TestCompanyReadAnswerBuildsABoundedGroundedModelRequest(t *testing.T) {
 
 func TestCompanyReadEvidenceIsBoundedNumberedAndWebsiteGrounded(t *testing.T) {
 	longValue := strings.Repeat("ü", companyReadSourceMaxRunes+20)
-	read := people.SiteRead{
-		LegalEntities: []people.SiteReadLegalEntity{{
+	read := contacts.SiteRead{
+		LegalEntities: []contacts.SiteReadLegalEntity{{
 			Name: "Acme GmbH", RegisteredAddress: "Werkstr. 1", RegisterNumber: "HRB 12345",
 			EvidenceSnippet: "Acme GmbH, Werkstr. 1, HRB 12345", SourceURL: "https://acme.example/imprint",
 		}},
-		ProfileFields: []people.DeepReadField{
+		ProfileFields: []contacts.DeepReadField{
 			{Field: "offer_summary", Value: longValue, EvidenceSnippet: "Onboarding software", SourceURL: "https://acme.example/product"},
 			{Field: "icp", Value: "ignored", SourceURL: ""},
 		},
-		Facts: []people.DeepReadFact{{
+		Facts: []contacts.DeepReadFact{{
 			Field: "service", Value: "Implementation", EvidenceSnippet: "Guided implementation", SourceURL: "https://acme.example/services",
 		}},
 	}
@@ -225,7 +225,7 @@ func TestCompanyReadMessageHandlerKeepsUnavailableStatesHonest(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
-			handlers.MessageCompanySiteRead(recorder, request.Clone(request.Context()), readID)
+			handlers.MessageAnchorCompanySiteRead(recorder, request.Clone(request.Context()), readID)
 			if recorder.Code != http.StatusNotImplemented {
 				t.Fatalf("status = %d, want 501", recorder.Code)
 			}
@@ -261,11 +261,11 @@ func TestOnboardingCompanyStatusQuestionsNeverBecomeChanges(t *testing.T) {
 		t.Fatal("an in-scope company question was classified as a workspace status question")
 	}
 
-	reply := onboardingCompanyReply(string(crmcontracts.OnboardingActCompany), companyReadModelReply{
+	reply := onboardingCompanyReply(string(crmcontracts.OnboardingActOnboardingActCompany), companyReadModelReply{
 		Kind: "status", Message: onboardingStatusMessage("en", onboardingResearchState{ready: true}, 2),
 	}, nil, []string{"display_name", "icp"}, onboardingResearchState{ready: true}, ai.RunSummary{Currency: "USD"})
-	if reply.Kind != crmcontracts.CompanyConversationStatus || len(reply.ProposedChanges) != 0 ||
-		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingNextRequiredDisplayName ||
+	if reply.Kind != crmcontracts.CompanyConversationResponseKindCompanyConversationStatus || len(reply.ProposedChanges) != 0 ||
+		reply.NextRequiredField == nil || *reply.NextRequiredField != crmcontracts.OnboardingCompanyMessageReplyNextRequiredFieldOnboardingNextRequiredDisplayName ||
 		reply.AvailableAction != nil {
 		t.Fatalf("status reply = %+v", reply)
 	}
@@ -296,8 +296,8 @@ func TestCompanyConversationRejectsSuggestionsWithoutChangeIntent(t *testing.T) 
 
 func TestCompanyConversationAllowsCitedSynthesisOnlyForInterpretiveFields(t *testing.T) {
 	known := map[string]companyReadEvidence{
-		"S1": {ID: "S1", Field: people.FactNamedCustomer, Value: "Shopware"},
-		"S2": {ID: "S2", Field: people.FactServedIndustry, Value: "industrial automation"},
+		"S1": {ID: "S1", Field: contacts.FactNamedCustomer, Value: "Shopware"},
+		"S2": {ID: "S2", Field: contacts.FactServedIndustry, Value: "industrial automation"},
 	}
 	icp := companyReadModelReply{
 		Kind: "recommendation", Message: "I suggest a focused ICP.", SourceIDs: []string{"S1", "S2"},

@@ -65,6 +65,13 @@ var erasureColumnBaseline = map[string][]string{
 	// recipient address and the subject link, which is the identifying half.
 	"communication_decision": {
 		"basis",
+		// Two values, both this repository's own: the engine allowed the
+		// message, or a named human decided a refused one goes anyway. It says
+		// nothing about the subject — it says what the CONTROLLER did — and
+		// clearing it would leave a sent message with no record of the
+		// authority behind it, which is the accountability half Art. 5(2)
+		// requires the erasure to keep.
+		"execution_authority",
 		"legacy_verdict",
 		"mode",
 		"phase",
@@ -81,6 +88,28 @@ var erasureColumnBaseline = map[string][]string{
 		// it here would destroy the controller's ability to say which evidence
 		// it relied on for a send it has already made.
 		"evidence",
+		// ISO 3166-1 alpha-2 codes naming which jurisdictions' rules judged the
+		// message — "de", "vn". The installation's own, never the subject's:
+		// applicableRules resolves the country the INSTALLATION declares, and
+		// the recipient's is not read at all. Clearing it would leave a sent
+		// message with no record of the law it was judged under, which is the
+		// accountability half Art. 5(2) requires the erasure to keep.
+		"ruleset_codes",
+	},
+	// A rights case's own vocabulary: what kind of request arrived, how it
+	// reached us, where it stands, and the minted code somebody quotes when
+	// asking after it. Every value is drawn from a closed set this repository
+	// defines or is a code with no subject in it — none of it is anything the
+	// subject wrote or anything written about them.
+	//
+	// The two columns that DID carry the subject are cleared by the redaction:
+	// subject_ref is tombstoned and resolution is replaced, because that one is
+	// prose a colleague typed and can name or quote the subject.
+	"data_subject_request": {
+		"channel",
+		"kind",
+		"receipt_reference",
+		"status",
 	},
 	"activity": {
 		"audience",
@@ -127,6 +156,10 @@ var erasureColumnBaseline = map[string][]string{
 		"co_target_entity_type",
 	},
 	"comms_outbound": {
+		// The delivery's half of the decision vocabulary, read by the worker
+		// rather than by an auditor. See
+		// communication_decision.execution_authority.
+		"execution_authority",
 		// The controller lane's vocabulary: which kind of sender, and which
 		// registered wording. Both are this repository's own words rather than
 		// anything a subject wrote or anything written about them, so the
@@ -163,7 +196,7 @@ var erasureColumnBaseline = map[string][]string{
 		"status",
 		"status_set_by",
 	},
-	"person": {
+	"contact": {
 		"captured_by",
 		"source",
 		"visibility",
@@ -344,7 +377,7 @@ func renderSQL(expr ast.Expr, consts map[string]string) string {
 		// The statement is the FORMAT STRING. A cascade statement built with
 		// Sprintf carries its columns in the format and its values in the
 		// arguments, so rendering the format is rendering the statement — and
-		// rendering nothing loses person's and lead's redactions entirely.
+		// rendering nothing loses contact's and lead's redactions entirely.
 		//
 		// ReplaceAll is the same shape one level along: what it substitutes is
 		// a bind position, not a column or a table.
@@ -466,7 +499,7 @@ func assignmentsAreReadable(statement string) bool {
 	clauses := setClause.FindAllStringSubmatch(statement, -1)
 	// NO CLAUSE AT ALL is unreadable, not readable. The caller has already
 	// decided this statement assigns something; a SET the scan cannot find is
-	// therefore a SET that the marker swallowed whole — `"UPDATE person " +
+	// therefore a SET that the marker swallowed whole — `"UPDATE contact " +
 	// clearEverything` — and the token this pattern anchors on went with it.
 	// Answering "readable" there let the loop run zero times and returned the
 	// same true a fully rendered redaction gets, which is this census skipping
@@ -526,7 +559,7 @@ func splitSetClause(clause string) []string {
 }
 
 // writesSomething matches the keyword of a statement that ASSIGNS, across any
-// whitespace: `UPDATE\n  person SET …` is one write laid out over two lines,
+// whitespace: `UPDATE\n  contact SET …` is one write laid out over two lines,
 // and a check for the literal "UPDATE " discards it before its target is ever
 // read.
 var writesSomething = regexp.MustCompile(`(?is)\b(?:update|merge\s+into)\s`)
@@ -684,8 +717,8 @@ func TestAWriteIsPlacedByItsOwnTargetOrNotAtAll(t *testing.T) {
 	}{
 		{
 			name: "a plain update is one write",
-			sql:  "UPDATE person SET full_name = '' WHERE id = $1",
-			want: []write{{table: "person", text: "UPDATE person SET full_name = '' WHERE id = $1"}},
+			sql:  "UPDATE contact SET full_name = '' WHERE id = $1",
+			want: []write{{table: "contact", text: "UPDATE contact SET full_name = '' WHERE id = $1"}},
 		}, {
 			// The approval redaction's shape. Read whole, the first target
 			// owns every SET clause: workflow_run's assignments become

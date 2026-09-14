@@ -64,7 +64,7 @@ export const Aside: Story = {
 };
 
 // The rail on the LEFT: what the subject IS, read before what is happening to
-// it — the person record's shape.
+// it — the contact record's shape.
 export const Rail: Story = {
   args: {
     shape: "rail",

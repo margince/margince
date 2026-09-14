@@ -3,14 +3,14 @@
 
 package capture
 
-// A seat's OTHER addresses: a send-as alias, a private domain the same person
+// A seat's OTHER addresses: a send-as alias, a private domain the same contact
 // reads, an address they forward from.
 //
-// Mail among a person's own addresses is not correspondence with anybody, and
+// Mail among a contact's own addresses is not correspondence with anybody, and
 // an alias is not a contact. The sink reads this list twice — once to decide a
 // message is wholly internal (internalOnlyTx) and once to decide who the
 // creation ladder is even about (ladderSubjectTx) — so an address a seat
-// declares as their own can never become a person record.
+// declares as their own can never become a contact record.
 //
 // Per USER, never per workspace. One seat's alias says nothing about another
 // seat's mail, and a workspace-wide list would let anyone silence a colleague's
@@ -91,7 +91,7 @@ func NewOwnerIdentityStore(db *database.DB) *OwnerIdentityStore {
 // right for the reads it guards, and wrong for this list. A connector
 // principal carries the granting seat's UserID, so under RequireHuman alone a
 // connector could list, add and withdraw that seat's private identities. The
-// list says which of a person's mail is theirs alone; nothing but that person
+// list says which of a contact's mail is theirs alone; nothing but that contact
 // touches it.
 func seatItself(ctx context.Context) (principal.Principal, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
@@ -147,7 +147,7 @@ func scanOwnerIdentity(row pgx.CollectableRow) (OwnerIdentity, error) {
 }
 
 // Add records one of the caller's own addresses. It takes a human seat and
-// nothing more: a person claiming their own address needs no grant, and the
+// nothing more: a contact claiming their own address needs no grant, and the
 // claim binds only their own mail. Idempotent on the folded value, so re-adding
 // answers the existing row rather than refusing.
 func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerIdentity, error) {
@@ -228,7 +228,7 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 // kind, and never its VALUE.
 //
 // This is the same ruling the user-scoped exclusion follows, and for a stronger
-// reason: an owner identity is always one person's, and its whole purpose is to
+// reason: an owner identity is always one contact's, and its whole purpose is to
 // keep a private address out of the CRM. Writing it into the audit log would
 // put it back in, where nothing erases it and every admin reads it. The
 // id and kind answer "who declared an address, and when", which is what an

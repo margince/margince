@@ -5,7 +5,7 @@
 
 package compose
 
-// Qualify-to-deal through the real people→deals edge: the promotion, the
+// Qualify-to-deal through the real contacts→deals edge: the promotion, the
 // deal and the contact's seat on it land in one transaction, and a deal the
 // deals store refuses rolls the whole promotion back.
 
@@ -16,8 +16,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,17 +31,17 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 	if err := dealsStore.SeedDefaults(admin); err != nil {
 		t.Fatalf("seed default pipeline: %v", err)
 	}
-	peopleStore := people.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
+	contactsStore := contacts.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
 
 	email, company := "qualify@example.test", "2txt GmbH"
-	lead, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &email, CompanyName: &company, Source: "manual"})
+	lead, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &email, CompanyName: &company, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 
-	out, err := peopleStore.QualifyLead(admin, leadID, people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{},
+	out, err := contactsStore.QualifyLead(admin, leadID, contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
 	if err != nil {
 		t.Fatalf("qualify with deal: %v", err)
@@ -63,7 +63,7 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 	if deal.PipelineId == nil || deal.StageId == nil || *deal.PipelineId != pipeline.Id || pipeline.Stages == nil || *deal.StageId != (*pipeline.Stages)[0].Id {
 		t.Errorf("deal sits in pipeline %v stage %v, want the default pipeline's first open stage", deal.PipelineId, deal.StageId)
 	}
-	after, err := peopleStore.GetLead(admin, leadID, storekit.IncludeArchived)
+	after, err := contactsStore.GetLead(admin, leadID, storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,13 +72,13 @@ func TestQualifyOpensTheDealAndSeatsTheContactInOneTransaction(t *testing.T) {
 	}
 	// The contact sits on the deal, which is what keeps the undo honest:
 	// demote refuses while the deal is live.
-	if e.WsCount(t, `SELECT count(*) FROM relationship WHERE kind = 'deal_stakeholder' AND person_id = $1 AND deal_id = $2 AND archived_at IS NULL`,
-		ids.UUID(out.Person.Id), *out.DealID) != 1 {
+	if e.WsCount(t, `SELECT count(*) FROM relationship WHERE kind = 'deal_stakeholder' AND contact_id = $1 AND deal_id = $2 AND archived_at IS NULL`,
+		ids.UUID(out.Contact.Id), *out.DealID) != 1 {
 		t.Error("the qualified contact is not seated on the deal")
 	}
-	var hasDeal *people.PersonHasDealError
-	if _, err := peopleStore.DemoteLead(admin, leadID, "changed my mind"); !errors.As(err, &hasDeal) {
-		t.Errorf("demote with the qualified deal live err = %v, want PersonHasDealError", err)
+	var hasDeal *contacts.ContactHasDealError
+	if _, err := contactsStore.DemoteLead(admin, leadID, "changed my mind"); !errors.As(err, &hasDeal) {
+		t.Errorf("demote with the qualified deal live err = %v, want ContactHasDealError", err)
 	}
 }
 
@@ -93,9 +93,9 @@ func TestQualifyWithDealNeedsTheRelationshipGrant(t *testing.T) {
 	if err := dealsStore.SeedDefaults(admin); err != nil {
 		t.Fatal(err)
 	}
-	peopleStore := people.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
+	contactsStore := contacts.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
 	email := "noseat@example.test"
-	lead, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &email, Source: "manual"})
+	lead, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &email, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,18 +103,18 @@ func TestQualifyWithDealNeedsTheRelationshipGrant(t *testing.T) {
 		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
 		Objects: map[string]principal.ObjectGrant{
 			"lead":     {Create: true, Read: true, Update: true, Delete: true},
-			"person":   {Create: true, Read: true, Update: true},
+			"contact":  {Create: true, Read: true, Update: true},
 			"deal":     {Create: true, Read: true, Update: true},
 			"pipeline": {Read: true},
 		},
 	})
-	_, err = peopleStore.QualifyLead(narrow, ids.From[ids.LeadKind](ids.UUID(lead.Id)), people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{},
+	_, err = contactsStore.QualifyLead(narrow, ids.From[ids.LeadKind](ids.UUID(lead.Id)), contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("qualify-with-deal without relationship:create err = %v, want ErrPermissionDenied", err)
 	}
-	if _, err := peopleStore.GetLead(admin, ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly); err != nil {
+	if _, err := contactsStore.GetLead(admin, ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly); err != nil {
 		t.Errorf("the refused qualify should have left the lead live and open: %v", err)
 	}
 }
@@ -126,9 +126,9 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 	if err := dealsStore.SeedDefaults(admin); err != nil {
 		t.Fatal(err)
 	}
-	peopleStore := people.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
+	contactsStore := contacts.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
 	email := "rollback@example.test"
-	lead, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &email, Source: "manual"})
+	lead, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &email, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,21 +141,21 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	pipelineID := ids.UUID(pipeline.Id)
-	_, err = peopleStore.QualifyLead(admin, leadID, people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{PipelineID: &pipelineID, StageID: &ghost},
+	_, err = contactsStore.QualifyLead(admin, leadID, contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{PipelineID: &pipelineID, StageID: &ghost},
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("qualify with a ghost stage err = %v, want ErrNotFound from the deal birth", err)
 	}
-	after, err := peopleStore.GetLead(admin, leadID, storekit.LiveOnly)
+	after, err := contactsStore.GetLead(admin, leadID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatalf("the lead should still be live and open after the rollback: %v", err)
 	}
-	if after.Status != crmcontracts.LeadStatusNew || after.PromotedPersonId != nil || after.QualifiedDealId != nil {
+	if after.Status != crmcontracts.LeadStatusNew || after.PromotedContactId != nil || after.QualifiedDealId != nil {
 		t.Errorf("lead after a refused deal: %+v, want untouched", after)
 	}
-	if e.WsCount(t, `SELECT count(*) FROM person WHERE converted_from_lead_id = $1`, ids.UUID(lead.Id)) != 0 {
-		t.Error("a person survived the rolled-back promotion")
+	if e.WsCount(t, `SELECT count(*) FROM contact WHERE converted_from_lead_id = $1`, ids.UUID(lead.Id)) != 0 {
+		t.Error("a contact survived the rolled-back promotion")
 	}
 
 	// A stage alone is placed in its own pipeline, not the default one.
@@ -169,12 +169,12 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 	}
 	intro := ids.UUID((*other.Stages)[0].Id)
 	stageEmail := "stage-only@example.test"
-	stageLead, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &stageEmail, Source: "manual"})
+	stageLead, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &stageEmail, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := peopleStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(stageLead.Id)), people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{StageID: &intro},
+	out, err := contactsStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(stageLead.Id)), contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{StageID: &intro},
 	})
 	if err != nil {
 		t.Fatalf("qualify with a stage alone: %v", err)
@@ -189,9 +189,9 @@ func TestQualifyRollsBackWhenTheDealIsRefused(t *testing.T) {
 
 	// Without the edge wired, asking for a deal is refused outright rather
 	// than promoting without one.
-	unwired := people.NewStore(e.DB())
-	var notWired *people.DealOpenerNotWiredError
-	if _, err := unwired.QualifyLead(admin, leadID, people.PromoteLeadInput{Trigger: "human_qualify", Deal: &people.QualifyDealInput{}}); !errors.As(err, &notWired) {
+	unwired := contacts.NewStore(e.DB())
+	var notWired *contacts.DealOpenerNotWiredError
+	if _, err := unwired.QualifyLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{}}); !errors.As(err, &notWired) {
 		t.Errorf("unwired qualify-with-deal err = %v, want DealOpenerNotWiredError", err)
 	}
 }
@@ -209,20 +209,20 @@ func TestQualifyInheritsTheLeadOwnerExactly(t *testing.T) {
 	if err := dealsStore.SeedDefaults(admin); err != nil {
 		t.Fatalf("seed default pipeline: %v", err)
 	}
-	peopleStore := people.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
+	contactsStore := contacts.NewStore(e.DB()).WithDealOpener(leadDealOpener{deals: dealsStore})
 
-	assertOwners := func(t *testing.T, out people.PromoteOutcome, want *ids.UUID) {
+	assertOwners := func(t *testing.T, out contacts.PromoteOutcome, want *ids.UUID) {
 		t.Helper()
-		var personOwner, dealOwner *ids.UUID
+		var contactOwner, dealOwner *ids.UUID
 		if err := owner.QueryRow(context.Background(),
-			`SELECT owner_id FROM person WHERE id = $1`, ids.UUID(out.Person.Id)).Scan(&personOwner); err != nil {
+			`SELECT owner_id FROM contact WHERE id = $1`, ids.UUID(out.Contact.Id)).Scan(&contactOwner); err != nil {
 			t.Fatal(err)
 		}
 		if err := owner.QueryRow(context.Background(),
 			`SELECT owner_id FROM deal WHERE id = $1`, *out.DealID).Scan(&dealOwner); err != nil {
 			t.Fatal(err)
 		}
-		for name, got := range map[string]*ids.UUID{"person": personOwner, "deal": dealOwner} {
+		for name, got := range map[string]*ids.UUID{"contact": contactOwner, "deal": dealOwner} {
 			if (got == nil) != (want == nil) || (got != nil && *got != *want) {
 				t.Errorf("%s owner = %v, want %v", name, got, want)
 			}
@@ -230,12 +230,12 @@ func TestQualifyInheritsTheLeadOwnerExactly(t *testing.T) {
 	}
 
 	queueEmail := "queue-qualify@example.test"
-	queued, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &queueEmail, Source: "manual"})
+	queued, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &queueEmail, Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	queuedOut, err := peopleStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(queued.Id)), people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{},
+	queuedOut, err := contactsStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(queued.Id)), contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
 	if err != nil {
 		t.Fatalf("qualify the unassigned lead: %v", err)
@@ -247,12 +247,12 @@ func TestQualifyInheritsTheLeadOwnerExactly(t *testing.T) {
 
 	repOwner := ids.From[ids.UserKind](e.Rep1)
 	ownedEmail := "owned-qualify@example.test"
-	owned, _, err := peopleStore.CreateLead(admin, people.CreateLeadInput{Email: &ownedEmail, Source: "manual", OwnerID: &repOwner})
+	owned, _, err := contactsStore.CreateLead(admin, contacts.CreateLeadInput{Email: &ownedEmail, Source: "manual", OwnerID: &repOwner})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ownedOut, err := peopleStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(owned.Id)), people.PromoteLeadInput{
-		Trigger: "human_qualify", Deal: &people.QualifyDealInput{},
+	ownedOut, err := contactsStore.QualifyLead(admin, ids.From[ids.LeadKind](ids.UUID(owned.Id)), contacts.PromoteLeadInput{
+		Trigger: "human_qualify", Deal: &contacts.QualifyDealInput{},
 	})
 	if err != nil {
 		t.Fatalf("qualify the owned lead: %v", err)

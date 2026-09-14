@@ -14,7 +14,7 @@ package extension
 // What that cost is not abstract. A member connects an account, chooses what to
 // capture, presses save, and nothing can happen until the next scheduled tick —
 // a full cadence away, longer once adaptive backoff has engaged. From the
-// outside that is indistinguishable from a broken feature, and the first person
+// outside that is indistinguishable from a broken feature, and the first contact
 // it happens to is the rep whose belief in the connector is the whole product.
 //
 // WHY THE OTHER THREE ANSWERS ARE WORSE, since each is the obvious one:

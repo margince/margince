@@ -83,7 +83,7 @@ type Names interface {
 }
 
 // fillSubjectLabels names every subject the lanes produced, one gated read
-// per subject TYPE — every person on the page costs one query, not one each.
+// per subject TYPE — every contact on the page costs one query, not one each.
 //
 // It walks the assembled answer rather than each renderer, so a producer
 // added tomorrow gets its labels by existing. The lanes are enumerated from
@@ -107,7 +107,7 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 	}
 	lanes := everyItemLane(out)
 	// Gathered before anything is asked, so each type is one question. The
-	// ids are DEDUPED per type — the same person on three cards is one id in
+	// ids are DEDUPED per type — the same contact on three cards is one id in
 	// the query — and the order they were met in is kept, so a store that
 	// bounds its answer drops the same records for the same page rather than
 	// a different set each read.

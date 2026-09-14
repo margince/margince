@@ -3,7 +3,7 @@
 
 package activities
 
-// HOW MANY promises each named person has already missed.
+// HOW MANY promises each named contact has already missed.
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// OverdueLoad is how many open, already-due tasks one person holds.
+// OverdueLoad is how many open, already-due tasks one contact holds.
 type OverdueLoad struct {
 	// OwnerID is zero for the open overdue tasks nobody is assigned.
 	OwnerID ids.UUID
@@ -34,7 +34,7 @@ type OverdueLoad struct {
 // task due at exactly tomorrow midnight as late today.
 //
 // A count over an unbounded page rather than a paged read, and that is the
-// reason this exists: the lane reading tasks for one person's day is capped at
+// reason this exists: the lane reading tasks for one contact's day is capped at
 // twelve, so counting its rows would report every busy rep as holding exactly
 // twelve and a board built that way would say the whole team is equally loaded.
 //
@@ -50,7 +50,7 @@ const overdueLoadSQL = `
 	   AND %[2]s
 	 GROUP BY 1`
 
-// OverdueLoadByAssignee counts each person's open tasks already past due.
+// OverdueLoadByAssignee counts each contact's open tasks already past due.
 func (s *Store) OverdueLoadByAssignee(ctx context.Context, asOf time.Time) ([]OverdueLoad, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err

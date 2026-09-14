@@ -30,7 +30,7 @@ type Contract = components["schemas"]["Contract"];
 
 const AGREEMENT = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "Pallet pooling framework",
   contract_number: "SM-2026-014",
   status: "active",

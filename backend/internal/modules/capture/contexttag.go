@@ -5,7 +5,7 @@ package capture
 
 // The word a connector files what it captures under.
 //
-// An import already does this: a person picks an existing tag at the start of a
+// An import already does this: a human picks an existing tag at the start of a
 // run and every record the run creates is filed under it, so a batch stays
 // findable as a batch. A record capture creates carried no equivalent, so
 // "which records came in from this source" had no answer.

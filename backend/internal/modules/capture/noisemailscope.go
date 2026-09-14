@@ -32,16 +32,16 @@ import "time"
 //     the attestation came from a connector reading the owner's sent copy or
 //     from the governed send path stamping its own outbound row.
 //
-//   - Never linked to a person the message is WITH, and never for an address a
-//     person EXISTS for. A linked message belongs to somebody's record; and once
+//   - Never linked to a contact the message is WITH, and never for an address a
+//     contact EXISTS for. A linked message belongs to somebody's record; and once
 //     the workspace has a contact at that address — by any route, including a
 //     human typing it in to correct a wrong verdict — the sender is a
 //     counterparty and a stale disposition has no authority over their mail.
 //     Linkage alone is not enough: a manually created contact backfills no
-//     activity_link. A person filed under only because they were COPIED does not
+//     activity_link. A contact filed under only because they were COPIED does not
 //     count either: capture files a message under every participant it resolves
 //     (sinkmaillinks.go), so a newsletter naming one contact in Cc would carry a
-//     person link forever, and a sender judged noise afterwards could never be
+//     contact link forever, and a sender judged noise afterwards could never be
 //     hidden or redacted.
 //
 // And the disposition stops applying entirely once the workspace CORRESPONDS
@@ -54,21 +54,21 @@ const noiseMailScope = `
 	  AND NOT a.counterparty_outbound_attested
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity_link l
-	     WHERE l.activity_id = a.id AND l.person_id IS NOT NULL
+	     WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL
 	       AND NOT EXISTS (
 	         SELECT 1 FROM activity_participant cc
-	          WHERE cc.activity_id = a.id AND cc.person_id = l.person_id
+	          WHERE cc.activity_id = a.id AND cc.contact_id = l.contact_id
 	            AND cc.role <> 'from'
 	            AND NOT EXISTS (
 	              SELECT 1 FROM activity_participant au
-	               WHERE au.activity_id = a.id AND au.person_id = l.person_id
+	               WHERE au.activity_id = a.id AND au.contact_id = l.contact_id
 	                 AND au.role = 'from')))
 	  AND NOT EXISTS (
 	    SELECT 1 FROM activity c
 	     WHERE c.counterparty_email = p.email
 	       AND c.direction = 'outbound' AND c.counterparty_outbound_attested)
 	  AND NOT EXISTS (
-	    SELECT 1 FROM person_email pe JOIN person pr ON pr.id = pe.person_id
+	    SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 	     WHERE pe.email = p.email AND pr.archived_at IS NULL
 	       AND pe.from_correspondence)`
 

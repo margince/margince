@@ -4,7 +4,7 @@ import { navigate } from "../app/router";
 import { Button, TextInput } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
-import { useOrganization360 } from "./company360";
+import { useCompany360 } from "./company360";
 import type { DraftUnavailable } from "./compose";
 import { Citations } from "./record360";
 
@@ -27,24 +27,24 @@ import { Citations } from "./record360";
 // of the account, so a contact this picker offers that the view does not carry
 // would be one the draft then refuses.
 export function AccountDraftContext({
-  orgId,
+  companyId,
   recipientId,
   onRecipientChange,
   dealId,
   onDealChange,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   recipientId: string;
   onRecipientChange: (next: string) => void;
   dealId: string;
   onDealChange: (next: string) => void;
 }>) {
   const t = useT();
-  const query = useOrganization360(orgId);
+  const query = useCompany360(companyId);
   // An overlay workspace has no native 360 to ground from; the endpoint
   // refuses there too, so the pickers simply have nothing to offer.
   const view = query.data?.state === "ready" ? query.data.view : undefined;
-  const contacts = view?.people?.data ?? [];
+  const contacts = view?.contacts?.data ?? [];
   const deals = view?.deals?.data ?? [];
 
   // No contact on the account is an honest dead end for the DRAFT — the model
@@ -71,7 +71,7 @@ export function AccountDraftContext({
           options={[
             { value: "", label: t("compose.draftToUnset") },
             ...contacts.map((contact) => ({
-              value: contact.person_id,
+              value: contact.contact_id,
               label: contact.full_name,
             })),
           ]}
@@ -107,7 +107,7 @@ export function openCited(entityType: string, entityId: string) {
   if (entityType === "deal") {
     navigate({ screen: "deals", id: entityId });
   }
-  if (entityType === "person") {
+  if (entityType === "contact") {
     navigate({ screen: "contacts", id: entityId });
   }
 }
@@ -190,11 +190,13 @@ export type PendingAction = Readonly<{
 // sits in the action row with the other verdicts (send, cancel), where a rep
 // decides what happens to the message rather than how it gets written.
 export function DraftOffer({
+  replying = false,
   intent,
   onIntentChange,
   draft,
   unavailable,
 }: Readonly<{
+  replying?: boolean;
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
@@ -203,13 +205,18 @@ export function DraftOffer({
   const t = useT();
   return (
     <div className="compose-offer">
+      {!replying && (
+        <p className="t-caption">{t("compose.draftContextHint")}</p>
+      )}
       <div className="compose-draftbar">
         <TextInput
           // A NAME, not just a placeholder. The placeholder is the example and
           // disappears the moment the reader types; a field whose only name was
           // the example had none at all the instant it held anything.
-          aria-label={t("compose.intentLabel")}
-          placeholder={t("compose.intent")}
+          aria-label={t(replying ? "compose.replyIntent" : "compose.newIntent")}
+          placeholder={t(
+            replying ? "compose.replyIntent" : "compose.newIntent",
+          )}
           value={intent}
           onChange={(event) => onIntentChange(event.target.value)}
         />
@@ -228,7 +235,7 @@ export function DraftOffer({
           busyLabel={t("compose.drafting")}
         >
           <Sparkles aria-hidden="true" />
-          {t("compose.draftWithAi")}
+          {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
         </Button>
       </div>
       {unavailable && (

@@ -11,7 +11,7 @@ package capture
 // Mail reaches its records through the counterparty: one address, one ensure,
 // one link. A contact merely cc'd was stamped as a participant and filed
 // nowhere, so the message never reached their timeline — and, because consent
-// reads an INBOUND activity linked to the person as the Art 6(1)(f) qualifying
+// reads an INBOUND activity linked to the contact as the Art 6(1)(f) qualifying
 // event, the send gate refused mail to a contact whose own replies were sitting
 // in the workspace unlinked.
 //
@@ -29,21 +29,21 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// peopleFiledUnder answers the people one captured activity is filed under.
-func peopleFiledUnder(t *testing.T, e *integration.SearchEnv, sourceID string) []ids.UUID {
+// contactsFiledUnder answers the contacts one captured activity is filed under.
+func contactsFiledUnder(t *testing.T, e *integration.SearchEnv, sourceID string) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
-			SELECT l.person_id FROM activity_link l
+			SELECT l.contact_id FROM activity_link l
 			  JOIN activity a ON a.id = l.activity_id
-			 WHERE a.source_id = $1 AND l.person_id IS NOT NULL
-			 ORDER BY l.person_id`, sourceID)
+			 WHERE a.source_id = $1 AND l.contact_id IS NOT NULL
+			 ORDER BY l.contact_id`, sourceID)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func peopleFiledUnder(t *testing.T, e *integration.SearchEnv, sourceID string) [
 	return out
 }
 
-// filedUnder reports whether the filing names this person.
+// filedUnder reports whether the filing names this contact.
 func filedUnder(filed []ids.UUID, want ids.UUID) bool {
 	for _, p := range filed {
 		if p == want {
@@ -82,17 +82,17 @@ func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
-	// Through the real people store: the resolution under test reads
-	// person_email, and a row a test invents is not the row production writes.
-	store := people.NewStore(e.DB())
-	cc, err := store.EnsurePersonByEmail(personCreator(e), "Cc Contact", "cc@partner.example", "manual")
+	// Through the real contacts store: the resolution under test reads
+	// contact_email, and a row a test invents is not the row production writes.
+	store := contacts.NewStore(e.DB())
+	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual")
 	if err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}
 
 	sync(t, emailCC("sender@partner.example", "Sender", captureOwner, "cc@partner.example", "cc1@partner.example"))
 
-	filed := peopleFiledUnder(t, e, "cc1@partner.example")
+	filed := contactsFiledUnder(t, e, "cc1@partner.example")
 	if !filedUnder(filed, cc) {
 		t.Fatalf("message filed under %v, want the cc'd contact %s among them — "+
 			"a contact copied on a message reaches it through no link at all, "+
@@ -110,15 +110,15 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
-	store := people.NewStore(e.DB())
-	if _, err := store.EnsurePersonByEmail(personCreator(e), "Cc Contact", "cc@partner.example", "manual"); err != nil {
+	store := contacts.NewStore(e.DB())
+	if _, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual"); err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}
 
 	// DocuSign is exact infrastructure, so the ladder suppresses it.
 	sync(t, emailCC("dse@eu.docusign.net", "DocuSign EU", captureOwner, "cc@partner.example", "sup1@docusign.net"))
 
-	if filed := peopleFiledUnder(t, e, "sup1@docusign.net"); len(filed) != 0 {
+	if filed := contactsFiledUnder(t, e, "sup1@docusign.net"); len(filed) != 0 {
 		t.Fatalf("a suppressed message is filed under %v, want nobody — the ladder judged this sender, "+
 			"and filing it puts a bulk sender's mail on a contact's timeline and hands it a qualifying event "+
 			"the judgement just refused", filed)
@@ -141,8 +141,8 @@ func TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt(t *testing.T) {
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
-	store := people.NewStore(e.DB())
-	cc, err := store.EnsurePersonByEmail(personCreator(e), "Cc Contact", "cc@partner.example", "manual")
+	store := contacts.NewStore(e.DB())
+	cc, err := store.EnsureContactByEmail(contactCreator(e), "Cc Contact", "cc@partner.example", "manual")
 	if err != nil {
 		t.Fatalf("seeding the cc'd contact: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt(t *testing.T) {
 
 	// The filing happened: without it this test would prove nothing about the
 	// audience, because a message with no links keeps its birth audience anyway.
-	filed := peopleFiledUnder(t, e, "conf1@partner.example")
+	filed := contactsFiledUnder(t, e, "conf1@partner.example")
 	if !filedUnder(filed, cc) {
 		t.Fatalf("message filed under %v, want the cc'd contact %s among them — "+
 			"the audience assertion below only means something once the links exist", filed, cc)

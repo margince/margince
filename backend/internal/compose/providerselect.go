@@ -30,7 +30,7 @@ const ProviderModeEnv = "MARGINCE_PROVIDER_SURFE"
 
 // offlinePollsBeforeDone makes the fake's polled transport visible on a dev
 // stack: two pending polls before it completes, so in_progress is a state a
-// human actually sees on the person page rather than a frame nobody catches.
+// human actually sees on the contact page rather than a frame nobody catches.
 const offlinePollsBeforeDone = 2
 
 // ProviderRegistryFromEnv builds the adapter registry this process runs with,

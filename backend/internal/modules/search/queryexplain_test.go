@@ -13,17 +13,17 @@ import (
 // a caller reading rows beside it is reading a description of the query those
 // rows came from.
 func TestTheNarrativeDescribesTheExecutedPlan(t *testing.T) {
-	plan := validatedPlanDoc(readerFor(entityDeal, entityOrganization), t, `{
+	plan := validatedPlanDoc(readerFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
 		"where": [{"field": "status", "op": "eq", "value": "open"},
 		          {"field": "amount_minor", "op": "gte", "value": 100000}],
-		"traverse": {"relation": "organization",
+		"traverse": {"relation": "company",
 		             "where": [{"field": "address.city", "op": "eq", "value": "Stuttgart"}]},
 		"similar_to": "manufacturers who churned after a pilot",
 		"limit": 25}`)
 	got := explainPlan(plan)
 	want := `deal records where status is "open" and amount_minor is at least 100000, ` +
-		`linked to an organization record where address.city is "Stuttgart", ` +
+		`linked to a company record where address.city is "Stuttgart", ` +
 		`ranked by similarity to "manufacturers who churned after a pilot"; at most 25.`
 	if got != want {
 		t.Errorf("narrative is\n  %s\nwant\n  %s", got, want)
@@ -68,12 +68,12 @@ func TestAMembershipTestReadsItsList(t *testing.T) {
 // The sentence carries the predicate that did NOT run, and says what that cost
 // the answer. A note in a machine field nobody reads is a note nobody reads.
 func TestTheNarrativeNamesThePredicateThatCouldNotRun(t *testing.T) {
-	// A PERSON, not a company: this product does not geocode where people live,
+	// A CONTACT, not a company: this product does not geocode where contacts live,
 	// so a radius on one is genuinely unanswerable and the narrative has to say
 	// so. A company's radius runs now, and a narrative claiming otherwise would
 	// be the thing this test exists to catch.
-	plan := validatedPlanDoc(readerFor(entityPerson), t, `{
-		"version": "v1", "target": "person",
+	plan := validatedPlanDoc(readerFor(entityContact), t, `{
+		"version": "v1", "target": "contact",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Stuttgart", "radius_km": 50}}]}`)
 	got := explainPlan(plan)

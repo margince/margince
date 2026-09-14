@@ -17,7 +17,7 @@ import type { HistoryValueCtx } from "./historyvalues";
 
 // A record has ONE chronology, and this is where it is assembled — for any
 // record, not for the account page alone. What was said to a record and what
-// was changed about it are one story to the person reading them: kept apart,
+// was changed about it are one story to the reader reading them: kept apart,
 // a reader comparing "we told them X" against "someone set stage to Y" had to
 // hold two orderings in their head.
 //
@@ -217,9 +217,9 @@ export function useRecordChronology({
   // every record page reads changes on open.
   const changeRows =
     changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
-  // The people on each exchange, named through the same resolver the change
+  // The contacts on each exchange, named through the same resolver the change
   // rows use for their stored ids. One resolver for both feeds, because a
-  // chronology that named a person on a mail and not on the field edit beside
+  // chronology that named a contact on a mail and not on the field edit beside
   // it would look like two different lists.
   const activityEntries = activityTimeline(
     activities,
@@ -228,7 +228,7 @@ export function useRecordChronology({
     values.nameOf
       ? {
           nameOf: (entityType, entityId) =>
-            entityType === "person" ? values.nameOf?.(entityId) : undefined,
+            entityType === "contact" ? values.nameOf?.(entityId) : undefined,
           t,
           locale: values.locale,
         }

@@ -88,7 +88,7 @@ type StageProgressionChange struct {
 	//
 	// It is the APPROVER's to supply, through the card's editable field.
 	// Nothing the product read can answer why a deal was won without paper —
-	// that is an argument a person makes, and a proposer filling it in would be
+	// that is an argument a contact makes, and a proposer filling it in would be
 	// inventing the argument the bound exists to demand.
 	//
 	// PRESENT AND EMPTY on such a proposal, never absent, and the difference is
@@ -296,7 +296,7 @@ func recordProgressionDecidedTx(
 		       -- because this is when the promise is made. Read live at undo
 		       -- time it would be whatever the rule says then, so an admin
 		       -- shortening it would close the window on moves already made
-		       -- and lengthening it would reopen ones people were told had
+		       -- and lengthening it would reopen ones contacts were told had
 		       -- closed.
 		       undo_window_hours = CASE WHEN $2 = $6 THEN (
 		           SELECT p.undo_window_hours FROM stage_progression_policy p

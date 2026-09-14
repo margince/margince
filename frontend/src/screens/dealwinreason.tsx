@@ -50,7 +50,7 @@ export function WonWithoutContractFact({
   const label = t(WON_REASON_LABELS[reason]);
   // The detail replaces the label for `other`, and does not follow it:
   // "Something else: renewed on a handshake" says the category twice and
-  // buries the only part written by a person. Every other reason is its own
+  // buries the only part written by a contact. Every other reason is its own
   // answer and carries no detail.
   const detail = reason === "other" ? deal.won_without_contract_detail : null;
   if (!detail) {
@@ -63,7 +63,7 @@ export function WonWithoutContractFact({
   // reads as solved and is not — a tooltip wants a mouse, is ignored by most
   // screen readers, and never appears for a keyboard or touch reader. Clipped
   // with no `title` is simply unreadable for everyone looking at it. Either way
-  // the reader who loses is the person checking the words they just typed,
+  // the reader who loses is the contact checking the words they just typed,
   // which is who this fact exists for.
   //
   // Wrapping is affordable because the server bounds the value: 500 characters

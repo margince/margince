@@ -32,7 +32,7 @@ func TestTheAgentIsAlwaysToldWhichLanguageToWriteStoredProseIn(t *testing.T) {
 		t.Fatalf("reading the acting identity: %v", err)
 	}
 	if who.Locale != "" {
-		t.Errorf("locale is %q, want empty — a person who chose nothing must not read as a choice", who.Locale)
+		t.Errorf("locale is %q, want empty — a contact who chose nothing must not read as a choice", who.Locale)
 	}
 	if who.ProseLanguage != "English" {
 		t.Errorf("prose_language is %q for a member with no locale, want the installation's English", who.ProseLanguage)

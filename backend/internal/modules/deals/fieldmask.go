@@ -26,21 +26,34 @@ import (
 // dealMaskableFields are the columns a mask may name on a deal, and how each
 // is withheld. A mask naming a column not listed here is inert: withholding
 // is a deliberate act per field, not a reflective one over the struct.
+//
+// The keys are WIRE field names as a configured mask spells them, which is a
+// different vocabulary from the column constants they happen to coincide with:
+// renaming a column would not rename what an installation's stored mask says.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary
 var dealMaskableFields = map[string]func(*crmcontracts.Deal){
-	// The money pair goes together: a currency beside a withheld amount
-	// would read as a priced deal with its figure missing.
-	"amount_minor": func(d *crmcontracts.Deal) { d.AmountMinor, d.Currency = nil, nil },
-	"currency":     func(d *crmcontracts.Deal) { d.Currency = nil },
+	// The money fields go together: a currency beside a withheld amount
+	// would read as a priced deal with its figure missing, and an ARR left
+	// standing beside a withheld one-off amount discloses the size of the
+	// deal the mask was meant to hide.
+	"amount_minor": func(d *crmcontracts.Deal) {
+		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
+	},
+	"expected_arr_minor": func(d *crmcontracts.Deal) {
+		d.AmountMinor, d.ExpectedArrMinor, d.Currency = nil, nil, nil
+	},
+	"currency": func(d *crmcontracts.Deal) { d.Currency = nil },
 	// The three references. They are withheld by the same mechanism as a role
 	// mask because the reader needs the same thing from them: a null they can
 	// tell from an empty field. Which rows they are withheld ON is a different
 	// question, answered per row by unreadableReferences.
-	filterOrganizationID: func(d *crmcontracts.Deal) { d.OrganizationId = nil },
-	filterProjectID:      func(d *crmcontracts.Deal) { d.ProjectId = nil },
+	filterCompanyID: func(d *crmcontracts.Deal) { d.CompanyId = nil },
+	filterProjectID: func(d *crmcontracts.Deal) { d.ProjectId = nil },
 	// The attribution describes the partner it travels with, so a withheld
 	// partner takes it along: "sourced" beside a null partner would disclose
 	// that SOME partner brought the deal to a reader who may not know which.
-	filterPartnerOrgID: func(d *crmcontracts.Deal) { d.PartnerOrgId, d.PartnerAttribution = nil, nil },
+	filterPartnerCompanyID: func(d *crmcontracts.Deal) { d.PartnerCompanyId, d.PartnerAttribution = nil, nil },
 }
 
 // withheldFields is the ordered set of columns withheld from ONE row. Ordered
@@ -134,27 +147,27 @@ func roleMaskedFields(ctx context.Context, deals []crmcontracts.Deal, withheld [
 
 // unreadableReferences withholds a deal's links to records the caller could
 // not open. Every seat of the workspace reads every deal — a deal is customer
-// identity — but the records it POINTS AT are not: an organization can be
+// identity — but the records it POINTS AT are not: a company can be
 // capture-private to the colleague who captured it, and a project keeps its own
 // own/team row scope. Handing the id back regardless would make the deal an
-// existence oracle over rows the reader's own organization and project reads
+// existence oracle over rows the reader's own company and project reads
 // would refuse.
 //
 // The write path has enforced exactly this rule all along: applyDealLinkPatches
 // gates all three references with auth.EnsureLinkTarget before setting them.
-// The system already agrees you may not NAME an organization you cannot see;
+// The system already agrees you may not NAME a company you cannot see;
 // this is the half that never asked when handing one back.
 //
 // ONE statement per referenced table for the whole page, never a probe per row.
 func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal, withheld []withheldFields) error {
-	orgIDs := make([]ids.UUID, 0, 2*len(deals))
+	companyIDs := make([]ids.UUID, 0, 2*len(deals))
 	projectIDs := make([]ids.UUID, 0, len(deals))
 	for _, d := range deals {
-		// partner_org_id points at the same table as organization_id, so one
-		// organization query answers both arms.
-		for _, ref := range []*openapi_types.UUID{d.OrganizationId, d.PartnerOrgId} {
+		// partner_company_id points at the same table as company_id, so one
+		// company query answers both arms.
+		for _, ref := range []*openapi_types.UUID{d.CompanyId, d.PartnerCompanyId} {
 			if ref != nil {
-				orgIDs = append(orgIDs, ids.UUID(*ref))
+				companyIDs = append(companyIDs, ids.UUID(*ref))
 			}
 		}
 		if d.ProjectId != nil {
@@ -162,8 +175,8 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 		}
 	}
 	// VisibleSubset answers an empty list without a round trip, so a page that
-	// names no organization or no project pays for neither.
-	visibleOrgs, err := auth.VisibleSubset(ctx, tx, "organization", orgIDs)
+	// names no company or no project pays for neither.
+	visibleCompanies, err := auth.VisibleSubset(ctx, tx, "company", companyIDs)
 	if err != nil {
 		return err
 	}
@@ -173,11 +186,11 @@ func unreadableReferences(ctx context.Context, tx pgx.Tx, deals []crmcontracts.D
 	}
 	for i := range deals {
 		d := deals[i]
-		if d.OrganizationId != nil && !visibleOrgs[ids.UUID(*d.OrganizationId)] {
-			withheld[i].add(filterOrganizationID)
+		if d.CompanyId != nil && !visibleCompanies[ids.UUID(*d.CompanyId)] {
+			withheld[i].add(filterCompanyID)
 		}
-		if d.PartnerOrgId != nil && !visibleOrgs[ids.UUID(*d.PartnerOrgId)] {
-			withheld[i].add(filterPartnerOrgID)
+		if d.PartnerCompanyId != nil && !visibleCompanies[ids.UUID(*d.PartnerCompanyId)] {
+			withheld[i].add(filterPartnerCompanyID)
 		}
 		if d.ProjectId != nil && !visibleProjects[ids.UUID(*d.ProjectId)] {
 			withheld[i].add(filterProjectID)

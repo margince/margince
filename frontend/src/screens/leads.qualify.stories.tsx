@@ -103,7 +103,7 @@ export const WouldMergeIntoAnExistingContact: Story = {
     preview: () =>
       jsonResponse({
         outcome: "merge",
-        person: {
+        contact: {
           id: "p-9",
           full_name: "Jonas Petersen",
           version: 1,
@@ -115,11 +115,11 @@ export const WouldMergeIntoAnExistingContact: Story = {
 };
 
 /** A merge whose matched contact is outside the reader's row scope. The
- *  outcome is still stated — an omitted person read as "no match" would tell
+ *  outcome is still stated — an omitted contact read as "no match" would tell
  *  the rep a duplicate is about to be created when the opposite is true. */
 export const WouldMergeIntoAContactYouCannotSee: Story = {
   render: dialog({
-    preview: () => jsonResponse({ outcome: "merge", person_withheld: true }),
+    preview: () => jsonResponse({ outcome: "merge", contact_withheld: true }),
   }),
 };
 

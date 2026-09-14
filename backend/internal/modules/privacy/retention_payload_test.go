@@ -5,7 +5,7 @@ package privacy
 
 // The privacy half: drives retentionAppliedPayload — the exact function
 // the retention.applied emit sites call (retention.go's eraseEmbedCall,
-// eraseVoiceSignalContent and apply, erasure.go's ErasePerson) — then
+// eraseVoiceSignalContent and apply, erasure.go's EraseContact) — then
 // round-trips the result through JSON exactly as
 // storekit.EmitEventForEntity marshals it into the outbox envelope's
 // payload column. There is no non-integration harness in this repo that
@@ -18,8 +18,8 @@ package privacy
 // retention.applied is dynamic-entity (contract x-entity-type: dynamic):
 // its subject is ai_call (the embedding-retention sweep),
 // voice_learning_signal (the voice-learning content sweep), pol.ObjectType
-// (a workspace's configured retention policy — activity/deal/lead/person/
-// ai_call_payload), or person (Art. 17 erasure) — DIFFERENT runtime values
+// (a workspace's configured retention policy — activity/deal/lead/contact/
+// ai_call_payload), or contact (Art. 17 erasure) — DIFFERENT runtime values
 // across the sites, none of which is the payload's own (unused, "dynamic")
 // EntityType(). This file proves each site's entity-type expression
 // survives into the wire envelope via storekit.EmitEventForEntity, using
@@ -106,7 +106,7 @@ func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 }
 
 // TestRetentionAppliedPayload_WithReason proves the Art. 17 erasure
-// subset (erasure.go's ErasePerson): action + reason, no policy.
+// subset (erasure.go's EraseContact): action + reason, no policy.
 func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 	reason := "dsr_request"
 
@@ -202,7 +202,7 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 // TestRetentionAppliedEmitUsesRuntimeEntityType is the dynamic-entity twist:
 // retention.applied's subject varies by site — ai_call (the embed-call
 // sweep), a policy's configured object type (the policy-driven sweep), or
-// person (Art. 17 erasure) — none of which is the payload's own (unused,
+// contact (Art. 17 erasure) — none of which is the payload's own (unused,
 // "dynamic") EntityType(). Driving the exact
 // same seam each site uses against all three runtime values proves the
 // wire entity_type tracks the caller-supplied subject, not the payload's
@@ -210,7 +210,7 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 func TestRetentionAppliedEmitUsesRuntimeEntityType(t *testing.T) {
 	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
-	for _, entityType := range []string{"ai_call", "activity", "deal", "person"} {
+	for _, entityType := range []string{"ai_call", "activity", "deal", "contact"} {
 		t.Run(entityType, func(t *testing.T) {
 			tx := &fakeTx{}
 			auditID := ids.NewV7()

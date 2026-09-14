@@ -41,7 +41,7 @@ package compose
 // (--microsoft-signin-tenant) is an operator's explicit decision and wins
 // whenever it is set. Without one, a stored app pinned to a directory names
 // that directory — the admin who pinned it said whose mailboxes may connect,
-// and that is the same organization whose people sign in — while a stored app
+// and that is the same company whose colleagues sign in — while a stored app
 // left on `common` names nothing and cannot sign anyone in, for the reason
 // above.
 
@@ -87,7 +87,7 @@ const (
 	// the consumer one. Used when the list names several work tenants and no
 	// personal accounts, so a private account is turned away at Microsoft's own
 	// screen instead of after a round trip.
-	microsoftWorkAuthority = "organizations"
+	microsoftWorkAuthority = "companies"
 	// microsoftConsumerAuthority is the alias for the consumer tenant, used
 	// when personal accounts are the ONLY thing listed.
 	//
@@ -107,8 +107,8 @@ type MicrosoftSignInConfig struct {
 	ClientID     string
 	ClientSecret string
 	// Tenant is the Entra DIRECTORY IDS (GUIDs, comma-separated) this
-	// installation's people sign in from. Deliberately not the authority aliases
-	// Microsoft also accepts in this position (`common`, `organizations`,
+	// installation's contacts sign in from. Deliberately not the authority aliases
+	// Microsoft also accepts in this position (`common`, `companies`,
 	// `consumers`) and not a domain name: the value is compared against the
 	// token's `tid` claim, which is always a GUID, so anything else would be a
 	// comparison that can only fail — or, worse, a check somebody later "fixes"
@@ -175,7 +175,7 @@ func tenantsOf(raw string) []string {
 //
 // One directory keeps its own authority, so Microsoft shows that tenant's
 // branding and turns away everybody else before a round trip. Several need a
-// shared one, and which shared one is worth getting right: `organizations`
+// shared one, and which shared one is worth getting right: `companies`
 // refuses personal accounts at Microsoft's screen, which is a better answer
 // than accepting the round trip and refusing the token afterwards. `common` is
 // used only when the list actually names consumer accounts.
@@ -209,13 +209,13 @@ func (cfg MicrosoftSignInConfig) MissingFields() []string {
 	}.missingSignInFields()
 	// EVERY entry. A list with a bad id is refused whole rather than quietly
 	// served by its good half: an operator who mistyped one directory would
-	// otherwise get a working sign-in that silently turns away the people that
+	// otherwise get a working sign-in that silently turns away the colleagues that
 	// entry was for. An EMPTY list is not refused: it leaves the directory to
 	// the stored app's pin, and the boot log says what that means for the
 	// environment's own pair.
 	for _, id := range tenantsOf(cfg.Tenant) {
 		if !isDirectoryID(id) {
-			missing = append(missing, "tenant "+id+" (not an Entra directory id — sign-in cannot run on common/organizations/consumers)")
+			missing = append(missing, "tenant "+id+" (not an Entra directory id — sign-in cannot run on common/companies/consumers)")
 		}
 	}
 	return missing
@@ -284,7 +284,7 @@ func microsoftIssuer(tenants []string) func(oidcClaims) error {
 		}
 		if !slices.ContainsFunc(tenants, func(id string) bool { return strings.EqualFold(c.Tid, id) }) {
 			// The consumer tenant keeps its own sentence. Somebody who signed
-			// in with their private account by mistake is a different person
+			// in with their private account by mistake is a different contact
 			// from somebody whose employer is not listed, and "not one of this
 			// installation's directories" sends the first one to ask for an
 			// allowlist entry they do not want.
@@ -441,7 +441,7 @@ func WithMicrosoftSignIn(cfg MicrosoftSignInConfig) Option {
 		// lists, so one missing here is a sign-in that fails at Microsoft's
 		// consent screen with AADSTS50011 — naming no URI.
 		if base := signInRedirectBase(cfg.RedirectBase); base != "" {
-			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.SignIn,
+			s.addRedirectURI(capture.AppProviderMicrosoft, crmcontracts.ConnectorAppRedirectUriPurposeSignIn,
 				identity.SignInRedirectURI(base, microsoftProviderKey))
 		}
 		if !cfg.Enabled() {

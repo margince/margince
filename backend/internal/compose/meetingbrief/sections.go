@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
-	"github.com/margince/margince/backend/internal/compose/personcontext"
+	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -35,7 +35,7 @@ import (
 const (
 	citeActivity = "activity"
 	citeDeal     = "deal"
-	citePerson   = "person"
+	citeContact  = "contact"
 )
 
 // The two natures this floor writes. A line that RECOMMENDS an action and one
@@ -44,8 +44,8 @@ const (
 // that are not plain facts are the ones that must say so. Anything unlabelled
 // is a fact, which is the contract's default.
 const (
-	natureAssessment     = string(crmcontracts.OrganizationBriefSentenceNatureAssessment)
-	natureRecommendation = string(crmcontracts.OrganizationBriefSentenceNatureRecommendation)
+	natureAssessment     = string(crmcontracts.CompanyBriefSentenceNatureAssessment)
+	natureRecommendation = string(crmcontracts.CompanyBriefSentenceNatureRecommendation)
 )
 
 // The claim kinds this floor reads, bound to the contract enum rather than
@@ -53,14 +53,14 @@ const (
 // here, instead of silently emptying the section that reads it — a section that
 // quietly stops having anything to say is invisible to every gate.
 const (
-	kindCommitmentOurs   = string(crmcontracts.CommitmentOurs)
-	kindCommitmentTheirs = string(crmcontracts.CommitmentTheirs)
-	kindOpenQuestion     = string(crmcontracts.OpenQuestion)
-	kindDecision         = string(crmcontracts.Decision)
-	kindDecisionProcess  = string(crmcontracts.DecisionProcess)
-	kindObjection        = string(crmcontracts.Objection)
-	kindPriority         = string(crmcontracts.Priority)
-	kindSuccessCriterion = string(crmcontracts.SuccessCriterion)
+	kindCommitmentOurs   = string(crmcontracts.ConversationClaimKindCommitmentOurs)
+	kindCommitmentTheirs = string(crmcontracts.ConversationClaimKindCommitmentTheirs)
+	kindOpenQuestion     = string(crmcontracts.ConversationClaimKindOpenQuestion)
+	kindDecision         = string(crmcontracts.ConversationClaimKindDecision)
+	kindDecisionProcess  = string(crmcontracts.ConversationClaimKindDecisionProcess)
+	kindObjection        = string(crmcontracts.ConversationClaimKindObjection)
+	kindPriority         = string(crmcontracts.ConversationClaimKindPriority)
+	kindSuccessCriterion = string(crmcontracts.ConversationClaimKindSuccessCriterion)
 )
 
 // statusOpen is the claim status the risk and goal rules test. A claim already
@@ -159,7 +159,7 @@ func headerSection(in Input) []Sentence {
 // where it sits, and when it is meant to land.
 func dealHeaderLine(deal DealIn) string {
 	parts := []string{deal.Name}
-	if amount := personcontext.SpokenAmount(deal.AmountMinor, deal.Currency); amount != "" {
+	if amount := contactcontext.SpokenAmount(deal.AmountMinor, deal.Currency); amount != "" {
 		parts = append(parts, amount)
 	}
 	if deal.Stage != "" {
@@ -228,18 +228,18 @@ func goalSection(in Input, ranked *rankedClaims) []Sentence {
 func goalLine(ask ClaimIn, now time.Time) string {
 	switch ask.Kind {
 	case kindOpenQuestion:
-		return fmt.Sprintf("Answer the open question from %s: %s", ask.PersonName, ask.Body)
+		return fmt.Sprintf("Answer the open question from %s: %s", ask.ContactName, ask.Body)
 	case kindDecision:
-		return fmt.Sprintf("Get the decision %s is holding: %s", ask.PersonName, ask.Body)
+		return fmt.Sprintf("Get the decision %s is holding: %s", ask.ContactName, ask.Body)
 	default:
 		if deadline.Passed(ask.DueAt, now) {
-			return fmt.Sprintf("Close out what we owe %s, overdue since %s: %s", ask.PersonName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
+			return fmt.Sprintf("Close out what we owe %s, overdue since %s: %s", ask.ContactName, ask.DueAt.UTC().Format("2 Jan"), ask.Body)
 		}
-		return fmt.Sprintf("Close out what we promised %s: %s", ask.PersonName, ask.Body)
+		return fmt.Sprintf("Close out what we promised %s: %s", ask.ContactName, ask.Body)
 	}
 }
 
-// attendeesSection (D list + M one-liners) names the room, with the people the
+// attendeesSection (D list + M one-liners) names the room, with the contacts the
 // reader has never spoken to flagged.
 //
 // The first-time flag is the point of the section. Walking in without knowing
@@ -251,7 +251,7 @@ func attendeesSection(in Input) []Sentence {
 	for _, attendee := range in.Attendees {
 		out = append(out, Sentence{
 			Text:     attendeeLine(attendee, in.Now),
-			Evidence: []Evidence{{EntityType: citePerson, EntityID: attendee.PersonID}},
+			Evidence: []Evidence{{EntityType: citeContact, EntityID: attendee.ContactID}},
 		})
 	}
 	return out
@@ -266,7 +266,12 @@ func attendeeLine(attendee AttendeeIn, now time.Time) string {
 		parts = append(parts, readableRole(attendee.DealRole))
 	}
 	line := strings.Join(parts, ", ")
-	if attendee.FirstTime {
+	// FirstTime and a nil LastTouch are ONE fact with two spellings: the
+	// assembler derives the flag from the date (attendeeRow.firstTime), so an
+	// attendee with no recorded contact IS the first-time case. Reading only
+	// the flag made the pair a dereference waiting for a caller that set
+	// neither — and the brief panicked instead of degrading to its floor.
+	if attendee.FirstTime || attendee.LastTouch == nil {
 		return line + " — first time you are meeting them."
 	}
 	days := elapsed.Days(*attendee.LastTouch, now)
@@ -309,11 +314,11 @@ func commitmentLine(claim ClaimIn) string {
 	var opener string
 	switch claim.Kind {
 	case kindCommitmentOurs:
-		opener = "We owe " + claim.PersonName
+		opener = "We owe " + claim.ContactName
 	case kindCommitmentTheirs:
-		opener = claim.PersonName + " owes us"
+		opener = claim.ContactName + " owes us"
 	default:
-		opener = claim.PersonName + " asked"
+		opener = claim.ContactName + " asked"
 	}
 	line := fmt.Sprintf("%s: %s", opener, claim.Body)
 	if claim.DueAt != nil {
@@ -379,7 +384,7 @@ func lastConversationLine(last ActIn) string {
 }
 
 func dealStateLine(claim ClaimIn) string {
-	return fmt.Sprintf("Agreed with %s: %s", claim.PersonName, claim.Body)
+	return fmt.Sprintf("Agreed with %s: %s", claim.ContactName, claim.Body)
 }
 
 // risksSection (M, ≤3) is OMITTED when empty, and that is spelled in the spec
@@ -408,13 +413,13 @@ const riskCap = 3
 // spec forbids.
 func riskLine(claim ClaimIn, now time.Time) (string, bool) {
 	if claim.Kind == kindObjection && claim.Status == statusOpen {
-		return fmt.Sprintf("%s's objection is still open: %s", claim.PersonName, claim.Body), true
+		return fmt.Sprintf("%s's objection is still open: %s", claim.ContactName, claim.Body), true
 	}
 	overdue := claim.Kind == kindCommitmentOurs &&
 		claim.Status == statusOpen &&
 		deadline.Passed(claim.DueAt, now)
 	if overdue {
-		return fmt.Sprintf("We are past due to %s on: %s", claim.PersonName, claim.Body), true
+		return fmt.Sprintf("We are past due to %s on: %s", claim.ContactName, claim.Body), true
 	}
 	return "", false
 }
@@ -442,17 +447,17 @@ func talkingPointLine(claim ClaimIn) string {
 	switch claim.Kind {
 	case kindObjection:
 		if claim.Status == statusOpen {
-			return fmt.Sprintf("%s objected to %s and we have not answered — bring the answer, or say when.", claim.PersonName, claim.Body)
+			return fmt.Sprintf("%s objected to %s and we have not answered — bring the answer, or say when.", claim.ContactName, claim.Body)
 		}
-		return fmt.Sprintf("%s once objected to %s — confirm it is settled before moving on.", claim.PersonName, claim.Body)
+		return fmt.Sprintf("%s once objected to %s — confirm it is settled before moving on.", claim.ContactName, claim.Body)
 	case kindDecisionProcess:
-		return fmt.Sprintf("%s described how they decide: %s — walk the next step of it in the room.", claim.PersonName, claim.Body)
+		return fmt.Sprintf("%s described how they decide: %s — walk the next step of it in the room.", claim.ContactName, claim.Body)
 	case kindSuccessCriterion:
-		return fmt.Sprintf("%s calls success %s — tie what you show to it.", claim.PersonName, claim.Body)
+		return fmt.Sprintf("%s calls success %s — tie what you show to it.", claim.ContactName, claim.Body)
 	case kindCommitmentTheirs:
-		return fmt.Sprintf("%s owes us %s — ask where it stands.", claim.PersonName, claim.Body)
+		return fmt.Sprintf("%s owes us %s — ask where it stands.", claim.ContactName, claim.Body)
 	default:
-		return fmt.Sprintf("%s said %s matters — lead with it.", claim.PersonName, claim.Body)
+		return fmt.Sprintf("%s said %s matters — lead with it.", claim.ContactName, claim.Body)
 	}
 }
 

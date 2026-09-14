@@ -5,10 +5,29 @@
 // its directory under extensions/ IS the enablement. Core code never contains a
 // jurisdiction string — this unit is where Vietnam lives.
 //
-// V1 declares the outbound-messaging rules Decree 91/2020/ND-CP places on
-// advertising email. It declares NO retention class: the decree and the
-// Vietnamese accounting law bind records this CRM does not hold, and a floor no
-// record can carry would be documentation posing as enforcement.
+// V2 declares the outbound-messaging rules Vietnamese law places on advertising
+// email, and states THREE instruments rather than one.
+//
+// Decree 91/2020/ND-CP is where every obligation below comes from: the daily
+// ceiling, the [QC] label, the advertiser identification, the acknowledged
+// opt-out. That has not changed, and the engine applies exactly what it did at
+// version 1.
+//
+// Law 91/2025/QH15 and Decree 356/2025/ND-CP both took effect on 1 January 2026
+// and govern personal data protection. They are stated here because a
+// Vietnamese recipient of advertising email is a data subject under them, so a
+// decision taken from that date sits under all three — NOT because either one
+// amends the 2020 decree. Whether they impose an outbound-messaging obligation
+// this pack does not yet declare is an open question for a Vietnamese lawyer,
+// and stating them is what makes that question askable from the record.
+//
+// The version moves because the instruments moved. A decision recording
+// "vn version 2" can be read back against the law that was live when it was
+// taken, which a version alone cannot answer.
+//
+// It declares NO retention class: the decree and the Vietnamese accounting law
+// bind records this CRM does not hold, and a floor no record can carry would be
+// documentation posing as enforcement.
 package vn
 
 import (
@@ -65,6 +84,37 @@ const (
 // second jurisdiction with a different label needs no core change.
 const advertisingLabel = "[QC]"
 
+// vnInstruments are the laws this rule set rests on.
+//
+// THREE, and the 2020 decree is the one every obligation below rests on. The
+// 2025 pair governs personal data protection and took effect on 1 January 2026;
+// neither amends the decree. They are stated because a recipient of Vietnamese
+// advertising email is a data subject under them, so a decision from that date
+// sits under all three — and a pack listing only the decree would leave a
+// record that cannot say so.
+//
+// Stated for the READER of a decision, never applied: nothing in the engine
+// consults an instrument, and the obligations these instruments carry are the
+// fields below. A pack that put a rule here instead would be declaring law the
+// engine cannot apply.
+func vnInstruments() []messaging.Instrument {
+	// Inside the function, not at package level: a var initializer would run at
+	// import, before the declaration is validated, and the composition
+	// generator refuses one for exactly that reason.
+	//
+	// When Law 91/2025/QH15 and Decree 356/2025/ND-CP took effect — their own
+	// commencement date, not the date this pack stated them.
+	commencement2025 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	return []messaging.Instrument{
+		{
+			Name:          "Decree 91/2020/ND-CP",
+			EffectiveFrom: time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{Name: "Law 91/2025/QH15", EffectiveFrom: commencement2025},
+		{Name: "Decree 356/2025/ND-CP", EffectiveFrom: commencement2025},
+	}
+}
+
 // messagingRules is what Vietnamese law requires of an outbound message, stated
 // as data the core engine applies. Nothing here decides a send.
 //
@@ -109,8 +159,14 @@ const advertisingLabel = "[QC]"
 // rather than inheriting silently. Neither bounds a same-thread reply.
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
-		Jurisdiction:       "vn",
-		Version:            1,
+		Jurisdiction: "vn",
+		// 2, because the instruments below changed. The obligations the engine
+		// applies did not: a decision recording version 1 was judged under
+		// Decree 91/2020 alone, and one recording version 2 was judged under
+		// the same decree as amended. The number is what tells those two apart
+		// in a record read years later, which is the only reason it moves.
+		Version:            2,
+		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
 		// Empty on purpose: prior consent is the only route. See above.

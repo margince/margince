@@ -51,7 +51,7 @@ describe("settingsSearch", () => {
   // A reader types a phrase as one thought, and its words live in different
   // fields — "email" in one alias, "signature" in another beside it. Demanding
   // the whole phrase be one substring answered nothing for exactly the queries
-  // a person composes naturally.
+  // a contact composes naturally.
   it.each([
     ["email signature", "account"],
     ["lead source", "leads"],

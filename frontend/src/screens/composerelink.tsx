@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { Checkbox } from "../design-system/atoms";
@@ -11,6 +11,7 @@ import {
 import { useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
 import { problemMessageOf, throwProblem } from "./common";
+import { type RelinkKind, useRecordTargets } from "./recordtargets";
 
 // Moving a filed message to the record it actually belongs to, extracted from
 // compose.tsx unchanged.
@@ -30,57 +31,10 @@ import { problemMessageOf, throwProblem } from "./common";
 //
 // An ARRAY with the type derived from it, rather than a bare union, because the
 // picker below has to decide at RUNTIME whether a search hit is one of these.
-export const RELINK_KINDS = [
-  "person",
-  "organization",
-  "deal",
-  "lead",
-  "project",
-] as const;
-export type RelinkKind = (typeof RELINK_KINDS)[number];
-
-// Whether a cross-object search hit is something a message can be filed
-// against. Asked as an ADMISSION rather than as a list of exclusions: the
-// skip-list form named `activity` and `tag`, and silently admitted every type
-// /search learned to return afterwards — which is how a product and an offer
-// template became relink targets the moment the search enum widened. What this
-// endpoint accepts is bounded and known; what search returns is not.
-function isRelinkKind(type: string): type is RelinkKind {
-  return (RELINK_KINDS as readonly string[]).includes(type);
-}
-
-// The relink target is chosen via cross-object search (/search covers every
-// kind; the per-entity list endpoints don't all expose `q`). Each candidate's
-// entity_type comes from its SearchResult.type, remembered here so the confirm
-// can recover it — RecordPickerCandidate itself only carries {id,name}.
-// Anything the relink enum does not name is dropped.
-function useSearchTargets() {
-  const kindById = useRef(new Map<string, RelinkKind>());
-  const search = useCallback(
-    async (q: string): Promise<RecordPickerCandidate[]> => {
-      const { data, error } = await api.GET("/search", {
-        params: { query: { q, limit: 10 } },
-      });
-      if (error) throwProblem(error);
-      const out: RecordPickerCandidate[] = [];
-      for (const result of data.data) {
-        // Only what a relink may point at. An activity is the message itself, a
-        // tag is a word rather than something a message can be about, and a
-        // catalog row is neither — none of them is a record this can be filed
-        // against, and the endpoint's own enum is what says so.
-        if (!result.type || !isRelinkKind(result.type)) continue;
-        kindById.current.set(result.id, result.type);
-        out.push({ id: result.id, name: result.title ?? result.id });
-      }
-      return out;
-    },
-    [],
-  );
-  return { search, kindOf: (id: string) => kindById.current.get(id) ?? null };
-}
+export { RELINK_KINDS, type RelinkKind } from "./recordtargets";
 
 // A 🟢 internal association (no autonomy dot): move or also-link a captured
-// activity's typed link to the right person/org/deal/lead. Idempotent on the
+// activity's typed link to the right contact/company/deal/lead. Idempotent on the
 // backend — re-relinking the same target is a no-op that still answers 200.
 // `threadKey` is the activity's conversation key when it has one. With it the
 // dialog offers to move the whole thread through `relinkThread`, which applies
@@ -121,7 +75,7 @@ export function RelinkModal({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const { search, kindOf } = useSearchTargets();
+  const { search, kindOf } = useRecordTargets();
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
   const [replace, setReplace] = useState(false);
   const [wholeThread, setWholeThread] = useState(false);

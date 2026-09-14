@@ -12,7 +12,7 @@ package compose
 // contact on a personal thread — forty-six of them — predated the verdict about
 // it, so refusing at creation time alone would have prevented none of them.
 //
-// The keeping is as much the subject as the withdrawing. A person who also
+// The keeping is as much the subject as the withdrawing. A contact who also
 // writes about business is a business contact who happens to have a private
 // thread, and every "retracted" case here is paired with the shape that must
 // survive.
@@ -40,11 +40,11 @@ func TestAPersonalVerdictRetractsTheContactCaptureAlreadyMade(t *testing.T) {
 	const aunt = "aunt@family.test"
 	activityID := seedHeldThreadMail(t, e, "thread-family", aunt, "Geburtstag")
 	threadID := seedThreadQuestion(t, e, "thread-family", activityID)
-	personID := seedCapturedContact(t, e, aunt)
+	contactID := seedCapturedContact(t, e, aunt)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if !personIsArchived(t, e, personID) {
+	if !contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact whose only correspondence is a private conversation is still in the CRM — " +
 			"the classifier decided this is not the workspace's business")
 	}
@@ -67,11 +67,11 @@ func TestAPersonalVerdictKeepsAContactWhoAlsoWritesAboutBusiness(t *testing.T) {
 
 	privateActivity := seedHeldThreadMail(t, e, "thread-private", both, "Familie")
 	threadID := seedThreadQuestion(t, e, "thread-private", privateActivity)
-	personID := seedCapturedContact(t, e, both)
+	contactID := seedCapturedContact(t, e, both)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact who also writes about business was retracted — one private " +
 			"conversation does not make somebody's whole correspondence private")
 	}
@@ -91,11 +91,11 @@ func TestAPersonalVerdictRetractsAContactWhoseOtherThreadWasNeverJudged(t *testi
 	threadID := seedThreadQuestion(t, e, "thread-results", privateActivity)
 	// A second conversation nobody asked a question about: held, unjudged.
 	seedHeldThreadMail(t, e, "thread-unjudged", clinic, "Blood test results, August")
-	personID := seedCapturedContact(t, e, clinic)
+	contactID := seedCapturedContact(t, e, clinic)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if !personIsArchived(t, e, personID) {
+	if !contactIsArchived(t, e, contactID) {
 		t.Fatal("a thread nothing has judged kept a private correspondent in the CRM — " +
 			"silence about a conversation is not evidence that it is business")
 	}
@@ -112,11 +112,11 @@ func TestAPersonalVerdictWaitsWhileAnotherThreadIsStillPending(t *testing.T) {
 	// Opened and deliberately not answered.
 	otherActivity := seedHeldThreadMail(t, e, "thread-open", pending, "Offen")
 	seedThreadQuestion(t, e, "thread-open", otherActivity)
-	personID := seedCapturedContact(t, e, pending)
+	contactID := seedCapturedContact(t, e, pending)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact was retracted while a question about another of their threads " +
 			"was still open — the answer may yet be that it is business")
 	}
@@ -133,11 +133,11 @@ func TestAPersonalVerdictKeepsAContactWhoseOtherThreadIsOpenToTheWorkspace(t *te
 	privateActivity := seedHeldThreadMail(t, e, "thread-private-c", known, "Privat")
 	threadID := seedThreadQuestion(t, e, "thread-private-c", privateActivity)
 	seedOpenThreadMail(t, e, "thread-open-ws", known, "Vertrag")
-	personID := seedCapturedContact(t, e, known)
+	contactID := seedCapturedContact(t, e, known)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact whose other conversation is already open to the whole workspace " +
 			"was retracted — the workspace has agreed that correspondence is its own")
 	}
@@ -156,15 +156,15 @@ func TestAPersonalVerdictRetractsAContactAMachinePromoted(t *testing.T) {
 	const promoted = "doctor@health.test"
 	activityID := seedHeldThreadMail(t, e, "thread-promoted", promoted, "Befund")
 	threadID := seedThreadQuestion(t, e, "thread-promoted", activityID)
-	personID := seedMachinePromotedContact(t, e, promoted)
+	contactID := seedMachinePromotedContact(t, e, promoted)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if !personIsArchived(t, e, personID) {
+	if !contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact the sender classifier had promoted survived a personal verdict — " +
-			"one machine's guess outranked another machine's answer about the same person")
+			"one machine's guess outranked another machine's answer about the same contact")
 	}
-	if got := personVisibilityIs(t, e, personID); got != "owner" {
+	if got := contactVisibilityIs(t, e, contactID); got != "owner" {
 		t.Fatalf("the retracted contact is still %q-visible: an archived record is still "+
 			"listable by colleagues who ask for archived ones, so it has to be narrowed too", got)
 	}
@@ -172,7 +172,7 @@ func TestAPersonalVerdictRetractsAContactAMachinePromoted(t *testing.T) {
 
 // A record a human PUBLISHED is theirs, exactly as an edited one is. The
 // difference from the test above is only who did the publishing, and it is the
-// whole difference: a person deciding a contact belongs to the workspace is a
+// whole difference: a contact deciding a contact belongs to the workspace is a
 // decision, and a classifier's opinion about one conversation does not overrule
 // it.
 func TestAPersonalVerdictKeepsAContactAHumanPublished(t *testing.T) {
@@ -180,13 +180,13 @@ func TestAPersonalVerdictKeepsAContactAHumanPublished(t *testing.T) {
 	const published = "advisor@health.test"
 	activityID := seedHeldThreadMail(t, e, "thread-published", published, "Privat")
 	threadID := seedThreadQuestion(t, e, "thread-published", activityID)
-	personID := seedMachinePromotedContact(t, e, published)
-	seedHumanEdit(t, e, personID)
+	contactID := seedMachinePromotedContact(t, e, published)
+	seedHumanEdit(t, e, contactID)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
-		t.Fatal("a contact a human published was retracted — a person's decision that this " +
+	if contactIsArchived(t, e, contactID) {
+		t.Fatal("a contact a human published was retracted — a contact's decision that this " +
 			"record belongs to the workspace outranks a classifier's about one thread")
 	}
 }
@@ -198,30 +198,30 @@ func TestAPersonalVerdictKeepsAContactAHumanEdited(t *testing.T) {
 	const edited = "friend@family.test"
 	activityID := seedHeldThreadMail(t, e, "thread-edited", edited, "Privat")
 	threadID := seedThreadQuestion(t, e, "thread-edited", activityID)
-	personID := seedCapturedContact(t, e, edited)
-	seedHumanEdit(t, e, personID)
+	contactID := seedCapturedContact(t, e, edited)
+	seedHumanEdit(t, e, contactID)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact a human edited was retracted — an edit is somebody saying they want this record")
 	}
 }
 
 // seedCapturedContact lands the contact shape capture creates: owner-scoped,
 // captured_by a connector, with the address on it.
-func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.PersonID {
+func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
-	var id ids.PersonID
+	var id ids.ContactID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, source, captured_by, owner_id, visibility)
+			INSERT INTO contact (full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'gmail:seed', 'connector:gmail', $2, 'owner')
 			RETURNING id`, email, e.Rep1).Scan(&id); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
 			VALUES ($1, $2, 'gmail:seed', 'connector:gmail')`, id.UUID, email)
 		return err
 	}); err != nil {
@@ -244,11 +244,11 @@ func TestAPersonalVerdictKeepsAContactWhoseOtherThreadTheOwnerHeldThemselves(t *
 	threadID := seedThreadQuestion(t, e, "thread-private-d", privateActivity)
 	seedHeldThreadMail(t, e, "thread-owner-held", held, "Mandat")
 	seedOwnerHeldThread(t, e, "thread-owner-held")
-	personID := seedCapturedContact(t, e, held)
+	contactID := seedCapturedContact(t, e, held)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact was retracted although the owner had held another of their threads " +
 			"themselves — an owner hold carries no kind, and NULL is not `personal`")
 	}
@@ -266,14 +266,14 @@ func TestAPersonalVerdictKeepsAContactAHumanApproved(t *testing.T) {
 	const approved = "kontakt@partner.test"
 	activityID := seedHeldThreadMail(t, e, "thread-approved", approved, "Privat")
 	threadID := seedThreadQuestion(t, e, "thread-approved", activityID)
-	personID := seedMachinePromotedContact(t, e, approved)
-	seedApprovedOnBehalfOf(t, e, personID)
+	contactID := seedMachinePromotedContact(t, e, approved)
+	seedApprovedOnBehalfOf(t, e, contactID)
 
 	runConfidentiality(t, e, threadID, confidentialityPersonal, 0.95)
 
-	if personIsArchived(t, e, personID) {
+	if contactIsArchived(t, e, contactID) {
 		t.Fatal("a contact a human was asked about and approved was retracted — the approval " +
-			"executor writes as the system and records the person only in on_behalf_of")
+			"executor writes as the system and records the contact only in on_behalf_of")
 	}
 }
 
@@ -293,12 +293,12 @@ func seedOwnerHeldThread(t *testing.T, e *integration.Env, threadKey string) {
 
 // seedApprovedOnBehalfOf lands the audit row an accepted counterparty proposal
 // leaves: system actor, the deciding human in on_behalf_of.
-func seedApprovedOnBehalfOf(t *testing.T, e *integration.Env, id ids.PersonID) {
+func seedApprovedOnBehalfOf(t *testing.T, e *integration.Env, id ids.ContactID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, on_behalf_of)
-			VALUES ('system', 'agent:capture_counterparty', 'create', 'person', $1, $2)`,
+			VALUES ('system', 'agent:capture_counterparty', 'create', 'contact', $1, $2)`,
 			id.UUID, e.Rep1)
 		return err
 	}); err != nil {
@@ -336,25 +336,25 @@ func seedOpenThreadMail(t *testing.T, e *integration.Env, threadKey, from, subje
 // the system audit row the promotion writes. Hand-built rather than driven
 // through the verdict engine because this file's subject is the confidentiality
 // pass; the shape is taken from what that engine actually writes.
-func seedMachinePromotedContact(t *testing.T, e *integration.Env, email string) ids.PersonID {
+func seedMachinePromotedContact(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
-	var id ids.PersonID
+	var id ids.ContactID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
-			INSERT INTO person (full_name, source, captured_by, owner_id, visibility)
+			INSERT INTO contact (full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'capture_counterparty_verdict', 'agent:capture_counterparty_verdict', $2, 'workspace')
 			RETURNING id`, email, e.Rep1).Scan(&id); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
 			VALUES ($1, $2, 'capture_counterparty_verdict', 'agent:capture_counterparty_verdict')`,
 			id.UUID, email); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, before, after)
-			VALUES ('system', 'agent:capture_counterparty_verdict', 'update', 'person', $1,
+			VALUES ('system', 'agent:capture_counterparty_verdict', 'update', 'contact', $1,
 			        '{"visibility":"owner"}'::jsonb, '{"visibility":"workspace"}'::jsonb)`, id.UUID)
 		return err
 	}); err != nil {
@@ -363,38 +363,38 @@ func seedMachinePromotedContact(t *testing.T, e *integration.Env, email string) 
 	return id
 }
 
-// personVisibilityIs reads who may see the record now.
-func personVisibilityIs(t *testing.T, e *integration.Env, id ids.PersonID) string {
+// contactVisibilityIs reads who may see the record now.
+func contactVisibilityIs(t *testing.T, e *integration.Env, id ids.ContactID) string {
 	t.Helper()
 	var visibility string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT visibility FROM person WHERE id = $1`, id.UUID).Scan(&visibility)
+			`SELECT visibility FROM contact WHERE id = $1`, id.UUID).Scan(&visibility)
 	}); err != nil {
 		t.Fatalf("reading the contact's visibility: %v", err)
 	}
 	return visibility
 }
 
-// seedHumanEdit lands the audit row a person's own edit leaves behind.
-func seedHumanEdit(t *testing.T, e *integration.Env, id ids.PersonID) {
+// seedHumanEdit lands the audit row a contact's own edit leaves behind.
+func seedHumanEdit(t *testing.T, e *integration.Env, id ids.ContactID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
-			VALUES ('human', $1, 'update', 'person', $2)`, e.Rep1.String(), id.UUID)
+			VALUES ('human', $1, 'update', 'contact', $2)`, e.Rep1.String(), id.UUID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the human edit: %v", err)
 	}
 }
 
-func personIsArchived(t *testing.T, e *integration.Env, id ids.PersonID) bool {
+func contactIsArchived(t *testing.T, e *integration.Env, id ids.ContactID) bool {
 	t.Helper()
 	var archived bool
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT archived_at IS NOT NULL FROM person WHERE id = $1`, id.UUID).Scan(&archived)
+			`SELECT archived_at IS NOT NULL FROM contact WHERE id = $1`, id.UUID).Scan(&archived)
 	}); err != nil {
 		t.Fatalf("reading whether the contact was retracted: %v", err)
 	}

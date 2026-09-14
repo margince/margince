@@ -45,17 +45,23 @@ func seedRate(t *testing.T, e *Env, from, to string, rate string, on time.Time) 
 	}
 }
 
+// draftValueMinor is the value every draftInCurrency fixture carries, shared
+// with the callers that restate it: a hand-copied literal would keep passing
+// if the fixture's value ever changed, silently testing a re-price instead of
+// the restatement it names.
+const draftValueMinor = int64(250_000)
+
 // draftInCurrency stages a contract carrying a value in the named currency.
-func draftInCurrency(t *testing.T, e *Env, org ids.UUID, currency string) ids.ContractID {
+func draftInCurrency(t *testing.T, e *Env, company ids.UUID, currency string) ids.ContractID {
 	t.Helper()
-	value := int64(250_000)
+	value := draftValueMinor
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "A foreign-currency agreement",
-		ValueMinor:     &value,
-		Currency:       &currency,
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "A foreign-currency agreement",
+		ValueMinor: &value,
+		Currency:   &currency,
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,10 +71,10 @@ func draftInCurrency(t *testing.T, e *Env, org ids.UUID, currency string) ids.Co
 
 func TestActivationFreezesTheContractsConversion(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
 
-	id := draftInCurrency(t, e, org, "USD")
+	id := draftInCurrency(t, e, company, "USD")
 	activated, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
 	if err != nil {
 		t.Fatalf("activating a contract whose rate is published: %v", err)
@@ -101,10 +107,10 @@ func TestActivationFreezesTheContractsConversion(t *testing.T) {
 // re-price an agreement nobody renegotiated.
 func TestReActivationDoesNotRePriceTheAgreement(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
 
-	id := draftInCurrency(t, e, org, "USD")
+	id := draftInCurrency(t, e, company, "USD")
 	first, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
 	if err != nil {
 		t.Fatalf("activating: %v", err)
@@ -129,10 +135,10 @@ func TestReActivationDoesNotRePriceTheAgreement(t *testing.T) {
 // a draft, which has frozen nothing, still takes it.
 func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
 
-	id := draftInCurrency(t, e, org, "USD")
+	id := draftInCurrency(t, e, company, "USD")
 	if _, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil); err != nil {
 		t.Fatalf("activating: %v", err)
 	}
@@ -160,10 +166,10 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 	// A contract that activated with no currency froze nothing — and giving it
 	// one now would leave an active foreign-currency contract with no rate.
 	bare, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "An agreement priced later",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "An agreement priced later",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -179,9 +185,14 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 		t.Fatalf("pricing an active contract that froze no rate answered %v, want a refusal on currency", err)
 	}
 
-	// A draft has frozen nothing, so its currency is still the human's to fix.
-	draft := draftInCurrency(t, e, org, "USD")
-	moved, err := e.Contracts.UpdateContract(e.Admin(), draft, crmcontracts.UpdateContractRequest{Currency: &eur}, nil)
+	// A draft has frozen nothing, so its currency is still the human's to
+	// fix — but a currency move must resend every populated figure
+	// (refuseARedenominatedDraft). This draft's price is unchanged in the
+	// new code, so the same numeral is resent on purpose.
+	draft := draftInCurrency(t, e, company, "USD")
+	restated := draftValueMinor
+	moved, err := e.Contracts.UpdateContract(e.Admin(), draft,
+		crmcontracts.UpdateContractRequest{Currency: &eur, ValueMinor: &restated}, nil)
 	if err != nil {
 		t.Fatalf("correcting a draft's currency: %v", err)
 	}
@@ -195,9 +206,9 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 // end.
 func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 
-	id := draftInCurrency(t, e, org, "JPY")
+	id := draftInCurrency(t, e, company, "JPY")
 	_, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
 
 	var missing *deals.MissingFxRateError
@@ -219,13 +230,13 @@ func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
 // the right answer rather than a refusal.
 func TestAContractWithNoCurrencyActivatesWithoutARate(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", nil)
+	company := e.SeedCompany(t, "Acme", nil)
 
 	created, err := e.Contracts.CreateContract(e.Admin(), contracts.CreateContractInput{
-		OrganizationID: ids.From[ids.OrganizationKind](org),
-		Title:          "An agreement with no money in it",
-		ValueBasis:     contracts.BasisTotal,
-		Source:         "manual",
+		CompanyID:  ids.From[ids.CompanyKind](company),
+		Title:      "An agreement with no money in it",
+		ValueBasis: contracts.BasisTotal,
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,7 +33,7 @@ var teamJobClock = time.Date(2026, 6, 10, 9, 0, 0, 0, time.UTC)
 // without them, and neither is what this test is about.
 func teamSnapshotWorker(e *integration.Env) *weeklyGenerateWorker {
 	return &weeklyGenerateWorker{
-		engine: weekly.NewEngine(e.Pool, newTeammatesSeam(e.Pool)),
+		engine: newWeeklyEngine(e.Pool),
 		pool:   e.Pool,
 		users:  identity.NewService(e.Pool),
 		now:    func() time.Time { return teamJobClock },
@@ -57,8 +56,8 @@ func seedManagerRoles(t *testing.T, e *integration.Env, users ...ids.UUID) {
 	// the object grant to assemble and the team scope to re-read.
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
 	             VALUES ('team_lead_under_test', 'Team Lead', $1::jsonb)`,
-		`{"objects":{"deal":{"read":true},"person":{"read":true},`+
-			`"activity":{"read":true},"installation_settings":{"read":true}},`+
+		`{"objects":{"deal":{"read":true},"contact":{"read":true},`+
+			`"activity":{"read":true},"weekly_plan":{"read":true,"update":true},"installation_settings":{"read":true}},`+
 			`"row_scope":"team"}`)
 	for _, user := range users {
 		e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
@@ -85,7 +84,7 @@ func TestTheTeamSnapshotJobWritesAWeek(t *testing.T) {
 		}
 	}
 
-	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock); len(failures) > 0 {
+	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock, nil); len(failures) > 0 {
 		t.Fatalf("the team snapshot job failed: %v", failures)
 	}
 
@@ -112,16 +111,41 @@ func TestASecondTickOfTheTeamSnapshotJobSucceeds(t *testing.T) {
 			t.Fatalf("writing %v's week: %v", rep, err)
 		}
 	}
-	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock); len(failures) > 0 {
+	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock, nil); len(failures) > 0 {
 		t.Fatalf("the first tick failed: %v", failures)
 	}
 
-	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock); len(failures) > 0 {
+	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock, nil); len(failures) > 0 {
 		t.Fatalf("the second tick failed: %v", failures)
 	}
 
 	// One row per team, not one per tick.
 	if got := e.WsCount(t, `SELECT count(*) FROM team_weekly_review`); got != 2 {
 		t.Errorf("after two ticks there are %d team weeks, wanted one per team (2)", got)
+	}
+}
+
+func TestATeamWaitsForAFailedMemberAndUsesAnAuthorizedLead(t *testing.T) {
+	e := integration.Setup(t)
+	w := teamSnapshotWorker(e)
+	// Only the second member is authorized to read a team review.
+	seedManagerRoles(t, e, e.Rep2, e.Rep3)
+	ctx := e.Admin()
+	for _, rep := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		if _, _, err := w.engine.AssembleFor(e.As(rep, nil, integration.AdminPerms), teamJobClock); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock, map[ids.UUID]bool{e.Rep1: true}); len(failures) > 0 {
+		t.Fatal(failures)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM team_weekly_review WHERE team_id=$1`, e.Team1); got != 0 {
+		t.Fatal("team froze despite a failed member")
+	}
+	if failures := w.snapshotTeams(ctx, e.WS, teamJobClock, nil); len(failures) > 0 {
+		t.Fatal(failures)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM team_weekly_review WHERE team_id=$1 AND reps_counted=2`, e.Team1); got != 1 {
+		t.Fatal("authorized member did not measure the complete team")
 	}
 }

@@ -336,7 +336,7 @@ func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID,
 	if mode != modeOverlay {
 		return nil, nil
 	}
-	// One installation, one organization (ADR-0061), so this is every live
+	// One installation, one company (ADR-0061), so this is every live
 	// workspace rather than a filtered subset. A fan-out that outlives that
 	// assumption is #1857's to collapse.
 	rows, err := pool.Query(ctx, `

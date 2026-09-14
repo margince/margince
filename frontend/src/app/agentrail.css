@@ -414,7 +414,7 @@
  *
  * At 56px the orb IS the report, and it keeps as much of that width as the rail
  * will give it. The words, the chevron and the CTA go; the count stays, because a
- * number waiting for a person is the one thing that still has to get through at
+ * number waiting for a contact is the one thing that still has to get through at
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -42,7 +42,7 @@ function settled<T>(data: T): QueryLike<T> {
 const SYNC: SyncStatus = {
   objects: [
     {
-      object: "person",
+      object: "contact",
       lastSyncedAt: "2026-07-25T08:00:00Z",
       state: "fresh",
       backfillComplete: true,

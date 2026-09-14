@@ -44,7 +44,7 @@ func (s *Service) WithIntroductions(i Introductions) *Service {
 	return s
 }
 
-// WithMachineSender binds the rule that tells a sending system from a person.
+// WithMachineSender binds the rule that tells a sending system from a contact.
 func (s *Service) WithMachineSender(is MachineSender) *Service {
 	s.machine = is
 	return s

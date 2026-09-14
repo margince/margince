@@ -26,7 +26,7 @@ import (
 )
 
 // arcGapDays is the silence that closes a moment. Three weeks is long enough
-// that people came back to a subject rather than continued it, and short
+// that contacts came back to a subject rather than continued it, and short
 // enough that one negotiation does not fragment into five.
 const arcGapDays = 21
 

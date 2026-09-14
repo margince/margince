@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 
 /**
- * The two pages a recipient reaches from a message, driven as a person
+ * The two pages a recipient reaches from a message, driven as a contact
  * reaches them: through the address in the mail, in a browser.
  *
  * These are the surfaces that were broken. The visible "Unsubscribe" link

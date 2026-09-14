@@ -41,8 +41,8 @@ const (
 	chromeEvidenceLane = "chrome-evidence"
 	// The two finding kinds that are not a field of the company profile, named
 	// so the trail says what was dropped rather than leaving it to the value.
-	chromeEvidencePersonField = "person"
-	chromeEvidenceEntityField = "legal_entity"
+	chromeEvidenceContactField = "contact"
+	chromeEvidenceEntityField  = "legal_entity"
 )
 
 // suppressChromeEvidence removes the findings whose evidence is the site's own
@@ -94,17 +94,17 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 			}
 			out.facts = append(out.facts, fact)
 		}
-		out.people = nil
-		for _, person := range result.people {
-			if isChromeEvidence(person.EvidenceSnippet, normalized, prose) {
+		out.contacts = nil
+		for _, contact := range result.contacts {
+			if isChromeEvidence(contact.EvidenceSnippet, normalized, prose) {
 				dropped = append(dropped, droppedFinding{
-					Lane: chromeEvidenceLane, Field: chromeEvidencePersonField, Value: person.Name,
-					EvidenceSnippet: person.EvidenceSnippet,
+					Lane: chromeEvidenceLane, Field: chromeEvidenceContactField, Value: contact.Name,
+					EvidenceSnippet: contact.EvidenceSnippet,
 					Reason:          "the only passage naming them is the site's navigation, which every page carries",
 				})
 				continue
 			}
-			out.people = append(out.people, person)
+			out.contacts = append(out.contacts, contact)
 		}
 		out.entities = nil
 		for _, entity := range result.entities {

@@ -182,7 +182,7 @@ func DeclaredTypeDisagreement(declared, sniffed string) string {
 // Three classes go, and each is a real attack rather than tidiness. Path
 // separators stop a name from ever reading as a path. Line breaks stop a name
 // from rewriting a log line it appears in. Bidirectional overrides stop a name
-// from rendering as an extension it does not have — the name a person reads and
+// from rendering as an extension it does not have — the name a reader reads and
 // the extension the file has must be the same string. (A name ending "gpj.exe"
 // with a RIGHT-TO-LEFT OVERRIDE before it renders as "...jpg".)
 //

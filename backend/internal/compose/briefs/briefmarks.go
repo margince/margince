@@ -6,7 +6,7 @@ package briefs
 // What the rep does with a queue item: acted, dismissed, snoozed.
 //
 // Split from the store's assembly and read paths because it is a different
-// concept — those build and serve a run, these record a person's answer to one
+// concept — those build and serve a run, these record a contact's answer to one
 // — and because one file holding both crossed the length ceiling once lineage
 // gave the read something more to carry.
 

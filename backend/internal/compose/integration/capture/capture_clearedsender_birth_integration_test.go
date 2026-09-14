@@ -37,7 +37,7 @@ func TestMailCapturedAfterAClearedVerdictIsBornOpen(t *testing.T) {
 
 	activityID := newestActivityID(t, e)
 	if got, reason := audienceOf(t, e, activityID); got != "workspace" || reason != "" {
-		t.Errorf("mail from a sender already judged a real person was born %q / %q, want workspace: "+
+		t.Errorf("mail from a sender already judged a real contact was born %q / %q, want workspace: "+
 			"the mailbox held it for a question that has an answer, and nothing re-asks it",
 			got, reason)
 	}
@@ -64,7 +64,7 @@ func TestAClearedSenderIsStillHeldByThisSeatsOwnHold(t *testing.T) {
 	}
 }
 
-// A sender judged real but not a PERSON leaves the question the posture asked
+// A sender judged real but not a CONTACT leaves the question the posture asked
 // unanswered — an advisor's record is deliberately kept to its owner, and their
 // mail is exactly the mail a classified mailbox means to hold.
 func TestAnAdvisorVerdictDoesNotOpenTheNextMessage(t *testing.T) {
@@ -79,15 +79,15 @@ func TestAnAdvisorVerdictDoesNotOpenTheNextMessage(t *testing.T) {
 	activityID := newestActivityID(t, e)
 	if got, _ := audienceOf(t, e, activityID); got != "participants" {
 		t.Errorf("mail from an advisor was born %q: the rung asked for status alone rather than "+
-			"whether a person was behind the address", got)
+			"whether a contact was behind the address", got)
 	}
 }
 
-// clearSender records the settled verdict that a real person is behind this
+// clearSender records the settled verdict that a real contact is behind this
 // address, which is what the birth ladder reads.
 func clearSender(t *testing.T, e *integration.SearchEnv, email string) {
 	t.Helper()
-	settleSender(t, e, email, capturemod.PendingStatusReal, capturemod.KindPerson)
+	settleSender(t, e, email, capturemod.PendingStatusReal, capturemod.KindContact)
 }
 
 // settleSender writes one settled ledger row, against the earlier message that

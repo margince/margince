@@ -1,0 +1,359 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// Filling a contact from what their employer's site ALREADY published.
+//
+// The deep read fills a published contact onto a record the workspace already
+// has (deepreadautoapply.go), and stages a stranger as a lead. Both happen
+// during the read. A contact who arrives AFTERWARDS — a rep typing a name, a
+// first mail landing, an import — is never matched against what that site
+// said, so the role printed beside their name on the about page goes unused
+// and the workspace holds a contact it could have described.
+//
+// That is the bug the LinkedIn matcher was written to fix, in the same shape:
+// matching only at read time means every later arrival is a match nobody
+// would ever make. The answer is the same one — THE TRIGGER IS THE EVENT, NOT
+// THE WRITER. contact.created and contact.updated reach the outbox because the
+// write shape puts them there, so manual entry, capture, site read, merge and
+// import all land here without any of them knowing this consumer exists, and
+// a writer added tomorrow is covered on the day it emits its first event.
+//
+// What the site published is still on file as the staged lead proposals the
+// read left behind: each carries the name, role, published email, LinkedIn
+// URL and the verbatim snippet it was read from. So the match reads those
+// rather than re-crawling a page that has not changed.
+//
+// A match resolves TWO things at once, which is why they are one pass: the
+// contact's empty fields get filled, and the proposal that would have asked a
+// human to create a lead for somebody the CRM now holds stops being a
+// question. Leaving it would spend the approval queue on a duplicate of the
+// row that is already there.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/websearch"
+)
+
+// autoEnrichActor is the provenance a fill from this pass carries. It is
+// distinct from the deep read's own actor so a reader can tell a value that
+// arrived with the crawl from one this pass matched onto them later.
+const autoEnrichActor = "system:contact_auto_enrich"
+
+// ContactAutoEnrich fills a newly-known contact from what their employer's site
+// already published.
+type ContactAutoEnrich struct {
+	pool      *pgxpool.Pool
+	contacts  *contacts.Store
+	approvals *approvals.Service
+	// search is the ADR-0081 seam, and nil is a supported deployment rather
+	// than a broken one: without a bound provider the pass fills from the
+	// employer's staged pages alone and skips discovery silently.
+	search websearch.Client
+	log    *slog.Logger
+}
+
+// NewContactAutoEnrich builds the consumer over the stores it composes.
+func NewContactAutoEnrich(pool *pgxpool.Pool, store *contacts.Store, approvalsSvc *approvals.Service, search websearch.Client, log *slog.Logger) *ContactAutoEnrich {
+	return &ContactAutoEnrich{pool: pool, contacts: store, approvals: approvalsSvc, search: search, log: log}
+}
+
+// HandleEvent routes one envelope. An event this consumer does not care about
+// answers nil, so the group keeps flowing rather than wedging on somebody
+// else's traffic.
+//
+// Recomputing is idempotent — the fill is fill-only-empty and the withdrawal
+// reports whether the offer was still live — so the at-least-once bus costs
+// nothing: a redelivered event re-runs a match that has already been made and
+// changes no row.
+func (g *ContactAutoEnrich) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if env.Entity.ID == ids.Nil || env.Entity.Type != string(recordTypeContact) {
+		return nil
+	}
+	subject := env.Entity.ID
+	switch env.Type {
+	// Every event that can make a contact newly matchable. An archive needs no
+	// reaction: the match requires a live row, so an archived contact stops
+	// being a candidate without anything being recomputed.
+	case "contact.created", "contact.updated", "contact.restored":
+	case "contact.merged":
+		// A merge names the merged-AWAY contact as its entity — the row it just
+		// archived. Enriching that would fill a record no read returns, and the
+		// survivor, which is the one that actually became newly matchable
+		// (it inherits the source's emails and employer), would be missed. The
+		// survivorship patch is a bare UPDATE and emits nothing of its own, so
+		// this event is the only notice this consumer gets.
+		survivor, ok := survivorOf(env)
+		if !ok {
+			return nil
+		}
+		subject = survivor
+	default:
+		return nil
+	}
+	// The envelope carries no tenant (ADR-0091 §6); the store's handle names it.
+	ws, err := InstallationDB(g.pool).Workspace(ctx)
+	if err != nil {
+		return err
+	}
+	return g.enrich(g.systemContext(ctx, env, ws.UUID), ids.From[ids.ContactKind](subject))
+}
+
+// survivorOf reads the surviving contact out of a contact.merged payload.
+//
+// An unreadable payload yields no subject rather than a guess: enriching the
+// wrong record is worse than not enriching, and the merge itself has already
+// committed either way.
+func survivorOf(env events.Envelope) (ids.UUID, bool) {
+	var merged crmcontracts.PublicEventContactMerged
+	if err := json.Unmarshal(env.Payload, &merged); err != nil {
+		return ids.Nil, false
+	}
+	survivor := ids.UUID(merged.MergedIntoId)
+	if survivor == ids.Nil {
+		return ids.Nil, false
+	}
+	return survivor, true
+}
+
+// systemContext binds the workspace and the system principal this pass writes
+// under. The fill is not a human's edit and must not be recorded as one, and
+// the correlation id carries through so the fill traces back to the event
+// that caused it.
+func (g *ContactAutoEnrich) systemContext(ctx context.Context, env events.Envelope, ws ids.UUID) context.Context {
+	ctx = principal.WithWorkspaceID(ctx, ws)
+	ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: autoEnrichActor,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+}
+
+// enrich runs one contact's pass: find their employer, read what that site
+// published, and fill the contact from the one entry that is unmistakably
+// them.
+func (g *ContactAutoEnrich) enrich(ctx context.Context, contactID ids.ContactID) error {
+	// Locals, not fields: one consumer instance serves concurrent events, so
+	// carrying per-event state on the struct would race.
+	var needsDiscovery bool
+	var discoverName, discoverEmployer string
+
+	if err := database.WithWorkspaceTx(ctx, g.pool, func(tx pgx.Tx) error {
+		companyID, ok, err := g.employerOf(ctx, tx, contactID)
+		if err != nil || !ok {
+			// No employer means nothing to match against. That is the common
+			// case for a fresh contact and is not a failure.
+			return err
+		}
+		staged, err := g.stagedSiteContacts(ctx, tx, companyID)
+		if err != nil {
+			return err
+		}
+		filled, err := g.fillFromStagedPages(ctx, tx, companyID, contactID, staged)
+		if err != nil {
+			return err
+		}
+		if filled {
+			// The employer's own pages answered. Search is the fallback for
+			// what they did not say, not a second opinion on what they did.
+			return nil
+		}
+		name, employer, err := g.searchTerms(ctx, tx, contactID, companyID)
+		if err != nil {
+			// Not swallowed: a failed query has already aborted this
+			// transaction, so continuing past it turns a readable error into
+			// "commit unexpectedly resulted in rollback" somewhere else.
+			return err
+		}
+		// Already discovered. The write downstream is ON CONFLICT DO NOTHING,
+		// so a repeat costs nothing in the database — but the search runs
+		// BEFORE it, and that is a paid third-party request carrying this
+		// contact's real name and employer. Without this check a rep editing
+		// one contact in a loop, or capture updating a contact on every inbound
+		// mail, spends one API unit per event re-discovering a URL already
+		// stored.
+		var already bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM contact_profile_field
+			                WHERE contact_id = $1 AND field = 'linkedin')`,
+			contactID).Scan(&already); err != nil {
+			return err
+		}
+		if already {
+			return nil
+		}
+		needsDiscovery, discoverName, discoverEmployer = true, name, employer
+		return nil
+	}); err != nil {
+		return err
+	}
+	if !needsDiscovery {
+		return nil
+	}
+	return g.discoverFromSearch(ctx, contactID, discoverName, discoverEmployer)
+}
+
+// searchTerms reads the two facts a discovery query is anchored on: the
+// contact's name and their employer's. A query without both is not run —
+// a bare name returns somebody else.
+func (g *ContactAutoEnrich) searchTerms(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, companyID ids.CompanyID) (name, employer string, err error) {
+	err = tx.QueryRow(ctx, `
+		SELECT p.full_name, coalesce(o.display_name, '')
+		FROM contact p LEFT JOIN company o ON o.id = $2
+		WHERE p.id = $1`, contactID, companyID).Scan(&name, &employer)
+	return name, employer, err
+}
+
+// employerOf resolves the contact's current primary employer — the only
+// company whose site may describe them. Filling a title from company X's site
+// onto a contact the CRM records at company Y is a conflict a human should
+// see, not one a sweep settles.
+func (g *ContactAutoEnrich) employerOf(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.CompanyID, bool, error) {
+	var companyID ids.CompanyID
+	err := tx.QueryRow(ctx, `
+		SELECT company_id FROM relationship
+		WHERE contact_id = $1 AND kind = 'employment' AND `+employment.CurrentPrimarySQL("")+`
+		  AND archived_at IS NULL AND company_id IS NOT NULL
+		LIMIT 1`, contactID).Scan(&companyID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ids.CompanyID{}, false, nil
+		}
+		return ids.CompanyID{}, false, err
+	}
+	return companyID, true, nil
+}
+
+// stagedSiteContact pairs a pending proposal with the payload it carries.
+type stagedSiteContact struct {
+	approvalID ids.ApprovalID
+	proposal   siteLeadProposal
+}
+
+// stagedSiteContacts reads what the employer's site published and nobody has
+// decided yet.
+//
+// It reads the approval rows directly because this pass runs as a system
+// principal: the module's own PendingForTarget is human-only by design, since
+// it answers "what is in YOUR inbox", and this pass has no inbox. The scan is
+// bounded so one company's backlog cannot make a single contact's event
+// unbounded work.
+//
+// LIVE proposals only, and the expiry predicate is load-bearing twice over.
+// Withdrawal works by expiring the row rather than by moving its status, so
+// without it a redelivered event re-withdraws a proposal already withdrawn
+// and writes a second audit row for one logical act. It also keeps the pass
+// off stale ground: an offer whose TTL lapsed is a read nobody acted on, and
+// filling a contact from it would assert a page that may have moved on.
+//
+// The consequence is a real bound on this pass — it can only fill from a read
+// that is still on offer. A contact who arrives long after their employer was
+// crawled matches nothing here, and the honest answer for them is a fresh
+// read rather than a stale proposal.
+func (g *ContactAutoEnrich) stagedSiteContacts(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) ([]stagedSiteContact, error) {
+	// Oldest-first, which is the canonical approval lock order — not the
+	// newest-first this read used to take.
+	//
+	// It looks like a plain read, and that is exactly why it was wrong. The
+	// caller withdraws every row it matches on the SAME transaction, and each
+	// withdrawal takes that row's lock, so THIS `ORDER BY` is the order in which
+	// a transaction acquires approval locks. Newest-first is the mirror of the
+	// order a bundle decision walks the same rows in, and two of them meeting
+	// over two proposals deadlock — the loser gets a 500.
+	//
+	// Oldest-first also answers the caller's own question better: where two
+	// proposals match one contact, the one the workspace has been sitting on
+	// longest is the one to retire first.
+	rows, err := tx.Query(ctx, `
+		SELECT id, proposed_change FROM approval
+		WHERE kind = $1 AND target_entity_type = $2 AND target_entity_id = $3
+		  AND status = 'pending' AND expires_at > now()
+		ORDER BY created_at, id
+		LIMIT 50`, siteLeadProposalKind, enrichTargetType, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []stagedSiteContact
+	for rows.Next() {
+		var id ids.ApprovalID
+		var raw []byte
+		if err := rows.Scan(&id, &raw); err != nil {
+			return nil, err
+		}
+		var p siteLeadProposal
+		if err := json.Unmarshal(raw, &p); err != nil {
+			// A payload this consumer cannot read is somebody else's row
+			// shape, not a reason to wedge the group.
+			g.log.WarnContext(ctx, "skipping an unreadable site-lead proposal",
+				"approval", id.String(), "err", err)
+			continue
+		}
+		out = append(out, stagedSiteContact{approvalID: id, proposal: p})
+	}
+	return out, rows.Err()
+}
+
+// fillFromStagedPages applies whatever the employer's own site already
+// published about this contact, and reports whether anything landed.
+//
+// Split out because it is the half that needs no network: the staged proposals
+// are already on file, and only their absence justifies paying for a search.
+func (g *ContactAutoEnrich) fillFromStagedPages(
+	ctx context.Context,
+	tx pgx.Tx,
+	companyID ids.CompanyID,
+	contactID ids.ContactID,
+	staged []stagedSiteContact,
+) (bool, error) {
+	filled := false
+	for _, sp := range staged {
+		// ApplySiteContactFields owns the match rule and keeps it narrow:
+		// an exact live email among that company's own employees, or
+		// exactly ONE employee whose name matches confidently. Zero or two
+		// is not identifiable, and it declines rather than guessing.
+		matched, err := g.contacts.ApplySiteContactFields(ctx, companyID, contacts.SiteContactFields{
+			Name:            sp.proposal.Name,
+			Role:            sp.proposal.Role,
+			PublishedEmail:  sp.proposal.PublishedEmail,
+			LinkedinURL:     sp.proposal.LinkedinURL,
+			EvidenceSnippet: sp.proposal.EvidenceSnippet,
+			SourceURL:       sp.proposal.SourceURL,
+		})
+		if err != nil {
+			return false, err
+		}
+		if !matched {
+			continue
+		}
+		// The proposal asked a human to create a lead for this contact.
+		// The contact exists, so the question is answered by the world
+		// rather than by the human, and the queue should not carry it.
+		withdrawn, err := g.approvals.WithdrawInTx(ctx, tx, sp.approvalID,
+			"the published contact is already a contact in this workspace")
+		if err != nil {
+			return false, err
+		}
+		filled = true
+		g.log.InfoContext(ctx, "contact auto-enriched from the employer's site",
+			string(recordTypeContact), contactID.String(), "company", companyID.String(),
+			"source", sp.proposal.SourceURL, "proposal_withdrawn", withdrawn)
+	}
+	return filled, nil
+}

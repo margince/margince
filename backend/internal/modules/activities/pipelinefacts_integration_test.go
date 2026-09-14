@@ -110,7 +110,7 @@ type capturedRow struct {
 	archived        bool
 	audience        string
 	undecidedSender bool
-	withPerson      bool
+	withContact     bool
 }
 
 func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
@@ -137,12 +137,12 @@ func (e *factsEnv) seed(t *testing.T, row capturedRow) ids.UUID {
 			INSERT INTO capture_pending_counterparty (id, owner_id, email, status, activity_id)
 			VALUES ($1, $2, $3, 'pending', $4)`, ids.NewV7(), e.user, email, id)
 	}
-	if row.withPerson {
-		person := ids.NewV7()
-		e.exec(t, `INSERT INTO person (id, full_name, source, captured_by)
-			VALUES ($1, 'Linked Person', 'test', 'connector:gmail')`, person)
-		e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id)
-			VALUES ($1, 'person', $2)`, id, person)
+	if row.withContact {
+		contact := ids.NewV7()
+		e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
+			VALUES ($1, 'Linked Contact', 'test', 'connector:gmail')`, contact)
+		e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			VALUES ($1, 'contact', $2)`, id, contact)
 	}
 	return id
 }
@@ -210,23 +210,23 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	}
 }
 
-func TestThePersonLinkIsWhatThePersonCreationRungReads(t *testing.T) {
-	// The person-creation rung is derived by elimination, and the link is the
+func TestTheContactLinkIsWhatTheContactCreationRungReads(t *testing.T) {
+	// The contact-creation rung is derived by elimination, and the link is the
 	// only durable signal it has — the same signal the nightly reconcile scans
 	// for. If this read stopped seeing it, the rung would report "no contact
 	// linked yet" for messages that have one.
 	e := setupFacts(t)
 	ctx := e.as()
 	for id, want := range map[ids.UUID]bool{
-		e.seed(t, capturedRow{kind: "email"}):                   false,
-		e.seed(t, capturedRow{kind: "email", withPerson: true}): true,
+		e.seed(t, capturedRow{kind: "email"}):                    false,
+		e.seed(t, capturedRow{kind: "email", withContact: true}): true,
 	} {
 		facts, err := e.store.ReadPipelineFacts(ctx, id)
 		if err != nil {
 			t.Fatalf("reading pipeline facts: %v", err)
 		}
-		if facts.HasPersonLink != want {
-			t.Errorf("HasPersonLink for %s = %v, want %v", id, facts.HasPersonLink, want)
+		if facts.HasContactLink != want {
+			t.Errorf("HasContactLink for %s = %v, want %v", id, facts.HasContactLink, want)
 		}
 	}
 }
@@ -238,17 +238,17 @@ func TestReadingPipelineFactsTakesTheRowScopeNotJustTheGrant(t *testing.T) {
 	// construction — so deleting that call left nothing red.
 	//
 	// This is the other half: the grant is HELD, and the activity is linked only
-	// to another rep's capture-private person (visibility='owner' — ownership
-	// alone no longer hides a person), so only the link-walk can refuse.
+	// to another rep's capture-private contact (visibility='owner' — ownership
+	// alone no longer hides a contact), so only the link-walk can refuse.
 	e := setupFacts(t)
 	id := e.seed(t, capturedRow{kind: "email"})
 	other := ids.NewV7()
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Other')`, other, "other-"+other.String()+"@facts.test")
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, source, captured_by, owner_id, visibility)
-		VALUES ($1, 'Theirs', 'test', 'connector:gmail', $2, 'owner')`, person, other)
-	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, person)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by, owner_id, visibility)
+		VALUES ($1, 'Theirs', 'test', 'connector:gmail', $2, 'owner')`, contact, other)
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, contact)
 
 	asUser := func(userID ids.UUID, scope principal.RowScope) context.Context {
 		return principal.WithActor(

@@ -169,8 +169,8 @@ func TestTheSummaryCountsTheSameItemsTheQueueCarries(t *testing.T) {
 	if summary.Total != len(candidates) {
 		t.Fatalf("summary totals %d over a day of %d", summary.Total, len(candidates))
 	}
-	if summary.Urgent != 1 {
-		t.Fatalf("counted %d urgent, wanted the one promise", summary.Urgent)
+	if summary.Urgent != 2 {
+		t.Fatalf("counted %d urgent, wanted the promise and overdue task", summary.Urgent)
 	}
 	if summary.LowerPriority != 1 {
 		t.Fatalf("counted %d lower-priority, wanted the one hygiene decision", summary.LowerPriority)
@@ -565,7 +565,7 @@ func TestAWaitingDealDoesNotAlsoAppearAsDrifting(t *testing.T) {
 	}
 }
 
-// The longer somebody has waited, the higher they sit — among people who are
+// The longer somebody has waited, the higher they sit — among contacts who are
 // all waiting, the forgotten one is the one at risk.
 //
 // Both waits are inside the ordering ceiling. Past it every wait ties on age by

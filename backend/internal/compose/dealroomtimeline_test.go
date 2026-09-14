@@ -43,7 +43,7 @@ func roomEnvelope[P roomPayload](t *testing.T, eventType string, payload P) even
 	}
 }
 
-// The note has to name the PERSON and the DOCUMENT, not their categories.
+// The note has to name the CONTACT and the DOCUMENT, not their categories.
 //
 // The earlier version of this test asserted the words "buyer" and "document"
 // appeared somewhere, which "The buyer replied in the Deal Room / About a
@@ -88,7 +88,7 @@ func TestABuyerCommentBecomesANoteThatNamesTheBuyerAndTheDocument(t *testing.T) 
 
 // An event minted before the payload carried a name still has to produce a
 // true note. It falls back to the side — vaguer, never wrong, and never a
-// placeholder name that would read as a real person.
+// placeholder name that would read as a real contact.
 func TestACommentWithoutANameFallsBackToTheSide(t *testing.T) {
 	doc := openapi_types.UUID(ids.NewV7())
 	note, carried, err := roomNote(roomEnvelope(t, dealrooms.EventCommentPosted,
@@ -104,7 +104,7 @@ func TestACommentWithoutANameFallsBackToTheSide(t *testing.T) {
 		t.Fatalf("routing an old-shape comment: carried=%v err=%v", carried, err)
 	}
 	if !strings.Contains(note.subject, "buyer") {
-		t.Errorf("subject %q names neither a person nor a side", note.subject)
+		t.Errorf("subject %q names neither a contact nor a side", note.subject)
 	}
 	for _, bogus := range []string{"Unknown", "<nil>", "null"} {
 		if strings.Contains(note.subject, bogus) || strings.Contains(note.body, bogus) {

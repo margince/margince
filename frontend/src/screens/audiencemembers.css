@@ -22,7 +22,7 @@
   min-width: 0;
 }
 
-/* The note is the seat's address, which is how two people with one name are
+/* The note is the seat's address, which is how two contacts with one name are
    told apart. It truncates; the name does not. */
 .compose-audience-member > .t-caption {
   min-width: 0;

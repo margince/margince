@@ -5,10 +5,10 @@ more usefully — how they connect, and which connections are required.
 
 ## The five, in one line each
 
-**Contact** — a person. In the app's navigation this is **Contacts**; on a few
-screens the underlying word "person" shows through.
+**Contact** — a contact. In the app's navigation this is **Contacts**; on a few
+screens the underlying word "contact" shows through.
 
-**Company** — an organization you deal with. Navigation calls this
+**Company** — a company you deal with. Navigation calls this
 **Companies**.
 
 **Lead** — a prospect you have not qualified yet. Deliberately kept apart from
@@ -39,7 +39,7 @@ most CRMs, on purpose.
 | Project → Company | **Required — at least one, always.** |
 | Activity → any record | Optional. An activity with no links is shared with everyone. |
 
-Two of these catch people out.
+Two of these catch contacts out.
 
 **A deal does not need a company.** Deal name, currency and stage are required.
 Value, company and expected close date are optional. Qualifying a lead creates a
@@ -114,7 +114,7 @@ Contacted and engaged are set automatically from captured activity, and can also
 be set by hand. The record tells you which: "set automatically from captured
 activity" or "set by hand".
 
-A person may move an open lead to any open step, forwards or back. The system
+A contact may move an open lead to any open step, forwards or back. The system
 only ever moves it forwards.
 
 ### Qualifying a lead
@@ -199,7 +199,7 @@ project is never silently reopened by a win. Reopening is a human move with a
 reason.
 
 Every phase move is recorded, including the automatic one, which is attributed to
-the person whose action caused it.
+the contact whose action caused it.
 
 ### The key
 
@@ -227,7 +227,7 @@ companies can both be Customer, or none can be.
 Stakeholders on a project use five roles: **Sponsor, Project lead, Delivery lead,
 Subject-matter expert, User.**
 
-One thing that trips people up: **you seat someone on a project from the
+One thing that trips contacts up: **you seat someone on a project from the
 contact's page, not the project's.** The project's Stakeholders card shows the
 result and is read-only.
 
@@ -255,7 +255,7 @@ Use **Log activity** to add a note or a task straight onto a timeline.
 
 One activity can link to several records at once — a contact and a deal, for
 example. An activity with no links at all is visible to everyone in the
-organization.
+company.
 
 A meeting carries a status: **booked, held, no-show, canceled.**
 
@@ -263,12 +263,12 @@ A meeting carries a status: **booked, held, no-show, canceled.**
 filed against the wrong record, the fix is **Relink**, not delete.
 
 On top of visibility inherited from linked records, an activity carries an
-audience: everyone in the organization, the participants, or a named few. That
+audience: everyone in the company, the participants, or a named few. That
 audience is not overridden by seniority — someone who can see every record still
 does not read a message they were not an audience for.
 
 Where the audience comes from depends on how the row arrived. A note or a call
-you log is shared with the organization unless you say otherwise. **A message
+you log is shared with the company unless you say otherwise. **A message
 captured from a mailbox is not**: its audience is derived from what each
 importing mailbox asks for, and a new mailbox holds its mail until a classifier
 judges the thread ordinary. You change a captured message's audience by sharing
@@ -303,7 +303,7 @@ edited the record in between. When that happens the change is refused and
 nothing is written, rather than being applied to a record that has moved. Read
 the reason, look at the record again, and decide from what is there now.
 
-**An agent cannot put a change back.** It is a person's authority on purpose:
+**An agent cannot put a change back.** It is a contact's authority on purpose:
 otherwise an agent could reach a change it was never allowed to make directly by
 making it, and then undoing the undo.
 

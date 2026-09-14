@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AvatarStack } from "./avatarstack";
 
-// A committee of people as overlapping monograms, folding into a "+N" once
+// A committee of contacts as overlapping monograms, folding into a "+N" once
 // the group runs past `max`.
 const meta: Meta<typeof AvatarStack> = {
   title: "Design System/AvatarStack",
@@ -15,15 +15,15 @@ export default meta;
 
 type Story = StoryObj<typeof AvatarStack>;
 
-export const FewPeople: Story = {
+export const FewContacts: Story = {
   args: {
-    people: [{ name: "Alex Rivera" }, { name: "Sam Okafor" }],
+    contacts: [{ name: "Alex Rivera" }, { name: "Sam Okafor" }],
   },
 };
 
 export const OverTheMax: Story = {
   args: {
-    people: [
+    contacts: [
       { name: "Alex Rivera" },
       { name: "Sam Okafor" },
       { name: "Priya Nair" },

@@ -20,7 +20,7 @@ const POLL_IDLE_MS = 30_000;
  * How long this tab's own ask stays reported after its request ended.
  *
  * A model call that answers in a tenth of a second is still the agent doing
- * something a person asked for, and a light that appears and disappears inside
+ * something a contact asked for, and a light that appears and disappears inside
  * one animation frame is a light nobody sees. This is the same floor the
  * ticker's lines are given (`LINGER_MS` in agentrail-ticker.ts) and for the
  * same reason: long enough to register, short enough that the report is never
@@ -135,7 +135,7 @@ export type AiActivity = Readonly<{
 }>;
 
 /**
- * What the AI is doing for this person, polled while somebody is looking.
+ * What the AI is doing for this contact, polled while somebody is looking.
  *
  * ONE read over one projection: a scheduled run and a document reading arrive
  * through the same feed, so a new kind of AI work never adds a call here.
@@ -213,7 +213,7 @@ export function useAiActivity(): AiActivity {
   // Both EDGES of an ask, read immediately rather than waited for: the request
   // leaving is when the occurrence appears, and the request answering is when
   // it settles. Polling alone would show each of those up to a poll late, which
-  // for the short tasks a person triggers and then watches is most of the run.
+  // for the short tasks a contact triggers and then watches is most of the run.
   //
   // On `open` rather than on the lingering flag above, because the linger is a
   // presentation floor and this is a read: waiting it out would put the settled

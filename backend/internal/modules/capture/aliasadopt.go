@@ -91,7 +91,7 @@ func (s *Sink) adoptMailForNewIdentityTx(
 // one of this seat's addresses is on, and which the seat has no import row for.
 //
 // Called when an address BECOMES the seat's own — discovered by alias sighting,
-// or declared by the person themselves. Both are the same event as far as the
+// or declared by the contact themselves. Both are the same event as far as the
 // mail is concerned: an address the product did not know was theirs now is.
 //
 // Returns the messages adopted, so the caller can recompute their audience.

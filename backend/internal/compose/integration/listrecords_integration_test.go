@@ -66,20 +66,20 @@ func TestListRecordsNarrowsByOwner(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	mine := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"person","fields":{"full_name":"Owned By Rep One","owner_id":"`+e.Rep1.String()+`"}}`)
+		`{"record_type":"contact","fields":{"full_name":"Owned By Rep One","owner_id":"`+e.Rep1.String()+`"}}`)
 	theirs := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"person","fields":{"full_name":"Owned By Rep Two","owner_id":"`+e.Rep2.String()+`"}}`)
+		`{"record_type":"contact","fields":{"full_name":"Owned By Rep Two","owner_id":"`+e.Rep2.String()+`"}}`)
 
 	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(
-		`{"record_type":"person","filters":{"owner_id":"`+e.Rep1.String()+`"}}`))
+		`{"record_type":"contact","filters":{"owner_id":"`+e.Rep1.String()+`"}}`))
 	if err != nil {
-		t.Fatalf("listing people by owner: %v", err)
+		t.Fatalf("listing contacts by owner: %v", err)
 	}
 
 	if !strings.Contains(string(out), mine.String()) {
-		t.Errorf("the person owned by the filtered owner is missing from the answer:\n%s", out)
+		t.Errorf("the contact owned by the filtered owner is missing from the answer:\n%s", out)
 	}
 	if strings.Contains(string(out), theirs.String()) {
-		t.Errorf("a person owned by someone else came back from an owner-filtered list:\n%s", out)
+		t.Errorf("a contact owned by someone else came back from an owner-filtered list:\n%s", out)
 	}
 }

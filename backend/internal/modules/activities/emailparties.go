@@ -37,33 +37,33 @@ type emailParties struct {
 // as activity_participant rows with a role, which is why the viewer never has
 // to parse a provider payload to learn who was on a message.
 //
-// A person's name is resolved only through the caller's own row scope: an
+// A contact's name is resolved only through the caller's own row scope: an
 // address the caller may not see a contact for stays an address, which is the
 // truth rather than a blank.
 func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailParties, error) {
 	args := []any{id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return emailParties{}, err
 	}
-	personJoin := `LEFT JOIN person p ON p.id = ap.person_id AND p.archived_at IS NULL`
+	contactJoin := `LEFT JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL`
 	if scope != "" {
-		personJoin += ` AND (` + scope + `)`
+		contactJoin += ` AND (` + scope + `)`
 	}
 	// Three sources for one name, in the order of how much this installation
-	// knows the person. The contact record first — it is ours and it is
+	// knows the contact. The contact record first — it is ours and it is
 	// maintained. Then the SEAT, for a colleague. Then the name the sender typed
 	// into the header, which capture keeps and nothing here read: it is the
 	// weakest, because it is whatever the other side wrote, but it beats
 	// printing a bare address at a reader.
 	//
-	// A colleague's SEAT is named from app_user, not from person. A message to
+	// A colleague's SEAT is named from app_user, not from contact. A message to
 	// somebody in this workspace records their user_id and, for a seat capture
 	// resolved rather than read off a header, no address at all — so a party
-	// joined only against `person` came back with an empty address and no name,
+	// joined only against `contact` came back with an empty address and no name,
 	// and the reader saw a bare comma where a colleague should be. That reader
-	// is usually the very person it stood for: this is how a rep could not tell
+	// is usually the very contact it stood for: this is how a rep could not tell
 	// why a message had reached them.
 	//
 	// A seat is not row-scoped the way a contact is. The workspace roster is
@@ -75,14 +75,14 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	// dropping their name would leave a gap in a header that is otherwise
 	// complete — the very defect this join fixes, reappearing for anybody who
 	// resigns. This is the case livemember_test names as outside its rule: a row
-	// resolved by id to render a name does not ask whether the person still
+	// resolved by id to render a name does not ask whether the contact still
 	// works here.
 	rows, err := tx.Query(ctx, `
 		SELECT ap.role, coalesce(ap.address, ''), p.id,
 		       coalesce(p.full_name, u.display_name, ap.display_name), ap.user_id,
 		       coalesce(u.email, '')
 		  FROM activity_participant ap
-		  `+personJoin+`
+		  `+contactJoin+`
 		  LEFT JOIN app_user u ON u.id = ap.user_id
 		 WHERE ap.activity_id = $1
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc')
@@ -106,9 +106,9 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 	}
 	for rows.Next() {
 		var role, address, seatEmail string
-		var personID, userID *ids.UUID
+		var contactID, userID *ids.UUID
 		var fullName *string
-		if err := rows.Scan(&role, &address, &personID, &fullName, &userID, &seatEmail); err != nil {
+		if err := rows.Scan(&role, &address, &contactID, &fullName, &userID, &seatEmail); err != nil {
 			return emailParties{}, err
 		}
 		// The seat's own address, when the participant row carries none. Capture
@@ -119,9 +119,9 @@ func readEmailParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (emailP
 			address = seatEmail
 		}
 		party := crmcontracts.EmailParty{Address: address, DisplayName: fullName}
-		if personID != nil {
-			pid := openapi_types.UUID(*personID)
-			party.PersonId = &pid
+		if contactID != nil {
+			pid := openapi_types.UUID(*contactID)
+			party.ContactId = &pid
 		}
 		if userID != nil {
 			uid := openapi_types.UUID(*userID)

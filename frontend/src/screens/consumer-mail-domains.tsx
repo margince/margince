@@ -25,12 +25,12 @@ import { SEARCH_DEBOUNCE_MS } from "./listquery";
 import "./consumer-mail-domains.css";
 
 // This installation's own consumer-mail list (CAP-PARAM-5). Mail from a consumer
-// domain still creates the person; what it never creates is a company. The
+// domain still creates the contact; what it never creates is a company. The
 // shipped baseline is a third-party dataset of some 8 700 domains, right far
 // more often than a hand-typed list and still wrong sometimes in both
 // directions — so this is where an operator adds what it missed and takes back
 // what it wrongly claimed. Every role reads it, and every role may search the
-// shipped baseline itself, so the capture posture stays legible to the people
+// shipped baseline itself, so the capture posture stays legible to the contacts
 // whose mail it governs. The write split mirrors the server's: any seat with
 // capture_settings:create adds a consumer domain the baseline missed (`extra`),
 // while `never` carve-outs and removal stay on capture_settings:update

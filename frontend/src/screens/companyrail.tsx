@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCanWriteRecord } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
 import { Button, Disclosure } from "../design-system/atoms";
@@ -9,32 +10,26 @@ import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Popover } from "../design-system/popover";
 import { RecordCard } from "../design-system/recordcard";
-import {
-  type SectionState,
-  SurfaceState,
-  sectionState,
-} from "../design-system/surfacestate";
-import {
-  formatDate,
-  formatMoneyOrAbsent,
-  formatNumber,
-} from "../format/format";
+import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { formatDate, formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
 import { useLocale, useT } from "../i18n";
-import { problemCodeOf, throwProblem } from "./common";
-import { NewDealAction } from "./companyactions";
-import { useCompanyReadOnlyReason } from "./companyheader";
-import { DetailsGrid } from "./companyraildetails";
+import { problemCodeOf, throwProblem, useSorMode } from "./common";
+import { CompanyDetails } from "./companydetails";
+import { DealsSection } from "./companyraildeals";
+import { CompanyProfileDetails } from "./companyraildetails";
 import {
   contactRole,
-  peopleSlice,
+  contactsSlice,
+  RAIL_ROW_LIMIT,
   SectionSummary,
   sectionAnswered,
-  wholeCount,
 } from "./companyrailshared";
 import { CompanyTagsSection } from "./companyrailtags";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { signalKindLabel, signalTone } from "./record360";
+import { RecordCustomFields } from "./recordcustomfields";
+import { RecordTeam } from "./recordteam";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -47,7 +42,7 @@ import "./company360.css";
 // rather than the narrower `aside` share a right-hand column would get.
 //
 // Drawn as SIX separate panels, each answering one question about the
-// account — its open deals, its people, its facts, its lists and tags — in
+// account — its open deals, its contacts, its facts, its lists and tags — in
 // the order a reader works down the column, rather than the disclosures the
 // rail used to fold into one card: a hairline inside a panel reads as one
 // story about that panel's own subject, and a panel's own edge is what tells
@@ -63,29 +58,28 @@ import "./company360.css";
 // its own overlay, and the rail standing behind it would only be two things
 // competing for the same glance.
 
-type Organization = components["schemas"]["Organization"];
-type Organization360 = components["schemas"]["Organization360"];
-type Contact = components["schemas"]["Organization360Contact"];
-type Deal = components["schemas"]["Organization360Deal"];
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
+type Contact = components["schemas"]["Company360Contact"];
 type Signal = components["schemas"]["Signal"];
 
 export function CompanyRail({
-  orgId,
-  org,
+  companyId,
+  company,
   view,
   loading,
   composerOpen,
   onTab,
 }: Readonly<{
-  orgId: string;
+  companyId: string;
   // The page's own resolved record, read regardless of how the composite
   // read below is doing — Details draws from this whenever the composite
-  // has no organization slice yet (still loading, or failed), rather than
+  // has no company slice yet (still loading, or failed), rather than
   // going blank on a read the page already has the answer to.
-  org?: Organization;
-  view?: Organization360;
+  company?: Company;
+  view?: Company360;
   // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Deals, People, Tags) so their
+  // sections that read `view` straight (Deals, Contacts, Tags) so their
   // `sectionState` calls can tell "still loading" apart from "the read
   // failed" — both hand a section an undefined `view`, and without this flag
   // every one of them reads the failed state for as long as the read runs,
@@ -101,6 +95,13 @@ export function CompanyRail({
   onTab: (tab: "deals" | "contacts" | "profile") => void;
 }>) {
   const t = useT();
+  const overlay = useSorMode() === "overlay";
+  // The same per-row answer the company's other verbs read: an archived
+  // company, or one this seat may read but not write, takes no new
+  // responsibilities.
+  const resolved = view?.company ?? company;
+  const canWriteCompany =
+    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
   if (composerOpen) {
     return null;
   }
@@ -108,59 +109,54 @@ export function CompanyRail({
     // A plain div: the shell's own <aside> is the landmark around this, and a
     // second labelled region inside it would give a reader two names for one
     // column. Inside it ONE pane of named sections (DESIGN.md §6): the
-    // account's fields, its deals, its people, the hold, its tags — each a
+    // account's fields, its deals, its contacts, the hold, its tags — each a
     // disclosure with its own summary, so the column reads as one object with
     // five slices rather than five cards a reader has to assemble.
     <div className="co-rail">
-      <Panel>
-        {/* Details lead the column: the account's own fields are the first
+      {/* Details lead the column: the account's own fields are the first
             thing a reader orients by, and they draw from the page's already-
             resolved record while the composite read below is still arriving. */}
-        <Disclosure
-          className="co-sect"
-          open
-          summary={<SectionSummary title={t("co.details.title")} />}
-        >
-          <PanelBody>
-            <DetailsGrid organization={view?.organization ?? org} />
-          </PanelBody>
-          <div className="card-actions">
-            {/* "All fields", not "Profile": the Profile TAB carries that name a
-                few pixels away, and two controls with one accessible name in
-                one view is a dead end for anyone moving by name rather than by
-                sight. */}
-            <Button small variant="ghost" onClick={() => onTab("profile")}>
-              {t("co.rail.details.all")}
-            </Button>
-          </div>
-        </Disclosure>
+      {resolved && (
+        <>
+          <CompanyDetails company={resolved} overlay={overlay} />
+          <RecordCustomFields kind="company" record={resolved} />
+        </>
+      )}
+      <Panel>
+        {resolved && (
+          <Disclosure
+            className="co-sect"
+            open
+            summary={<SectionSummary title={t("record.registration")} />}
+          >
+            <PanelBody>
+              <CompanyProfileDetails company={resolved} />
+            </PanelBody>
+          </Disclosure>
+        )}
+        <RecordTeam
+          recordType="company"
+          recordId={companyId}
+          readOnly={!canWriteCompany}
+        />
         {/* Both summaries stand on EVERY tab, the open one included: the
             column is the reader's anchor while they move between tabs, and
             each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
             tab is not a duplicate of it, a full copy would be. */}
         <DealsSection view={view} loading={loading} onTab={onTab} />
-        <PeopleSection view={view} loading={loading} onTab={onTab} />
-        <CompanyHoldSection organization={view?.organization ?? org} />
+        <ContactsSection view={view} loading={loading} onTab={onTab} />
+        <CompanyHoldSection company={resolved} />
         <Disclosure
           className="co-sect"
           open
           summary={<SectionSummary title={t("tags.panelTitle")} />}
         >
-          <CompanyTagsSection
-            organization={view?.organization ?? org}
-            orgId={orgId}
-            bare
-          />
+          <CompanyTagsSection company={resolved} companyId={companyId} bare />
         </Disclosure>
       </Panel>
     </div>
   );
 }
-
-// How many rows a rail card shows before pointing at the tab. The rail is a
-// glance, and a twenty-row card beside the work column is a second page, not
-// an anchor — the "All N" header verb is the way to the rest.
-const RAIL_ROW_LIMIT = 3;
 
 // Keeping a whole account's correspondence private, from the account page.
 //
@@ -170,10 +166,10 @@ const RAIL_ROW_LIMIT = 3;
 // a hold has to name something, and `website_url` is derived from the primary
 // domain row, so its absence means there is nothing to name.
 function CompanyHoldSection({
-  organization,
-}: Readonly<{ organization: Organization | undefined }>) {
+  company,
+}: Readonly<{ company: Company | undefined }>) {
   const t = useT();
-  const host = hostOf(organization?.website_url);
+  const host = hostOf(company?.website_url);
   if (!host) {
     return null;
   }
@@ -184,7 +180,7 @@ function CompanyHoldSection({
     >
       <PanelBody>
         {/* The row takes an ADDRESS and derives the domain from it, which is
-            what every person page hands it. An account has only the domain, so
+            what every contact page hands it. An account has only the domain, so
             it is handed a bare address at that domain — the same value the
             row's own domain verb would compute. */}
         <CounterpartyHoldRow email={`x@${host}`} />
@@ -209,239 +205,28 @@ function hostOf(website: string | null | undefined): string | undefined {
 }
 
 /**
- * DealsSection is the account's open pipeline at a glance: the top
- * RAIL_ROW_LIMIT deals, each with its stage, expected close, and the deal's
- * own reason for needing attention ahead of everything else about it.
- * `view.deals.data` is already open-only (the 360's own contract — closed
- * deals are reported through `won_lifetime` and `lost_count`, never listed),
- * so nothing here filters on `status` a second time.
- *
- * "Top" means: a deal carrying an attention flag before one without, and the
- * larger amount before the smaller — the row a rep would want surfaced is
- * the one that needs a move or carries the money.
- */
-function DealsSection({
-  view,
-  loading,
-  onTab,
-}: Readonly<{
-  view?: Organization360;
-  loading: boolean;
-  onTab: (tab: "deals") => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const deals = view?.deals;
-  const rows = rankedDeals(deals?.data ?? []);
-  const count = wholeCount(deals);
-  const state = sectionState(
-    view,
-    "deals",
-    Boolean(deals),
-    rows.length,
-    loading,
-  );
-  const answered = sectionAnswered(state);
-  // Closed history vs. never having had a deal: the two empty accounts read
-  // differently — one has simply not started, the other has already been
-  // through a cycle and stands between two of them.
-  const hasClosedHistory = Boolean(
-    deals &&
-      ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
-  );
-  return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
-          title={t("co.rail.deals.title")}
-          count={answered ? count : undefined}
-        />
-      }
-    >
-      {state === "ready" ? (
-        rows
-          .slice(0, RAIL_ROW_LIMIT)
-          .map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("co.rail.deals.title")}
-            state={state}
-            emptyLabel={
-              hasClosedHistory
-                ? t("co.rail.deals.emptyClosedOnly")
-                : t("co.rail.deals.empty")
-            }
-          >
-            {null}
-          </SurfaceState>
-          {state === "empty" && view?.organization && (
-            <DealsEmptyVerb
-              organization={view.organization}
-              betweenCycles={hasClosedHistory}
-              onTab={onTab}
-            />
-          )}
-        </PanelBody>
-      )}
-      {state === "ready" && (
-        <div className="card-actions">
-          <Button small variant="ghost" onClick={() => onTab("deals")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        </div>
-      )}
-    </Disclosure>
-  );
-}
-
-// The ONE verb an empty pipeline carries. An account that never started gets
-// the create verb when the reader may write; one between cycles, or a reader
-// who may not write, gets the way to the Deals tab instead. Never both — two
-// verbs under one empty state is a choice the reader has no basis to make.
-// Gated on writability the same way TagsSection's own add-tag verb is:
-// `useCompanyReadOnlyReason` needs a resolved Organization, so this is its
-// own component mounted only once one exists, rather than a conditional
-// hook call inside DealsSection itself.
-function DealsEmptyVerb({
-  organization,
-  betweenCycles,
-  onTab,
-}: Readonly<{
-  organization: Organization;
-  betweenCycles: boolean;
-  onTab: (tab: "deals") => void;
-}>) {
-  const t = useT();
-  const readOnlyReason = useCompanyReadOnlyReason(organization);
-  if (betweenCycles || readOnlyReason) {
-    return (
-      <div className="card-actions">
-        <Button small variant="ghost" onClick={() => onTab("deals")}>
-          {t("co.rail.add")}
-        </Button>
-      </div>
-    );
-  }
-  return (
-    <div className="card-actions">
-      <NewDealAction
-        orgId={organization.id}
-        orgName={organization.display_name}
-      />
-    </div>
-  );
-}
-
-// The rail's own ranking: a deal that needs a move outranks one that does
-// not, and past that the money decides — but only when every priced deal on
-// the account shares one KNOWN currency, because minor units of different or
-// unrecorded currencies are not comparable and a raw compare would rank ¥
-// over € on digit count. The decision is made ONCE over the whole list, not
-// inside the comparator: a pairwise "these two do not compare" while other
-// pairs still reorder is a non-transitive comparator, and Array.sort answers
-// that with an arbitrary order rather than the server's. When the amounts do
-// not compare, the stable sort keeps the server's own order — the one every
-// other deal surface shows — past the attention split.
-function rankedDeals(rows: readonly Deal[]): Deal[] {
-  // Only PRICED deals vote on comparability: an unpriced deal's currency is
-  // not a figure anybody ranks, and letting it into the set would stop two
-  // priced same-currency deals from ranking on a deal with nothing to rank.
-  const currencies = new Set(
-    rows.flatMap((deal) =>
-      deal.amount?.amount_minor != null && deal.amount.currency
-        ? [deal.amount.currency]
-        : [],
-    ),
-  );
-  const amountsComparable =
-    currencies.size <= 1 &&
-    rows.every(
-      (deal) => deal.amount?.amount_minor == null || deal.amount.currency,
-    );
-  const needsMove = (deal: Deal) => (deal.attention || deal.stalled ? 1 : 0);
-  return [...rows].sort((a, b) => {
-    const moved = needsMove(b) - needsMove(a);
-    if (moved !== 0 || !amountsComparable) {
-      return moved;
-    }
-    return (b.amount?.amount_minor ?? 0) - (a.amount?.amount_minor ?? 0);
-  });
-}
-
-// One flag a deal can carry ahead of its stage and close date: an overdue
-// task beats a stall, because a stall is the absence of a reason and an
-// overdue task IS one — the same precedence the work list draws its own
-// attention line by.
-function dealFlag(deal: Deal, t: ReturnType<typeof useT>): string | undefined {
-  if (deal.attention) {
-    return deal.attention.kind === "overdue_task"
-      ? t("co.rail.deals.attentionOverdue")
-      : t("co.rail.deals.attentionCommitment");
-  }
-  return deal.stalled ? t("deal.stalled") : undefined;
-}
-
-function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const closes = deal.expected_close_date
-    ? t("co.work.closes", {
-        date: formatDate(deal.expected_close_date, locale, recordZone),
-      })
-    : t("co.rail.deals.noCloseDate");
-  const flag = dealFlag(deal, t);
-  const note = [flag, deal.stage_name ?? t("co.deals.noStage"), closes]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <PanelRow className="co-row">
-      <a
-        className="co-rowlink co-rowcover"
-        href={routeHash({ screen: "deals", id: deal.deal_id })}
-      >
-        {deal.name}
-      </a>
-      <span className="t-mono">
-        {formatMoneyOrAbsent(
-          deal.amount?.amount_minor,
-          deal.amount?.currency,
-          locale,
-        )}
-      </span>
-      <p className="co-row-meta t-caption">{note}</p>
-    </PanelRow>
-  );
-}
-
-/**
- * PeopleSection is a glance at the roster: who is here, how they have
+ * ContactsSection is a glance at the roster: who is here, how they have
  * answered, and, where the graph read supports it, the colleagues already in
  * contact with them. The set-role and route-in verbs stay on the Contacts tab's
  * own roster rather than being rebuilt here a second time.
  */
-function PeopleSection({
+function ContactsSection({
   view,
   loading,
   onTab,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   loading: boolean;
   onTab: (tab: "contacts") => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Already ranked. The server orders the people section by engagement, then
-  // relationship strength, then id (people.RankContacts) BEFORE it cuts to
+  // Already ranked. The server orders the contacts section by engagement, then
+  // relationship strength, then id (contacts.RankContacts) BEFORE it cuts to
   // twenty-five, so re-sorting here would be a second spelling of that rule —
   // and the copy that drifts, since only one of the two is what chose which
   // twenty-five arrived.
-  const { contacts, count, state } = peopleSlice(view, loading);
+  const { contacts, count, state } = contactsSlice(view, loading);
   const answered = sectionAnswered(state);
   return (
     <Disclosure
@@ -449,7 +234,7 @@ function PeopleSection({
       open
       summary={
         <SectionSummary
-          title={t("co.rail.people.title")}
+          title={t("co.rail.contacts.title")}
           count={answered ? count : undefined}
         />
       }
@@ -459,8 +244,8 @@ function PeopleSection({
         // on the account, and the Contacts tab is the full roster.
         <ul className="record-card-list">
           {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-            <li key={contact.person_id}>
-              <PersonCard contact={contact} />
+            <li key={contact.contact_id}>
+              <ContactCard contact={contact} />
             </li>
           ))}
         </ul>
@@ -468,8 +253,8 @@ function PeopleSection({
         <PanelBody>
           <SurfaceState
             state={state}
-            emptyLabel={t("co.rail.people.empty")}
-            loadingLabel={t("co.rail.people.title")}
+            emptyLabel={t("co.rail.contacts.empty")}
+            loadingLabel={t("co.rail.contacts.title")}
           >
             {null}
           </SurfaceState>
@@ -479,7 +264,7 @@ function PeopleSection({
           {state === "empty" && (
             <div className="card-actions">
               <Button small variant="ghost" onClick={() => onTab("contacts")}>
-                {t("co.rail.people.add")}
+                {t("co.rail.contacts.add")}
               </Button>
             </div>
           )}
@@ -498,15 +283,15 @@ function PeopleSection({
   );
 }
 
-function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
+function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
   const t = useT();
   const colleagues = contact.routes?.top ?? [];
   return (
     <RecordCard
-      kind="person"
+      kind="contact"
       name={contact.full_name}
-      identity={contact.person_id}
-      href={routeHash({ screen: "contacts", id: contact.person_id })}
+      identity={contact.contact_id}
+      href={routeHash({ screen: "contacts", id: contact.contact_id })}
       position={contactRole(contact)}
       email={contact.primary_email ?? undefined}
       aside={
@@ -516,10 +301,10 @@ function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
 
              A bare monogram is a mark only its owner recognises, so the stack
              opens to the sentence it stands for: which colleagues are already
-             in touch with this person. Hover for a passing reader, click and
+             in touch with this contact. Hover for a passing reader, click and
              focus for everyone a hover never reaches; the sr-only names
              double as the trigger's accessible name. */
-          <span className="co-person-routes">
+          <span className="co-contact-routes">
             <Popover
               onHover
               label={
@@ -528,15 +313,15 @@ function PersonCard({ contact }: Readonly<{ contact: Contact }>) {
                     {colleagues.map((route) => route.display_name).join(", ")}
                   </span>
                   <AvatarStack
-                    people={colleagues.map((route) => ({
+                    contacts={colleagues.map((route) => ({
                       name: route.display_name,
                     }))}
                   />
                 </>
               }
             >
-              <p className="t-caption">{t("co.rail.people.inTouch")}</p>
-              <ul className="co-person-routes-list">
+              <p className="t-caption">{t("co.rail.contacts.inTouch")}</p>
+              <ul className="co-contact-routes-list">
                 {colleagues.map((route) => (
                   // Keyed on the id, not the name: two colleagues can share a
                   // display name, and a name key would fold their rows.
@@ -597,16 +382,16 @@ function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
  * account's other readings, and the company record's overview stack mounts it
  * there.
  */
-export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
+export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const query = useQuery({
-    queryKey: ["signals", "organization", orgId],
+    queryKey: ["signals", "company", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET("/signals", {
         params: {
-          query: { organization_id: orgId, status: "open", limit: 10 },
+          query: { company_id: companyId, status: "open", limit: 10 },
         },
       });
       if (error) {
@@ -655,7 +440,7 @@ export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
               </span>
               {/* A signal ABOUT one of the account's projects sends the
                   reader to that project: the summary names it, the link
-                  opens it. An account- or person-subject signal already
+                  opens it. An account- or contact-subject signal already
                   sits on the page it is about. */}
               {signal.entity_type === "project" && signal.entity_id && (
                 <a

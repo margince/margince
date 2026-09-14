@@ -36,7 +36,7 @@
   line-height: var(--lh-relaxed);
 }
 
-/* A named field's value: a person's own words, a date they recognise. Set as
+/* A named field's value: a contact's own words, a date they recognise. Set as
    prose, unlike the wire values under Technical details, which stay mono
    because a uuid IS machine output and should look like it. */
 .approval-detail-value {

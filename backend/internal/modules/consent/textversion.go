@@ -34,7 +34,7 @@ type TextVersion struct {
 	// Locale is which language this text is, empty for a wording that applies
 	// in every language. A controller template names one: the same template at
 	// the same version has an English, a German and a Vietnamese text, and a
-	// proof row has to say which of the three a person was shown.
+	// proof row has to say which of the three a contact was shown.
 	Locale      string
 	Subject     string
 	Body        string

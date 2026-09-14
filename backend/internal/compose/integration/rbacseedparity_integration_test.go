@@ -116,7 +116,7 @@ const controlRole = "custom_scoped_role"
 // role the seeded matrix does not name, so no backfill should touch it.
 var controlDocument = []byte(
 	`{"objects": {"deal": {"create": false, "read": true, "update": false, "delete": false}, ` +
-		`"person": {"create": false, "read": true, "update": false, "delete": false}}, ` +
+		`"contact": {"create": false, "read": true, "update": false, "delete": false}}, ` +
 		`"row_scope": "team"}`)
 
 // roleDocument is one role's permissions document. Grants stay RawMessage: this

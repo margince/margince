@@ -19,14 +19,14 @@ it.
 2. **Every sentence is cited or dropped.** A sentence whose citations do not
    resolve to records the caller can open is dropped *whole* rather than shown
    uncited. The rule lives in `internal/compose/claims` and is shared with the
-   account and person briefs.
+   account and contact briefs.
 3. **A section with nothing to say is absent**, never present-and-empty. A
    reader never scans a heading that turns out to hold nothing.
 
 ## What the caller sees is what the caller could open
 
 The brief is assembled under the caller's own scope, from the same gated reads
-the person page serves. It can only describe records that caller could open
+the contact page serves. It can only describe records that caller could open
 themselves — there is no privileged path.
 
 Where a grant keeps something out, the brief **says so** in `omitted` rather
@@ -98,7 +98,7 @@ indistinguishable from a correct denial.
 **Coaching introduces no new read.** The brief a lead gets is the brief that
 lead would have got anyway — under their own grants, their own row scope and
 their own baseline — with one more object attached.
-`TestCoachingAddsAnObjectAndChangesNothingElse` reads twice as ONE person, once
+`TestCoachingAddsAnObjectAndChangesNothingElse` reads twice as ONE contact, once
 with the membership seam wired and once without, and walks the plan struct
 reflectively to compare every field but the coaching.
 
@@ -106,7 +106,7 @@ It is **not** true that a lead and their rep see the same brief, and nothing her
 tries to make it true. This surface is caller-scoped throughout: `readLastSpoke`
 keys "since you last spoke" on the reader's own id, the history runs through the
 reader's own activity scope, and a team-scoped lead reaches rows an own-scoped
-rep does not. Two people reading one meeting get two briefs, which was true
+rep does not. Two readers of one meeting get two briefs, which was true
 before coaching existed. What coaching adds is a reading of the reader's OWN
 brief — attached over the finished plan rather than generated beside it, so the
 coaching cannot start describing a meeting the plan under it does not support.
@@ -117,7 +117,7 @@ Two passes, because one query cannot both be cheap over a year and carry
 message bodies.
 
 1. **Rank** (`history.go`). Up to 200 conversations across 12 months, as
-   metadata: dates, subjects, thread keys. Gated the way the person timeline is
+   metadata: dates, subjects, thread keys. Gated the way the contact timeline is
    — DISCOVER decides whether a row is visible, the audience arm decides whether
    its content comes back. A row the caller may not read still COUNTS: it keeps
    its date, contributes no subject, and feeds the `activity_history` omission.
@@ -136,11 +136,11 @@ where a promise was made.
 ## One brief, two surfaces
 
 The `prep_for_meeting` MCP tool serves THIS assembly rather than composing its
-own, so an agent and the person it acts for read the same brief. The binding is
+own, so an agent and the contact it acts for read the same brief. The binding is
 `internal/compose/meetingbriefseam.go`, and it takes the **server's** service
 instance rather than building a second one — the model lane is bound to that
 instance, so a second service would have served agents the deterministic floor
-while the person page got model prose.
+while the contact page got model prose.
 
 Every record the plan cites is charged against the agent's read budget, for the
 same reason: the arc reaches a year of history the eight sections never

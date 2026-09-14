@@ -49,7 +49,7 @@ func proveM08WinRateByCountAndValue(t *testing.T) {
 	// deliberately opposite, so one number cannot land on both.
 	//
 	// Both groups clear the privacy floor. A cohort under it is WITHHELD, which
-	// is the right answer to a question about few people and the wrong fixture
+	// is the right answer to a question about few contacts and the wrong fixture
 	// for a question about arithmetic: every assertion below would read null.
 	for range 6 {
 		seedClosedOwnedDeal(t, e, "Small win", 10_000, "won", "manual", e.Rep1)

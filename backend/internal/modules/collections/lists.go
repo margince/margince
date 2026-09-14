@@ -333,7 +333,7 @@ func compileForValidation(engine storekit.Query, tree map[string]any, field stri
 	// Refused BEFORE the compile, and only here. A picklist leaf compares
 	// text, so a value outside the field's set compiles fine and selects
 	// nothing — an honest answer for a value no row carries, and the wrong one
-	// for the person who just typed it, whose equivalent list URL would have
+	// for the contact who just typed it, whose equivalent list URL would have
 	// been told. Evaluation stays permissive on purpose: a definition stored
 	// last quarter must not begin failing because somebody removed a value
 	// from a custom field's option set since.

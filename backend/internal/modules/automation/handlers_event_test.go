@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -127,7 +129,7 @@ func TestStageChangeNotifyMatchFiresOnEveryStageMove(t *testing.T) {
 func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	owner := ids.NewV7()
 	dealID := ids.NewV7()
-	fields, err := json.Marshal(dealOwnerFields{OwnerID: &owner})
+	fields, err := json.Marshal(dealOwnerFields{OwnerID: &owner, Name: "Fleet renewal"})
 	if err != nil {
 		t.Fatalf("marshal fixture fields: %v", err)
 	}
@@ -136,7 +138,7 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 		Fields: fields,
 	}}
 	w := stageChangeNotify{ex: Executors{Provider: provider}}
-	ev := workflow.Event{Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}}
+	ev := workflow.Event{ID: ids.NewV7(), Actor: events.Actor{Type: "human", ID: "human:" + ids.NewV7().String()}, OccurredAt: time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC), Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
 
 	eff, err := w.Plan(context.Background(), ev)
 	if err != nil {
@@ -159,8 +161,11 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 	if args.Recipient != owner {
 		t.Errorf("notify recipient = %v, want the deal's real owner %v", args.Recipient, owner)
 	}
-	if args.Subject == "" || args.Body == "" {
-		t.Error("notify subject/body is empty — a human reading the inbox needs to know why they were notified")
+	if args.Body != "Discovery → Proposal" {
+		t.Fatalf("the notice must name the recorded transition: %s", args.Body)
+	}
+	if args.Subject != "Fleet renewal" || args.Origin == nil || args.Origin.StageChange == nil || args.Origin.StageChange.FromName == nil || args.Origin.StageChange.ToName == nil || *args.Origin.StageChange.FromName != "Discovery" || *args.Origin.StageChange.ToName != "Proposal" {
+		t.Errorf("notification lost its deal name or recorded transition: %+v", args)
 	}
 }
 
@@ -367,7 +372,7 @@ func TestPostMeetingRecapApplyComposesTheDraftDurably(t *testing.T) {
 		t.Fatalf("Plan err = %v, want nil", err)
 	}
 	// An OWNED firing: draft_email refuses one with no owner, because a held
-	// draft is released by the person it goes out as.
+	// draft is released by the contact it goes out as.
 	result, err := w.Apply(ownedFiring(), workflow.Event{Entity: meeting}, eff, nil)
 	// The recap composes and then holds its send for a human, so the firing
 	// suspends. The draft it produced still has to reach run history.

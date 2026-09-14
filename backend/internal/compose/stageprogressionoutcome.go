@@ -42,7 +42,7 @@ import (
 )
 
 // stageProgressionOutcomeActor names this consumer in the audit rows it causes,
-// so a card the clock closed is told apart from one a person answered.
+// so a card the clock closed is told apart from one a contact answered.
 const stageProgressionOutcomeActor = "system:stage-progression-outcome"
 
 // StageProgressionOutcome records how each staged move was received.
@@ -140,7 +140,7 @@ type decisionShape struct {
 // looking at the evidence and saying no.
 //
 // An APPROVAL SPLITS THREE WAYS, and the split decides whether the launch gate
-// can be trusted. A person agreeing as proposed, a person agreeing after
+// can be trusted. A contact agreeing as proposed, a contact agreeing after
 // changing something, and the product applying under a governing policy are
 // three different claims, and only the first two are evidence that anybody
 // agreed. Filing an automatic apply as a clean acceptance would let the

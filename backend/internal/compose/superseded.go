@@ -195,7 +195,7 @@ func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, er
 
 // Only keys the record holds as COLUMNS are compared, and the row itself says
 // which those are — `to_jsonb(r) ? key`. A field kept in its own table
-// (a person's social profiles, a company's domains or relationship types) is
+// (a contact's social profiles, a company's domains or relationship types) is
 // absent from the row's jsonb, so comparing it would read every one of them as
 // moved and refuse every restore that touched one.
 //
@@ -204,7 +204,7 @@ func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, er
 // adds one: silently, by refusing a restore that should have worked.
 //
 // The gap this leaves is stated: supersession does not judge those fields, so
-// two people editing a company's domains in turn will not block each other the
+// two contacts editing a company's domains in turn will not block each other the
 // way two editing its name do. Judging them means reading each relation, which
 // earns its own engine when it is worth building.
 

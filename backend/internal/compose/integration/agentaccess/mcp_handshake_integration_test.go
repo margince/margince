@@ -84,16 +84,16 @@ func TestAConnectorCompletesTheWholeHandshakeOnOneOrigin(t *testing.T) {
 	if !ok || len(tools) == 0 {
 		t.Fatalf("tools/list answered no tools, so there is nothing for the client to call: %v", list)
 	}
-	const created = "One Origin Person"
+	const created = "One Origin Contact"
 	call := e.rpc(t, token, negotiated,
 		`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"create_record",`+
-			`"arguments":{"record_type":"person","fields":{"full_name":"`+created+`"}}}}`)
+			`"arguments":{"record_type":"contact","fields":{"full_name":"`+created+`"}}}}`)
 	if text := toolText(t, call); !strings.Contains(text, created) {
 		t.Fatalf("tools/call answered %q, which does not carry the record it was asked to create", text)
 	}
 	// The handshake ends in a real effect or it ends in nothing: a surface
 	// answering from a stub would satisfy every assertion above.
-	assertOwnerCount(t, o, 1, `SELECT count(*) FROM person WHERE full_name = $1`, created)
+	assertOwnerCount(t, o, 1, `SELECT count(*) FROM contact WHERE full_name = $1`, created)
 }
 
 // advertisedEndpoints is everything a client learns before it holds any

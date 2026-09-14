@@ -84,7 +84,7 @@ func TestNoDraftingEntryPointIsAlwaysUnvoiced(t *testing.T) {
 	// number deliberately. A rise is ordinary — a new drafting call — and
 	// raising it is the whole of the response.
 	// Was 36 while the two grounded surfaces each carried their own copy of the
-	// writer: 22 in the reply lane, 7 in accountdraft, 7 in persondraft. The
+	// writer: 22 in the reply lane, 7 in accountdraft, 7 in contactdraft. The
 	// copies became one, so those fourteen are now 2 + 2 in the surfaces (their
 	// own prompt assembly) plus 5 in draftcore, which every surface runs.
 	const governedCalls = 31

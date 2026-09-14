@@ -11,8 +11,8 @@ package privacy
 // derivation held wrongly, or PIN one it missed.
 //
 // Neither is a toggle. Both require a stated reason, both are audited, and
-// both are attributed to the person who decided: DEPACK-AC-5a forbids a
-// SILENT override, which a logged decision by a named accountable person is
+// both are attributed to the contact who decided: DEPACK-AC-5a forbids a
+// SILENT override, which a logged decision by a named accountable contact is
 // the opposite of.
 
 import (
@@ -125,7 +125,7 @@ func releaseFoundNothing(ctx context.Context, tx pgx.Tx, activityID ids.UUID) er
 // A pin is not free-setting a class. What DEPACK-PARAM-5 forbids is editing a
 // class's period or treatment; what a pin sets is the claim that THIS record
 // is correspondence of that class — a finding of fact about a document, made
-// by a named person, recorded with a reason.
+// by a named contact, recorded with a reason.
 //
 // `restricted_reason` on the row carries the CLASS, exactly as a derived
 // restriction writes it (erasure_restrict.go), NOT the controller's words:

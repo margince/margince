@@ -8,8 +8,8 @@ package gates
 // Remediation work must never read as buyer engagement.
 //
 // Forecast assurance files review tasks against a deal. They are activities,
-// and the recency clocks the product reads — last_activity_at on deal, person,
-// organization and project — are folded by four SQL functions over the activity
+// and the recency clocks the product reads — last_activity_at on deal, contact,
+// company and project — are folded by four SQL functions over the activity
 // table. If a review task counted, the system asking why a deal went quiet
 // would refresh that deal's clock and the staleness rule that raised the
 // question would stop firing. The engine would switch itself off, one deal at
@@ -35,8 +35,8 @@ import (
 // the exclusion is exactly the defect this gate exists to catch.
 var recencyFunctions = []string{
 	"last_activity_of_deal",
-	"last_activity_of_person",
-	"last_activity_of_organization",
+	"last_activity_of_contact",
+	"last_activity_of_company",
 	"last_activity_of_project",
 }
 
@@ -66,7 +66,7 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 			t.Errorf("%s: no definition found in migrations", name)
 			continue
 		}
-		// Every arm, not the function: last_activity_of_organization unions
+		// Every arm, not the function: last_activity_of_company unions
 		// three populations, and an exclusion on two of them still lets a
 		// review task filed against a deal refresh its account.
 		arms := strings.Count(body, "activity a ON a.id = l.activity_id")
@@ -177,7 +177,7 @@ var recencyReadersOutsideTheHelpers = map[string]string{
 	"internal/modules/activities/lasttouch.go":       "genuine engagement for the quiet-record scan",
 	"internal/modules/deals/health.go":               "the record behind deal.last_activity_at",
 	"internal/modules/activities/projectcoverage.go": "Project 360's last activity",
-	"internal/modules/people/lead_read.go":           "the lead's last-touch clock",
+	"internal/modules/contacts/lead_read.go":         "the lead's last-touch clock",
 }
 
 // TestRecencyReadersOutsideTheHelpersExcludeRemediation holds the Go side.

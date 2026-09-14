@@ -1,0 +1,152 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Compact rows share their title, dates and actions with the full worklist.
+// Details expose supporting evidence; sorting diagnostics stay off the agenda.
+
+import type { ReactNode } from "react";
+import { Badge } from "../design-system/atoms";
+import { Popover } from "../design-system/popover";
+import { useTruncationTooltip } from "../design-system/tooltip";
+import { useT } from "../i18n";
+import { isUnprepared } from "./worklist.copy";
+import type { WorklistItem } from "./worklist.queries";
+import { VerdictLine } from "./worklist.verdict";
+import "./worklist.row.compact.css";
+
+/**
+ * Everything the row has already read off its item, in the order a column says
+ * it.
+ *
+ * ONE object, handed to whichever column the surface asked for, so the two
+ * densities cannot come to say different things about one piece of work.
+ *
+ * Strings rather than the item, deliberately: `when` is written against the
+ * reader's clock and the record's zone, `facts` against the reader's currency,
+ * and the reasons are phrased by `worklist.copy.ts`. A column that took the
+ * item and re-derived any of them would be a second author of the row's words.
+ */
+export type RowReadings = Readonly<{
+  item: WorklistItem;
+  /** The row's name, and where pressing it goes — no `href`, not a link. */
+  title: string;
+  href?: string;
+  /** The clock this row is racing, and what it is worth. */
+  when: string | null;
+  facts: string | null;
+  /** Why it is here: what the line says outright, and what the fold holds. */
+  said: readonly string[];
+  folded: readonly string[];
+  /** Why it beat the row below it. A full sentence, so never on the line. */
+  above: string | null;
+  /** What doing nothing costs. */
+  consequence: string | null;
+  /** The supporting sentence, from every source that sends prose. */
+  detail?: string | null;
+  /** A grouped row's named members. */
+  sample: readonly string[];
+  /** The zone a verdict's timestamps are read in. */
+  zone: string;
+}>;
+
+/** The linked title opens the record; optional details contain its evidence. */
+export function CompactRowLine({
+  readings,
+  named,
+}: Readonly<{
+  readings: RowReadings;
+  /**
+   * Whether this line draws the NAME.
+   *
+   * False where the message above already named the row: a waiting email names
+   * itself with the canonical reading of a message (`EmailEntry`, whose whole
+   * contract is that it has no compact form), so the line would print the
+   * subject a second time. It still carries the day's states and the
+   * fragments, which that reading does not answer.
+   */
+  named: boolean;
+}>) {
+  const { item, title, href, said, folded, zone } = readings;
+  const t = useT();
+  // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
+  // separate fragments the line would clip whichever happened to be last and
+  // leave a reader no way to see what went.
+  const inline = [
+    readings.when,
+    item.move?.action === "draft_reply" ? t("brief.reply.owed") : null,
+    readings.facts,
+    ...said,
+  ]
+    .filter((part): part is string => part !== null && part !== "")
+    .join(" · ");
+  const tip = useTruncationTooltip<HTMLSpanElement>(inline);
+  const rest: ReactNode[] = [];
+  if (folded.length > 0) {
+    rest.push(
+      <p className="t-caption" key="reasons">
+        {folded.join(" · ")}
+      </p>,
+    );
+  }
+  if (readings.detail && item.source !== "notice") {
+    rest.push(
+      <p className="t-caption" key="detail">
+        {readings.detail}
+      </p>,
+    );
+  }
+  if (readings.sample.length > 0) {
+    rest.push(
+      <p className="t-caption" key="sample">
+        {readings.sample.join(" · ")}
+      </p>,
+    );
+  }
+
+  return (
+    <div className="worklist-row-line">
+      <p className="t-body worklist-row-title">
+        {!named ? null : href ? (
+          <a className="entity-link" href={href}>
+            {title}
+          </a>
+        ) : (
+          title
+        )}
+        {/* The day's states ride the name at both densities: a rep scanning for
+            the row to open before it starts has to see them without reading
+            anything beside them. */}
+        {item.overdue && <Badge tone="danger">{t("worklist.overdue")}</Badge>}
+        {isUnprepared(item) && (
+          <Badge tone="warn">{t("worklist.needsPrep")}</Badge>
+        )}
+      </p>
+      {inline && (
+        <span
+          className="t-caption worklist-row-inline"
+          ref={tip.ref}
+          {...tip.trigger}
+        >
+          {inline}
+          {tip.tip}
+        </span>
+      )}
+      {item.source === "notice" && readings.detail && (
+        <p className="t-caption worklist-row-notice">{readings.detail}</p>
+      )}
+      <VerdictLine verdict={item.verdict} zone={zone} />
+      {rest.length > 0 && (
+        <Popover
+          // NO `variant`: the catalog's own direction for a trigger that reads
+          // as words in the line it sits in rather than as a control — the
+          // shape the tags strip's "+N" already wears. A ghost Button here drew
+          // a 44px filled chip beside a 19px line.
+          className="t-caption worklist-row-why"
+          label={t("brief.row.details")}
+        >
+          {rest}
+        </Popover>
+      )}
+    </div>
+  );
+}

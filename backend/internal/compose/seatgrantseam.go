@@ -18,8 +18,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,7 +30,7 @@ import (
 // the nomination gates that, and this reads the nominee's grants and nothing
 // else. It runs inside the caller's transaction so the answer and the write it
 // gates commit together.
-func seatReadsLeads(_ *pgxpool.Pool) people.SeatReadsLeads {
+func seatReadsLeads(_ *pgxpool.Pool) contacts.SeatReadsLeads {
 	return func(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
 		return identity.SeatAllows(ctx, tx, ids.From[ids.UserKind](seat), "lead", principal.ActionRead)
 	}

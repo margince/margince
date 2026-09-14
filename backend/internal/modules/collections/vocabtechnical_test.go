@@ -10,11 +10,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// technicalLeaves are the four the organization engine gained, with the field
-// each one pins in organization_fact.
+// technicalLeaves are the four the company engine gained, with the field
+// each one pins in company_fact.
 //
 // gatekit:fixture the leaf name each technical filter carries, mapped to the
-// organization_fact field it must pin
+// company_fact field it must pin
 var technicalLeaves = map[string]string{
 	"mail_provider":    "mail_provider",
 	"hosting_provider": "hosting_provider",
@@ -28,12 +28,12 @@ var technicalLeaves = map[string]string{
 func TestEveryTechnicalLeafCorrelatesToTheAccount(t *testing.T) {
 	t.Parallel()
 	for name := range technicalLeaves {
-		field, ok := segmentEngines["organization"].Fields[name]
+		field, ok := segmentEngines["company"].Fields[name]
 		if !ok {
-			t.Errorf("organizations cannot be filtered by %s", name)
+			t.Errorf("companies cannot be filtered by %s", name)
 			continue
 		}
-		if !strings.Contains(field.Link, "tf.organization_id = t.id") {
+		if !strings.Contains(field.Link, "tf.company_id = t.id") {
 			t.Errorf("the %s leaf does not correlate to the account: %q", name, field.Link)
 		}
 	}
@@ -45,9 +45,9 @@ func TestEveryTechnicalLeafCorrelatesToTheAccount(t *testing.T) {
 func TestEveryTechnicalLeafPinsItsOwnField(t *testing.T) {
 	t.Parallel()
 	for name, field := range technicalLeaves {
-		leaf, ok := segmentEngines["organization"].Fields[name]
+		leaf, ok := segmentEngines["company"].Fields[name]
 		if !ok {
-			t.Errorf("organizations cannot be filtered by %s", name)
+			t.Errorf("companies cannot be filtered by %s", name)
 			continue
 		}
 		if !strings.Contains(leaf.Link, "tf.field = '"+field+"'") {
@@ -62,7 +62,7 @@ func TestEveryTechnicalLeafPinsItsOwnField(t *testing.T) {
 func TestEveryTechnicalLeafPinsTheSignalCategory(t *testing.T) {
 	t.Parallel()
 	for name := range technicalLeaves {
-		leaf, ok := segmentEngines["organization"].Fields[name]
+		leaf, ok := segmentEngines["company"].Fields[name]
 		if !ok {
 			continue
 		}
@@ -72,14 +72,14 @@ func TestEveryTechnicalLeafPinsTheSignalCategory(t *testing.T) {
 	}
 }
 
-// A person correcting a machine-read value rewrites the row's source to
+// A contact correcting a machine-read value rewrites the row's source to
 // `human`. A leaf constrained by source would drop exactly the accounts
 // somebody cared enough to fix, which is the opposite of what naming that
 // value means.
 func TestNoTechnicalLeafFiltersOnSource(t *testing.T) {
 	t.Parallel()
 	for name := range technicalLeaves {
-		leaf, ok := segmentEngines["organization"].Fields[name]
+		leaf, ok := segmentEngines["company"].Fields[name]
 		if !ok {
 			continue
 		}
@@ -100,9 +100,9 @@ func TestTheTechnicalLeavesAreTypedByWhetherTheirSetIsClosed(t *testing.T) {
 		"operated_service": storekit.FieldPicklist,
 		"technology":       storekit.FieldText,
 	} {
-		leaf, ok := segmentEngines["organization"].Fields[name]
+		leaf, ok := segmentEngines["company"].Fields[name]
 		if !ok {
-			t.Errorf("organizations cannot be filtered by %s", name)
+			t.Errorf("companies cannot be filtered by %s", name)
 			continue
 		}
 		if leaf.Type != want {

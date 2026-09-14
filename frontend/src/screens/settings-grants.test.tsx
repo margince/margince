@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GrantSpec } from "../app/mefixture";
@@ -42,7 +42,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    // `privacy` rides the floor here: meFixture grants `person:read`, which is
+    // `privacy` rides the floor here: meFixture grants `contact:read`, which is
     // one of that page's union terms — the consent registry's own server gate.
     await waitFor(() =>
       expect(offeredPages()).toEqual(floorPlus("authentication")),
@@ -118,7 +118,7 @@ describe("the grant that opens one settings page", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        allow: { ...readOn("person"), pipeline: ["read"] },
+        allow: { ...readOn("contact"), pipeline: ["read"] },
       }),
     );
     renderHome();
@@ -180,7 +180,7 @@ describe("the grant that opens one settings page", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        allow: { ...readOn("person"), pipeline: ["read"] },
+        allow: { ...readOn("contact"), pipeline: ["read"] },
       }),
     );
     renderHome();
@@ -199,11 +199,11 @@ describe("the grant that opens one settings page", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        // `person:read` is the floor `readOn` holds steady for every other case
+        // `contact:read` is the floor `readOn` holds steady for every other case
         // here — without it this stops being a case about Extensions and also
         // becomes one about losing Privacy.
         allow: {
-          person: ["read"],
+          contact: ["read"],
           extension_access: ["read"],
           role_admin: ["read"],
         },
@@ -238,7 +238,7 @@ describe("the grant that opens one settings page", () => {
       settingsNavBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
+          contact: ["read"],
           system_reset: ["delete"],
           // The witness: `pipeline` opens Pipelines and Stage automation and
           // nothing else, so
@@ -274,7 +274,7 @@ describe("the grant that opens one settings page", () => {
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: { person: ["read"], system_reset: ["delete"] },
+        allow: { contact: ["read"], system_reset: ["delete"] },
         dataResetAvailable: true,
       }),
     );
@@ -291,7 +291,7 @@ describe("the grant that opens one settings page", () => {
       settingsNavBackend({
         roles: ["admin"],
         allow: {
-          person: ["read"],
+          contact: ["read"],
           system_reset: ["delete"],
           // The witness: `pipeline` opens Pipelines and Stage automation and
           // nothing else, so
@@ -365,7 +365,7 @@ describe("the grant that opens one settings page", () => {
       "fetch",
       settingsNavBackend({
         roles: ["ops"],
-        allow: { person: ["read"], automation: ["update"] },
+        allow: { contact: ["read"], automation: ["update"] },
       }),
     );
     renderHome();
@@ -396,18 +396,18 @@ describe("the grant that opens one settings page", () => {
     },
   );
 
-  // `person` was the third term and is now the case that must NOT open it.
+  // `contact` was the third term and is now the case that must NOT open it.
   // Every seeded role holds this read — it is the gate the registry endpoint
-  // applies (consent/store.go's ListPurposes) and the Person 360 needs it — so
+  // applies (consent/store.go's ListPurposes) and the Contact 360 needs it — so
   // a page opening on it was the whole workspace's governance page. The card
-  // still reads through `person`; a card narrower than its page withholds
+  // still reads through `contact`; a card narrower than its page withholds
   // itself, which is the safe direction.
-  it("does not open Privacy for the person read every seeded role holds", async () => {
+  it("does not open Privacy for the contact read every seeded role holds", async () => {
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["rep"],
-        allow: { person: ["read"], pipeline: ["read"] },
+        allow: { contact: ["read"], pipeline: ["read"] },
       }),
     );
     renderHome();
@@ -431,7 +431,7 @@ describe("the grant that opens one settings page", () => {
   it("opens Audit log without opening Privacy, for an admin holding the trail read", async () => {
     // The trail was split off the privacy page because it answers to a
     // DIFFERENT grant: a reader could hold `audit_log:read` and be refused the
-    // page carrying it. Granting the trail read and NOT `person:read` is what
+    // page carrying it. Granting the trail read and NOT `contact:read` is what
     // proves the split — the two pages move independently.
     //
     // The trail read is the WHOLE gate now: the entry used to AND it with
@@ -491,12 +491,12 @@ describe("the grant that opens one settings page", () => {
   // server answers 200 on — three of which (products, offer templates, custom
   // fields) were ungated routes of their own before the merge.
 
-  it("shows Company profile to an admin holding the organization read once the company rollout flag is on", async () => {
+  it("shows Company profile to an admin holding the company read once the company rollout flag is on", async () => {
     vi.stubGlobal(
       "fetch",
       settingsNavBackend({
         roles: ["admin"],
-        allow: { ...readOn("organization"), organization: ["read", "update"] },
+        allow: { ...readOn("company"), company: ["read", "update"] },
         companyReadEnabled: true,
       }),
     );
@@ -518,7 +518,7 @@ describe("the grant that opens one settings page", () => {
     // before the snapshot it reads. The race is gone rather than untested, which
     // is why the second moment went with it.
     //
-    // The organization WRITE is the only term of Company profile's requirement
+    // The company WRITE is the only term of Company profile's requirement
     // this fixture grants, which is what leaves the flag decisive. Granting the
     // read alone would hide the page whatever the flag said, and the case would
     // pass while proving nothing about the flag.
@@ -527,8 +527,8 @@ describe("the grant that opens one settings page", () => {
       settingsNavBackend({
         roles: ["admin"],
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],
@@ -562,8 +562,8 @@ describe("the grant that opens one settings page", () => {
         // alone the page is shut anyway and the absent-availability arm this
         // case exists to hold would never be reached.
         allow: {
-          ...readOn("organization"),
-          organization: ["read", "update"],
+          ...readOn("company"),
+          company: ["read", "update"],
           // The witness, so the absence below is asserted against a
           // RESOLVED snapshot rather than the loading render.
           pipeline: ["read"],

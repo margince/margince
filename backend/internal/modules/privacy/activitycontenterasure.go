@@ -49,7 +49,7 @@ import (
 // supervisory authority reads.
 //
 // A nil purger REFUSES rather than skipping. There is no second path that ages
-// raw_capture out — the Art. 17 cascade's purge is scoped to a PERSON where a
+// raw_capture out — the Art. 17 cascade's purge is scoped to a CONTACT where a
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
 func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {

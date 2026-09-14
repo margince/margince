@@ -215,7 +215,7 @@ func TestReconcileConnectionBackfillsAndSeedsViaFakeIncumbent(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass = "person" // canonical — the mapping adapter's own translation, simulated
+	rec.ObjectClass = "contact" // canonical — the mapping adapter's own translation, simulated
 	rec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlay.IncumbentClassContacts, rec)
 
@@ -247,11 +247,11 @@ func TestReconcileConnectionBackfillsAndSeedsViaFakeIncumbent(t *testing.T) {
 	}
 
 	// Seeding mapped Rep1 to owner-1, so Rep1 sees the backfilled record.
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "c-1"); err != nil {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "c-1"); err != nil {
 		t.Fatalf("Rep1 (seed-matched) must see the backfilled record, got: %v", err)
 	}
 	// Rep2 matches no owner, so stays hidden (existence-hiding 404).
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep2), "person", "c-1"); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep2), "contact", "c-1"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Rep2 (unmapped) must not see the record, got: %v", err)
 	}
 }
@@ -301,7 +301,7 @@ func TestCappedBackfillIsNotUndoneByTheFirstModifiedSweep(t *testing.T) {
 	past := time.Now().Add(-24 * time.Hour)
 	for i := range portal {
 		rec := fake.Rec("c-"+strconv.Itoa(i), map[string]any{"firstname": "Ada"})
-		rec.ObjectClass = "person"
+		rec.ObjectClass = "contact"
 		rec.OwnerExternalID = "owner-1"
 		rec.ModifiedAt = past
 		fakeInc.Seed(overlay.IncumbentClassContacts, rec)
@@ -331,8 +331,8 @@ func TestCappedBackfillIsNotUndoneByTheFirstModifiedSweep(t *testing.T) {
 			slog.New(slog.DiscardHandler), d, func(_, _ string) overlay.Incumbent { return capped }); err != nil {
 			t.Fatalf("reconcileConnection tick %d: %v", tick, err)
 		}
-		if got := countMirrorRows(sweepCtx, t, e.Pool, "person"); got != backfillLimit {
-			t.Fatalf("tick %d mirrored %d person rows, want exactly %d — the cap must bound the whole sweep, not just Backfill", tick, got, backfillLimit)
+		if got := countMirrorRows(sweepCtx, t, e.Pool, "contact"); got != backfillLimit {
+			t.Fatalf("tick %d mirrored %d contact rows, want exactly %d — the cap must bound the whole sweep, not just Backfill", tick, got, backfillLimit)
 		}
 	}
 
@@ -348,16 +348,16 @@ func TestCappedBackfillIsNotUndoneByTheFirstModifiedSweep(t *testing.T) {
 	}
 	found := false
 	for _, o := range status {
-		if o.Object != "person" {
+		if o.Object != "contact" {
 			continue
 		}
 		found = true
 		if o.BackfillComplete {
-			t.Error("SyncStatus reports person backfillComplete=true after a capped backfill — the cap declined records the incumbent still has, this must be false")
+			t.Error("SyncStatus reports contact backfillComplete=true after a capped backfill — the cap declined records the incumbent still has, this must be false")
 		}
 	}
 	if !found {
-		t.Fatal("SyncStatus reported no person object — expected the mirrored rows to produce one")
+		t.Fatal("SyncStatus reported no contact object — expected the mirrored rows to produce one")
 	}
 }
 
@@ -382,7 +382,7 @@ func TestSweepStillIngestsRecordsEditedAfterTheConnect(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test")
 	old := fake.Rec("c-old", map[string]any{"firstname": "Ada"})
-	old.ObjectClass, old.OwnerExternalID, old.ModifiedAt = "person", "owner-1", time.Now().Add(-24*time.Hour)
+	old.ObjectClass, old.OwnerExternalID, old.ModifiedAt = "contact", "owner-1", time.Now().Add(-24*time.Hour)
 	fakeInc.Seed(overlay.IncumbentClassContacts, old)
 
 	due, err := overlay.DueOverlayConnections(overlayAdminCtx(e.WS, e.Rep1), e.Pool)
@@ -412,11 +412,11 @@ func TestSweepStillIngestsRecordsEditedAfterTheConnect(t *testing.T) {
 	// Modified pass skips it — the backfill already mirrored it. This one is
 	// edited after the connect, so it is above the floor and must arrive.
 	fresh := fake.Rec("c-new", map[string]any{"firstname": "Grace"})
-	fresh.ObjectClass, fresh.OwnerExternalID, fresh.ModifiedAt = "person", "owner-1", time.Now().Add(time.Minute)
+	fresh.ObjectClass, fresh.OwnerExternalID, fresh.ModifiedAt = "contact", "owner-1", time.Now().Add(time.Minute)
 	fakeInc.Seed(overlay.IncumbentClassContacts, fresh)
 	sweep()
 
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "c-new"); err != nil {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "c-new"); err != nil {
 		t.Fatalf("a record modified after the connect must still be swept in, got: %v — the floor bounds the first pass, it must not stop continuous sync", err)
 	}
 }
@@ -440,7 +440,7 @@ func TestReconcileConnectionPurgesIncumbentDeletedRecord(t *testing.T) {
 	fakeInc := fake.New()
 	fakeInc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("990009", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass = "person" // canonical — the mapping adapter's own translation, simulated
+	rec.ObjectClass = "contact" // canonical — the mapping adapter's own translation, simulated
 	rec.OwnerExternalID = "owner-1"
 	fakeInc.Seed(overlay.IncumbentClassContacts, rec)
 
@@ -466,19 +466,19 @@ func TestReconcileConnectionPurgesIncumbentDeletedRecord(t *testing.T) {
 	if err := reconcileConnection(sweepCtx, e.Pool, vault, ms, meter, slog.New(slog.DiscardHandler), d, newInc); err != nil {
 		t.Fatalf("first sweep: %v", err)
 	}
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "990009"); err != nil {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "990009"); err != nil {
 		t.Fatalf("Rep1 must see the record after the first sweep: %v", err)
 	}
 
 	// The incumbent archives the record (it leaves the live feed and enters
 	// the deletion feed); the next sweep must purge it from the mirror.
 	fakeInc.SeedDeletion(overlay.IncumbentClassContacts, overlay.Deletion{
-		ExternalID: "990009", ObjectClass: "person", DeletedAt: rec.ModifiedAt.Add(time.Hour),
+		ExternalID: "990009", ObjectClass: "contact", DeletedAt: rec.ModifiedAt.Add(time.Hour),
 	})
 	if err := reconcileConnection(sweepCtx, e.Pool, vault, ms, meter, slog.New(slog.DiscardHandler), d, newInc); err != nil {
 		t.Fatalf("second sweep: %v", err)
 	}
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "990009"); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "990009"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Rep1 must NOT see the record after it was deleted incumbent-side, got: %v", err)
 	}
 }
@@ -608,7 +608,7 @@ func TestOverlayRefetchWorkerFreshensTheMirrorRecord(t *testing.T) {
 		// unconfirmable (fail-closed) and hide the record.
 		inc.SeedOwner("owner-1", "a@authz.test")
 		rec := fake.Rec("c-1", map[string]any{"firstname": firstname})
-		rec.ObjectClass = "person" // canonical — the mapping adapter's own translation, simulated
+		rec.ObjectClass = "contact" // canonical — the mapping adapter's own translation, simulated
 		rec.OwnerExternalID = "owner-1"
 		rec.ModifiedAt = modified
 		inc.Seed(overlay.IncumbentClassContacts, rec)
@@ -628,7 +628,7 @@ func TestOverlayRefetchWorkerFreshensTheMirrorRecord(t *testing.T) {
 	}
 	firstname := func() any {
 		t.Helper()
-		row, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "c-1")
+		row, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "c-1")
 		if err != nil {
 			t.Fatalf("Rep1 must see the re-fetched record: %v", err)
 		}
@@ -684,7 +684,7 @@ func TestOverlayRefetchWorkerShedsWhenBudgetExhausted(t *testing.T) {
 	inc := fake.New()
 	inc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass = "person"
+	rec.ObjectClass = "contact"
 	rec.OwnerExternalID = "owner-1"
 	rec.ModifiedAt = time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	inc.Seed(overlay.IncumbentClassContacts, rec)
@@ -706,7 +706,7 @@ func TestOverlayRefetchWorkerShedsWhenBudgetExhausted(t *testing.T) {
 		t.Errorf("a shed re-fetch must not read the incumbent, got %d Get call(s)", spy.gets)
 	}
 	// ...and so nothing was mirrored (the poller heals later).
-	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "c-1"); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "c-1"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("a shed re-fetch must ingest nothing, got: %v", err)
 	}
 }

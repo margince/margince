@@ -25,12 +25,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/margince/margince/backend/internal/compose/orgscan"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The two carrier kinds that are not scheduled specs: a human asking for an
@@ -44,7 +44,7 @@ import (
 // none as its own.
 const (
 	documentReadingKind = activities.ExtractionAITask
-	websiteReadingKind  = people.SiteReadActivityKind
+	websiteReadingKind  = contacts.SiteReadActivityKind
 	transcriptReadKind  = activities.TranscriptAITask
 	voiceBuildKind      = ai.VoiceBuildAITask
 )
@@ -104,7 +104,7 @@ func alignEnum(missing []string) string {
 // direction is a producer half-gated, and the half that is missing is whichever
 // one nobody thought about.
 func producedKinds() []string {
-	out := []string{documentReadingKind, websiteReadingKind, transcriptReadKind, voiceBuildKind, orgscan.ActivityKind}
+	out := []string{documentReadingKind, websiteReadingKind, transcriptReadKind, voiceBuildKind, companyscan.ActivityKind}
 	for _, spec := range runner.Catalog() {
 		out = append(out, spec.Name)
 	}

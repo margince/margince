@@ -5,7 +5,7 @@ package compose
 
 // The seam that lets a create tell its caller what it filed for review.
 //
-// The tool surface may not import the people module (.go-arch-lint.yml), and
+// The tool surface may not import the contacts module (.go-arch-lint.yml), and
 // should not: an injected reader is what keeps `agents` unable to reach a
 // record table on its own, so RBAC and row scope apply to this read exactly as
 // they do on the HTTP path. This is the wiring, and it is thin on purpose —
@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,7 +31,7 @@ import (
 // has to work out which half is its own record before it can offer a merge, and
 // that is a step the seam can take once instead of every caller taking it.
 func openDuplicatesFor(pool *pgxpool.Pool) agents.OpenDuplicatesFor {
-	store := people.NewStore(InstallationDB(pool))
+	store := contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, recordType string, id ids.UUID) ([]agents.DuplicateCandidate, error) {
 		rows, err := store.OpenCandidatesNaming(ctx, recordType, id)
 		if err != nil {
@@ -104,7 +104,7 @@ type evidenceRow struct {
 //
 // So it decodes ITSELF rather than being declared a string: a typed string
 // member would fail the whole row on the first numeric value, and the row is
-// the evidence a person reads before merging two records.
+// the evidence a reader reads before merging two records.
 type evidenceValue struct{ s string }
 
 func (v *evidenceValue) UnmarshalJSON(b []byte) error {

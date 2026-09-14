@@ -19,10 +19,14 @@ import "strings"
 // client-facing create path refuses it.
 const ReservedSourceSystemPrefix = "mirror:"
 
+// EmailRequestSource names reminders created by the internal request worker.
+// Their source identity links task state to the original email obligation.
+const EmailRequestSource = "email_request"
+
 // ReservedSourceSystem reports whether a client-supplied source system
 // trespasses on the importer's namespace.
 func ReservedSourceSystem(sourceSystem string) bool {
-	return strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
+	return sourceSystem == EmailRequestSource || strings.HasPrefix(sourceSystem, ReservedSourceSystemPrefix)
 }
 
 // ReservedError refuses a client write into the importer's namespace,
@@ -33,7 +37,7 @@ func ReservedSourceSystem(sourceSystem string) bool {
 type ReservedError struct{ Field, Value string }
 
 func (e *ReservedError) Error() string {
-	return e.Field + " " + e.Value + " is reserved for imports; omit it or use a value outside the " + ReservedSourceSystemPrefix + " namespace"
+	return e.Field + " " + e.Value + " is reserved for internal writes; omit it or choose ordinary provenance outside the " + ReservedSourceSystemPrefix + " namespace and " + EmailRequestSource
 }
 
 // FieldFault states the refusal as caller-fixable, which is how it

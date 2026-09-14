@@ -70,143 +70,6 @@ export type CapabilityExpression =
   // verb and a read seat may genuinely see those.
   | { kind: "seat" };
 
-/** Shorthand builders, so the table below reads as requirements rather than syntax. */
-export const reads = (object: RbacObject): CapabilityExpression => ({
-  kind: "grant",
-  object,
-  action: "read",
-});
-/**
- * A page whose subject is the installation's own configuration asks for the
- * verb that changes it, not the one that displays it.
- *
- * The seeded roles read far more than they may change — every seat reads
- * `installation_settings` for the base currency, `automation` to see what ran,
- * and the integration objects to see whether capture is working. Gating those
- * pages on the read put six administration destinations in a rep's navigation
- * that she could only look at. `writes` is how a page says its subject is
- * somebody's job rather than everybody's reference.
- *
- * Either write verb counts. A custom role holding `create` without `update` may
- * still add a webhook or an automation, and adding one is the whole reason to
- * open the page; the seeded roles hold both together, so a stricter spelling
- * would only ever strand a hand-built role — quietly, which is the bad way.
- *
- * Not a replacement for `reads`: a page a reader genuinely consults, like the
- * sales vocabulary she works in every day, still opens on the read.
- */
-export const writes = (
-  object: RbacObject,
-  // Which write verbs the object's own endpoints actually offer. Defaults to
-  // both, which is the common case; pass `["update"]` for an object that has no
-  // create operation, so a custom role granted a verb the API does not expose
-  // cannot open a page on it. `installation_settings` is the worked example:
-  // `/installation/settings` is GET and PATCH, and nothing else.
-  actions: readonly ("create" | "update")[] = ["update", "create"],
-): CapabilityExpression => ({
-  kind: "any",
-  of: actions.map((action) => ({ kind: "grant", object, action })),
-});
-/**
- * The delete verb alone.
- *
- * Separate from `writes` on purpose: `writes` answers "may this reader author
- * something here", which is the question a page's `requires` asks, and delete is
- * not part of it — an archive verb on an object whose create the reader lacks
- * should not open a page for them. In a `changes` expression it belongs beside
- * `writes`, because archiving a tag is acting on the page as much as renaming
- * one is.
- */
-/**
- * The full seat, as an expression.
- *
- * Only ever an arm of a page's `changes`. A `requires` must NOT fold it: a read
- * seat may open every page its grants open, and hiding one would be a
- * permission change rather than a statement about prominence.
- */
-export const fullSeat: CapabilityExpression = { kind: "seat" };
-
-export const destroys = (object: RbacObject): CapabilityExpression => ({
-  kind: "grant",
-  object,
-  action: "delete",
-});
-export const available = (
-  key: SettingsAvailabilityKey,
-): CapabilityExpression => ({ kind: "availability", key });
-export const flagged = (
-  flag: "data_reset_available",
-): CapabilityExpression => ({ kind: "flag", flag });
-export const composedUnits = (
-  scope: UnitSecretScope,
-): CapabilityExpression => ({
-  kind: "units",
-  scope,
-});
-
-/**
- * Where a composed unit keeps its secrets. Mirrored rather than imported: the
- * extensions registry reaches `@composition/screens` and so pulls React and a
- * build alias into whatever imports it, which is the one thing this module may
- * not do — being importable from anywhere is its whole purpose.
- *
- * `settingscatalog.units.test.ts` holds the two spellings equal.
- */
-export type UnitSecretScope = "workspace" | "user";
-
-/**
- * How the caller answers the composition question.
- *
- * Injected rather than read, for the import reason above. `holds` takes it as
- * an option so the pure table stays evaluable in a test, a story or a script
- * with no registry at all — and the one caller that has a registry passes it.
- */
-export type CatalogContext = {
-  composedUnitScopes?: readonly UnitSecretScope[];
-};
-export const anyOf = (
-  ...of: readonly CapabilityExpression[]
-): CapabilityExpression => ({ kind: "any", of });
-export const allOf = (
-  ...of: readonly CapabilityExpression[]
-): CapabilityExpression => ({ kind: "all", of });
-/**
- * What a page's `changes` says when acting on it means issuing a mutating
- * request: the grants, AND the seat ceiling above them.
- *
- * This mirrors `useCanWrite`, which every mutating control in the tree already
- * uses — grant plus `useCanMutate`. Without the ceiling, a read-seat operator
- * keeping their create and update grants would be told a page is theirs to work
- * in, walk into it, and find every control closed. The backend refuses the same
- * request independently at `identity/admission.go`, so the rail would be
- * promising something two layers below it already deny.
- */
-export const acts = (
-  ...of: readonly CapabilityExpression[]
-): CapabilityExpression => allOf(fullSeat, anyOf(...of));
-
-export const always: CapabilityExpression = { kind: "always" };
-
-/**
- * A page whose whole purpose is a read: the seat count, the AI usage figures,
- * the model calls, the audit trail. Consulting it IS the act, so `changes` is
- * whatever `requires` is.
- *
- * Only legitimate where `requires` is itself a read. A page whose requirement is
- * a mutation must NOT use this — `requires` deliberately carries no seat ceiling,
- * so the sentinel would tell a read seat that a page it cannot write is theirs to
- * work in. Automations and Reset were both written this way and both were wrong;
- * a test in settingscatalog.test.ts now fails that combination.
- *
- * A sentinel rather than the expression written twice. The two would drift —
- * somebody narrows the requirement, misses the copy, and the page silently
- * leaves the rail for a reader who may still open it. `settingsReach` resolves
- * it against the page's own `requires`, so there is one spelling per page.
- */
-export const readingIsTheAct: CapabilityExpression = {
-  kind: "reading-is-the-act",
-};
-
 /**
  * Resolve one requirement against an access snapshot.
  *
@@ -277,7 +140,7 @@ export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];
  * Whose state a setting changes, in the reader's words.
  *
  * `workspace` is the internal enum's name for it and is deliberately not shown:
- * a person reading a settings page knows "Company", not the tenancy model.
+ * a reader reading a settings page knows "Company", not the tenancy model.
  */
 export type SettingsScope =
   | "self"
@@ -324,6 +187,59 @@ export type SettingsScope =
  * spend, the model calls, the audit trail, the seat count — reading is the
  * action, so `changes` is the same expression as `requires` and says so.
  */
+import {
+  acts,
+  allOf,
+  always,
+  anyOf,
+  available,
+  composedUnits,
+  destroys,
+  flagged,
+  fullSeat,
+  readingIsTheAct,
+  reads,
+  writes,
+} from "./settingscapability";
+
+/**
+ * Where a composed unit keeps its secrets. Mirrored rather than imported: the
+ * extensions registry reaches `@composition/screens` and so pulls React and a
+ * build alias into whatever imports it, which is the one thing this module may
+ * not do — being importable from anywhere is its whole purpose.
+ *
+ * `settingscatalog.units.test.ts` holds the two spellings equal.
+ */
+export type UnitSecretScope = "workspace" | "user";
+/**
+ * How the caller answers the composition question.
+ *
+ * Injected rather than read, for the import reason above. `holds` takes it as
+ * an option so the pure table stays evaluable in a test, a story or a script
+ * with no registry at all — and the one caller that has a registry passes it.
+ */
+export type CatalogContext = {
+  composedUnitScopes?: readonly UnitSecretScope[];
+};
+
+// The shorthand the table below is written in. Re-exported rather than moved
+// outright: a dozen callers and two tests import these from here, and the
+// split is about this file's length, not about its surface.
+export {
+  acts,
+  allOf,
+  always,
+  anyOf,
+  available,
+  composedUnits,
+  destroys,
+  flagged,
+  fullSeat,
+  readingIsTheAct,
+  reads,
+  writes,
+} from "./settingscapability";
+
 export const SETTINGS_PAGES = [
   {
     id: "account",
@@ -406,21 +322,21 @@ export const SETTINGS_PAGES = [
     // workspace. Only admin and ops may change them.
     //
     // The company profile is different and stays a write a rep really holds:
-    // `organization:update` is hers, and the profile the AI reads is a thing
+    // `company:update` is hers, and the profile the AI reads is a thing
     // she legitimately edits. Its second condition is a deployment FLAG rather
     // than a permission, so the grant ANDs with it — the surface may simply not
     // exist on this installation.
     requires: anyOf(
       writes("installation_settings", ["update"]),
-      allOf(writes("organization"), available("company_context")),
+      allOf(writes("company"), available("company_context")),
       reads("fx_rate"),
     ),
     // The three cards, by the verb each performs. InstallationSettingsCard and
-    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("organization")`,
+    // FxRatesCard both write; CompanyContextCard asks `useCanUpsert("company")`,
     // which is create-or-update plus the seat — spelled here as `writes`.
     changes: acts(
       writes("installation_settings", ["update"]),
-      allOf(writes("organization"), available("company_context")),
+      allOf(writes("company"), available("company_context")),
       writes("fx_rate"),
     ),
   },
@@ -562,6 +478,36 @@ export const SETTINGS_PAGES = [
     changes: acts(writes("custom_field"), destroys("custom_field")),
   },
   {
+    id: "acquisition",
+    // `custom_field` for the lead page's reason above; no destroys because a
+    // source is retired through its switch rather than deleted.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: acts(writes("custom_field")),
+  },
+  {
+    id: "reviewtemplates",
+    // `custom_field` read, which is what the templates endpoint itself
+    // requires. The card has no write of any kind — the API serves these
+    // templates and accepts no edits — so reading them IS the action, and the
+    // two questions have one answer.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: readingIsTheAct,
+  },
+  {
+    id: "recordroles",
+    // Same `custom_field` authority as the vocabularies above: everyone reads,
+    // admin/ops write. No destroys — a role is retired through its switch,
+    // because an assignment that carried it must stay resolvable.
+    group: "sales",
+    scope: "workspace",
+    requires: reads("custom_field"),
+    changes: acts(writes("custom_field")),
+  },
+  {
     id: "fields",
     group: "sales",
     scope: "workspace",
@@ -600,11 +546,11 @@ export const SETTINGS_PAGES = [
     requires: reads("capture_settings"),
     // Five cards. Four write `capture_settings:update` — the sharing rule, the
     // posture, the own-domain list and the consumer-mailbox list; the fifth,
-    // BlockedDomainsCard, writes `organization:update`, which every seeded sales
+    // BlockedDomainsCard, writes `company:update`, which every seeded sales
     // role holds — so a rep keeps this page in the rail.
     changes: acts(
       writes("capture_settings", ["update"]),
-      writes("organization", ["update"]),
+      writes("company", ["update"]),
     ),
   },
   {
@@ -734,40 +680,40 @@ export const SETTINGS_PAGES = [
     // and `/retention-policies` lists "the installation's retention policies".
     // What this page destroys, it destroys everywhere.
     scope: "installation",
-    // `person` is deliberately NOT an arm, though the purposes card reads
-    // through it. `person:read` is held by every seeded role, so that arm put
+    // `contact` is deliberately NOT an arm, though the purposes card reads
+    // through it. `contact:read` is held by every seeded role, so that arm put
     // the governance page in front of the whole workspace — the retention
     // ladder, the subject-request queue and the restricted-record list, none of
     // which a rep can act on.
     //
-    // The purposes LIST stays gated on `person` server-side and must not move:
-    // that endpoint feeds the Person 360, and narrowing it would 403 every rep
+    // The purposes LIST stays gated on `contact` server-side and must not move:
+    // that endpoint feeds the Contact 360, and narrowing it would 403 every rep
     // on a screen they use all day. A card narrower than its page is the safe
     // direction — the card withholds itself.
     //
     // `consent_config` buys no read either (consent/store.go ListPurposes is on
-    // `person`), so it is not an arm; its holders all hold retention or the
+    // `contact`), so it is not an arm; its holders all hold retention or the
     // request queue anyway.
     requires: anyOf(
       reads("retention_policy"),
       reads("privacy_request"),
-      // The consent vocabulary, as a PAIR. `person:read` is what the purposes
+      // The consent vocabulary, as a PAIR. `contact:read` is what the purposes
       // endpoint asks (consent/store.go ListPurposes) and every seeded role
       // holds it, so it cannot open the page alone. `consent_config` is who the
       // vocabulary belongs to — management is seeded its read and nothing else
       // on this page, so without this arm the one role deliberately granted the
       // vocabulary could not reach the only page that renders it.
-      allOf(reads("person"), reads("consent_config")),
+      allOf(reads("contact"), reads("consent_config")),
     ),
-    // Four cards, four objects. `person:update` is what PrivacyInboxCard asks to
-    // open a subject request — the request is about a person's record, so the
-    // grant is the person's, not the queue's.
+    // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
+    // open a subject request — the request is about a contact's record, so the
+    // grant is the contact's, not the queue's.
     changes: acts(
       writes("consent_config", ["create"]),
       writes("retention_policy"),
       destroys("retention_policy"),
       writes("privacy_request", ["update"]),
-      writes("person", ["update"]),
+      writes("contact", ["update"]),
     ),
   },
   {
@@ -878,7 +824,7 @@ export function visibleSettingsPages(
  * under headings that say which is which.
  *
  * Splitting here rather than at each caller is what keeps the rail, the home
- * and the read-only banner agreeing. Three readers deriving "can this person
+ * and the read-only banner agreeing. Three readers deriving "can this contact
  * act?" separately is three chances to disagree in front of one user.
  */
 export type SettingsReach = {

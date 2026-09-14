@@ -7,7 +7,7 @@ package compose
 //
 // consent owns the queue: which requests exist, who they name, when they are
 // due. privacy owns the export: what the installation actually holds about a
-// person and which of it Art. 15 owes back. Neither may import the other, so
+// contact and which of it Art. 15 owes back. Neither may import the other, so
 // the edge is here — the same shape the erase path already uses, because
 // answering an access request is the same species of act as answering an
 // erasure one: the queue records the decision, another module carries it out.
@@ -54,13 +54,13 @@ func newSubjectAccessAssembler(db *database.DB) *subjectAccessSeam {
 // AssemblePackage answers the serialized Art. 15 package for one subject.
 //
 // Every authority check lives in AssembleSAR and none is repeated here: it takes
-// the person.delete grant, refuses a non-human principal whatever its passport
+// the contact.delete grant, refuses a non-human principal whatever its passport
 // carries, and requires unbounded row scope because Art. 15 owes the subject
 // everything held rather than the slice one colleague may see. A second copy of
 // those checks here would be a second answer to who may read a subject's whole
 // record.
-func (s *subjectAccessSeam) AssemblePackage(ctx context.Context, personID ids.UUID) ([]byte, error) {
-	pkg, err := privacy.AssembleSAR(ctx, s.db, ids.From[ids.PersonKind](personID))
+func (s *subjectAccessSeam) AssemblePackage(ctx context.Context, contactID ids.UUID) ([]byte, error) {
+	pkg, err := privacy.AssembleSAR(ctx, s.db, ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		return nil, err
 	}

@@ -15,12 +15,12 @@ import (
 // both-null, so both-set and neither-set must die at the seam — before
 // admission, before any row.
 func TestConsentSubjectIsExactlyOne(t *testing.T) {
-	person := ids.New[ids.PersonKind]()
+	contact := ids.New[ids.ContactKind]()
 	lead := ids.New[ids.LeadKind]()
 
-	sub, err := consentSubject(RecordInput{PersonID: person})
-	if err != nil || sub.entityType != "person" || sub.column != "person_id" || sub.id != person.UUID {
-		t.Fatalf("person subject resolved wrong: %+v, %v", sub, err)
+	sub, err := consentSubject(RecordInput{ContactID: contact})
+	if err != nil || sub.entityType != "contact" || sub.column != "contact_id" || sub.id != contact.UUID {
+		t.Fatalf("contact subject resolved wrong: %+v, %v", sub, err)
 	}
 	sub, err = consentSubject(RecordInput{LeadID: lead})
 	if err != nil || sub.entityType != "lead" || sub.column != "lead_id" || sub.id != lead.UUID {
@@ -28,7 +28,7 @@ func TestConsentSubjectIsExactlyOne(t *testing.T) {
 	}
 
 	for name, in := range map[string]RecordInput{
-		"both subjects": {PersonID: person, LeadID: lead},
+		"both subjects": {ContactID: contact, LeadID: lead},
 		"no subject":    {},
 	} {
 		if _, err := consentSubject(in); err == nil {
@@ -47,7 +47,7 @@ func TestConsentSubjectIsExactlyOne(t *testing.T) {
 func TestRecordRefusesAnAmbiguousSubjectBeforeAnyWrite(t *testing.T) {
 	store := NewStore(nil)
 	_, err := store.Record(context.Background(), RecordInput{
-		PersonID:   ids.New[ids.PersonKind](),
+		ContactID:  ids.New[ids.ContactKind](),
 		LeadID:     ids.New[ids.LeadKind](),
 		NewState:   "granted",
 		PolicyText: &grantWording,

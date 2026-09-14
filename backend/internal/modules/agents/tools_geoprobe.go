@@ -35,7 +35,7 @@ var checkLocationSupportCopy = toolCopy{
 	Purpose: "Find out whether this chat host lets a Margince card read the device's location, " +
 		"which is what would let a contact be tagged with the event you are standing at.",
 	Limits: "It does not read a location and cannot: the answer comes from the card shown beside " +
-		"this result, and only after the person using it presses the button on that card. " +
+		"this result, and only after the contact using it presses the button on that card. " +
 		"A host is free to refuse, and refusing is the expected outcome until one is shown not to.",
 	Instead: "To record where something happened, put it in the activity you log with log_activity; " +
 		"this tool tags nothing and writes nothing.",

@@ -32,11 +32,11 @@ import (
 func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
-	other := seedBarePerson(t, e)
+	other := seedBareContact(t, e)
 
 	var restricted, archived bool
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -73,7 +73,7 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 	assert423("UpdateActivity", err)
 
 	_, err = e.Activities.RelinkActivity(e.Admin(), held, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: other,
+		EntityType: "contact", EntityID: other,
 	})
 	assert423("RelinkActivity", err)
 
@@ -102,12 +102,12 @@ func TestARetentionHeldActivityAnswers423NotNotFoundOnWrite(t *testing.T) {
 func TestARelinkAlreadyPresentOnAHeldRowStillReadsBack(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
 
-	// The deal, not f.person: ErasePerson archives the subject themselves
+	// The deal, not f.contact: EraseContact archives the subject themselves
 	// (a link to an archived record is its own refusal, unrelated to what
 	// this test is about), while the won deal SeedWonDealLinkedTo already
 	// filed the email under stays live — a genuinely no-op relink target.
@@ -181,13 +181,13 @@ func TestSetAudienceOnAHeldCapturedRowAnswers423NotCapturedAudienceError(t *test
 // a live erasure: activity_refuse_restricted_mutation is a BEFORE
 // UPDATE/DELETE trigger, so it never fires on this insert, and the only
 // thing this test needs is a row that already carries restricted_at and
-// archived_at, linked to a person the caller cannot write.
+// archived_at, linked to a contact the caller cannot write.
 func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 
-	theirPerson := e.SeedPerson(t, "Held But Unrelated", &e.Rep3)
-	e.MakeCapturePrivate(t, "person", theirPerson, e.Rep3)
+	theirContact := e.SeedContact(t, "Held But Unrelated", &e.Rep3)
+	e.MakeCapturePrivate(t, "contact", theirContact, e.Rep3)
 	heldActivity := SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by,
 		                      archived_at, restricted_at, restricted_until, retention_class,
@@ -195,7 +195,7 @@ func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 		VALUES ($1, 'email', 'Confidential', 'body', now(), 'manual', 'human:x',
 		        now(), now(), now() + interval '5 years', 'commercial_correspondence',
 		        now(), 'commercial_correspondence')`)
-	LinkActivity(t, owner, heldActivity, "person", theirPerson)
+	LinkActivity(t, owner, heldActivity, "contact", theirContact)
 	held := ids.From[ids.ActivityKind](heldActivity)
 
 	// All four write paths, not just one: each composes lockActivityForWrite
@@ -220,7 +220,7 @@ func TestARetentionHeldRowStaysHiddenFromAnUnrelatedWriter(t *testing.T) {
 	assertHidden("SetAudience", err)
 
 	_, err = e.Activities.RelinkActivity(rep, held, activities.RelinkActivityInput{
-		EntityType: "person", EntityID: theirPerson,
+		EntityType: "contact", EntityID: theirContact,
 	})
 	assertHidden("RelinkActivity", err)
 
@@ -267,20 +267,20 @@ func TestAnUnboundedCallerStillFacesTheAudienceArmOnAHeldRow(t *testing.T) {
 	}
 }
 
-// seedBarePerson is a relink target unrelated to the restriction fixture: the
+// seedBareContact is a relink target unrelated to the restriction fixture: the
 // held activity must gain a genuinely NEW link (not a duplicate the ON
 // CONFLICT DO NOTHING no-ops on) for the relink to reach the row UPDATE its
 // CHECK trigger refuses.
-func seedBarePerson(t *testing.T, e *Env) ids.UUID {
+func seedBareContact(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
 			 VALUES ($1, 'Relink Target', 'Relink', 'manual', 'human:x')`, id)
 		return err
 	}); err != nil {
-		t.Fatalf("seeding a relink target person: %v", err)
+		t.Fatalf("seeding a relink target contact: %v", err)
 	}
 	return id
 }

@@ -20,13 +20,13 @@ import (
 //
 // That renumbering is the fragile part, and it fails LOUDLY but late: Postgres
 // answers `could not determine data type of parameter $3` at run time, which is
-// an integration failure in whatever suite happens to erase a person. A
+// an integration failure in whatever suite happens to erase a contact. A
 // fragment that grows a $7 tomorrow would do it again. This is the cheap check
 // that catches it in a unit test instead.
 func TestTheTimelineLockBindsEveryPlaceholderItNames(t *testing.T) {
 	t.Parallel()
 
-	const bound = 3 // personID, emails, channelKeys
+	const bound = 3 // contactID, emails, channelKeys
 	seen := map[int]bool{}
 	for _, match := range regexp.MustCompile(`\$(\d+)`).FindAllStringSubmatch(subjectTimelineLockSQL, -1) {
 		n, err := strconv.Atoi(match[1])
@@ -37,7 +37,7 @@ func TestTheTimelineLockBindsEveryPlaceholderItNames(t *testing.T) {
 		if n > bound {
 			t.Errorf("the lock names $%d and binds %d arguments — Postgres refuses a placeholder "+
 				"nothing types, as `could not determine data type of parameter`, at run time in "+
-				"whichever suite erases a person next", n, bound)
+				"whichever suite erases a contact next", n, bound)
 		}
 	}
 	// And every one it binds is used: an argument the statement never mentions

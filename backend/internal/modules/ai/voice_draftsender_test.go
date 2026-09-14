@@ -6,7 +6,7 @@ package ai
 // Whose voice a draft is written in.
 //
 // The rule has one interesting case and it is the one that shipped broken: an
-// automation composes under the system principal, which names no person, while
+// automation composes under the system principal, which names no contact, while
 // the mail it drafts still leaves under the automation owner's name. Reading the
 // actor alone resolved nothing there, so every automated draft was written in
 // nobody's voice — and it failed silently, because a voice that cannot be loaded
@@ -40,7 +40,7 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 			ok:   true,
 		},
 		// The automation path, and the whole reason the sender is bound at all.
-		// The actor names no person; the owner does.
+		// The actor names no contact; the owner does.
 		"an automation firing under the system actor": {
 			ctx: principal.WithSendingHuman(
 				principal.WithActor(context.Background(), system), owner),
@@ -49,8 +49,8 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 		},
 		// A human actor CANNOT be overridden. A voice profile holds its owner's
 		// verbatim written text, so honouring a bound sender here would turn
-		// this value into an authorization input: a call acting as one person
-		// would read another person's private writing. The actor already knows
+		// this value into an authorization input: a call acting as one contact
+		// would read another contact's private writing. The actor already knows
 		// whose voice they want.
 		"a bound sender never overrides a human actor": {
 			ctx: principal.WithSendingHuman(
@@ -59,7 +59,7 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 			ok:   true,
 		},
 		// A system job nobody owns has no voice to write in, and guessing one
-		// would sign a message in a person who never asked for it.
+		// would sign a message in a contact who never asked for it.
 		"the system actor with no sender bound": {
 			ctx:  principal.WithActor(context.Background(), system),
 			want: ids.Nil,
@@ -83,7 +83,7 @@ func TestTheVoiceSenderIsTheHumanTheMailGoesOutAs(t *testing.T) {
 	}
 }
 
-// A bound sender cannot make one person's call read another's voice profile.
+// A bound sender cannot make one contact's call read another's voice profile.
 //
 // A profile carries its owner's verbatim written text — the personality they
 // typed and excerpts of their own mail — so "whose profile is loaded" is a read
@@ -106,7 +106,7 @@ func TestABoundSenderCannotRedirectAHumansVoiceRead(t *testing.T) {
 	if got == victim {
 		t.Fatalf("a bound sender redirected the voice read to %s, whose profile holds their own "+
 			"verbatim writing — this value selects whose private text is loaded and must never "+
-			"override an actor who names a person", victim)
+			"override an actor who names a contact", victim)
 	}
 	if got != rep {
 		t.Errorf("the voice read resolved %s, want the acting rep %s", got, rep)

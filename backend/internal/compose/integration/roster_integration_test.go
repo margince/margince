@@ -93,7 +93,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// A second workspace's member used to be seeded here, holding a uniquely
 	// keyed role, so the assertions below could prove neither escaped into this
 	// roster. ADR-0091 §8 phase D took the tenant column off app_user, role and
-	// role_assignment, and an installation serves one organization (ADR-0061):
+	// role_assignment, and an installation serves one company (ADR-0061):
 	// there is no second workspace's member to leak, so the arms that looked for
 	// one are gone rather than weakened. What the page still owes — every member
 	// listed once, the agent seat marked, role keys withheld from a non-admin —
@@ -105,7 +105,7 @@ func TestRosterReadsUsersAndTeams(t *testing.T) {
 	// (a) The roster lists the installation's members: the bootstrap admin and
 	// the two seeded reps, and nothing else.
 	//
-	// THREE, and every one of them a person. `is_agent` stays on the wire and the
+	// THREE, and every one of them a contact. `is_agent` stays on the wire and the
 	// roster lists such a row where one exists — that flag is what tells a picker
 	// of humans to leave it out. What is asserted here is that no PRODUCT PATH
 	// creates one, which is why this counts rather than filtering.

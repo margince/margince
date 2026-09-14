@@ -45,10 +45,10 @@ var serviceLabels = map[string]string{
 //
 // THIS MAP IS THE PRIVACY BOUNDARY, and it is an allowlist for that reason
 // rather than for tidiness. Certificate transparency publishes every hostname
-// a company has ever had a certificate for, and those include people:
+// a company has ever had a certificate for, and those include contacts:
 // `jan.example.de` for a developer's machine, a name in a vanity host, a
 // contractor's test box. A denylist would have to anticipate every name a
-// person can have. This map passes through only labels that name a SERVICE,
+// contact can have. This map passes through only labels that name a SERVICE,
 // so a personal name cannot be matched by construction — it is dropped before
 // it reaches a cache, a fact row, or a log line.
 var serviceLabelAllowlist = map[string]string{
@@ -115,7 +115,7 @@ func ServiceKeys() []string {
 //
 // Only the first label is consulted, and only against the allowlist above.
 // Everything else — every hostname that does not name a known service — is
-// dropped here and never travels further, which is what keeps a person's name
+// dropped here and never travels further, which is what keeps a contact's name
 // out of the record.
 //
 // The result is sorted by service key so two passes over the same certificate
@@ -131,7 +131,7 @@ func OperatedServices(domain string, hostnames []string) []Signal {
 		// EXACTLY ONE label under the domain, and that is the privacy rule
 		// rather than a tidiness one. Reading only the first label of a deeper
 		// name admits `shop.jan-mueller.example.de` as a webshop and then
-		// stores the whole hostname — a person's name — as the evidence that
+		// stores the whole hostname — a contact's name — as the evidence that
 		// proved it. A service a company operates is published at one label;
 		// anything deeper is somebody's box.
 		sub := strings.TrimSuffix(hostname, "."+domain)

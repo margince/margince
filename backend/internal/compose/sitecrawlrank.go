@@ -295,7 +295,7 @@ var (
 		"gioi-thieu-cong-ty": true, "ve-chung-toi": true,
 		"회사소개": true,
 	}
-	// vi: doi ngu = "the team". ko: 조직도 = "org chart", 임직원 = "executives
+	// vi: doi ngu = "the team". ko: 조직도 = "company chart", 임직원 = "executives
 	// and staff" — whole only, so 임직원복지 (staff benefits) is not a directory.
 	teamSegments = map[string]bool{
 		"doi-ngu": true, "doingu": true,

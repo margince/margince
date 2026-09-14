@@ -218,6 +218,10 @@ func fullRegistry(t *testing.T) *Registry {
 	// where the production renderer belongs and the encoding walk would be
 	// checking the double's schema.
 	RegisterReportVocabularyTool(r, NewReportVocabularyResource(probeReportCatalog))
+	// The real resource again, and for the same reason: the write vocabulary is
+	// composed from the contract shapes alone — no pool, no seam — so a stub
+	// would put a double where the production renderer belongs.
+	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	// The analytics vocabulary's production renderer lives with the derived
 	// schema in the composition root, which this module cannot import — so the
 	// encoding walk checks the tool over a stub document. The schema it

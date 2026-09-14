@@ -15,7 +15,7 @@ const CONNECTIONS_HREF = "#/settings/connections";
 /**
  * The import, in the reader's eyeline.
  *
- * A connect-time import runs for minutes to hours and the person who started
+ * A connect-time import runs for minutes to hours and the contact who started
  * it goes back to work while it does. The orb in the rail carries its ring, but
  * the rail is the corner of the window and at phone width a cell in the bar;
  * this puts the same reading bottom-centre of the content, small, for as long as

@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,8 +24,8 @@ import (
 // RowScope, which is the axis these tests are about.
 func leadObjectGrant() map[string]principal.ObjectGrant {
 	return map[string]principal.ObjectGrant{
-		"lead":   {Create: true, Read: true, Update: true},
-		"person": {Create: true, Read: true, Update: true},
+		"lead":    {Create: true, Read: true, Update: true},
+		"contact": {Create: true, Read: true, Update: true},
 	}
 }
 
@@ -51,7 +51,7 @@ func leadManagerPerms() principal.Permissions {
 // everything the production writer puts on it.
 func seedOwnerlessLead(t *testing.T, e *Env, name string) ids.LeadID {
 	t.Helper()
-	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name,
 		Source:   "manual",
 	})
@@ -65,7 +65,7 @@ func seedOwnerlessLead(t *testing.T, e *Env, name string) ids.LeadID {
 
 func assignLead(actor context.Context, e *Env, id ids.LeadID, dest ids.UUID) error {
 	owner := ids.From[ids.UserKind](dest)
-	_, err := e.People.UpdateLead(actor, id, people.UpdateLeadInput{OwnerID: &owner})
+	_, err := e.Contacts.UpdateLead(actor, id, contacts.UpdateLeadInput{OwnerID: &owner})
 	return err
 }
 
@@ -85,7 +85,7 @@ func TestAnOwnerlessLeadIsAssignableWithinTheAssignersOwnReach(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep1); err != nil {
 			t.Fatalf("a rep assigning an ownerless lead to themselves → %v, want allowed", err)
 		}
-		got, err := e.People.GetLead(rep, id, 0)
+		got, err := e.Contacts.GetLead(rep, id, 0)
 		if err != nil {
 			t.Fatalf("reading the lead back: %v", err)
 		}
@@ -108,7 +108,7 @@ func TestAnOwnerlessLeadIsAssignableWithinTheAssignersOwnReach(t *testing.T) {
 		if err := assignLead(manager, e, id, e.Rep1); err != nil {
 			t.Fatalf("a manager assigning an ownerless lead to a live teammate → %v, want allowed", err)
 		}
-		got, err := e.People.GetLead(manager, id, 0)
+		got, err := e.Contacts.GetLead(manager, id, 0)
 		if err != nil {
 			t.Fatalf("reading the lead back: %v", err)
 		}
@@ -189,7 +189,7 @@ func TestTheOwnerlessDoorCarriesOwnershipAndNoOtherField(t *testing.T) {
 
 	owner := ids.From[ids.UserKind](e.Rep1)
 	title := "VP Engineering"
-	_, err := e.People.UpdateLead(manager, id, people.UpdateLeadInput{
+	_, err := e.Contacts.UpdateLead(manager, id, contacts.UpdateLeadInput{
 		OwnerID: &owner,
 		Title:   &title,
 	})
@@ -211,7 +211,7 @@ func TestAnotherSeatsLeadIsStillNotAssignableByAStranger(t *testing.T) {
 
 	name := "Owned By Rep1"
 	ownedBy := ids.From[ids.UserKind](e.Rep1)
-	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Source: "manual", OwnerID: &ownedBy,
 	})
 	if err != nil {
@@ -222,7 +222,7 @@ func TestAnotherSeatsLeadIsStillNotAssignableByAStranger(t *testing.T) {
 	if err := assignLead(stranger, e, id, e.Rep3); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a stranger taking a colleague's lead → %v, want ErrPermissionDenied", err)
 	}
-	got, err := e.People.GetLead(e.Admin(), id, 0)
+	got, err := e.Contacts.GetLead(e.Admin(), id, 0)
 	if err != nil {
 		t.Fatalf("reading the lead back: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestACreatedLeadCannotNameAnIneligibleOwner(t *testing.T) {
 
 	name := "Created For A Suspended Seat"
 	owner := ids.From[ids.UserKind](e.Rep3)
-	_, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	_, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &name, Source: "manual", OwnerID: &owner,
 	})
 	if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
@@ -324,7 +324,7 @@ func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
 	// not theirs to hand on.
 	strangerName := "Bulk Stranger's"
 	strangerOwner := ids.From[ids.UserKind](e.Rep3)
-	strangerLead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{
+	strangerLead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
 		FullName: &strangerName, Source: "manual", OwnerID: &strangerOwner,
 	})
 	if err != nil {
@@ -332,9 +332,9 @@ func TestBulkAssignAnswersForEachLeadSeparately(t *testing.T) {
 	}
 
 	staleVersion := int64(1)
-	outcomes, err := e.People.AssignLeads(manager, people.AssignLeadsInput{
+	outcomes, err := e.Contacts.AssignLeads(manager, contacts.AssignLeadsInput{
 		OwnerID: ids.From[ids.UserKind](e.Rep1),
-		Leads: []people.AssignLeadItem{
+		Leads: []contacts.AssignLeadItem{
 			{ID: movable},
 			{ID: ids.From[ids.LeadKind](ids.UUID(strangerLead.Id))},
 			{ID: stale, IfVersion: &staleVersion},
@@ -382,9 +382,9 @@ func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
 	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
 
-	_, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+	_, err := e.Contacts.AssignLeads(e.Admin(), contacts.AssignLeadsInput{
 		OwnerID: ids.From[ids.UserKind](e.Rep3),
-		Leads:   []people.AssignLeadItem{{ID: first}, {ID: second}},
+		Leads:   []contacts.AssignLeadItem{{ID: first}, {ID: second}},
 	})
 	if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
 		t.Fatalf("a bulk assign to a suspended seat → %v, want AssigneeNotAllowedError", err)
@@ -402,17 +402,17 @@ func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
 	id := seedOwnerlessLead(t, e, "Bulk Rep Reach")
 
-	if _, err := e.People.AssignLeads(rep, people.AssignLeadsInput{
+	if _, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
 		OwnerID: ids.From[ids.UserKind](e.Rep2),
-		Leads:   []people.AssignLeadItem{{ID: id}},
+		Leads:   []contacts.AssignLeadItem{{ID: id}},
 	}); !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
 		t.Fatalf("a rep bulk-assigning to a teammate → %v, want AssigneeNotAllowedError", err)
 	}
 	mustStayUnowned(t, e, id)
 
-	outcomes, err := e.People.AssignLeads(rep, people.AssignLeadsInput{
+	outcomes, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
 		OwnerID: ids.From[ids.UserKind](e.Rep1),
-		Leads:   []people.AssignLeadItem{{ID: id}},
+		Leads:   []contacts.AssignLeadItem{{ID: id}},
 	})
 	if err != nil {
 		t.Fatalf("a rep bulk-assigning to themselves: %v", err)
@@ -429,17 +429,17 @@ func TestBulkAssignEnforcesItsOwnSizeCap(t *testing.T) {
 	e := Setup(t)
 	owner := ids.From[ids.UserKind](e.Rep1)
 
-	if _, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+	if _, err := e.Contacts.AssignLeads(e.Admin(), contacts.AssignLeadsInput{
 		OwnerID: owner,
 	}); err == nil {
 		t.Error("a bulk assign naming no leads was accepted, want a refusal")
 	}
 
-	tooMany := make([]people.AssignLeadItem, 501)
+	tooMany := make([]contacts.AssignLeadItem, 501)
 	for i := range tooMany {
-		tooMany[i] = people.AssignLeadItem{ID: ids.New[ids.LeadKind]()}
+		tooMany[i] = contacts.AssignLeadItem{ID: ids.New[ids.LeadKind]()}
 	}
-	if _, err := e.People.AssignLeads(e.Admin(), people.AssignLeadsInput{
+	if _, err := e.Contacts.AssignLeads(e.Admin(), contacts.AssignLeadsInput{
 		OwnerID: owner, Leads: tooMany,
 	}); err == nil {
 		t.Error("a bulk assign naming 501 leads was accepted, want a refusal")

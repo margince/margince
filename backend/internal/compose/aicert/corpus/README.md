@@ -14,7 +14,7 @@ mints and no scenario ever spells.
 Every scenario is hand-authored (`source: hand_authored`) and names who
 reviewed it for sensitive content (`sanitized_by`) — `LoadCorpus` refuses
 anything else. Every fixture under this tree is synthetic, invented for this
-corpus: no real company, deal, or person data.
+corpus: no real company, deal, or contact data.
 
 ## What a scenario asserts
 

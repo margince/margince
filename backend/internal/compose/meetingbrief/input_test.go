@@ -22,7 +22,7 @@ import (
 func TestWithCounterpartExcludesAWithheldActivity(t *testing.T) {
 	withheld := crmcontracts.ActivityContentStateWithheld
 	available := crmcontracts.ActivityContentStateAvailable
-	view := crmcontracts.Person360{
+	view := crmcontracts.Contact360{
 		Activities: &struct {
 			Data []crmcontracts.Activity `json:"data"`
 			Page crmcontracts.PageInfo   `json:"page"`
@@ -89,7 +89,7 @@ func TestAWithheldActivityDoesNotSpendARecentSlot(t *testing.T) {
 			ContentState: &available,
 		})
 	}
-	view := crmcontracts.Person360{
+	view := crmcontracts.Contact360{
 		Activities: &struct {
 			Data []crmcontracts.Activity `json:"data"`
 			Page crmcontracts.PageInfo   `json:"page"`

@@ -26,21 +26,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedUnreachablePerson writes a contact owner-scoped to a rep on the OTHER
+// seedUnreachableContact writes a contact owner-scoped to a rep on the OTHER
 // team, through the same columns capture writes. `visibility = 'owner'` is what
 // platform/auth reads as capture privacy: the row is invisible to every
 // principal but its owner, an admin included.
-func seedUnreachablePerson(t *testing.T, e *integration.SearchEnv, email string) ids.UUID {
+func seedUnreachableContact(t *testing.T, e *integration.SearchEnv, email string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, source, captured_by, owner_id, visibility)
+			INSERT INTO contact (id, full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'Buyer', 'manual', 'human:x', $2, 'owner')`, id, e.Rep3); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 			VALUES ($1, $2, true, 'manual', 'human:x')`, id, email)
 		return err
 	}); err != nil {
@@ -54,11 +54,11 @@ func seedUnreachablePerson(t *testing.T, e *integration.SearchEnv, email string)
 // the contact keeps the name it had.
 func TestAnInvitationCannotNameAContactTheSeatCannotSee(t *testing.T) {
 	e := integration.SetupSearch(t)
-	hidden := seedUnreachablePerson(t, e, "buyer@acme.com")
+	hidden := seedUnreachableContact(t, e, "buyer@acme.com")
 
 	syncOneGcalMeeting(t, e)
 
-	if _, _, full := personName(t, e, hidden); full != "Buyer" {
+	if _, _, full := contactName(t, e, hidden); full != "Buyer" {
 		t.Errorf("the contact is now called %q — an organizer outside the workspace named a record this seat cannot reach", full)
 	}
 }

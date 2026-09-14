@@ -7,7 +7,7 @@ package briefs
 
 // A brief cites activities, and a cited id is a read of that activity. The deal
 // it hangs off being readable says nothing about the activity: a message under a
-// workspace-readable deal can be limited to the people who were on it, and its
+// workspace-readable deal can be limited to the contacts who were on it, and its
 // id and its moment are the protected fact as much as its body is.
 
 import (

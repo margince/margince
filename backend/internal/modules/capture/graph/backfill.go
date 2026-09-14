@@ -23,17 +23,23 @@ import (
 const backfillPageSize = 100
 
 // EstimateBackfill asks the provider how many messages the window holds.
-func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (int, error) {
+//
+// Never a floor: Graph answers an exact `$count` for the filter, so there is
+// no cap to bind and nothing to qualify.
+func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, after time.Time) (connector.BackfillEstimate, error) {
 	st, err := graphconn.Read(connectorName, auth)
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
 	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
 	if err != nil {
-		return 0, err
+		return connector.BackfillEstimate{}, err
 	}
-	access := refreshed.AccessToken
-	return c.api.EstimateAfter(ctx, access, after)
+	count, err := c.api.EstimateAfter(ctx, refreshed.AccessToken, after)
+	if err != nil {
+		return connector.BackfillEstimate{}, err
+	}
+	return connector.BackfillEstimate{Messages: count}, nil
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,

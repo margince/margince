@@ -40,7 +40,7 @@ Name each source column and the field it feeds. The importer does not guess:
 
 ```json
 {
-  "object": "organization",
+  "object": "company",
   "csv": "name,city,country,size\nHelios Logistik GmbH,Hamburg,DE,51-200\n",
   "mapping": {
     "name": "display_name",
@@ -57,7 +57,7 @@ A company can receive `display_name`, `legal_name`, `industry`, `size_band`,
 Map a name it does not take and the run is refused with the list of what it
 does — before anything is written.
 
-**A file of people becomes leads, not contacts.** Set `object` to `lead` for
+**A file of contacts becomes leads, not contacts.** Set `object` to `lead` for
 those. That is a deliberate rule, not an omission: an unqualified list must not
 land in the clean core.
 
@@ -122,7 +122,7 @@ matcher that finds *likely* duplicates is built to answer "should a human look a
 these two?", and it blurs on purpose to do that:
 
 - It strips the legal form, so `Acme Inc` and `Acme GmbH` are the same string —
-  and the CRM routes those to a person precisely because they are different
+  and the CRM routes those to a contact precisely because they are different
   companies.
 - It scores a trading name against a registered one, so your row's `Kestrel Data`
   matches a company registered under that name but trading as something else.
@@ -188,7 +188,7 @@ The report keeps its shape afterwards: the same fields report what the run *did*
 
 Over MCP this is one instruction:
 
-> Import this CSV as organizations. Tell me how many are new and how many are
+> Import this CSV as companies. Tell me how many are new and how many are
 > already here before you commit anything.
 
 Or, for a corrections file:

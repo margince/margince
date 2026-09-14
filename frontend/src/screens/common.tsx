@@ -82,11 +82,12 @@ export function consumeAuthExitNotice(): "signed-out" | null {
 // The session principal (GET /v1/me): identity + effective role keys. One
 // spelling, one ["me"] cache entry — the App auth gate, the settings identity
 // card, and role-aware affordances all read the same probe. The server binds
-// the installation's singleton organization itself (A107/ADR-0061) — the
+// the installation's singleton company itself (ADR-0061) — the
 // probe needs nothing but the session cookie.
-export function useMe() {
+export function useMe(enabled = true) {
   return useQuery({
     queryKey: ["me"],
+    enabled,
     staleTime: 5 * 60_000,
     // A role change does not revoke live sessions, so this snapshot is the one
     // cache entry that must not sit stale for its full staleTime: the UI now
@@ -186,7 +187,7 @@ export function timelineZoneNotice(
 // Every caller is a place that learns the session is over: the deliberate
 // sign-out, and the 401 a long-lived read discovers for itself. What must not
 // happen is a cached answer outliving the member it was fetched for — the next
-// person to sign in inside the cache lifetime would be served it.
+// contact to sign in inside the cache lifetime would be served it.
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
@@ -427,7 +428,7 @@ export function QueryGate<Data>({
 // agent tag unnamed, and a connector's member id is dropped a segment at a time.
 // The human remainder is the exception and is kept WHOLE, because it is compared
 // against the reader's own id and never printed — the tag resolves it through
-// the caller's `renderUser` or says a person entered it — and an id truncated to
+// the caller's `renderUser` or says a contact entered it — and an id truncated to
 // its first segment is how a colleague's entry would come to read "typed by
 // you".
 export function provenanceOf(
@@ -449,7 +450,7 @@ export function provenanceOf(
     };
   }
   if (source === "buyer") {
-    // The other side of a Deal Room: a person, outside the organization and in
+    // The other side of a Deal Room: a contact, outside the company and in
     // no member directory, so neither the human arm (which would send a reader
     // looking them up) nor `unknown` (which says nobody recorded a source) is
     // true of them. What follows the kind is the participant uuid — opaque, and
@@ -529,7 +530,7 @@ function connectorLabel(rest: string): string {
 }
 
 // The reader's own user id, for the provenance tags on this screen. Undefined
-// while /me is in flight, which the tags read as "a person, not provably you"
+// while /me is in flight, which the tags read as "a contact, not provably you"
 // — the honest reading until the session is known.
 export function useViewerId(): string | undefined {
   return useMe().data?.user.id;
@@ -569,7 +570,7 @@ export function useViewerId(): string | undefined {
 // knowing before anyone tries to "keep the more specific answer". `httperr`
 // builds a refusal's detail from `err.Error()`, and every producer of this
 // sentinel wraps it with INTERNALS: `auth.Require` sends the RBAC object and
-// verb ("person.update: permission denied"), the admission gate sends its own
+// verb ("contact.update: permission denied"), the admission gate sends its own
 // spec name and resolver state. None of that is copy, and showing it would
 // leak the shape of the authority model to a client. There is no path on which
 // the server sends a sentence written for a reader here.
@@ -579,7 +580,7 @@ export function useViewerId(): string | undefined {
 // reader whose role admits the action is refused anyway. Its server detail is
 // the bare sentinel ("seat tier insufficient"), which names a concept no
 // reader has met and offers nothing to do about it, so the catalog copy
-// replaces it and points at the one person who can lift the ceiling. It names
+// replaces it and points at the one contact who can lift the ceiling. It names
 // the SEAT rather than "your seat": the same code answers a read seat's own
 // mutation, an agent passport acting for one, and a grant that would give a
 // read seat write access. A surface that knows WHOSE seat it is (share.tsx
@@ -823,8 +824,8 @@ export function isAlreadyDecided(problem: unknown): boolean {
 }
 
 // A 409 whose code names the consent suppression gate: the send's recipients
-// have no active `granted` person_consent for the purpose it falls under
-// (default-deny per purpose, A22/ADR-0011). Distinguished from RBAC (403) and
+// have no active `granted` contact_consent for the purpose it falls under
+// (default-deny per purpose, ADR-0011). Distinguished from RBAC (403) and
 // validation (422) so the composer can point the user at the consent surface
 // rather than showing a raw server detail.
 export function isConsentNotGranted(problem: unknown): boolean {
@@ -877,14 +878,13 @@ export function coldFieldLabelKey(field: string): MessageKey | undefined {
 // The account's finance summary. It lives here rather than beside the finance
 // card because the KPI row reads the SAME figure: one query key, so the two
 // readings on a page agree and the second costs no request.
-export function useFinanceSummary(orgId: string) {
-  return useQuery<components["schemas"]["OrganizationFinanceSummary"]>({
-    queryKey: ["finance-summary", orgId],
+export function useFinanceSummary(companyId: string) {
+  return useQuery<components["schemas"]["CompanyFinanceSummary"]>({
+    queryKey: ["finance-summary", companyId],
     queryFn: async () => {
-      const { data, error } = await api.GET(
-        "/organizations/{id}/finance-summary",
-        { params: { path: { id: orgId } } },
-      );
+      const { data, error } = await api.GET("/companies/{id}/finance-summary", {
+        params: { path: { id: companyId } },
+      });
       if (error) {
         throwProblem(error);
       }

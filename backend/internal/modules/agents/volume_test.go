@@ -63,7 +63,7 @@ func (s *servingTool) Spec() mcp.ToolSpec { return s.spec }
 func (s *servingTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
 	for range s.records {
 		newWireRecord(ctx, datasource.Record{
-			Ref: datasource.EntityRef{Type: "person", ID: ids.NewV7()},
+			Ref: datasource.EntityRef{Type: "contact", ID: ids.NewV7()},
 		})
 	}
 	if s.fail {
@@ -181,7 +181,7 @@ func (rt *repeatingTool) Spec() mcp.ToolSpec { return rt.spec }
 
 func (rt *repeatingTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
 	for range rt.times {
-		newWireRecord(ctx, datasource.Record{Ref: datasource.EntityRef{Type: "person", ID: rt.id}})
+		newWireRecord(ctx, datasource.Record{Ref: datasource.EntityRef{Type: "contact", ID: rt.id}})
 	}
 	return json.RawMessage(`{}`), nil
 }

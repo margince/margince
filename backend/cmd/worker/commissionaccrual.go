@@ -23,7 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/commissions"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // startCommissionAccrual subscribes the consumer that turns a won deal into
@@ -42,7 +42,7 @@ func startCommissionAccrual(
 ) {
 	accrual := compose.NewCommissionGen(pool,
 		commissions.NewStore(compose.InstallationDB(pool)),
-		people.NewStore(compose.InstallationDB(pool)), logger)
+		contacts.NewStore(compose.InstallationDB(pool)), logger)
 	_, _ = fmt.Fprintln(stdout, "worker accruing partner commission on won deals")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:commissions", accrual.HandleEvent, logger, 0) })
 }

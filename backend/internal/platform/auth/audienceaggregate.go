@@ -27,7 +27,7 @@ package auth
 //
 // Deliberately NOT the reader's own audience. An aggregate is read by
 // colleagues who did not receive the mail, and a per-caller answer would give
-// two people different numbers for the same account — which reads as a bug and
+// two contacts different numbers for the same account — which reads as a bug and
 // discloses the difference between them. The question an aggregate asks is
 // "may EVERYONE see this", and the answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {

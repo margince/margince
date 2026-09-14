@@ -61,7 +61,7 @@ var signalSummaryByLang = map[textlang.Lang]signalSummaryCopy{
 //
 // The fallback is unreachable for a language the product ships — the census
 // holds that — and it is still here because the language comes off a settings
-// row a person can edit. Answering in a language beats answering in none.
+// row a contact can edit. Answering in a language beats answering in none.
 func signalSummaryCopyFor(lang textlang.Lang) signalSummaryCopy {
 	if said, ok := signalSummaryByLang[lang]; ok {
 		return said

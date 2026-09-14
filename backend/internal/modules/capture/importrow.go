@@ -80,9 +80,9 @@ func (s *Sink) WithAudienceRecompute(recompute AudienceRecomputer) *Sink {
 	return &c
 }
 
-// ParticipantNamer completes the names of the people an activity's participant
-// rows resolved to, from the name the transport gave them. The people module
-// owns the person table and so owns that write; compose injects it, because
+// ParticipantNamer completes the names of the contacts an activity's participant
+// rows resolved to, from the name the transport gave them. The contacts module
+// owns the contact table and so owns that write; compose injects it, because
 // capture never imports a sibling — the same shape AudienceRecomputer travels
 // on, and for the same reason.
 //
@@ -130,7 +130,7 @@ func (s *Sink) recordThisImport(
 	if !delivered {
 		// Not this seat's message to claim. The capture already stored nothing
 		// (the natural key collided), so there is nothing to undo and nothing to
-		// tell the connector: the message is on the timeline, for the people it
+		// tell the connector: the message is on the timeline, for the contacts it
 		// belongs to.
 		return nil
 	}

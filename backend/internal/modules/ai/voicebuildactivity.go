@@ -8,7 +8,7 @@ package ai
 // The router can only speak once a model call is over, so a task it reports is
 // settled the moment it appears: a rep asks the product to learn their writing
 // voice, sees nothing for as long as it takes, and then finds it already done.
-// For work a person waits on, settled-only is worse than silence — it looks
+// For work a rep waits on, settled-only is worse than silence — it looks
 // like nothing happened.
 //
 // A build has what a live line needs and the router does not: a durable row

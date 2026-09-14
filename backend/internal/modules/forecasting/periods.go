@@ -13,7 +13,7 @@ import (
 //
 // It carries the SAME window twice, in two types, because the two columns it is
 // compared against are two types. `deal.expected_close_date` is a zoneless
-// `date`: a person wrote down a day, and it means that day everywhere.
+// `date`: a contact wrote down a day, and it means that day everywhere.
 // `deal.closed_at` is a `timestamptz`: an instant, which falls on different
 // days depending on where you stand.
 //
@@ -118,7 +118,7 @@ func ResolvePeriod(kind PeriodKind, at time.Time, fiscalStartMonth int, zone *ti
 //
 // SEVEN LOCAL DAYS, not 168 hours. AddDate crosses a daylight-saving boundary
 // by keeping the wall clock, so the spring week is 167 hours and the autumn one
-// 169, and both are still the seven days a person worked. Adding a duration
+// 169, and both are still the seven days a contact worked. Adding a duration
 // would leave the autumn week ending an hour before Sunday closed.
 func ResolveWeek(monday time.Time, zone *time.Location) (Period, error) {
 	if zone == nil {

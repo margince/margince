@@ -34,7 +34,7 @@ import (
 func TestEveryDeclaredFilterReachesTheQuery(t *testing.T) {
 	kind := "site_lead"
 	status := "pending"
-	targetType := "organization"
+	targetType := "company"
 	targetID := ids.NewV7()
 
 	q, args := approvalPageQuery(ListInput{
@@ -244,7 +244,7 @@ func idsOf(rows []row) []ids.ApprovalID {
 // that id. Refusing it is what keeps "I asked about this company" from
 // silently answering with the whole workspace's inbox.
 func TestListApprovalsRefusesHalfATargetReference(t *testing.T) {
-	targetType := "organization"
+	targetType := "company"
 	targetID := openapi_types.UUID(ids.NewV7())
 
 	for name, params := range map[string]crmcontracts.ListApprovalsParams{
@@ -287,7 +287,7 @@ func TestListApprovalsRefusesHalfATargetReference(t *testing.T) {
 // The whole pair binds through to the query, and so does the kind the contract
 // has declared all along.
 func TestTheWholeTargetPairAndKindBind(t *testing.T) {
-	targetType := "organization"
+	targetType := "company"
 	targetID := ids.NewV7()
 	kind := "site_lead"
 	status := crmcontracts.ListApprovalsParamsStatusPending

@@ -132,7 +132,7 @@ func (s *Store) moveRoom(ctx context.Context, id ids.DealRoomID, move roomMove) 
 	// refuses an agent on these three routes, but a caller reaching moveRoom
 	// from inside the process — a compose orchestration, the buyer edge — would
 	// pass that gate by never meeting it. Suspending or ending a buyer's access
-	// is a person's act, and this is where that survives a new caller.
+	// is a contact's act, and this is where that survives a new caller.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return crmcontracts.DealRoom{}, err
 	}

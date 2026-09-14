@@ -21,18 +21,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // CreateContractInput is one agreement as a human recorded it. Status is
 // absent by design: an agreement is born a draft and leaves that state only
 // through an asserted transition.
 type CreateContractInput struct {
-	OrganizationID   ids.OrganizationID
-	DealID           *ids.DealID
-	ProjectID        *ids.ProjectID
-	ContractNumber   *string
-	Title            string
-	ValueMinor       *int64
+	CompanyID      ids.CompanyID
+	DealID         *ids.DealID
+	ProjectID      *ids.ProjectID
+	ContractNumber *string
+	Title          string
+	ValueMinor     *int64
+	// ArrMinor is the recurring half of the agreement's worth, in the same
+	// currency as ValueMinor.
+	ArrMinor         *int64
 	Currency         *string
 	ValueBasis       string
 	StartsOn         *time.Time
@@ -40,8 +44,11 @@ type CreateContractInput struct {
 	RenewalOn        *time.Time
 	AutoRenew        bool
 	NoticePeriodDays *int
-	SignedOn         *time.Time
-	Source           string
+	PaymentTermDays  *int
+	// CustomFields are the cf_* values a create carries, as the wire sent them.
+	CustomFields map[string]any
+	SignedOn     *time.Time
+	Source       string
 }
 
 // CreateContract records an agreement.
@@ -53,40 +60,50 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = createContractTx(ctx, tx, in, by, s.today())
+		out, err = createContractTx(ctx, tx, in, by, s.today(), active)
 		return err
 	})
 	return out, err
 }
 
-func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time) (crmcontracts.Contract, error) {
+func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by string, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
-	if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksVisible(ctx, tx, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	if err := ensureLinksShareOrganization(ctx, tx, in.OrganizationID.UUID,
+	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
 		dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	id := ids.New[ids.ContractKind]()
-	_, err := tx.Exec(ctx,
-		`INSERT INTO contract (id, organization_id, deal_id, project_id, contract_number, title,
-		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
-		                       auto_renew, notice_period_days, signed_on, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
-		id, in.OrganizationID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
+	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, []any{
+		id, in.CompanyID, in.DealID, in.ProjectID, in.ContractNumber, in.Title,
 		in.ValueMinor, in.Currency, in.ValueBasis, in.StartsOn, in.EndsOn, in.RenewalOn,
-		in.AutoRenew, in.NoticePeriodDays, in.SignedOn, in.Source, by)
+		in.AutoRenew, in.NoticePeriodDays, in.PaymentTermDays, in.SignedOn, in.Source, by,
+		in.ArrMinor,
+	})
+	_, err := tx.Exec(ctx,
+		`INSERT INTO contract (id, company_id, deal_id, project_id, contract_number, title,
+		                       value_minor, currency, value_basis, starts_on, ends_on, renewal_on,
+		                       auto_renew, notice_period_days, payment_term_days, signed_on,
+		                       source, captured_by, arr_minor`+cfCols+`)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+		         $19`+cfHolders+`)`,
+		args...)
 	if err != nil {
 		if storekit.IsForeignKeyViolation(err) {
 			return crmcontracts.Contract{}, apperrors.ErrNotFound
@@ -98,13 +115,13 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	}
 
 	auditID, err := storekit.Audit(ctx, tx, "create", contractObject, id.UUID, nil,
-		map[string]any{"title": in.Title, "organization_id": in.OrganizationID.UUID})
+		map[string]any{"title": in.Title, "company_id": in.CompanyID.UUID})
 	if err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("audit contract create: %w", err)
 	}
 	created := crmcontracts.PublicEventContractCreated{
 		Title:          in.Title,
-		OrganizationId: openapi_types.UUID(in.OrganizationID.UUID),
+		CompanyId:      openapi_types.UUID(in.CompanyID.UUID),
 		Status:         StatusDraft,
 		ValueBasis:     in.ValueBasis,
 		ContractNumber: in.ContractNumber,
@@ -116,19 +133,23 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, created); err != nil {
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.created: %w", err)
 	}
-	return readContractForCaller(ctx, tx, id, asOf)
+	return readContractForCaller(ctx, tx, id, asOf, active)
 }
 
 // UpdateContract applies a partial patch. Status is absent by design: it moves
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
 func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, ifVersion *int64) (crmcontracts.Contract, error) {
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// The patch is a write, so the row must first be visible as a read —
 		// otherwise a caller learns a contract exists by patching it.
 		existing, err := writableContract(ctx, tx, id, s.today())
@@ -137,7 +158,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		}
 		// Naming a deal or a project is a read of it, on a PATCH exactly as on a
 		// create. Without this a caller re-points a contract at a record it
-		// cannot see — and because the organization arm of the visibility
+		// cannot see — and because the company arm of the visibility
 		// predicate enforces capture privacy while the deal arm does not,
 		// moving the anchor would strip that boundary from the row for good.
 		if err := ensureLinksVisible(ctx, tx, uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
@@ -147,24 +168,38 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 		if err != nil {
 			return err
 		}
-		if err := ensureLinksShareOrganization(ctx, tx, anchor,
+		if err := ensureLinksShareCompany(ctx, tx, anchor,
 			uuidRef(dealTable, in.DealId), uuidRef(projectTable, in.ProjectId)); err != nil {
+			return err
+		}
+		if err := refuseARedenominatedDraft(existing, in); err != nil {
 			return err
 		}
 		if err := refuseRepricingAFrozenContract(existing, in); err != nil {
 			return err
 		}
 		patch := contractPatch(existing, in)
+		// The cf_* values travel in the request's extension bag, so they are
+		// patched from it rather than from a named field. Without this a PATCH
+		// carrying custom fields succeeds and changes nothing.
+		storekit.SetCustomFieldPatch(patch, active, in.AdditionalProperties, existing.AdditionalProperties)
 		if patch.Empty() {
 			// The unchanged row still leaves the store, so it is masked like
-			// any other answer — `existing` is the write path's pre-image.
-			out, err = maskContractForCaller(ctx, tx, existing)
-			return err
+			// any other answer. It is re-read WITH the catalog rather than
+			// reusing the pre-image: writableContract reads with nil columns,
+			// so `existing` carries no custom values and answering with it
+			// would strip every one from the response.
+			unchanged, readErr := readContractForCaller(ctx, tx, id, s.today(), active)
+			if readErr != nil {
+				return readErr
+			}
+			out = unchanged
+			return nil
 		}
 		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
 			return err
 		}
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today(), active)
 		return err
 	})
 	return out, err
@@ -240,11 +275,45 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 			return err
 		}
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractArchived{OrganizationId: openapi_types.UUID(anchor)}); err != nil {
+			crmcontracts.PublicEventContractArchived{CompanyId: openapi_types.UUID(anchor)}); err != nil {
 			return fmt.Errorf("emit contract.archived: %w", err)
 		}
 		return nil
 	})
+}
+
+// refuseARedenominatedDraft holds for a DRAFT what the frozen-rate guard below
+// holds for everything else: a currency changed under a figure nobody restated
+// silently reprices the agreement.
+//
+// A draft is still the human's to re-price, so the currency may move — but the
+// stored numeral carries no unit, and moving the code alone turns 12,000 EUR
+// into 12,000 JPY with nothing in the row or its audit diff saying the value
+// changed. Requiring every populated figure to be sent again in the same
+// request makes the reprice explicit and puts it in the diff.
+//
+// Re-sending the currency the draft already holds is not a change and asks for
+// nothing.
+func refuseARedenominatedDraft(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) error {
+	if in.Currency == nil || statusOf(existing) != StatusDraft {
+		return nil
+	}
+	if existing.Currency == nil || *existing.Currency == *in.Currency {
+		return nil
+	}
+	if existing.ValueMinor != nil && in.ValueMinor == nil {
+		return &ContractCheckError{
+			Field:  "value_minor",
+			Reason: "changing the currency requires restating the value in the new currency, because the stored number carries no unit of its own",
+		}
+	}
+	if existing.ArrMinor != nil && in.ArrMinor == nil {
+		return &ContractCheckError{
+			Field:  "arr_minor",
+			Reason: "changing the currency requires restating the recurring value in the new currency, because the stored number carries no unit of its own",
+		}
+	}
+	return nil
 }
 
 // refuseRepricingAFrozenContract keeps a contract's currency and its frozen
@@ -297,6 +366,9 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	if in.ValueMinor != nil {
 		patch.Set("value_minor", existing.ValueMinor, *in.ValueMinor)
 	}
+	if in.ArrMinor != nil {
+		patch.Set("arr_minor", existing.ArrMinor, *in.ArrMinor)
+	}
 	if in.Currency != nil {
 		patch.Set("currency", existing.Currency, *in.Currency)
 	}
@@ -317,6 +389,9 @@ func contractPatch(existing crmcontracts.Contract, in crmcontracts.UpdateContrac
 	}
 	if in.NoticePeriodDays != nil {
 		patch.Set("notice_period_days", existing.NoticePeriodDays, *in.NoticePeriodDays)
+	}
+	if in.PaymentTermDays != nil {
+		patch.Set("payment_term_days", existing.PaymentTermDays, *in.PaymentTermDays)
 	}
 	if in.SignedOn != nil {
 		patch.Set("signed_on", existing.SignedOn, in.SignedOn.Time)
@@ -370,15 +445,15 @@ func ensureLinksVisible(ctx context.Context, tx pgx.Tx, refs ...linkRef) error {
 	return nil
 }
 
-// CrossOrganizationLinkError reports a deal or project that belongs to a
+// CrossCompanyLinkError reports a deal or project that belongs to a
 // different company than the contract does.
-type CrossOrganizationLinkError struct{ Field string }
+type CrossCompanyLinkError struct{ Field string }
 
-func (e *CrossOrganizationLinkError) Error() string {
+func (e *CrossCompanyLinkError) Error() string {
 	return "the " + strings.TrimSuffix(e.Field, "_id") + " belongs to a different company than this contract"
 }
 
-// ensureLinksShareOrganization refuses a contract whose deal or project belongs
+// ensureLinksShareCompany refuses a contract whose deal or project belongs
 // to another company.
 //
 // This is a VISIBILITY rule as much as a data-integrity one. The predicate that
@@ -387,36 +462,36 @@ func (e *CrossOrganizationLinkError) Error() string {
 // A's agreement to everyone who can see B — including through the events it
 // emits. Two independent "can you see it" checks cannot catch that; only asking
 // whether the two name the same company can.
-func ensureLinksShareOrganization(ctx context.Context, tx pgx.Tx, orgID ids.UUID, refs ...linkRef) error {
+func ensureLinksShareCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID, refs ...linkRef) error {
 	for _, ref := range refs {
 		if ref.id == nil {
 			continue
 		}
-		// Nullable, because deal.organization_id is — a deal may be worked
+		// Nullable, because deal.company_id is — a deal may be worked
 		// before anyone knows whose it is, and the create form leaves Company
-		// optional. project.organization_id is NOT NULL, so only the deal arm
+		// optional. project.company_id is NOT NULL, so only the deal arm
 		// ever reads absent.
-		var linkedOrg *ids.UUID
+		var linkedCompany *ids.UUID
 		//nolint:gosec // the table name is a package literal from dealRef/projectRef, never client input
-		query := "SELECT organization_id FROM " + ref.table + " WHERE id = $1"
-		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedOrg)
+		query := "SELECT company_id FROM " + ref.table + " WHERE id = $1"
+		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedCompany)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// EnsureLinkTarget already ran, so an absent row here means it was
 			// archived or deleted in between; answer as it does.
 			return apperrors.ErrNotFound
 		}
 		if err != nil {
-			return fmt.Errorf("read %s organization: %w", ref.table, err)
+			return fmt.Errorf("read %s company: %w", ref.table, err)
 		}
 		// A deal naming no company is not a company this contract disagrees
 		// with. The leak this check exists against is A's agreement reaching
 		// everyone who can see B's deal; with no B there is nobody it reaches
 		// that the deal itself does not already admit.
-		if linkedOrg == nil {
+		if linkedCompany == nil {
 			continue
 		}
-		if *linkedOrg != orgID {
-			return &CrossOrganizationLinkError{Field: ref.table + "_id"}
+		if *linkedCompany != companyID {
+			return &CrossCompanyLinkError{Field: ref.table + "_id"}
 		}
 	}
 	return nil

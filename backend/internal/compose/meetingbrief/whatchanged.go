@@ -5,9 +5,9 @@ package meetingbrief
 
 // "What changed since we last spoke" — the section a rep actually opens a
 // brief for. "We last spoke" is the READER's last interaction with the
-// people in this room: the newest past activity, linked to any of them,
+// contacts in this room: the newest past activity, linked to any of them,
 // that the reader took part in. Two reps honestly get two baselines on one
-// deal, which is correct — it is what "last spoke" means to the person
+// deal, which is correct — it is what "last spoke" means to the contact
 // reading. With no such interaction the section says FIRST CONTACT rather
 // than "nothing changed", which would be a false claim.
 //
@@ -51,7 +51,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		ceiling = room.StartsAt
 	}
 	ceilingPos := arg(ceiling)
-	peoplePos := arg(room.Room)
+	contactsPos := arg(room.Room)
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
 		return time.Time{}, false, err
@@ -79,8 +79,8 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 		  JOIN activity_participant ap ON ap.activity_id = a.id AND ap.user_id = $%d
 		 WHERE a.id <> $%d AND a.occurred_at < $%d AND a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM activity_link l
-		                WHERE l.activity_id = a.id AND l.entity_type = 'person' AND l.person_id = ANY($%d))
-		   AND %s AND %s`, mePos, roomPos, ceilingPos, peoplePos, scope, within), args...).Scan(&last)
+		                WHERE l.activity_id = a.id AND l.entity_type = 'contact' AND l.contact_id = ANY($%d))
+		   AND %s AND %s`, mePos, roomPos, ceilingPos, contactsPos, scope, within), args...).Scan(&last)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return time.Time{}, false, fmt.Errorf("read when the reader last spoke to the room: %w", err)
 	}
@@ -151,17 +151,17 @@ const whatChangedCap = 5
 func changedClaimLine(claim ClaimIn) string {
 	switch claim.Kind {
 	case kindCommitmentOurs:
-		return fmt.Sprintf("Since then we promised %s: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then we promised %s: %s", claim.ContactName, claim.Body)
 	case kindCommitmentTheirs:
-		return fmt.Sprintf("Since then %s promised: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then %s promised: %s", claim.ContactName, claim.Body)
 	case kindObjection:
-		return fmt.Sprintf("Since then %s objected: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then %s objected: %s", claim.ContactName, claim.Body)
 	case kindDecision:
-		return fmt.Sprintf("Since then it was agreed with %s: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then it was agreed with %s: %s", claim.ContactName, claim.Body)
 	case kindOpenQuestion:
-		return fmt.Sprintf("Since then %s asked: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then %s asked: %s", claim.ContactName, claim.Body)
 	default:
-		return fmt.Sprintf("Since then %s said: %s", claim.PersonName, claim.Body)
+		return fmt.Sprintf("Since then %s said: %s", claim.ContactName, claim.Body)
 	}
 }
 

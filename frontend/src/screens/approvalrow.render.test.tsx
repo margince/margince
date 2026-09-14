@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -106,7 +106,7 @@ describe("the offer to put an approved change back", () => {
     );
     render(<ApprovalRow approval={closeDateApproval()} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
 
     const undo = await screen.findByRole("button", {
       name: "Undo on the record",
@@ -155,7 +155,7 @@ describe("the offer to put an approved change back", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(approveCalls(fetched)).toBe(1));
     expect(
       screen.queryByRole("button", { name: "Undo on the record" }),

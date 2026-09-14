@@ -21,7 +21,7 @@ package finance
 // catalog carries no finance verb at all, and neither of the two types that
 // look adjacent fits. `mirror.*` belongs to the overlay write-back stream, so
 // staging a mirrored invoice under it would route an accounting fact to
-// subscribers watching for something else entirely. `organization.updated`
+// subscribers watching for something else entirely. `company.updated`
 // would tell every subscriber that a company record changed when none did.
 // Publishing under either is worse than publishing nothing: a wrong envelope
 // is acted on, an absent one is not.
@@ -70,34 +70,34 @@ const (
 // it received arrives as `open_minor`, which is gross less paid, clamped at
 // nothing-owed.
 type invoiceImage struct {
-	OrganizationID ids.OrganizationID `json:"organization_id"`
-	Number         *string            `json:"number"`
-	IssuedAt       time.Time          `json:"issued_at"`
-	DueAt          *time.Time         `json:"due_at"`
-	Status         string             `json:"status"`
-	Currency       string             `json:"currency"`
-	NetMinor       int64              `json:"net_minor"`
-	TaxMinor       int64              `json:"tax_minor"`
-	GrossMinor     int64              `json:"gross_minor"`
-	OpenMinor      int64              `json:"open_minor"`
-	CreditedMinor  int64              `json:"credited_minor"`
-	FullyPaidAt    *time.Time         `json:"fully_paid_at"`
-	DisputedAt     *time.Time         `json:"disputed_at"`
-	VoidAt         *time.Time         `json:"void_at"`
-	FxRateToBase   *float64           `json:"fx_rate_to_base"`
-	SyncHash       string             `json:"sync_hash"`
+	CompanyID     ids.CompanyID `json:"company_id"`
+	Number        *string       `json:"number"`
+	IssuedAt      time.Time     `json:"issued_at"`
+	DueAt         *time.Time    `json:"due_at"`
+	Status        string        `json:"status"`
+	Currency      string        `json:"currency"`
+	NetMinor      int64         `json:"net_minor"`
+	TaxMinor      int64         `json:"tax_minor"`
+	GrossMinor    int64         `json:"gross_minor"`
+	OpenMinor     int64         `json:"open_minor"`
+	CreditedMinor int64         `json:"credited_minor"`
+	FullyPaidAt   *time.Time    `json:"fully_paid_at"`
+	DisputedAt    *time.Time    `json:"disputed_at"`
+	VoidAt        *time.Time    `json:"void_at"`
+	FxRateToBase  *float64      `json:"fx_rate_to_base"`
+	SyncHash      string        `json:"sync_hash"`
 }
 
 // paymentImage is one mirrored payment as the audit trail carries it,
 // including the invoice it settles: a payment reassigned to another invoice is
 // money moving between accounts, and the before image is where that shows.
 type paymentImage struct {
-	OrganizationID ids.OrganizationID `json:"organization_id"`
-	InvoiceID      *ids.UUID          `json:"invoice_id"`
-	Currency       string             `json:"currency"`
-	AmountMinor    int64              `json:"amount_minor"`
-	PaidAt         time.Time          `json:"paid_at"`
-	SyncHash       string             `json:"sync_hash"`
+	CompanyID   ids.CompanyID `json:"company_id"`
+	InvoiceID   *ids.UUID     `json:"invoice_id"`
+	Currency    string        `json:"currency"`
+	AmountMinor int64         `json:"amount_minor"`
+	PaidAt      time.Time     `json:"paid_at"`
+	SyncHash    string        `json:"sync_hash"`
 }
 
 // externalCustomerImage is one mirrored directory entry. It carries no money;

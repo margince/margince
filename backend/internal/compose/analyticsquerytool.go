@@ -32,7 +32,7 @@ import (
 
 // analyticsQueryToolRunner adapts the typed query engine to the tool seam:
 // strict-decode the wire shape, run, save when asked, re-encode.
-// The floor is DefaultFloor on both transports: a figure a person may not see
+// The floor is DefaultFloor on both transports: a figure a contact may not see
 // is one a model asking on their behalf may not see either.
 func analyticsQueryToolRunner(db *database.DB) agents.AnalyticsQueryRunner {
 	floor := analyticsquery.DefaultFloor

@@ -43,7 +43,7 @@ func TestIsConsumerCoversTheDefectsAHandPinnedListLeft(t *testing.T) {
 	}
 
 	// A company domain must never be one, least of all the personal domains
-	// that started this: they are a person's own domain, not a mailbox vendor.
+	// that started this: they are a contact's own domain, not a mailbox vendor.
 	company := []string{
 		"kestner.example", "rowanmarsh.example", "acme.example", "gradion.com",
 		"gmail.com.example", // suffix trickery is not a match
@@ -126,7 +126,7 @@ func TestBaselineSanitizesTheVendoredDataset(t *testing.T) {
 func TestHostnameRefusesWhatAForgedHeaderCanCarry(t *testing.T) {
 	// net/mail accepts far more than DNS does: every string below parses as the
 	// domain half of a From: address. Each one used to reach a SQL LIKE pattern,
-	// a crawl seed, and an organization_domain row.
+	// a crawl seed, and a company_domain row.
 	forged := []string{
 		"%",          // in a LIKE pattern this matched every address on file
 		"%.com",      //

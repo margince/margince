@@ -6,7 +6,7 @@
 package integration
 
 // The partner lifecycle fields over HTTP (A41/ADR-0032 + the partner-desk
-// working surface): PUT /organizations/{id}/partner carries the stage,
+// working surface): PUT /companies/{id}/partner carries the stage,
 // next-step, segments, and gate metrics; the round-trip read returns
 // exactly what was written; and a stage outside the closed lifecycle
 // vocabulary is the seam's 422, never the DB CHECK's 500.
@@ -18,7 +18,7 @@ import (
 
 // partnerWire is the contract Partner shape as this suite reads it.
 type partnerWire struct {
-	OrganizationID    string         `json:"organization_id"`
+	CompanyID         string         `json:"company_id"`
 	CertStatus        string         `json:"cert_status"`
 	PartnerRole       string         `json:"partner_role"`
 	RelationshipStage string         `json:"relationship_stage"`
@@ -34,7 +34,7 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 
 	// Upsert with the full lifecycle block.
 	var upserted partnerWire
-	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", AnyMap{
+	if status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
 		"partner_role":       "consulting",
 		"cert_status":        "applied",
 		"relationship_stage": "in_conversation",
@@ -51,10 +51,10 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 
 	// The read-back returns exactly what was written.
 	var fetched partnerWire
-	if status := e.Call(t, "GET", "/v1/organizations/"+e.orgID+"/partner", nil, nil, &fetched); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, &fetched); status != http.StatusOK {
 		t.Fatalf("get partner → %d", status)
 	}
-	if fetched.OrganizationID != e.orgID || fetched.PartnerRole != "consulting" || fetched.CertStatus != "applied" {
+	if fetched.CompanyID != e.companyID || fetched.PartnerRole != "consulting" || fetched.CertStatus != "applied" {
 		t.Fatalf("round-trip identity drifted: %+v", fetched)
 	}
 	if fetched.RelationshipStage != "in_conversation" {
@@ -75,14 +75,14 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 
 	// A stage outside the closed lifecycle vocabulary is refused at the
 	// seam — 422, and the stored stage stands.
-	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", AnyMap{
+	if status := e.Call(t, "PUT", "/v1/companies/"+e.companyID+"/partner", AnyMap{
 		"partner_role":       "consulting",
 		"relationship_stage": "best_friends",
 	}, map[string]string{"If-Match": "1"}, nil); status != 422 {
 		t.Fatalf("unknown relationship_stage → %d, want 422", status)
 	}
 	var after partnerWire
-	if status := e.Call(t, "GET", "/v1/organizations/"+e.orgID+"/partner", nil, nil, &after); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, &after); status != http.StatusOK {
 		t.Fatalf("get partner after refusal → %d", status)
 	}
 	if after.RelationshipStage != "in_conversation" {

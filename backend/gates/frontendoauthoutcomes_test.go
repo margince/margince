@@ -10,7 +10,7 @@ package gates
 // the SPA turns it into the sentence that human reads.
 //
 // A value only the server knows renders NOTHING — the maps ignore an unknown
-// segment rather than print it — so the failure is a person staring at a blank
+// segment rather than print it — so the failure is a contact staring at a blank
 // card after a connection did not work, with the reason sitting in a log they
 // cannot see. A value only the frontend knows is the opposite tell: copy that
 // can never appear, which is how a reader learns the map is not maintained.

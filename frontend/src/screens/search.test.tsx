@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -247,7 +247,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               snippet: "…Dana at Acme…",
@@ -295,7 +295,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               snippet: "…Dana at Acme…",
@@ -327,7 +327,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p1",
               title: "Dana Buyer",
               trust_tier: "external",
@@ -360,7 +360,7 @@ describe("SearchScreen", () => {
         jsonResponse({
           data: [
             {
-              type: "person",
+              type: "contact",
               id: "p2",
               title: "Sam Unknown",
               trust_tier: "unverified",
@@ -459,8 +459,8 @@ describe("SearchScreen", () => {
 // this is the assertion that says so for every member of it.
 describe("SearchScreen — every hit type the contract can return", () => {
   const KINDS = [
-    { type: "person", heading: "Contacts" },
-    { type: "organization", heading: "Organizations" },
+    { type: "contact", heading: "Contacts" },
+    { type: "company", heading: "Companies" },
     { type: "deal", heading: "Deals" },
     { type: "project", heading: "Projects" },
     { type: "product", heading: "Products" },

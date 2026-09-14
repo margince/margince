@@ -17,7 +17,6 @@ import {
   BookOpen,
   Building2,
   Database,
-  Gauge,
   House,
   KeyRound,
   type LucideIcon,
@@ -39,11 +38,11 @@ import { useMe } from "./common";
 import {
   SETTINGS_GROUPS as CATALOG_GROUPS,
   type SettingsPage,
-  type SettingsPageId,
   type SettingsReach,
   settingsReach,
   visibleSettingsPages,
 } from "./settingscatalog";
+import { PAGE_ICONS } from "./settingsnavicons";
 import { settingsRouteTarget } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
 
@@ -55,7 +54,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
 //
 // It used to be fifteen tabs plus nine routes outside them. What collapsed and
 // why: two surfaces both called "Capture" became one; the
-// installation and the company profile were always the same organization;
+// installation and the company profile were always the same company;
 // currency rates joined the base currency they convert to while model prices
 // joined the AI runtime they price; user administration and extension
 // permissions are one question about authority; the field editor, pipeline
@@ -83,7 +82,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // seat check for admin-or-ops — and it answered false for the whole group
 // whatever the entry underneath had decided. That is a guess about a
 // heterogeneous set: it spans surfaces with clean object grants (data model,
-// organization, knowledge) and surfaces the server gates on the role itself
+// company, knowledge) and surfaces the server gates on the role itself
 // (users, extensions). Every seeded role holds `pipeline`, `custom_field`,
 // `knowledge_corpus`, `automation`, `product`, `offer_template` and `tag`
 // reads, so the server answered those seats 200 while the product showed them
@@ -92,7 +91,7 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // which is the same rule applied to everyone rather than to two role names.
 // The server stays the RBAC authority on every card within.
 //
-// The personal group is where a credential or a connection the PERSON holds
+// The personal group is where a credential or a connection the COLLEAGUE holds
 // lives: `agents` carries the caller's own passports, so gating it would regress
 // passport minting for every seat that is not an admin, and `connections` carries
 // their own mailbox and their own LinkedIn network.
@@ -121,46 +120,6 @@ import { SettingsSearchBox } from "./settingssearchbox";
 // the file, including the two that claim to check the whole level.
 // The two audience groups the rail renders, in order. Beside the register they
 // group, so a group added to one is visible from the other.
-
-/**
- * A lucide glyph per catalog page.
- *
- * Here rather than in the catalog because the catalog is React-free by
- * construction — it is imported by a node test and a plain script, and one
- * lucide import would end that. A page missing from this map is a TypeScript
- * error, so the table cannot fall behind the catalog silently.
- */
-const PAGE_ICONS: Readonly<Record<SettingsPageId, LucideIcon>> = {
-  account: UserRound,
-  voice: Mic,
-  agents: KeyRound,
-  connections: Plug,
-  "capture-activity": Activity,
-  company: Building2,
-  authentication: ShieldCheck,
-  members: UsersRound,
-  teams: UsersRound,
-  seats: BadgeCheck,
-  pipelines: Database,
-  stageautomation: Gauge,
-  leads: Database,
-  fields: Database,
-  tags: Database,
-  products: Database,
-  capture: Mail,
-  integrations: Webhook,
-  knowledge: BookOpen,
-  import: Database,
-  models: Sparkles,
-  automations: Sparkles,
-  usage: Sparkles,
-  "model-calls": Sparkles,
-  privacy: ShieldCheck,
-  audit: ShieldCheck,
-  "system-health": Wrench,
-  extensions: Blocks,
-  reset: Wrench,
-};
 
 export const SETTINGS_TABS = [
   { id: "account", icon: UserRound, group: "you" },
@@ -207,7 +166,7 @@ type AdminTabId = Extract<
   { group: "admin" }
 >["id"];
 
-// Which Organization entries this principal can use, one answer per entry, each
+// Which Company entries this principal can use, one answer per entry, each
 // asking for the grant the cards on it ask for. The nav then describes the seat
 // instead of the role name it was assigned: a principal granted product writes by
 // an edited role reaches the data model, and nobody is offered a page whose every
@@ -253,7 +212,7 @@ type AdminTabId = Extract<
 // back — so the `||` sits on the results, never around the calls, and no hook
 // may move into the filter over the tab list.
 /**
- * Which Organization entries this principal may open.
+ * Which Company entries this principal may open.
  *
  * Exported because the command palette must answer the SAME question: it offers a
  * shortcut to two of these entries, and a shortcut that lands on the Account
@@ -289,15 +248,15 @@ export function useSettingsEntryVisibility(): Readonly<
   const fxRate = useCan("fx_rate", "read");
   const aiModelRate = useCan("ai_model_rate", "read");
   const embeddingReindex = useCan("embedding_reindex", "read");
-  const organization = useCan("organization", "read");
+  const company = useCan("company", "read");
   const installation = useCan("installation_settings", "read");
   const captureSettings = useCan("capture_settings", "read");
   const licenseRead = useCan("license", "read");
   const automation = useCan("automation", "read");
   const webhook = useCan("webhook_subscription", "read");
   // The consent registry's server gate, which is not a role and not "any member":
-  // consent/store.go's ListPurposes calls auth.Require(ctx, "person", read).
-  const person = useCan("person", "read");
+  // consent/store.go's ListPurposes calls auth.Require(ctx, "contact", read).
+  const contact = useCan("contact", "read");
   const overlay = useCan("overlay_connection", "read");
   // The one predicate below that is a ROLE rather than a grant. `GET /admin/reset-data`
   // and the job-health read are gated on the literal admin role server-side and no
@@ -316,7 +275,7 @@ export function useSettingsEntryVisibility(): Readonly<
   // refused. What an entry offers once opened is still each card's own
   // question, and the cards ask their own writes.
   const granted = {
-    // The organization, its profile and its currency table are one entry now, so
+    // The company, its profile and its currency table are one entry now, so
     // the predicate is the union of what they each asked for. Each is gated on
     // the SAME live grant the card inside asks for rather than on a role name:
     // deriving it from admin/ops would disagree with the cards in both
@@ -326,9 +285,9 @@ export function useSettingsEntryVisibility(): Readonly<
     //
     // The company profile carries a second condition that is a rollout FLAG
     // rather than a permission, so its grant ANDs with it: PUT /company is gated
-    // on organization writes, and the flag says whether the surface exists on
+    // on company writes, and the flag says whether the surface exists on
     // this installation at all.
-    general: installation || (organization && companyContext) || fxRate,
+    general: installation || (company && companyContext) || fxRate,
     // The member roster, the roles on it, and what a role may reach. No RBAC
     // object describes identity administration and none can — a `role` object
     // would encode a constant, and an admin who revoked their own grant on it
@@ -386,12 +345,12 @@ export function useSettingsEntryVisibility(): Readonly<
     // queue and the audit trail. `consent_config` is a governed object upstream and
     // absent from the shipped RBAC vocabulary, so there is no grant NAMED for the
     // registry — but the server does not gate it on a role either: ListPurposes
-    // demands `person:read`, so that is the grant to ask for, and asking it is what
+    // demands `contact:read`, so that is the grant to ask for, and asking it is what
     // keeps this from being `true` standing in for a permission. Every seeded role
     // holds it, and a role edited to drop it would otherwise reach a page of four
     // refusals. The three surfaces below the registry are narrower and each says so.
-    privacy: person,
-    // The document sets a person can ask questions of, and the files in them.
+    privacy: contact,
+    // The document sets a contact can ask questions of, and the files in them.
     // `knowledge_corpus:read` is the ASK, and the RBAC migration grants it to
     // every seeded role — so this entry opens for a manager or a rep, and the
     // card inside shows them the sets with no verbs. That is deliberate and is
@@ -442,7 +401,7 @@ export function useSettingsEntryVisibility(): Readonly<
  * `SETTINGS_TABS` carries the current one alone.
  */
 const RENAMED_TABS: Readonly<Record<string, SettingsTabId>> = {
-  people: "users",
+  contacts: "users",
 };
 
 export function settingsRouteTab(route: Route): {
@@ -526,7 +485,7 @@ export const SETTINGS_HOME_ID = "home";
  *
  * The shell asks for this and renders it as the second navigation level; it
  * never learns what a grant is. The two groups are the ones this screen has
- * always had — "You" is per-user work, "Organization" is posture an admin
+ * always had — "You" is per-user work, "Company" is posture an admin
  * curates — and a group with no visible member is dropped rather than printed
  * empty. They are named for the SUBJECT rather than repeating the word the level
  * above them already carries: "Settings / Your settings / …" said it twice in a
@@ -691,7 +650,7 @@ export function useVisibleSettingsPages(): readonly SettingsPage[] {
  *
  * The hook half of `settingsReach`, taking the same two facts as the visibility
  * hook above so the rail, the settings home and the read-only banner resolve one
- * partition rather than each deciding "can this person act?" for itself.
+ * partition rather than each deciding "can this contact act?" for itself.
  */
 export function useSettingsReach(): SettingsReach {
   const snapshot = useMe().data;

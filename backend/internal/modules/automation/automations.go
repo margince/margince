@@ -38,7 +38,7 @@ type AutomationStore struct {
 	// (automations_preview_renewal.go) validates a draft/stored
 	// object+date_field pair against before ever building a previewDef
 	// around it — nil is the zero-cost pass-through every other
-	// WithFieldCatalog consumer (deals.Store, people.Store) falls back to
+	// WithFieldCatalog consumer (deals.Store, contacts.Store) falls back to
 	// when the seam is unwired (tests, or a role that never mounted it).
 	catalog fieldcatalog.Reader
 }
@@ -62,7 +62,7 @@ func (s *AutomationStore) WithClock(now func() time.Time) *AutomationStore {
 // injects modules/customfields' Service here — ADR-0054: a module never
 // imports a sibling), so renewal_reminder's preview can validate a
 // workspace-controlled (object, date_field) pair before building SQL
-// around it, exactly like deals.Store/people.Store already do for their
+// around it, exactly like deals.Store/contacts.Store already do for their
 // own custom-column reads. Returns the store for chaining.
 func (s *AutomationStore) WithFieldCatalog(catalog fieldcatalog.Reader) *AutomationStore {
 	s.catalog = catalog
@@ -345,8 +345,8 @@ func (s *AutomationStore) Archive(ctx context.Context, id ids.AutomationID) erro
 }
 
 // SeedStarterAutomationsTx enables the system-owned starters at bootstrap.
-// A draft needs a person's authority, so its template stays paused until an
-// authorized person enables it and takes ownership.
+// A draft needs a contact's authority, so its template stays paused until an
+// authorized contact enables it and takes ownership.
 func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 	for _, entry := range Catalog() {
 		if !entry.Seeded {

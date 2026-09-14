@@ -127,10 +127,10 @@ describe("history field labels", () => {
     const byType = fieldsARecordUpdateWrites();
     expect([...byType.keys()].sort()).toEqual([
       "activity",
+      "company",
+      "contact",
       "deal",
       "lead",
-      "organization",
-      "person",
       "project",
     ]);
     expect(byType.get("deal")).toContain("amount_minor");

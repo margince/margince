@@ -52,9 +52,9 @@ type Message struct {
 	// this? It never drops a message; it only refuses the outbound attestation,
 	// so a responder's reply cannot vouch for an address the owner never chose.
 	machineTouched bool
-	// calendarNotice is groupware sending an invitation on a person's behalf.
+	// calendarNotice is groupware sending an invitation on a contact's behalf.
 	// It implies machineTouched and says something narrower: this message names
-	// an EVENT, so its recipients are attendees rather than people the workspace
+	// an EVENT, so its recipients are attendees rather than contacts the workspace
 	// corresponded with.
 	calendarNotice bool
 	// hasCalendarPart is the raw evidence calendarNotice is derived from: this
@@ -95,7 +95,7 @@ func (m Message) AttestSentByOwner(sent bool) Message {
 	return m
 }
 
-// Counterparty is the non-owner address on the message (the person this
+// Counterparty is the non-owner address on the message (the contact this
 // mail was with) — exported so a connector can tally distinct contacts.
 func (m Message) Counterparty() string { return m.counterparty }
 
@@ -147,14 +147,14 @@ func Parse(raw []byte, owner string) (Message, error) {
 	autoSubmitted, precedence := header.Values("Auto-Submitted"), header.Values("Precedence")
 	autoReply := isAutoReply(autoSubmitted, precedence)
 	machineTouched := isMachineTouched(autoSubmitted, precedence, hasMachineHandledHeader(header))
-	// Groupware speaking for a person is a machine having a hand in the message,
+	// Groupware speaking for a contact is a machine having a hand in the message,
 	// and it is the one shape no RFC 3834 marker covers: an invitation carries
 	// no Auto-Submitted, no List-* pair and no bulk Precedence. Withholding the
 	// attestation here is a DIFFERENT effect from withholding the counterparty
 	// in recordCounterparty — see that function — and each refuses the contact
 	// on its own, so each carries its own test.
 	// Only an invitation the OWNER sent. An invitation the owner RECEIVES names
-	// its organizer in From, and that organizer is a person who wrote to them —
+	// its organizer in From, and that organizer is a contact who wrote to them —
 	// suppressing them would delete a real counterparty from the record, which
 	// is the opposite of this rule's purpose. The wrong contacts came from the
 	// outbound direction: the owner invites, and every attendee reads as

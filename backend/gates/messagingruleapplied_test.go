@@ -38,8 +38,12 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -63,9 +67,17 @@ const (
 // Version is NOT identity, though it reads like it: messaging.Rules says it is
 // "stamped onto every decision taken under it", which is an obligation and a
 // promise to a subject who later asks which rules their message was judged
-// under. Excluding it here was this gate's own first blind spot — the register
-// below carries it instead, which is where an unkept promise belongs.
-var rulesIdentityFields = []string{"Jurisdiction"}
+// under. Excluding it here was this gate's own first blind spot. The register
+// below carried it until consent.rulesetStamp began writing it onto every
+// staging and transmit row, so it is an applied obligation now and belongs in
+// neither list.
+// Instruments names the LAWS the version stands for and binds nothing. It is
+// the citation a subject's decision is read back against — "Decree 91/2020/ND-CP",
+// not an obligation the engine could discharge — so demanding an engine reader
+// for it would be asking the engine to apply a footnote. The obligations those
+// instruments carry are the other fields, and each answers to this gate on its
+// own.
+var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 
 // unappliedRules are the obligations the engine does not read yet, each with
 // the reason it cannot.
@@ -80,21 +92,15 @@ var rulesIdentityFields = []string{"Jurisdiction"}
 // AssertAllMatched sees both a field that has since gained a reader and one the
 // struct no longer declares, because the arm below asks Waived only about a
 // field it has already found unapplied.
-var unappliedRules = gatekit.Waive(map[string]string{
-	"SubjectPrefix": "nothing prepends it. A send composes its own subject — " +
-		"activities.SendEmailInput.Subject is caller-supplied text — and no step " +
-		"between that and the provider consults the applicable rules, so an " +
-		"advertising message leaves unmarked whatever a pack declares",
-	"Disclosures": "nothing renders a disclosure into a message body. The kinds are a " +
-		"closed set and the merge keeps them, but no consumer turns one into text",
-	"OptOutAcknowledgement": "no acknowledgement is sent. The controller lane is the only " +
-		"one that may write to somebody who has just suppressed themselves, and it " +
-		"registers no template for this",
-	"Version": "no decision records which ruleset judged it. Strictest zeroes the version " +
-		"when it folds two jurisdictions and returns the codes it folded instead, and " +
-		"applicableRules discards that second result — so neither the version nor the " +
-		"codes reach communication_decision, which carries no column for either",
-})
+// IT IS EMPTY, and that is the point rather than an oversight. Every obligation
+// the shipped packs declare now has an engine reader reachable from a send:
+// the disclosures, the subject prefix, the ruleset version, the frequency cap,
+// the windows and — last to land — the opt-out acknowledgement.
+//
+// An empty register is not a claim that no gap can exist. It says none is
+// RECORDED, and the test below fails the moment a pack declares something the
+// engine does not read, which is what puts the next entry here.
+var unappliedRules = gatekit.Waive(map[string]string{})
 
 func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 	t.Parallel()
@@ -103,7 +109,14 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 	readers := engineRuleReaders(t)
 
 	for _, field := range obligations {
-		if readers[field] {
+		// READ IS NOT APPLIED, and this gate used to conflate them. A function
+		// that reads an obligation satisfies a read-census perfectly while
+		// nothing calls it, so the field looks applied and no message changes —
+		// which is exactly what happened when DisclosuresFor was written and
+		// the register line deleted in the same change. unreachedReaders names
+		// the fields whose only reader is waiting for a caller, so they stay in
+		// the register below rather than passing on a read nobody makes.
+		if readers[field] && !unreachedReaders[field] {
 			continue
 		}
 		if unappliedRules.Waived(t, field) {
@@ -117,6 +130,166 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 			field, rulesEngineDir)
 	}
 	unappliedRules.AssertAllMatched(t)
+}
+
+// unreachedReaders are the obligations whose only engine reader has no caller.
+//
+// A field here is read and NOT applied: the mapping from obligation to text
+// exists and no message carries the result. It stays in unappliedRules, and
+// TestEveryRuleReaderIsReachableFromASend below names the function waiting.
+//
+// An entry leaves this map when a send path calls the reader, which is the same
+// moment its register line goes.
+var unreachedReaders = map[string]bool{}
+
+// ruleReaderCallers maps a rules FIELD to the file where the seam is crossed.
+//
+// The key names the field (Rules.Disclosures); the value names the file whose
+// call reaches the reader. The check below asks whether that file calls a
+// function of the key's name, which is what catches an adapter gutted while its
+// wiring stays in place.
+//
+// An EMPTY value means not yet reached, and the field stays in unappliedRules
+// with the matching reason. The two entries are the same gap seen from two
+// sides: the register says the obligation is not applied, and this says which
+// function is waiting for a caller.
+//
+// gatekit:fixture the rule readers and the send paths that call them
+var ruleReaderCallers = map[string]string{
+	// The compose adapter, which is where the seam is actually crossed.
+	// activities/unsubscribe.go calls its own store helper, which calls the
+	// injected resolver — so naming the module file would pass on a call that
+	// never reaches consent if the wiring were removed.
+	//
+	// The KEY is the field's reader (DisclosuresFor reads Rules.Disclosures);
+	// the value names the function the adapter calls to get there, which opens
+	// its own transaction around it.
+	"Disclosures": "backend/internal/compose/disclosurefooter.go",
+}
+
+// TestEveryRuleReaderIsReachableFromASend closes this gate's own blind spot.
+//
+// The census above asks whether any engine code READS an obligation, which it
+// treats as applying it. A function that reads one and nothing calls satisfies
+// it perfectly — and that is not a hypothetical: consent.DisclosuresFor was
+// written, read Disclosures, let the register line be deleted, and had no
+// production caller. The obligation was exactly as unapplied as before, and the
+// register said it was done.
+//
+// Reading a rule is not applying it. Applying it means a message carries the
+// consequence, which requires somebody to ask.
+func TestEveryRuleReaderIsReachableFromASend(t *testing.T) {
+	t.Parallel()
+	for reader, caller := range ruleReaderCallers {
+		if caller == "" {
+			// Recorded rather than failed, because the register above carries
+			// the same gap and failing twice for one missing consumer would
+			// make the second failure noise. What this adds is the NAME of the
+			// function waiting, which the register cannot say.
+			t.Logf("%s reads a declared obligation and no send path calls it yet. "+
+				"A reader nothing calls satisfies the census above while changing no "+
+				"message, so the obligation is recorded as applied and is not. Either "+
+				"name the caller here once one exists.", reader)
+			continue
+		}
+		if !sendPathCalls(t, caller, reader) {
+			t.Errorf("%s no longer calls %s — the obligation stopped being applied and "+
+				"nothing else says so", caller, reader)
+		}
+	}
+}
+
+// composedWithoutDisclosures are the send paths that build a message body
+// without asking what it must disclose.
+//
+// Each is a FIRST CONTACT that plainly owes an Art. 13 disclosure, and each
+// composes its own body rather than going through activities' send path — so
+// the append that covers the ordinary send cannot reach them.
+//
+// The register above cannot hold this: its question is whether any engine code
+// reads the obligation, and the answer is now yes. This is the narrower one it
+// cannot ask — whether every path that sends reaches that reader.
+//
+// gatekit:fixture the send paths that compose a body without disclosures
+var composedWithoutDisclosures = map[string]string{
+	"backend/internal/compose/controllermail.go": "the installation's own mail — a privacy " +
+		"notice, a confirm link — is rendered by consent.RenderControllerTemplate and staged " +
+		"straight onto a delivery. It never reaches activities' send path, so a notice that " +
+		"exists to discharge an Art. 14 duty leaves without the controller identity the same " +
+		"pack demands on every first contact",
+	"backend/internal/modules/activities/channelsend.go": "a channel message builds its own " +
+		"outbound row from the caller's body and sends it unchanged. Nothing here is " +
+		"email-specific about the obligation — a first message over Telegram is as much a " +
+		"first contact as one over mail",
+	"backend/internal/modules/dealrooms/invitemail.go": "a buyer invitation goes out through " +
+		"the raw mailer, which adds headers rather than composing anything. " +
+		"gates/directmailbypass_test.go already ratifies this mailer's existence; what it " +
+		"does not say is that an invitation is often the first contact with its recipient",
+}
+
+// TestEverySendPathThatComposesABodyAsksWhatItOwes keeps the register above
+// honest: every entry names a file that still exists and still says why.
+//
+// WHAT IT DOES NOT DO, stated plainly because an earlier version of this
+// comment claimed otherwise: it does not DISCOVER a new undisclosed send path.
+// It reads the map and nothing else, so a path added tomorrow that composes a
+// body and asks nothing passes here in silence.
+//
+// Discovery was tried and withdrawn. Every anchor wide enough to catch these
+// three — a Body field in a struct literal, a call named Stage — matches
+// dozens of unrelated writers, and the allowlist needed to quiet them would be
+// longer than the register it guards. A waived gate reads as coverage, which is
+// worse than a register that admits its own limit.
+//
+// So the register is a RECORD, not a fence: three paths that owe an Art. 13
+// disclosure and do not carry it, written down where the next reader finds them
+// instead of rediscovering them. Removing an entry by closing its gap is the
+// point; the fence that would stop a fourth appearing does not exist yet.
+func TestEverySendPathThatComposesABodyAsksWhatItOwes(t *testing.T) {
+	t.Parallel()
+	for path, reason := range composedWithoutDisclosures {
+		if strings.TrimSpace(reason) == "" {
+			t.Errorf("%s is recorded as composing without disclosures and says no reason. "+
+				"A path here ships a message owing an obligation it does not carry, which "+
+				"is a decision somebody has to make rather than inherit.", path)
+		}
+		if _, err := os.Stat(filepath.Join(repoRoot, path)); err != nil {
+			t.Errorf("%s no longer exists — this record names a send path that is gone. "+
+				"Point it at what replaced the file, or delete the entry if the gap closed "+
+				"with it: %v", path, err)
+		}
+	}
+}
+
+// sendPathCalls reports whether the named file CALLS the named function, as
+// opposed to merely mentioning it.
+//
+// A substring match was the first version and it was too weak: gutting the call
+// while leaving the type name in a variable declaration still matched, so the
+// gate passed over a seam that no longer crossed. This walks the syntax and
+// looks for a call expression, which a comment or a type reference is not.
+func sendPathCalls(t *testing.T, file, fn string) bool {
+	t.Helper()
+	parsed, err := parser.ParseFile(token.NewFileSet(),
+		filepath.Join(repoRoot, file), nil, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", file, err)
+	}
+	var called bool
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		call, isCall := n.(*ast.CallExpr)
+		if !isCall {
+			return true
+		}
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			called = called || fun.Name == fn
+		case *ast.SelectorExpr:
+			called = called || fun.Sel.Name == fn
+		}
+		return true
+	})
+	return called
 }
 
 // TestTheEngineReadsAtLeastOneRuleField is the positive control for the reader

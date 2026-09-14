@@ -340,7 +340,7 @@ function HistoryEntryRow({
         {/* `summary` already NAMES the granting human as its subject
             ("Ada Authority, via an agent, updated the record"), so the
             on-behalf-of suffix that used to complete the old machine-first
-            sentence would now say the same person twice. */}
+            sentence would now say the same contact twice. */}
         <span className="tl-title">{entry.summary}</span>
         <span className="tl-meta">
           <span>{formatDateTime(entry.occurred_at, locale, recordZone)}</span>
@@ -348,7 +348,7 @@ function HistoryEntryRow({
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name
             // has to be handed in. The read path resolves it for exactly this:
-            // without it the chip says a person entered the row without
+            // without it the chip says a contact entered the row without
             // claiming which one, which is the same "nobody to ask" the
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}

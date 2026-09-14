@@ -27,7 +27,7 @@ package gates
 // user, whatever anybody decides about the columns that offer nothing.
 //
 // The Go side is read with its CONSTANTS RESOLVED. Several vocabularies spell
-// their keys as package constants (`ownerIDColumn`, `personNameColumn`), so a
+// their keys as package constants (`ownerIDColumn`, `contactNameColumn`), so a
 // scan reading string literals finds an EMPTY vocabulary and agrees with every
 // sort a screen could possibly offer. That is the failure direction a census
 // must not have, and this one had it until the constants were followed.
@@ -43,6 +43,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // listSurface pairs a screen with the resource it lists.
@@ -54,9 +56,9 @@ import (
 // surface out of the census quietly.
 var listSurfaces = map[string]struct{ vocabulary, source string }{
 	"deals.tsx":          {"dealListFields", "internal/modules/deals/deal_read.go"},
-	"contacts.tsx":       {"personListFields", "internal/modules/people/person_list.go"},
-	"leads.list.tsx":     {"leadListFields", "internal/modules/people/lead_list.go"},
-	"organizations.tsx":  {"organizationListFields", "internal/modules/people/organization_list.go"},
+	"contacts.tsx":       {"contactListFields", "internal/modules/contacts/contact_list.go"},
+	"leads.list.tsx":     {"leadListFields", "internal/modules/contacts/lead_list.go"},
+	"companies.tsx":      {"companyListFields", "internal/modules/contacts/company_list.go"},
 	"projects.tsx":       {"projectListFields", "internal/modules/projects/read.go"},
 	"products.tsx":       {"productListFields", "internal/modules/deals/product.go"},
 	"offertemplates.tsx": {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
@@ -161,7 +163,7 @@ func sharedColumnSorts(t *testing.T) map[string]string {
 // package constant to the string it holds.
 func goSortVocabulary(t *testing.T, source, name string) []string {
 	t.Helper()
-	constants := packageStringConstants(t, filepath.Dir(source))
+	constants := gatekit.PackageStringConstants(t, filepath.Dir(source))
 	file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", source, err)
@@ -193,45 +195,6 @@ func goSortVocabulary(t *testing.T, source, name string) []string {
 				out = append(out, value)
 			default:
 				t.Fatalf("%s has a key this gate cannot read (%T)", name, kv.Key)
-			}
-		}
-	}
-	return out
-}
-
-// packageStringConstants reads every string constant one package declares.
-func packageStringConstants(t *testing.T, dir string) map[string]string {
-	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
-	if err != nil {
-		t.Fatalf("listing %s: %v", dir, err)
-	}
-	out := map[string]string{}
-	for _, source := range sources {
-		if strings.HasSuffix(source, "_test.go") {
-			continue
-		}
-		file, err := parser.ParseFile(token.NewFileSet(), source, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", source, err)
-		}
-		for _, decl := range file.Decls {
-			general, ok := decl.(*ast.GenDecl)
-			if !ok || general.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range general.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok || len(value.Names) != 1 || len(value.Values) != 1 {
-					continue
-				}
-				if lit, ok := value.Values[0].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					unquoted, err := strconv.Unquote(lit.Value)
-					if err != nil {
-						t.Fatalf("unquoting %s in %s: %v", lit.Value, source, err)
-					}
-					out[value.Names[0].Name] = unquoted
-				}
 			}
 		}
 	}

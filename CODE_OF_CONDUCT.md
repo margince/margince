@@ -17,7 +17,7 @@ diverse, inclusive, and healthy community.
 Examples of behavior that contributes to a positive environment for our
 community include:
 
-* Demonstrating empathy and kindness toward other people
+* Demonstrating empathy and kindness toward other contacts
 * Being respectful of differing opinions, viewpoints, and experiences
 * Giving and gracefully accepting constructive feedback
 * Accepting responsibility and apologizing to those affected by our mistakes,
@@ -101,7 +101,7 @@ behavior was inappropriate. A public apology may be requested.
 actions.
 
 **Consequence**: A warning with consequences for continued behavior. No
-interaction with the people involved, including unsolicited interaction with
+interaction with the contacts involved, including unsolicited interaction with
 those enforcing the Code of Conduct, for a specified period of time. This
 includes avoiding interactions in community spaces as well as external channels
 like social media. Violating these terms may lead to a temporary or permanent
@@ -114,7 +114,7 @@ sustained inappropriate behavior.
 
 **Consequence**: A temporary ban from any sort of interaction or public
 communication with the community for a specified period of time. No public or
-private interaction with the people involved, including unsolicited interaction
+private interaction with the contacts involved, including unsolicited interaction
 with those enforcing the Code of Conduct, is allowed during this period.
 Violating these terms may lead to a permanent ban.
 

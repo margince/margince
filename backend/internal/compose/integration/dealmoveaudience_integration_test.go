@@ -168,7 +168,7 @@ func TestACachedMoveStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
 	}
 }
 
-// dealReaderWithoutActivities is the same person as dealReader, one grant fewer:
+// dealReaderWithoutActivities is the same contact as dealReader, one grant fewer:
 // they read deals and no longer read activities at all. The user id is passed in
 // because the card cache is keyed by it — a different id would be a different
 // reader with no card, which would pass this test for the wrong reason.

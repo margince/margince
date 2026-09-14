@@ -8,7 +8,7 @@ package consent
 //
 // A staging decision answers "may this be written down and queued". It cannot
 // answer "may this go out NOW", because the two are separated by a queue: a
-// person can withdraw consent, object, or have their address hard-bounce in
+// contact can withdraw consent, object, or have their address hard-bounce in
 // between, and a delivery that waited a day on a retry ladder was authorized
 // against a world that no longer exists. So the question is asked again here,
 // and the answer is persisted before any provider I/O rather than after — a
@@ -93,11 +93,25 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 			return err
 		}
 		modeFor := func(c commsauthz.Category) commsauthz.Mode { return ModeFor(modes, c) }
+		// WHICH RULES ARE ABOUT TO JUDGE THIS, read ONCE and before any of them
+		// do, so the row records the ruleset the decisions were actually taken
+		// under.
+		//
+		// Asking again after decideRecipients would let an installation that
+		// changed its declared country mid-transmit record a pack that judged
+		// nothing: the frequency ceiling would have been applied under the old
+		// country while the row named the new one. The reads are separate
+		// unlocked SELECTs under READ COMMITTED, so sharing this transaction
+		// does not make two of them agree — asking once does.
+		stamp, err := g.rulesetStamp(ctx, tx)
+		if err != nil {
+			return err
+		}
 		set, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
 		if err != nil {
 			return err
 		}
-		written, err := g.recordDecisions(ctx, tx, req, setID, set)
+		written, err := g.recordDecisions(ctx, tx, req, setID, set, stamp)
 		if err != nil {
 			return err
 		}
@@ -119,25 +133,36 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 		}
 		ticket.Allowed = set.Effective(modeFor, legacyAllowed)
 		ticket.Reason = refusalReason(set, legacyAllowed)
+		// THIS REFUSAL IS ABOUT THE RECIPIENTS, which is the one a recorded
+		// human decision can answer — they were shown the engine's verdict
+		// about the contacts, and that is what they signed for.
+		//
+		// Set here, from the engine's own answer, and never widened below: the
+		// wording check that follows refuses for a reason NOBODY has looked at,
+		// so it must not inherit this flag. See TransmitTicket.ConsentRefused.
+		ticket.ConsentRefused = !ticket.Allowed
 		// The message that goes must be the message that was authorized.
 		//
-		// Asked LAST, and only of a send the engine would otherwise allow: a
-		// delivery already refused is parked with a reason about the recipient,
-		// and replacing that with "the wording changed" would tell an operator
-		// to re-approve a message somebody had objected to. A changed body on
-		// an allowed send is its own refusal, and it parks rather than denying
-		// forever — the wording is a thing a human can look at and re-send.
-		if ticket.Allowed {
-			changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
-			if err != nil {
-				return err
-			}
-			if changed {
-				ticket.Allowed = false
-				ticket.Reason = "this message was edited after it was authorized, so the wording that " +
-					"was checked is not the wording that would go"
-			}
+		// ASKED OF EVERY MESSAGE THAT MIGHT ACTUALLY GO, which is not the same
+		// as every message the engine allows. A delivery the engine refused can
+		// still leave on a named human's recorded decision, and that decision
+		// was about specific words — so skipping this check for a refused
+		// delivery would let a directed send carry whatever the payload holds
+		// now rather than what was acknowledged. That was the defect: the check
+		// ran only under `if ticket.Allowed`, and a directed send is never
+		// allowed.
+		//
+		// It does not REPLACE the recipient refusal for a message that is not
+		// going anyway: an operator reading "the wording changed" about a
+		// message somebody had objected to would be told to re-approve the
+		// wrong thing. So the reason is only rewritten when the recipient
+		// verdict would otherwise have let it through, and the flag is cleared
+		// either way — a wording refusal is nobody's to waive.
+		changed, err := g.wordingDiffersFromStaging(ctx, tx, req)
+		if err != nil {
+			return err
 		}
+		applyWordingVerdict(&ticket, changed)
 		return nil
 	})
 	if err != nil {
@@ -221,10 +246,10 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
 	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing}
-	personID, found, err := resolvePerson(ctx, tx, r)
+	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		// Ambiguity refuses rather than picking, and that is an ANSWER about
-		// this send: no verdict can be about one person.
+		// this send: no verdict can be about one contact.
 		if errors.Is(err, apperrors.ErrConsentNotGranted) {
 			d.Verdict = commsauthz.VerdictDeny
 			d.ReasonCode = commsauthz.ReasonNoSubject
@@ -233,7 +258,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		return commsauthz.Decision{}, err
 	}
 	if !found {
-		// No person: this may still be a LEAD, which is a subject the engine
+		// No contact: this may still be a LEAD, which is a subject the engine
 		// can answer about. Without this arm every lead-only recipient came
 		// back `review`, so a category moved to enforce would refuse exactly
 		// the sends the legacy gate allows — an inversion rather than a
@@ -241,16 +266,16 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		// mode rather than the day this code was written.
 		return g.decideLead(ctx, tx, r, req, d, phase)
 	}
-	parsed, err := ids.Parse(personID)
+	parsed, err := ids.Parse(contactID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved subject is not an id: %w", err)
 	}
-	d.SubjectKind, d.SubjectID = entityPerson, parsed
+	d.SubjectKind, d.SubjectID = entityContact, parsed
 
 	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
 	// depends on what the message is, and nothing knows that until the record
 	// has been resolved — see applySuppression.
-	kinds, err := liveSuppression(ctx, tx, personID, r)
+	kinds, err := liveSuppression(ctx, tx, contactID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -265,7 +290,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, err = g.decideResolved(ctx, tx, req, subjectRef{
-		Kind: entityPerson, ID: personID, Address: address,
+		Kind: entityContact, ID: contactID, Address: address,
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 	}, d, phase, len(kinds) > 0)
 	if err != nil {
@@ -282,7 +307,7 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // prose meant an ordinary copy edit in verdict.go could silently reclassify a
 // legal fact, and it collapsed three different blocks into "objection" — a
 // withdrawal under Art. 7(3), and a purpose class this installation has no
-// transport for, both recorded as though the person had objected. A subject
+// transport for, both recorded as though the contact had objected. A subject
 // access request discloses these rows, so a wrong label there is a false
 // statement about somebody.
 //
@@ -348,4 +373,26 @@ func refusalReason(set commsauthz.DecisionSet, legacyAllowed bool) string {
 	}
 	return fmt.Sprintf("%d of %d recipients are not authorized for this message (%s)",
 		len(denied), len(set.Decisions), denied[0].ReasonCode)
+}
+
+// applyWordingVerdict folds the wording answer into the ticket.
+//
+// Split out so the rule can be stated without a database behind it, and because
+// it is the rule a directed send hangs on: a message edited after it was
+// checked is refused for a reason NOBODY has looked at, so the flag that lets a
+// recorded decision waive the recipient refusal must not survive it.
+//
+// The REASON is only rewritten when the recipient verdict would otherwise have
+// let the message through. An operator reading "the wording changed" about a
+// message somebody had objected to would be told to re-approve the wrong thing.
+func applyWordingVerdict(ticket *commsauthz.TransmitTicket, changed bool) {
+	if !changed {
+		return
+	}
+	if ticket.Allowed {
+		ticket.Reason = "this message was edited after it was authorized, so the wording that " +
+			"was checked is not the wording that would go"
+	}
+	ticket.Allowed = false
+	ticket.ConsentRefused = false
 }

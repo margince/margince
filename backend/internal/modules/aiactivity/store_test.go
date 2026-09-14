@@ -59,15 +59,15 @@ func TestAChangeIsRefusedBeforeAnySQLWhenItsShapeCannotBeStored(t *testing.T) {
 	}
 }
 
-// A personal read with no bound person is refused rather than answered.
+// A personal read with no bound contact is refused rather than answered.
 // Answered, it would be a query with no predicate on the one column that makes
 // the feed personal — everybody's work, handed to whoever asked.
-func TestAPersonalReadWithNoPersonIsRefused(t *testing.T) {
+func TestAPersonalReadWithNoContactIsRefused(t *testing.T) {
 	_, err := NewStore(nil).Mine(context.Background(), time.Time{}, nil)
 	if err == nil {
-		t.Fatal("expected a refusal for a read with no person")
+		t.Fatal("expected a refusal for a read with no contact")
 	}
-	if !strings.Contains(err.Error(), "needs an authenticated person") {
+	if !strings.Contains(err.Error(), "needs an authenticated contact") {
 		t.Fatalf("the refusal must say what is missing, got %v", err)
 	}
 }
@@ -76,10 +76,10 @@ func TestAPersonalReadWithNoPersonIsRefused(t *testing.T) {
 // no pool, so a refusal that did not precede the read would panic rather than
 // pass — and it is the permission sentinel, which is what lets the attention
 // feed render the lane as withheld instead of failing the day.
-func TestTroubledWithNoPersonIsRefusedWithTheSentinel(t *testing.T) {
+func TestTroubledWithNoContactIsRefusedWithTheSentinel(t *testing.T) {
 	_, err := NewStore(nil).Troubled(context.Background(), time.Time{}, 8)
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("Troubled with no person = %v, want ErrPermissionDenied", err)
+		t.Fatalf("Troubled with no contact = %v, want ErrPermissionDenied", err)
 	}
 }
 

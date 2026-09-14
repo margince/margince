@@ -22,7 +22,7 @@ type DealClaim struct {
 }
 
 // ClaimDeal makes the calling human the owner of one deal — the deals half of
-// the record claim (people owns the other three tables). Human-only, gated by
+// the record claim (contacts owns the other three tables). Human-only, gated by
 // storekit.ClaimOwnership: visible, and unowned or already the caller's to
 // change. ifVersion, when given, is the If-Match compare.
 func (s *Store) ClaimDeal(ctx context.Context, id ids.DealID, ifVersion *int64) (DealClaim, error) {

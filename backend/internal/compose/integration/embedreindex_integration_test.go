@@ -137,7 +137,7 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 	return e
 }
 
-// seedStaleEmbeddingRow plants one person carrying an embedding row under
+// seedStaleEmbeddingRow plants one contact carrying an embedding row under
 // a DIFFERENT identity than currentIdentity — the "swap case"
 // binding_integration_test.go's TestReindexNeededAfterStaleIdentityRow
 // proves at the store: an entity with an embedding row, just not a
@@ -145,15 +145,15 @@ func setupEmbedReindex(t *testing.T, router *ai.Router) *apptest.AppEnv {
 func seedStaleEmbeddingRow(t *testing.T, e *apptest.AppEnv, wsID string) {
 	t.Helper()
 	ctx := context.Background()
-	var personID string
+	var contactID string
 	if err := e.Owner.QueryRow(ctx,
-		`INSERT INTO person (full_name, source, captured_by) VALUES ('Stale Row Person', 'manual', 'human:x') RETURNING id`).Scan(&personID); err != nil {
-		t.Fatalf("seeding the stale-row person: %v", err)
+		`INSERT INTO contact (full_name, source, captured_by) VALUES ('Stale Row Contact', 'manual', 'human:x') RETURNING id`).Scan(&contactID); err != nil {
+		t.Fatalf("seeding the stale-row contact: %v", err)
 	}
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-		VALUES ('person', $1, 0, 'stale-hash', 'fake/stale-identity@1024', '[1,2,3]'::vector)`,
-		personID); err != nil {
+		VALUES ('contact', $1, 0, 'stale-hash', 'fake/stale-identity@1024', '[1,2,3]'::vector)`,
+		contactID); err != nil {
 		t.Fatalf("seeding the stale embedding row: %v", err)
 	}
 }

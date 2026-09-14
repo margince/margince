@@ -34,7 +34,7 @@
 }
 
 /* Our side. Teal, NOT the indigo family — indigo marks what an agent decided,
-   and the colleagues carrying a deal are people. */
+   and the colleagues carrying a deal are contacts. */
 .dc-seat-ours {
   fill: var(--tealText);
 }

@@ -74,7 +74,7 @@ var activityReadLiteral = gatekit.TableReadPattern("activity")
 // audit_log" AND "mentions before" anywhere in the declaration. A declaration
 // carries its error strings too, and this tree writes sentences with the words
 // "before" and "after" in them: asked separately, the two conditions pulled in
-// a person-name repair and a JSON-decode error message as audit-image readers,
+// a contact-name repair and a JSON-decode error message as audit-image readers,
 // which is a corpus that has to be ratified reader by reader for reasons that
 // are not true.
 //
@@ -270,6 +270,7 @@ var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMar
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/audiencerescope.go:AudienceRescopeGen.rescope":          "the audience-change consumer reads the thread key (content by the activity policy) and the capture owner of the ONE activity whose audience just moved — deliberately, as a system principal, because both are exactly what narrowing the derived models needs, to NARROW what other readers may see — excluding a held row here would leave a legal-hold conversation's derived signals workspace-visible, the exact disclosure the consumer exists to remove. The cost is that a held activity's thread key and owner id reach this system principal",
 	"internal/modules/privacy/auditaudienceboundary.go:ListAuditLog":          "the compliance read joins activity to evaluate ONE predicate — the audience arm the row's author set — and projects a single boolean from it. No activity column reaches the caller: the join's whole output is content_readable, which can only ever WITHHOLD an audit image, never reveal an activity. A held activity is therefore no more readable through this join than without it. The cost is that the audit IMAGE of a held activity stays readable to the admin, which is a pre-existing property of audit_log rather than of this join — audit_log is append-only and the hold is on the activity — and is filed rather than settled here, because making the compliance trail skip held rows is a decision about A165 and not a fix to the audience gap this join closes",
+	"internal/modules/contacts/acquiredwhen.go:acquisitionTimeFor":            "the acquisition's DATE, and the one column it reads from activity is occurred_at aggregated to a min() \u2014 never a subject, never content, and never projected as a row: the whole output is one timestamp that a compliance deadline is computed from. A held message is still evidence that this contact was obtained on the day it arrived, and the hold is about who may READ the correspondence, not about whether the acquisition happened. Excluding held rows would move the Art. 14 deadline LATER, which is the unsafe direction: a duty acquired in March would be dated from whatever unheld message came next, and the case would show time remaining on an obligation already missed. It runs as the capture path's own principal while creating a contact from a message that principal just captured. The cost is that the TIMESTAMP of a held activity reaches this computation \u2014 bounded to a minimum over the counterparty's captured history, so it cannot single out which message was held, and spent only on a deadline the installation owes that same contact",
 	"internal/modules/privacy/erasure_graph.go:subjectNamedOnAParticipantRow": "the identity predicate BOTH participant scrubs share — the Art. 17 eraser's and the retention sweep's — and both are WRITERS. The one thing it reads from activity is channel_provider, a registry key naming a transport: never a subject's content, never projected, and read only because a chat roster names the third human in a group by an account id alone, which is meaningful only against the provider that issued it. Excluding a held activity here would do the opposite of what the hold protects — it would leave the erased subject's account standing on that roster row forever, readable and matchable back to them by the next roster naming it, while every other arm of the same statement removed them. The four statements built on it each carry notTransitivelyHeld, which is the hold exclusion that belongs to this path; the cost is that a held activity's transport decides whether a participant row on it is scrubbed, a fact about the row's own erasability whose effect is always toward removing the subject",
 
 	// The four below read the trail with entity_type as a PARAMETER, so an
@@ -288,7 +289,7 @@ var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/compose/recordrestore.go:RestoreSeam.readRow":                  "reads ONE audit row by its own id to decide what restoring it means, entity_type parameterized. The image it reads is the image the caller is already looking at on that record's history — this read reveals nothing the history did not — and the restore it drives writes to the target row rather than disclosing the trail. Cost: an activity's before/after passes through this seam when a caller restores one",
 	"internal/compose/humanprecedence.go:fieldOwnership.HumanOwnedConflicts": "asks which fields of ONE record a human last set, by looking for the field's key in an after-image. It projects no image: the statement's output is the set of field KEYS a human owns, so an activity's content cannot leave through it. Cost: an activity's after-image decides which of its own field names are reported as human-owned",
 	"internal/compose/superseded.go:moneyMovedUnderIt":                       "asks whether a later audit row moved money under the row being judged, reading the after-image to compare one amount. It projects a boolean, never the image. Cost: an activity's after-image is read to answer a question about the row it belongs to",
-	"internal/modules/people/ensurenamefill.go:displayNameSetByHumanTx":      "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
+	"internal/modules/contacts/ensurenamefill.go:displayNameSetByHumanTx":    "asks whether a human ever set this record's display name, by looking for the key in an after-image, and projects EXISTS. No image leaves it. Cost: an activity's after-image is read to answer a question about that same record's naming",
 
 	"internal/modules/capture/tracestore.go:TraceStore.readRungs": "the capture trace ladder LEFT JOINs activity to reach one thing — the counterparty email a stored trace row was raised about — and uses it only inside the lateral's WHERE, to pick which disposition verdict applies. Every column it PROJECTS comes from capture_trace and from capture_pending_counterparty; no activity column is scanned, so a held activity is no more readable through this join than without it. Excluding held rows here would instead blank the disposition on a trace row whose message is under hold, which tells an operator the connector did nothing when it did. The cost is that a held activity's counterparty_email decides which verdict a trace row shows — a fact about the trace, never content of the activity",
 })
@@ -540,8 +541,8 @@ func activityFragmentsIn(decl ast.Decl) []fragmentBinding {
 // spec may be repeating the previous one's, and only the caller walking the
 // block knows what that was.
 //
-// One spec can bind several at once — `const activitySQL, personSQL = "…", "…"`
-// — so taking every name in the spec would let the person statement's name
+// One spec can bind several at once — `const activitySQL, contactSQL = "…", "…"`
+// — so taking every name in the spec would let the contact statement's name
 // answer for the activity one, in both directions: as evidence the activity
 // fragment is composed somewhere, and, when the function naming it reaches no
 // exclusion, as a reported reader of SQL it never touches.
@@ -778,7 +779,7 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 			// The false positives that made the window bounded in the first
 			// place: prose and error strings carrying the words on their own.
 			name: "a sentence using the words apart from any audit read",
-			sql:  `"the person's name was repaired before the export and after the merge"`,
+			sql:  `"the contact's name was repaired before the export and after the merge"`,
 			want: false,
 		},
 	} {

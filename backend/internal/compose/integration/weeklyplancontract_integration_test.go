@@ -36,7 +36,7 @@ func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
 	e := setupPlan(t)
 
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
-		SetRisks: true, Risks: ptr("Two people out; the Nordwind renewal has no sponsor"),
+		SetRisks: true, Risks: ptr("Two contacts out; the Nordwind renewal has no sponsor"),
 		SetCapacityNote: true, CapacityNote: ptr("Conference Thursday and Friday"),
 	})
 	if err != nil {

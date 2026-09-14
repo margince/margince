@@ -13,12 +13,12 @@
 // # What belongs here, and what does not
 //
 // The integration lane already has eleven topic packages beside this one
-// (agentaccess, capture, channels, org360, …). They are the right home for a
+// (agentaccess, capture, channels, company360, …). They are the right home for a
 // SUBSYSTEM: the connector's discovery chain, the capture pipeline, the
 // custom-field resolver. Each asks whether one part of the product is correct.
 //
 // A suite belongs HERE instead when it asks whether a JOURNEY works — several
-// subsystems in sequence, in the order and by the route a person actually
+// subsystems in sequence, in the order and by the route a contact actually
 // meets them, with the assertions written from what the user was promised
 // rather than from what a package exports. The distinction is the direction
 // the test is written from, not how many packages it touches.

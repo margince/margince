@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -102,7 +102,7 @@ describe("ProjectLinks", () => {
     draw({
       search: async () => [{ id: "p9", name: "Warehouse rollout" }],
       // Every real adapter refuses through throwProblem (companyprojects,
-      // personprojects, projectcompanies all do), so the stand-in refuses the
+      // contactprojects, projectcompanies all do), so the stand-in refuses the
       // same way. A plain Error here would be a test supplying its own version
       // of production and proving nothing about it.
       attach: async () => {
@@ -243,7 +243,7 @@ describe("ProjectLinks", () => {
       attach: async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "organization.link_project: permission denied",
+          detail: "company.link_project: permission denied",
         });
       },
     });
@@ -256,6 +256,6 @@ describe("ProjectLinks", () => {
     await user.click(await screen.findByText("Warehouse rollout"));
 
     expect(await screen.findByText(/do not have permission/)).toBeTruthy();
-    expect(screen.queryByText(/organization\.link_project/)).toBeNull();
+    expect(screen.queryByText(/company\.link_project/)).toBeNull();
   });
 });

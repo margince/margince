@@ -13,6 +13,10 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import {
+  RecordPicker,
+  type RecordPickerCandidate,
+} from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -53,12 +57,14 @@ export type SubField = {
   required?: boolean;
   options?: CreateFieldOption[];
   placeholder?: string;
+  maxLength?: number;
   // Granularity for a number input. Omitted means the browser's default of 1,
   // which rejects any fractional entry.
   step?: string;
 };
 
 export type CreateField = {
+  searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
   key: string;
   // Static fields carry an i18n `label` key; dynamic fields (custom fields,
   // whose labels are workspace data, not translated) carry a literal
@@ -78,20 +84,11 @@ export type CreateField = {
   required?: boolean;
   options?: CreateFieldOption[];
   placeholder?: string;
-  /**
-   * A sentence under the control saying what the value is FOR — what a
-   * project key does in an email subject. Already translated by the caller.
-   */
+  maxLength?: number;
+  // Already translated guidance beneath the control.
   hint?: string;
-  /**
-   * The one client-side refusal a field may carry: what is wrong with the
-   * value as typed, or undefined when nothing is. The server stays the truth
-   * for everything else (uniqueness, cross-record rules); this is for a shape
-   * the contract states as a pattern, where a round trip to learn that a key
-   * may not start with a digit is a wait the reader need not pay. A refused
-   * value blocks Save exactly as a missing required value does, and renders
-   * through `Field`'s own `error` slot so it announces.
-   */
+  // A validation refusal blocks Save and is announced through Field.error.
+  // The server remains authoritative for uniqueness and cross-record rules.
   validate?: (value: string) => string | undefined;
   // repeatable-only: the subfields each row renders, the "add row" button's
   // label, which subfield key holds the row's primary flag, and (if set)
@@ -112,52 +109,14 @@ export type CreateField = {
   toInput?: (raw: unknown) => string;
   // See SubField.step: a money field must declare its cents.
   step?: string;
-  /**
-   * Show this field only when the form's current values satisfy the predicate.
-   *
-   * For a field that is meaningless until another one is answered: what a
-   * partner did for a deal is a question about a partner, so asking it before
-   * one is named offers a choice with nothing to attach it to. A hidden field
-   * is also not required and not submitted — `visibleFields` is what both the
-   * render and the required check read, so the two cannot disagree and a form
-   * can never be blocked by a control nobody can see.
-   */
+  // Hidden fields are neither required nor submitted.
   showWhen?: (values: Record<string, string>) => boolean;
-  /**
-   * A select whose choices DEPEND on another answer — the projects a deal may
-   * name are the projects of the company the same form has chosen. Called
-   * with the form's current values; an empty list disables the control, and
-   * a value no longer in the list is cleared the moment the answer it hung
-   * on changes, so a project from the previous company cannot ride along
-   * into a save the server would refuse.
-   */
+  // Recompute dependent choices; clear values no longer valid after a change.
   optionsFor?: (values: Record<string, string>) => CreateFieldOption[];
 };
 
-/**
- * Publishes a form's live answers to a caller that asked for them.
- *
- * `optionsFor` covers the dependent field whose narrowing the browser can do
- * for itself: it is a pure function of the values, so it can only filter a
- * list the parent already fetched. It cannot RE-READ, and some narrowings are
- * questions only the server can answer — which projects a company may be
- * filed under is decided by relationship rows, and a project list row carries
- * only its anchor company, so nothing in the browser can compute membership.
- * This is the seam for that: the parent watches the values, runs its own
- * query, and hands the narrowed list back as ordinary options.
- *
- * From an EFFECT rather than from the setter, because values are set from two
- * places. The reader typing is one; the seed that runs during the closed→open
- * transition is the other, and it runs during render — where calling a
- * parent's setState is exactly what React refuses. Publishing from the setter
- * would miss it, and the answers a form OPENS with are the first thing a
- * dependent query needs.
- *
- * The dependency is the values object alone. It is a new identity only when
- * they change, which is precisely when a caller wants to hear; adding the
- * callback would republish on every render for the callers most likely to
- * pass an inline one.
- */
+// Publish after render so server-dependent choices also see seeded answers.
+// The callback ref avoids publishing again solely because its identity changed.
 export function usePublishedValues(
   values: Record<string, string>,
   publish?: (values: Record<string, string>) => void,
@@ -384,7 +343,7 @@ export function CreateAction<Created extends { id: string }>({
   startOpen?: boolean;
   // `keepOpen` turns one save into "saved, next": the modal stays open and
   // empties itself instead of closing. It is for capture done in a run —
-  // somebody reading a list of profiles in another window types six people
+  // somebody reading a list of profiles in another window types six contacts
   // without reopening the form six times. It implies `stay`, because opening
   // the record just created would be the opposite of staying to type the next
   // one.
@@ -485,6 +444,43 @@ export function NewRecordButton({
 // required marker and the described-by seam — belongs to the `Field` that
 // wraps this, which is why the wiring arrives whole as `control` rather than
 // being rebuilt from a field id here.
+function referenceControl(
+  field: CreateField,
+  searchTargets: NonNullable<CreateField["searchTargets"]>,
+  control: FieldControl,
+  value: string,
+  setValue: (next: string) => void,
+  t: (key: MessageKey) => string,
+): ReactNode {
+  return (
+    <>
+      <RecordPicker
+        label={fieldLabel(field, t)}
+        id={control.id}
+        aria-describedby={control["aria-describedby"]}
+        aria-invalid={control["aria-invalid"]}
+        searchTargets={searchTargets}
+        selected={
+          value
+            ? {
+                id: value,
+                name:
+                  field.options?.find((option) => option.value === value)
+                    ?.label ?? value,
+              }
+            : null
+        }
+        onPick={(candidate) => setValue(candidate.id)}
+      />
+      {value && !field.required && (
+        <Button variant="link" onClick={() => setValue("")}>
+          {t("field.unset")}
+        </Button>
+      )}
+    </>
+  );
+}
+
 export function fieldControl(
   field: CreateField | SubField,
   control: FieldControl,
@@ -494,20 +490,17 @@ export function fieldControl(
   // The form's current values, for a field whose choices depend on them.
   values: Record<string, string> = {},
 ): ReactNode {
+  if ("searchTargets" in field && field.searchTargets)
+    return referenceControl(
+      field,
+      field.searchTargets,
+      control,
+      value,
+      setValue,
+      t,
+    );
   if (field.type === "select") {
-    // An optional select leads with a choice that clears it, and it is a choice
-    // rather than a placeholder face: once a value has been picked, this is the
-    // only way back to leaving the field unset.
-    //
-    // It says so in words. A blank-labelled entry is what a native `<option/>`
-    // left behind — a row a browser gave a baseline height and a screen reader
-    // announced as nothing at all — and in a drawn list it is an unreadable
-    // strip nobody can aim at.
-    //
-    // A field that already offers the empty value has said it in its own,
-    // better words ("Unassign" on a deal's owner), and one value gets exactly
-    // one entry: a second would offer the same choice twice and give the list
-    // two options with the same identity.
+    // Optional fields can be cleared; preserve a caller's existing empty choice.
     const options =
       "optionsFor" in field
         ? fieldOptions(field, values)
@@ -540,6 +533,7 @@ export function fieldControl(
         value={value}
         placeholder={field.placeholder}
         rows={3}
+        maxLength={field.maxLength}
         onChange={(event) => setValue(event.target.value)}
       />
     );
@@ -551,6 +545,7 @@ export function fieldControl(
       // A bare number input steps by 1, so the browser refuses 14.60 before
       // any handler sees it. A money field has to say it takes cents.
       step={field.step}
+      maxLength={field.maxLength}
       value={value}
       placeholder={field.placeholder}
       onChange={(event) => setValue(event.target.value)}
@@ -781,7 +776,8 @@ export function RecordFormBody({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit(submittedValues(fields, values), rows);
+        if (!pending && !requiredMissing && refusals.size === 0)
+          onSubmit(submittedValues(fields, values), rows);
       }}
       className="form-stack"
     >
@@ -945,7 +941,7 @@ export function CreateRecordModal({
       // A form that stays open to take the next record clears only what the
       // save it just made carried. Nothing disables the fields during the
       // round trip, so a reader who kept typing while it was in flight has
-      // words on screen that belong to the NEXT person — and blanking the
+      // words on screen that belong to the NEXT contact — and blanking the
       // whole form would take them with it. `submitted` is what went; anything
       // typed after it stays exactly where the reader put it.
       setValues((current) =>

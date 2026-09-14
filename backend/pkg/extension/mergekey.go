@@ -8,7 +8,7 @@
 
 package extension
 
-// MergeKey is an identity key the person-resolution ladder resolves by. It is a
+// MergeKey is an identity key the contact-resolution ladder resolves by. It is a
 // declaration vocabulary rather than a flag, because the ladder is a ladder:
 // naming the key a source vouches for says something a boolean cannot as the
 // vocabulary grows.

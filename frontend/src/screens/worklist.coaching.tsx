@@ -4,8 +4,8 @@
 // The three conversations a lead should have this morning.
 //
 // The board above says who is carrying what; it does not say what to DO about
-// it. A lead reading five columns across six people is doing arithmetic before
-// they can act, and the person most in trouble is not always the one with the
+// it. A lead reading five columns across six contacts is doing arithmetic before
+// they can act, and the contact most in trouble is not always the one with the
 // biggest number — a rep with fourteen waiting customers and nothing overdue is
 // having a busy week, and one with four waiting and six broken promises is
 // losing trust.
@@ -32,14 +32,14 @@ export const COACHING_MOVES = 3;
 // What each threshold means, and why it is where it is.
 //
 // These are the counts at which a number stops being a busy week and starts
-// being a person who needs help. They are deliberately not configurable yet:
+// being a contact who needs help. They are deliberately not configurable yet:
 // one shipped set that a lead can argue with beats a settings page nobody fills
 // in, and the argument is what tells us where they really belong.
 const TOO_MANY_OVERDUE = 3;
 const TOO_MANY_WAITING = 5;
 const ANY_BROKEN_PROMISE = 1;
 
-// A move names a person, what is happening, and the number behind it.
+// A move names a contact, what is happening, and the number behind it.
 type CoachingMove = Readonly<{
   ownerId: string;
   name: string;
@@ -54,8 +54,8 @@ type CoachingMove = Readonly<{
 // rep behind on tasks is late, a rep who said "I'll send it Tuesday" and did
 // not has spent something that has to be earned back.
 //
-// One move per person. A teammate over every threshold has one problem — too
-// much work — and three lines about them would push two other people off a list
+// One move per contact. A teammate over every threshold has one problem — too
+// much work — and three lines about them would push two other contacts off a list
 // of three.
 export function movesFor(members: readonly TeamBoardMember[]): CoachingMove[] {
   const moves: CoachingMove[] = [];
@@ -114,7 +114,7 @@ export function CoachingMoves({
     return null;
   }
   // A section of the page, not a notice on it: this is CONTENT — three
-  // sentences drawn from the board's own counts, each one a link to the person
+  // sentences drawn from the board's own counts, each one a link to the contact
   // it names — and a callout is what a surface says about itself.
   return (
     <Panel title={t("worklist.coaching.title")}>

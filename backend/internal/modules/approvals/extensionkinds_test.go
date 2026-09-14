@@ -97,7 +97,7 @@ func TestRegisterExtensionKindsRefusesWhatCannotBeGoverned(t *testing.T) {
 		}},
 		// Its existence probe would read another store's table.
 		"a core target type": {{
-			Verb: "notes_forget", TargetTable: tablePerson,
+			Verb: "notes_forget", TargetTable: tableContact,
 			RbacObject: "ext_notes_note", RbacAction: principal.ActionDelete,
 		}},
 		// The name is read into a statement, so it is checked as an identifier
@@ -202,7 +202,7 @@ func TestTheReadFloorAsksAboutTheObjectAUnitDeclared(t *testing.T) {
 		t.Errorf("the read floor asks about %q, want the unit's declared object", got)
 	}
 	// A core type answers with itself, unchanged.
-	if got := readObjectFor(tablePerson); got != tablePerson {
+	if got := readObjectFor(tableContact); got != tableContact {
 		t.Errorf("a core target type resolved to %q, want itself", got)
 	}
 	// And so does one nothing registered: an unknown type has no object to

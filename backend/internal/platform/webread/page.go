@@ -58,7 +58,7 @@ type Page struct {
 	//
 	// The JSON-LD half is here rather than in a field of its own because it
 	// answers the same question and every reader of this one already asks it:
-	// a schema.org block naming the organization is the page's claim about
+	// a schema.org block naming the company is the page's claim about
 	// itself exactly as a meta description is, and a separate field would have
 	// to be threaded through the crawl's dedupe, its prose and its emptiness
 	// test one call site at a time.
@@ -87,7 +87,7 @@ type Page struct {
 // This is a real shape, not a defensive one. A site can announce its language
 // choice this way — an empty document whose whole content is
 // `<meta http-equiv="refresh" content="0; URL=/de">` — and a browser lands on
-// the real site without the person ever seeing the shell. A reader that stops
+// the real site without the contact ever seeing the shell. A reader that stops
 // at the shell sees a page with nothing on it, which is indistinguishable from
 // a parked domain and gets judged as one.
 func (p Page) MetaRefreshOnly() bool {

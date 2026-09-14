@@ -22,7 +22,7 @@ func TestTheAgendaOrderIsTheOrderTheRulesAreTried(t *testing.T) {
 	t.Parallel()
 	fired := make([]string, 0, len(focusRules))
 	for _, rule := range focusRules {
-		kind, _ := focusFor(rule.counts, rule.help)
+		kind, _ := focusFor(rule.counts, rule.help, rule.recovery)
 		fired = append(fired, kind)
 	}
 	if !slices.Equal(fired, focusPriority) {
@@ -39,7 +39,7 @@ func TestEveryDeclaredFocusIsRanked(t *testing.T) {
 	t.Parallel()
 	declared := []string{
 		FocusHelpRequested, FocusLeadsBreached, FocusCommitmentsMissed,
-		FocusMeetingsWithoutNextStep, FocusStrongWeek, FocusQuietWeek,
+		FocusDealsAtRisk, FocusMeetingsWithoutNextStep, FocusStrongWeek, FocusQuietWeek,
 	}
 	for _, kind := range declared {
 		if slices.Index(focusPriority, kind) < 0 {

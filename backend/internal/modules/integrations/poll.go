@@ -123,10 +123,10 @@ func (s *Store) dueRuns(ctx context.Context) ([]dueRun, error) {
 
 // pollLease is what the poll lease hands the provider call.
 type pollLease struct {
-	cred   provider.Credential
-	epoch  int64
-	jobID  string
-	person string
+	cred    provider.Credential
+	epoch   int64
+	jobID   string
+	contact string
 }
 
 // pollOne advances one in-progress run: lease, poll outside any transaction,
@@ -178,19 +178,19 @@ func (s *Store) leaseForPoll(ctx context.Context, tx pgx.Tx, name, runID, wantSt
 		return none, false, err
 	}
 	var state string
-	var person, jobID *string
+	var contact, jobID *string
 	var runEpoch int64
 	err := tx.QueryRow(ctx, `
-		SELECT state, person_id::text, connection_epoch, provider_job_id
+		SELECT state, contact_id::text, connection_epoch, provider_job_id
 		  FROM provider_run WHERE id = $1 FOR UPDATE`, runID).
-		Scan(&state, &person, &runEpoch, &jobID)
+		Scan(&state, &contact, &runEpoch, &jobID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return none, false, nil
 	}
 	if err != nil {
 		return none, false, fmt.Errorf("integrations: locking the run: %w", err)
 	}
-	if state != wantState || jobID == nil || person == nil {
+	if state != wantState || jobID == nil || contact == nil {
 		return none, false, nil
 	}
 	conn, err := s.readLiveConnection(ctx, tx, name)
@@ -215,7 +215,7 @@ func (s *Store) leaseForPoll(ctx context.Context, tx pgx.Tx, name, runID, wantSt
 	if err != nil {
 		return none, false, err
 	}
-	return pollLease{cred: cred, epoch: runEpoch, jobID: *jobID, person: *person}, true, nil
+	return pollLease{cred: cred, epoch: runEpoch, jobID: *jobID, contact: *contact}, true, nil
 }
 
 // settlePoll writes a poll's terminal outcome in one transaction, then hands
@@ -249,7 +249,7 @@ func (s *Store) settlePoll(ctx context.Context, desc provider.Descriptor, name, 
 		return err
 	}
 	if completed != nil {
-		return s.handoffClaims(ctx, runID, lease.person, name, completed.Claims)
+		return s.handoffClaims(ctx, runID, lease.contact, name, completed.Claims)
 	}
 	return nil
 }

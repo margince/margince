@@ -80,7 +80,7 @@ func companyMessageFixture() onboardingCompanyMessageFixture {
 			NextRequired:      fieldDisplayName,
 			RemainingRequired: []string{fieldDisplayName, fieldOfferSummary, fieldICP},
 		},
-		Locale: string(crmcontracts.OnboardingCompanyLocaleEN),
+		Locale: string(crmcontracts.OnboardingCompanyMessageRequestLocaleOnboardingCompanyLocaleEN),
 	}
 }
 

@@ -28,28 +28,28 @@ func reader(grant principal.ObjectGrant) context.Context {
 
 // card carries one writing verb as the recommendation and both a writing and a
 // reading verb underneath, which is the shape every real ladder produces.
-func card() crmcontracts.PersonMoment {
-	surface := &crmcontracts.PersonMomentDestination{
-		Surface: crmcontracts.PersonMomentDestinationSurfaceActivityLog,
+func card() crmcontracts.ContactMoment {
+	surface := &crmcontracts.ContactMomentDestination{
+		Surface: crmcontracts.ContactMomentDestinationSurfaceActivityLog,
 	}
-	return crmcontracts.PersonMoment{
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:        crmcontracts.PersonMomentActionKindLogActivity,
+	return crmcontracts.ContactMoment{
+		RecommendedAction: crmcontracts.ContactMomentAction{
+			Kind:        crmcontracts.ContactMomentActionKindLogActivity,
 			Label:       "Log an interaction",
-			State:       crmcontracts.PersonMomentActionStateAvailable,
+			State:       crmcontracts.ContactMomentActionStateAvailable,
 			Destination: surface,
 		},
-		SecondaryActions: &[]crmcontracts.PersonMomentAction{
+		SecondaryActions: &[]crmcontracts.ContactMomentAction{
 			{
-				Kind:        crmcontracts.PersonMomentActionKindCompleteTask,
+				Kind:        crmcontracts.ContactMomentActionKindCompleteTask,
 				Label:       "Mark it done",
-				State:       crmcontracts.PersonMomentActionStateWillConfirm,
+				State:       crmcontracts.ContactMomentActionStateWillConfirm,
 				Destination: surface,
 			},
 			{
-				Kind:  crmcontracts.PersonMomentActionKindOpenRecord,
+				Kind:  crmcontracts.ContactMomentActionKindOpenRecord,
 				Label: "Open the deal",
-				State: crmcontracts.PersonMomentActionStateAvailable,
+				State: crmcontracts.ContactMomentActionStateAvailable,
 			},
 		},
 	}
@@ -60,9 +60,9 @@ func TestWithholdBlocksBothWritingVerbsForAReaderWhoCannotLog(t *testing.T) {
 
 	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
 
-	for _, action := range append([]crmcontracts.PersonMomentAction{moment.RecommendedAction},
+	for _, action := range append([]crmcontracts.ContactMomentAction{moment.RecommendedAction},
 		(*moment.SecondaryActions)[0]) {
-		if action.State != crmcontracts.PersonMomentActionStateBlocked {
+		if action.State != crmcontracts.ContactMomentActionStateBlocked {
 			t.Errorf("%s state = %q, want blocked — its save is refused", action.Kind, action.State)
 		}
 		if action.BlockedReason == nil || *action.BlockedReason == "" {
@@ -85,7 +85,7 @@ func TestWithholdLeavesAReadingVerbAlone(t *testing.T) {
 	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
 
 	open := (*moment.SecondaryActions)[1]
-	if open.State != crmcontracts.PersonMomentActionStateAvailable {
+	if open.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("open_record state = %q, want available — it writes nothing", open.State)
 	}
 }
@@ -95,10 +95,10 @@ func TestWithholdLeavesTheCardAloneForAReaderWhoMayLog(t *testing.T) {
 
 	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), &moment)
 
-	if moment.RecommendedAction.State != crmcontracts.PersonMomentActionStateAvailable {
+	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("recommended state = %q, want available", moment.RecommendedAction.State)
 	}
-	if got := (*moment.SecondaryActions)[0].State; got != crmcontracts.PersonMomentActionStateWillConfirm {
+	if got := (*moment.SecondaryActions)[0].State; got != crmcontracts.ContactMomentActionStateWillConfirm {
 		t.Errorf("complete_task state = %q, want the will_confirm it was minted with — "+
 			"the withholding must not flatten a staging verb into an available one", got)
 	}
@@ -107,17 +107,17 @@ func TestWithholdLeavesTheCardAloneForAReaderWhoMayLog(t *testing.T) {
 // A card with no secondary actions is the common one (the account page mints
 // exactly one verb), and the recommendation still has to be reached.
 func TestWithholdBlocksTheRecommendationOnACardWithNoSecondaries(t *testing.T) {
-	moment := crmcontracts.PersonMoment{
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:  crmcontracts.PersonMomentActionKindLogActivity,
+	moment := crmcontracts.ContactMoment{
+		RecommendedAction: crmcontracts.ContactMomentAction{
+			Kind:  crmcontracts.ContactMomentActionKindLogActivity,
 			Label: "Log something",
-			State: crmcontracts.PersonMomentActionStateWillConfirm,
+			State: crmcontracts.ContactMomentActionStateWillConfirm,
 		},
 	}
 
 	Withhold(reader(principal.ObjectGrant{Read: true}), &moment)
 
-	if moment.RecommendedAction.State != crmcontracts.PersonMomentActionStateBlocked {
+	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("recommended state = %q, want blocked", moment.RecommendedAction.State)
 	}
 }
@@ -128,11 +128,11 @@ func TestWithholdBlocksTheRecommendationOnACardWithNoSecondaries(t *testing.T) {
 // explain a control that was already unavailable with the wrong cause.
 func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
 	reason := "The task names no record to open"
-	moment := crmcontracts.PersonMoment{
-		RecommendedAction: crmcontracts.PersonMomentAction{
-			Kind:          crmcontracts.PersonMomentActionKindCompleteTask,
+	moment := crmcontracts.ContactMoment{
+		RecommendedAction: crmcontracts.ContactMomentAction{
+			Kind:          crmcontracts.ContactMomentActionKindCompleteTask,
 			Label:         "Open it from the task list",
-			State:         crmcontracts.PersonMomentActionStateBlocked,
+			State:         crmcontracts.ContactMomentActionStateBlocked,
 			BlockedReason: &reason,
 		},
 	}

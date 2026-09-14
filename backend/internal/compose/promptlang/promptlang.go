@@ -65,7 +65,7 @@ func Rule(lang string) string {
 	return Heading + `Write every human-readable sentence of your output in ` + LanguageName(lang) + `.
 Write naturally in that language rather than translating English phrasing.
 Leave everything that is not a sentence exactly as it is given: JSON keys, enum
-and status values, ids, urls, email addresses, people's names, company names,
+and status values, ids, urls, email addresses, contacts's names, company names,
 and any text you are quoting from a source. Translating one of those changes
 what it refers to.`
 }

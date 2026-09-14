@@ -11,7 +11,7 @@ package gates
 // IMAP mailbox — and the rule is matched against NormalizedRecord.Containers on
 // the pre-store path. A connector that does not fill it does not fail: it
 // captures exactly as before, and the owner's rule quietly matches nothing.
-// That is the shape this census exists for, because the person who set the rule
+// That is the shape this census exists for, because the contact who set the rule
 // sees mail keep arriving and has no way to tell a rule that did not match from
 // a connector that never asked.
 //

@@ -144,7 +144,7 @@ function RoomCard({ room }: Readonly<{ room: DealRoom }>) {
             rung rather than reading as the first line of the caption under it. */}
         <p className="t-h3">{room.title}</p>
         <p className="t-caption">
-          {t("room.card.people", {
+          {t("room.card.contacts", {
             invited: formatNumber(invited, locale),
             active: formatNumber(active, locale),
           })}

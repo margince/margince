@@ -7,7 +7,7 @@ package migrations_test
 
 // A proof row the application can edit is not a proof.
 //
-// consent_event says what a person was shown and what they answered.
+// consent_event says what a contact was shown and what they answered.
 // communication_decision says why a message was allowed to go out. Both are
 // served to a data subject as evidence, so the runtime role holding a general
 // UPDATE on them was a standing invitation for any defect or repair script to
@@ -29,7 +29,7 @@ import (
 // evidenceRow seeds one decision and one consent event through the owner, and
 // answers the ids the app role then tries to change.
 type evidenceRow struct {
-	person   string
+	contact  string
 	decision string
 	event    string
 }
@@ -39,9 +39,9 @@ func seedEvidence(t *testing.T, owner *pgx.Conn) evidenceRow {
 	ctx := context.Background()
 	var e evidenceRow
 	if err := owner.QueryRow(ctx,
-		`INSERT INTO person (full_name, source, captured_by)
-		 VALUES ('Evidence Subject', 'manual', 'human:seed') RETURNING id`).Scan(&e.person); err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		`INSERT INTO contact (full_name, source, captured_by)
+		 VALUES ('Evidence Subject', 'manual', 'human:seed') RETURNING id`).Scan(&e.contact); err != nil {
+		t.Fatalf("seeding the contact: %v", err)
 	}
 	var purpose string
 	if err := owner.QueryRow(ctx,
@@ -51,10 +51,10 @@ func seedEvidence(t *testing.T, owner *pgx.Conn) evidenceRow {
 	}
 	if err := owner.QueryRow(ctx, `
 		INSERT INTO consent_event
-		    (person_id, purpose_id, new_state, source, captured_by, captured_at, policy_text, policy_version)
+		    (contact_id, purpose_id, new_state, source, captured_by, captured_at, policy_text, policy_version)
 		VALUES ($1, $2, 'granted', 'preference_center', 'human:subject', now(),
 		        'You agreed to receive our newsletter.', 'v1')
-		RETURNING id`, e.person, purpose).Scan(&e.event); err != nil {
+		RETURNING id`, e.contact, purpose).Scan(&e.event); err != nil {
 		t.Fatalf("seeding the consent proof: %v", err)
 	}
 
@@ -84,9 +84,9 @@ func seedEvidence(t *testing.T, owner *pgx.Conn) evidenceRow {
 		INSERT INTO communication_decision
 		    (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 		     phase, resolved_category, verdict, reason_code, mode, actor)
-		VALUES ($1, 0, gen_random_uuid(), 'subject@evidence.test', 'person', $2,
+		VALUES ($1, 0, gen_random_uuid(), 'subject@evidence.test', 'contact', $2,
 		        'staging', 'marketing', 'allow', 'allowed', 'enforce', 'human:seed')
-		RETURNING id`, delivery, e.person).Scan(&e.decision); err != nil {
+		RETURNING id`, delivery, e.contact).Scan(&e.decision); err != nil {
 		t.Fatalf("seeding the decision: %v", err)
 	}
 	return e
@@ -96,7 +96,7 @@ func seedEvidence(t *testing.T, owner *pgx.Conn) evidenceRow {
 // from a comment into a permission.
 //
 // Every column below is a FINDING — what the engine concluded, and what the
-// person was told. None of them has a legitimate writer in this tree.
+// contact was told. None of them has a legitimate writer in this tree.
 //
 // Mutation: drop either REVOKE from the up migration and the matching case
 // stops being refused.
@@ -125,8 +125,8 @@ func TestTheRuntimeRoleCannotRewriteAFinding(t *testing.T) {
 		what string
 		sql  string
 	}{
-		{"what a person answered", `UPDATE consent_event SET new_state = 'withdrawn' WHERE id = $1`},
-		{"the wording a person was shown", `UPDATE consent_event SET policy_text = 'something else' WHERE id = $1`},
+		{"what a contact answered", `UPDATE consent_event SET new_state = 'withdrawn' WHERE id = $1`},
+		{"the wording a contact was shown", `UPDATE consent_event SET policy_text = 'something else' WHERE id = $1`},
 		{"who recorded a consent", `UPDATE consent_event SET captured_by = 'human:someone-else' WHERE id = $1`},
 	} {
 		if _, err := app.Exec(ctx, c.sql, e.event); !permissionDenied(err) {
@@ -170,7 +170,7 @@ func TestTheAdminResetStillClearsTheEvidenceTables(t *testing.T) {
 // Three writers touch communication_decision and one touches consent_event, and
 // every one of them changes only which subject a row points at:
 // privacy/erasure_consent.go, erasure_leadtwins.go and retentionactions.go
-// tombstone the address and null the subject link; people/consentcarry.go
+// tombstone the address and null the subject link; contacts/consentcarry.go
 // re-points a proof onto the surviving record when a lead is promoted.
 //
 // A blanket REVOKE would have passed the test above and broken Art. 17, which
@@ -191,13 +191,13 @@ func TestErasureAndTheLeadCarryStillReachTheirColumns(t *testing.T) {
 		UPDATE communication_decision
 		   SET recipient_address = 'erased+' || id || '@example.invalid',
 		       subject_id = NULL, subject_kind = NULL
-		 WHERE subject_id = $1`, e.person); err != nil {
+		 WHERE subject_id = $1`, e.contact); err != nil {
 		t.Errorf("erasure can no longer retire a subject's decisions: %v — Art. 17 has to reach the address a message went to", err)
 	}
 
-	// The lead carry's own statement, as people/consentcarry.go writes it.
+	// The lead carry's own statement, as contacts/consentcarry.go writes it.
 	if _, err := app.Exec(ctx,
-		`UPDATE consent_event SET person_id = $2 WHERE person_id = $1`, e.person, e.person); err != nil {
+		`UPDATE consent_event SET contact_id = $2 WHERE contact_id = $1`, e.contact, e.contact); err != nil {
 		t.Errorf("the lead-promotion carry can no longer re-point a proof row: %v", err)
 	}
 }

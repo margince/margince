@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PersonNetworkPanel } from "./network";
+import { ContactNetworkPanel } from "./network";
 import {
   installFetchStub,
   jsonResponse,
@@ -29,7 +29,7 @@ export default meta;
 type Story = StoryObj;
 
 const network = {
-  person_id: "p-1",
+  contact_id: "p-1",
   colleagues: [
     {
       user_id: "u-1",
@@ -65,11 +65,11 @@ export const WhoKnowsThem: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /people/p-1/network": () => jsonResponse(network),
+      "GET /contacts/p-1/network": () => jsonResponse(network),
     });
     return (
       <StoryProviders>
-        <PersonNetworkPanel id="p-1" />
+        <ContactNetworkPanel id="p-1" />
       </StoryProviders>
     );
   },
@@ -79,12 +79,12 @@ export const NobodyKnowsThem: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /people/p-1/network": () =>
-        jsonResponse({ person_id: "p-1", colleagues: [] }),
+      "GET /contacts/p-1/network": () =>
+        jsonResponse({ contact_id: "p-1", colleagues: [] }),
     });
     return (
       <StoryProviders>
-        <PersonNetworkPanel id="p-1" />
+        <ContactNetworkPanel id="p-1" />
       </StoryProviders>
     );
   },

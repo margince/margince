@@ -75,7 +75,7 @@ type DealHealthWeights struct {
 type DealHealthEvidence struct {
 	// MostRecentActivityID backs the recency factor; nil when the deal
 	// has never seen an activity (recency 0.0 by definition).
-	// note: the health evidence ids (activity/person refs below) are
+	// note: the health evidence ids (activity/contact refs below) are
 	// operational explainability pointers gathered through the generic
 	// collectIDs helper, not typed entity handles — they stay ids.UUID.
 	MostRecentActivityID *ids.UUID
@@ -88,7 +88,7 @@ type DealHealthEvidence struct {
 	DaysInStage         float64
 	ExpectedDaysInStage float64
 
-	// EngagedStakeholderIDs are the person ids counted by the
+	// EngagedStakeholderIDs are the contact ids counted by the
 	// engagement factor (two-way contact inside the window).
 	EngagedStakeholderIDs []ids.UUID
 
@@ -252,7 +252,7 @@ func daysBetween(from, to time.Time) float64 {
 // healthActivityKinds are the qualifying two-way-engagement interaction
 // kinds (§4 inputs; tasks and notes are not contact). It reads the shared
 // definition rather than restating it: relationship scoring, deal health and
-// person strength all ask the same question, and a set that drifts between
+// contact strength all ask the same question, and a set that drifts between
 // them makes the network and coverage signals disagree about one activity.
 var healthActivityKinds = relstrength.InteractionKindSQLGroup()
 

@@ -11,10 +11,9 @@ import {
   OverflowMenu,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { FileChip } from "../design-system/filechip";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatBytes, formatDate, formatMoney } from "../format/format";
+import { formatDate, formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -25,7 +24,9 @@ import {
   ContractStatusModal,
   isTerminalContractStatus,
 } from "./contractlifecycle";
-import { useContractPaper } from "./contractpaper";
+import { ContractPaper } from "./contractpaperchip";
+import { ContractTerm, ContractTerms } from "./contractterms";
+import { CustomFieldsPanel } from "./customfields.card";
 import { EntityRef } from "./entityref";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -89,7 +90,9 @@ function contractsState(
   return "ready";
 }
 
-export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
+export function CompanyContractsCard({
+  companyId,
+}: Readonly<{ companyId: string }>) {
   const t = useT();
   // `useCan` for the READ — the grant alone decides what may be shown. The
   // three below gate MUTATING controls, so they take the seat as well: the
@@ -120,12 +123,12 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
   const [formOpen, setFormOpen] = useState(false);
 
   const query = useQuery({
-    queryKey: ["orgContracts", orgId, activeOnly],
+    queryKey: ["companyContracts", companyId, activeOnly],
     enabled: mayRead,
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}/contracts", {
+      const { data, error } = await api.GET("/companies/{id}/contracts", {
         params: {
-          path: { id: orgId },
+          path: { id: companyId },
           query: activeOnly ? { under_contract_only: true } : {},
         },
       });
@@ -151,7 +154,7 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
           account with no agreements — the account the add button most exists
           for. */}
       <ContractForm
-        orgId={orgId}
+        companyId={companyId}
         contract={editing}
         open={formOpen}
         onClose={() => {
@@ -205,7 +208,7 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
               <ContractRow
                 key={contract.id}
                 contract={contract}
-                orgId={orgId}
+                companyId={companyId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
                 mayRenew={mayRenew}
@@ -234,14 +237,14 @@ export function CompanyContractsCard({ orgId }: Readonly<{ orgId: string }>) {
 
 function ContractRow({
   contract,
-  orgId,
+  companyId,
   mayWrite,
   mayArchive,
   mayRenew,
   onEdit,
 }: Readonly<{
   contract: Contract;
-  orgId: string;
+  companyId: string;
   mayWrite: boolean;
   mayArchive: boolean;
   mayRenew: boolean;
@@ -282,8 +285,10 @@ function ContractRow({
     },
     onSuccess: () => {
       setAsking(false);
-      queryClient.invalidateQueries({ queryKey: ["orgContracts", orgId] });
-      queryClient.invalidateQueries({ queryKey: ["organization360", orgId] });
+      queryClient.invalidateQueries({
+        queryKey: ["companyContracts", companyId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["company360", companyId] });
     },
   });
 
@@ -309,11 +314,12 @@ function ContractRow({
           )}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
-          {/* A bare EntityRef here would read as an org name or a person —
+          <ContractTerms contract={contract} />
+          {/* A bare EntityRef here would read as a company name or a contact —
               the other siblings on this line are all self-identifying by
               format (a mono number, a date range, a state pill), and a deal's
               name is not. Same {label}{" "}<EntityRef/> shape deals.tsx uses
-              for its own second, non-obvious reference (partner_org_id). */}
+              for its own second, non-obvious reference (partner_company_id). */}
           {contract.deal_id && (
             <span className="t-caption">
               {t("contracts.deal")}{" "}
@@ -321,9 +327,10 @@ function ContractRow({
             </span>
           )}
         </span>
-        {/* The paper sits under the agreement's own line: a file is about the
-            agreement, not about any one of the facts beside it. */}
-        <ContractPaper contractId={contract.id} orgId={orgId} />
+        {/* Paper and workspace fields both describe the AGREEMENT, not any one
+            fact on the line above, so both sit under it. */}
+        <ContractPaper contractId={contract.id} companyId={companyId} />
+        <CustomFieldsPanel object="contract" record={contract} />
       </div>
       <div className="rec-end">
         {/* The figure and the basis it is stated on, stacked: the amount is
@@ -405,88 +412,6 @@ function ContractRow({
 }
 
 /**
- * ContractPaper is the signed document itself, on the row for the agreement it
- * belongs to.
- *
- * The link is filed at upload as `attachment.contract_id`, so this asks the
- * documents endpoint for exactly that agreement's paper rather than guessing
- * from a matching title — a company with a 2024 and a 2026 framework agreement
- * has two files whose names differ by one digit, and matching on text would
- * hand a reader the wrong contract with full confidence.
- *
- * A contract with no paper renders NOTHING, not an error and not an empty
- * word. Recording what was agreed and filing the PDF are separate acts, and a
- * commercial record entered from an invoice is complete without a file.
- *
- * What it never does is present a PAGE as the paper. The documents endpoint
- * paginates, so a row that kept the first page and dropped `page.has_more`
- * showed some of the files under a label that reads as all of them — the same
- * silent truncation on the row as in the form, and the same fix: the chips the
- * read reached, and under them how many it did not.
- *
- * Each link is NAMED BY ITS FILE, not by a generic word for paper. This row is
- * the only place the file is read — the account's library below deliberately
- * leaves agreement paper to the agreement — so an amendment filed beside a
- * signed original has to be tellable from it, and two identical links are two
- * coin flips.
- */
-function ContractPaper({
-  contractId,
-  orgId,
-}: Readonly<{ contractId: string; orgId: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const query = useContractPaper(orgId, contractId);
-
-  // A failed read says nothing here. The row's own commercial facts are
-  // already on screen and are what the reader came for; an error chip next to
-  // them would report a document problem as though the agreement were doubtful.
-  const paper = query.data;
-  if (!paper || paper.documents.length === 0) {
-    return null;
-  }
-  // `remaining` is 0 only when the read reached the end of the list. Anything
-  // else — a counted remainder, or more paper than the bounded count could
-  // walk — is a row showing part of the paper, and it has to say so.
-  const complete = paper.remaining === 0;
-  return (
-    // A DIV, not a span: the truncation sentence SurfaceState draws is a
-    // paragraph, and a paragraph inside phrasing content is invalid markup.
-    // Both containers set their own `display: flex`, so nothing moves.
-    <div className="rec-files">
-      <span className="t-caption rec-files-label">{t("contracts.files")}</span>
-      {/* The cards wrap as their OWN group. Left in the label's row they wrap
-          back to the panel's edge, so a second file starts to the left of the
-          first and the label stops reading as a label for both. */}
-      <div className="rec-files-items">
-        <SurfaceState
-          loadingLabel={t("contracts.files")}
-          state={complete ? "ready" : "partial"}
-          emptyLabel=""
-          detail={{ remaining: paper.remaining }}
-        >
-          {paper.documents.map((file) => (
-            // The filename, not the title: a paper's title is very often the
-            // agreement's own title, and a link repeating the row it sits on
-            // names nothing.
-            <FileChip
-              key={file.id}
-              href={`/v1/attachments/${file.id}`}
-              filename={file.filename}
-              size={
-                file.byte_size == null
-                  ? undefined
-                  : formatBytes(file.byte_size, locale)
-              }
-            />
-          ))}
-        </SurfaceState>
-      </div>
-    </div>
-  );
-}
-
-/**
  * ContractTermState is where the row says what is actually true about its
  * dates, which is not always what its status says.
  *
@@ -555,25 +480,4 @@ export function basisLabel(contract: Contract): MessageKey | "" {
   return contract.value_basis === "annualized_12m"
     ? "contracts.value.perYear"
     : "contracts.value.total";
-}
-
-// The term as the two dates that bound it. Absent dates say so in words: a
-// blank column reads as "not loaded", and an agreement whose term nobody
-// recorded is a real and common state — it is entered from an invoice as
-// often as from the paper.
-function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const on = (date: string) => formatDate(date, locale, recordZone);
-  if (!contract.starts_on && !contract.ends_on) {
-    return <span className="t-caption">{t("contracts.noTerm")}</span>;
-  }
-  return (
-    <span className="rec-term-dates">
-      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
-      {" – "}
-      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
-    </span>
-  );
 }

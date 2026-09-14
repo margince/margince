@@ -19,11 +19,11 @@ import (
 )
 
 // subjectAttachmentsWhere selects the attachments Art. 17 erasure removes for
-// a person: those hung off the person and those on the person's destroyable
+// a contact: those hung off the contact and those on the contact's destroyable
 // subject-only activities (floor-shielded correspondence keeps its
-// attachments too). $1 is the person id; $2/$3 are the statutory floor's
+// attachments too). $1 is the contact id; $2/$3 are the statutory floor's
 // interval and calendar-year-end anchor.
-var subjectAttachmentsWhere = `(entity_type = 'person' AND entity_id = $1)
+var subjectAttachmentsWhere = `(entity_type = 'contact' AND entity_id = $1)
 	   OR (entity_type = 'activity' AND entity_id IN (` + subjectOnlyDestroyable + `))`
 
 // eraseAttachments purges the matched attachments' objects and deletes their

@@ -52,7 +52,7 @@ func TestWriteOverlayMetricsRendersEveryCounter(t *testing.T) {
 	rec := httptest.NewRecorder()
 	writeOverlayMetrics(context.Background(), &exposition{w: rec}, &OverlayMetrics{
 		SourceLag: func(context.Context) (map[string]time.Duration, error) {
-			return map[string]time.Duration{"person": 90 * time.Second}, nil
+			return map[string]time.Duration{"contact": 90 * time.Second}, nil
 		},
 		SyncedTotal:   func() uint64 { return 7 },
 		ConflictTotal: func() uint64 { return 3 },
@@ -60,7 +60,7 @@ func TestWriteOverlayMetricsRendersEveryCounter(t *testing.T) {
 	})
 	body := rec.Body.String()
 	for _, want := range []string{
-		`margince_overlay_source_lag_seconds{object_class="person"} 90`,
+		`margince_overlay_source_lag_seconds{object_class="contact"} 90`,
 		"margince_overlay_mirror_synced_total 7",
 		"margince_overlay_mirror_conflict_total 3",
 		"margince_overlay_mirror_deleted_total 5",

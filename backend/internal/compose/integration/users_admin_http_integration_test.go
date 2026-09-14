@@ -91,7 +91,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 
 	// The active-only roster does NOT carry the invited member, and that is the
 	// point of it: this list feeds the share and assignee pickers, and offering
-	// somebody who signs in nowhere would assign work to a person who cannot
+	// somebody who signs in nowhere would assign work to a colleague who cannot
 	// open it — the same judgement transfer-ownership makes. The admin roster
 	// below still shows them, because an admin has to be able to see and revoke
 	// an invitation they sent.
@@ -204,7 +204,7 @@ func TestAdminUserManagementOverHTTP(t *testing.T) {
 
 	// The bootstrap admin is the only admin (the invited member holds manager
 	// by now): neither deactivating nor demoting them is allowed — it would
-	// lock the organization out of user administration entirely.
+	// lock the company out of user administration entirely.
 	var me struct {
 		User struct {
 			ID string `json:"id"`

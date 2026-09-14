@@ -40,12 +40,12 @@ func acceptanceBudgetMeter(t *testing.T) *overlaybudget.Meter {
 }
 
 // contactsTranslator is a fixed canonical->incumbent class translator
-// scoped to this suite's one fixtured mapping (person -> contacts) — the
+// scoped to this suite's one fixtured mapping (contact -> contacts) — the
 // same role hubspot.IncumbentClassesFor plays in production, stood in here
 // so these tests never import the hubspot subpackage, which is itself what
 // the AC-OV-1 gate proves of every package above the seam.
 func contactsTranslator(canonical string) ([]string, bool) {
-	if canonical == "person" {
+	if canonical == "contact" {
 		return []string{overlaymod.IncumbentClassContacts}, true
 	}
 	return nil, false
@@ -78,14 +78,14 @@ func TestAcceptance_AC_OV_3_MirrorReadMeetsBudget(t *testing.T) {
 	}
 	mirrorTime := time.Now().UTC().Add(-time.Hour)
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862066",
+		ObjectClass: "contact", ExternalID: "100214862066",
 		Fields: map[string]any{"firstname": "Budget"}, ModifiedAt: mirrorTime, OwnerExternalID: "owner-1",
 	}); err != nil {
 		t.Fatalf("ingesting the mirror fixture: %v", err)
 	}
 
 	basicProvider := overlaymod.NewProvider(mirror, nil)
-	searchRes, err := basicProvider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10})
+	searchRes, err := basicProvider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10})
 	if err != nil || len(searchRes.Records) != 1 {
 		t.Fatalf("resolving the fixture's own ref: err=%v records=%d", err, len(searchRes.Records))
 	}
@@ -144,14 +144,14 @@ func TestAcceptance_AC_OV_7_ForceFreshDegrades(t *testing.T) {
 	}
 	mirrorTime := time.Now().UTC().Add(-time.Hour)
 	if err := mirror.Ingest(ctx, overlaymod.Record{
-		ObjectClass: "person", ExternalID: "100214862077",
+		ObjectClass: "contact", ExternalID: "100214862077",
 		Fields: map[string]any{"firstname": "Shed"}, ModifiedAt: mirrorTime, OwnerExternalID: "owner-1",
 	}); err != nil {
 		t.Fatalf("ingesting the mirror fixture: %v", err)
 	}
 
 	basicProvider := overlaymod.NewProvider(mirror, nil)
-	searchRes, err := basicProvider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}, Limit: 10})
+	searchRes, err := basicProvider.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}, Limit: 10})
 	if err != nil || len(searchRes.Records) != 1 {
 		t.Fatalf("resolving the fixture's own ref: err=%v records=%d", err, len(searchRes.Records))
 	}

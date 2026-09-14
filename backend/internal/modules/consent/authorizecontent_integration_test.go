@@ -48,7 +48,7 @@ func stageThenTransmit(
 	// A live confirm link, which is what authorizes a record-confirmation send.
 	// The category is chosen for how LITTLE it needs: the subject of these tests
 	// is the fingerprint, and an invoice or a deal would put a chain of
-	// organization, employment and document rows between the test and its point.
+	// company, employment and document rows between the test and its point.
 	//
 	// Through the sibling's own fixture helper, which already argues why direct
 	// SQL is right here: the real writer mints a token AND stages the mail that
@@ -254,7 +254,7 @@ func TestARefusedSendKeepsItsOwnReason(t *testing.T) {
 	}
 	// ...then the link is spent, so the recipient no longer authorizes anything.
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE confirm_token SET consumed_at = now() WHERE person_id = $1`, e.person); err != nil {
+		`UPDATE confirm_token SET consumed_at = now() WHERE contact_id = $1`, e.contact); err != nil {
 		t.Fatalf("spending the link: %v", err)
 	}
 

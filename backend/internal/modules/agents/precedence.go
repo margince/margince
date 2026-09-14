@@ -4,7 +4,7 @@
 package agents
 
 // The per-field human-edit-precedence split (interfaces.md §2.1):
-// update_record is 🟢, but an agent never silently undoes a person.
+// update_record is 🟢, but an agent never silently undoes a contact.
 // When an auto-execute patch touches fields whose CURRENT value a human last
 // wrote, exactly those fields are split off into a 🟡 staged approval
 // while the remainder of the patch proceeds at the auto-execute tier in the same call.

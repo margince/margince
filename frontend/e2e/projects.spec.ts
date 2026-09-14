@@ -79,14 +79,12 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     }),
   ).toBeVisible();
 
-  // 2. Attach a deal on the deal's own form, reached from the deal's overflow
-  // menu — the project picker offers the company's live projects by name.
+  // 2. Attach through the company/project group in the deal's Details pane.
   await page.goto("/#/deals/d-fleet");
-  await page.getByRole("button", { name: "Weitere Aktionen" }).click();
-  await page.getByRole("button", { name: "Deal bearbeiten" }).click();
+  await page.getByRole("button", { name: "Firma ändern", exact: true }).click();
   await choose(
     page,
-    dialog.getByRole("combobox", { name: "Projekt" }),
+    page.getByRole("combobox", { name: "Projekt", exact: true }),
     "Brandt ERP",
   );
   const patched = page.waitForRequest(
@@ -94,7 +92,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
       request.url().endsWith("/v1/deals/d-fleet") &&
       request.method() === "PATCH",
   );
-  await dialog.getByRole("button", { name: "Speichern" }).click();
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
@@ -152,7 +150,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
   await dialog
     .getByRole("searchbox", {
-      name: "Kontakt, Organisation, Deal, Lead oder Projekt suchen",
+      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

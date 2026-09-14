@@ -31,34 +31,34 @@ func TestTheGrantListWithholdsSharesOfARecordTypeTheSeatCannotRead(t *testing.T)
 
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Quiet expansion", pipeline, open, &e.Rep1)
-	org := e.SeedOrg(t, "Shared Holding", &e.Rep1)
+	company := e.SeedCompany(t, "Shared Holding", &e.Rep1)
 	for _, share := range []identity.CreateGrantInput{
 		{RecordType: "deal", RecordID: deal, SubjectType: "user", SubjectID: e.Rep3, Access: "read"},
-		{RecordType: "organization", RecordID: org, SubjectType: "user", SubjectID: e.Rep3, Access: "read"},
+		{RecordType: "company", RecordID: company, SubjectType: "user", SubjectID: e.Rep3, Access: "read"},
 	} {
 		if _, err := shares.CreateRecordGrant(admin, share); err != nil {
 			t.Fatalf("sharing the %s: %v", share.RecordType, err)
 		}
 	}
 
-	// Organizations yes, deals no — the configuration an admin reaches through
+	// Companies yes, deals no — the configuration an admin reaches through
 	// the role editor, at an unbounded scope so row scope cannot be the reason.
 	noDeals := principal.Permissions{
 		RoleKeys: []string{"custom"},
-		Objects:  map[string]principal.ObjectGrant{"organization": {Read: true}},
+		Objects:  map[string]principal.ObjectGrant{"company": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	}
 	seen := grantedRecords(e.As(ids.NewV7(), nil, noDeals), t, shares)
 	if seen[deal] {
 		t.Error("a seat with no deal.read listed a deal share — the deal id, who holds it and why")
 	}
-	if !seen[org] {
-		t.Error("the same seat lost the organization share it may read — the list withholds by type, not wholesale")
+	if !seen[company] {
+		t.Error("the same seat lost the company share it may read — the list withholds by type, not wholesale")
 	}
 
 	// The admin, holding both grants, still reads both shares.
 	all := grantedRecords(admin, t, shares)
-	if !all[deal] || !all[org] {
+	if !all[deal] || !all[company] {
 		t.Fatalf("the admin listed %v, want both shares", all)
 	}
 }

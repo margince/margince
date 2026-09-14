@@ -36,7 +36,7 @@ func grantAt(t *testing.T, expiresAt *time.Time) error {
 	svc := NewService(nil)
 	svc.now = func() time.Time { return grantNoon }
 	_, err := svc.CreateRecordGrant(context.Background(), CreateGrantInput{
-		RecordType: "person", SubjectType: "user", Access: "read",
+		RecordType: "contact", SubjectType: "user", Access: "read",
 		RecordID: ids.NewV7(), SubjectID: ids.NewV7(), ExpiresAt: expiresAt,
 	})
 	return err

@@ -9,7 +9,7 @@ package compose
 // It is tested here rather than through ReadForSend deliberately. That read
 // needs a pool, a blobstore and twenty megabytes of fixture to reach the
 // comparison, and the property under test is not the reading — it is the
-// CLASSIFICATION, because getting that wrong is the difference between a person
+// CLASSIFICATION, because getting that wrong is the difference between a contact
 // being told what happened and a delivery spending its whole retry ladder
 // re-reading the same files before parking under a reason that names no cause.
 
@@ -47,7 +47,7 @@ func TestTheAggregateSendBudgetParksInsteadOfRetrying(t *testing.T) {
 			if !errors.Is(err, connector.ErrFilesNotCarried) {
 				t.Fatalf("a total of %d bytes → %v, want ErrFilesNotCarried so the delivery parks", tc.total, err)
 			}
-			// And it names the bound, because a refusal a person cannot act on is
+			// And it names the bound, because a refusal a contact cannot act on is
 			// the failure this reason exists to avoid.
 			if !strings.Contains(err.Error(), "20 MiB") {
 				t.Errorf("refusal %q does not name the bound a sender has to get under", err)

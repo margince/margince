@@ -65,7 +65,7 @@ var selfOnlyEvents = map[string]struct{}{
 	"linkedin_account.changed":  {},
 	"linkedin_match.decided":    {},
 	"linkedin_network.imported": {},
-	// A notice is addressed to ONE person; fanning its lifecycle to every
+	// A notice is addressed to ONE contact; fanning its lifecycle to every
 	// subscription owner would tell colleagues who was notified of what.
 	"notice.created": {},
 	"notice.read":    {},
@@ -128,7 +128,7 @@ var workspaceLevelEntities = map[string]struct{}{
 // (not entity type) because their runtime subject class collides with the
 // row-scoped entity names above. The overlay mirror.* events stamp the
 // diverged record's RUNTIME canonical class (rec.ObjectClass / ref.Type /
-// del.ObjectClass — e.g. "person", "deal") as their entity type, but the
+// del.ObjectClass — e.g. "contact", "deal") as their entity type, but the
 // id they carry is a mirror-synthetic key (externalIDToUUID) or a
 // pre-materialization EntityRef — NOT a live record id the owner's grants
 // can be probed against. An entity-type probe would therefore either miss
@@ -151,7 +151,7 @@ var deferredDeliveryEvents = map[string]string{
 
 // deferredDeliveryEntities are subscribable subjects keyed by RUNTIME
 // entity type whose row scope has no probe today. retention.applied is a
-// dynamic-entity event: its person/lead/deal/activity subjects DO resolve
+// dynamic-entity event: its contact/lead/deal/activity subjects DO resolve
 // through the row-scope probes below, but the nightly retention sweep also
 // ages out engine telemetry — ai_call (embedding traces, privacy/
 // retention.go's eraseEmbedCall), ai_call_payload (retained call content),
@@ -203,7 +203,11 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return ok && actor.UserID != ids.Nil && actor.UserID == entityID, nil
 	}
 	switch entityType {
-	case "person", "organization", "deal", "lead", "project", "voice_profile":
+	//nolint:goconst // wire entity types read as data. The constants goconst points at
+	// name other concepts that spell the same word — an approval target, a mirror
+	// object class — and hiding these behind one would assert a correspondence no
+	// gate holds.
+	case "contact", "company", "deal", "lead", "project", "voice_profile":
 		return s.rowScopedVisible(ctx, entityType, func(c context.Context, tx pgx.Tx) error {
 			return auth.EnsureVisible(c, tx, entityType, entityID)
 		})
@@ -222,7 +226,7 @@ func (s *Store) entityVisibleTo(ctx context.Context, eventType, entityType strin
 		return s.offerVisibleTo(ctx, entityID)
 	case "contract":
 		// A contract has no owner of its own: it is visible through the deal it
-		// came from, falling back to its organization for the agreements that
+		// came from, falling back to its company for the agreements that
 		// never ran through a pipeline (ADR-0109 §8). Same shape as the offer
 		// above, one anchor further out.
 		return s.contractVisibleTo(ctx, entityID)
@@ -311,7 +315,7 @@ func (s *Store) offerVisibleTo(ctx context.Context, offerID ids.UUID) (bool, err
 }
 
 // contractVisibleTo gates a contract subject on contract.read and then on the
-// ROW SCOPE of its anchor — the deal it came from, or its organization when it
+// ROW SCOPE of its anchor — the deal it came from, or its company when it
 // has no deal. An absent contract reads as not-visible.
 //
 // The anchor's own OBJECT grant is deliberately not required, and that is the
@@ -333,10 +337,10 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 		return false, err
 	}
 	var dealID *ids.UUID
-	var orgID ids.UUID
+	var companyID ids.UUID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT deal_id, organization_id FROM contract WHERE id = $1`, contractID).Scan(&dealID, &orgID)
+			`SELECT deal_id, company_id FROM contract WHERE id = $1`, contractID).Scan(&dealID, &companyID)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -344,7 +348,7 @@ func (s *Store) contractVisibleTo(ctx context.Context, contractID ids.UUID) (boo
 	if err != nil {
 		return false, err
 	}
-	anchor, anchorID := "organization", orgID
+	anchor, anchorID := "company", companyID
 	if dealID != nil {
 		anchor, anchorID = "deal", *dealID
 	}

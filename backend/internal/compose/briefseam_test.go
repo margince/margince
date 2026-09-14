@@ -33,7 +33,7 @@ var withheldFromTheTool = gatekit.Waive(map[string]string{
 	"Narrative": "the agent's OWN sentence about the night, withheld from the agent. It is the " +
 		"only field here the tool's caller wrote rather than read, and handing it back is how a " +
 		"loop reads its own output as new information — a second pass would summarize the " +
-		"summary. The person reads it on Home, which is who it was written for",
+		"summary. The reader reads it on Home, which is who it was written for",
 	"AnnotatedAt": "the stamp on the agent's own write, withheld for the same reason as Narrative: " +
 		"it answers 'has a pass run', and the only caller asking is the pass",
 
@@ -135,7 +135,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
 		// Served, not withheld: without the condition a snooze carrying no
 		// moment reads to an agent as one that never lifts, and it would report
-		// a deal as abandoned when the person is waiting for a reply.
+		// a deal as abandoned when the contact is waiting for a reply.
 		"ReopenOn": `"reopen_on":"meeting"`, "ReopenRef": `"reopen_ref":"` + meetingID.String(),
 		"Finding": "He asked about the delivery date yesterday.",
 		"Lineage": `"dismissed_on":"2026-08-05"`,

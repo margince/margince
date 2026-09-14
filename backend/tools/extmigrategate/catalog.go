@@ -140,7 +140,7 @@ func assertUnitTable(ctx context.Context, conn *pgx.Conn, rel relation, namespac
 
 // assertNoTenantColumn refuses a workspace column on a unit table.
 //
-// An installation holds one organization, so a workspace column separates
+// An installation holds one company, so a workspace column separates
 // nothing — and it was never a wall against a unit in any case, since a unit
 // issues its own SQL through the seam.
 //

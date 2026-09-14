@@ -124,8 +124,8 @@ func TestAnOversizedBodyPartIsBounded(t *testing.T) {
 //
 // It now takes an ordinal, a count slot and message budget like any other file,
 // so a message already at the part cap has one more candidate than it did. The
-// files a person sent are what a rep opens; the invitation is evidence. On a
-// message at the cap the person's files win.
+// files a contact sent are what a rep opens; the invitation is evidence. On a
+// message at the cap the contact's files win.
 func TestACalendarPartDoesNotDisplaceAUserFile(t *testing.T) {
 	t.Parallel()
 	var b strings.Builder

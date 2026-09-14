@@ -42,26 +42,26 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, gmailReadonlyScope, gmailSendScope)
 
-	// A message written the night before, addressed to the person who is about
+	// A message written the night before, addressed to the contact who is about
 	// to exercise Art. 17.
 	id := p.scheduleFor(t, time.Now().Add(12*time.Hour))
 
-	personID, err := ids.Parse(p.personID)
+	contactID, err := ids.Parse(p.contactID)
 	if err != nil {
-		t.Fatalf("person id %q: %v", p.personID, err)
+		t.Fatalf("contact id %q: %v", p.contactID, err)
 	}
-	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).ErasePerson(
-		p.privacyAdmin(t), personID, "art-17"); err != nil {
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+		p.privacyAdmin(t), contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}
 
 	// The payload must no longer name them, and the message must no longer be
 	// waiting to go out: a scheduled row survives with a live timer, so an
 	// emptied-but-pending one would still fire the morning after the erasure
-	// certified this person's data destroyed.
+	// certified this contact's data destroyed.
 	status, _ := p.scheduledStatus(t, id)
 	if status != activities.ScheduledStatusCancelled {
-		t.Fatalf("a scheduled message to an erased person reads %q, want %q — it still has a timer",
+		t.Fatalf("a scheduled message to an erased contact reads %q, want %q — it still has a timer",
 			status, activities.ScheduledStatusCancelled)
 	}
 	var payload string
@@ -72,10 +72,10 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 		t.Fatalf("reading the frozen payload: %v", err)
 	}
 	if strings.Contains(payload, "buyer@preflight.test") {
-		t.Fatalf("the erased person's address survives in a scheduled message: %s", payload)
+		t.Fatalf("the erased contact's address survives in a scheduled message: %s", payload)
 	}
 	if strings.Contains(payload, "Written the night before.") {
-		t.Fatalf("the body of a message to an erased person survives: %s", payload)
+		t.Fatalf("the body of a message to an erased contact survives: %s", payload)
 	}
 }
 
@@ -91,18 +91,18 @@ func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 	// product writes — payload shape included, which is what the export reads.
 	p.scheduleFor(t, time.Now().Add(6*time.Hour))
 
-	personID, err := ids.Parse(p.personID)
+	contactID, err := ids.Parse(p.contactID)
 	if err != nil {
-		t.Fatalf("person id %q: %v", p.personID, err)
+		t.Fatalf("contact id %q: %v", p.contactID, err)
 	}
 	pkg, err := privacy.AssembleSAR(
-		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID))
+		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
 
 	if len(pkg.ScheduledMessages) != 1 {
-		t.Fatalf("the export carried %d unsent messages, want the one waiting for this person: %#v",
+		t.Fatalf("the export carried %d unsent messages, want the one waiting for this contact: %#v",
 			len(pkg.ScheduledMessages), pkg.ScheduledMessages)
 	}
 	row := pkg.ScheduledMessages[0]
@@ -110,7 +110,7 @@ func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 		t.Errorf("the unsent message came back with subject %q, want the one that was scheduled", subject)
 	}
 	if body, _ := row["body"].(string); !strings.Contains(body, "Written the night before") {
-		t.Errorf("the export withheld the body of a message written to this person: %#v", row)
+		t.Errorf("the export withheld the body of a message written to this contact: %#v", row)
 	}
 	// The state is part of the answer: a subject told a message exists, but not
 	// whether it is still going to arrive, has been told half a fact.
@@ -131,7 +131,7 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 	// The subject is BLIND-copied; somebody else is the visible addressee, and
 	// a third party shares the blind list with them.
 	//
-	// Both extra addressees need a person on file and a granted purpose,
+	// Both extra addressees need a contact on file and a granted purpose,
 	// because consent is owed to EVERY addressee however they were addressed —
 	// the same rule that makes a blind copy a consent question at all. Without
 	// them the send is refused 409 before it can be scheduled, which would say
@@ -154,7 +154,7 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 		"bcc":             []string{"buyer@preflight.test", otherBlind},
 		"consent_purpose": "transactional",
 		"links": []AnyMap{
-			{"entity_type": "person", "entity_id": p.personID},
+			{"entity_type": "contact", "entity_id": p.contactID},
 		},
 		"scheduled_at": time.Now().Add(6 * time.Hour).UTC().Format(time.RFC3339),
 		"scheduled_tz": "Europe/Berlin",
@@ -163,12 +163,12 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 		t.Fatalf("scheduling a blind-copied message → %d, want 201", status)
 	}
 
-	personID, err := ids.Parse(p.personID)
+	contactID, err := ids.Parse(p.contactID)
 	if err != nil {
-		t.Fatalf("person id %q: %v", p.personID, err)
+		t.Fatalf("contact id %q: %v", p.contactID, err)
 	}
 	pkg, err := privacy.AssembleSAR(
-		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID))
+		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

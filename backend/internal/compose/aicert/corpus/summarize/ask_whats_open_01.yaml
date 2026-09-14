@@ -1,6 +1,6 @@
 name: ask_whats_open_answers_the_pipeline_not_the_history
 task: summarize
-site: org_ask
+site: company_ask
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:

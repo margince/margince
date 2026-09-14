@@ -32,10 +32,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// Finding is one thing wrong with a draft, in words a person can act on.
+// Finding is one thing wrong with a draft, in words a contact can act on.
 type Finding struct {
-	// Rule names what was violated, for the log and the regeneration prompt.
-	Rule string
+	// Rule names what was violated, for the log and the regeneration prompt,
+	// and carries how bad breaking it is. A Rule rather than a string because
+	// the serve decision compares severities, and a rule whose class was
+	// declared somewhere other than its own identity is a rule the next one
+	// can be written without.
+	Rule Rule
 	// Phrase is the text that triggered it, so a reader can find it.
 	Phrase string
 	// Why says what makes it wrong HERE — the same phrase is fine at another
@@ -116,8 +120,8 @@ var invention = map[textlang.Lang][]string{
 // directedRelationship are the ways a draft claims who introduced, referred or
 // first contacted whom.
 //
-// The product holds no person-to-person referral record — referred_by is
-// constrained org-to-org — so a directed introduction fact in a draft is
+// The product holds no contact-to-contact referral record — referred_by is
+// constrained company-to-company — so a directed introduction fact in a draft is
 // necessarily read out of quoted correspondence, which is how the reported
 // defect got the direction backwards. Silence about introductions is the
 // correct behaviour today (DRAFT-AC-E-7), which makes this list a flat refusal
@@ -167,7 +171,7 @@ func Reasoning(labels []string, lang textlang.Lang, band convstate.Band) []Findi
 		for _, phrase := range allDirectedRelationshipPhrases() {
 			if startsWord(lowered, phrase) {
 				findings = append(findings, Finding{
-					Rule:   "invented-relationship",
+					Rule:   RuleInventedRelationship,
 					Phrase: phrase,
 					Why: "no referral record exists to support who introduced whom, so a " +
 						"chip asserting one states a fact the product does not hold",
@@ -202,7 +206,7 @@ func allDirectedRelationshipPhrases() []string {
 // reads as machine-written, which is the thing VOICE-STRIP exists to prevent.
 // It is checked rather than merely instructed because the prompt already said
 // to be consistent and the model was not — three consecutive drafts to one
-// person came back du, du, Sie.
+// contact came back du, du, Sie.
 //
 // The check is on the draft's OWN text, so it needs no envelope: a body holding
 // both forms is inconsistent whichever one the envelope asked for.
@@ -219,7 +223,7 @@ func mixedRegister(body string) bool {
 // concluded". Nobody said it concluded. The draft turned the recipient's own
 // condition into a completed fact, and then reasoned from it.
 //
-// It is a first-person claim about THEIR side's state, which is the one thing a
+// It is a first-contact claim about THEIR side's state, which is the one thing a
 // drafter cannot know: the record holds what they told us, and anything past
 // that is invention wearing the grammar of an update.
 var resolvedEvent = map[textlang.Lang][]string{
@@ -261,7 +265,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 	for _, phrase := range wellbeing[lang] {
 		if contains(opening(lowered), phrase) {
 			findings = append(findings, Finding{
-				Rule:   "wellbeing-opener",
+				Rule:   RuleWellbeingOpener,
 				Phrase: phrase,
 				Why:    "an opening pleasantry is filler, and it reads as a template",
 			})
@@ -270,12 +274,12 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 
 	if !on.Threaded {
 		findings = append(findings, firstMatch(lowered, spokenExchange[lang],
-			"invented-conversation",
+			RuleInventedConversation,
 			"this message opens a new conversation, so nothing in the input says a "+
 				"call or meeting took place — write from the messages on the record")...)
 
 		findings = append(findings, firstMatch(lowered, attributedClaim[lang],
-			"attributed-claim",
+			RuleAttributedClaim,
 			"the input says what a message was about, never who wrote it — "+
 				"name the topic instead of attributing it to the recipient")...)
 	}
@@ -286,7 +290,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 	// untouched — that is the message this product exists to write.
 	if !on.Booked {
 		findings = append(findings, firstMatch(lowered, scheduledArrangement[lang],
-			"unscheduled-arrangement",
+			RuleUnscheduledArrangement,
 			"nothing in the input books a meeting with this recipient, so writing about one "+
 				"as already arranged puts an appointment in front of them that nobody made — "+
 				"propose it instead")...)
@@ -294,7 +298,7 @@ func Body(body string, lang textlang.Lang, band convstate.Band, on Grounds) []Fi
 
 	if lang == textlang.German && mixedRegister(body) {
 		findings = append(findings, Finding{
-			Rule:   "mixed-register",
+			Rule:   RuleMixedRegister,
 			Phrase: "du/Sie",
 			Why: "the draft addresses the recipient formally in one sentence and " +
 				"familiarly in another — pick the one the correspondence uses and hold it",
@@ -315,7 +319,7 @@ func Formatting(body string) []Finding {
 		return nil
 	}
 	return []Finding{{
-		Rule:   "unbroken-block",
+		Rule:   RuleUnbrokenBlock,
 		Phrase: "the whole message on one line",
 		Why: "the greeting and the message run together as a single block, which " +
 			"reads as a wall of text in every mail client — put the greeting on its " +
@@ -357,7 +361,7 @@ func bandGated(lowered string, lang textlang.Lang, band convstate.Band) []Findin
 		for _, phrase := range invention[lang] {
 			if contains(lowered, phrase) {
 				findings = append(findings, Finding{
-					Rule:   "invented-first-touch",
+					Rule:   RuleInventedFirstTouch,
 					Phrase: phrase,
 					Why: "this is a first message and nothing in the input supports that claim — " +
 						"write only from the recipient, their employer and the stated reason for writing",
@@ -374,7 +378,7 @@ func bandGated(lowered string, lang textlang.Lang, band convstate.Band) []Findin
 		for _, phrase := range resolvedEvent[lang] {
 			if strings.Contains(lowered, phrase) {
 				findings = append(findings, Finding{
-					Rule:   "assumed-resolution",
+					Rule:   RuleAssumedResolution,
 					Phrase: phrase,
 					Why: "nothing in the input says that happened — after months of silence " +
 						"their side's state is unknown, so ask rather than assert",
@@ -387,7 +391,7 @@ func bandGated(lowered string, lang textlang.Lang, band convstate.Band) []Findin
 		for _, phrase := range assumedMemory[lang] {
 			if contains(lowered, phrase) {
 				findings = append(findings, Finding{
-					Rule:   "assumed-memory",
+					Rule:   RuleAssumedMemory,
 					Phrase: phrase,
 					Why: "the correspondence has been silent for " + string(band) +
 						", so the recipient does not have that exchange in mind — name it instead",
@@ -477,7 +481,7 @@ func boundary(text string, i int) bool {
 // One rather than all, because the finding is fed back to the model as a
 // correction and a list of six ways it said the same wrong thing is not six
 // corrections. The first is enough to name what to stop doing.
-func firstMatch(lowered string, phrases []string, rule, why string) []Finding {
+func firstMatch(lowered string, phrases []string, rule Rule, why string) []Finding {
 	for _, phrase := range phrases {
 		if contains(lowered, phrase) {
 			return []Finding{{Rule: rule, Phrase: phrase, Why: why}}

@@ -109,7 +109,7 @@ function SeedInstallation({
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
     client.setQueryData(["company"], {
-      organization_id: "org-1",
+      company_id: "company-1",
       display_name: "Gradion GmbH",
       logo_url: logoUrl,
       logo_icon_url: logoIconUrl,
@@ -352,7 +352,7 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * Seats used against seats granted, at the foot of both panels.
  *
  * The foot is where a tool puts what the installation is entitled to, and seats
- * are the one number about it that changes under people while they work: an
+ * are the one number about it that changes under contacts while they work: an
  * invitation spends one, and the refusal when the last is gone arrives in the
  * middle of adding a colleague.
  *
@@ -794,7 +794,7 @@ export const PhoneMoreSheet: Story = {
  * grid column alone would have been third to the eye and last to the keyboard.
  */
 function PhoneBarExample() {
-  const route: Route = { screen: "brief" };
+  const route: Route = { screen: "home" };
   const { openSearch, palette } = usePaletteSeam();
   return (
     <div className="app railexpanded">

@@ -49,38 +49,42 @@ type approvalListBody struct {
 // so every approved member runs its registered accept effect, and a placeholder
 // body would report effect_failed for reasons that have nothing to do with
 // bundling.
-func siteReadPayload(kind, orgID, readID, person string) string {
+func siteReadPayload(kind, companyID, readID, contact string) string {
 	if kind == "deepread" {
-		return `{"organization_id":"` + orgID + `","source_url":"https://acme.example",` +
+		return `{"company_id":"` + companyID + `","source_url":"https://acme.example",` +
 			`"site_read_id":"` + readID + `","fields":[{"field":"industry","value":"Industrial valves",` +
 			`"evidence_snippet":"Acme makes industrial valves.","source_url":"https://acme.example","confidence":0.9}],"facts":[]}`
 	}
-	return `{"organization_id":"` + orgID + `","site_read_id":"` + readID + `","natural_key":"` + person +
-		`","name":"` + person + `","role":"CTO","published_email":"` + person + `@acme.example",` +
-		`"evidence_snippet":"` + person + `, CTO","source_url":"https://acme.example/team"}`
+	return `{"company_id":"` + companyID + `","site_read_id":"` + readID + `","natural_key":"` + contact +
+		`","name":"` + contact + `","role":"CTO","published_email":"` + contact + `@acme.example",` +
+		`"evidence_snippet":"` + contact + `, CTO","source_url":"https://acme.example/team"}`
 }
 
 // stageBundleRows puts one act's proposals in the inbox through the owner
 // connection. The staging PATH is exercised where it lives; this suite needs
 // only the rows an act leaves behind, and writing them directly keeps the
 // arrange step from depending on a crawler.
-func stageBundleRows(t *testing.T, e *apptest.AppEnv, orgID string, kinds ...string) ids.UUID {
+func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, kinds ...string) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	bundle, readID := ids.NewV7(), ids.NewV7()
-	var adminID string
-	if err := e.Owner.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&adminID); err != nil {
-		t.Fatalf("admin lookup: %v", err)
-	}
+	// THIS SESSION'S seat, read from the app rather than picked out of app_user.
+	// The pick here used to be `is_agent = false ORDER BY created_at LIMIT 1`,
+	// which names the session's seat only while the installation holds exactly
+	// one contact: rows inserted in one transaction share now(), so a second
+	// contact makes it arbitrary. These rows are what the session then decides,
+	// so an arbitrary seat stages an inbox belonging to somebody else and the
+	// suite asserts against a bundle its caller never proposed. Same defect as
+	// demoteToRep's, same fix — #1180, #1074.
+	adminID := sessionUserID(t, e)
 	for i, kind := range kinds {
-		payload := siteReadPayload(kind, orgID, readID.String(), fmt.Sprintf("person%d", i))
+		payload := siteReadPayload(kind, companyID, readID.String(), fmt.Sprintf("contact%d", i))
 		if _, err := e.Owner.Exec(ctx, `
 			INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
 			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id)
-			VALUES ($1, 'agent:site-read', $2, 'organization', $3, $4, $5::jsonb, $6,
+			VALUES ($1, 'agent:site-read', $2, 'company', $3, $4, $5::jsonb, $6,
 			        now() + interval '1 day', $7)`,
-			kind, adminID, orgID, "Staged by the site read", payload,
+			kind, adminID, companyID, "Staged by the site read", payload,
 			ids.NewV7().String(), bundle); err != nil {
 			t.Fatalf("staging member %d (%s): %v", i, kind, err)
 		}
@@ -90,21 +94,21 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, orgID string, kinds ...str
 
 // One act, one question, and a body that still answers for every proposal in it.
 // The second call is the part worth having: a client that retries — or two
-// people clearing the same inbox — must not re-decide anything, and must be told
+// contacts clearing the same inbox — must not re-decide anything, and must be told
 // so per member rather than by a bare 409 that says nothing about which.
 func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Door", "ada@bundle.test", "Ada Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create org → %d", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, org.ID, "deepread", "site_lead", "site_lead")
+	bundle := stageBundleRows(t, e, company.ID, "deepread", "site_lead", "site_lead")
 
 	var listed approvalListBody
 	if status := e.Call(t, "GET", "/v1/approvals?bundle_id="+bundle.String(), nil, nil, &listed); status != http.StatusOK {
@@ -176,15 +180,15 @@ func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Passport", "ada@passport.test", "Ada Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create org → %d", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
-	bundle := stageBundleRows(t, e, org.ID, "site_lead")
+	bundle := stageBundleRows(t, e, company.ID, "site_lead")
 	reader := apptest.PassportBearer(t, e, "bundle reader", "read")
 
 	status := e.Call(t, "POST", "/v1/approval-bundles/"+bundle.String()+"/approve", nil, reader, nil)

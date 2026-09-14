@@ -54,7 +54,7 @@ func TestTheHolderOfATaskCrossesTheSeam(t *testing.T) {
 }
 
 // An unheld task crosses as unheld rather than as a zero id, which is a value a
-// client would try to resolve to a person who does not exist.
+// client would try to resolve to a contact who does not exist.
 func TestAnUnheldTaskCrossesTheSeamCarryingNoHolder(t *testing.T) {
 	if task := taskFromActivity(storedTask(nil, nil)); task.AssigneeID != nil {
 		t.Fatalf("an unheld task crossed naming %v as its holder", *task.AssigneeID)

@@ -228,7 +228,7 @@ func (e *Estimator) priceObserved(ctx context.Context, task ai.Task, slices []ai
 
 	if priced {
 		// The observed denominator the priced cost is spread over. For a
-		// call-based denominator (enrich per person, embed per entity) the priced
+		// call-based denominator (enrich per contact, embed per entity) the priced
 		// slices' share of the work IS their share of the COMPLETED calls, so the
 		// share is denom×pricedCompletedCalls/Σcompleted-calls — but denom equals
 		// Σcompleted-calls for these rules (observedDenom is that same sum), so it
@@ -288,7 +288,7 @@ func (e *Estimator) priceFloor(ctx context.Context, task ai.Task, units int64, t
 // expectedUnits maps this preview's scanned-message count to a task's expected
 // unit count via the connection's backfill yields, or the floor whenever the
 // yield cannot anchor the ratio: no completed run, an unruled task, or a rule
-// reporting its ratio unavailable — where enrich's zero-people guard lands, the
+// reporting its ratio unavailable — where enrich's zero-contacts guard lands, the
 // case that needs a completed run to reach at all. Multiply-before-divide.
 // observed=false ⇒ the floor was used (a heuristic). The per-task observed ratio
 // lives in the rule the contract names; the shared floor fallback is spelled

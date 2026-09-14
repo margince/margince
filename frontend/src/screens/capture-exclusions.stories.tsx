@@ -44,7 +44,7 @@ function story(
   };
 }
 
-// Excluding one of your OWN correspondents needs no grant; the organization-wide
+// Excluding one of your OWN correspondents needs no grant; the company-wide
 // rule is what capture_settings:update buys.
 const OPS = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
@@ -65,14 +65,14 @@ export const Empty: Story = { render: story([], OPS) };
 
 // The state the seeded demo cannot show: a seat that may keep its own
 // correspondent out and may not touch the rule binding everyone. The
-// organization row's verb refuses and points at the one sentence under the list;
+// company row's verb refuses and points at the one sentence under the list;
 // the reader's own row stays live beside it. That per-ROW split is what this card
 // has and the other capture cards do not.
-export const OrganizationRuleRefused: Story = {
+export const CompanyRuleRefused: Story = {
   render: story([MINE, EVERYONE], READER),
 };
 
-export const OrganizationRuleRefusedDark: Story = {
+export const CompanyRuleRefusedDark: Story = {
   globals: { theme: "dark" },
   render: story([MINE, EVERYONE], READER),
 };

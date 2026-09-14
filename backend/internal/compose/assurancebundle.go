@@ -296,7 +296,7 @@ var bundleTaskSource = "assurance"
 // it — and NOT the actor, which is the system principal this pass runs as.
 // activities.taskAssignee leaves the column NULL for a system principal that
 // names nobody, and an unassigned remediation task is one that reaches the
-// unassigned queue rather than the person whose deal it is about.
+// unassigned queue rather than the contact whose deal it is about.
 func mintBundleTask(
 	ctx context.Context, deps bundleDeps, runID ids.UUID, subject subjectFindings,
 ) (ids.UUID, error) {

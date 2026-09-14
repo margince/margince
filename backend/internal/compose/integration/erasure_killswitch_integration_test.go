@@ -63,14 +63,14 @@ func (m refusingMailbox) ResolveChannel(context.Context, ids.UserID, string) (co
 // proves the provider is never reached.
 func TestErasingASubjectNeutralizesTheirQueuedSend(t *testing.T) {
 	e := Setup(t)
-	person := seedMailRecipient(t, e)
+	contact := seedMailRecipient(t, e)
 	// Aged past the statutory correspondence floor: a fresh fixture would be
 	// shielded from the erase and would prove nothing about the scrub.
 	queued := seedDelivery(t, e, "9 years", "Queued for the subject",
-		"the words still waiting to go out", "pending", mailRecipientEmail, person)
+		"the words still waiting to go out", "pending", mailRecipientEmail, contact)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), person, "test"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	// The job wakes here. Nothing about the queue changed — the args still

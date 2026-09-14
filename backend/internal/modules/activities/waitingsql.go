@@ -7,7 +7,7 @@ package activities
 //
 // Its own file because it is the thing three callers share and must never fork:
 // the Worklist's workspace-wide read, the entity-scoped list filter, and the
-// hidden-backlog guardrail. Every rule that decides whether a person is waiting
+// hidden-backlog guardrail. Every rule that decides whether a contact is waiting
 // lives here — the anti-joins, the machine-sender exclusion, the horizon, the
 // sales-link requirement, the live-record predicates — and a caller restating
 // any of them would be a second answer to one question, wrong the first time
@@ -64,13 +64,13 @@ const waitingRepliesSQL = `
 	       -- One row per message however many records it is filed under. There
 	       -- is no max(uuid) in Postgres, so the pick is the first by text
 	       -- order: arbitrary but STABLE, which is what a card needs — the same
-	       -- message must not point at the person on one read and the company
+	       -- message must not point at the contact on one read and the company
 	       -- on the next.
-	       COALESCE((array_agg(wl.person_id ORDER BY wl.person_id::text)
-	                 FILTER (WHERE wl.person_id IS NOT NULL))[1],
+	       COALESCE((array_agg(wl.contact_id ORDER BY wl.contact_id::text)
+	                 FILTER (WHERE wl.contact_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
-	       COALESCE((array_agg(wl.organization_id ORDER BY wl.organization_id::text)
-	                 FILTER (WHERE wl.organization_id IS NOT NULL))[1],
+	       COALESCE((array_agg(wl.company_id ORDER BY wl.company_id::text)
+	                 FILTER (WHERE wl.company_id IS NOT NULL))[1],
 	                '00000000-0000-0000-0000-000000000000'::uuid),
 	       COALESCE((array_agg(wl.deal_id ORDER BY wl.deal_id::text)
 	                 FILTER (WHERE wl.deal_id IS NOT NULL))[1],
@@ -84,7 +84,7 @@ const waitingRepliesSQL = `
 	       -- row they can see decline to go stale.
 	       bool_or(openDeal.id IS NOT NULL),
 	       -- WHO owes the reply, first owner found down the precedence: deal,
-	       -- lead, person, organization.
+	       -- lead, contact, company.
 	       --
 	       -- COALESCE over four aggregates rather than four correlated
 	       -- subqueries: the links are already joined and grouped here, so this
@@ -95,7 +95,7 @@ const waitingRepliesSQL = `
 	       -- uq_activity_link is keyed on (activity, type, id), so a second deal
 	       -- link is a legal row — and ordering by owner_id picks the smallest
 	       -- OWNER across both. That owner need not own the deal this same query
-	       -- reports: the row would name deal D1 and bill its wait to the person
+	       -- reports: the row would name deal D1 and bill its wait to the contact
 	       -- who owns D2. Ordering by the record id makes each arm walk its links
 	       -- in the SAME order the record ids above are picked in.
 	       --
@@ -122,9 +122,8 @@ const waitingRepliesSQL = `
 	       -- eligibility that depended on the reader would make the same message
 	       -- engaged for one colleague and cold for another.
 	       -- The classifier's answer, or empty when nobody has judged this
-	       -- message. Absence is never evidence: an unjudged row ranks exactly
-	       -- as it did before the column existed.
-	       coalesce(a.owed_verdict, ''),
+	       -- message. Uncertain intent remains reviewable without claiming priority.
+	       coalesce(a.owed_verdict, ''), coalesce(a.capture_label, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.
@@ -169,15 +168,15 @@ const waitingRepliesSQL = `
 	          FILTER (WHERE ownerDeal.owner_id IS NOT NULL))[1],
 	         (array_agg(ownerLead.owner_id ORDER BY ownerLead.id::text)
 	          FILTER (WHERE ownerLead.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerPerson.owner_id ORDER BY ownerPerson.id::text)
-	          FILTER (WHERE ownerPerson.owner_id IS NOT NULL))[1],
-	         (array_agg(ownerOrg.owner_id ORDER BY ownerOrg.id::text)
-	          FILTER (WHERE ownerOrg.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerContact.owner_id ORDER BY ownerContact.id::text)
+	          FILTER (WHERE ownerContact.owner_id IS NOT NULL))[1],
+	         (array_agg(ownerCompany.owner_id ORDER BY ownerCompany.id::text)
+	          FILTER (WHERE ownerCompany.owner_id IS NOT NULL))[1],
 	         '00000000-0000-0000-0000-000000000000'::uuid)
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
-	  -- and it is the only evidence at this level that tells a person apart
+	  -- and it is the only evidence at this level that tells a contact apart
 	  -- from a notification service.
 	  LEFT JOIN activity_participant sender
 	         ON sender.activity_id = a.id AND sender.role = 'from'
@@ -186,8 +185,8 @@ const waitingRepliesSQL = `
 	  -- The ownership walk, all four off the gated link join above.
 	  LEFT JOIN deal ownerDeal ON ownerDeal.id = wl.deal_id
 	  LEFT JOIN lead ownerLead ON ownerLead.id = wl.lead_id
-	  LEFT JOIN person ownerPerson ON ownerPerson.id = wl.person_id
-	  LEFT JOIN organization ownerOrg ON ownerOrg.id = wl.organization_id
+	  LEFT JOIN contact ownerContact ON ownerContact.id = wl.contact_id
+	  LEFT JOIN company ownerCompany ON ownerCompany.id = wl.company_id
 	 WHERE a.kind IN ('email', 'message')
 	   AND a.direction = 'inbound'
 	   AND a.archived_at IS NULL
@@ -200,6 +199,11 @@ const waitingRepliesSQL = `
 	   -- workspace-wide Worklist read.
 	   AND (%[11]s)
 	   AND a.thread_key IS NOT NULL
+	   AND NOT EXISTS (SELECT 1 FROM activity request_task
+	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
+	       AND request_task.source_activity_id = a.id
+       AND (request_task.is_done OR (request_task.archived_at IS NULL
+         AND (request_task.assignee_id = $%[10]d OR $%[10]d = '00000000-0000-0000-0000-000000000000'::uuid))))
 	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
 	   --
 	   -- The horizon and the caller's staleness rule have to agree about money,
@@ -229,8 +233,8 @@ const waitingRepliesSQL = `
 	   AND (%[13]s OR EXISTS (
 	         SELECT 1 FROM activity_link sales
 	          WHERE sales.activity_id = a.id
-	            AND (sales.person_id IS NOT NULL
-	              OR sales.organization_id IS NOT NULL
+	            AND (sales.contact_id IS NOT NULL
+	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
 	                          WHERE d.id = sales.deal_id AND %[6]s)
 	              OR EXISTS (SELECT 1 FROM lead ld
@@ -258,7 +262,7 @@ const waitingRepliesSQL = `
 	   -- which is the one answer this source must never get wrong.
 	   --
 	   -- Deliberately coarse: it removes what nothing could mistake for a
-	   -- person, and the caller's own rule (capture's address list, which
+	   -- contact, and the caller's own rule (capture's address list, which
 	   -- knows the operator's allowlist) still runs over what survives.
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity_participant machine
@@ -270,15 +274,7 @@ const waitingRepliesSQL = `
 	              OR machine.address ILIKE '%%donotreply%%'
 	              OR machine.address ILIKE '%%notification%%'
 	              OR machine.address ILIKE '%%mailer-daemon%%'))
-	   AND NOT EXISTS (
-	         SELECT 1 FROM activity later
-	          WHERE later.thread_key = a.thread_key
-	            AND later.kind = a.kind
-	            AND later.channel_provider IS NOT DISTINCT FROM a.channel_provider
-	            AND later.direction = 'outbound'
-	            AND later.archived_at IS NULL
-	            AND later.occurred_at <= $%[1]d
-	            AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
+	   AND %[18]s
 	   AND NOT EXISTS (
 	         SELECT 1 FROM activity newer
 	          WHERE newer.thread_key = a.thread_key
@@ -319,8 +315,8 @@ const waitingRepliesSQL = `
 	   --
 	   -- not_mine carries no moment and does not lift at all. Ending it when the
 	   -- linked record changes hands would be the kinder rule, and it is not
-	   -- implemented: a message reaches its owner through a person, an
-	   -- organization, a deal or a lead, so the re-arm is a consumer over four
+	   -- implemented: a message reaches its owner through a contact, an
+	   -- company, a deal or a lead, so the re-arm is a consumer over four
 	   -- ownership events rather than a clause here. Until that exists the
 	   -- judgement stands until its reader withdraws it, and the contract says
 	   -- so rather than promising the re-arm.

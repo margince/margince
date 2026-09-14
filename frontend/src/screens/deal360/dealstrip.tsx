@@ -35,7 +35,7 @@ import {
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRoleLabel } from "../record360";
-import { SeatPerson } from "./seatperson";
+import { SeatContact } from "./seatcontact";
 
 // Where the money reading's door leads. The deal's overview draws the offers
 // card under these readings — the same tab, one screen down — so the door is a
@@ -96,7 +96,7 @@ export function DealStrip({
     <ReadingsGrid label={t("deal.strip.title")} testId="deal-strip">
       <MoneyStat deal={deal} offers={offers} locale={locale} t={t} />
       <CloseStat deal={deal} locale={locale} zone={zone} t={t} />
-      <PeopleStat
+      <ContactsStat
         coverage={coverage}
         withheld={coverageWithheld}
         locale={locale}
@@ -239,10 +239,10 @@ function CloseStat({
   );
 }
 
-// How many of the people on this deal are actually talking to us, and — behind
+// How many of the contacts on this deal are actually talking to us, and — behind
 // the figure — who they are: the buying side, by seat, with whether each has
 // answered.
-function PeopleStat({
+function ContactsStat({
   coverage,
   withheld,
   locale,
@@ -256,7 +256,7 @@ function PeopleStat({
   if (withheld) {
     return (
       <StatCard
-        label={t("deal.strip.people")}
+        label={t("deal.strip.contacts")}
         value={t("deal.strip.withheld")}
         detail={t("deal.strip.withheldDetail")}
       />
@@ -267,21 +267,21 @@ function PeopleStat({
   if (seats.length === 0) {
     return (
       <StatCard
-        label={t("deal.strip.people")}
-        value={t("deal.strip.people.none")}
-        detail={t("deal.strip.people.noneDetail")}
+        label={t("deal.strip.contacts")}
+        value={t("deal.strip.contacts.none")}
+        detail={t("deal.strip.contacts.noneDetail")}
         tone="warn"
       />
     );
   }
   const champion = seats.some((seat) => seat.role === "champion");
   const detail = champion
-    ? t("deal.strip.people.champion")
-    : t("deal.strip.people.noChampion");
+    ? t("deal.strip.contacts.champion")
+    : t("deal.strip.contacts.noChampion");
   return (
     <StatCard
-      label={t("deal.strip.people")}
-      value={t("deal.strip.people.count", {
+      label={t("deal.strip.contacts")}
+      value={t("deal.strip.contacts.count", {
         engaged: formatNumber(engaged, locale),
         total: formatNumber(seats.length, locale),
       })}
@@ -292,11 +292,11 @@ function PeopleStat({
       basis={
         <FactList
           facts={seats.map((seat) => ({
-            key: seat.person_id,
-            // The person, linked — or the withheld sentence when only the
-            // identity is hidden. SeatPerson owns both, because two other
+            key: seat.contact_id,
+            // The contact, linked — or the withheld sentence when only the
+            // identity is hidden. SeatContact owns both, because two other
             // cards on this record ask the same question.
-            term: <SeatPerson seat={seat} />,
+            term: <SeatContact seat={seat} />,
             value: dealRoleLabel(seat.role, t),
             note: seat.engaged ? t("coverage.engaged") : t("coverage.quiet"),
           }))}

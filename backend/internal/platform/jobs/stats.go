@@ -129,6 +129,10 @@ type Snapshot struct {
 	// which is a legitimate fleet rather than a failed read — Stats returns
 	// the error for that.
 	Units []SweepUnit
+	// Failures is the failing rows grouped by kind and by the sentence they
+	// recorded — the input the exposition classifies. Empty is a fleet with
+	// nothing failing, which is the healthy case and not a failed read.
+	Failures []FailureCount
 }
 
 // Stats reads the live job table for the metric surface.
@@ -157,7 +161,11 @@ func Stats(ctx context.Context, pool *pgxpool.Pool) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	return Snapshot{Rows: rows, Sweeps: sweeps, Units: units}, nil
+	failures, err := statsByFailure(ctx, pool)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	return Snapshot{Rows: rows, Sweeps: sweeps, Units: units, Failures: failures}, nil
 }
 
 // subWorkspaceFanOuts answers the fan-out child kinds whose declared unit is

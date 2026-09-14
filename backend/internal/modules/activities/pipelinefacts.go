@@ -65,10 +65,10 @@ const ClassifyBacklogPredicate = `capture_label IS NULL
 // once and every field comes off the same row — four round trips to assemble one
 // drawer would be four times the cost for no separation anybody benefits from.
 type PipelineFacts struct {
-	// HasPersonLink answers the person-creation rung. The link is the durable
+	// HasContactLink answers the contact-creation rung. The link is the durable
 	// signal: it is also how the link_reconcile sweep finds its work, so a
 	// link-less connector activity is precisely what "not linked yet" means.
-	HasPersonLink bool
+	HasContactLink bool
 
 	// CaptureLabel is the attention label, empty when unlabelled.
 	CaptureLabel string
@@ -109,7 +109,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 		row := tx.QueryRow(ctx, `
 			SELECT
 			  EXISTS (SELECT 1 FROM activity_link l
-			           WHERE l.activity_id = activity.id AND l.person_id IS NOT NULL),
+			           WHERE l.activity_id = activity.id AND l.contact_id IS NOT NULL),
 			  capture_label,
 			  kind,
 			  captured_by,
@@ -121,7 +121,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID) (PipelineFac
 			  (`+ClassifyBacklogPredicate+`)
 			FROM activity
 			WHERE id = $1`, id, pipelinetrace.OpenDispositionStatuses())
-		if err := row.Scan(&out.HasPersonLink, &label, &kind, &capturedBy,
+		if err := row.Scan(&out.HasContactLink, &label, &kind, &capturedBy,
 			&archived, &audienceLimited, &senderUndecided, &eligible); err != nil {
 			return err
 		}

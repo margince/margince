@@ -6,7 +6,7 @@ package compose
 // Where a consent round-trip lands and what the human is told when it did not
 // work. The callback never renders: it redirects to a hash route the SPA maps
 // to copy, so the vocabulary of outcomes IS the contract with the frontend, and
-// picking the right one is the difference between advice a person can act on
+// picking the right one is the difference between advice a contact can act on
 // and a shrug.
 
 import (

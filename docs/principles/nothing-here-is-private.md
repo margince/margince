@@ -58,6 +58,6 @@ your patch, ask in the issue rather than guessing.
 
 - **Not secrecy about the product.** The design, the contract and the reasoning
   in these docs are meant to be read. This is about not *pointing* at things a
-  reader cannot open, and not leaking material that harms people.
+  reader cannot open, and not leaking material that harms contacts.
 - **Not avoiding security work in the open.** Hardening lands here in public,
   with its test. Only live, reproducible weaknesses take the private path.

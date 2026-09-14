@@ -36,11 +36,13 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 		got = append(got, object+"/"+category+"/"+action)
 		_ = days
 	}
+	// The query below orders by object, so the list follows the alphabet and
+	// not the order the seed writes them in.
 	want := []string{
 		"activity/transcript/erase", "activity//archive",
 		"ai_call_payload/content/erase",
+		"contact/no_consent_no_deal/anonymize",
 		"deal/lost/archive", "lead/unconverted/anonymize",
-		"person/no_consent_no_deal/anonymize",
 	}
 	if len(got) != len(want) {
 		t.Fatalf("seeded %d policies %v, want the §3.4 five + ai_call_payload/content/erase", len(got), got)
@@ -59,7 +61,7 @@ func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": e.personID, "due_at": "2026-08-01T00:00:00Z",
+		"kind": "erasure", "subject_ref": e.contactID, "due_at": "2026-08-01T00:00:00Z",
 	}, nil, &dsr); status != http.StatusCreated {
 		t.Fatalf("create DSR → %d", status)
 	}
@@ -69,13 +71,13 @@ func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
 		t.Fatalf("fulfill DSR → %d", status)
 	}
 
-	var person struct {
+	var contact struct {
 		FullName string `json:"full_name"`
 	}
-	if status := e.Call(t, "GET", "/v1/people/"+e.personID, nil, nil, &person); status != http.StatusOK {
-		t.Fatalf("read person → %d", status)
+	if status := e.Call(t, "GET", "/v1/contacts/"+e.contactID, nil, nil, &contact); status != http.StatusOK {
+		t.Fatalf("read contact → %d", status)
 	}
-	if person.FullName != "Erased Subject" {
-		t.Fatalf("fulfilled erasure left the subject intact: %q", person.FullName)
+	if contact.FullName != "Erased Subject" {
+		t.Fatalf("fulfilled erasure left the subject intact: %q", contact.FullName)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -89,6 +90,7 @@ type Trigger struct {
 // instance's validated params — the editor's parameterization reaches
 // the run here.
 type Event struct {
+	Actor       events.Actor
 	ID          ids.UUID
 	Type        string
 	WorkspaceID ids.UUID
@@ -244,9 +246,9 @@ type StagedApprovalError struct {
 	//
 	// Without it a caller is told a decision is pending and has to go read the
 	// proposal back to learn what it itself proposed — which an agent relaying
-	// to a person does not do: it says "a change will be applied once approved"
+	// to a contact does not do: it says "a change will be applied once approved"
 	// and never says which. The card and this sentence are the same sentence on
-	// purpose, so the person and the agent are waiting on one described thing.
+	// purpose, so the contact and the agent are waiting on one described thing.
 	//
 	// Nothing new is disclosed. It describes THIS call, built from arguments
 	// this caller supplied, and the human sees the same text.
@@ -284,7 +286,7 @@ func boundedSummary(s string) string {
 }
 
 func (e *StagedApprovalError) Error() string {
-	// The summary leads, because it is the part a caller relays to a person.
+	// The summary leads, because it is the part a caller relays to a contact.
 	// An empty one is a producer that stages without describing what it staged,
 	// which is a real state (the automation engine's effects) rather than a
 	// gap to fill with a placeholder sentence.

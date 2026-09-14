@@ -132,7 +132,7 @@ func dialLogin(ctx context.Context, creds Credentials) (*imapclient.Client, net.
 //
 // Only when the server advertises the extension, and a refusal is not fatal:
 // an introduction is a courtesy the session does not depend on, and declining
-// to read a person's mail because their provider would not take one would be
+// to read a contact's mail because their provider would not take one would be
 // the wrong trade entirely.
 func announceClient(client *imapclient.Client) {
 	if !client.Caps().Has(imapv2.CapID) {

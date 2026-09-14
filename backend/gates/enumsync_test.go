@@ -40,10 +40,10 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
-	"lead.status":                      {"internal/modules/people", "LeadStatus"},
+	"lead.status":                      {"internal/modules/contacts", "LeadStatus"},
 	"deal.status":                      {"internal/modules/deals", "DealStatus"},
 	"stage.semantic":                   {"internal/modules/deals", "StageSemantic"},
-	"person_consent.state":             {"internal/modules/consent", "ConsentState"},
+	"contact_consent.state":            {"internal/modules/consent", "ConsentState"},
 	"offer_line_item.proposal_state":   {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":        {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status": {"internal/contracts", "KnowledgeDocumentIngestStatus"},
@@ -63,7 +63,12 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"attachment.entity_type":       {"internal/shared/ports/datasource", "EntityType"},
 	"embedding.entity_type":        {"internal/shared/ports/datasource", "EntityType"},
 	"field_provenance.object_type": {"internal/shared/ports/datasource", "EntityType"},
-	"custom_field.object":          {"internal/shared/ports/datasource", "EntityType"},
+	// NOT EntityType, and this is the one binding where the difference is the
+	// point. A custom field hangs off a TARGET; an EntityType is something a
+	// record provider can be asked about. Contract is the first member that is
+	// the former without being the latter, so the CHECK mirrors
+	// fieldcatalog.Target and the gate compares it against that.
+	"custom_field.object": {"internal/shared/ports/fieldcatalog", "Target"},
 }
 
 // checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
@@ -122,6 +127,11 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			if err != nil {
 				return err
 			}
+			// Read through the renames the migrations themselves declare: a CHECK
+			// against a table since renamed would otherwise be filed under a
+			// name no caller uses, and the vocabulary derived for the current
+			// one comes back empty.
+			sql := withCurrentNames(string(raw))
 			current, block := "", strings.Builder{}
 			flush := func() {
 				if current == "" {
@@ -131,7 +141,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				current = ""
 				block.Reset()
 			}
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(sql, "\n") {
 				if m := createTableLine.FindStringSubmatch(line); m != nil {
 					flush()
 					current = m[1]
@@ -147,7 +157,7 @@ func tableCheckSets(t *testing.T) map[string][]string {
 				}
 			}
 			flush()
-			for _, stmt := range strings.Split(string(raw), ";") {
+			for _, stmt := range strings.Split(sql, ";") {
 				if alter := alterTableStmt.FindStringSubmatch(stmt); alter != nil {
 					recordChecks(sets, alter[1], stmt)
 				}

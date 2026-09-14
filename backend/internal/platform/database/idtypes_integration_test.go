@@ -30,10 +30,10 @@ func TestTypedIDsRoundTripThroughPgx(t *testing.T) {
 	}
 	defer pool.Close()
 
-	want := ids.New[ids.PersonKind]()
+	want := ids.New[ids.ContactKind]()
 
 	// Scalar bind + scan.
-	var got ids.PersonID
+	var got ids.ContactID
 	if err := pool.QueryRow(ctx, `SELECT $1::uuid`, want).Scan(&got); err != nil {
 		t.Fatalf("scalar round-trip: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestTypedIDsRoundTripThroughPgx(t *testing.T) {
 	}
 
 	// NULL through the pointer form.
-	var null *ids.PersonID
+	var null *ids.ContactID
 	if err := pool.QueryRow(ctx, `SELECT NULL::uuid`).Scan(&null); err != nil {
 		t.Fatalf("NULL scan: %v", err)
 	}
@@ -54,11 +54,11 @@ func TestTypedIDsRoundTripThroughPgx(t *testing.T) {
 	}
 
 	// The ANY($1) slice idiom — the reason RegisterIDTypes exists.
-	other := ids.New[ids.PersonKind]()
+	other := ids.New[ids.ContactKind]()
 	var matched int
 	if err := pool.QueryRow(ctx,
 		`SELECT count(*) FROM (SELECT unnest(ARRAY[$1::uuid, $2::uuid]) AS id) rows WHERE rows.id = ANY($3)`,
-		want, other, []ids.PersonID{want, other}).Scan(&matched); err != nil {
+		want, other, []ids.ContactID{want, other}).Scan(&matched); err != nil {
 		t.Fatalf("slice ANY bind: %v", err)
 	}
 	if matched != 2 {

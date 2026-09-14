@@ -16,11 +16,6 @@ import { Select, type SelectOption } from "./select";
 
 // One value a reader can change without leaving the page they are reading.
 //
-// It exists because burying a field in an edit modal is not neutral: a value
-// nobody can change in place is a value nobody changes. Account lifecycle and
-// owner are the two a rep moves during a call, and both were reachable only
-// through a form that also asked about legal names and size bands.
-//
 // The interaction is edit-in-place, not a form: at rest the value reads as
 // plain text — no box, no accent, nothing saying "control" — and only a hover
 // or a keyboard focus reveals the affordance (an underline, and for a chooser
@@ -50,6 +45,8 @@ export function InlineChoice({
   readOnlyReason,
   render,
   onSave,
+  onEditingChange,
+  onDirtyChange,
 }: Readonly<{
   // Names the field, for the reader and for assistive tech. A bare value in a
   // header row reads as one more fact among many.
@@ -61,29 +58,26 @@ export function InlineChoice({
   // name once (FieldGrid's own label column) — printing it a second time here
   // is the field naming itself twice, not a second fact.
   hideLabel?: boolean;
+  onEditingChange?: (editing: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   value: string;
   options: readonly SelectOption[];
   canEdit: boolean;
-  // Why this is not editable, when there is a reason worth saying — an archived
-  // record, an overlay-mirrored one. Absent means "you simply may not", which
-  // needs no sentence.
   readOnlyReason?: string;
-  // How the current value reads when the control is closed. A raw value is
-  // rarely what a human should see: a lifecycle is a badge, an owner is a name
-  // the caller has to resolve.
   render: (value: string) => ReactNode;
-  // Returns nothing on success and THROWS on failure. Version conflicts,
-  // validation and permission refusals all arrive here; what the reader is
-  // shown is `problemMessageOf`'s reading of the throw, not its text. A
-  // ProblemError's own detail is written by `httperr` from `err.Error()`, so
-  // for a permission refusal it is the RBAC object and verb — the shape of the
-  // authority model, which is not copy and never reaches a screen.
+  // Refused saves keep the draft and render a translated problem.
   onSave: (next: string) => Promise<void>;
 }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
+  useEffect(() => {
+    onEditingChange?.(editing);
+  }, [editing, onEditingChange]);
   const [pending, setPending] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    onDirtyChange?.(editing && (saving || pending !== value));
+  }, [editing, saving, pending, value, onDirtyChange]);
   const [failure, setFailure] = useState<string | null>(null);
   const container = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -249,7 +243,7 @@ export function InlineChoice({
   );
 }
 
-// InlineText is InlineChoice for a free-text value: the company's one-line
+// Free-text editing follows the same save/refusal contract as choices.
 // description, edited where it is read rather than inside a form that also
 // asks about legal names and size bands.
 //
@@ -283,17 +277,20 @@ export function InlineText({
   placeholder,
   maxLength,
   multiline,
+  type,
+  step,
   onEditingChange,
+  onDirtyChange,
   canEdit,
   readOnlyReason,
   onSave,
 }: Readonly<{
   label: string;
   value: string;
-  // What the pressable reads as when the value is empty. Without it an unset
-  // description is a zero-width button nobody can find.
   placeholder: string;
   maxLength?: number;
+  type?: "text" | "email" | "number" | "date";
+  step?: string;
   // A value that is a PARAGRAPH rather than a line: the account's own story
   // fields run to several sentences, and a single-line input shows a reader
   // one sentence of what they are editing. Enter then inserts a newline
@@ -306,6 +303,7 @@ export function InlineText({
   // and standing beside a draft it would attribute the reader's own words to
   // whatever produced the old one.
   onEditingChange?: (editing: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   canEdit: boolean;
   readOnlyReason?: string;
   // Returns nothing on success and throws on failure. What the reader is shown
@@ -323,6 +321,11 @@ export function InlineText({
   // between the Escape keydown and that blur, so the blur handler below can
   // tell "the reader cancelled" from "the reader tabbed away" and skip the
   // commit only for the former.
+  useEffect(() => {
+    onDirtyChange?.(
+      editing && (saving || (multiline ? draft : draft.trim()) !== value),
+    );
+  }, [editing, saving, draft, multiline, value, onDirtyChange]);
   const cancelling = useRef(false);
   const field = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -407,7 +410,12 @@ export function InlineText({
     if (saving) {
       return;
     }
-    const next = draft.trim();
+    if (field.current && !field.current.checkValidity()) {
+      setFailure(field.current.validationMessage);
+      field.current.focus();
+      return;
+    }
+    const next = multiline ? draft : draft.trim();
     // Saving what is already stored writes an audit row for a change that did
     // not happen. Blur fires on every exit now, so this guard is what keeps
     // "clicked in, typed nothing, clicked out" silent.
@@ -439,6 +447,8 @@ export function InlineText({
       </label>
       <InlineTextControl
         multiline={multiline}
+        type={type}
+        step={step}
         ref={field}
         id={fieldId}
         value={draft}

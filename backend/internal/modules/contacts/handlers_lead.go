@@ -1,0 +1,302 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"net/http"
+	"strings"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
+	in := ListLeadsInput{
+		Cursor:          params.Cursor,
+		Limit:           params.Limit,
+		Query:           params.Q,
+		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
+		CapturedByKind:  capturedByKindArg(params.CapturedByKind),
+		AiWritten:       params.AiWritten,
+		MinScore:        params.MinScore,
+		Source:          params.Source,
+		SLAState:        params.SlaState,
+		Sort:            params.Sort,
+	}
+	if params.Status != nil {
+		s := string(*params.Status)
+		in.Status = &s
+	}
+	in.OwnerID = idArg[ids.UserKind](params.OwnerId)
+	in.OwnerTeamID = idArg[ids.TeamKind](params.OwnerTeamId)
+	in.Unassigned = params.Unassigned
+
+	leads, page, err := h.store.ListLeads(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LeadListResponse{Data: leads, Page: pageInfo(page)})
+}
+
+func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateLeadParams) {
+	var req crmcontracts.CreateLeadRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+
+	in, err := leadCreateInput(req)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	lead, created, err := h.store.CreateLead(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	status := http.StatusCreated
+	if !created {
+		// Natural-key replay: same (source_system, source_id) returns the
+		// existing row, not a duplicate (features/01 §6.2).
+		status = http.StatusOK
+	}
+	w.Header().Set("Location", "/v1/leads/"+lead.Id.String())
+	httperr.WriteJSON(w, status, lead)
+}
+
+func (h Handlers) GetLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	lead, err := h.store.GetLead(r.Context(), pathID[ids.LeadKind](id), storekit.IncludeArchived)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, lead)
+}
+
+func (h Handlers) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UpdateLeadParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req LeadUpdateRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+
+	update := leadUpdateInput(req, ifVersion)
+	update.Clear = httperr.ClearedFields(r)
+	lead, err := h.store.UpdateLead(r.Context(), pathID[ids.LeadKind](id), update)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, lead)
+}
+
+// AssignLeads serves POST /leads/assign-bulk: hand a named set of leads to one
+// owner, each answering for itself.
+//
+// 200 with per-row outcomes rather than an error for a partly refused run:
+// the refusals ARE the result here, and a 4xx carrying no body would leave the
+// screen unable to say which of forty leads did not move.
+func (h Handlers) AssignLeads(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.AssignLeadsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// An absent required id decodes to the zero UUID with no error, and a zero
+	// UUID reaching the assignment gate would be refused as "not a seat you may
+	// assign to" — a sentence about a colleague the caller never named. Both
+	// ids are refused here instead, naming the field that was missing.
+	if err := httperr.RequireBodyID("owner_id", ids.UUID(req.OwnerId)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	in := AssignLeadsInput{
+		OwnerID: ids.From[ids.UserKind](ids.UUID(req.OwnerId)),
+		Leads:   make([]AssignLeadItem, 0, len(req.Leads)),
+	}
+	for _, item := range req.Leads {
+		if err := httperr.RequireBodyID("leads.id", ids.UUID(item.Id)); err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+		in.Leads = append(in.Leads, AssignLeadItem{
+			ID:        ids.From[ids.LeadKind](ids.UUID(item.Id)),
+			IfVersion: item.Version,
+		})
+	}
+	outcomes, err := h.store.AssignLeads(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	results := make([]crmcontracts.AssignLeadOutcome, 0, len(outcomes))
+	for _, o := range outcomes {
+		results = append(results, crmcontracts.AssignLeadOutcome{
+			LeadId:  openapi_types.UUID(o.LeadID.UUID),
+			Outcome: o.Outcome,
+			Version: o.Version,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssignLeadsResult{Results: results})
+}
+
+// PromoteLead: POST /leads/{id}/promote — the lead graduates into the
+// clean core on genuine engagement (features/01 §6.4). The 🟡
+// agent-triggered path waits on the approvals machinery; today's callers
+// are human sessions.
+func (h Handlers) PromoteLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.PromoteLeadParams) {
+	var req crmcontracts.PromoteLeadRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// cold_outbound_no_reply is not in the enum BY DESIGN — an outbound
+	// touch with no response never promotes (the anti-pollution line).
+	if !req.Trigger.Valid() {
+		httperr.Write(w, r, httperr.Validation("trigger", "trigger_not_allowed",
+			"promotion needs genuine engagement: inbound_reply, meeting_booked, meeting_held or human_qualify"))
+		return
+	}
+
+	in := PromoteLeadInput{Trigger: string(req.Trigger)}
+	if req.Evidence != nil {
+		in.EvidenceNote = req.Evidence.Note
+		in.EvidenceActivityID = idArg[ids.ActivityKind](req.Evidence.ActivityId)
+	}
+	if req.Deal != nil {
+		in.Deal = &QualifyDealInput{
+			PipelineID: uuidPtrToIDs(req.Deal.PipelineId), StageID: uuidPtrToIDs(req.Deal.StageId),
+			AmountMinor: req.Deal.AmountMinor, Currency: req.Deal.Currency,
+		}
+		if req.Deal.Name != nil {
+			in.Deal.Name = *req.Deal.Name
+		}
+	}
+
+	out, err := h.store.QualifyLead(r.Context(), pathID[ids.LeadKind](id), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	leadID := id
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.PromoteLeadResponse{
+		LeadId: &leadID, Merged: out.Merged, Contact: out.Contact, DealId: uuidPtr(out.DealID),
+	})
+}
+
+// GetLeadSettings serves GET /leads/settings.
+func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
+	out, err := h.store.GetLeadSettings(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// UpdateLeadSettings serves PATCH /leads/settings (admin/ops, human only).
+func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.UpdateLeadSettingsRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in := UpdateLeadSettingsInput{
+		FirstResponseEnabled: req.FirstResponseEnabled, FirstResponseTargetMinutes: req.FirstResponseTargetMinutes,
+	}
+	// A JSON null decodes to a nil pointer and reads as "not supplied", so the
+	// explicit "nobody answers for the queue" is carried by the cleared-fields
+	// list rather than by the value.
+	for _, cleared := range httperr.ClearedFields(r) {
+		if cleared == "unassigned_escalation_user_id" {
+			in.ClearUnassignedEscalation = true
+		}
+	}
+	if req.UnassignedEscalationUserId != nil {
+		seat := ids.From[ids.UserKind](ids.UUID(*req.UnassignedEscalationUserId))
+		in.UnassignedEscalationUserID = &seat
+	}
+	out, err := h.store.UpdateLeadSettings(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// PreviewLeadPromotion serves GET /leads/{id}/promote-preview — what
+// promotion would do, without doing it (ADR-0119/A170).
+func (h Handlers) PreviewLeadPromotion(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	preview, err := h.store.PreviewLeadPromotion(r.Context(), pathID[ids.LeadKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, preview)
+}
+
+// DemoteLead serves POST /leads/{id}/demote — the audited reverse of
+// promotion (formulas §26).
+func (h Handlers) DemoteLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DemoteLeadParams) {
+	var req crmcontracts.DemoteLeadRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.Reason) == "" {
+		httperr.Write(w, r, httperr.Validation("reason", "required",
+			"say why the promotion is being reversed; the reason is recorded in the audit trail"))
+		return
+	}
+	out, err := h.store.DemoteLead(r.Context(), pathID[ids.LeadKind](id), req.Reason)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// ReopenLead puts a disqualified lead back on the open ladder — POST
+// /leads/{id}/reopen, the reverse of the disqualify below.
+//
+// No body. What a reopen restores is read from the trail rather than supplied,
+// so there is nothing for a caller to say beyond which lead.
+func (h Handlers) ReopenLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ReopenLeadParams) {
+	lead, err := h.store.ReopenLead(r.Context(), pathID[ids.LeadKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, lead)
+}
+
+// DisqualifyLead: DELETE /leads/{id} — the one path where
+// "disqualified ⇒ archived" is enforced.
+// DisqualifyLead: DELETE /leads/{id}. The body is optional on the wire — an
+// agent's governed call sends none — so an empty body is "no reason", not a
+// malformed request.
+func (h Handlers) DisqualifyLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var in DisqualifyLeadInput
+	if r.ContentLength != 0 {
+		var req crmcontracts.DisqualifyLeadRequest
+		if !httperr.Decode(w, r, &req) {
+			return
+		}
+		if req.ReasonId != nil {
+			reason := ids.UUID(*req.ReasonId)
+			in.ReasonID = &reason
+		}
+		in.Note = req.Note
+	}
+	lead, err := h.store.DisqualifyLead(r.Context(), pathID[ids.LeadKind](id), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, lead)
+}

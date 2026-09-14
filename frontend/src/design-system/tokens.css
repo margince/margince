@@ -200,7 +200,7 @@
    * mirrors share.html's read/write pill colours). Derived from --teal. */
   --tealLight: rgba(14, 116, 144, 0.1);
   --away: #fbbf24;
-  /* Monogram tones: the six backgrounds a company/person avatar picks from by
+  /* Monogram tones: the six backgrounds a company/contact avatar picks from by
    * name, so the same record reads the same colour everywhere without storing
    * one. Low-alpha fills over the card surface, paired with a readable text
    * tone — they identify a record at a glance, they never encode status, and
@@ -274,7 +274,7 @@
    *
    * The three tones that are NOT work keep their own hues, because those are
    * status and status is a different question from provenance: amber asks a
-   * person for something, red failed, grey cannot reach a source. An orb that
+   * contact for something, red failed, grey cannot reach a source. An orb that
    * went indigo when it failed would say who was working and stop saying how it
    * went.
    *
@@ -651,7 +651,7 @@
   --focus-glow-danger: 0 0 0 3px var(--dangerBg);
   /* The same glow in the AI family, for a field on a surface a machine authored
    * — the onboarding conversation, the composer. An accent ring there would be
-   * the one colour in the product that says "a person decided this" drawn on a
+   * the one colour in the product that says "a contact decided this" drawn on a
    * card that says the opposite, so this is a variant for the same reason
    * --focus-glow-danger is one, not a second spelling. Six rules hand-spelled
    * it before it existed. */

@@ -230,7 +230,7 @@ func comparesADueDateToTheClock(call *ast.CallExpr) bool {
 // mentionsADueDate reports whether an expression names a DUE date.
 //
 // "due" only, and that is a scope decision rather than an oversight. A due date
-// is a moment promised to a person, and being past it is something a reader is
+// is a moment promised to a contact, and being past it is something a reader is
 // shown. An expiry, a lease, a quiesce deadline and a token lifetime are also
 // moments compared against a clock, and none of them is a promise anybody
 // missed — widening to those words reported eleven sites that were all correct,

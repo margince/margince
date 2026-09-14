@@ -5,7 +5,7 @@ package compose
 
 // The licensed-data-provider surface (ADR-0101, PI-WIRE-1..6): read the
 // connections, connect or rotate a key, patch the saved policy, disconnect,
-// delete retained data, and queue or read a person's enrichment run.
+// delete retained data, and queue or read a contact's enrichment run.
 //
 // Thin transport. The integrations store owns every RBAC gate and every write;
 // what happens here is decoding, mapping and the human-only check the contract
@@ -100,7 +100,7 @@ func (h integrationsHandlers) UpdateProviderConnection(w http.ResponseWriter, r 
 		return
 	}
 	// Read off the header rather than the generated params struct, which is
-	// the house spelling (people, deals, roles): httperr.IfMatchVersion
+	// the house spelling (contacts, deals, roles): httperr.IfMatchVersion
 	// is where "a bare integer, not a quoted ETag" and the malformed-header
 	// refusal are decided once, for every surface.
 	ifVersion, ok := httperr.IfMatchVersion(w, r)
@@ -152,9 +152,9 @@ func (h integrationsHandlers) DeleteProviderData(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CreatePersonEnrichmentRunParams) {
+func (h integrationsHandlers) CreateContactEnrichmentRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CreateContactEnrichmentRunParams) {
 	if h.runs == nil {
-		httperr.NotImplemented(w, r, "CreatePersonEnrichmentRun")
+		httperr.NotImplemented(w, r, "CreateContactEnrichmentRun")
 		return
 	}
 	if err := auth.RequireHuman(r.Context()); err != nil {
@@ -179,18 +179,18 @@ func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r
 		httperr.Write(w, r, err)
 		return
 	}
-	var body crmcontracts.CreatePersonEnrichmentRunRequest
+	var body crmcontracts.CreateContactEnrichmentRunRequest
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	run, err := h.runs.QueueRun(r.Context(), provider.QueueInput{
-		PersonID: id.String(),
-		Provider: string(body.Provider),
+		ContactID: id.String(),
+		Provider:  string(body.Provider),
 		// What this ONE press buys. Absent means the connection's selection;
 		// named, it is how a reader purchases a single priced detail without
 		// changing what every future run spends.
 		Categories: requestedCategories(body.Categories),
-		// A person asking explicitly. Never fenced by the duplicate or
+		// A contact asking explicitly. Never fenced by the duplicate or
 		// freshness checks — they know something the timestamps do not.
 		Trigger: provider.TriggerManual,
 	})
@@ -202,9 +202,9 @@ func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r
 	httperr.WriteJSON(w, http.StatusAccepted, toProviderRun(run))
 }
 
-func (h integrationsHandlers) GetPersonEnrichmentRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, runID openapi_types.UUID) {
+func (h integrationsHandlers) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, runID openapi_types.UUID) {
 	if h.runs == nil {
-		httperr.NotImplemented(w, r, "GetPersonEnrichmentRun")
+		httperr.NotImplemented(w, r, "GetContactEnrichmentRun")
 		return
 	}
 	run, err := h.runs.GetRun(r.Context(), id.String(), runID.String())
@@ -289,6 +289,6 @@ func (h integrationsHandlers) requireVisibleContact(ctx context.Context, id crmc
 		return apperrors.ErrPermissionDenied
 	}
 	return database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
-		return auth.EnsureVisibleLive(ctx, tx, "person", ids.UUID(id))
+		return auth.EnsureVisibleLive(ctx, tx, "contact", ids.UUID(id))
 	})
 }

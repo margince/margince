@@ -51,30 +51,30 @@ var (
 // The phone pair is seeded as two rows joined by superseded_phone_id, which is
 // how the writer records a replacement: the old row is archived rather than
 // deleted, and the new one points back at it.
-func seedSupersededHistory(ctx context.Context, t *testing.T, owner *pgx.Conn, person ids.PersonID) {
+func seedSupersededHistory(ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID) {
 	t.Helper()
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person_profile_field
-		  (person_id, field, value, evidence_snippet, source_ref, source, captured_by,
+		INSERT INTO contact_profile_field
+		  (contact_id, field, value, evidence_snippet, source_ref, source, captured_by,
 		   observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
 		VALUES ($1, 'title', $2, 'signature block', 'activity:test', 'signature', 'agent:enrich',
 		        $3, $4, 'user:test', $5)`,
-		person, livedTitle, observedAt, replacedTitle, replacedObservedAt); err != nil {
+		contact, livedTitle, observedAt, replacedTitle, replacedObservedAt); err != nil {
 		t.Fatal(err)
 	}
 
 	var replaced ids.UUID
 	if err := owner.QueryRow(ctx, `
-		INSERT INTO person_phone (person_id, phone, source, captured_by, observed_at, archived_at)
+		INSERT INTO contact_phone (contact_id, phone, source, captured_by, observed_at, archived_at)
 		VALUES ($1, $2, 'manual', 'user:test', $3, $4)
 		RETURNING id`,
-		person, ident(person, replacedPhone), replacedObservedAt, retiredAt).Scan(&replaced); err != nil {
+		contact, ident(contact, replacedPhone), replacedObservedAt, retiredAt).Scan(&replaced); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
-		UPDATE person_phone SET superseded_phone_id = $1, observed_at = $2
-		 WHERE person_id = $3 AND phone = $4`,
-		replaced, observedAt, person, ident(person, livePhone)); err != nil {
+		UPDATE contact_phone SET superseded_phone_id = $1, observed_at = $2
+		 WHERE contact_id = $3 AND phone = $4`,
+		replaced, observedAt, contact, ident(contact, livePhone)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -83,9 +83,9 @@ func seedSupersededHistory(ctx context.Context, t *testing.T, owner *pgx.Conn, p
 // section hands over both assertions and both dates.
 func TestTheExportCarriesTheValueANewerStatementReplaced(t *testing.T) {
 	e := setupSARIdentifiers(t)
-	seedSupersededHistory(e.ctx, t, e.owner, e.person)
+	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -137,23 +137,23 @@ func TestTheExportCarriesTheValueANewerStatementReplaced(t *testing.T) {
 // the subject nothing, so the obligation is the NUMBER.
 func TestTheExportNamesTheNumberANewerOneReplaced(t *testing.T) {
 	e := setupSARIdentifiers(t)
-	seedSupersededHistory(e.ctx, t, e.owner, e.person)
+	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
 
 	var live map[string]any
 	for _, row := range pkg.Phones {
-		if row["phone"] == ident(e.person, livePhone) {
+		if row["phone"] == ident(e.contact, livePhone) {
 			live = row
 		}
 	}
 	if live == nil {
 		t.Fatalf("the live phone is missing from the export: %v", pkg.Phones)
 	}
-	if got := live["replaced_phone"]; got != ident(e.person, replacedPhone) {
+	if got := live["replaced_phone"]; got != ident(e.contact, replacedPhone) {
 		t.Errorf("replaced_phone = %v, want %q — a row id would name nothing the subject can read", got, replacedPhone)
 	}
 	stamp, ok := live["replaced_observed_at"].(time.Time)
@@ -171,16 +171,16 @@ func TestTheExportNamesTheNumberANewerOneReplaced(t *testing.T) {
 // which is most of them.
 func TestAPhoneThatReplacedNothingStillReachesTheExport(t *testing.T) {
 	e := setupSARIdentifiers(t)
-	seedSupersededHistory(e.ctx, t, e.owner, e.person)
+	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
 
 	var replaced map[string]any
 	for _, row := range pkg.Phones {
-		if row["phone"] == ident(e.person, replacedPhone) {
+		if row["phone"] == ident(e.contact, replacedPhone) {
 			replaced = row
 		}
 	}
@@ -195,25 +195,25 @@ func TestAPhoneThatReplacedNothingStillReachesTheExport(t *testing.T) {
 // TestTheExportNeverNamesAStrangersReplacedNumber is the merge case.
 //
 // A merge re-homes only LIVE phone rows, so the survivor ends up carrying a
-// live row that still points at the merged-away person's ARCHIVED one. The
+// live row that still points at the merged-away contact's ARCHIVED one. The
 // pointer therefore crosses subjects in ordinary use, and an export that
 // followed it would hand this subject a number belonging to somebody else —
 // the single worst thing a privacy export can do.
 func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 	e := setupSARIdentifiers(t)
 
-	// A second person, holding the number, whose live row is then re-homed to
+	// A second contact, holding the number, whose live row is then re-homed to
 	// our subject exactly as relinkDemotingPrimary does it: the archived
 	// predecessor stays behind.
-	stranger := ids.New[ids.PersonKind]()
+	stranger := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(e.ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
+		INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Merged Away', 'manual', 'user:test')`, stranger); err != nil {
 		t.Fatal(err)
 	}
 	var strangersOld ids.UUID
 	if err := e.owner.QueryRow(e.ctx, `
-		INSERT INTO person_phone (person_id, phone, source, captured_by, observed_at, archived_at)
+		INSERT INTO contact_phone (contact_id, phone, source, captured_by, observed_at, archived_at)
 		VALUES ($1, $2, 'manual', 'user:test', $3, $4)
 		RETURNING id`,
 		stranger, ident(stranger, replacedPhone), replacedObservedAt, retiredAt).Scan(&strangersOld); err != nil {
@@ -221,13 +221,13 @@ func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 	}
 	// The survivor's live row points at it, which is what the merge leaves.
 	if _, err := e.owner.Exec(e.ctx, `
-		UPDATE person_phone SET superseded_phone_id = $1
-		 WHERE person_id = $2 AND phone = $3`,
-		strangersOld, e.person, ident(e.person, livePhone)); err != nil {
+		UPDATE contact_phone SET superseded_phone_id = $1
+		 WHERE contact_id = $2 AND phone = $3`,
+		strangersOld, e.contact, ident(e.contact, livePhone)); err != nil {
 		t.Fatal(err)
 	}
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 	strangersNumber := ident(stranger, replacedPhone)
 	for _, row := range pkg.Phones {
 		if row["replaced_phone"] == strangersNumber {
-			t.Fatalf("the export named a number held by another person as this subject's "+
+			t.Fatalf("the export named a number held by another contact as this subject's "+
 				"replaced number: %v", row)
 		}
 	}
@@ -243,7 +243,7 @@ func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 	// unresolved, not dropped along with the number that carries it.
 	var live map[string]any
 	for _, row := range pkg.Phones {
-		if row["phone"] == ident(e.person, livePhone) {
+		if row["phone"] == ident(e.contact, livePhone) {
 			live = row
 		}
 	}
@@ -265,9 +265,9 @@ func TestTheExportNeverNamesAStrangersReplacedNumber(t *testing.T) {
 // judgement.
 func TestEveryHeldColumnReachesTheExport(t *testing.T) {
 	e := setupSARIdentifiers(t)
-	seedSupersededHistory(e.ctx, t, e.owner, e.person)
+	seedSupersededHistory(e.ctx, t, e.owner, e.contact)
 
-	pkg, err := AssembleSAR(e.ctx, e.db, e.person)
+	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -278,21 +278,21 @@ func TestEveryHeldColumnReachesTheExport(t *testing.T) {
 		excused map[string]string
 	}{
 		{
-			table: "person_profile_field",
+			table: "contact_profile_field",
 			rows:  pkg.EnrichedFields,
 			excused: map[string]string{
 				"id":         "the row's own key, not a fact about the subject",
-				"person_id":  "the subject this whole package is about",
+				"contact_id": "the subject this whole package is about",
 				"created_at": "updated_at is the one the section reports",
 				"version":    "optimistic-locking counter; says how often the row was written, not what it says",
 			},
 		},
 		{
-			table: "person_phone",
+			table: "contact_phone",
 			rows:  pkg.Phones,
 			excused: map[string]string{
 				"id":                  "the row's own key, not a fact about the subject",
-				"person_id":           "the subject this whole package is about",
+				"contact_id":          "the subject this whole package is about",
 				"created_at":          "bookkeeping; observed_at is what the record believes",
 				"updated_at":          "bookkeeping; observed_at is what the record believes",
 				"superseded_phone_id": "exported resolved, as replaced_phone",

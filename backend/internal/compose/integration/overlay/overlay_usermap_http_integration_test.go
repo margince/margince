@@ -111,7 +111,7 @@ func overlayAppUserEmail(t *testing.T, user ids.UUID) string {
 // read and never a 403.
 func requireContactHidden(ctx context.Context, t *testing.T, store *overlaymod.MirrorStore, why string) {
 	t.Helper()
-	if _, err := store.Get(ctx, "person", mirroredContactID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := store.Get(ctx, "contact", mirroredContactID); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("mirror read = %v, want apperrors.ErrNotFound — %s", err, why)
 	}
 }
@@ -157,7 +157,7 @@ func TestAnUnmappedAdminMapsThemselvesAndTheRecordsAppear(t *testing.T) {
 	// --- the incumbent owns one contact, through an owner who is not the
 	// admin: mirrored through the real backfill seam, not hand-inserted ---
 	fakeInc.Seed(overlaymod.IncumbentClassContacts, overlaymod.Record{
-		ObjectClass:     "person",
+		ObjectClass:     "contact",
 		ExternalID:      mirroredContactID,
 		Fields:          map[string]any{"first_name": "Ada", "last_name": "Overlay"},
 		ModifiedAt:      incumbentEpoch,
@@ -189,7 +189,7 @@ func TestAnUnmappedAdminMapsThemselvesAndTheRecordsAppear(t *testing.T) {
 		t.Fatalf("pinning the admin to %s: %v", recordOwner, err)
 	}
 
-	row, err := store.Get(adminCtx, "person", mirroredContactID)
+	row, err := store.Get(adminCtx, "contact", mirroredContactID)
 	if err != nil {
 		t.Fatalf("the mirrored contact must be visible once the admin is mapped to its owner: %v", err)
 	}

@@ -90,7 +90,7 @@ func agentMeetingPlan(plan *crmcontracts.MeetingPlan) *agents.MeetingPlanResult 
 	return out
 }
 
-func agentCites(evidence []crmcontracts.OrganizationBriefEvidence) []agents.MeetingBriefCite {
+func agentCites(evidence []crmcontracts.CompanyBriefEvidence) []agents.MeetingBriefCite {
 	out := make([]agents.MeetingBriefCite, 0, len(evidence))
 	for _, cited := range evidence {
 		out = append(out, agents.MeetingBriefCite{

@@ -133,7 +133,7 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 	// no longer that the core egress verbs are 🟡 — since ADR-0055 they are not.
 	// send_email, send_message and book_meeting now run directly, because a
 	// passport carries the granting human's own seat and grants, and every one
-	// of those sends is something that person could make unaided in the app.
+	// of those sends is something that contact could make unaided in the app.
 	//
 	// The reason that survives is what an extension is: code the workspace did
 	// not write, reaching a destination the product did not choose, on authority

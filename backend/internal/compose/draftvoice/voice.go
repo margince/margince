@@ -112,7 +112,7 @@ const SystemRule = `VOICE PROFILE
 The user turn carries the sender's own voice profile. It controls expression — rhythm, vocabulary, directness, sentence length, structure — and never facts.
 Obey its avoid rules. Treat its style metrics as limits, not targets.
 Where the profile and a grounding rule disagree, the grounding rule wins: a fact bent to fit a phrasing is the one error the sender cannot see before it goes out.
-The profile never chooses the LANGUAGE. Its samples are whatever their author happened to write, and a profile built from one language does not mean its owner writes only that language. Write in output_language even when every sample you were given is in another, and carry the profile across: rhythm, directness, sentence length and structure are the same person's in any language, and the words are not.`
+The profile never chooses the LANGUAGE. Its samples are whatever their author happened to write, and a profile built from one language does not mean its owner writes only that language. Write in output_language even when every sample you were given is in another, and carry the profile across: rhythm, directness, sentence length and structure are the same contact's in any language, and the words are not.`
 
 // Violations runs the deterministic floor over the two texts a draft is made
 // of, independently. Concatenation would hide a canned opener inside the body,

@@ -38,14 +38,14 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
-type FinanceSummary = components["schemas"]["OrganizationFinanceSummary"];
+type View = components["schemas"]["Company360"];
+type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const page = { has_more: false, next_cursor: null };
 
 const populated = {
   as_of: "2026-07-13T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     lifecycle: "customer",
@@ -75,10 +75,10 @@ const populated = {
       evidence: [{ entity_type: "activity", entity_id: "a-1" }],
     },
   ],
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -96,7 +96,7 @@ const populated = {
         },
       },
       {
-        person_id: "p-2",
+        contact_id: "p-2",
         full_name: "Kim Ops",
         title: "Operations",
         deal_roles: [],
@@ -195,7 +195,7 @@ const populated = {
         due_at: "2026-07-01T09:00:00Z",
         overdue: true,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
       {
@@ -204,7 +204,7 @@ const populated = {
         due_at: "2026-08-04T09:00:00Z",
         overdue: false,
         linked_deal_id: null,
-        linked_person_id: null,
+        linked_contact_id: null,
         assignee_id: null,
       },
     ],
@@ -274,7 +274,7 @@ const populated = {
   },
 } as unknown as View;
 
-// The same account read by someone whose role cannot see deals, people or
+// The same account read by someone whose role cannot see deals, contacts or
 // the state strip: each card says so rather than reading as an account with
 // no pipeline, no contacts and no standing. This is the state no seeded demo
 // account can reach — every one of them grants the viewer full RBAC — so
@@ -282,9 +282,9 @@ const populated = {
 const withheld = {
   ...populated,
   deals: undefined,
-  people: undefined,
+  contacts: undefined,
   state_strip: undefined,
-  sections_omitted: ["deals", "people", "state_strip"],
+  sections_omitted: ["deals", "contacts", "state_strip"],
   // The reasons are a separate grant from the rows: this reader can list the
   // projects and cannot read the conversations behind them, so the card shows
   // the rows and says the statuses are incomplete.
@@ -294,7 +294,7 @@ const withheld = {
 // An account nobody has worked yet — every card in its own empty state.
 const empty = {
   ...populated,
-  people: { data: [], page },
+  contacts: { data: [], page },
   deals: {
     data: [],
     page,
@@ -319,13 +319,13 @@ const empty = {
 
 function Cards({ view }: Readonly<{ view: View }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /signals": () => jsonResponse({ data: [], page }),
     // The prepared questions answer from the account; the story serves the
     // deterministic floor, which is what a deployment with no model lane shows.
-    "POST /organizations/o-1/ask": () =>
+    "POST /companies/o-1/ask": () =>
       jsonResponse({
-        organization_id: "o-1",
+        company_id: "o-1",
         question: "whats_open",
         generated_at: "2026-07-13T09:00:00Z",
         generated_by: "deterministic",
@@ -408,14 +408,14 @@ const recommending = {
 
 function RecommendedStep() {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
   });
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <NextSteps
           view={recommending}
-          proposed={<ProposedNextSteps orgId="o-1" view={recommending} />}
+          proposed={<ProposedNextSteps companyId="o-1" view={recommending} />}
         />
       </div>
     </StoryProviders>
@@ -433,13 +433,13 @@ export const NextStepRecommended: Story = {
 // reader who cannot tell the tints apart.
 function Suggestions() {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }),
+    "GET /me": meRoute({ company: ["read", "update"] }),
   });
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <SuggestionsSection
-          orgId="o-1"
+          companyId="o-1"
           view={recommending}
           onOpenRecord={() => {}}
           onOpenTasks={() => {}}
@@ -471,7 +471,7 @@ export const MargincesSuggestionsDark: Story = {
 // than one year's worth of it, and a slot that reached for the wrong window
 // would be visibly wrong rather than plausibly wrong.
 const connectedFinance: FinanceSummary = {
-  organization_id: "o-1",
+  company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
   last_synced_at: "2026-08-10T06:00:00Z",
@@ -485,7 +485,7 @@ const connectedFinance: FinanceSummary = {
 // The two lookups below are keyed on the real wire enums (Lifecycle,
 // RelationshipType), but StateStrip's own label props take a bare `string` —
 // StateStrip: the record's own readings row, above the tabs — FIVE slots on
-// every account, drawn by the shared StatStrip the person record uses.
+// every account, drawn by the shared StatStrip the contact record uses.
 //
 // Three of the four stories are states nothing seeded reaches. Withheld is the
 // whole-strip permission boundary, which no demo account carries. Connected is
@@ -498,23 +498,23 @@ const connectedFinance: FinanceSummary = {
 // `Strip` itself returns `<StoryProviders>`, so it sits outside the
 // LocaleProvider it renders and cannot call `useT` directly; `StripBody`
 // is the inner component that mounts inside that context, mirroring the
-// real caller's label wiring (organizations.tsx's CompanyBand) rather than
+// real caller's label wiring (companies.tsx's CompanyBand) rather than
 // the identity functions that used to stand in for it and rendered the raw
 // wire enum instead of its copy.
 function StripBody({ view }: Readonly<{ view?: View }>) {
-  return <StateStrip orgId="o-1" view={view} />;
+  return <StateStrip companyId="o-1" view={view} />;
 }
 
 function Strip({
   view,
-  finance = { organization_id: "o-1", state: "no_connection" },
+  finance = { company_id: "o-1", state: "no_connection" },
 }: Readonly<{ view?: View; finance?: FinanceSummary }>) {
   installFetchStub({
-    "GET /me": meRoute({ organization: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
+    "GET /me": meRoute({ company: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
     // the same query the finance card and the payment health dimension run —
     // so a customer story with nothing stubbed here fires a real request the
     // static build has nowhere to send.
-    "GET /organizations/o-1/finance-summary": () => jsonResponse(finance),
+    "GET /companies/o-1/finance-summary": () => jsonResponse(finance),
   });
   return (
     <StoryProviders>

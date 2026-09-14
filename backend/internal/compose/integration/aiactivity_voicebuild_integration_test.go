@@ -147,7 +147,7 @@ func (f *voiceBuildFixture) claim(t *testing.T) time.Time {
 
 // The line the router could never draw: a build is live and the rep's own from
 // the moment they ask for it, not from the moment it finishes.
-func TestAQueuedVoiceBuildIsProjectedAsThePersonsOwnLiveWork(t *testing.T) {
+func TestAQueuedVoiceBuildIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
 	f := newVoiceBuildFixture(t)
 	f.drain(t)
 

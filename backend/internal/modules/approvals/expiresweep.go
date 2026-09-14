@@ -17,7 +17,7 @@ package approvals
 //
 // This is the sweep that makes the reading true. It writes the same three things
 // a human decision writes — the status, the audit row, the event — under a
-// system actor rather than a person, because nobody decided: the clock did.
+// system actor rather than a contact, because nobody decided: the clock did.
 //
 // The lazy reading STAYS. It is what keeps a row correct between sweeps, and
 // removing it would make expiry depend on a worker being alive. The two agree
@@ -189,7 +189,7 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 		}
 
 		// decided_by stays NULL and the actor is the system: nobody decided
-		// this, and naming a person would put a human's name on a refusal they
+		// this, and naming a human would put a human's name on a refusal they
 		// never made. That is the whole difference between this and Decide.
 		// The actor reaches the audit row from the CONTEXT, which the sweep
 		// binds — storekit reads it there rather than taking it as a parameter,
@@ -232,7 +232,7 @@ func (s *Service) expireOne(ctx context.Context, id ids.ApprovalID) (bool, error
 }
 
 // ExpiryActor names the clock on the audit row. A system id rather than a
-// person: APPR-AC-2 asks for the expiry to be "attributed to a system actor",
+// contact: APPR-AC-2 asks for the expiry to be "attributed to a system actor",
 // and the reason is legibility rather than ceremony — somebody reading the trail
 // must be able to tell a refusal a colleague made from one nobody made.
 const ExpiryActor = "system:approval-expiry"

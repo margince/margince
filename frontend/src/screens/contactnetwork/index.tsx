@@ -1,0 +1,303 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The contact's network, ordered as the decision a rep is making.
+//
+// Answer first, evidence under it: the one move this page recommends with
+// the counts behind it, then the three readings, then the alternatives, then
+// where the handoff stands, then the picture, then what moved lately. A
+// reader who trusts the first section never scrolls; one who does not can
+// check every claim.
+//
+// The ego ring this replaced drew structure without showing the handoff, and
+// its labels sat outside the drawing. The shared RelationshipMap draws the same
+// routes in the language the account page already uses.
+
+import { useMemo, useState } from "react";
+
+import type { components } from "../../api/schema";
+import { RelationshipMap } from "../../design-system/relationshipmap";
+import { SurfaceState } from "../../design-system/surfacestate";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { problemMessageOf } from "../common";
+import { mapLabels } from "../companycontacts/summary";
+import { useContactGraph } from "../contactgraph";
+import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
+import { IntroAsksPanel } from "../introasks";
+import { IntroDrawer } from "../introdrawer";
+import { type IntroRequest, useIntroRequests } from "../introrequests";
+import { DecisionStrip } from "./decision";
+import { EdgeDetail } from "./edgedetail";
+import { LeadPanel } from "./leadpanel";
+import { completenessText, mapModelFromContactGraph } from "./mapmodel";
+import { MomentsPanel, momentWhyNow } from "./moments";
+import { RelayPanel } from "./relay";
+import "../contactnetwork.css";
+
+type RelationshipMoments = Pick<
+  components["schemas"]["Contact360"],
+  "relationship_changes" | "sections_omitted"
+>;
+type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
+
+/**
+ * ContactNetworkTab answers "who reaches this contact, what should I do, and
+ * where did the last attempt get to".
+ *
+ * `view` is optional because the moments come from the 360 and the older
+ * contacts screen holds none. Without it the tab is everything else, one card
+ * shorter — never a card claiming nothing moved.
+ */
+export function ContactNetworkTab({
+  contactId,
+  view,
+  onOpenEmail,
+}: Readonly<{
+  contactId: string;
+  view?: RelationshipMoments;
+  // Opens a cited message in the contact page's own email drawer. The graph
+  // names the messages a count was read from, and the reader checks the count
+  // by reading one.
+  onOpenEmail?: (activityId: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const graph = useContactGraph(contactId);
+  const own = useOwnRoute();
+  const asks = useIntroRequests(contactId);
+  const [focus, setFocus] = useState<string | null>(null);
+  const [asking, setAsking] = useState<RouteCandidate | undefined>();
+
+  const copy = useMemo(
+    () => ({
+      ourTeam: t("contact.intro.laneOurs"),
+      theirCompany: t("contact.intro.laneTheirs"),
+      peers: t("contact.intro.lanePeers"),
+      target: t("contact.intro.laneTarget"),
+      useThisRoute: t("contact.intro.useThisRoute"),
+      withheldDirect: t("contact.graph.withheldDirect"),
+      withheldAccount: t("contact.graph.withheldAccount"),
+      edgeDirect: (name: string) => t("contact.intro.edgeDirect", { name }),
+      edgeAccount: (name: string) => t("contact.intro.edgeAccount", { name }),
+    }),
+    [t],
+  );
+
+  if (graph.isPending) {
+    return (
+      <SurfaceState
+        state="loading"
+        emptyLabel={t("contact.graph.noDirect")}
+        loadingLabel={t("contact.graph.loading")}
+        loadingLines={3}
+      >
+        {null}
+      </SurfaceState>
+    );
+  }
+  if (graph.isError) {
+    // Not SurfaceState's `failed`: WHICH failure this was is what a reader
+    // acts on — a refusal is answered by asking for the grant, a timeout by
+    // retrying. problemMessageOf keeps the internal cause off the screen.
+    return (
+      <p role="alert" className="pn-failed">
+        {problemMessageOf(graph.error, t)}
+      </p>
+    );
+  }
+  const data = graph.data;
+  if (!data?.nodes) {
+    return null;
+  }
+
+  const read = readGraph(data, asks.data ?? [], focus);
+
+  const model = mapModelFromContactGraph(data, copy);
+  const complete = completenessText(data, copy, (n) =>
+    t("contact.graph.droppedNote", { count: formatNumber(n, locale) }),
+  );
+
+  return (
+    <div className="pn-stack">
+      {/* The lead, or nothing. With no way in the strip below says so as
+          this page's first reading — its whole job is to answer first — and
+          a panel here repeating the same sentence made the page say it twice
+          in two different weights, which reads as two findings rather than
+          one. */}
+      {read.lead ? (
+        <LeadPanel
+          route={read.lead}
+          targetName={read.targetName}
+          blocked={availabilityLabel(read.lead.availability, t)}
+          onAsk={setAsking}
+          onOpenEmail={onOpenEmail}
+        />
+      ) : null}
+
+      <DecisionStrip
+        routes={read.routes}
+        legacyVia={read.legacy?.via_display_name}
+        whyNow={momentWhyNow(view, t)}
+        open={read.open}
+      />
+
+      {/* With nothing to draw on the left — one route, nothing withheld —
+          the side cards take the row, because a column of two cards beside
+          an empty one reads as a page that failed to load its left half. */}
+      <div className={read.hasMain ? "pn-work-grid" : "pn-side-only"}>
+        {read.hasMain ? (
+          <div className="pn-main-column">
+            {/* The alternatives, and only those: the lead is drawn above, so
+              listing it again would ask the reader which of the two identical
+              lines is the recommendation. One route means no alternatives, and
+              a card headed "other ways in" with nothing under it is worse than
+              no card. */}
+            {read.alternatives ? (
+              <RoutesPanel
+                graph={data}
+                onAsk={setAsking}
+                skipLead={read.skipLead}
+              />
+            ) : null}
+
+            {/* A group withheld for lack of a grant says so in the product's
+              ONE spelling of that fact, rather than reading as a company
+              nobody here knows. The map's completeness line repeats it for a
+              reader who scrolled past this. */}
+            {read.withheld ? (
+              <SurfaceState
+                loadingLabel={t("tab.network")}
+                state="withheld"
+                emptyLabel={t("contact.graph.noDirect")}
+              >
+                {null}
+              </SurfaceState>
+            ) : null}
+          </div>
+        ) : null}
+
+        <aside
+          className="pn-side-column"
+          aria-label={t("contact.graph.sideColumn")}
+        >
+          <RelayPanel ask={read.open} />
+          <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
+          {view && <MomentsPanel view={view} />}
+        </aside>
+      </div>
+
+      {/* Full width, below the grid. The drawing is 744px wide and scrolls
+          rather than shrinking, so inside a half-width column it showed its
+          left third and nothing else — one lane, and eleven nodes painted off
+          the visible canvas. */}
+      <RelationshipMap
+        model={model}
+        focusId={read.focused}
+        onFocus={setFocus}
+        onAction={(nodeId) => {
+          const picked = read.routeAt(nodeId);
+          // A route the reader IS, or one already spoken for, opens no drawer:
+          // neither the panel nor the rows offer it, and the server refuses an
+          // ask whose introducer is the contact making it.
+          if (picked && !own(picked) && picked.availability === "available") {
+            setAsking(picked);
+          }
+        }}
+        completenessText={complete}
+        // The account page's word set, with the one label that names the
+        // subject swapped: this drawing is about a contact, not an account.
+        labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
+        // The selected contact's own detail, including the one write this
+        // picture offers: recording an observed acquaintance the graph
+        // spotted but nothing has written down yet.
+        panelSlot={
+          read.focused && read.anchor ? (
+            <EdgeDetail
+              graph={data}
+              nodeId={read.focused}
+              anchorId={read.anchor.id}
+              onOpenEmail={onOpenEmail}
+            />
+          ) : null
+        }
+      />
+
+      {asking ? (
+        <IntroDrawer
+          contactId={contactId}
+          contactName={read.targetName}
+          route={asking}
+          open
+          onClose={() => setAsking(undefined)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * readGraph is the page's whole reading of one payload, in one place.
+ *
+ * Pulled out of the component because assembling six sections and deriving
+ * seven values from two reads is two jobs, and only the second is worth
+ * testing on its own.
+ */
+function readGraph(
+  data: NonNullable<ReturnType<typeof useContactGraph>["data"]>,
+  asks: readonly IntroRequest[],
+  focus: string | null,
+) {
+  const nodes = data.nodes ?? [];
+  const routes = data.routes ?? [];
+  const alternatives =
+    routes.length > 1 || (routes.length === 0 && !!data.route);
+  const withheld = (data.groups_omitted ?? []).length > 0;
+  return {
+    anchor: nodes.find((n) => n.group === "anchor"),
+    targetName: nodes.find((n) => n.group === "anchor")?.label ?? "",
+    routes,
+    lead: routes[0],
+    // The ask in flight. Only one route per colleague can be open at a time,
+    // and the newest is the one this page is about.
+    open: asks.find((a) => OPEN.has(a.status)),
+    // The card shows what the lead panel does NOT: the other routes when there
+    // are some, and the legacy singular `route` when a server that predates the
+    // candidate list is answering — which the panel cannot draw at all.
+    //
+    // An empty `routes` is NOT the legacy case on its own. A current server
+    // answering "nobody reaches this contact" sends an empty list and no
+    // `route`, and drawing the card then put a heading reading "Best first,
+    // pick the one you can actually use" above nothing — beside the paragraph
+    // that had already said nobody reaches them, so the page said it twice and
+    // offered a choice of none. The legacy payload is the one that has a
+    // singular `route` to draw.
+    alternatives,
+    skipLead: routes.length > 1,
+    legacy: routes.length === 0 ? data.route : undefined,
+    withheld,
+    // Whether the working grid has a left column at all.
+    hasMain: alternatives || withheld,
+    // The drawing's verb, joined back to the route it means.
+    //
+    // A node is keyed by the graph's own id and a route names a bare user id,
+    // so the join is the node's `user_id` — read out of the same payload rather
+    // than re-derived from the id's shape. Comparing the two raw (which is what
+    // this did) matched nothing, and every "use this route" on the picture
+    // silently did nothing at all.
+    routeAt: (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      return node?.user_id === undefined
+        ? undefined
+        : routes.find((r) => r.via_user_id === node.user_id);
+    },
+    // A selection only means something against the graph ON SCREEN. This tab
+    // stays mounted as a reader moves between contacts, so a raw id would open
+    // the detail on a node this graph does not have — describing a record the
+    // reader has already left. Validating beats resetting on contactId: it also
+    // covers a graph that reloads without the node for any other reason.
+    focused: nodes.some((n) => n.id === focus) ? focus : null,
+  };
+}
+
+const OPEN = new Set(["requested", "accepted", "name_drop_approved"]);

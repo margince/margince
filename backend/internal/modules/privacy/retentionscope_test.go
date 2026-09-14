@@ -54,13 +54,13 @@ func TestParseRetentionScopeResolvesEveryAuthorableScope(t *testing.T) {
 // second, silently different way to say "no finer scope".
 func TestParseRetentionScopeSplitsObjectTypeFromCategory(t *testing.T) {
 	cases := map[string]RetentionScope{
-		"lead/unconverted":          {ObjectType: "lead", Category: "unconverted"},
-		"activity":                  {ObjectType: "activity"},
-		"activity/transcript":       {ObjectType: "activity", Category: "transcript"},
-		"person/no_consent_no_deal": {ObjectType: "person", Category: "no_consent_no_deal"},
-		"deal/lost":                 {ObjectType: "deal", Category: "lost"},
-		"deal/won":                  {ObjectType: "deal", Category: "won"},
-		"ai_call_payload/content":   {ObjectType: "ai_call_payload", Category: "content"},
+		"lead/unconverted":           {ObjectType: "lead", Category: "unconverted"},
+		"activity":                   {ObjectType: "activity"},
+		"activity/transcript":        {ObjectType: "activity", Category: "transcript"},
+		"contact/no_consent_no_deal": {ObjectType: "contact", Category: "no_consent_no_deal"},
+		"deal/lost":                  {ObjectType: "deal", Category: "lost"},
+		"deal/won":                   {ObjectType: "deal", Category: "won"},
+		"ai_call_payload/content":    {ObjectType: "ai_call_payload", Category: "content"},
 	}
 	if len(cases) != len(retentionSelectors) {
 		t.Fatalf("this table covers %d scopes, the selector table has %d — a new selector needs its pair pinned here",
@@ -115,7 +115,7 @@ func TestParseRetentionScopeNormalizesTheSelectorSpelling(t *testing.T) {
 // provably never runs, so the refusal has to name what IS authorable — one
 // round trip is all the admin gets.
 func TestParseRetentionScopeRefusesAnUnservableScope(t *testing.T) {
-	for _, wire := range []string{"deal/abandoned", "person", "", "activity/nonsense", "lead"} {
+	for _, wire := range []string{"deal/abandoned", "contact", "", "activity/nonsense", "lead"} {
 		t.Run(wire, func(t *testing.T) {
 			scope, err := ParseRetentionScope(wire)
 			if err == nil {
@@ -227,7 +227,7 @@ func TestTheContractEnumAndTheSelectorTableAreTheSameSet(t *testing.T) {
 		crmcontracts.RetentionScopeLeadunconverted,
 		crmcontracts.RetentionScopeActivity,
 		crmcontracts.RetentionScopeActivitytranscript,
-		crmcontracts.RetentionScopePersonnoConsentNoDeal,
+		crmcontracts.RetentionScopeContactnoConsentNoDeal,
 		crmcontracts.RetentionScopeDeallost,
 		crmcontracts.RetentionScopeDealwon,
 		crmcontracts.RetentionScopeAiCallPayloadcontent,

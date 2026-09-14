@@ -36,7 +36,7 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 	}
 
 	// Both hold row scope `all`, so an unbounded scope is not what refuses them.
-	// The queue moved off a compound person+admin gate onto privacy_request,
+	// The queue moved off a compound contact+admin gate onto privacy_request,
 	// which the seed gives admin alone, and OpsPerms mirrors production by
 	// carrying the admin grid minus that governance set. The GRANT is what turns
 	// them away — a subject request is raised against the installation, so the
@@ -68,7 +68,7 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 
 // Filing a request is working the queue too. An erasure request is the
 // instruction the officer later carries out irreversibly, trusting that whoever
-// filed it could — so a rep, who holds person.update for their own contact edits
+// filed it could — so a rep, who holds contact.update for their own contact edits
 // and nothing on the queue, must not be able to plant one.
 func TestFilingASubjectRequestTakesTheQueuesOwnGate(t *testing.T) {
 	e := Setup(t)
@@ -80,8 +80,8 @@ func TestFilingASubjectRequestTakesTheQueuesOwnGate(t *testing.T) {
 	}
 
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if !RepPerms.Objects["person"].Update {
-		t.Fatal("the fixture rep must hold person.update, so the refusal below comes from the queue's own gate")
+	if !RepPerms.Objects["contact"].Update {
+		t.Fatal("the fixture rep must hold contact.update, so the refusal below comes from the queue's own gate")
 	}
 	if _, err := store.CreateDSR(repCtx, erasure); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a rep filed an erasure request: err=%v, want permission denied", err)

@@ -41,7 +41,7 @@ type voiceDrift struct {
 }
 
 // classify names the drift material when the candidate reads like a
-// different person or drops learned rules; each verdict carries its reason.
+// different contact or drops learned rules; each verdict carries its reason.
 func (d voiceDrift) classify() (string, []string) {
 	classification := voiceClassRoutine
 	var reasons []string

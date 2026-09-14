@@ -97,7 +97,7 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // So does the authority level, for the same kind of reason: it says whether the
 // refusal is anybody's to lift. Both are answers this engine already holds, and
 // a surface that re-derived either would be a second implementation of a rule
-// that decides whether mail reaches a person.
+// that decides whether mail reaches a contact.
 func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationPreview {
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:    set.Allowed(),
@@ -134,7 +134,7 @@ func previewResponse(set commsauthz.DecisionSet) crmcontracts.SendAuthorizationP
 		// engine already weighs together. Sent rather than derived for the same
 		// reason as decidedBy: recombining verdict, mode and absoluteness in a
 		// browser is a second implementation of the rule that decides whether
-		// mail reaches a person.
+		// mail reaches a contact.
 		refuses := d.WouldRefuse(d.Mode)
 		entry.WouldRefuse = &refuses
 		overrulable := d.CanBeOverruled()

@@ -31,22 +31,22 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 	return s.completeOpenSystemTasksLinkedBy(ctx, leadLinkColumn, leadID.UUID)
 }
 
-// CompleteOpenSystemTasksForPerson is CompleteOpenSystemTasksForLead's
-// sibling for a lead that PROMOTED: carryLeadActivities (people/promote.go)
-// re-points a follow-up task's link from the lead onto the person it became,
+// CompleteOpenSystemTasksForContact is CompleteOpenSystemTasksForLead's
+// sibling for a lead that PROMOTED: carryLeadActivities (contacts/promote.go)
+// re-points a follow-up task's link from the lead onto the contact it became,
 // in the same transaction that emits lead.promoted, so a lead id can no
-// longer find it — only the person id it was carried to can.
+// longer find it — only the contact id it was carried to can.
 //
-// Completion is bounded to the tasks that existed when the person did. This
-// arm's caller runs asynchronously off the outbox, so "the person is fresh
+// Completion is bounded to the tasks that existed when the contact did. This
+// arm's caller runs asynchronously off the outbox, so "the contact is fresh
 // and cannot yet carry anything else" is only true up to the moment the
 // promotion committed — a sibling automation (no_activity_reminder,
-// check_in_cadence) can anchor its own system task on the same person before
-// this handler runs, and completing every open system task on the person
+// check_in_cadence) can anchor its own system task on the same contact before
+// this handler runs, and completing every open system task on the contact
 // would claim that task too.
 //
-// The bound is the person's OWN created_at, and it takes no argument on
-// purpose. A promotion mints the person in the same transaction that carries
+// The bound is the contact's OWN created_at, and it takes no argument on
+// purpose. A promotion mints the contact in the same transaction that carries
 // the tasks onto them, so that row's creation IS the promotion instant — and
 // unlike a timestamp threaded in from the caller it is written by the same
 // clock as the activity.created_at it is compared against. The event's
@@ -55,17 +55,17 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 // creation and the promotion put the carried task on the wrong side of the
 // bound, which returns completed == 0 with no error — a loop left open
 // forever and nothing to notice it by.
-func (s *Store) CompleteOpenSystemTasksForPerson(ctx context.Context, personID ids.PersonID) (int, error) {
-	return s.completeOpenSystemTasksLinkedBy(ctx, personLinkColumn, personID.UUID)
+func (s *Store) CompleteOpenSystemTasksForContact(ctx context.Context, contactID ids.ContactID) (int, error) {
+	return s.completeOpenSystemTasksLinkedBy(ctx, contactLinkColumn, contactID.UUID)
 }
 
 // CompleteCarriedSystemTasks completes the open system-minted tasks among a
 // NAMED set of activities — the ones a promotion moved from the lead onto the
-// person, which the lead.promoted payload carries.
+// contact, which the lead.promoted payload carries.
 //
 // Named ids rather than a link column, which is what makes it exact for a
-// MERGE. The person-keyed reading answers "every open system task on this
-// person", and on a survivor that includes reminders the promotion never
+// MERGE. The contact-keyed reading answers "every open system task on this
+// contact", and on a survivor that includes reminders the promotion never
 // touched; this answers "the tasks this promotion carried", which is a fact
 // about the promotion. The same system-minted predicate applies — source AND
 // captured_by together — so a task a caller planted is no more completable
@@ -111,32 +111,32 @@ func (s *Store) CompleteCarriedSystemTasks(ctx context.Context, activityIDs []id
 // write is gated inside UpdateActivity.
 //
 // `column` is unexported and passed only by the two callers above, each a
-// compile-time literal ("lead_id" / "person_id") — never a value off a
+// compile-time literal ("lead_id" / "contact_id") — never a value off a
 // request body. Its placeholder is spelled right here, beside the argument
 // that fills it, rather than split across a call boundary.
 //
 // The created_at bound is derived from `column` rather than asked for
-// alongside it, because the two are one fact: the bound reads the PERSON row
-// $1 names, so it means something only when $1 is a person id. A separate
+// alongside it, because the two are one fact: the bound reads the CONTACT row
+// $1 names, so it means something only when $1 is a contact id. A separate
 // flag would let a caller pair it with leadLinkColumn, and that pairing does
-// not fail — it looks a lead id up in `person`, finds nothing, and completes
+// not fail — it looks a lead id up in `contact`, finds nothing, and completes
 // nothing at all. leadLinkColumn asks the original, unbounded question: a
 // lead's own follow-up cannot be confused with a sibling automation's task
-// the way a shared person id can.
+// the way a shared contact id can.
 func (s *Store) completeOpenSystemTasksLinkedBy(ctx context.Context, column string, linkValue ids.UUID) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	linkPos := arg(linkValue)
 	where := storekit.SQLf(`EXISTS (SELECT 1 FROM activity_link l
 			WHERE l.activity_id = a.id AND l.%s = $%d)`, column, linkPos)
-	if column == personLinkColumn {
-		// Both sides are Postgres's clock: person.created_at and
+	if column == contactLinkColumn {
+		// Both sides are Postgres's clock: contact.created_at and
 		// activity.created_at are each DEFAULT now(), and reading them in one
-		// statement leaves no second clock for a caller to introduce. A person
+		// statement leaves no second clock for a caller to introduce. A contact
 		// that has since been deleted makes the subquery NULL, so nothing
 		// matches and nothing is completed — the safe direction.
 		where += storekit.SQLf(
-			" AND a.created_at <= (SELECT p.created_at FROM person p WHERE p.id = $%d)", linkPos)
+			" AND a.created_at <= (SELECT p.created_at FROM contact p WHERE p.id = $%d)", linkPos)
 	}
 	return s.completeOpenSystemTasks(ctx, where, arg, &args)
 }
@@ -203,8 +203,8 @@ func (s *Store) completeOpenSystemTasks(
 // which one it was handed. Both are compile-time literals reaching SQL as
 // identifiers, never a value off a request body.
 const (
-	leadLinkColumn   = "lead_id"
-	personLinkColumn = "person_id"
+	leadLinkColumn    = "lead_id"
+	contactLinkColumn = "contact_id"
 )
 
 // completionAttempts bounds the re-read below. Each attempt is a lost race

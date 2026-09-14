@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -93,7 +93,7 @@ describe("ProjectScreen", () => {
     // and they were the first thing a reader met under the title.
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The sections: a linked deal row, a seated person with their role, the
+    // The sections: a linked deal row, a seated contact with their role, the
     // phase history with its duration, and honest empty states elsewhere.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
@@ -179,13 +179,13 @@ describe("ProjectScreen", () => {
           "contracts",
           "rollups",
           "coverage",
-          "organization",
+          "company",
           "activities",
         ],
         contracts: undefined,
         rollups: undefined,
         coverage: undefined,
-        organization: undefined,
+        company: undefined,
         activities: undefined,
       }),
     });

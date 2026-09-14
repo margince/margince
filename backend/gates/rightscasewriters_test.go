@@ -10,7 +10,7 @@ package gates
 // stageSubmission files what the subject asked for; openRightsCaseTx puts it in
 // the DPO's queue with a deadline and a receipt. The two are one act, and the
 // defect this slice closed was having only the first: a correction or erasure
-// request landed in person_confirm_submission where nobody owned it, the
+// request landed in contact_confirm_submission where nobody owned it, the
 // statutory month ran anyway, and the subject held no reference to chase.
 //
 // stageOneProposal is where the pair is spelled, and this test is what keeps
@@ -37,7 +37,7 @@ import (
 // queue knows", and stageOneProposal is that path.
 func TestOneWriterFilesAConfirmSubmission(t *testing.T) {
 	t.Parallel()
-	const key = "INSERT INTO person_confirm_submission"
+	const key = "INSERT INTO contact_confirm_submission"
 	scope := gatekit.Scope{
 		Roots:   []string{consentRoot},
 		Subject: fileContains(key),
@@ -45,7 +45,7 @@ func TestOneWriterFilesAConfirmSubmission(t *testing.T) {
 	}
 	total, where := countAcross(t, scope, key)
 	if total != 1 {
-		t.Errorf("person_confirm_submission is written from %d place(s), want exactly 1: %s\n\n"+
+		t.Errorf("contact_confirm_submission is written from %d place(s), want exactly 1: %s\n\n"+
 			"Every proposal a subject sends must reach the rights case that answers it, and the "+
 			"one writer is what makes that provable.", total, strings.Join(where, ", "))
 	}

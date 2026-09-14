@@ -57,7 +57,7 @@ type graphTime struct {
 
 // graphActor is one organizer/attendee. Microsoft nests the address one level
 // down and states an attendee's KIND separately — "resource" is a booked room
-// or device rather than a person.
+// or device rather than a contact.
 type graphActor struct {
 	Type         string `json:"type"`
 	EmailAddress struct {

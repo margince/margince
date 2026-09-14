@@ -66,7 +66,7 @@ func lockInstallation(l layout) (*startLock, error) {
 	stale, holder := staleLock(path)
 	if !stale {
 		// The capital is the product name, and this error is printed verbatim to
-		// the person who just double-clicked the second icon.
+		// the contact who just double-clicked the second icon.
 		return nil, fmt.Errorf( //nolint:staticcheck // ST1005: leading word is a proper noun
 			"Margince is already starting in this folder (process %s) — wait for it to finish, "+
 				"or close that one and start again", holder)

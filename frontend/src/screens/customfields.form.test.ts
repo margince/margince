@@ -237,7 +237,7 @@ describe("customFieldHref", () => {
   });
 });
 
-// An UPDATE body carries only what the person moved. customFieldsToBody is a
+// An UPDATE body carries only what the contact moved. customFieldsToBody is a
 // snapshot, which is right for a create and wrong here: an empty field coerces
 // to null, the API reads a top-level null as "forget this column", and no cf_*
 // column is clearable — so one empty custom field refused every save of the
@@ -251,7 +251,7 @@ describe("customFieldsToPatch", () => {
   });
   const fields = [priority, renewal];
 
-  it("says nothing about a field the person left alone", () => {
+  it("says nothing about a field the contact left alone", () => {
     const seeded = { cf_priority: "", cf_renewal: "2026-09-01" };
 
     const body = customFieldsToPatch({ ...seeded }, seeded, fields);

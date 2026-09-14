@@ -61,8 +61,14 @@ import (
 // found the same way and a method matching none of them is not a subject.
 const (
 	callAuthorize = "AuthorizeStagingTx"
-	callRefuse    = "refuseAtStaging"
-	callEnqueue   = "EnqueueTx"
+	// callAuthorizeDirected is the SAME obligation for a door that resumes a
+	// message the engine refused: it authorizes on the caller's transaction
+	// exactly as the ordinary call does, and additionally says where the
+	// recorded decision authorizing that refusal lives. Either spelling
+	// discharges the obligation; neither may be absent.
+	callAuthorizeDirected = "AuthorizeStagingWithDecisionTx"
+	callRefuse            = "refuseAtStaging"
+	callEnqueue           = "EnqueueTx"
 )
 
 // stagingMethod is one method that writes a delivery row: where it lives, so a
@@ -141,12 +147,15 @@ func TestEveryStagedDeliveryCarriesItsAuthorization(t *testing.T) {
 	}
 
 	for _, subject := range subjects {
-		for _, want := range []string{callAuthorize, callRefuse} {
-			if !subject.called[want] {
-				t.Errorf("%s (%s) stages a delivery and never calls %s: the message reaches the "+
-					"send queue with nothing on record about why it was allowed",
-					subject.name, subject.file, want)
-			}
+		if !subject.called[callAuthorize] && !subject.called[callAuthorizeDirected] {
+			t.Errorf("%s (%s) stages a delivery and never calls %s or %s: the message reaches "+
+				"the send queue with nothing on record about why it was allowed",
+				subject.name, subject.file, callAuthorize, callAuthorizeDirected)
+		}
+		if !subject.called[callRefuse] {
+			t.Errorf("%s (%s) stages a delivery and never calls %s: the message reaches the "+
+				"send queue with nothing on record about why it was allowed",
+				subject.name, subject.file, callRefuse)
 		}
 		if !subject.called[callEnqueue] {
 			// Not an obligation in itself — it is what makes the others

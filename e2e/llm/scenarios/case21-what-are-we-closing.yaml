@@ -101,7 +101,7 @@ must_not_mention:
   #
   # THE CAPABILITY DENIAL, the same failure case 7 guards. The forecast is
   # right there; concluding the workspace has none is worse than saying nothing,
-  # because the person reading it stops asking.
+  # because the reader reading it stops asking.
   #
   # Each alternative claims something about the PRODUCT. A hedge about the
   # answer — "I would not put much weight on this with so little history" — is

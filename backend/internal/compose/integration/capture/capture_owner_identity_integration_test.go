@@ -27,7 +27,7 @@ import (
 )
 
 // ownerAlias is the founder's own private domain in these fixtures — the shape
-// that actually produced a contact record: a second address the same person
+// that actually produced a contact record: a second address the same contact
 // reads, on a domain the workspace never registered as its own.
 const (
 	ownerAlias       = "lars@private.example"
@@ -61,7 +61,7 @@ func TestMailAmongTheOwnersOwnAddressesLeavesNoRow(t *testing.T) {
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
 
 	// Both legs: the owner writing to their own alias, and the alias writing
-	// back. The second is the one that used to mint a person — it reads as
+	// back. The second is the one that used to mint a contact — it reads as
 	// inbound mail from a stranger, because the connector knows one address.
 	sync(t,
 		email(captureOwner, "", ownerAlias, "self1@myco.example", ""),
@@ -69,13 +69,13 @@ func TestMailAmongTheOwnersOwnAddressesLeavesNoRow(t *testing.T) {
 	)
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = '`+ownerAlias+`'`); n != 0 {
-		t.Errorf("%d person(s) for the owner's own alias, want 0 — an alias is not a contact", n)
+		t.Errorf("%d contact(s) for the owner's own alias, want 0 — an alias is not a contact", n)
 	}
 	if n := countRows(t, e, `SELECT count(*) FROM activity WHERE kind = 'email'`); n != 0 {
 		t.Errorf("%d activity row(s) for mail among the owner's own addresses, want 0 — "+
-			"one person talking to themselves is not correspondence the CRM was asked to hold", n)
+			"one contact talking to themselves is not correspondence the CRM was asked to hold", n)
 	}
 }
 
@@ -94,9 +94,9 @@ func TestAnOwnersAliasCopiedOnACustomerThreadStillCapturesTheCustomer(t *testing
 		t.Fatalf("%d activity row(s), want 1 — a message naming a customer is not internal", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = '`+ownerAlias+`'`); n != 0 {
-		t.Errorf("%d person(s) for the owner's alias, want 0", n)
+		t.Errorf("%d contact(s) for the owner's alias, want 0", n)
 	}
 }
 
@@ -123,7 +123,7 @@ func TestAColleaguesIdentityIsNotMine(t *testing.T) {
 	// silence a colleague's counterparty by claiming their address.
 	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, "claimed@acme.example")
 
-	// The owner's reply is ATTESTED, which is what makes T1 mint the person:
+	// The owner's reply is ATTESTED, which is what makes T1 mint the contact:
 	// only a provider-vouched send counts as the workspace writing to them.
 	// Without it the sender defers to the verdict engine and this test would
 	// read a deferral as a colleague's claim taking effect.
@@ -136,9 +136,9 @@ func TestAColleaguesIdentityIsNotMine(t *testing.T) {
 		t.Fatalf("%d activity row(s), want 2 — a colleague's claim must not drop this mailbox's mail", n)
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'claimed@acme.example'`); n != 1 {
-		t.Errorf("%d person(s) for the address, want 1 — Rep3's claim binds Rep3's mail, not Rep1's", n)
+		t.Errorf("%d contact(s) for the address, want 1 — Rep3's claim binds Rep3's mail, not Rep1's", n)
 	}
 }
 
@@ -192,7 +192,7 @@ func TestAnotherSeatsIdentityIsNotListedOrRemovable(t *testing.T) {
 }
 
 // The audit trail records that a claim was made, and never which address. An
-// owner identity is always one person's, and its whole purpose is keeping a
+// owner identity is always one contact's, and its whole purpose is keeping a
 // private address out of the CRM — the trail must not put it back in.
 func TestTheAuditTrailNamesNoDeclaredAddress(t *testing.T) {
 	env := newCaptureEnv(t)
@@ -225,7 +225,7 @@ func TestTheAuditTrailNamesNoDeclaredAddress(t *testing.T) {
 // made for. The creation ladder is then deciding about the mailbox owner.
 //
 // The assertion is on WHO the ladder is asked about, read from the pending
-// ledger it records that in, rather than on a minted person: whether a subject
+// ledger it records that in, rather than on a minted contact: whether a subject
 // becomes a record depends on the tier rules, and this is a claim about the
 // subject.
 //
@@ -249,9 +249,9 @@ func TestAThreadTheOwnerWroteFromAnAliasIsAboutTheCustomer(t *testing.T) {
 			"a record for the mailbox owner")
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = '`+ownerAlias+`'`); n != 0 {
-		t.Errorf("%d person(s) for the owner's own alias, want 0", n)
+		t.Errorf("%d contact(s) for the owner's own alias, want 0", n)
 	}
 }
 
@@ -262,7 +262,7 @@ func TestAThreadTheOwnerWroteFromAnAliasIsAboutTheCustomer(t *testing.T) {
 // ladder's corrected subject — so a message the owner sent from an alias would
 // record the owner as the other end of their own exchange.
 //
-// Nothing promotes such a row to a person: the promotion needs a person_email,
+// Nothing promotes such a row to a contact: the promotion needs a contact_email,
 // and the gates above keep an alias from having one. What this prevents is a
 // durable falsehood about the exchange.
 func TestTheOwnersOwnAliasIsNeverTheOtherEndOfTheirMessage(t *testing.T) {
@@ -316,9 +316,9 @@ func TestTheConnectedMailboxsOwnAddressIsNeverTheLaddersSubject(t *testing.T) {
 			"part of who they are, and nobody declares it")
 	}
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = '`+captureOwner+`'`); n != 0 {
-		t.Errorf("%d person(s) for the mailbox's own address, want 0", n)
+		t.Errorf("%d contact(s) for the mailbox's own address, want 0", n)
 	}
 }
 
@@ -390,7 +390,7 @@ func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
 // should have to declare who they are to the product they are signed in to.
 //
 // It is a different address from the connected mailbox in the ordinary case: a
-// person signs in with their work address and connects a mailbox, and the two
+// contact signs in with their work address and connects a mailbox, and the two
 // often agree — but when they do not, the login address was unknown here. It
 // then stood in as a counterparty to itself, which is how a founder's own
 // address became a contact in his own workspace.
@@ -414,9 +414,9 @@ func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
 	env.sync(t, email(login, "Lars Himself", captureOwner, "login1@authz.test", ""))
 
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = '`+login+`'`); n != 0 {
-		t.Errorf("%d person(s) for the seat's own login address, want 0", n)
+		t.Errorf("%d contact(s) for the seat's own login address, want 0", n)
 	}
 	if n := countRows(t, e, `
 		SELECT count(*) FROM capture_pending_counterparty WHERE email = '`+login+`'`); n != 0 {
@@ -428,7 +428,7 @@ func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
 // The verdict is never asked about the owner's own address.
 //
 // The prompt carries no owner context — it is one sender, its subject and its
-// body — so a model asked "what kind of sender is this" about the person asking
+// body — so a model asked "what kind of sender is this" about the contact asking
 // has no way to answer "that is you". The defence is that the question is never
 // put: ladderSubjectTx replaces a counterparty the seat covers before any ledger
 // row is written, so the address the verdict engine reads is somebody else by

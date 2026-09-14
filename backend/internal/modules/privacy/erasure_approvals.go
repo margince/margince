@@ -40,14 +40,14 @@ import (
 // held about them.
 //
 // Three ways a proposal names somebody, because there are three ways one is
-// written. It may be ABOUT them — the staging's target is their person record,
+// written. It may be ABOUT them — the staging's target is their contact record,
 // or the LEAD row that is the same human before promotion — or it may merely
 // CONTAIN them, which is how a held draft carries an addressee and a body: the
 // payload is per-kind JSON this package cannot parse, so it is matched as text.
 //
 // The lead arm is not decoration. A staging targeting the subject's lead twin
 // carries their name and phone and frequently no email string at all, so the
-// text arm never sees it and the person arm names the wrong row — the sibling
+// text arm never sees it and the contact arm names the wrong row — the sibling
 // copy of the case under review, which is the recurring miss this codebase has
 // a rule about.
 //
@@ -64,9 +64,9 @@ import (
 // The export widens onto evidence instead (sarmessages.go), where
 // over-inclusion is admin-mediated and recoverable and over-destruction is not.
 //
-// $1 person, $2 lead ids, $3 ANCHORED address patterns from addressPatterns.
+// $1 contact, $2 lead ids, $3 ANCHORED address patterns from addressPatterns.
 const subjectApprovalMatch = `
-	   (target_entity_type = 'person' AND target_entity_id = $1)
+	   (target_entity_type = 'contact' AND target_entity_id = $1)
 	OR (target_entity_type = 'lead'   AND target_entity_id = ANY($2::uuid[]))
 	OR proposed_change::text ~* ANY($3::text[])
 	OR summary               ~* ANY($3::text[])`
@@ -80,7 +80,7 @@ const subjectApprovalMatch = `
 // behind — which is exactly how the quotation came to outlive an erasure that
 // emptied everything beside it.
 //
-// target_label is a person's own name where the proposal was about a person, so
+// target_label is a contact's own name where the proposal was about a contact, so
 // it goes with the rest. NULL rather than ”: the column's absence is what the
 // card reads as "say nothing", and an empty string would leave a blank caption
 // where a name used to be.
@@ -90,7 +90,7 @@ const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       evidence        = NULL`
 
 // The reasons this package writes onto a proposal it withdraws. Three, because
-// a colleague finding a card gone is owed the difference between a person who
+// a colleague finding a card gone is owed the difference between a contact who
 // asked to be forgotten, a source record that was destroyed with them, and a
 // policy that ended the material's window.
 //
@@ -99,7 +99,7 @@ const blankStagedProposal = `proposed_change = '{}'::jsonb,
 // be one spelling rather than two literals that happen to agree: a single
 // character of divergence stops the runs being ended, and nothing fails.
 const (
-	subjectWithdrawal = "withdrawn: the person it names exercised erasure"
+	subjectWithdrawal = "withdrawn: the contact it names exercised erasure"
 	// ErasedSourceWithdrawal names a card withdrawn because the record it
 	// quotes was destroyed by the Art. 17 cascade.
 	ErasedSourceWithdrawal = "withdrawn: the record it was read from was erased"
@@ -109,7 +109,7 @@ const (
 	// ReleasedSourceWithdrawal names one withdrawn because a controller
 	// released the restriction on the record it quotes, which erases it. The
 	// clock did not run out on that record; somebody decided, and a card
-	// telling its reader otherwise misdescribes the decision to the person
+	// telling its reader otherwise misdescribes the decision to the contact
 	// reviewing it.
 	ReleasedSourceWithdrawal = "withdrawn: the record it was read from was erased by a controller's decision"
 )
@@ -170,7 +170,7 @@ func addressPatterns(emails []string) []string {
 // Decided rows are emptied and keep their verdict. What a human approved or
 // rejected is a fact about that human, not about the subject, and rewriting it
 // would falsify the record of a decision that really happened.
-func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.PersonID, leads []ids.UUID, emails []string) error {
+func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID, leads []ids.UUID, emails []string) error {
 	// The address match needs at least one pattern to look for; a subject with
 	// no address is still matched by the target arms above.
 	addresses := addressPatterns(emails)
@@ -309,7 +309,7 @@ const evidenceCitesSubjectActivity = `
 	  SELECT 1 FROM jsonb_array_elements(` + evidenceArray + `) AS item
 	  JOIN activity_link cited
 	    ON cited.activity_id::text = item->>'source_id'
-	   WHERE item->>'source_type' = 'activity' AND cited.person_id = $1)`
+	   WHERE item->>'source_type' = 'activity' AND cited.contact_id = $1)`
 
 // redactApprovalsCitingActivities empties every proposal whose evidence quotes
 // one of the activities whose content has just been destroyed, and expires the
@@ -321,8 +321,8 @@ const evidenceCitesSubjectActivity = `
 // a proposal by checking the text rather than by trusting the model. It is
 // therefore a second copy of the body the caller just nulled, and nothing else
 // in either engine reaches it. A proposal read from a meeting targets the
-// ACTIVITY, never the person, so the target arms of subjectApprovalMatch cannot
-// fire; and a transcript quotes people by NAME, so the address patterns usually
+// ACTIVITY, never the contact, so the target arms of subjectApprovalMatch cannot
+// fire; and a transcript quotes contacts by NAME, so the address patterns usually
 // cannot either. Left alone, the timeline row is a tombstone while a card in
 // the inbox still quotes what was said in the meeting.
 //
@@ -388,7 +388,7 @@ func redactWorkflowRuns(ctx context.Context, tx pgx.Tx, emails []string) error {
 	if len(patterns) == 0 {
 		// Nothing to match on, and nothing else to match BY: unlike the approval
 		// scrub this table carries no target column, so a run that names the
-		// subject only by person id or by name alone is out of reach here. That
+		// subject only by contact id or by name alone is out of reach here. That
 		// is a real bound, stated rather than hidden behind an early return that
 		// reads as "nothing to do" — a subject with no recorded address gets no
 		// run scrub, and the gate below says so when it stops being true.

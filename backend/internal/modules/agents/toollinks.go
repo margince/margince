@@ -47,7 +47,7 @@ func requireAddressee(to []string) error {
 // Same reason as requireAddressee above: a send floored to confirm-first is
 // staged, put in front of a human, and redeemed — and redemption consumes the
 // one-shot approval before the send door parses anything. A malformed id would
-// therefore burn an approval a person granted and fail afterwards, which reads
+// therefore burn an approval a contact granted and fail afterwards, which reads
 // as the system losing their decision.
 //
 // It only asks whether the string IS an id. Whether the record exists, supports

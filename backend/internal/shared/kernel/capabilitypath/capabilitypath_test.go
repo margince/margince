@@ -48,7 +48,7 @@ func TestRedactHidesTheCredentialAndKeepsTheRoute(t *testing.T) {
 		},
 		{
 			// The booking slug is the only admission check on a route that
-			// creates a person, records a consent grant and books a meeting.
+			// creates a contact, records a consent grant and books a meeting.
 			// The host publishing the URL is not the host publishing it to a
 			// log aggregator.
 			"a booking slug admits a write, so it goes too",

@@ -80,7 +80,7 @@ const ZONES: readonly SelectOption[] = [
 // A roster: one short label and the long ones a real workspace carries. The
 // point of the set is the DISTANCE between the two, which is what a list sized
 // to its trigger destroys.
-const PEOPLE: readonly SelectOption[] = [
+const CONTACTS: readonly SelectOption[] = [
   { value: "mine", label: "Mine" },
   { value: "kr", label: "Dr. Katharina Reinhardt-Vogel" },
   { value: "jb", label: "Jean-Baptiste Moreau-Lefèvre" },
@@ -166,7 +166,7 @@ export const WithPlaceholder: Story = {
 export const ShortTriggerLongOptions: Story = {
   render: () => (
     <div style={{ ...column, maxWidth: "9rem" }}>
-      <Demo label="Viewing" options={PEOPLE} start="mine" />
+      <Demo label="Viewing" options={CONTACTS} start="mine" />
     </div>
   ),
 };
@@ -181,7 +181,7 @@ export const ContentSizedAtTheEdge: Story = {
   render: () => (
     <div style={{ display: "flex", justifyContent: "flex-end" }}>
       <div style={{ ...column, maxWidth: "9rem" }}>
-        <Demo label="Viewing" options={PEOPLE} start="mine" />
+        <Demo label="Viewing" options={CONTACTS} start="mine" />
       </div>
     </div>
   ),

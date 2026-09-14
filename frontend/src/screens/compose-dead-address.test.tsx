@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -15,7 +15,7 @@ import { allowedPreview, isPreviewDoor } from "./sendpermission.testkit";
 
 // The composer warns about an address that is known not to arrive.
 //
-// The person page badges one whose latest delivery hard-bounced with nothing
+// The contact page badges one whose latest delivery hard-bounced with nothing
 // clean since. Until now the mark lived only there — on a page the rep is not
 // looking at while they write — so the one moment it could change a decision
 // was the one moment it was absent.
@@ -47,10 +47,10 @@ const THREAD_RECIPIENT = {
 
 // The 360 as the composer reads it: only the section it asks about matters,
 // and `sections_omitted` is what a caller without the grant gets instead.
-function person360(overrides: Record<string, unknown> = {}) {
+function contact360(overrides: Record<string, unknown> = {}) {
   return {
     as_of: "2026-01-01T00:00:00Z",
-    person: { id: "p-1", full_name: "Anna Weiss", source: "seed" },
+    contact: { id: "p-1", full_name: "Anna Weiss", source: "seed" },
     sections_omitted: [],
     ...overrides,
   };
@@ -104,13 +104,13 @@ describe("ComposeModal dead recipients", () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -130,13 +130,13 @@ describe("ComposeModal dead recipients", () => {
           first_name: "Anna",
           address: "",
         }),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -167,13 +167,13 @@ describe("ComposeModal dead recipients", () => {
           first_name: "Anna",
           address: "anna@dead.example",
         }),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -197,13 +197,13 @@ describe("ComposeModal dead recipients", () => {
       // Omitted, not empty: the two are different facts, and inventing a
       // warning from an absence would be a claim about correspondence this
       // reader may not see.
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ sections_omitted: ["dead_addresses"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ sections_omitted: ["dead_addresses"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -220,7 +220,7 @@ describe("ComposeModal dead recipients", () => {
     expect(screen.queryByText(/is bouncing/)).toBeNull();
   });
 
-  it("asks for no person page when the composer knows no person", async () => {
+  it("asks for no contact page when the composer knows no contact", async () => {
     const seen = stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
@@ -235,7 +235,7 @@ describe("ComposeModal dead recipients", () => {
       />,
     );
 
-    // A deal timeline names no single person, so there is nobody to ask about
+    // A deal timeline names no single contact, so there is nobody to ask about
     // — and asking anyway would spend a composite read on every open.
     //
     // Asserted once the composer has SETTLED: the recipient it fetched is on
@@ -255,13 +255,13 @@ describe("ComposeModal dead recipients", () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -288,26 +288,26 @@ describe("ComposeModal dead recipients", () => {
 
   // THE ACCOUNT FLOW, which is the one with the most reason to warn: the rep is
   // choosing between an account's contacts rather than answering somebody who
-  // already wrote, so the composer learns the person from the picker and not
+  // already wrote, so the composer learns the contact from the picker and not
   // from the record it was opened on.
   it("warns for the contact picked in an account draft", async () => {
     stubRoutes({
-      "GET /organizations/org-1/360": () =>
+      "GET /companies/company-1/360": () =>
         jsonResponse({
           state: "ready",
           as_of: "2026-01-01T00:00:00Z",
-          organization: { id: "org-1", display_name: "Demo GmbH" },
-          people: { data: [{ person_id: "p-1", full_name: "Anna Weiss" }] },
+          company: { id: "company-1", display_name: "Demo GmbH" },
+          contacts: { data: [{ contact_id: "p-1", full_name: "Anna Weiss" }] },
           deals: { data: [] },
           sections_omitted: [],
         }),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
-        entityType="organization"
-        entityId="org-1"
+        entityType="company"
+        entityId="company-1"
         open
         onClose={vi.fn()}
       />,
@@ -315,7 +315,7 @@ describe("ComposeModal dead recipients", () => {
 
     const user = userEvent.setup();
     // Pick the contact, which is what tells this composer whose addresses to
-    // ask about — before that it knows an organization and nobody.
+    // ask about — before that it knows a company and nobody.
     await user.click(await screen.findByRole("combobox", { name: "Draft to" }));
     await user.click(await screen.findByRole("option", { name: "Anna Weiss" }));
     await user.click(await screen.findByLabelText("To"));
@@ -330,19 +330,19 @@ describe("ComposeModal dead recipients", () => {
   // A channel reply renders no address fields at all — its recipient is
   // resolved server-side — so the warning has nowhere to go and the composite
   // read would buy nothing.
-  it("asks for no person page for a channel reply, even knowing the person", async () => {
+  it("asks for no contact page for a channel reply, even knowing the contact", async () => {
     const seen = stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
         jsonResponse(THREAD_RECIPIENT),
-      "GET /people/p-1/360": () =>
-        jsonResponse(person360({ dead_addresses: ["anna@dead.example"] })),
+      "GET /contacts/p-1/360": () =>
+        jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
+        contactId="p-1"
         kind="message"
         open
         onClose={vi.fn()}

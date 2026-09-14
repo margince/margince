@@ -4,12 +4,12 @@
 package compose
 
 // The deep read's category-fact vocabulary plumbing: the closed
-// vocabulary lives with the people module (organization_fact's owner);
+// vocabulary lives with the contacts module (company_fact's owner);
 // this file carries the per-category prompt guidance the corpus call
 // embeds and the fact dedupe identity the gate and the merges share.
 
 import (
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // The extraction envelope's JSON keys and the chat role — the same
@@ -72,8 +72,8 @@ var categoryGuidance = map[string]string{
 		"without strengthening the claim — one entry per item, repeating the field name.",
 }
 
-// factKey is a fact's dedupe identity — the columns of uq_org_fact minus
-// the tenant and the org, both fixed within one read.
-func factKey(f people.DeepReadFact) string {
+// factKey is a fact's dedupe identity — the columns of uq_company_fact minus
+// the tenant and the company, both fixed within one read.
+func factKey(f contacts.DeepReadFact) string {
 	return f.Category + "\x00" + f.Field + "\x00" + f.ValueKey
 }

@@ -7,11 +7,11 @@ package gates
 
 // Every way a contact can arrive has a decided disclosure duty.
 //
-// The acquisition vocabulary lives in people; the duty it incurs is decided in
+// The acquisition vocabulary lives in contacts; the duty it incurs is decided in
 // consent. A module may not import a sibling, so the two halves cannot check
 // each other in code — which is exactly the shape gates/ exists for.
 //
-// Without this, a tenth acquisition kind added in people reaches DutyFor's
+// Without this, a tenth acquisition kind added in contacts reaches DutyFor's
 // default arm and is silently treated as Art. 14. That default is deliberate
 // and correct as a fail-safe, but it must not become the way new kinds get
 // decided: an unconsidered kind should stop somebody and ask, not be absorbed.
@@ -27,12 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// acquisitionKindConst matches the constant NAMES people declares, so the
+// acquisitionKindConst matches the constant NAMES contacts declares, so the
 // corpus is derived from the declaration rather than from a copy of its values.
 var acquisitionKindConst = regexp.MustCompile(`^Acquired[A-Z]`)
 
 // TestEveryAcquisitionKindReachesADecidedDuty derives the vocabulary from
-// people/acquisition.go and proves consent's noticerule.go names each one.
+// contacts/acquisition.go and proves consent's noticerule.go names each one.
 //
 // It matches the STRING VALUES against the switch arms' own literals rather
 // than calling DutyFor — gates may not import a module. A kind whose literal
@@ -46,7 +46,7 @@ func TestEveryAcquisitionKindReachesADecidedDuty(t *testing.T) {
 	// nothing would loop zero times and report PASS over an undecided
 	// vocabulary.
 	if len(kinds) < 9 {
-		t.Fatalf("read %d acquisition kinds from people/acquisition.go, want at least 9: "+
+		t.Fatalf("read %d acquisition kinds from contacts/acquisition.go, want at least 9: "+
 			"the census has stopped seeing its subject", len(kinds))
 	}
 
@@ -70,7 +70,7 @@ func TestEveryAcquisitionKindReachesADecidedDuty(t *testing.T) {
 // acquisitionKinds reads the string value of every Acquired* constant.
 func acquisitionKinds(t *testing.T) []string {
 	t.Helper()
-	file := parseModuleFile(t, filepath.Join(moduleRoot(t), "internal", "modules", "people", "acquisition.go"))
+	file := parseModuleFile(t, filepath.Join(moduleRoot(t), "internal", "modules", "contacts", "acquisition.go"))
 	var out []string
 	for _, decl := range file.Decls {
 		gen, isGen := decl.(*ast.GenDecl)

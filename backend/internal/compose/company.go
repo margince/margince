@@ -12,7 +12,7 @@ package compose
 //
 // This file owns only the transport: decode, validate the submission's shape,
 // and map the store's view onto the wire. The write shape lives in
-// people.Store.SaveCompany.
+// contacts.Store.SaveCompany.
 
 import (
 	"net/http"
@@ -22,7 +22,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -59,7 +59,7 @@ const (
 )
 
 type companyHandlers struct {
-	store *people.Store
+	store *contacts.Store
 	// Where an uploaded company mark's bytes live. Nil in a role that stores no
 	// objects, which is what makes the upload route answer 501 rather than
 	// accepting an image nothing could serve back.
@@ -67,7 +67,7 @@ type companyHandlers struct {
 	rollout string
 }
 
-func (h companyHandlers) GetCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) GetAnchorCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
 	rollout := h.rollout
 	if rollout == "" {
 		rollout = companyContextRolloutOnboarding
@@ -79,12 +79,12 @@ func (h companyHandlers) GetCompanyContextCapabilities(w http.ResponseWriter, r 
 	})
 }
 
-func (h companyHandlers) GetCompany(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "getCompany")
+		httperr.NotImplemented(w, r, "getAnchorCompany")
 		return
 	}
-	company, err := h.store.GetCompany(r.Context())
+	company, err := h.store.GetAnchorCompany(r.Context())
 	if err != nil {
 		// A workspace with no anchor yet surfaces as the store's ErrNotFound,
 		// which the sentinel mapping renders as the contract's 404.
@@ -94,9 +94,9 @@ func (h companyHandlers) GetCompany(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }
 
-func (h companyHandlers) PutCompany(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "putCompany")
+		httperr.NotImplemented(w, r, "putAnchorCompany")
 		return
 	}
 	var req crmcontracts.CompanyProfileInput
@@ -146,7 +146,7 @@ func (h companyHandlers) PutCompany(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	company, err := h.store.SaveCompany(r.Context(), people.SaveCompanyInput{
+	company, err := h.store.SaveCompany(r.Context(), contacts.SaveCompanyInput{
 		DisplayName: strings.TrimSpace(req.DisplayName),
 		Website:     website,
 		Fields: map[string]*string{
@@ -177,13 +177,13 @@ func (h companyHandlers) PutCompany(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, toContractCompany(company))
 }
 
-func (h companyHandlers) GetCompanyContext(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCompanyContextParams) {
+func (h companyHandlers) GetAnchorCompanyContext(w http.ResponseWriter, r *http.Request, params crmcontracts.GetAnchorCompanyContextParams) {
 	if !companyContextReadEnabled(h.rollout) {
-		httperr.NotImplemented(w, r, "getCompanyContext (company context rollout is off)")
+		httperr.NotImplemented(w, r, "getAnchorCompanyContext (company context rollout is off)")
 		return
 	}
 	if h.store == nil {
-		httperr.NotImplemented(w, r, "getCompanyContext")
+		httperr.NotImplemented(w, r, "getAnchorCompanyContext")
 		return
 	}
 	scopes, ok := parseCompanyContextScopes(w, r, params.Scopes)
@@ -198,15 +198,15 @@ func (h companyHandlers) GetCompanyContext(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusOK, toContractCompanyContext(companyContext))
 }
 
-func parseCompanyContextScopes(w http.ResponseWriter, r *http.Request, raw *string) ([]people.CompanyContextScope, bool) {
+func parseCompanyContextScopes(w http.ResponseWriter, r *http.Request, raw *string) ([]contacts.CompanyContextScope, bool) {
 	if raw == nil || strings.TrimSpace(*raw) == "" {
 		return nil, true
 	}
 	parts := strings.Split(*raw, ",")
-	scopes := make([]people.CompanyContextScope, 0, len(parts))
+	scopes := make([]contacts.CompanyContextScope, 0, len(parts))
 	for _, part := range parts {
 		name := strings.TrimSpace(part)
-		scope, valid := people.ParseCompanyContextScope(name)
+		scope, valid := contacts.ParseCompanyContextScope(name)
 		if !valid {
 			httperr.Write(w, r, httperr.Validation("scopes", "invalid", "unknown company-context scope: "+name))
 			return nil, false
@@ -245,20 +245,20 @@ func parseableWebsite(website string) bool {
 // toContractCompany maps the store's view onto the wire shape. A field nobody
 // has filled is absent, never an empty string — the form renders a blank, not
 // a value someone chose.
-func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
+func toContractCompany(c contacts.Company) crmcontracts.CompanyProfile {
 	out := crmcontracts.CompanyProfile{
-		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID),
-		DisplayName:    c.DisplayName,
-		Website:        c.Website,
+		CompanyId:   openapi_types.UUID(c.CompanyID.UUID),
+		DisplayName: c.DisplayName,
+		Website:     c.Website,
 		// The module's own spelling of the logo endpoint, not a second one: the
 		// shell draws the installation's mark from this profile and the record
-		// screens draw it from Organization.logo_url, and a company with two
+		// screens draw it from Company.logo_url, and a company with two
 		// faces is a company nobody recognises.
-		LogoUrl: people.LogoURL(c.OrganizationID.UUID, c.LogoObjectKey, people.LogoWide),
+		LogoUrl: contacts.LogoURL(c.CompanyID.UUID, c.LogoObjectKey, contacts.LogoWide),
 		// The square badge the collapsed sidebar draws, absent until somebody
 		// uploads one — which is what makes the rail fall back to the wide mark
 		// for every installation that has not.
-		LogoIconUrl: people.LogoURL(c.OrganizationID.UUID, c.LogoIconObjectKey, people.LogoIcon),
+		LogoIconUrl: contacts.LogoURL(c.CompanyID.UUID, c.LogoIconObjectKey, contacts.LogoIcon),
 		UpdatedAt:   &c.UpdatedAt,
 	}
 	profileFields := make([]crmcontracts.CompanyProfileField, 0, len(c.ProfileFields))
@@ -270,13 +270,13 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 			Confidence: field.Confidence, UpdatedAt: field.UpdatedAt,
 		})
 	}
-	facts := make([]crmcontracts.OrganizationFact, 0, len(c.Facts))
+	facts := make([]crmcontracts.CompanyFact, 0, len(c.Facts))
 	for _, fact := range c.Facts {
 		version := crmcontracts.RowVersion(fact.Version)
-		facts = append(facts, crmcontracts.OrganizationFact{
-			Category: crmcontracts.OrganizationFactCategory(fact.Category),
-			Field:    crmcontracts.OrganizationFactField(fact.Field), Value: fact.Value, ValueKey: fact.ValueKey,
-			Source: crmcontracts.OrganizationFactSource(fact.Source), CapturedBy: &fact.CapturedBy,
+		facts = append(facts, crmcontracts.CompanyFact{
+			Category: crmcontracts.CompanyFactCategory(fact.Category),
+			Field:    crmcontracts.CompanyFactField(fact.Field), Value: fact.Value, ValueKey: fact.ValueKey,
+			Source: crmcontracts.CompanyFactSource(fact.Source), CapturedBy: &fact.CapturedBy,
 			EvidenceSnippet: nonEmptyString(fact.EvidenceSnippet), SourceUrl: nonEmptyString(fact.SourceURL),
 			Confidence: fact.Confidence, UpdatedAt: fact.UpdatedAt, Version: &version,
 		})
@@ -311,7 +311,7 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 	return out
 }
 
-func toContractCompanyContext(c people.CompanyContext) crmcontracts.CompanyContext {
+func toContractCompanyContext(c contacts.CompanyContext) crmcontracts.CompanyContext {
 	scopes := make([]crmcontracts.CompanyContextScope, 0, len(c.Scopes))
 	for _, section := range c.Scopes {
 		items := make([]crmcontracts.CompanyContextItem, 0, len(section.Items))
@@ -327,7 +327,7 @@ func toContractCompanyContext(c people.CompanyContext) crmcontracts.CompanyConte
 		})
 	}
 	return crmcontracts.CompanyContext{
-		OrganizationId: openapi_types.UUID(c.OrganizationID.UUID), SchemaVersion: crmcontracts.N1,
+		CompanyId: openapi_types.UUID(c.CompanyID.UUID), SchemaVersion: crmcontracts.CompanyContextSchemaVersionN1,
 		Scopes: scopes, Fingerprint: c.Fingerprint, GeneratedAt: c.GeneratedAt,
 	}
 }

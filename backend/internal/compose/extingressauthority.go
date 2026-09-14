@@ -100,7 +100,7 @@ func declaredUserSecretKeys(unit string) []string {
 //
 // The read is the installation's: ADR-0091 §8 phase D took the tenant column
 // off extension_secret and then off app_user, and one installation serves one
-// organization (ADR-0061), so the deposit either exists or it does not.
+// company (ADR-0061), so the deposit either exists or it does not.
 func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit string, member ids.UUID) (bool, error) {
 	if pool == nil {
 		return false, errExtensionRuntimeUnwired

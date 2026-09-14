@@ -203,9 +203,9 @@ func toProviderRun(r provider.Run) crmcontracts.ProviderRun {
 		SubmittedAt:           r.SubmittedAt,
 		CompletedAt:           r.CompletedAt,
 	}
-	if r.PersonID != "" {
-		id := mustUUID(r.PersonID)
-		out.PersonId = &id
+	if r.ContactID != "" {
+		id := mustUUID(r.ContactID)
+		out.ContactId = &id
 	}
 	if r.SkipReason != "" {
 		reason := crmcontracts.ProviderRunSkipReason(r.SkipReason)

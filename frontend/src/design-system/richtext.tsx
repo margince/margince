@@ -365,7 +365,7 @@ export function plainTextOf(node: HTMLElement): string {
  * `value` is not always something a rep typed: an AI draft arrives here, and a
  * model's output is untrusted input however friendly its source. The server
  * filters what LEAVES for a recipient; this filters what ENTERS our own
- * document, and the two protect different people.
+ * document, and the two protect different contacts.
  *
  * It mirrors the server's allowlist deliberately — the same elements, the same
  * three link schemes — so a rep never sees formatting in the composer that the

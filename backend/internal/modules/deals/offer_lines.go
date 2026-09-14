@@ -53,6 +53,11 @@ type OfferLineInputRow struct {
 	UnitPriceMinor *int64
 	DiscountPct    *string
 	TaxRate        *string
+	// The billing classification. Left nil the line takes the product's, and
+	// with no product it stays unclassified.
+	BillingModel          *string
+	BillingIntervalMonths *int
+	IntervalCount         *int
 }
 
 // insertOfferLines inserts each input line in order, numbering the 422
@@ -78,6 +83,11 @@ type lineSnapshotDefaults struct {
 	Unit        *string
 	Price       *int64
 	TaxRate     *string
+	// The billing classification, snapshotted like the price. An offer that
+	// has been sent is a document: reclassifying the product afterwards must
+	// not change what the paper said it was.
+	BillingModel   *string
+	IntervalMonths *int
 }
 
 // resolvedOfferLine is a fully-resolved line ready to insert: defaults
@@ -88,11 +98,18 @@ type resolvedOfferLine struct {
 	Price       int64
 	Discount    string
 	Tax         string
+	// Nil where nobody has classified the line — which is what a line copied
+	// from an unclassified product carries, and what every line written before
+	// this field existed carries.
+	BillingModel   *string
+	IntervalMonths *int
+	IntervalCount  *int
 }
 
 func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerCurrency string, in OfferLineInputRow) error {
 	defaults, err := resolveProductSnapshot(ctx, tx, in.ProductID, offerCurrency, lineSnapshotDefaults{
 		Description: in.Description, Unit: in.Unit, Price: in.UnitPriceMinor, TaxRate: in.TaxRate,
+		BillingModel: in.BillingModel, IntervalMonths: in.BillingIntervalMonths,
 	})
 	if err != nil {
 		return err
@@ -111,66 +128,19 @@ func insertOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, offerC
 	}); err != nil {
 		return err
 	}
+	// The classification is settled here, before the row lands, so a
+	// half-stated one earns a field to fix rather than oli_billing_shape.
+	if err := validBillingShape(defaults.BillingModel, defaults.IntervalMonths); err != nil {
+		return err
+	}
+	if err := validIntervalCount(defaults.BillingModel, in.IntervalCount); err != nil {
+		return err
+	}
 	return insertOfferLineRow(ctx, tx, offerID, in, resolvedOfferLine{
 		Description: *defaults.Description, Unit: unitVal, Price: *defaults.Price, Discount: discount, Tax: tax,
+		BillingModel: defaults.BillingModel, IntervalMonths: defaults.IntervalMonths,
+		IntervalCount: in.IntervalCount,
 	})
-}
-
-// resolveProductSnapshot fills a line's description/unit/price/tax defaults
-// from its product; a line with no product keeps the caller's values. The
-// snapshot is copied ONCE, here — a later product edit never touches the
-// line (B-E03.17). The rate-card price only carries over when the
-// currencies agree; a silent conversion would fabricate a number.
-func resolveProductSnapshot(ctx context.Context, tx pgx.Tx, productID *ids.ProductID, offerCurrency string, in lineSnapshotDefaults) (lineSnapshotDefaults, error) {
-	if productID == nil {
-		return in, nil
-	}
-	var pName, pUnit, pCurrency, pTax string
-	var pPrice int64
-	err := tx.QueryRow(ctx,
-		`SELECT name, unit, currency, default_tax_rate::text, unit_price_minor
-		 FROM product WHERE id = $1 AND archived_at IS NULL`, *productID).
-		Scan(&pName, &pUnit, &pCurrency, &pTax, &pPrice)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return lineSnapshotDefaults{}, apperrors.ErrNotFound
-		}
-		return lineSnapshotDefaults{}, fmt.Errorf("read product for snapshot: %w", err)
-	}
-	if in.Description == nil {
-		in.Description = &pName
-	}
-	if in.Unit == nil {
-		in.Unit = &pUnit
-	}
-	if in.Price == nil {
-		if pCurrency != offerCurrency {
-			return lineSnapshotDefaults{}, &ProductCurrencyMismatchError{Product: pCurrency, Offer: offerCurrency}
-		}
-		in.Price = &pPrice
-	}
-	if in.TaxRate == nil {
-		in.TaxRate = &pTax
-	}
-	return in, nil
-}
-
-// normalizeLineDefaults resolves unit/discount/tax to their stored defaults
-// when neither the caller nor the product snapshot supplied a value.
-func normalizeLineDefaults(unit, discountPct, taxRate *string) (unitVal, discount, tax string) {
-	unitVal = "unit"
-	if unit != nil && *unit != "" {
-		unitVal = *unit
-	}
-	discount = "0.00"
-	if discountPct != nil {
-		discount = *discountPct
-	}
-	tax = "0.00"
-	if taxRate != nil {
-		tax = *taxRate
-	}
-	return unitVal, discount, tax
 }
 
 // insertOfferLineRow assigns the line's position (appending after the last
@@ -188,10 +158,12 @@ func insertOfferLineRow(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, in 
 	// so its row id stays an untyped ids.UUID.
 	_, err := tx.Exec(ctx,
 		`INSERT INTO offer_line_item (id, offer_id, position, product_id, description,
-		                              unit, quantity, unit_price_minor, discount_pct, tax_rate)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		                              unit, quantity, unit_price_minor, discount_pct, tax_rate,
+		                              billing_model, billing_interval_months, interval_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		ids.NewV7(), offerID, *position, in.ProductID, line.Description,
-		line.Unit, in.Quantity, line.Price, line.Discount, line.Tax)
+		line.Unit, in.Quantity, line.Price, line.Discount, line.Tax,
+		line.BillingModel, line.IntervalMonths, line.IntervalCount)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return fmt.Errorf("position %d is already taken on this offer: %w", *position, apperrors.ErrConflict)
@@ -260,6 +232,19 @@ type UpdateOfferLineInput struct {
 	UnitPriceMinor *int64
 	DiscountPct    *string
 	TaxRate        *string
+	// The billing classification and the committed term. Both editable while
+	// the offer is a draft, which is what lets somebody correct a line that
+	// snapshotted a classification from its product and settle the term send
+	// refuses to go without.
+	//
+	// Classified travels beside the pair because the pair's own nils cannot
+	// say whether a caller asked to clear the classification or simply left it
+	// alone — and "not specified" is a real answer here, not an omission.
+	Classified            bool
+	BillingModel          *string
+	BillingIntervalMonths *int
+	IntervalCountSet      bool
+	IntervalCount         *int
 }
 
 // note: lineID is an offer_line_item row id; it has no first-class
@@ -286,6 +271,14 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
 		// Validate the resulting line's math up front (422, not a CHECK 500).
 		if _, err := LineTotals(line); err != nil {
+			return err
+		}
+		if in.Classified {
+			if err := validBillingShape(in.BillingModel, in.BillingIntervalMonths); err != nil {
+				return err
+			}
+		}
+		if err := validPatchedIntervalCount(ctx, tx, lineID, in); err != nil {
 			return err
 		}
 		if len(sets) == 0 {
@@ -372,6 +365,16 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, curPosition i
 	if in.DiscountPct != nil {
 		set("discount_pct", line.DiscountPct, *in.DiscountPct)
 		line.DiscountPct = *in.DiscountPct
+	}
+	if in.Classified {
+		// One fact in two columns, so both are written whenever either is
+		// named — including to null, which is how a line goes back to saying
+		// nothing about whether its price repeats.
+		set("billing_model", nil, in.BillingModel)
+		set("billing_interval_months", nil, in.BillingIntervalMonths)
+	}
+	if in.IntervalCountSet {
+		set("interval_count", nil, in.IntervalCount)
 	}
 	if in.TaxRate != nil {
 		set("tax_rate", line.TaxRate, *in.TaxRate)

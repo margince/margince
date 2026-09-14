@@ -6,7 +6,7 @@ package ai
 // Who reports a task's work to the AI-activity projection.
 //
 // Every AI task this build can run must reach ai_task_run, because the rail's
-// whole claim is that it says what the AI is doing for one person — and a task
+// whole claim is that it says what the AI is doing for one contact — and a task
 // nothing reports is AI work the product performed and then denied. Seventeen
 // of nineteen shipped tasks reported nothing before this registry existed, and
 // no gate could see it: the parity checks in place compared two already-wired
@@ -126,7 +126,7 @@ var railOwners = map[Task]string{
 // siteReadPassesReason answers for all three passes of one website read,
 // because the reason is the same sentence about the same piece of work.
 const siteReadPassesReason = "a website read runs all three of these passes, and the READ is the " +
-	"occurrence: it is what a person asked for, it owns the row that is queued before any worker " +
+	"occurrence: it is what a contact asked for, it owns the row that is queued before any worker " +
 	"sees it, and it already announces itself. The router keys on correlation id plus task, and a " +
 	"read's correlation id is its own row id — so leaving these to the router files three more " +
 	"lines for one thing somebody asked for once, at a grain nobody asked about: a rep who clicked " +

@@ -25,7 +25,7 @@ import (
 // Config is the root of margince.yaml. Every section beyond `version` is
 // optional: a missing file (or one holding only `version: 1`) boots an
 // already-bootstrapped installation; bootstrap of an empty database
-// additionally requires `organization` and `bootstrap_admin`.
+// additionally requires `company` and `bootstrap_admin`.
 type Config struct {
 	Version        int             `yaml:"version"`
 	Workspace      Workspace       `yaml:"workspace"`
@@ -130,7 +130,7 @@ func (c CompanyContext) OnboardingEnabled() bool {
 // when the workspace is created; it never reconciles into an existing
 // installation (§6.3 of the ratified concept).
 //
-// It was spelled `organization` until the schema and the config disagreed
+// It was spelled `company` until the schema and the config disagreed
 // loudly enough to notice: `workspace` is the table, `workspace_id` is the
 // column on every tenant row, and an operator reading both had to know that
 // the two words meant one thing. Nothing here is the CRM's company record.

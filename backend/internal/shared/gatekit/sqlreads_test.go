@@ -26,19 +26,19 @@ func TestTableReadPatternSeesEveryBoundary(t *testing.T) {
 		// token rather than the unquoted text, `$` never fires and the read is
 		// invisible. It survived a mutation drill because the probe ended the
 		// LINE rather than the LITERAL.
-		"`SELECT r.person_id FROM relationship`": true,
+		"`SELECT r.contact_id FROM relationship`": true,
 		// Ends the line, which is the flaw's sibling: a pattern demanding a
 		// trailing space misses this one.
-		"`SELECT r.person_id\n\tFROM relationship\n\tWHERE r.kind = 'x'`": true,
-		"`SELECT r.id FROM relationship, person p`":                       true,
-		"`SELECT r.id FROM relationship)`":                                true,
-		"`... JOIN relationship theirs ON theirs.person_id = p.id`":       true,
-		"`SELECT 1 FROM RELATIONSHIP r`":                                  true,
+		"`SELECT r.contact_id\n\tFROM relationship\n\tWHERE r.kind = 'x'`": true,
+		"`SELECT r.id FROM relationship, contact p`":                       true,
+		"`SELECT r.id FROM relationship)`":                                 true,
+		"`... JOIN relationship theirs ON theirs.contact_id = p.id`":       true,
+		"`SELECT 1 FROM RELATIONSHIP r`":                                   true,
 		// Not reads of this table: a longer name that merely starts with it, a
 		// write, and the table's name used as a column.
 		"`SELECT 1 FROM relationship_history r`":        false,
 		"`INSERT INTO relationship (kind) VALUES ($1)`": false,
-		"`SELECT relationship FROM person`":             false,
+		"`SELECT relationship FROM contact`":            false,
 	} {
 		text, isString := LiteralText(&ast.BasicLit{Kind: token.STRING, Value: literal})
 		if !isString {
@@ -75,7 +75,7 @@ const listSQL = "SELECT 1 FROM relationship"
 
 func read() string { return "SELECT r.id FROM relationship r" }
 
-func unrelated() string { return "SELECT 1 FROM person" }
+func unrelated() string { return "SELECT 1 FROM contact" }
 `
 	file, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
 	if err != nil {

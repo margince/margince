@@ -3,7 +3,7 @@
 
 package privacy
 
-// Destroying named records on a person's own authority, rather than on a
+// Destroying named records on a contact's own authority, rather than on a
 // policy's.
 //
 // Retention destroys what a POLICY says is too old. This destroys what an
@@ -69,13 +69,13 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	// Gated here rather than only at the seam that assembles the purge. This is
 	// exported, so a second caller can reach it, and "the caller checked"
 	// is exactly the assumption that stops being true when somebody writes that
-	// second caller. Destroying mail is a person's own act or a named system
-	// pass acting on a decision a person already made — never an ambient one.
-	// auth.RequireHuman, which admits a person, a connector and the system
+	// second caller. Destroying mail is a contact's own act or a named system
+	// pass acting on a decision a contact already made — never an ambient one.
+	// auth.RequireHuman, which admits a contact, a connector and the system
 	// sweep, and refuses an AGENT — an agent has no standing to destroy
-	// correspondence, and whatever it concluded reaches a person first. The
+	// correspondence, and whatever it concluded reaches a contact first. The
 	// system arm is what lets the personal-verdict sweep carry out a decision a
-	// person already made.
+	// contact already made.
 	//
 	// Gated here rather than only at the seam that assembles the purge: this is
 	// exported, so a second caller can reach it, and "the caller checked" is
@@ -86,8 +86,8 @@ func (s *RetentionService) PurgeActivities(ctx context.Context, ids []ids.UUID, 
 	}
 	// The OBJECT grant too. RequireHuman refuses an agent and reads no grant at
 	// all, so on its own it would let a read-only seat destroy correspondence:
-	// the sibling that erases a person for a subject request takes
-	// auth.Require(ctx, "person", ActionDelete) for the same act, and this is
+	// the sibling that erases a contact for a subject request takes
+	// auth.Require(ctx, "contact", ActionDelete) for the same act, and this is
 	// the same act on a different object.
 	if err := auth.Require(ctx, "activity", principal.ActionDelete); err != nil {
 		return 0, err
@@ -121,7 +121,7 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 		// No addresses and no subject in the evidence. The audit row outlives
 		// the message on purpose, and a purge that recorded who was written to
 		// would leave the very fact the owner was destroying.
-		// Spelled as a literal for the audit gate; see anonymiseOnePerson.
+		// Spelled as a literal for the audit gate; see anonymiseOneContact.
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "erase", "activity", id, nil, nil, map[string]any{
 			evidenceKeyRetentionAction: actionErase, "purge_reason": string(reason),
 		})
@@ -133,31 +133,31 @@ func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, re
 	})
 }
 
-// AnonymisePeople strips the identifying columns from the named people, on an
+// AnonymiseContacts strips the identifying columns from the named contacts, on an
 // owner's authority.
 //
-// Anonymised, never deleted. A person row is referenced by activities, links
+// Anonymised, never deleted. A contact row is referenced by activities, links
 // and aggregates that a colleague may legitimately still hold, and deleting it
 // would either cascade into their work or leave it pointing at nothing. What
 // goes is what identifies the human: the name, the addresses, the profile
 // fields. What stays is a tombstone the rest of the graph can keep referring
 // to.
 //
-// The SAME executor retention's person/anonymize action runs, for the same
-// reason PurgeActivities shares its own: two ways to anonymise a person is one
+// The SAME executor retention's contact/anonymize action runs, for the same
+// reason PurgeActivities shares its own: two ways to anonymise a contact is one
 // way too many, and the one that gets less use is the one that quietly stops
 // covering a column.
-func (s *RetentionService) AnonymisePeople(ctx context.Context, people []ids.UUID, reason PurgeReason) (int, error) {
+func (s *RetentionService) AnonymiseContacts(ctx context.Context, contacts []ids.UUID, reason PurgeReason) (int, error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return 0, err
 	}
 	// The same grant the subject-request eraser takes for the same act.
-	if err := auth.Require(ctx, "person", principal.ActionDelete); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return 0, err
 	}
 	done := 0
-	for _, id := range people {
-		if err := s.anonymiseOnePerson(ctx, id, reason); err != nil {
+	for _, id := range contacts {
+		if err := s.anonymiseOneContact(ctx, id, reason); err != nil {
 			return done, fmt.Errorf("privacy: anonymising a purged contact: %w", err)
 		}
 		done++
@@ -165,22 +165,22 @@ func (s *RetentionService) AnonymisePeople(ctx context.Context, people []ids.UUI
 	return done, nil
 }
 
-func (s *RetentionService) anonymiseOnePerson(ctx context.Context, id ids.UUID, reason PurgeReason) error {
+func (s *RetentionService) anonymiseOneContact(ctx context.Context, id ids.UUID, reason PurgeReason) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := anonymizePersonRecord(ctx, tx, id); err != nil {
+		if err := anonymizeContactRecord(ctx, tx, id); err != nil {
 			return err
 		}
 		// The verb spelled as a literal, not through the constant: the audit
 		// gate reads call sites to tell an `update` (which must carry a
 		// before-image) from a scrub verb (which must not), and a constant is
 		// something it cannot resolve.
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, "anonymize", "person", id, nil, nil, map[string]any{
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "anonymize", "contact", id, nil, nil, map[string]any{
 			evidenceKeyRetentionAction: actionAnonymize, "purge_reason": string(reason),
 		})
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "person", id,
+		return storekit.EmitEventForEntity(ctx, tx, auditID, "contact", id,
 			retentionAppliedPayload(crmcontracts.RetentionAppliedAnonymize, nil, nil))
 	})
 }

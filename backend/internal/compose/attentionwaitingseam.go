@@ -107,8 +107,8 @@ func (w attentionWaiting) Unanswered(
 			EmailSummary:       summary,
 			Subject:            row.Subject,
 			Since:              row.OccurredAt,
-			PersonID:           row.PersonID,
-			OrganizationID:     row.OrganizationID,
+			ContactID:          row.ContactID,
+			CompanyID:          row.CompanyID,
 			DealID:             row.DealID,
 			HasOpenDeal:        row.HasOpenDeal,
 			Engaged:            row.Engaged,
@@ -117,14 +117,16 @@ func (w attentionWaiting) Unanswered(
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the
 			// queue never needs the word.
-			AsksNothing: row.OwedVerdict == activities.OwedVerdictInformsUs,
-			OwnerID:     row.OwnerID,
+			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
+			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs && row.CaptureLabel == string(crmcontracts.ActivityCaptureLabelCommitment),
+			ActionUnconfirmed: row.OwedVerdict == "" || row.CaptureLabel != string(crmcontracts.ActivityCaptureLabelCommitment),
+			OwnerID:           row.OwnerID,
 		})
 	}
 	return out, cut, nil
 }
 
-// keepWaitingCustomers keeps the rows that are a PERSON waiting on this reader.
+// keepWaitingCustomers keeps the rows that are a CONTACT waiting on this reader.
 //
 // Two rules, both learned from the live page.
 //
@@ -138,7 +140,7 @@ func (w attentionWaiting) Unanswered(
 // obligations to somebody scanning the page.
 //
 // Keyed on sender AND subject, never subject alone: two customers both writing
-// "Re: proposal" are two people waiting, and folding them would drop the second
+// "Re: proposal" are two contacts waiting, and folding them would drop the second
 // one silently — the worst failure this queue has, because nothing on the page
 // would say a customer had been hidden.
 //

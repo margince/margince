@@ -144,3 +144,8 @@
   outline: var(--focus-ring);
   outline-offset: -2px;
 }
+
+.emailentry[aria-pressed="true"] {
+  background: var(--accentLight);
+  box-shadow: inset 3px 0 var(--accentText);
+}

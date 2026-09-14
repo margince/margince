@@ -177,8 +177,8 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 // seedSeats queues tonight's occurrence of one spec for every rep who granted
 // it, each job carrying that rep's own passport.
 //
-// WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a person, and the only
-// credential it may act with is one that person minted for themselves. There
+// WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a contact, and the only
+// credential it may act with is one that colleague minted for themselves. There
 // is no workspace-wide authority to fall back on and deliberately so, so a
 // spec with no live grants has nothing to run tonight — that is a workspace
 // where nobody has said yes yet, not a fault, and it queues nothing.

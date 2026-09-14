@@ -96,7 +96,7 @@ var onboardingCopyByLang = map[textlang.Lang]onboardingCopy{
 		selectionRecorded: "Übernommen — Ihre Auswahl steht im Entwurf. Der Assistent hat in dieser Runde nicht geantwortet, deshalb gibt es hier nicht mehr zu lesen.",
 		selectionReason:   "Von Ihnen ausgewählt.",
 	},
-	// Addressed as "bạn", the neutral second person this product's Vietnamese
+	// Addressed as "bạn", the neutral second contact this product's Vietnamese
 	// UI already uses. The parenthesised keep_current / accept_proposal stay in
 	// English: they are the wire values behind the two buttons, and a reader
 	// comparing what they clicked with what the record says needs the same

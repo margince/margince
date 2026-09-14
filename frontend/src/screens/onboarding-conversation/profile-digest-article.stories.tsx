@@ -9,12 +9,12 @@ import type { ReviewRow, RowState } from "./company-review-state";
 import { ProfileArticle } from "./profile-digest-article";
 import {
   type Citation,
+  type Contact,
   citationsOf,
   type Fact,
   factsByCategory,
   type LegalEntity,
   type Page,
-  type Person,
 } from "./profile-digest-data";
 // The article draws `pdigest-*`; the sheet is a side-effect import of
 // profile-digest.tsx, which a story of this column alone never reaches.
@@ -136,7 +136,7 @@ const FACTS: readonly Fact[] = [
   },
 ];
 
-const PEOPLE: readonly Person[] = [
+const CONTACTS: readonly Contact[] = [
   {
     name: "Mara Voss",
     role: "Co-founder",
@@ -158,11 +158,11 @@ const PEOPLE: readonly Person[] = [
 function Article({
   legalEntities = [],
   facts = [],
-  people = [],
+  contacts = [],
 }: Readonly<{
   legalEntities?: readonly LegalEntity[];
   facts?: readonly Fact[];
-  people?: readonly Person[];
+  contacts?: readonly Contact[];
 }>) {
   const factGroups = factsByCategory(facts);
   // Rendering order, the same order the document hands them in, so a page
@@ -170,7 +170,7 @@ function Article({
   const cites: readonly Citation[] = citationsOf(ROWS, [
     ...legalEntities.map((entity) => entity.source_url),
     ...factGroups.flatMap((group) => group.facts.map((f) => f.evidence_url)),
-    ...people.map((person) => person.evidence_url),
+    ...contacts.map((contact) => contact.evidence_url),
   ]);
   return (
     <StoryProviders>
@@ -180,7 +180,7 @@ function Article({
         pages={PAGES}
         legalEntities={legalEntities}
         factGroups={factGroups}
-        people={people}
+        contacts={contacts}
         cites={cites}
         onSettle={() => {}}
         onField={() => {}}
@@ -199,11 +199,11 @@ export default meta;
 type Story = StoryObj<typeof Article>;
 
 // Everything the crawl found: the four record sections with a legal entity
-// folded into Identity, the proof it gathered, the two people it named under
+// folded into Identity, the proof it gathered, the two contacts it named under
 // Contacts, and a References list numbering every page cited above it.
 export const WholeRecord: Story = {
   render: () => (
-    <Article legalEntities={LEGAL_ENTITIES} facts={FACTS} people={PEOPLE} />
+    <Article legalEntities={LEGAL_ENTITIES} facts={FACTS} contacts={CONTACTS} />
   ),
 };
 

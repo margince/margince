@@ -26,7 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -127,11 +127,11 @@ func TestTheDossierAndGrowthFitPromptsCarryTheInstallationsLanguage(t *testing.T
 	setBaseLanguage(ctx, t, e.Pool, "vi")
 	lang := identity.BaseLanguageForPrompt(ctx, e.Pool)
 
-	dossier := orgdossier.DossierRequest(orgdossier.Input{}, lang)
+	dossier := companydossier.DossierRequest(companydossier.Input{}, lang)
 	if !strings.Contains(dossier.System, "Vietnamese") {
 		t.Errorf("the dossier prompt does not ask for Vietnamese:\n%s", dossier.System)
 	}
-	fit := orgdossier.GrowthFitRequest(orgdossier.Input{}, lang)
+	fit := companydossier.GrowthFitRequest(companydossier.Input{}, lang)
 	if !strings.Contains(fit.System, "Vietnamese") {
 		t.Errorf("the growth-fit prompt does not ask for Vietnamese:\n%s", fit.System)
 	}

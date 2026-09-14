@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { FileChip, previewMediaType } from "./filechip";

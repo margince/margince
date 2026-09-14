@@ -19,7 +19,7 @@ import (
 
 // gateHarness is a dispatcher whose only wired collaborator is the fake store,
 // because a gate called directly touches nothing else — and the store is what
-// holds the park reason a person has to be able to act on.
+// holds the park reason a contact has to be able to act on.
 func gateHarness(t *testing.T) (*Dispatcher, *fakeStore) {
 	t.Helper()
 	store := &fakeStore{}
@@ -90,7 +90,7 @@ func TestAttachmentCarriageGateParksRatherThanStripping(t *testing.T) {
 			fileBytes: 8 << 20,
 			wantPark:  true,
 			// The total AND the bound: "too big" without either number leaves a
-			// person guessing how much to drop.
+			// contact guessing how much to drop.
 			wantReason: []string{"3 files", "24.0 MiB", "20.0 MiB", "several messages"},
 		},
 		{
@@ -140,7 +140,7 @@ func TestAttachmentCarriageGateParksRatherThanStripping(t *testing.T) {
 			}
 			for _, want := range c.wantReason {
 				if !strings.Contains(store.parked, want) {
-					t.Errorf("park reason %q does not say %q — a person reading it cannot tell what to fix", store.parked, want)
+					t.Errorf("park reason %q does not say %q — a reader reading it cannot tell what to fix", store.parked, want)
 				}
 			}
 		})

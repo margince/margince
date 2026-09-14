@@ -142,13 +142,21 @@ func (f *flipRunner) Preflight(ctx context.Context) (verdictOut crmcontracts.Ove
 	if err != nil {
 		return crmcontracts.OverlayFlipPreflight{}, err
 	}
+	// The stuck count travels whether or not the flip is blocked, and zero is
+	// a real answer rather than a missing one: an operator held by
+	// force_fresh_incomplete is waiting on a sweep that will finish OR on
+	// somebody repairing a mapping that never will, and this is the number
+	// that says which. Telling them the preflight failed without it is what
+	// leaves them waiting on the wrong thing.
+	stuck := v.checks.UnprojectableRows
 	out := crmcontracts.OverlayFlipPreflight{
 		Ready:               len(v.blocking) == 0,
 		Blocking:            v.blocking,
 		UnresolvedConflicts: []crmcontracts.OverlayFlipUnresolvedConflict{},
+		UnprojectableRows:   &stuck,
 	}
 	if !out.Ready {
-		if blockingContains(v.blocking, crmcontracts.IncumbentUnreachable) {
+		if blockingContains(v.blocking, crmcontracts.OverlayFlipPreflightBlockingIncumbentUnreachable) {
 			out.Emergency = wireEmergency(v.checks)
 		}
 		return out, nil
@@ -383,11 +391,11 @@ func (f *flipRunner) admitMode(ctx context.Context, mode crmcontracts.OverlayFli
 	if v.checks.MirrorRows == 0 {
 		return fmt.Errorf("no mirror snapshot exists to cut over from: %w", apperrors.ErrOverlayFlipBlocked)
 	}
-	if blockingContains(v.blocking, crmcontracts.ExportMissing) {
+	if blockingContains(v.blocking, crmcontracts.OverlayFlipPreflightBlockingExportMissing) {
 		// Reversibility-as-reconstruction needs the pre-flip export even
 		// on the lossy path — the mirror is static, so the export is
 		// still producible before cutting over.
-		return flipBlocked([]crmcontracts.OverlayFlipPreflightBlocking{crmcontracts.ExportMissing})
+		return flipBlocked([]crmcontracts.OverlayFlipPreflightBlocking{crmcontracts.OverlayFlipPreflightBlockingExportMissing})
 	}
 	return nil
 }

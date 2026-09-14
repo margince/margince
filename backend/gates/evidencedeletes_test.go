@@ -7,7 +7,7 @@ package gates_test
 
 // No domain code deletes an evidence row.
 //
-// consent_event says what a person was shown and what they answered.
+// consent_event says what a contact was shown and what they answered.
 // communication_decision says why a message was allowed to go out. Migration
 // 1788529047 revokes UPDATE on both, so no statement anywhere can rewrite a
 // finding — and it deliberately leaves DELETE granted, because the admin data
@@ -49,7 +49,7 @@ var evidenceTables = []string{"communication_decision", "consent_event"}
 // communication_suppression, which are not evidence about a send.
 var ratifiedEvidenceDeletes = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/erasure_leadtwins.go": "The same Art. 17 erasure, for the lead " +
-		"twins a promoted person leaves behind. Its decision arm is an UPDATE tombstoning the " +
+		"twins a promoted contact leaves behind. Its decision arm is an UPDATE tombstoning the " +
 		"address, exactly as erasure_consent.go's is; the DELETEs in the same CTE are " +
 		"communication_basis and communication_suppression.",
 })

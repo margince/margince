@@ -293,21 +293,21 @@ func TestAnUnreadableRecordArgumentNamesNoRecord(t *testing.T) {
 	}
 }
 
-// A row about a person is not a deal row. Asking for it would send a person's
+// A row about a contact is not a deal row. Asking for it would send a contact's
 // id into a deal-keyed read, and the answer would be a miss dressed as one.
 func TestOnlyDealRowsAreAskedAbout(t *testing.T) {
 	moves := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{}}
 	svc := (&Service{}).WithDealMoves(moves)
-	person := riskRow(ids.NewV7())
-	person.Subject.Type = "person"
-	queue := []crmcontracts.WorklistItem{person}
+	contact := riskRow(ids.NewV7())
+	contact.Subject.Type = "contact"
+	queue := []crmcontracts.WorklistItem{contact}
 
 	if err := svc.nameTheStep(context.Background(), queue); err != nil {
 		t.Fatalf("naming the step: %v", err)
 	}
 
 	if moves.calls != 0 {
-		t.Fatalf("a person row provoked %d deal reads, wanted none", moves.calls)
+		t.Fatalf("a contact row provoked %d deal reads, wanted none", moves.calls)
 	}
 }
 
@@ -337,5 +337,22 @@ func TestARefusedReadFailsThePage(t *testing.T) {
 
 	if !errors.Is(err, refused) {
 		t.Fatalf("a refused read answered %v, wanted the refusal to travel", err)
+	}
+}
+
+func TestLinkedTasksDoNotInheritDealRecommendations(t *testing.T) {
+	dealID := ids.NewV7()
+	reader := &stubDealMoves{moves: map[ids.UUID]crmcontracts.DealStatusCardMove{dealID: cardMove("open_task", nil)}}
+	svc := (&Service{}).WithDealMoves(reader)
+	task := riskRow(dealID)
+	task.Source = "task"
+	notice := riskRow(dealID)
+	notice.Source = "notice"
+	queue := []crmcontracts.WorklistItem{task, notice, riskRow(dealID)}
+	if err := svc.nameTheStep(context.Background(), queue); err != nil {
+		t.Fatal(err)
+	}
+	if queue[0].Move != nil || queue[1].Move != nil || queue[2].Move == nil {
+		t.Fatalf("only deal work may inherit the deal's recommendation: %+v", queue)
 	}
 }

@@ -32,23 +32,34 @@ type UpdateDealInput struct {
 	// reversal path names them here instead.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
-	Trail                 storekit.AuditTrail
-	Name                  *string
-	AmountMinor           *int64
-	Currency              *string
-	OrganizationID        *ids.OrganizationID
-	ProjectID             *ids.ProjectID
-	OwnerID               *ids.UserID
-	PartnerOrganizationID *ids.OrganizationID
+	Trail            storekit.AuditTrail
+	Name             *string
+	AmountMinor      *int64
+	ExpectedArrMinor *int64
+	Currency         *string
+	CompanyID        *ids.CompanyID
+	ProjectID        *ids.ProjectID
+	OwnerID          *ids.UserID
+	PartnerCompanyID *ids.CompanyID
 	// PartnerAttribution says what the partner did for the deal — "sourced"
-	// or "influenced". It is meaningless without PartnerOrganizationID, and
+	// or "influenced". It is meaningless without PartnerCompanyID, and
 	// the store refuses the pair half-set rather than storing a claim about
 	// a partner the deal does not name.
 	PartnerAttribution *string
-	ExpectedClose      *time.Time
-	ForecastCategory   *string
-	WaitUntil          *time.Time
-	IfVersion          *int64
+	// Description is the human-authored brief. Cleared through Clear, like
+	// every other nullable column: a nil pointer here means "not supplied".
+	Description *string
+	// CommercialMotion, Priority and AcquisitionSource carry the deal's
+	// commercial context. A retired acquisition source stays on a deal that
+	// already holds it and is refused for a new assignment — the catalog
+	// check runs in the patch, where the current value is known.
+	CommercialMotion  *string
+	Priority          *string
+	AcquisitionSource *string
+	ExpectedClose     *time.Time
+	ForecastCategory  *string
+	WaitUntil         *time.Time
+	IfVersion         *int64
 	// CustomFields carries the request body's extra top-level keys
 	// (additionalProperties); only active cf_* catalog columns land,
 	// drop-on-mismatch (storekit customcolumns).
@@ -112,6 +123,7 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 		return crmcontracts.Deal{}, fmt.Errorf("read deal before update: %w", err)
 	}
 
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := s.dealUpdatePatch(ctx, tx, current, in)
 	if err != nil {
 		return crmcontracts.Deal{}, err
@@ -129,8 +141,8 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 	}
 
 	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
-		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameOrgConstraint {
-			return crmcontracts.Deal{}, &DealProjectOrgMismatchError{}
+		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameCompanyConstraint {
+			return crmcontracts.Deal{}, &DealProjectCompanyMismatchError{}
 		}
 		return crmcontracts.Deal{}, fmt.Errorf("apply deal patch: %w", err)
 	}

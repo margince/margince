@@ -6,7 +6,7 @@
 //
 // Every message the product sent was hard-coded English while the screens were
 // translated three ways. For the two transactional messages that is a small
-// thing — a person reading a password link already knows what they asked for.
+// thing — a reader reading a password link already knows what they asked for.
 // The weekly retrospective is not: it arrives unasked every Monday, it is the
 // product talking to a rep about their own week, and a German-speaking rep read
 // their Home panel in German and then got an English summary of the same
@@ -134,7 +134,7 @@ type Copy struct {
 	UnsubscribeLabel       string
 	ManagePreferencesLabel string
 
-	// The password reset a person asked for.
+	// The password reset a colleague asked for.
 	ResetSubject string
 	ResetIntro   string
 	ResetAction  string
@@ -185,7 +185,7 @@ type Copy struct {
 	// These are the hardest copy in the catalog to get wrong safely. Both go to
 	// somebody who did not ask for them and may not remember the company, so a
 	// bare "confirm your details" reads exactly like a phishing mail; and both
-	// are EVIDENCE — the consent proof records which version a person was
+	// are EVIDENCE — the consent proof records which version a contact was
 	// shown, so what these say is what an installation will one day have to
 	// stand behind. A translation that softens "we will not write to you about
 	// it" into a pleasantry changes what was promised, not just how it reads.
@@ -193,6 +193,50 @@ type Copy struct {
 	ConfirmRecordBody     string
 	ConfirmConsentSubject string
 	ConfirmConsentBody    string
+	// The PRIVACY NOTICE, which asks for nothing.
+	//
+	// It is a separate message from the record confirmation beside it because
+	// the two do different jobs and only one of them is owed. Art. 14 requires
+	// telling somebody we hold their data; it requires no answer from them. The
+	// record confirmation discharges that duty and ALSO asks whether they want
+	// to hear from us — a marketing question riding a legal obligation, which
+	// is the arrangement a supervisory authority reads as consent obtained
+	// under pressure.
+	//
+	// It also reaches contacts the other one cannot. A contact who asked us to
+	// stop is still owed their disclosure, and only the privacy-notice category
+	// survives that stop (consent/authorizesuppression.go's
+	// survivesARestriction). Before this template existed the duty was owed and
+	// undeliverable.
+	NoticeSubject string
+	NoticeBody    string
+	// ConfirmMarketingAsk is the QUESTION ON THE PAGE, not in the mail — the
+	// sentence beside the yes/no a subject actually answers.
+	//
+	// It lives in this catalog rather than in the frontend's because it is the
+	// proposition a consent is given to, and a proof row that quoted a string
+	// the client sent would be evidence the client wrote. Published through the
+	// same text-version machinery as the mail wording, so the grant can name
+	// the row the controller published.
+	//
+	// ConfirmMarketingYes and ConfirmMarketingNo are the two answers, here for
+	// the same reason: what a subject chose is part of what they were asked.
+	ConfirmMarketingAsk string
+	ConfirmMarketingYes string
+	ConfirmMarketingNo  string
+	// ConfirmSubscriptionAsk is the OTHER question, and the two are not
+	// interchangeable. A record-confirmation link asks the generic marketing
+	// question above; a dedicated subscription link names the purpose it was
+	// minted for — "confirm that you want to receive {purpose}" — which is a
+	// narrower and more specific proposition.
+	//
+	// Binding either door to the other's sentence would record somebody
+	// agreeing to something they were not asked, which is the defect the whole
+	// published-question change exists to end.
+	//
+	// {purpose} is substituted with the purpose's own label at render time.
+	ConfirmSubscriptionAsk     string
+	ConfirmSubscriptionConfirm string
 	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
 	// APPENDED to it when the link has a date, with the date as %s.
 	//
@@ -206,6 +250,23 @@ type Copy struct {
 	// permission until they answer.
 	ConfirmRecordIgnore  string
 	ConfirmConsentIgnore string
+	// The privacy notice's closing line. It asks for nothing, so it says so:
+	// a reader who does nothing has lost nothing, which is what makes this a
+	// notice rather than a request.
+	NoticeIgnore string
+
+	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
+	// Vietnamese recipient who refuses further advertising: a confirmation
+	// that their refusal was received, within twenty-four hours.
+	//
+	// IT CARRIES NO LINK and no advertising of its own. This is the one message
+	// the product sends to somebody who has just told it to stop, so anything
+	// in it beyond "we heard you" would be the thing they asked not to receive
+	// — and a link asking them to do something more would read as a message
+	// that did not take the first answer.
+	OptOutAckSubject string
+	OptOutAckBody    string
+	OptOutAckIgnore  string
 
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest

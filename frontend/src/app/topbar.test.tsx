@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -108,7 +108,7 @@ describe("Top bar search (AC-shell-7)", () => {
     const user = userEvent.setup();
     const onOpenSearch = vi.fn();
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onOpenSearch, onToggle: ignoreToggle },
     );
 
@@ -123,7 +123,7 @@ describe("Top bar search (AC-shell-7)", () => {
 
   it("is a button rather than the field it is styled as", () => {
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onToggle: ignoreToggle },
     );
     expect(container.querySelector(".topbar-search")?.tagName).toBe("BUTTON");
@@ -135,7 +135,7 @@ describe("Top bar search (AC-shell-7)", () => {
   // a kbd that leaked into it fails this.
   it("is named for what it does, with the shortcut kept out of that name", () => {
     const { container } = renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { onToggle: ignoreToggle },
     );
     expect(
@@ -164,7 +164,7 @@ describe("Top bar sidebar toggle", () => {
   it("reports the sidebar expanded and calls the handler on click", async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    renderTopBar({ screen: "brief" }, { onToggle });
+    renderTopBar({ screen: "home" }, { onToggle });
 
     const toggle = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
@@ -178,7 +178,7 @@ describe("Top bar sidebar toggle", () => {
   // changes.
   it("reports the sidebar collapsed and names the state it will move to", () => {
     renderTopBar(
-      { screen: "brief" },
+      { screen: "home" },
       { collapsed: true, onToggle: ignoreToggle },
     );
     const toggle = screen.getByRole("button", { name: "Expand sidebar" });
@@ -189,7 +189,7 @@ describe("Top bar sidebar toggle", () => {
   // conditioned on the handler because the handler is the only evidence the bar
   // has that a sidebar exists at all.
   it("mints no control when it is handed no toggle", () => {
-    const { container } = renderTopBar({ screen: "brief" });
+    const { container } = renderTopBar({ screen: "home" });
     expect(container.querySelector(".topbar-toggle")).toBeNull();
     expect(screen.queryByRole("button", { name: /sidebar$/ })).toBeNull();
   });
@@ -210,7 +210,7 @@ describe("Top bar trail", () => {
 
   it("leads a record back to the list it was opened from", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     renderWith(
       client,
       <TopBar

@@ -97,7 +97,7 @@ func seedOwnedDisposition(t *testing.T, e *integration.Env, owner ids.UUID, emai
 	return id
 }
 
-// tagsOn names every word filed against the person behind one address.
+// tagsOn names every word filed against the contact behind one address.
 func tagsOn(t *testing.T, e *integration.Env, email string) []string {
 	t.Helper()
 	var names []string
@@ -106,8 +106,8 @@ func tagsOn(t *testing.T, e *integration.Env, email string) []string {
 			SELECT t.name
 			  FROM taggable g
 			  JOIN tag t ON t.id = g.tag_id
-			  JOIN person_email pe ON pe.person_id = g.entity_id
-			 WHERE g.entity_type = 'person' AND pe.email = $1
+			  JOIN contact_email pe ON pe.contact_id = g.entity_id
+			 WHERE g.entity_type = 'contact' AND pe.email = $1
 			 ORDER BY t.name`, email)
 		if err != nil {
 			return err
@@ -144,7 +144,7 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 	suedID := seedOwnedDisposition(t, e, e.Rep2, "b@sued.example", "sued.example", fromSued)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{
-		nordID.String(): "person", suedID.String(): "person",
+		nordID.String(): "contact", suedID.String(): "contact",
 	}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
@@ -171,7 +171,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 	activityID := seedMailFrom(t, e, "gmail", "c@plain.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "c@plain.example", "plain.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "person"}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -193,7 +193,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 	activityID := seedMailFrom(t, e, "gmail", "d@retired.example")
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "d@retired.example", "retired.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "person"}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -205,9 +205,9 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 	// The contact IS made. A word is a finding aid, and refusing to create a
 	// contact because a tag could not be applied would trade the product's
 	// actual job for its index.
-	if n := countIn(t, e, `SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+	if n := countIn(t, e, `SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		 WHERE pe.email = 'd@retired.example'`); n != 1 {
-		t.Errorf("%d people created behind the address, want 1 — the capture failed over a retired word", n)
+		t.Errorf("%d contacts created behind the address, want 1 — the capture failed over a retired word", n)
 	}
 }
 
@@ -226,15 +226,15 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 
 	const address = "incumbent@nord.example"
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		personID := ids.NewV7()
+		contactID := ids.NewV7()
 		if _, err := tx.Exec(context.Background(), `
-			INSERT INTO person (id, full_name, source, captured_by, visibility)
-			VALUES ($1, 'Already Here', 'gmail', 'connector:gmail', 'workspace')`, personID); err != nil {
+			INSERT INTO contact (id, full_name, source, captured_by, visibility)
+			VALUES ($1, 'Already Here', 'gmail', 'connector:gmail', 'workspace')`, contactID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_email (person_id, email, source, captured_by)
-			VALUES ($1, $2, 'gmail', 'connector:gmail')`, personID, address)
+			INSERT INTO contact_email (contact_id, email, source, captured_by)
+			VALUES ($1, $2, 'gmail', 'connector:gmail')`, contactID, address)
 		return err
 	})
 	if err != nil {
@@ -244,7 +244,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 	activityID := seedMailFrom(t, e, "gmail", address)
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, address, "nord.example", activityID)
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "person"}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

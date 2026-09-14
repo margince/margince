@@ -69,8 +69,8 @@ func (e *stagingEnv) decidedEvent(t *testing.T, id ids.ApprovalID) map[string]an
 func TestADecidedApprovalWritesTheSameRowShapeEveryModuleDoes(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindDeepRead, "shape-hash")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindDeepRead, "shape-hash")
 
 	if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
 		t.Fatalf("deciding: %v", err)
@@ -118,8 +118,8 @@ func TestADecidedApprovalWritesTheSameRowShapeEveryModuleDoes(t *testing.T) {
 func TestAnApprovalDecidedByAnotherEventNamesItAsTheCause(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindDeepRead, "causation-hash")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindDeepRead, "causation-hash")
 
 	cause := ids.NewV7()
 	if _, err := e.svc.Decide(principal.WithCausationEvent(ctx, cause), id, true, nil); err != nil {
@@ -146,8 +146,8 @@ func TestAnApprovalDecidedByAnotherEventNamesItAsTheCause(t *testing.T) {
 func TestNoApprovalSigningKeyComesIntoExistenceUnrecorded(t *testing.T) {
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
-	org := e.organization(t)
-	id := e.stageInto(ctx, t, ids.NewV7(), org, kindDeepRead, "signing-hash")
+	company := e.company(t)
+	id := e.stageInto(ctx, t, ids.NewV7(), company, kindDeepRead, "signing-hash")
 	if _, err := e.svc.Decide(ctx, id, true, nil); err != nil {
 		t.Fatalf("deciding: %v", err)
 	}

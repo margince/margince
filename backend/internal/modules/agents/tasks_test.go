@@ -264,7 +264,7 @@ func TestCancellingASettledTaskLeavesItsAnswerAlone(t *testing.T) {
 
 // tasks/update is served because the specification requires the method to
 // exist, and it acknowledges emptily because this server raises no
-// inputRequests — a confirm-first decision is a person visiting Margince, not a
+// inputRequests — a confirm-first decision is a contact visiting Margince, not a
 // round trip back through the agent's client.
 func TestUpdatingATaskIsAnEmptyAcknowledgement(t *testing.T) {
 	s, store := stagingDispatcher(t)

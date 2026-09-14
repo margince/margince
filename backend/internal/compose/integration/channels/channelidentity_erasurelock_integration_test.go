@@ -10,7 +10,7 @@ package channels
 // two overlap: Postgres runs them at READ COMMITTED, so a delivery that probes
 // the suppression list, finds nothing, and then writes can have the whole
 // erasure commit between its two statements — leaving a verbatim payload
-// naming a subject whose person_channel_identity rows, the only handle every
+// naming a subject whose contact_channel_identity rows, the only handle every
 // later erasure and subject-access lane has on raw_capture, are gone for good.
 //
 // The erasure side is the half proved here. The delivery side has TWO writers
@@ -18,7 +18,7 @@ package channels
 // transactions: the ingress edge that admits an update and writes raw_capture,
 // and Sink.Upsert, which commits the activity later. Locking only the edge
 // leaves the activity unguarded, which is the worse half — a raw row is at
-// least reachable by account, whereas an activity with no person link and no
+// least reachable by account, whereas an activity with no contact link and no
 // counterparty_email is reachable by neither erasure selector. The activity
 // writer is pinned in telegram_sinkerasure_integration_test.go.
 
@@ -34,7 +34,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -72,7 +72,7 @@ func lockWaitBoundedPool(t *testing.T) *pgxpool.Pool {
 // that holds one account's identity lock, and reports what the erasure did.
 // The holder is the caller's own transaction, so the lock is provably held for
 // the entire erasure — no goroutine, no clock, no ordering to get lucky with.
-func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, person ids.UUID, lockedAccount string) error {
+func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, contact ids.UUID, lockedAccount string) error {
 	t.Helper()
 	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
 	admin := e.Admin()
@@ -84,7 +84,7 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, person ids.UUID
 		}); err != nil {
 			return err
 		}
-		eraseErr = eraser.ErasePerson(admin, person, "test")
+		eraseErr = eraser.EraseContact(admin, contact, "test")
 		return nil
 	}); err != nil {
 		t.Fatalf("holding the identity lock: %v", err)
@@ -95,7 +95,7 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, person ids.UUID
 // The erasure must take the SAME per-account lock the ingest path takes, or the
 // two can overlap: an inbound message from this very subject can commit its
 // verbatim payload after the erasure has already purged raw_capture and armed
-// the suppression that guarantees person_channel_identity is never recreated —
+// the suppression that guarantees contact_channel_identity is never recreated —
 // and every lane that could reach that payload again (this file's own erasure
 // purge, the Art. 15 raw section) drives off exactly those rows.
 //
@@ -104,13 +104,13 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, person ids.UUID
 // subject who keeps messaging while their own erasure runs.
 func TestErasureWaitsForAnInFlightDeliveryOfTheSubjectsAccount(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Locked Subject", nil)
-	seedChannelIdentity(t, e, person, "10108", "locked")
+	contact := e.SeedContact(t, "Locked Subject", nil)
+	seedChannelIdentity(t, e, contact, "10108", "locked")
 
-	err := eraseWhileAccountIsLocked(t, e, person, "10108")
+	err := eraseWhileAccountIsLocked(t, e, contact, "10108")
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != pgerrcode.LockNotAvailable {
-		t.Fatalf("ErasePerson returned %v, want a lock-wait timeout — it did not take the subject's identity lock, so a delivery of their own account can commit inside the erasure", err)
+		t.Fatalf("EraseContact returned %v, want a lock-wait timeout — it did not take the subject's identity lock, so a delivery of their own account can commit inside the erasure", err)
 	}
 	if !liveIdentityExists(t, e, "10108") {
 		t.Error("the identity is gone although the erasure failed — a refused erasure must leave nothing half-done")
@@ -125,11 +125,11 @@ func TestErasureWaitsForAnInFlightDeliveryOfTheSubjectsAccount(t *testing.T) {
 // failure above is the lock, not the bounded pool.
 func TestErasureIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
 	e := integration.Setup(t)
-	person := e.SeedPerson(t, "Unrelated Subject", nil)
-	seedChannelIdentity(t, e, person, "10109", "unrelated")
+	contact := e.SeedContact(t, "Unrelated Subject", nil)
+	seedChannelIdentity(t, e, contact, "10109", "unrelated")
 
-	if err := eraseWhileAccountIsLocked(t, e, person, "10110"); err != nil {
-		t.Fatalf("ErasePerson: %v — an unrelated account's delivery must not block an erasure", err)
+	if err := eraseWhileAccountIsLocked(t, e, contact, "10110"); err != nil {
+		t.Fatalf("EraseContact: %v — an unrelated account's delivery must not block an erasure", err)
 	}
 	if liveIdentityExists(t, e, "10109") {
 		t.Error("the erasure reported success but left the identity behind")
@@ -139,26 +139,26 @@ func TestErasureIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
 	}
 }
 
-// seedMailOnlySubject creates a person holding one address and no channel
+// seedMailOnlySubject creates a contact holding one address and no channel
 // account — the shape whose erasure takes no account lock at all, which is what
 // makes the address half of the mutex load-bearing. Written through the real
 // store, so the identifiers the eraser reads are the ones production writes.
 func seedMailOnlySubject(t *testing.T, e *integration.Env, name, email string) ids.UUID {
 	t.Helper()
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: name, Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding %s: %v", name, err)
 	}
-	return ids.UUID(person.Id)
+	return ids.UUID(contact.Id)
 }
 
 // eraseWhileAddressIsLocked is the twin of eraseWhileAccountIsLocked for the
 // other half of the mutex: it holds the subject lock on an ADDRESS across a
 // whole erasure.
-func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, person ids.UUID, lockedEmail string) error {
+func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, contact ids.UUID, lockedEmail string) error {
 	t.Helper()
 	eraser := privacy.NewEraser(database.BindTo(lockWaitBoundedPool(t), ids.From[ids.WorkspaceKind](e.WS)))
 	admin := e.Admin()
@@ -168,7 +168,7 @@ func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, person ids.UUID
 		if err := storekit.LockSubjectKeys(ctx, tx, nil, []string{lockedEmail}); err != nil {
 			return err
 		}
-		eraseErr = eraser.ErasePerson(admin, person, "test")
+		eraseErr = eraser.EraseContact(admin, contact, "test")
 		return nil
 	}); err != nil {
 		t.Fatalf("holding the address lock: %v", err)
@@ -190,13 +190,13 @@ func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, person ids.UUID
 func TestErasureWaitsForAnInFlightDeliveryCorroboratedByTheSubjectsAddress(t *testing.T) {
 	e := integration.Setup(t)
 	const email = "mail.only.subject@client.io"
-	person := seedMailOnlySubject(t, e, "Mail Only Subject", email)
+	contact := seedMailOnlySubject(t, e, "Mail Only Subject", email)
 
-	err := eraseWhileAddressIsLocked(t, e, person, email)
+	err := eraseWhileAddressIsLocked(t, e, contact, email)
 
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != pgerrcode.LockNotAvailable {
-		t.Fatalf("ErasePerson returned %v, want a lock-wait timeout — it did not take the subject's address lock, so a message corroborated by that address can bind an account inside the erasure", err)
+		t.Fatalf("EraseContact returned %v, want a lock-wait timeout — it did not take the subject's address lock, so a message corroborated by that address can bind an account inside the erasure", err)
 	}
 }
 
@@ -205,10 +205,10 @@ func TestErasureWaitsForAnInFlightDeliveryCorroboratedByTheSubjectsAddress(t *te
 // than the bounded pool.
 func TestErasureIsUnaffectedByALockOnAnotherAddress(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedMailOnlySubject(t, e, "Unrelated Mail Subject", "erased@client.io")
+	contact := seedMailOnlySubject(t, e, "Unrelated Mail Subject", "erased@client.io")
 
-	if err := eraseWhileAddressIsLocked(t, e, person, "somebody.else@client.io"); err != nil {
-		t.Fatalf("ErasePerson: %v — an unrelated address must not block an erasure", err)
+	if err := eraseWhileAddressIsLocked(t, e, contact, "somebody.else@client.io"); err != nil {
+		t.Fatalf("EraseContact: %v — an unrelated address must not block an erasure", err)
 	}
 }
 
@@ -217,6 +217,6 @@ func TestErasureIsUnaffectedByALockOnAnotherAddress(t *testing.T) {
 func liveIdentityExists(t *testing.T, e *integration.Env, channelUserID string) bool {
 	t.Helper()
 	return e.WsCount(t,
-		`SELECT count(*) FROM person_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
+		`SELECT count(*) FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
 		telegramProvider, channelUserID) > 0
 }

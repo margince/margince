@@ -44,7 +44,7 @@ func classifyDecay(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	// The BAND deliberately states nothing. It moves the level, and the reason
 	// vocabulary has no word for it — `no_champion` is the nearest and means
 	// the opposite here, an account with nobody carrying it rather than a
-	// person who WAS carrying it. A reason that reads backwards is worse than
+	// contact who WAS carrying it. A reason that reads backwards is worse than
 	// a rank the row does not explain, so the band waits for a word of its own.
 	if facts := item.Relationship; facts != nil && facts.HasOpenDeal != nil && *facts.HasOpenDeal {
 		row.Because = append(row.Because, reason("expected_revenue", nil))
@@ -103,11 +103,11 @@ func decayMatters(facts *crmcontracts.AttentionRelationshipFacts) bool {
 // duplicate row still passes.
 const sourceDecay = crmcontracts.WorklistItemSource("relationship_decay")
 
-// dropDecayAlreadyWaiting removes the lapsed-relationship row for a person the
+// dropDecayAlreadyWaiting removes the lapsed-relationship row for a contact the
 // reader is already shown as waiting on.
 //
-// One person is one row. The two lanes say opposite things about the same
-// contact and both are true: nobody has spoken in sixty days, AND that person
+// One contact is one row. The two lanes say opposite things about the same
+// contact and both are true: nobody has spoken in sixty days, AND that contact
 // wrote last week and is waiting for an answer. Drawn together they read as a
 // contradiction, and the rep is left to work out which one to believe.
 //
@@ -119,32 +119,32 @@ const sourceDecay = crmcontracts.WorklistItemSource("relationship_decay")
 // row contradicts rather than completes — the contact is not quiet, they are
 // unanswered. But the money IS, and that half took a defect to notice. The two
 // lanes answer different questions about a deal: a wait asks whether one rides
-// on THIS THREAD, the decay lane asks whether the person sits on any open deal
+// on THIS THREAD, the decay lane asks whether the contact sits on any open deal
 // the reader can see. So a fifteen-day-old wait about a contact who carries a
 // deal elsewhere loses `expected_revenue` when its decay row goes, and drops a
 // band with it — the row falls out of the day for lack of a fact the page had.
 func dropDecayAlreadyWaiting(rows []ranked) []ranked {
-	waitingPeople := waitingContacts(rows)
-	if len(waitingPeople) == 0 {
+	waitingContacts := waitingContacts(rows)
+	if len(waitingContacts) == 0 {
 		return rows
 	}
 	// What the dropped rows were going to say about money, kept for the row
 	// that replaces them.
 	funded := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceDecay && waitingPeople[row.item.Id] &&
+		if row.item.Source == sourceDecay && waitingContacts[row.item.Id] &&
 			hasReason(row.item, reasonExpectedRevenue) {
 			funded[row.item.Id] = true
 		}
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		// The decay row's id IS the person's id, which is what makes this
+		// The decay row's id IS the contact's id, which is what makes this
 		// match at all: the lane has no activity to key on.
-		if row.item.Source == sourceDecay && waitingPeople[row.item.Id] {
+		if row.item.Source == sourceDecay && waitingContacts[row.item.Id] {
 			continue
 		}
-		if row.item.Source == sourceWaiting && funded[row.person.String()] &&
+		if row.item.Source == sourceWaiting && funded[row.contact.String()] &&
 			!hasReason(row.item, reasonExpectedRevenue) {
 			row.item.Because = append(row.item.Because, reason(reasonExpectedRevenue, nil))
 		}
@@ -155,19 +155,19 @@ func dropDecayAlreadyWaiting(rows []ranked) []ranked {
 
 // waitingContacts collects the contacts named by the waiting rows on this page.
 //
-// It reads the row's OWN person rather than its subject, and that distinction
+// It reads the row's OWN contact rather than its subject, and that distinction
 // is the whole correctness of this pass. A wait carrying both a deal and a
-// person takes the deal as its subject — the deal says more about what the
+// contact takes the deal as its subject — the deal says more about what the
 // reply is for — so a subject-keyed lookup misses exactly the contacts most
 // likely to also be lapsing, and the page shows them twice.
 func waitingContacts(rows []ranked) map[string]bool {
-	people := map[string]bool{}
+	contacts := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceWaiting && !row.person.IsZero() {
-			people[row.person.String()] = true
+		if row.item.Source == sourceWaiting && !row.contact.IsZero() {
+			contacts[row.contact.String()] = true
 		}
 	}
-	return people
+	return contacts
 }
 
 // reasonExpectedRevenue says money still rests on this row.

@@ -16,6 +16,7 @@ package weekly
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -87,7 +89,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		// same shape brief_run.local_day uses, which is right for a date
 		// column and wrong for a range. Comparing timestamptz against it
 		// measures a week offset by the installation's UTC offset, and in a
-		// DST zone a fixed 168 hours rather than the week people lived.
+		// DST zone a fixed 168 hours rather than the week contacts lived.
 		start, end, err := localWeekWindow(ctx, tx, weekStart)
 		if err != nil {
 			return err
@@ -99,6 +101,13 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 		review = Review{
 			UserID: userID, LocalWeekStart: weekStart, AsOf: now.UTC(),
 			LearningsState: LearningsNotRun,
+		}
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM weekly_review WHERE user_id=$1 AND local_week_start=$2)`, userID, weekStart).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return nil
 		}
 		if err := e.measureWeek(ctx, tx, &review, now, start, end); err != nil {
 			return err
@@ -130,30 +139,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 			return err
 		}
 		review.Scorecard = &card
-		// Where the week was landing, frozen into the same transaction as the
-		// counts. Split across two, a review could exist with no outlook and no
-		// way to tell that from an installation that forecasts nothing.
-		//
-		// Only on the branch that WROTE the review: the loser of the insert
-		// race returned above, and freezing an outlook onto somebody else's
-		// review row would give it two.
-		if e.forecast == nil {
-			// No forecast composed. The review stands without one.
-			return nil
-		}
-		outlooks, movements, drivers, err := e.forecast.CloseWeek(ctx, tx, start, end)
-		if err != nil {
-			return err
-		}
-		if err := writeOutlook(ctx, tx, id, outlooks, movements, drivers); err != nil {
-			return err
-		}
-		// Carried on the returned review as well as written. The weekly mail is
-		// built from THIS value rather than from a re-read, so a review that
-		// froze its landing and did not carry it would send a rep an email with
-		// no outlook in it.
-		review.Outlook = outlooks
-		return nil
+		return e.freezeReviewOutlook(ctx, tx, &review, start, end)
 	})
 	if err != nil {
 		return Review{}, false, err
@@ -201,7 +187,9 @@ func (e *Engine) measureWeek(
 	// ticks inside a week do not re-settle a commitment the rep completed
 	// after the first pass.
 	if e.plan != nil {
-		if c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now); err != nil {
+		c.CommitmentsDue, c.CommitmentsKept, err = e.plan.CloseWeek(ctx, now)
+		// A seat without plan authority still has recorded work to review.
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
 		}
 	}

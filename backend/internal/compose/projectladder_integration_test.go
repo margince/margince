@@ -17,7 +17,7 @@ package compose
 // silently broken ladder also looks like.
 //
 // Every fixture is written by the thing that writes it in production: the
-// account and contact through the people store, the project through the
+// account and contact through the contacts store, the project through the
 // projects store, the message through the composed sink.
 
 import (
@@ -28,7 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,25 +44,25 @@ const ladderCounterparty = "dana@ladder.example"
 // production seeds them.
 type ladderAccount struct {
 	e          *integration.Env
-	orgID      ids.UUID
+	companyID  ids.UUID
 	sink       *capture.Sink
 	captureCtx context.Context
 }
 
 func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 	t.Helper()
-	orgID := e.SeedOrg(t, "Ladder Works", nil)
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
+	companyID := e.SeedCompany(t, "Ladder Works", nil)
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Dana Ladder", Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: ladderCounterparty, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: ladderCounterparty, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
-	personID := ids.From[ids.PersonKind](ids.UUID(person.Id))
-	employer := ids.From[ids.OrganizationKind](orgID)
-	if _, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
-		Kind: "employment", PersonID: &personID, OrganizationID: &employer, Source: "manual",
+	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
+	employer := ids.From[ids.CompanyKind](companyID)
+	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contactID, CompanyID: &employer, Source: "manual",
 	}); err != nil {
 		t.Fatalf("seeding the employment: %v", err)
 	}
@@ -73,16 +73,16 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 		UserID: e.Rep1, OnBehalfOf: e.Rep1,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"activity":     {Create: true, Read: true, Update: true},
-				"person":       {Create: true, Read: true},
-				"organization": {Create: true, Read: true},
-				"project":      {Read: true},
-				"deal":         {Read: true},
+				"activity": {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true},
+				"company":  {Create: true, Read: true},
+				"project":  {Read: true},
+				"deal":     {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	return ladderAccount{e: e, orgID: orgID, sink: newCaptureSink(e.Pool, CaptureConfig{}), captureCtx: ctx}
+	return ladderAccount{e: e, companyID: companyID, sink: newCaptureSink(e.Pool, CaptureConfig{}), captureCtx: ctx}
 }
 
 // project opens one live project on the account and answers its id and key.
@@ -91,7 +91,7 @@ func seedLadderAccount(t *testing.T, e *integration.Env) ladderAccount {
 func (a ladderAccount) project(t *testing.T, name string) (ids.UUID, string) {
 	t.Helper()
 	created, err := a.e.Projects.CreateProject(a.e.Admin(), projects.CreateProjectInput{
-		Name: name, OrganizationID: ids.From[ids.OrganizationKind](a.orgID), Source: "manual",
+		Name: name, CompanyID: ids.From[ids.CompanyKind](a.companyID), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating project %q: %v", name, err)

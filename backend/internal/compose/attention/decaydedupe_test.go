@@ -3,7 +3,7 @@
 
 package attention
 
-// One person is one row.
+// One contact is one row.
 //
 // The decay lane and the waiting lane say opposite things about the same
 // contact and both are true: nobody has spoken to Dana in sixty days, AND Dana
@@ -24,31 +24,31 @@ import (
 
 // Both fixtures go through the REAL classifiers rather than being built by
 // hand. The defect this pass exists to close lives in classifyWaiting's subject
-// choice — a wait naming both a deal and a person takes the deal — so a
+// choice — a wait naming both a deal and a contact takes the deal — so a
 // hand-built row with the subject the test wants is a row that proves the
 // suppressor agrees with the test, not that it agrees with the product.
-func decayRowFor(person ids.UUID) ranked {
+func decayRowFor(contact ids.UUID) ranked {
 	return classifyDecay(lapsedItem(QuietRelationship{
-		PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: dedupeInstant,
+		ContactID: contact, Name: "Dana Weiss", QuietDays: 63, LastAt: dedupeInstant,
 	}), dedupeInstant)
 }
 
-// waitingRowFor is a wait about a person and nothing else.
-func waitingRowFor(person ids.UUID) ranked {
+// waitingRowFor is a wait about a contact and nothing else.
+func waitingRowFor(contact ids.UUID) ranked {
 	return classifyWaiting(WaitingCustomer{
 		ActivityID: ids.NewV7(), Subject: "Re: the retrofit quote",
-		Since: dedupeInstant.AddDate(0, 0, -2), PersonID: person,
+		Since: dedupeInstant.AddDate(0, 0, -2), ContactID: contact,
 	}, dedupeInstant)
 }
 
 // waitingOnADealFor is the case that made this pass wrong: a wait naming BOTH
 // the contact and the deal their thread belongs to. classifyWaiting gives the
-// deal the subject, so the person is on the row and nowhere in its subject.
-func waitingOnADealFor(person ids.UUID) ranked {
+// deal the subject, so the contact is on the row and nowhere in its subject.
+func waitingOnADealFor(contact ids.UUID) ranked {
 	return classifyWaiting(WaitingCustomer{
 		ActivityID: ids.NewV7(), Subject: "Re: the retrofit quote",
-		Since:    dedupeInstant.AddDate(0, 0, -2),
-		PersonID: person, DealID: ids.NewV7(),
+		Since:     dedupeInstant.AddDate(0, 0, -2),
+		ContactID: contact, DealID: ids.NewV7(),
 	}, dedupeInstant)
 }
 
@@ -93,7 +93,7 @@ func TestAQuietContactNobodyIsWaitingOnKeepsTheirRow(t *testing.T) {
 	})
 
 	if len(kept) != 2 {
-		t.Fatalf("the page carries %v, want both rows — they are about different people",
+		t.Fatalf("the page carries %v, want both rows — they are about different contacts",
 			sourcesOf(kept))
 	}
 }
@@ -112,7 +112,7 @@ func TestADayWithNobodyWaitingKeepsEveryQuietContact(t *testing.T) {
 // The case a subject-keyed lookup misses entirely.
 //
 // A wait naming both the contact and their deal takes the DEAL as its subject,
-// so the person is on the row and nowhere in its subject. Those are exactly the
+// so the contact is on the row and nowhere in its subject. Those are exactly the
 // contacts most likely to also be lapsing — somebody with an open deal — and
 // the page showed them twice: unanswered in one row, gone quiet in another.
 func TestAContactWaitingOnADealThreadIsStillNotReportedAsGoneQuiet(t *testing.T) {
@@ -122,7 +122,7 @@ func TestAContactWaitingOnADealThreadIsStillNotReportedAsGoneQuiet(t *testing.T)
 
 	if len(kept) != 1 {
 		t.Fatalf("the page carries %v for one contact, want the waiting row alone — "+
-			"the wait's SUBJECT is the deal, so only the row's own person can match",
+			"the wait's SUBJECT is the deal, so only the row's own contact can match",
 			sourcesOf(kept))
 	}
 	if kept[0].item.Source != sourceWaiting {
@@ -132,11 +132,11 @@ func TestAContactWaitingOnADealThreadIsStillNotReportedAsGoneQuiet(t *testing.T)
 
 // A waiting row about a DEAL and NOBODY does not silence a contact. The two lanes both
 // carry subjects, and matching on the id alone rather than on the subject type
-// would let an unrelated record's id suppress a person who shares nothing with
+// would let an unrelated record's id suppress a contact who shares nothing with
 // it but a coincidence.
 func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 	dana := ids.NewV7()
-	// A thread filed under a deal alone, naming no person. Its subject id
+	// A thread filed under a deal alone, naming no contact. Its subject id
 	// happens to equal the contact's — the coincidence a subject-keyed match
 	// would fall for.
 	onADealOnly := classifyWaiting(WaitingCustomer{
@@ -147,7 +147,7 @@ func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 	kept := dropDecayAlreadyWaiting([]ranked{decayRowFor(dana), onADealOnly})
 
 	if len(kept) != 2 {
-		t.Fatalf("the page carries %v, want both — the wait names no person at all, "+
+		t.Fatalf("the page carries %v, want both — the wait names no contact at all, "+
 			"and an id that merely matches is a coincidence", sourcesOf(kept))
 	}
 }
@@ -155,7 +155,7 @@ func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 // The money survives the row that carried it.
 //
 // The two lanes answer different questions about a deal: a wait asks whether one
-// rides on THIS THREAD, the decay lane asks whether the person sits on any open
+// rides on THIS THREAD, the decay lane asks whether the contact sits on any open
 // deal the reader can see. So the decay row can be the only row on the page that
 // knows money rests on this contact — and dropping it silently took that with
 // it, which for a wait past the staleness window is the difference between
@@ -163,7 +163,7 @@ func TestAWaitNamingNoContactDoesNotSilenceOne(t *testing.T) {
 func TestTheMoneyOnASilencedContactSurvivesOntoTheWaitingRow(t *testing.T) {
 	dana := ids.NewV7()
 	quiet := classifyDecay(lapsedItem(QuietRelationship{
-		PersonID: dana, Name: "Dana Weiss", QuietDays: 63,
+		ContactID: dana, Name: "Dana Weiss", QuietDays: 63,
 		LastAt: dedupeInstant, HasOpenDeal: true,
 	}), dedupeInstant)
 	if !hasReason(quiet.item, reasonExpectedRevenue) {

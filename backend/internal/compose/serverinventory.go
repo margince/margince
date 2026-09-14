@@ -19,23 +19,23 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/meetingbrief"
 	"github.com/margince/margince/backend/internal/compose/network"
-	"github.com/margince/margince/backend/internal/compose/org360"
-	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
-	"github.com/margince/margince/backend/internal/compose/orgscan"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/apps"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -52,7 +52,7 @@ import (
 // surface.
 type Server struct {
 	authHandlers
-	peopleHandlers
+	contactsHandlers
 	dealsHandlers
 	projectsHandlers
 	contractsHandlers
@@ -62,6 +62,7 @@ type Server struct {
 	approvalsHandlers
 	searchHandlers
 	consentHandlers
+	directedSendHandlers
 	collectionsHandlers
 	signalsHandlers
 	privacyHandlers
@@ -124,10 +125,11 @@ type Server struct {
 	filteredExportHandlers
 	filterPreviewHandlers
 	overlayExportHandlers
-	orgRollupHandlers
+	companyRollupHandlers
 	strengthHandlers
 	customfieldsHandlers
 	attachmentExtractionHandlers
+	outcomeReviewHandlers
 	overlayHandlers
 	embedReindexHandlers
 	rateRefreshHandlers
@@ -141,18 +143,18 @@ type Server struct {
 	extensionsHandlers
 	// The transport directory (handlers_channelproviders.go): stateless, embedded the same way.
 	channelProvidersHandlers
-	org360Handlers
-	person360Handlers
+	company360Handlers
+	contact360Handlers
 	project360Handlers
-	personBriefHandlers
+	contactBriefHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
-	personResearchHandlers
-	personDraftHandlers
+	contactResearchHandlers
+	contactDraftHandlers
 	leadDraftHandlers
-	orgBriefHandlers
-	orgDossierHandlers
-	orgScanHandlers
+	companyBriefHandlers
+	companyDossierHandlers
+	companyScanHandlers
 	accountDraftHandlers
 	financeHandlers
 	integrationsHandlers
@@ -165,6 +167,10 @@ type Server struct {
 	// The notices transport: one verb (mark read); the content reaches the
 	// reader on the Worklist's notices lane.
 	noticesHandlers
+	// Who is responsible for a record, and the administered roles they hold it
+	// under. Its authority is the parent record's own, so it wires no
+	// permission of its own.
+	assignmentHandlers
 	// The week ahead: the rep's own plan, and the one write their lead has on
 	// it. The week just gone is weeklyHandlers, which shares no table with it.
 	weeklyPlanHandlers
@@ -418,23 +424,23 @@ type Server struct {
 	// object class (dev/demo — WithOverlayBackfillLimit); 0 is uncapped.
 	overlayBackfillLimit int
 
-	// orgBriefSvc writes both of the company view's grounded-prose surfaces:
+	// companyBriefSvc writes both of the company view's grounded-prose surfaces:
 	// the standing account brief and the prepared "Ask Margince" questions.
 	// WithAccountBrief rebinds its model lane at boot, so the api role writes
 	// with a model and every other role serves the same deterministic floor.
 	// (WithBrief is a different option — the Morning Brief's L2 ranker.)
-	orgBriefSvc *orgbrief.Service
-	// org360Svc is the composite read the brief is assembled from, held so
+	companyBriefSvc *companybrief.Service
+	// company360Svc is the composite read the brief is assembled from, held so
 	// WithAccountBrief can rebuild the brief service over the SAME gated
 	// read rather than a second one that might drift from it.
-	org360Svc *org360.Service
-	// peopleStore is shared by the 360 and the account brief: the brief reads
+	company360Svc *company360.Service
+	// contactsStore is shared by the 360 and the account brief: the brief reads
 	// the company's curated profile through it, under the caller's own gates.
-	peopleStore *people.Store
-	// person360Svc is the person page's composite read, held for the same
-	// reason org360Svc is: the relationship brief is assembled from THIS gated
+	contactsStore *contacts.Store
+	// contact360Svc is the contact page's composite read, held for the same
+	// reason company360Svc is: the relationship brief is assembled from THIS gated
 	// read rather than a second one that could drift from what the page shows.
-	person360Svc *person360.Service
+	contact360Svc *contact360.Service
 	// meetingBriefSvc is held so an option can bind its model lane after the
 	// handler sets are built.
 	meetingBriefSvc *meetingbrief.Service
@@ -442,17 +448,17 @@ type Server struct {
 	// deal_health lane onto the service the handler set already wraps.
 	dealStatusSvc *dealstatus.Service
 
-	// orgDossierSvc and orgGrowthFitSvc are the company view's other two
+	// companyDossierSvc and companyGrowthFitSvc are the company view's other two
 	// generated surfaces. They are held for WithGrowthFit's sake: rebinding one
 	// lane must not silently drop the other's handler, which is what building a
 	// fresh handler set from a half-remembered pair would do.
-	orgDossierSvc   *orgdossier.Service
-	orgGrowthFitSvc *orgdossier.GrowthFitService
-	// orgScanSvc is the account scan, held so WithAccountScan can rebind its
+	companyDossierSvc   *companydossier.Service
+	companyGrowthFitSvc *companydossier.GrowthFitService
+	// companyScanSvc is the account scan, held so WithAccountScan can rebind its
 	// lane and its job runner over the SAME composite read and dismissals the
 	// 360 serves, and so the 360's dismissal endpoint can recognise a finding
 	// the scan raised.
-	orgScanSvc *orgscan.Service
+	companyScanSvc *companyscan.Service
 
 	// resetRuntime is the non-Postgres purge set POST /admin/reset-data runs —
 	// the job queue, the event bus, the cache-flush announcement — injected by

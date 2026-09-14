@@ -112,7 +112,7 @@ func TestEachSectionOfTheReferencePageListsExactlyItsLabels(t *testing.T) {
 			got := listedIn(page, section.heading, section.prefix, section.bare)
 			if !slices.Equal(want, got) {
 				t.Errorf("%s lists %v and the source declares %v.\n"+
-					"\tThis section is what a person reads when choosing one, so a name only in "+
+					"\tThis section is what a reader reads when choosing one, so a name only in "+
 					"the source is a label nobody picks, and a name only here is one "+
 					"`gh issue create` will refuse.", section.heading, got, want)
 			}

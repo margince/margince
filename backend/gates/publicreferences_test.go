@@ -171,7 +171,7 @@ func TestPublicTreeCitesNoDocumentGitIgnores(t *testing.T) {
 		// AGENTS.md under an extensions/ path that git ignores, and nothing is
 		// wrong with that — and a fixture cannot be told from a citation by
 		// looking at it. Reporting those would either add a waiver list or teach
-		// people to spell paths so this gate cannot see them.
+		// contacts to spell paths so this gate cannot see them.
 		if filepath.Ext(rel) != ".md" {
 			continue
 		}

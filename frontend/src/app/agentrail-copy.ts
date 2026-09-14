@@ -30,7 +30,7 @@ export const LABELS = {
   recap: "What it has done",
   justNow: "just now",
   fullLog: "Full log",
-  /** The recap when the feed answered and this person's day holds nothing yet.
+  /** The recap when the feed answered and this contact's day holds nothing yet.
    *  It is bounded to what SETTLED today, so an empty list is a quiet morning
    *  rather than an agent that has never run. */
   nothingToday: "nothing has finished today",
@@ -100,7 +100,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
  * this is the vocabulary it names them in: the words a salesperson uses about
  * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching organization360" is a key.
+ * company" is a sentence; "fetching company360" is a key.
  *
  * A key with no entry here produces NO LINE. That is the point of a table rather
  * than a fallback that opens up the key: half of what a session fetches is
@@ -131,7 +131,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 export const IDLE_ORDER = [
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
-  // rather than a task, so it does not push the queue a person has to answer
+  // rather than a task, so it does not push the queue a contact has to answer
   // down the rotation.
   "finished",
   // Last, and standing rather than daily: an installation on the development
@@ -196,11 +196,11 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
 export const NAMED: Readonly<Record<string, string>> = {
   deal: "Reading the %s deal",
   lead: "Reading %s",
-  organization: "Reading %s",
-  organization360: "Reading everything about %s",
-  person: "Reading %s",
-  person360: "Reading everything about %s",
-  personBrief: "Summarising %s",
+  company: "Reading %s",
+  company360: "Reading everything about %s",
+  contact: "Reading %s",
+  contact360: "Reading everything about %s",
+  contactBrief: "Summarising %s",
 };
 
 export const SAID: Readonly<Record<string, string>> = {
@@ -209,6 +209,8 @@ export const SAID: Readonly<Record<string, string>> = {
   "ai-calls": "Reading its own log",
   "ai-usage": "Adding up what it spent",
   companies: "Reading companies",
+  company: "Reading a company",
+  company360: "Reading everything about this company",
   connectors: "Checking its sources",
   deal: "Reading a deal",
   "deal-offers": "Reading the offers on a deal",
@@ -216,14 +218,11 @@ export const SAID: Readonly<Record<string, string>> = {
   dsrs: "Checking privacy requests",
   lead: "Reading a lead",
   leads: "Reading leads",
-  organization: "Reading a company",
-  organization360: "Reading everything about this company",
-  organizations: "Reading companies",
   overlay: "Reading what it wrote here",
-  people: "Reading contacts",
-  person: "Reading a contact",
-  person360: "Reading everything about this contact",
-  personBrief: "Summarising a contact",
+  contacts: "Reading contacts",
+  contact: "Reading a contact",
+  contact360: "Reading everything about this contact",
+  contactBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
   // The brief is written on every open, from the reader's own records, and the
   // rail's own line follows on its next poll: this is the sentence for the

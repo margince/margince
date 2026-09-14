@@ -475,7 +475,7 @@ func bindActor(ctx context.Context) context.Context {
 // suppress the follow to the package's real bindActor, and the worker — which
 // calls it and IS bound — came back unbound. That is the cry-wolf direction,
 // and this file's own prose says what a gate that cries wolf gets: deleted by
-// the next person who sees it red.
+// the next contact who sees it red.
 func TestTheFollowIgnoresAnAssignmentInsideACommentOrAString(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose

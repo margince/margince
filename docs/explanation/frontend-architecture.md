@@ -30,7 +30,7 @@ consequences are load-bearing:
   other is `screens/connected-agents.tsx` reading
   `/.well-known/oauth-protected-resource`, which is **not a `/v1` route at all**
   and so was never the typed client's to carry.
-- **No tenant selector on the wire.** One installation serves one organization
+- **No tenant selector on the wire.** One installation serves one company
   (A107/ADR-0061) and the server resolves it itself. The client sends the
   session cookie and nothing else — `auth.test.tsx` and `preferences.test.tsx`
   assert the absence of a workspace header, so re-introducing one fails the
@@ -86,7 +86,7 @@ it, so a `?utm=…` never leaks into a screen name.
   only when it is a state machine rather than a page, and exactly one has:
   `screens/onboarding-conversation/`, where the conversation machine, its acts,
   its scenes and its restore logic each need their own file. Everything else —
-  including surfaces as large as `organizations.tsx` and `deals.tsx` — stays a
+  including surfaces as large as `companies.tsx` and `deals.tsx` — stays a
   file with co-located `*.test.tsx` and `*.stories.tsx`. A route with no screen
   behind it renders the honest pending state (`App.tsx`'s `PendingScreen`),
   never a blank page.
@@ -150,7 +150,7 @@ the splash) use the same rail-less frame.
 
 ### A nav label is presentation and never a route id
 
-This is the convention most likely to be got wrong by the next person adding a
+This is the convention most likely to be got wrong by the next contact adding a
 destination, so it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id** — the stable English name in the hash, in
 `App.tsx`'s switch, and in every `href`. `NavItem.labelKey` is a **catalog key**
@@ -245,7 +245,7 @@ than brand colour, and a literal anywhere else fails the gate.
 ## Provenance
 
 **`EvidenceMark` is THE provenance affordance.** A value that came from
-somewhere other than a person typing it carries a dotted underline; opening the
+somewhere other than a contact typing it carries a dotted underline; opening the
 mark says where it came from, how sure the system was, the text it was read
 from, when — and offers a way through to that field's full history.
 

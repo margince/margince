@@ -16,10 +16,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -27,7 +29,7 @@ import (
 
 // StarterWorkflows returns the shipped handler set over the injected
 // executor seams. assign_lead_owner is NOT here: its engine is
-// lead-store SQL, so the people module provides that handler (under
+// lead-store SQL, so the contacts module provides that handler (under
 // its own honest name — AUTO-NOTE-2, §3.5) and compose registers it
 // beside these. ex is the seam bundle every handler's Apply threads
 // into ApplyActions, whether or not this particular starter's own
@@ -126,7 +128,7 @@ func (stageChangeCreateTask) IdempotencyKey(ev workflow.Event) string {
 // (AUTO-NOTE-2, §3.5): "route a new lead to a task", the CREATE_TASK
 // reading of those words — never confused with the OWNER-assignment
 // reading of the same phrase, which lives under its own honest name,
-// assign_lead_owner (people.LeadRoutingWorkflow), because the two are
+// assign_lead_owner (contacts.LeadRoutingWorkflow), because the two are
 // genuinely different acts, not two names for one automation.
 const routeLeadName = "route_lead"
 
@@ -157,7 +159,7 @@ func (routeLeadCreateTask) Spec() workflow.Spec {
 
 // Match declines a lead nobody asked us for.
 //
-// Every lead that came from a person — a form, a reply, a referral, a hand
+// Every lead that came from a contact — a form, a reply, a referral, a hand
 // typed row — needs its first follow-up, and unlike stage_change_create_task
 // there is no "wrong direction" one could have arrived from. What does not need
 // one is a name the product READ off a public web page: nobody wrote in and
@@ -183,7 +185,7 @@ func (routeLeadCreateTask) Match(_ context.Context, ev workflow.Event) (bool, er
 // Plan mints the follow-up ASSIGNED to whoever answers for the lead.
 //
 // The owner is read off the lead through the same provider stage_change_notify
-// reads its deal through, rather than imported from the people module: this
+// reads its deal through, rather than imported from the contacts module: this
 // module reaches no sibling, and the record is already in front of it.
 //
 // A lead nobody owns yet mints an unassigned task, which is the honest answer —
@@ -234,10 +236,8 @@ var errDealHasNoOwner = declineFiring("the moved deal has no assigned owner to n
 // (automations_catalog.go's CatalogEntry doc).
 const stageChangeNotifyName = "stage_change_notify"
 
-// stageChangeNotify tells the deal's owner about every stage move,
-// including the closes (won/lost) that end stageChangeCreateTask's own
-// follow-up cadence — a rep especially wants to hear that their own deal
-// closed, not just that it is still open.
+// stageChangeNotify tells the owner about moves made by others.
+// Their own moves remain in deal history, without becoming inbox work.
 type stageChangeNotify struct {
 	ex Executors
 }
@@ -250,10 +250,8 @@ func (stageChangeNotify) Spec() workflow.Spec {
 	}
 }
 
-// Match fires unconditionally on every stage move: unlike
-// stageChangeCreateTask (which narrows to open moves — a closed deal
-// needs no next-step task), a notification's whole point is that the
-// owner hears about the move regardless of which way it went.
+// Both open and closed destinations can matter. Plan resolves the owner
+// before deciding whether the original actor has anything new to tell them.
 func (stageChangeNotify) Match(_ context.Context, _ workflow.Event) (bool, error) {
 	return true, nil
 }
@@ -270,14 +268,39 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	if deal.OwnerID == nil {
 		return workflow.Effect{}, errDealHasNoOwner
 	}
+	// Retries can carry older bare UUID actor IDs as well as canonical human IDs.
+	ownerID := deal.OwnerID.String()
+	if ev.Actor.Type == string(principal.PrincipalHuman) &&
+		(strings.EqualFold(ev.Actor.ID, ownerID) || strings.EqualFold(ev.Actor.ID, principal.HumanIDPrefix+ownerID)) {
+		return workflow.Effect{}, declineFiring("the owner made this stage change")
+	}
 	dealName := deal.Name
 	if dealName == "" {
-		dealName = "A deal you own"
+		dealName = "Deal"
+	}
+	body := "Stage changed. The previous and new stages are unavailable."
+	var change crmcontracts.PublicEventDealStageChanged
+	if len(ev.Payload) > 0 {
+		if err := json.Unmarshal(ev.Payload, &change); err != nil {
+			return workflow.Effect{}, fmt.Errorf("automation: decoding the stage change: %w", err)
+		}
+		if change.FromStageName != nil && change.ToStageName != nil {
+			body = fmt.Sprintf("%s → %s", *change.FromStageName, *change.ToStageName)
+		}
+	}
+	origin := noticeOrigin(ev)
+	if origin != nil {
+		origin.StageChange = &struct {
+			FromName *string `json:"from_name,omitempty"`
+			ToName   *string `json:"to_name,omitempty"`
+		}{FromName: change.FromStageName, ToName: change.ToStageName}
 	}
 	args, err := json.Marshal(notifyArgs{
 		Recipient: *deal.OwnerID,
-		Subject:   "A deal you own changed stage",
-		Body:      fmt.Sprintf("%s moved to a new pipeline stage.", dealName),
+		Origin:    origin,
+		DedupeKey: w.IdempotencyKey(ev),
+		Subject:   dealName,
+		Body:      body,
 	})
 	if err != nil {
 		return workflow.Effect{}, fmt.Errorf("automation: encoding the notify action: %w", err)
@@ -374,9 +397,9 @@ func (postMeetingRecap) Plan(_ context.Context, ev workflow.Event) (workflow.Eff
 	// business_correspondence is NAMED here rather than left to a default, and
 	// naming it is not this code choosing a lawful basis: the purpose exists
 	// for exactly this case. ADR-0098 D1 added it because ADR-0011's blanket
-	// default-deny "overshoots on one class: replying to a person who wrote to
+	// default-deny "overshoots on one class: replying to a contact who wrote to
 	// us" — individual business correspondence is not advertising under UWG §7
-	// and rests on Art 6(1)(b)/(f), not consent. A recap to the person you just
+	// and rests on Art 6(1)(b)/(f), not consent. A recap to the contact you just
 	// met with is that and nothing else.
 	//
 	// A user-configured draft_email instance declares its own purpose and is

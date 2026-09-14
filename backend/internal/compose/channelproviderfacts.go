@@ -151,7 +151,7 @@ func channelProviderFactsFor(registered []string, sending map[string]connector.C
 // boot failure and not a warning. A unit declaring `telegram` would take over
 // the row the workspace's own bot is registered under, and every Telegram reply
 // a rep wrote would then leave on the unit's per-member credential instead —
-// the same message, sent by a different person, with nothing on the screen
+// the same message, sent by a different contact, with nothing on the screen
 // different. Refusing at boot costs an installation a rename.
 //
 // It lives HERE rather than in preflightChannels because this is the first
@@ -181,7 +181,7 @@ func channelProviderFactsFor(registered []string, sending map[string]connector.C
 // a unit. Deriving it answered wrongly for that whole class, and wrongly in the
 // direction nothing detects — a message narrowed onto the mailbox path keeps
 // exactly one reader, the connecting admin, so no orphan invariant fires while a
-// company's customer correspondence has become one person's private mail.
+// company's customer correspondence has become one contact's private mail.
 //
 // Channel.Validate refuses a unit that declares neither, so there is no default
 // to be wrong about here.
@@ -199,7 +199,7 @@ func unitChannelFacts(reserved map[string]bool) ([]channelProviderFacts, error) 
 				// upsert. Refusing here names the unit, the transport and the
 				// two answers, which is what a unit author needs and what a
 				// constraint name cannot give them.
-				return nil, fmt.Errorf("compose: extension %q declares the transport %q without a credential model — say %q if one credential serves the whole installation, %q if each member deposits their own; it decides whether this transport's messages are the company's correspondence or one person's",
+				return nil, fmt.Errorf("compose: extension %q declares the transport %q without a credential model — say %q if one credential serves the whole installation, %q if each member deposits their own; it decides whether this transport's messages are the company's correspondence or one contact's",
 					ext.Name, ch.Provider, extension.CredentialWorkspaceBot, extension.CredentialPerMember)
 			}
 			if reserved[ch.Provider] {

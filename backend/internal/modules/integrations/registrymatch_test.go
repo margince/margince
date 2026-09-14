@@ -4,7 +4,7 @@
 package integrations
 
 // A descriptor's match rules are refused at registration when they name a
-// field a person does not carry.
+// field a contact does not carry.
 //
 // This is the one failure mode of the mechanism that is otherwise silent: an
 // unknown field is never present, so a rule carrying a typo is satisfied by

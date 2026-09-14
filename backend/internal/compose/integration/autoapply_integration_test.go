@@ -8,7 +8,7 @@ package integration
 // Applying a proposal because its owner said to, and the four cases where it
 // must not.
 //
-// Every claim here is SQL: whose policy was consulted, whether that person is
+// Every claim here is SQL: whose policy was consulted, whether that contact is
 // still live, and what the decision wrote. A unit test with hand-built rows
 // could not fail on any of them — and the refusals are the half that matters,
 // because a sweep that applied nothing would pass a refusal-only suite while
@@ -153,7 +153,7 @@ func TestAProposalAppliesWhenItsOwnerSaidSo(t *testing.T) {
 		t.Errorf("status = %q, want approved", status)
 	}
 	if !bySystem {
-		t.Error("the row does not say the system decided it, so the receipt would name a person who was never asked")
+		t.Error("the row does not say the system decided it, so the receipt would name a contact who was never asked")
 	}
 }
 
@@ -175,7 +175,7 @@ func TestAProposalWaitsWhenNobodyOptedIn(t *testing.T) {
 		t.Fatalf("applied %d proposals, want none — nobody opted in", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
-		t.Errorf("status = %q, want the proposal still waiting for a person", status)
+		t.Errorf("status = %q, want the proposal still waiting for a contact", status)
 	}
 }
 
@@ -230,7 +230,7 @@ func TestAProposalWhoseOwnerHasLeftDoesNotApply(t *testing.T) {
 		t.Fatalf("applied %d proposals, want none — the owner is no longer live", applied)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
-		t.Errorf("status = %q, want the proposal left for a person to answer", status)
+		t.Errorf("status = %q, want the proposal left for a contact to answer", status)
 	}
 }
 
@@ -255,10 +255,10 @@ func TestAnIneligibleKindNeverApplies(t *testing.T) {
 // Auto-apply is allowed to happen without asking BECAUSE the rep can undo it,
 // so a change the restore path cannot reverse is not a change this may make.
 // Nothing new reverses it — the audit row the apply wrote goes back through the
-// same record-history restore a person's Undo button uses, which is the point
+// same record-history restore a contact's Undo button uses, which is the point
 // of computing reversibility rather than storing a flag beside the approval.
 //
-// An org rename rather than a close date, and deliberately: a confirmed close
+// A company rename rather than a close date, and deliberately: a confirmed close
 // date currently cannot be undone at all, because its audit image records a
 // timestamp against a date column and every restore reads that as superseded.
 // That is a defect in the close-date effect rather than in this path, filed
@@ -267,16 +267,16 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	svc := approvals.NewService(e.DB())
-	org := e.SeedOrg(t, "Weber GmbH", &e.Rep1)
-	grantOrgRepRole(t, e, e.Rep1)
-	// A promotion only overrides a name the DOMAIN produced — a name a person
+	company := e.SeedCompany(t, "Weber GmbH", &e.Rep1)
+	grantCompanyRepRole(t, e, e.Rep1)
+	// A promotion only overrides a name the DOMAIN produced — a name a contact
 	// typed outranks a signature, and the store refuses to touch it. The seed
 	// leaves another source, so the fixture states the precondition the
 	// promotion is actually about rather than silently proving nothing.
-	e.WsExec(t, `UPDATE organization SET name_source = 'domain' WHERE id = $1`, org)
+	e.WsExec(t, `UPDATE company SET name_source = 'domain' WHERE id = $1`, company)
 
 	proposal, err := json.Marshal(map[string]any{
-		"organization_id":   org,
+		"company_id":        company,
 		"current_name":      "Weber GmbH",
 		"proposed_name":     "Weber Fahrzeugtechnik GmbH",
 		"proposed_name_key": "weber fahrzeugtechnik gmbh",
@@ -285,18 +285,18 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 		t.Fatalf("marshalling the proposal: %v", err)
 	}
 	approvalID, err := svc.Stage(stageCtx(e), approvals.StageInput{
-		Kind:           "org_name_promotion",
+		Kind:           "company_name_promotion",
 		ProposedChange: proposal,
 		DiffHash:       "h-" + ids.NewV7().String(),
-		TargetType:     "organization",
-		TargetID:       org,
+		TargetType:     "company",
+		TargetID:       company,
 		Summary:        "the signature spells the company differently",
 	})
 	if err != nil {
 		t.Fatalf("staging the proposal: %v", err)
 	}
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if _, err := svc.SetAutoApply(repCtx, "org_name_promotion", true); err != nil {
+	if _, err := svc.SetAutoApply(repCtx, "company_name_promotion", true); err != nil {
 		t.Fatalf("turning auto-apply on: %v", err)
 	}
 
@@ -309,21 +309,21 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 
 	// The audit row the APPLY wrote, found the way the history screen finds it.
 	// The write is recorded against a MACHINE and carries the owner it acted
-	// for. Which machine is the effect's own business — an org rename stamps
+	// for. Which machine is the effect's own business — a company rename stamps
 	// its provenance as the signature it read, not as the pass that released
-	// it — but no automatic write may be recorded as a person having typed it,
+	// it — but no automatic write may be recorded as a contact having typed it,
 	// because the receipts lane's whole claim is that nobody was asked.
 	var auditID ids.UUID
 	var actor string
 	var onBehalfOf *ids.UUID
 	if err := owner.QueryRow(context.Background(), `
 		SELECT id, actor_id, on_behalf_of FROM audit_log
-		 WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'update'
-		 ORDER BY occurred_at DESC LIMIT 1`, org).Scan(&auditID, &actor, &onBehalfOf); err != nil {
+		 WHERE entity_type = 'company' AND entity_id = $1 AND action = 'update'
+		 ORDER BY occurred_at DESC LIMIT 1`, company).Scan(&auditID, &actor, &onBehalfOf); err != nil {
 		t.Fatalf("finding the audit row the apply wrote: %v", err)
 	}
 	if strings.HasPrefix(actor, "human:") {
-		t.Errorf("the change is recorded against %q — a person is named for a write nobody was asked about", actor)
+		t.Errorf("the change is recorded against %q — a contact is named for a write nobody was asked about", actor)
 	}
 	if onBehalfOf == nil || *onBehalfOf != e.Rep1 {
 		t.Errorf("on_behalf_of = %v, want the owner whose policy authorized it", onBehalfOf)
@@ -331,18 +331,18 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 
 	var version int64
 	if err := owner.QueryRow(context.Background(),
-		`SELECT version FROM organization WHERE id = $1`, org).Scan(&version); err != nil {
+		`SELECT version FROM company WHERE id = $1`, company).Scan(&version); err != nil {
 		t.Fatalf("reading the record version: %v", err)
 	}
 
-	// A PERSON undoes it, through the record-history restore a rep's Undo
+	// A CONTACT undoes it, through the record-history restore a rep's Undo
 	// button uses. The route is human-only, which is the other half of the
 	// bargain: the machine may apply without asking, and only somebody who can
 	// see the record may put it back.
 	// The undoing rep's authority is RESOLVED, not declared. The machine got
 	// its grants from role_assignment through EffectiveAuthority, so a
-	// hand-written Permissions here would put the person on a different footing
-	// and the test would pass even if grantOrgRepRole granted the wrong thing.
+	// hand-written Permissions here would put the contact on a different footing
+	// and the test would pass even if grantCompanyRepRole granted the wrong thing.
 	// Same call, same source, both sides.
 	rbac, seat, err := identity.NewService(e.Pool).EffectiveAuthority(
 		principal.WithWorkspaceID(context.Background(), e.WS), e.WS, e.Rep1)
@@ -361,12 +361,12 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	undoCtx = principal.WithCorrelationID(undoCtx, ids.NewV7())
 	seam := compose.NewRestoreSeam(e.Pool, compose.NewDispatcher(
 		compose.NewProvider(e.Pool), nil, e.Pool), nil)
-	if _, err := seam.Restore(undoCtx, "organization", org, auditID, version); err != nil {
+	if _, err := seam.Restore(undoCtx, "company", company, auditID, version); err != nil {
 		t.Fatalf("undoing what the product applied on its own: %v", err)
 	}
 	var name string
 	if err := owner.QueryRow(context.Background(),
-		`SELECT display_name FROM organization WHERE id = $1`, org).Scan(&name); err != nil {
+		`SELECT display_name FROM company WHERE id = $1`, company).Scan(&name); err != nil {
 		t.Fatal(err)
 	}
 	if name != "Weber GmbH" {
@@ -374,16 +374,16 @@ func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
 	}
 }
 
-// grantOrgRepRole grants what an org-name promotion spends, the same way an
+// grantCompanyRepRole grants what a company-name promotion spends, the same way an
 // installation grants a role — see grantDealRepRole for why a bound context's
 // permissions are not enough.
-func grantOrgRepRole(t *testing.T, e *Env, user ids.UUID) {
+func grantCompanyRepRole(t *testing.T, e *Env, user ids.UUID) {
 	t.Helper()
 	roleKey := "autoapplyorg-" + user.String()[:8]
 	e.WsExec(t, `INSERT INTO role (key, name, permissions)
-		VALUES ($1, 'Auto-apply Org Rep', $2::jsonb)`,
+		VALUES ($1, 'Auto-apply Company Rep', $2::jsonb)`,
 		roleKey,
-		`{"objects":{"organization":{"read":true,"update":true},`+
+		`{"objects":{"company":{"read":true,"update":true},`+
 			`"installation_settings":{"read":true}},"row_scope":"all"}`)
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id)
 		SELECT r.id, $1 FROM role r WHERE r.key = $2`,
@@ -400,7 +400,7 @@ func grantOrgRepRole(t *testing.T, e *Env, user ids.UUID) {
 // sweep steps over it and keeps going.
 //
 // "Stranded" is about the WRITE, not the decision: the decision commits and the
-// effect then fails, exactly as it does when a person clicks approve on a stale
+// effect then fails, exactly as it does when a colleague clicks approve on a stale
 // pin. What this holds is that the failure stays with its own row.
 func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 	e := Setup(t)
@@ -448,6 +448,6 @@ func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 		t.Fatal(err)
 	}
 	if failure == nil {
-		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a person")
+		t.Error("the stranded proposal records no failure, so nothing would ever surface it to a contact")
 	}
 }

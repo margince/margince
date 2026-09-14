@@ -29,7 +29,7 @@ type CommissionEntry = components["schemas"]["CommissionEntry"];
 const ENTRY: CommissionEntry = {
   id: "c-1",
   deal_id: "d-1",
-  partner_org_id: "o-1",
+  partner_company_id: "o-1",
   status: "accrued",
   attribution_at_accrual: "sourced",
   margin_tier_at_accrual: "tier2_20",
@@ -60,7 +60,7 @@ function decision(
         <CommissionDecision
           entry={{ ...ENTRY, status: args.status }}
           decision={args.decision}
-          organizationId="o-1"
+          companyId="o-1"
         />
       </StoryProviders>
     );

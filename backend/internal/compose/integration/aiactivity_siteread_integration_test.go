@@ -7,11 +7,11 @@ package integration
 
 // A website read reports itself, end to end, the way a document reading does
 // (aiactivity_e2e_integration_test.go): every read here is BORN through
-// people.Store — StartSiteRead, BeginSiteRead, DeferSiteRead, FinishSiteRead —
+// contacts.Store — StartSiteRead, BeginSiteRead, DeferSiteRead, FinishSiteRead —
 // and every envelope is read back out of event_outbox rather than hand-built,
 // so what the projection receives is exactly what production staged.
 //
-// What this proves is the thing the rail needs: a read a person starts is
+// What this proves is the thing the rail needs: a read a contact starts is
 // their own live work from the moment it is queued, stays live while the
 // worker holds it, and settles from the dossier's own outcome — so the orb can
 // light for the crawl and rest when it ends.
@@ -26,7 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -43,7 +43,7 @@ type websiteReadFixture struct {
 	rep      context.Context
 	worker   context.Context
 	consumer *aiactivity.Consumer
-	org      ids.OrganizationID
+	company  ids.CompanyID
 	readID   ids.UUID
 	// delivered is how far the fixture's subscriber has got, so drain hands
 	// the consumer only what it has not seen — a replay of the first envelope
@@ -55,8 +55,8 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 	t.Helper()
 	e := Setup(t)
 	rep := e.As(e.Rep1, nil, AdminPerms)
-	org := ids.From[ids.OrganizationKind](e.SeedOrg(t, "Acme Systems", &e.Rep1))
-	read, joined, err := e.People.StartSiteRead(rep, org, "https://acme.example", "human:"+e.Rep1.String())
+	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme Systems", &e.Rep1))
+	read, joined, err := e.Contacts.StartSiteRead(rep, company, "https://acme.example", "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}
@@ -78,7 +78,7 @@ func newWebsiteReadFixture(t *testing.T) *websiteReadFixture {
 		rep:      rep,
 		worker:   worker,
 		consumer: aiactivity.NewConsumer(aiactivity.NewStore(e.DB()), testLogger(t)),
-		org:      org,
+		company:  company,
 		readID:   read.ID,
 	}
 }
@@ -95,7 +95,7 @@ func (f *websiteReadFixture) drain(t *testing.T) {
 			   AND envelope->'payload'->>'source' = $1
 			   AND envelope->'payload'->>'occurrence_key' = $2
 			 ORDER BY seq
-			 OFFSET $3`, people.SiteReadActivitySource, f.readID.String(), f.delivered)
+			 OFFSET $3`, contacts.SiteReadActivitySource, f.readID.String(), f.delivered)
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (f *websiteReadFixture) projection(t *testing.T) projectedRead {
 		SELECT kind, ai_task, state, attempt, actor_scope, actor_user_id,
 		       started_at, finished_at, stale_after, subject_type, subject_id, subject_label, degrade_reason
 		  FROM ai_task_run WHERE source = $1 AND occurrence_key = $2`,
-		people.SiteReadActivitySource, f.readID.String()).
+		contacts.SiteReadActivitySource, f.readID.String()).
 		Scan(&got.Kind, &got.AITask, &got.State, &got.Attempt, &got.ActorScope, &got.ActorUserID,
 			&got.StartedAt, &got.FinishedAt, &got.StaleAfter, &got.SubjectType, &got.SubjectID,
 			&got.SubjectLabel, &got.DegradeReason)
@@ -172,9 +172,9 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 	if got.State != "queued" || got.Attempt != 1 {
 		t.Fatalf("state/attempt = %s/%d, want queued/1", got.State, got.Attempt)
 	}
-	if got.Kind != people.SiteReadActivityKind || got.AITask != nil {
+	if got.Kind != contacts.SiteReadActivityKind || got.AITask != nil {
 		t.Fatalf("kind/ai_task = %s/%v, want %s with no task — a read is an occurrence of no single model call",
-			got.Kind, got.AITask, people.SiteReadActivityKind)
+			got.Kind, got.AITask, contacts.SiteReadActivityKind)
 	}
 	if got.ActorScope != "personal" || got.ActorUserID == nil || *got.ActorUserID != f.env.Rep1 {
 		t.Fatalf("actor = %s/%v, want personal/%s — the human who pressed the button owns the occurrence",
@@ -183,8 +183,8 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 	if got.StaleAfter == nil {
 		t.Fatal("a queued occurrence carries no stale_after, so a queue nobody drains would render as live forever")
 	}
-	if got.SubjectType == nil || *got.SubjectType != "organization" || got.SubjectID == nil || *got.SubjectID != f.org.UUID {
-		t.Fatalf("subject = %v/%v, want organization/%s", got.SubjectType, got.SubjectID, f.org)
+	if got.SubjectType == nil || *got.SubjectType != "company" || got.SubjectID == nil || *got.SubjectID != f.company.UUID {
+		t.Fatalf("subject = %v/%v, want company/%s", got.SubjectType, got.SubjectID, f.company)
 	}
 	if got.SubjectLabel == nil || *got.SubjectLabel != "Acme Systems" {
 		t.Fatalf("subject_label = %v, want the company's own name, so the rail can say which website it is reading", got.SubjectLabel)
@@ -196,7 +196,7 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 // stops carrying a lease: nothing about a closed occurrence can go stale.
 func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
@@ -213,9 +213,9 @@ func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
 		t.Fatalf("the worker's claim re-attributed the read to %s/%v; it stays the rep's", got.ActorScope, got.ActorUserID)
 	}
 
-	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+	if err := f.env.Contacts.FinishSiteRead(f.worker, f.readID, contacts.FinishSiteReadInput{
 		Status: "done", ClaimedAt: &claim.ClaimedAt,
-		Pages: []people.SiteReadPage{{URL: "https://acme.example", Kind: "home"}},
+		Pages: []contacts.SiteReadPage{{URL: "https://acme.example", Kind: "home"}},
 	}); err != nil {
 		t.Fatalf("FinishSiteRead: %v", err)
 	}
@@ -240,12 +240,12 @@ func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
 // interruption.
 func TestAWebsiteReadThatFilledItsPageBudgetSettlesDoneWithItsStopReason(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	stopped := "page_cap"
-	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+	if err := f.env.Contacts.FinishSiteRead(f.worker, f.readID, contacts.FinishSiteReadInput{
 		Status: "partial", ClaimedAt: &claim.ClaimedAt, StoppedReason: &stopped,
 	}); err != nil {
 		t.Fatalf("FinishSiteRead: %v", err)
@@ -268,14 +268,14 @@ func TestAWebsiteReadThatFilledItsPageBudgetSettlesDoneWithItsStopReason(t *test
 // the row spells it with the cap's own reason.
 func TestAWebsiteReadThatAlsoLostALaneStaysDegraded(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	stopped := "page_cap"
-	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+	if err := f.env.Contacts.FinishSiteRead(f.worker, f.readID, contacts.FinishSiteReadInput{
 		Status: "partial", ClaimedAt: &claim.ClaimedAt, StoppedReason: &stopped,
-		Warnings: []string{people.SiteReadPartialExtractionWarning},
+		Warnings: []string{contacts.SiteReadPartialExtractionWarning},
 	}); err != nil {
 		t.Fatalf("FinishSiteRead: %v", err)
 	}
@@ -293,14 +293,14 @@ func TestAWebsiteReadThatAlsoLostALaneStaysDegraded(t *testing.T) {
 // projection's guard admits and a state-only guard would refuse.
 func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	if _, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
+	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	f.drain(t)
 	// Due already, so the next claim's deferred-and-due arm admits it without
 	// this test waiting on a clock.
 	due := time.Now().Add(-time.Second)
-	if err := f.env.People.DeferSiteRead(f.worker, f.readID, due); err != nil {
+	if err := f.env.Contacts.DeferSiteRead(f.worker, f.readID, due); err != nil {
 		t.Fatalf("DeferSiteRead: %v", err)
 	}
 	f.drain(t)
@@ -313,7 +313,7 @@ func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 		t.Fatal("a deferral says why it stopped, and the occurrence carries no reason")
 	}
 
-	if _, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
+	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
 		t.Fatalf("BeginSiteRead after the deferral: %v", err)
 	}
 	f.drain(t)
@@ -334,14 +334,14 @@ func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 // that still says when it ended reads as settled to anything that asks.
 func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
 	f := newWebsiteReadFixture(t)
-	claim, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease)
+	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
 	}
 	due := time.Now().Add(-time.Second)
-	if err := f.env.People.FinishSiteRead(f.worker, f.readID, people.FinishSiteReadInput{
+	if err := f.env.Contacts.FinishSiteRead(f.worker, f.readID, contacts.FinishSiteReadInput{
 		Status: "failed", ClaimedAt: &claim.ClaimedAt,
-		StatusCode:    people.SiteReadFailureServerError,
+		StatusCode:    contacts.SiteReadFailureServerError,
 		StatusDetail:  "The site answered 503. Another attempt is scheduled.",
 		NextAttemptAt: &due,
 	}); err != nil {
@@ -354,7 +354,7 @@ func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
 			got.State, got.Attempt, got.FinishedAt, got.DegradeReason)
 	}
 
-	if _, err := f.env.People.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
+	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
 		t.Fatalf("BeginSiteRead after the retryable failure: %v", err)
 	}
 	f.drain(t)

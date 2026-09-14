@@ -40,7 +40,7 @@ func rbacActor(ctx context.Context) (principal.Principal, error) {
 // `Permissions` — so a buyer would be admitted by exactly the accident that it
 // is minted carrying none. That is not a guarantee; it is a coincidence one
 // careless constructor would end, and the caller admitted by it would be an
-// external person with a room link.
+// external contact with a room link.
 //
 // A buyer's authority is its Deal Room session, and the Deal Room's own store
 // methods carry the room predicate that grants it. Nothing in platform/auth
@@ -76,7 +76,7 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 
 // Allows is Require's boolean form: the same object-level admission decision
 // for a caller that treats an absent grant as a branch rather than a refusal.
-// The LinkedIn matcher runs under a member's own person:read authority and has
+// The LinkedIn matcher runs under a member's own contact:read authority and has
 // to know whether that member may also EDIT a contact — a holder of the update
 // grant auto-confirms a match, a read-only grant degrades it to a suggestion —
 // so the answer must be a boolean and not an error.
@@ -122,6 +122,42 @@ func RequireAny(ctx context.Context, object string, actions ...principal.Action)
 		verbs[i] = string(a)
 	}
 	return fmt.Errorf("%s.%s: %w", object, strings.Join(verbs, "|"), apperrors.ErrPermissionDenied)
+}
+
+// RequireAnyObject admits when the actor holds the action on AT LEAST ONE
+// object type. It is the upfront half of a pair, in RequireAny's sense and for
+// the mirror reason: RequireAny knows the object and not yet the action, this
+// knows the action and not yet the object.
+//
+// Where the object is unknowable is a multipart upload. The object type arrives
+// INSIDE the body, so the handler cannot ask the exact question until it has
+// parsed the bytes — and parsing them is the cost. That made a refusal the
+// expensive answer: a session holding no write grant anywhere could spend one
+// request and make the server spend a whole file, every time, and still be
+// refused. This is what the handler can ask BEFORE reading, and a caller it
+// turns away is one the exact check would have turned away too, whatever object
+// the body went on to name.
+//
+// Deliberately coarse, and never a substitute for the specific check. The store
+// still requires the action on the object the body actually named, because the
+// store is the gate every transport passes.
+func RequireAnyObject(ctx context.Context, action principal.Action) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if err := refuseBuyer(p, string(action)); err != nil {
+		return err
+	}
+	if p.Type == principal.PrincipalSystem {
+		return nil
+	}
+	for object := range p.Permissions.Objects {
+		if p.Permissions.Allows(object, action) {
+			return nil
+		}
+	}
+	return fmt.Errorf("*.%s: %w", action, apperrors.ErrPermissionDenied)
 }
 
 // UpsertAction names the grant an upsert actually demands once it knows
@@ -217,7 +253,7 @@ func RequireSystem(ctx context.Context) error {
 //
 // Each entry names the grant the verb's write path actually demands, so
 // the attribution is the rule that admitted the call rather than a
-// plausible-looking one: export is person.delete because SAR assembly is
+// plausible-looking one: export is contact.delete because SAR assembly is
 // gated on it, and erase is voice_profile.update because clearing a
 // corpus is gated as an update. A verb missing here renders a BLANK
 // authorization_rule, which reads as "no rule applied" years later —
@@ -266,7 +302,7 @@ var auditActionGrant = map[string]principal.Action{
 	// commissions.Store.Accrue actually requires; paying moves an existing
 	// entry's state, which is the update grant Decide requires. The rule
 	// recorded on the row has to be the grant the write really took.
-	// Deal Room ACCESS. Admitting an outside person and taking that access back
+	// Deal Room ACCESS. Admitting an outside contact and taking that access back
 	// are both writes against the room, gated on deal_room.update at the store —
 	// a participant carries no object grant of its own, so update is the rule
 	// that actually admitted the call.
@@ -371,7 +407,7 @@ var coachingRoles = []string{roleAdmin, "management", "manager"}
 // A system principal is refused rather than admitted, which is the opposite of
 // RequireAdmin. A system flow raising a notice uses its own kinds through the
 // notifier seam; one arriving here would be a background pass writing in a
-// person's voice.
+// contact's voice.
 func RequireCoach(ctx context.Context) error {
 	p, err := rbacActor(ctx)
 	if err != nil {

@@ -875,7 +875,7 @@ export function AutomationsAdmin() {
 // The colour is the glance and this is the reading: a mark is what a screen
 // reader cannot see and a colour-blind reader may not distinguish, and the
 // difference it carries here is whether the rule acts on the workspace by itself
-// or waits for a person. Its own component because the row it sits in is already
+// or waits for a contact. Its own component because the row it sits in is already
 // at the complexity ceiling, and a branch about one badge is not what a reader
 // of that row is there for.
 function AutomationTierBadge({ tier }: Readonly<{ tier?: string }>) {

@@ -58,12 +58,32 @@ func (s *Store) recordAdmittedTx(
 	// below blocks on the conflicting insert instead, and updates.
 	var current string
 	err = tx.QueryRow(ctx,
-		`SELECT state FROM person_consent WHERE `+sub.column+` = $1 AND purpose_id = $2 FOR UPDATE`,
+		`SELECT state FROM contact_consent WHERE `+sub.column+` = $1 AND purpose_id = $2 FOR UPDATE`,
 		sub.id, in.PurposeID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return State{}, err
 	}
-	if current == in.NewState {
+	// AN UNCONFIRMED GRANT IS NOT THE SAME STATE, however the column reads.
+	//
+	// The row says `granted` and the send gate refuses it, because a
+	// double-opt-in purpose is only effective once the round trip happened
+	// (authorizelead.go). So a subject spending the confirmation link for a
+	// grant already sitting there unconfirmed was answered as an idempotent
+	// re-assertion — no proof row, no confirmation recorded — and the message
+	// they were confirming still never went.
+	//
+	// It is the shape a preference-centre grant used to leave behind, and
+	// exactly what resubscribe.go now mints a link to repair. Short-circuiting
+	// here would have made that repair a no-op.
+	reassertion := current == in.NewState
+	if reassertion && requiresDOI && in.NewState == string(StateGranted) {
+		confirmed, err := grantIsConfirmedTx(ctx, tx, sub, in.PurposeID)
+		if err != nil {
+			return State{}, err
+		}
+		reassertion = confirmed
+	}
+	if reassertion {
 		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
 		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded (Changed stays false)
 	}
@@ -110,14 +130,14 @@ func (s *Store) recordAdmittedTx(
 // anonymized — subject: suppression is what you most want still working once
 // somebody has asked to be forgotten.
 //
-// A GRANT does not. Anonymize-in-place leaves the person row standing, so an
-// erased subject would go on accruing person_consent, consent_event, audit and
+// A GRANT does not. Anonymize-in-place leaves the contact row standing, so an
+// erased subject would go on accruing contact_consent, consent_event, audit and
 // outbox rows — the accrual erasure destroys the emailed capabilities to stop.
 // This closes it from the other end.
 //
 // "Permissive" is weaker than it sounds: EnsureWritable runs NO statement for
 // an actor unbounded on the table, and every human is unbounded on `lead` — so
-// that arm is ungated for a lead, and gated for a person only by capture
+// that arm is ungated for a lead, and gated for a contact only by capture
 // privacy. Nothing outside tests sets LeadID, which is why that is a note not a
 // finding (#2574).
 //
@@ -142,7 +162,7 @@ func rowProbeFor(state ConsentState) (func(context.Context, pgx.Tx, string, ids.
 // consentChangedPayload builds the consent.changed wire payload — the
 // subject travels separately (sub.entityType/sub.id, passed to
 // storekit.EmitEventForEntity), since this event's entity is dynamic
-// (person XOR lead): the payload itself only ever carries the
+// (contact XOR lead): the payload itself only ever carries the
 // purpose/state triple.
 func consentChangedPayload(purposeID ids.PurposeID, purposeKey, newState string) crmcontracts.PublicEventConsentChanged {
 	return crmcontracts.PublicEventConsentChanged{

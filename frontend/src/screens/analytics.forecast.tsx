@@ -28,7 +28,7 @@ import {
 type Readings = components["schemas"]["ForecastReadings"];
 
 // The forecast section: what the period is expected to bring in, what the
-// figure does not cover, and what a person believes instead.
+// figure does not cover, and what a contact believes instead.
 //
 // The three readings are not equal tiles by accident. A CALL is somebody's
 // judgement, EVIDENCE is the part with confirmed dates behind it, and ALREADY
