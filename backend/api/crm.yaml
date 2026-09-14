@@ -15535,6 +15535,57 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/allow/{overrideId}/revoke:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+      - name: overrideId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: |
+          The override to take back. The row and not the contact: a subject may carry more
+          than one vouch — one per category — and revoking "the override" would take back
+          whichever came first.
+    post:
+      tags: [Compliance]
+      operationId: revokeOverride
+      security: [ { cookieAuth: [] } ]   # human session only
+      # HUMAN-ONLY for the same reason liftSuppression is: this door takes back
+      # a rep's own vouch, and an agent inferring that the vouch no longer
+      # holds is exactly the shape this door must not have.
+      x-agent-access: human-only
+      summary: Take back a standing override, if you outrank the level that recorded it.
+      description: |
+        Revokes one `communication_override`. **You may revoke a vouch recorded below your
+        level, never at or above it** — a rep's override is revocable by an admin and not by
+        another rep, the same rule `liftSuppression` states for a stop.
+
+        A row already revoked, belonging to another subject, or never in existence all answer
+        `404` alike: a caller learns nothing about rows they would not have been allowed to
+        touch either way.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+                  description: |
+                    Why the override is being revoked. Required, the same asymmetry
+                    `liftSuppression`'s reason states: a vouch that gets taken back is the
+                    write most worth being able to explain later.
+      responses:
+        '204': { description: Revoked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/consent/double-opt-in:
     parameters:
       - $ref: '#/components/parameters/Id'

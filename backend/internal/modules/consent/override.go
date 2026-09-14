@@ -25,13 +25,16 @@ package consent
 //     on the send, so it always carries the seat's level.
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -193,5 +196,141 @@ func overrideRecordedPayload(
 	return crmcontracts.PublicEventConsentOverrideRecorded{
 		Category:       category,
 		DecidedByLevel: string(level),
+	}
+}
+
+// RevokeOverrideInput names the override to take back and why.
+type RevokeOverrideInput struct {
+	ContactID ids.ContactID
+	// OverrideID is the row, not the contact: a subject may carry more than one
+	// vouch — one per category, sometimes several over time — and revoking "the
+	// override" would silently take back whichever the query happened to return
+	// first.
+	OverrideID ids.UUID
+	// Reason is why it is being revoked, in the revoker's own words. Required,
+	// the same asymmetry requireReason states for a lift: a vouch that gets
+	// taken back is the write most worth being able to explain later.
+	Reason string
+}
+
+// RevokeOverride revokes one standing override, if this caller outranks the
+// level that recorded it.
+//
+// The shape mirrors Lift exactly: same subject reach, same authority source,
+// same write shape, against communication_override rather than
+// communication_suppression. The one rule is unchanged —
+// commsauthz.AuthorityLevel.CanOverrule — and this door asks that question
+// once rather than re-answering it.
+func (s *Store) RevokeOverride(ctx context.Context, in RevokeOverrideInput) error {
+	sub, level, err := admitRevokeOverride(ctx, in)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return s.revokeOverrideAdmittedTx(ctx, tx, in, sub, level)
+	})
+}
+
+// admitRevokeOverride settles what is decidable before a connection is taken.
+func admitRevokeOverride(ctx context.Context, in RevokeOverrideInput) (subject, commsauthz.AuthorityLevel, error) {
+	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
+	if err != nil {
+		return subject{}, "", err
+	}
+	if in.OverrideID.IsZero() {
+		return subject{}, "", &ValidationError{
+			Field:  "override_id",
+			Reason: "name the override to revoke; a subject may carry more than one",
+		}
+	}
+	if err := requireReason(in.Reason, "revoking an override"); err != nil {
+		return subject{}, "", err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return subject{}, "", err
+	}
+	return sub, authorityOf(ctx), nil
+}
+
+// revokeOverrideAdmittedTx reads the row's authority, compares it, and revokes.
+func (s *Store) revokeOverrideAdmittedTx(
+	ctx context.Context, tx pgx.Tx, in RevokeOverrideInput, sub subject, level commsauthz.AuthorityLevel,
+) error {
+	// FIRST, before anything that reads the subject's row, and for the same
+	// deadlock-ordering reason liftAdmittedTx gives: a merge holds the contact
+	// row locked while it reaches for this same advisory lock. lockSubjectSuppressions
+	// is reused rather than a dedicated lock because its key names no table —
+	// an override queues behind the same key a stop already does.
+	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return err
+	}
+	// EnsureRetractable, which IS EnsureWritable and says so: this write
+	// RELEASES rather than adds, and it reaches an archived subject on purpose.
+	if err := auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id); err != nil {
+		return err
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+
+	var decided string
+	err = tx.QueryRow(ctx, `
+		SELECT decided_by_level FROM communication_override
+		 WHERE id = $1 AND contact_id = $2 AND revoked_at IS NULL
+		 FOR UPDATE`, in.OverrideID, sub.id).Scan(&decided)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A row that is already revoked, belongs to another subject, or never
+		// existed all answer alike: a caller learns nothing about rows they were
+		// not going to be allowed to touch.
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("consent: reading the override: %w", err)
+	}
+
+	if !level.CanOverrule(commsauthz.AuthorityLevel(decided)) {
+		return fmt.Errorf(
+			"this override was recorded at a level you do not outrank: %w", apperrors.ErrPermissionDenied)
+	}
+
+	if _, err = tx.Exec(ctx, `
+		UPDATE communication_override
+		   SET revoked_at = now()
+		 WHERE id = $1 AND revoked_at IS NULL`, in.OverrideID); err != nil {
+		return fmt.Errorf("consent: revoking the override: %w", err)
+	}
+
+	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
+		map[string]any{
+			"revoked_override":  in.OverrideID.String(),
+			"recorded_at_level": decided,
+			"revoked_by_level":  string(level),
+			"revoked_by":        by,
+			// The REVOKER's words, and the audit entry is their home — the same
+			// split liftAdmittedTx keeps: the rep's own reason for vouching stays
+			// on the override row, and this is the installation explaining why it
+			// took the vouch back.
+			fieldReason: in.Reason,
+		})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, sub.id,
+		overrideLiftedPayload(in.OverrideID, level))
+}
+
+// overrideLiftedPayload names which override was revoked and at whose
+// authority. It carries neither the category the override covered nor the
+// reason either party gave: a consumer wanting the category can read the
+// still-live communication_override rows for this contact, and the words
+// belong to the contacts who wrote them — the same restraint
+// suppressionLiftedPayload keeps.
+func overrideLiftedPayload(
+	revoked ids.UUID, by commsauthz.AuthorityLevel,
+) crmcontracts.PublicEventConsentOverrideLifted {
+	return crmcontracts.PublicEventConsentOverrideLifted{
+		OverrideId:     openapi_types.UUID(revoked),
+		RevokedByLevel: string(by),
 	}
 }

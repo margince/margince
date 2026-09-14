@@ -163,6 +163,11 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// suppression_lifted's does: this stream also carries "changed" and
 		// "suppressed", and "recorded" alone would not say what was recorded.
 		"override_recorded": true,
+		// A standing override was taken back. The verb carries its object for
+		// the same reason suppression_lifted's does: this stream also carries
+		// the recording, and "lifted" alone would not say which of the two
+		// happened.
+		"override_lifted": true,
 	}
 
 	for _, typ := range Types() {

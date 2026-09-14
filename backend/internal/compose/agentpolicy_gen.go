@@ -497,6 +497,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/contacts/{id}/claims":                                         {Op: "recordConversationClaim", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/consent":                                        {Op: "recordConsent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/consent/allow":                                  {Op: "allowContact", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/contacts/{id}/consent/allow/{overrideId}/revoke":              {Op: "revokeOverride", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/consent/confirm-request":                        {Op: "requestDetailsConfirmation", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/consent/double-opt-in":                          {Op: "issueDoubleOptIn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/consent/privacy-notice":                         {Op: "sendPrivacyNotice", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

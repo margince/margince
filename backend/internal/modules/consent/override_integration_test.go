@@ -17,6 +17,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -221,5 +222,161 @@ func TestAllowThenTheSendGoesThrough(t *testing.T) {
 	}
 	if after.ReasonCode != commsauthz.ReasonAllowedByOverride {
 		t.Errorf("reason = %q, want %q", after.ReasonCode, commsauthz.ReasonAllowedByOverride)
+	}
+}
+
+// writerCtxAt builds a context whose seat writes at the named role — "rep" for
+// LevelUser, "admin" for LevelAdmin — with the contact:Update grant every
+// writer door in this file needs and RowScopeAll so ownership never confounds
+// the level comparison under test.
+func writerCtxAt(ws, user ids.UUID, role string) context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{role},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+}
+
+// TestAdminRevokesAUserOverride is the primary case: an admin revokes a rep's
+// override, and a subsequent send in that category refuses again — the
+// engine re-reads the LIVE rows inside the sending transaction, so the row
+// must actually be gone from its point of view, not merely reported as such
+// by the revoke call.
+func TestAdminRevokesAUserOverride(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "newsletter", "marketing")
+	req := commsauthz.Request{LegacyPurposeKey: "newsletter"}
+
+	repCtx := writerCtxAt(e.ws, e.user, "rep")
+	if err := e.store.Allow(repCtx, AllowInput{
+		ContactID: e.contact, Category: "marketing", Reason: "the buyer confirmed by phone",
+	}); err != nil {
+		t.Fatalf("recording the override: %v", err)
+	}
+
+	afterAllow := e.decide(t, req)
+	if afterAllow.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("verdict = %q (%s) after Allow, want allow — the fixture proves nothing otherwise",
+			afterAllow.Verdict, afterAllow.ReasonCode)
+	}
+	overrideID := afterAllow.OverrideID
+
+	adminCtx := writerCtxAt(e.ws, ids.NewV7(), "admin")
+	if err := e.store.RevokeOverride(adminCtx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: overrideID, Reason: "the buyer changed their mind",
+	}); err != nil {
+		t.Fatalf("an admin revoking a rep's override: %v", err)
+	}
+
+	var live bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT revoked_at IS NULL FROM communication_override WHERE id = $1`, overrideID).Scan(&live); err != nil {
+		t.Fatal(err)
+	}
+	if live {
+		t.Error("the override is still live after it was revoked")
+	}
+
+	after := e.decide(t, req)
+	if after.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("verdict = allow (%s) after the override was revoked, want a refusal again", after.ReasonCode)
+	}
+	if after.ReasonCode != commsauthz.ReasonNoMarketingConsent {
+		t.Errorf("reason = %q, want %q: the original refusal must stand once more",
+			after.ReasonCode, commsauthz.ReasonNoMarketingConsent)
+	}
+}
+
+// plantOverride writes a row at a named level, bypassing the write door so a
+// revoke test can start from a known level without depending on Allow's own
+// behaviour — the same reason plantSuppression bypasses Suppress for the lift
+// tests.
+func plantOverride(t *testing.T, e *channelConsentEnv, contact ids.ContactID, level string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_override
+		    (id, contact_id, category, reason, decided_by_level, captured_by)
+		VALUES ($1, $2, 'marketing', 'the lead confirmed by phone', $3, 'human:x')`,
+		id, contact, level); err != nil {
+		t.Fatalf("planting a %s-level override: %v", level, err)
+	}
+	return id
+}
+
+// overrideStillLive reports whether the row is unrevoked.
+func overrideStillLive(t *testing.T, e *channelConsentEnv, id ids.UUID) bool {
+	t.Helper()
+	var live bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT revoked_at IS NULL FROM communication_override WHERE id = $1`, id).Scan(&live); err != nil {
+		t.Fatalf("reading the override back: %v", err)
+	}
+	return live
+}
+
+// TestAUserCannotRevokeAnotherUsersOverride holds the equal-rank arm, the same
+// shape TestARepDoesNotLiftAnotherRepsStop holds for a stop: two reps
+// disagreeing about a contact is a real situation, and reversing a peer's
+// vouch stays a deliberate escalation rather than something a rep does by
+// pressing a button.
+func TestAUserCannotRevokeAnotherUsersOverride(t *testing.T) {
+	e := setupChannelConsent(t)
+	own := ids.New[ids.ContactKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO contact (id, full_name, source, captured_by, visibility, owner_id)
+		VALUES ($1, 'Their Own Contact', 'test', 'human:x', 'workspace', $2)`,
+		own, e.user); err != nil {
+		t.Fatal(err)
+	}
+	row := plantOverride(t, e, own, string(commsauthz.LevelUser))
+
+	err := e.store.RevokeOverride(boundedRepCtx(e.ws, e.user), RevokeOverrideInput{
+		ContactID: own, OverrideID: row, Reason: "I disagree with the vouch",
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a rep revoking a peer's override answered %v, want ErrPermissionDenied", err)
+	}
+	if !overrideStillLive(t, e, row) {
+		t.Error("a refused revoke took back the row anyway")
+	}
+}
+
+// TestRevokeUnknownOverrideIsNotFound holds the same non-disclosure lift.go's
+// equivalent test does: a row that never existed answers exactly like one
+// this caller was never going to be allowed to touch.
+func TestRevokeUnknownOverrideIsNotFound(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
+		ContactID: e.contact, OverrideID: ids.NewV7(), Reason: "does not exist",
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("revoking an unknown override answered %v, want ErrNotFound", err)
+	}
+}
+
+// TestRevokeRequiresAReason is the same asymmetry requireReason states for a
+// lift: a vouch that gets taken back is the write most worth being able to
+// explain later, so the reason is mandatory rather than merely bounded.
+func TestRevokeRequiresAReason(t *testing.T) {
+	e := setupChannelConsent(t)
+	row := plantOverride(t, e, e.contact, string(commsauthz.LevelUser))
+
+	err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{ContactID: e.contact, OverrideID: row})
+	var invalid *ValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("an empty reason was refused with %v, want a validation error", err)
+	}
+	if invalid.Field != fieldReason {
+		t.Errorf("refused on field %q, want %q", invalid.Field, fieldReason)
+	}
+	if !overrideStillLive(t, e, row) {
+		t.Error("a refused reason revoked the row anyway")
 	}
 }

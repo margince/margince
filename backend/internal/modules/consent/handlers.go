@@ -312,6 +312,32 @@ func (h Handlers) LiftSuppression(
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// RevokeOverride serves POST /contacts/{id}/consent/allow/{overrideId}/revoke:
+// somebody taking back a standing vouch they outrank.
+//
+// Wire-only, matching LiftSuppression exactly: the store judges the reason,
+// the row scope and the level. The comparison in particular belongs beside
+// the row and inside the transaction that revokes it — a handler that
+// pre-checked the level would be reading a value that can change before the
+// write lands.
+func (h Handlers) RevokeOverride(
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, overrideID openapi_types.UUID,
+) {
+	var req crmcontracts.RevokeOverrideJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.RevokeOverride(r.Context(), RevokeOverrideInput{
+		ContactID:  ids.From[ids.ContactKind](ids.UUID(id)),
+		OverrideID: ids.UUID(overrideID),
+		Reason:     req.Reason,
+	}); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // RecordQualifyingEvent serves POST /contacts/{id}/consent/qualifying-events: the
 // one lawful basis nothing can derive, written down by the contact who was
 // there. The store owns the rules; this is wire-only.
