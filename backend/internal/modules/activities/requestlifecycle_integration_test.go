@@ -201,3 +201,48 @@ func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
 		t.Error("the refused archive lost the rep's completion")
 	}
 }
+
+// TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone.
+//
+// The other half of what the compose-side sweep tolerates. A duplicate it read
+// a moment ago can be archived or erased by anyone before the sweep reaches it,
+// and a second archive answers ErrNotFound rather than skew — the row is no
+// longer one this call can find. That is the outcome the sweep wanted, so it
+// reads the refusal as settled and moves on; without this the pin's answer and
+// the vanished row's answer would be one indistinguishable error and the sweep
+// would have to abort a whole pass on either.
+func TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone(t *testing.T) {
+	e := setupLoad(t)
+	store := storeKnowing(e)
+	actor, ok := principal.Actor(e.as())
+	if !ok {
+		t.Fatal("missing reader")
+	}
+	actor.Permissions.Objects["activity"] = principal.ObjectGrant{
+		Read: true, Create: true, Update: true, Delete: true,
+	}
+	reader := principal.WithActor(e.as(), actor)
+
+	subject := "Book the retrofit survey"
+	task, _, err := store.LogActivity(reader, LogActivityInput{
+		Kind: "task", Source: "ui", Subject: &subject,
+	})
+	if err != nil {
+		t.Fatalf("logging the task: %v", err)
+	}
+	id := ids.From[ids.ActivityKind](ids.UUID(task.Id))
+
+	// Somebody else settles it first — the race the sweep loses.
+	if _, err := store.ArchiveActivity(reader, id, (*int64)(task.Version)); err != nil {
+		t.Fatalf("the first archive: %v", err)
+	}
+
+	archived, err := store.GetActivity(reader, id, storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("re-reading the archived task: %v", err)
+	}
+	if _, err := store.ArchiveActivity(reader, id, (*int64)(archived.Version)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("archiving an already-archived task answered %v, want ErrNotFound — the sweep reads "+
+			"that as the duplicate having been settled without it", err)
+	}
+}
