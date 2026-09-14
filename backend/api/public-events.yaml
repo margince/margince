@@ -1833,10 +1833,13 @@ components:
         fields (subject, body, occurred_at, due_at, remind_at,
         assignee_id, is_done, meeting_status) each carried only when this update touched
         them, plus RelinkActivity's relinked target and SetActivityAudience's
-        audience — a fixed, KNOWN key
+        audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key
         set (unlike contact/company/deal/lead.updated's genuinely
         open patch), so it is typed rather than an open map.
       properties:
+        restored:
+          type: boolean
+          description: True when explicit request acceptance restores an archived unfinished reminder.
         subject:
           type: string
           description: The activity's new subject (absent when this update did not touch it).

@@ -133,7 +133,7 @@ describe("LeadSourcesCard", () => {
     await waitFor(() =>
       expect(screen.getByDisplayValue("Created manually")).toBeTruthy(),
     );
-    expect(screen.getByText("built-in")).toBeTruthy();
+    expect(screen.getByText("Built-in")).toBeTruthy();
     expect(screen.getByText("3 leads")).toBeTruthy();
     // The built-in, in-use source says "switch off instead"; the unused
     // custom one gets the Remove button.

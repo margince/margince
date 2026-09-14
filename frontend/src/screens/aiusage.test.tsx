@@ -84,7 +84,7 @@ it("renders the budget meter and economy band without inventing cost", async () 
       },
     ],
   });
-  expect(await screen.findByText("economy mode")).toBeTruthy();
+  expect(await screen.findByText("Economy mode")).toBeTruthy();
   expect(screen.getByText("850 of 1,000 tokens · 85%")).toBeTruthy();
   expect(screen.queryByText("Est. cost")).toBeNull();
 });
@@ -109,7 +109,7 @@ it("renders queued and lights up estimated cost only when present", async () => 
     ],
   });
   expect(
-    await screen.findByText("budget reached — background AI queued"),
+    await screen.findByText("Budget reached — background AI queued"),
   ).toBeTruthy();
   expect(screen.getByText("Est. cost")).toBeTruthy();
   expect(screen.getAllByText(/€1\.23/).length).toBeGreaterThan(0);
@@ -244,7 +244,7 @@ it("names every row, and puts the per-day breakdown behind one disclosure", asyn
 
 it("surfaces an unknown budget band", async () => {
   mount({ budget: { ...budget, band: "future-band" }, days: [] });
-  expect(await screen.findByText("unknown budget state")).toBeTruthy();
+  expect(await screen.findByText("Unknown budget state")).toBeTruthy();
 });
 
 it("withholds the spend from a principal without the diagnostics read, and asks the server for nothing", async () => {

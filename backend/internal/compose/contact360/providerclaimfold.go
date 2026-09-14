@@ -283,11 +283,12 @@ func monthStart(value string) *time.Time {
 	if value == "" {
 		return nil
 	}
-	parsed, err := time.Parse("2006-01", value)
-	if err != nil {
-		return nil
+	for _, layout := range []string{"2006-01", time.DateOnly} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return &parsed
+		}
 	}
-	return &parsed
+	return nil
 }
 
 // foldLocation carries the provider's location verbatim.

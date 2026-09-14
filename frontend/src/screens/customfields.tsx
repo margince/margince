@@ -380,13 +380,7 @@ export function FieldTable({
       key: "type",
       header: t("cf.col.type"),
       render: (field) => {
-        const Icon = TYPE_ICON[field.type];
-        return (
-          <span className="cf-typechip t-caption">
-            <Icon aria-hidden />
-            {typeChip(field)}
-          </span>
-        );
+        return <Badge icon={TYPE_ICON[field.type]}>{typeChip(field)}</Badge>;
       },
     },
     {

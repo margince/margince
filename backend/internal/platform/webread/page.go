@@ -26,6 +26,9 @@ type Page struct {
 	// host may only forward.
 	FinalURL string
 	Text     string
+	// Sections keeps heading boundaries for callers attributing details to
+	// one of several entities on a page. Each section uses Text's reduction.
+	Sections []string
 	Links    []string
 	Bytes    int
 	// OGImage is the og:image the page declared (absolute), or "" when it
@@ -161,6 +164,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		URL:             rawURL,
 		FinalURL:        base.String(),
 		Text:            StripTags(body),
+		Sections:        HeadingSections(body),
 		Links:           extractLinks(body, base),
 		Bytes:           len(body),
 		OGImage:         head.ogImage,

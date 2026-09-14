@@ -1019,6 +1019,14 @@ func (stubs) DraftContactEmail(w nethttp.ResponseWriter, r *nethttp.Request, id 
 	httperr.NotImplemented(w, r, "DraftContactEmail")
 }
 
+func (stubs) PreviewContactEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "PreviewContactEmploymentImport")
+}
+
+func (stubs) ApplyContactEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ApplyContactEmploymentImport")
+}
+
 func (stubs) CreateContactEnrichmentRun(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.CreateContactEnrichmentRunParams) {
 	httperr.NotImplemented(w, r, "CreateContactEnrichmentRun")
 }
@@ -1365,6 +1373,10 @@ func (stubs) EmbedReindexPreview(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) EmbedReindexStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "EmbedReindexStatus")
+}
+
+func (stubs) BackfillEmploymentImport(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "BackfillEmploymentImport")
 }
 
 func (stubs) CreateFilteredExport(w nethttp.ResponseWriter, r *nethttp.Request) {

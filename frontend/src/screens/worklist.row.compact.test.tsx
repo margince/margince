@@ -40,7 +40,7 @@ function item(over: Partial<WorklistItem> = {}): WorklistItem {
       label: "Turbinenbau retrofit",
     },
     ...over,
-  } as unknown as WorklistItem;
+  };
 }
 
 function row(over: Partial<WorklistItem> = {}) {

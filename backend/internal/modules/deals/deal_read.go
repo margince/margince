@@ -64,7 +64,7 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	if err := attachClosingOccurrence(ctx, tx, id, &d); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return maskDealForCaller(ctx, tx, d)
+	return finishDealForCaller(ctx, tx, d)
 }
 
 // dealTaggableType is the value taggable.entity_type stores for a deal. It
@@ -188,7 +188,7 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	return storekit.RunListPage(ctx, s, pre, dealTable, dealColumns, active, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error {
-			if err := maskDeals(ctx, tx, page); err != nil {
+			if err := finishDealPage(ctx, tx, page); err != nil {
 				return err
 			}
 			return storekit.AttachRowTags(ctx, tx, dealTaggableType, page,
@@ -212,7 +212,7 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	}
 	return storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active.cols, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Deal) error { return finishDealPage(ctx, tx, page) })
 }
 
 // dealListQuery is the half of a deal list both entry points share: the sort

@@ -58,6 +58,24 @@ jobs:
   coverage:
     name: review coverage (reports, never blocks)
     timeout-minutes: 5
+    # SAME-REPOSITORY BRANCHES ONLY once the review event is in play.
+    # `pull_request_review` runs in the BASE repository's context, and unlike
+    # `pull_request` GitHub does not downgrade a fork's token there — while the
+    # checkout below names the pull request's HEAD and the step runs a script out
+    # of that checkout. Without this a fork's branch executes its own
+    # scripts/check-review-coverage.sh, with a pull-requests-write token in the
+    # step environment, at the moment a maintainer opens the pull request to
+    # review it — an event the branch's author provokes by asking for review and
+    # a payload no reviewer reads, since CI plumbing is not what a diff is read
+    # for. `persist-credentials: false` does not reach this: it keeps the token
+    # out of the git config, not out of `env:`.
+    #
+    # A fork still gets the report on every push, where the token GitHub hands
+    # the job is read-only and that downgrade is the control. What a fork loses
+    # is the refresh on a submitted review.
+    if: >-
+      github.event_name == 'pull_request'
+      || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read

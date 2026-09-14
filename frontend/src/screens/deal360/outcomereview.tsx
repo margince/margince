@@ -140,7 +140,7 @@ function ReviewCard({
   return (
     <div className="outcome-review">
       <div className="outcome-review-head">
-        <Badge quiet tone={review.outcome === "won" ? "success" : "danger"}>
+        <Badge tone={review.outcome === "won" ? "success" : "danger"}>
           {t(
             review.outcome === "won"
               ? "outcomeReview.outcomeWon"

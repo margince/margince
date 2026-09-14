@@ -1240,6 +1240,16 @@ kinds:
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
 
+  employment_import_sweep:
+    role: worker
+    fleet: true
+    go_type: EmploymentImportSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 30s
+    reason: Applies bounded retained employment evidence without any vendor lookup; also reconciles historical purchases after upgrade.
+
   provider_run_poll_sweep:
     role: worker
     fleet: true

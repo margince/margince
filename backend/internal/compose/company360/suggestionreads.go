@@ -35,9 +35,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // lastMessage is the newest two-way exchange on an account, as the no-reply
@@ -217,24 +215,6 @@ type suggestionInputs struct {
 // rather than answering empty.
 func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline }
 
-// granted answers whether this caller may read one object, distinguishing a
-// refusal from a broken context.
-//
-// Collapsing both into a bool would turn "no actor bound" — a programming error —
-// into a quietly withheld section on a 200, while every other section in the same
-// assembly surfaces it as a failure. The spelling here matches dealStageMoves in
-// viewbaseline.go: the sentinel is a decision, anything else is a bug.
-func granted(ctx context.Context, object string) (bool, error) {
-	err := auth.Require(ctx, object, principal.ActionRead)
-	if err == nil {
-		return true, nil
-	}
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return false, nil
-	}
-	return false, err
-}
-
 // gatherSuggestionInputs reads what the rules need, skipping whatever this
 // caller has no grant for.
 // facts and heading are passed in rather than read here, because the page
@@ -254,18 +234,9 @@ func gatherSuggestionInputs(
 	facts signalFacts, heading companyHeading, baseCurrency string,
 	opts AssembleOptions,
 ) (suggestionInputs, error) {
-	timeline, err := granted(ctx, "activity")
-	if err != nil {
-		return suggestionInputs{}, err
-	}
-	pipeline, err := granted(ctx, "deal")
-	if err != nil {
-		return suggestionInputs{}, err
-	}
-	contractsGranted, err := granted(ctx, "contract")
-	if err != nil {
-		return suggestionInputs{}, err
-	}
+	timeline := auth.ReadGranted(ctx, "activity")
+	pipeline := auth.ReadGranted(ctx, "deal")
+	contractsGranted := auth.ReadGranted(ctx, "contract")
 	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)

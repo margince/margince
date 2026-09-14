@@ -311,7 +311,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"provider_run.contact_id": "gated: auth.EnsureVisible in QueueRun, inside the transaction that inserts the run — the object grant alone answers \"may this role read contacts\", never \"may this caller see THIS contact\"",
 	// The claim is a child of the run: it is written only by the domain's
 	// claim sink, from the run's own contact_id, and never from a request body.
-	"contact_provider_claim.contact_id": "child row: written by the claim hand-off from the run's own subject, which QueueRun already gated; the fence is re-run immediately before every write (PI-AC-7)",
+	"provider_employment_resolution.contact_id": "owned evidence: ApplyEmploymentImport holds the writable live contact before reconciliation; preview gates contact visibility",
+	"provider_employment_resolution.company_id": "resolved target: automatic and manual company resolution gates visibility before linking; preview re-probes company visibility and outcome replacement bounds the prior reference",
+	"contact_provider_claim.contact_id":         "child row: written by the claim hand-off from the run's own subject, which QueueRun already gated; the fence is re-run immediately before every write (PI-AC-7)",
 	// The record of WHICH field a run filled, beside the claim that bought it.
 	// SCHEMA ONLY so far — nothing in the tree writes this table yet — so this
 	// entry is the obligation rather than a record of one already met: the

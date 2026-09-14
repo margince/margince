@@ -6,10 +6,12 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { FilePreviewProvider } from "../design-system/filepreview";
 import { LocaleProvider } from "../i18n";
 import { BuyerRoomScreen } from "./buyerroom";
 
@@ -52,7 +54,11 @@ function stubRoom(
       }
       sent.push({
         key,
-        authorization: request?.headers.get("Authorization") ?? null,
+        // The generated client sends a Request; the file preview sends a URL
+        // and an init. The token has to be visible either way.
+        authorization:
+          request?.headers.get("Authorization") ??
+          new Headers(init?.headers).get("Authorization"),
         body,
       });
       const override = overrides[key];
@@ -348,6 +354,77 @@ describe("BuyerRoomScreen", () => {
 // `comment` was handed a working composer while the page told it a preview
 // cannot write. Only the server minting every preview seat read-only kept
 // that off the screen.
+describe("reading a document in place", () => {
+  // The preview reads the bytes with the room's Bearer, exactly as the list
+  // did: a buyer holds no cookie, so a read that rode the cookie alone would
+  // be refused and the dialog would say the file could not be shown.
+  it("opens a PDF over the room, read with the Bearer", async () => {
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:room-read");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const sent = stubRoom({
+      "GET /public/rooms/documents/d-1/file": () =>
+        new Response(new TextEncoder().encode("%PDF-1.7"), {
+          status: 200,
+          headers: { "Content-Type": "application/pdf" },
+        }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    const user = userEvent.setup();
+    render(
+      <FilePreviewProvider>
+        <BuyerRoomScreen />
+      </FilePreviewProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Read Data processing agreement",
+      }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByRole("heading", { name: "DPA_v7.pdf" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        sent.find((call) => call.key === "GET /public/rooms/documents/d-1/file")
+          ?.authorization,
+      ).toBe("Bearer mdrs_session"),
+    );
+  });
+
+  // A spreadsheet has no reading here to offer; the download stays its one
+  // verb, and no button promises what the browser cannot draw.
+  it("keeps the download as the only verb for a file no browser draws", async () => {
+    stubRoom({
+      "GET /public/rooms/documents": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "d-2",
+              group_key: "commercial",
+              title: "Pricing schedule",
+              position: 0,
+              filename: "pricing.xlsx",
+            },
+          ],
+        }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(
+      <FilePreviewProvider>
+        <BuyerRoomScreen />
+      </FilePreviewProvider>,
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Download Pricing schedule" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Read/ })).toBeNull();
+  });
+});
+
 describe("the hero the buyer lands on", () => {
   it("marks a live room as live, and says who is on the other end", async () => {
     stubRoom();
@@ -362,6 +439,38 @@ describe("the hero the buyer lands on", () => {
     const pill = screen.getByText("Live").closest(".badge");
     expect(pill).toHaveClass("badge-success");
     expect(pill?.querySelector(".badge-live-dot")).toBeInTheDocument();
+  });
+
+  // The contact stands beside the documents as a card, and the page says who
+  // is reading it: a room forwarded to a colleague should make plain whose
+  // seat the tab is in before they write in it.
+  it("names the contact beside the documents and who is signed in", async () => {
+    stubRoom();
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    const side = await screen.findByRole("complementary");
+    expect(within(side).getByText("Ada Admin")).toBeInTheDocument();
+    expect(within(side).getByText("Your contact: Ada Admin.")).toBeTruthy();
+    expect(screen.getByText("Signed in as Laura Buyer.")).toBeInTheDocument();
+  });
+
+  // A closed room says the day, beside the word: "closed" alone leaves a
+  // buyer wondering whether they missed something last week or last year.
+  it("dates a closed room", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({
+          ...LIVE,
+          access: "closed",
+          room: { ...LIVE.room, closed_at: "2026-08-22T10:00:00Z" },
+        }),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    render(<BuyerRoomScreen />);
+
+    expect(await screen.findByText("Closed")).toBeInTheDocument();
+    expect(screen.getByText(/^Closed on .*2026/)).toBeInTheDocument();
   });
 
   // A pill is a claim about the room, and a build that has never heard of the

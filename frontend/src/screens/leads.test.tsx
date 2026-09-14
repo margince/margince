@@ -56,8 +56,7 @@ async function openLeadActions(user: Pick<UserEvent, "click"> = userEvent) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 
-// The six shipped lead sources, as GET /lead-sources serves them on a fresh
-// installation.
+// The six shipped lead sources GET /lead-sources serves on a fresh install.
 const SHIPPED_LEAD_SOURCES = {
   data: [
     ["manual", "Created manually", "neutral"],
@@ -1802,9 +1801,10 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    expect(
-      screen.getByText("Disqualified", { selector: "span.badge-warn" }),
-    ).toBeTruthy();
+    const warned = screen
+      .getAllByText("Disqualified", { selector: ".badge-label" })
+      .filter((label) => label.closest(".badge.badge-warn"));
+    expect(warned).toHaveLength(1);
   });
 });
 

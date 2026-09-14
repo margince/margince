@@ -1610,22 +1610,6 @@
   margin: var(--space-1) 0 0;
 }
 
-.ob-connect-pill {
-  padding: 2px 6px;
-  border-radius: var(--r-sm);
-  font-family: var(--f-body);
-  font-size: var(--fs-eyebrow);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-}
-
-/* Recommended reads as a quiet aside, never an alarm — LinkedIn does not gate
-   the act, so its tag must not look like one that does. */
-.ob-connect-pill-recommended {
-  color: var(--textMeta);
-}
-
 /* The provider cards: a mark, the name, what the connection actually grants,
    and a footer naming the auth mechanism plus the tile's own affordance. */
 .ob-connect-grid {
@@ -2420,26 +2404,6 @@
   scroll-margin-top: var(--space-3);
 }
 
-/* One digit at most, never words: a narrow column has no room for a phrase
-   beside a section name, in either language. This is the blocking count —
-   the only number that stops confirm — so it is always the danger tint;
-   there is no neutral variant to tell apart from it any more. */
-.ob-triage-nav-badge {
-  display: inline-flex;
-  align-items: center;
-  flex: none;
-  min-width: 16px;
-  padding: 0 5px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--dangerBg);
-  color: var(--dangerText);
-  font-family: var(--f-body);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
 /* The advisory count: a section with outstanding work but none of it
    blocking still marks itself at the section level — the neutral tone,
    never the danger pill above, since red is reserved for the count that
@@ -2686,28 +2650,6 @@
 
 .ob-triage-row-outstanding[data-state="required"] {
   color: var(--dangerText);
-}
-
-/* The settled-but-ungraded mark: a quiet pill in the same family as the
-   design system's ProvenanceTag, for the one state that vocabulary has no
-   word for (`stored` — carried in from the profile, not typed this
-   session). */
-.ob-triage-row-provenance {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-}
-/* The ink the fill above costs. `.t-label` carries the size and sets --textMeta
-   with it, which reads 4.07:1 over the chip on --bgCard; --textChip is the same
-   role one step along, and it is the token that exists for text on this fill.
-   BOTH classes, not one: `.t-label` sets its colour at a single class of
-   specificity, so a rule naming only the pill would win or lose on whichever
-   sheet the bundler put last. */
-.t-label.ob-triage-row-provenance {
-  color: var(--textChip);
 }
 
 /* The expanded weight: the same card, taller — the value editable in
@@ -2971,22 +2913,10 @@
 }
 
 /* The count is the part that has to survive the fold: it is what tells the
-   reader how much is behind a shut item, so it sits in a chip of its own at
-   the row's far end rather than trailing the name as plain text. */
+   reader how much is behind a shut item, so its badge sits at the row's far
+   end rather than trailing the name as plain text. */
 .ob-triage-fact-type-count {
   margin-inline-start: auto;
-  padding: 0 var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-  font-weight: var(--fw-medium);
-}
-/* Same as the provenance pill above: the count sits ON the chip fill, so it
-   takes --textChip rather than the --textMeta `.t-caption` sets beside its
-   size, and it names both classes so the override does not depend on sheet
-   order. */
-.t-caption.ob-triage-fact-type-count {
-  color: var(--textChip);
 }
 
 /* The atom wraps its children; the rows are the panel, so the wrapper adds

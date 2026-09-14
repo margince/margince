@@ -885,7 +885,7 @@ function AutomationTierBadge({ tier }: Readonly<{ tier?: string }>) {
   }
   const runs = tier === "auto_execute";
   return (
-    <Badge tone={runs ? "success" : "warn"} quiet>
+    <Badge tone={runs ? "success" : "warn"}>
       {runs ? t("auto.tier.runs") : t("auto.tier.approval")}
     </Badge>
   );

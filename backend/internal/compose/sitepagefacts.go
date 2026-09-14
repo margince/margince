@@ -183,6 +183,9 @@ const pageFactsExcerptRunes = profileExcerptBudgetRunes
 // embed adapter's window report carries, for the same reason — a truncation
 // nobody is told about is indistinguishable downstream from a complete read.
 func pageFactsExcerpt(page crawlPage) (excerptPages, int) {
+	if page.Kind == crmcontracts.SiteReadPageKindImpressum {
+		page.Text = legalSectionText(page)
+	}
 	runes := []rune(page.Text)
 	if len(runes) <= pageFactsExcerptRunes {
 		return excerptPages{page}, 0

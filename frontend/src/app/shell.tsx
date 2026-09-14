@@ -123,7 +123,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
    * else in that column is a label at all. */
   const marker = (
     <span className="ws-alpha">
-      {narrow ? narrowVersion() : displayVersion()}
+      <Badge tone="accent">{narrow ? narrowVersion() : displayVersion()}</Badge>
     </span>
   );
   // The installation's own company (ADR-0061: one installation, one
@@ -776,12 +776,10 @@ export function PageTitle({
           {/* Beside the heading rather than inside it: the scope is about the
               page, not part of its name, and a heading carrying it would read
               "Capture rules Company" in every document outline and screen
-              reader. `quiet` because it states a fact rather than flagging one
-              — a page being company-wide is the ordinary case, not a warning.
-              `quiet` keeps the vocabulary and drops the fill (design-system
-              README, Badge); it still draws the status dot. */}
+              reader. Neutral: company-wide is the ordinary case, not a
+              warning. */}
           {scopeKey && (
-            <Badge quiet>
+            <Badge>
               {/* The mixed page says something different from the others: not
                   WHO it affects, but that it has no single answer and each
                   setting states its own. "Who this page affects: Mixed" would

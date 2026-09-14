@@ -60,7 +60,7 @@ services:
     #
     # The integration lane's demand is not incidental, it is the lane's shape.
     # scripts/test-integration-parallel.sh runs INTEGRATION_JOBS packages at
-    # once (16 in CI), each against its own clone of THIS instance, and each
+    # once (8 in CI), each against its own clone of THIS instance, and each
     # resets between tests by emptying every table in public + ext inside ONE
     # transaction — deliberately one, so a reset is atomic (see
     # backend/internal/platform/testdb/reset.go). A lock is taken per RELATION,
@@ -87,17 +87,25 @@ services:
     # scripts/lib-testdb.sh is where its terms are declared — this number is
     # their sum, not a round figure chosen to be comfortable:
     #
-    #   INTEGRATION_JOBS                   16   (.github/workflows/ci.yml)
+    #   INTEGRATION_JOBS                    8   (.github/workflows/_lane-integration.yml)
     #   x LANE_CONNS_PER_PACKAGE           24   two pools at LANE_POOL_MAX_CONNS=8,
     #                                           plus 8 for what the pin does not
     #                                           reach — see the term's own note
     #   + one admin connection per slot     1   CREATE/DROP DATABASE at a handover
     #   ------------------------------------
-    #     16 x (24 + 1)                  = 400
+    #      8 x (24 + 1)                  = 200
     #   + LANE_FIXED_CONNS                  8   template migrate 2, superuser
     #                                           reserve 3, an operator's psql 3
     #   ------------------------------------
-    #                                    = 408
+    #                                    = 208
+    #
+    # This number stays at 408, which is that sum at the SIXTEEN jobs the lane
+    # ran until the memory finding in #5483 brought it to eight. It is left above
+    # the demand deliberately, and it is the one place in this block where the
+    # figure is not the sum: the gate below holds `demand <= max_connections`,
+    # the direction that actually fails a lane, and cutting capacity in the same
+    # change that cut demand would mean a later INTEGRATION_JOBS going back up
+    # re-crosses two ceilings at once instead of one gate.
     #
     # Measured, so the terms are not guesses: at INTEGRATION_JOBS=16 the whole
     # cluster peaks at 86 backends and one package at 16, sampled every 100ms

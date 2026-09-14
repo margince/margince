@@ -40,14 +40,18 @@ const DOCUMENTS: readonly BoardDocument[] = [
     id: "doc-1",
     groupKey: "commercial",
     title: "Commercial terms v4",
+    filename: "commercial-terms-v4.pdf",
     meta: "commercial-terms-v4.pdf · Commercial",
+    byteSize: 412_000,
     status: <Badge tone="success">Shared</Badge>,
   },
   {
     id: "doc-2",
     groupKey: "technical",
     title: "Implementation plan",
+    filename: "implementation-plan.pdf",
     meta: "implementation-plan.pdf · Technical",
+    byteSize: 1_240_000,
     status: <Badge>Draft</Badge>,
   },
 ];

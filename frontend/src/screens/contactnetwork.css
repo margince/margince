@@ -93,6 +93,22 @@
 .pn-counts {
   margin: var(--space-1) 0 0;
 }
+/* The one write the edge detail offers names the peer it records, and the
+ * detail rides a narrow panel slot, so a long name has to fit. It WRAPS inside
+ * the card rather than ending in an ellipsis: the name is the object of the
+ * write, and a verb that hid whom it records would ask for a click on trust.
+ * The button only stops at the card's edge; the wrap, and the leading two lines
+ * need, belong to the label's own element, since the button's type is set
+ * where the button is declared. */
+.pn-suggest > .btn {
+  max-inline-size: 100%;
+}
+.pn-suggest-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+  line-height: var(--lh-snug);
+}
 .pn-receipts {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);
@@ -378,21 +394,19 @@
 .pn-moment + .pn-moment {
   border-top: 1px solid var(--borderSubtle);
 }
+/* A row, so the flag on the head change keeps its distance from the sentence
+   and sits on its baseline, wrapping under it when the line is full. */
 .pn-moment p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
   margin: 0;
   color: var(--textContent);
 }
 .pn-moment:first-child p {
   color: var(--textPrimary);
   font-weight: var(--fw-medium);
-}
-.pn-moment p .badge {
-  /* ds:ignore a badge trailing a sentence is not a spacing role — it is the
-     gap between a word and the label after it, and none of gapActions,
-     gapCards or the pad roles describes that. Changing the primitive would
-     move every badge in the product, including the ones that sit alone. */
-  margin-left: var(--space-2);
-  vertical-align: 1px;
 }
 .pn-moment-when {
   font-family: var(--f-mono);

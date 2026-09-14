@@ -95,7 +95,7 @@ export const HumanWrittenNote: Story = {
   render: drawer({ note_generated_by: "human", note_ai_generated: false }),
 };
 
-// Dark, on the drafted note: `--aiText` on the quiet badge's own ground is the
+// Dark, on the drafted note: `--aiText` on the soft badge's own ground is the
 // pair the dark accent lift moves first.
 export const ModelDraftedNoteDark: Story = {
   globals: { theme: "dark" },

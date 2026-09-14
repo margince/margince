@@ -1045,20 +1045,23 @@
   font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
-/* The licence, and any other standing fault, as a pill in the strip: it is the
-   one thing here somebody has to do something about. */
-.arwarn {
-  padding: 2px 7px; /* ds:ignore pill optics on a 10px label */
-  border-radius: var(--r-sm);
-  background: var(--warnBg);
-}
 .armeta b {
   color: var(--textPrimary);
   font-weight: var(--fw-medium);
 }
+/* The link around the licence badge. The badge draws the pill; this only
+   carries the press, so it adds no ink of its own. A hover underline would be
+   dead here, because text decoration does not reach into the badge's
+   inline-flex box, so the ring on keyboard focus is the one state it draws. */
 .arwarn {
-  color: var(--warnText);
-  font-weight: var(--fw-medium);
+  display: inline-flex;
+  text-decoration: none;
+}
+.arwarn:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 .arconn {
   display: flex;

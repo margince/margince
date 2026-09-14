@@ -97,6 +97,10 @@ without claiming a numbered slot.
   read, under the standing crawl guarantees: SSRF guard, robots handling, hard
   page/byte/time bounds, and evidence-or-omit — an ungrounded value stays
   empty rather than guessed.
+- The default crawl reads up to **60 pages**, within the existing byte and
+  time limits. The legal page-facts lane preserves heading boundaries before
+  packing the usual bounded passages, keeping short company blocks together
+  without widening the evidence scope or changing the attribution checks.
 - **Confirmation is accept-subset in one transaction.** The confirm request
   binds the inspected read version, writes only the selected fields/facts
   (audited, outbox-evented), and treats any edited value as a human assertion.

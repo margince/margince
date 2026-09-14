@@ -228,6 +228,48 @@ export const NothingOwedAndNothingAdvised: Story = {
   ),
 };
 
+// Advice resting on a message rather than on a quoted receipt: the rule's
+// evidence carries the server's own row model, so the basis is drawn as an
+// EmailEntry — subject, sender and preview — instead of a chip. The preview
+// is one long unbreakable line on purpose: the row owes the card an ellipsis
+// at the card's measure, and a basis sized to its own words rather than to
+// the card runs straight out of it.
+const restingOnAMail = {
+  ...populated,
+  suggestions: [
+    {
+      kind: "no_reply",
+      fingerprint: "f-2",
+      title: "Confirm the server booking",
+      reason:
+        "You asked the client to book the server, but nothing says it was done or followed up on.",
+      evidence: [
+        {
+          entity_type: "activity",
+          entity_id: "a-4",
+          email_summary: {
+            activity_id: "a-4",
+            occurred_at: "2026-07-11T14:17:00Z",
+            version: 1,
+            subject: "Re: Scheduling tool: project start + setup",
+            preview:
+              "You would then still need to book the server once more On Fri, Jul 11, 2026 at 4:17 PM Dana Buyer <dana@brandt.example> wrote: thanks for the walkthrough, we will sort the booking out on our side next week",
+            counterparty: null,
+            direction: "outbound",
+            display_status: "team",
+            move: "waiting_for_them",
+            attachment_count: 0,
+          },
+        },
+      ],
+    },
+  ],
+} as unknown as View;
+
+export const AdviceRestingOnAMail: Story = {
+  render: () => <Brief view={restingOnAMail} />,
+};
+
 // Margince reading the account: the rules' rows stand, and the pending row
 // above them says more is coming rather than that this is everything.
 export const BeingRead: Story = {

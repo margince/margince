@@ -266,7 +266,7 @@ function SampleDrafts({ drafts }: Readonly<{ drafts: VoiceSampleDraft[] }>) {
         // second card the moment one of its five chrome values moves.
         <Card as="div" inset key={draft.body} className="vdna-sample">
           <div className="vdna-sample-head">
-            <span className="vdna-pill">{t("voice.insights.draftOnly")}</span>
+            <Badge>{t("voice.insights.draftOnly")}</Badge>
             {draft.subject && <b>{draft.subject}</b>}
             {draft.score !== null && (
               <span className="t-caption">

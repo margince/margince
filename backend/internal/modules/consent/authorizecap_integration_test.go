@@ -522,3 +522,45 @@ func TestNoCountryAndNoCeilingBothLeaveTheMessageAlone(t *testing.T) {
 		})
 	}
 }
+
+// A MESSAGE THAT WENT OUT UNDER A RECORDED EXCEPTION COUNTS, because the
+// recipient received it.
+//
+// This is the shape a standing communication exception produces: the engine
+// refuses, comms/gates.go answers outcomeUndecided rather than parking the
+// delivery, the provider is called, and the row reaches 'sent' with its
+// decision still reading deny. Counting only allows meant Decree 91/2020's
+// three-per-day ceiling could be filled by three ordinary sends and then
+// exceeded without limit by exception, while the installation's own count
+// still read three.
+//
+// The verdict says whether the message should have gone. The ceiling is about
+// whether it arrived.
+func TestAnExceptionDirectedSendCountsTowardTheCap(t *testing.T) {
+	e := setupCap(t)
+	sent := time.Now().Add(-time.Hour)
+	e.plant(t, plantSpec{
+		status: "sent", sentAt: &sent, phase: "transmit",
+		verdict: "deny", category: string(commsauthz.CategoryMarketing),
+		mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 1 {
+		t.Fatalf("counted %d, want 1 — a refused message that shipped anyway still reached the mailbox", got)
+	}
+}
+
+// The other direction, and the reason the verdict filter looked load-bearing: a
+// refusal that actually STOPPED the message must not consume the allowance.
+// What separates the two is the delivery, not the decision — `parked` is its
+// own status and matches neither half of the count.
+func TestARefusedMessageThatWasParkedCountsForNothing(t *testing.T) {
+	e := setupCap(t)
+	e.plant(t, plantSpec{
+		status: "parked", phase: "transmit",
+		verdict: "deny", category: string(commsauthz.CategoryMarketing),
+		mode: "enforce",
+	})
+	if got := e.received(t, 24*time.Hour); got != 0 {
+		t.Fatalf("counted %d, want 0 — a parked message reached nobody and must return its allowance", got)
+	}
+}

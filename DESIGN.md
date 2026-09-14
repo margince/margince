@@ -142,7 +142,7 @@ styleseed visual-craft rules and Emil Kowalski's design-engineering notes.
 5. **Colour means something.** Emerald is the one filled verb, a link and the
    light behind the sidebar. Indigo is a tinted row that says an agent wrote
    it, and the light at the top of the far edge. Green, amber and red are a
-   dot before a word. Nothing is coloured to look nice.
+   soft tint behind a word. Nothing is coloured to look nice.
 
 Rules 1 and 5 are already held by gates; this file adds 2, 3 and 4.
 
@@ -174,7 +174,7 @@ edge is `--aiMed`, and status is `--success` / `--warn` / `--danger`.
 | `--ink` / `--ink2` / `--ink3` / `--ink4` | `#101a15` / `#33403a` / `#66736c` / `#9aa59f` | Names and values / body / labels and meta / placeholders and dates. |
 | `--accent` / `--accentText` / `--accentBg` | `#0b7a53` / `#0a6f4b` / `#e8f3ee` | The one filled verb; a link; a selected row or a done stage. |
 | `--ai` / `--aiText` / `--aiBg` / `--aiLine` | `#5b61d6` / `#3f45b0` / `rgba(91,97,214,.09)` / `.35` | The agent's filled verb; its label; the tinted row; the dashed edge of a staged row. |
-| `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a dot before a word, or as a pill for the one status that must not be missed. |
+| `--ok` / `--warn` / `--bad` | `#15803d` / `#a16207` / `#b91c1c` | Status, as a soft badge — the tint behind a word, lettered in the tone's ink and edged in its hairline — or as a solid one for a count and the one status that must not be missed. |
 
 ### Dark
 
@@ -198,7 +198,9 @@ to step, and `--textChip` lifts with it to `#95a69f`. The three-state theme patt
 - **Indigo is a fact, not a mood.** The agent's read is a row on `--aiBg`; a
   staged change is a row with a dashed `--aiLine` edge until a contact accepts
   it. Nothing else is indigo.
-- **Status is a dot before it is a pill.**
+- **Status is a soft badge before it is a solid one.** A column of statuses
+  is a column of soft badges, one weight down the page; the solid fill is for
+  a count and the one status a reader must not miss.
 - **Avatars are neutral.** `--bg3` with `--ink2` initials; a record is told
   apart by its name.
 
@@ -855,10 +857,10 @@ looks now.
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | Outlined in `--bad`; fills only inside a `ConfirmModal`. |
 | `TextInput` / `Select` | White, `--line2` outline, 36px, 10px radius; focus is a 2px emerald ring. Label above at 12px 500; helper below at 12px in `--ink3`. |
-| `Badge` | `quiet` by default: a 6px dot and a word. The pill (`--bg3`, 20px, 11.5px 500) is for the one status that must not be missed and for the record's standing badges beside its name. |
-| `Chip` | The same pill. There is one pill. |
+| `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never capitals. `soft` by default: the tone's tint behind the word in the tone's ink, edged in a hairline of the same tone — the record's standing badges beside its name, a status in a row. `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the sparkles. |
+| `Chip` | A fact a reader can act on rather than a status: a pill on the elevated ground with a neutral hairline and a glyph, a link when the fact has somewhere to go, and a hover that says so. A badge is the other thing — a tinted status, edged in its tone, that nobody presses. |
 | `Panel` | Becomes a **zone pane**: `--pane` with a `--paneEdge` and a 20px corner; inside, a display-face title with its count and its verb, a hairline, rows. `PanelPlate` (the inset well) becomes a row on `--bg3`. |
-| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the evidence chip at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
+| `StatCard` | The **reading card**: `--pane` with the hairline and a 20px corner, 138px tall; the eyebrow as its label with the basis as dotted-underlined words at the label's end, the figure at 26px mono (down to 20px where five share a narrow row), the basis at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The attribute row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures right-aligned; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`; the Details control at the right end. |

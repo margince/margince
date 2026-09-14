@@ -135,6 +135,22 @@ export const ReadFailed: Story = {
   args: { day: undefined, state: "failed" },
 };
 
+// A source failed under an otherwise empty focus: the panel says the read was
+// incomplete rather than that the morning is clear, and that one sentence sits
+// on the pane's gutter with nothing drawn under it — no empty grid whose
+// padding stood as a blank band between the sentence and the footer.
+export const IncompleteRead: Story = {
+  args: {
+    state: "ready",
+    day: {
+      ...day([], 0),
+      sources_unavailable: [
+        { source: "task", reason: "failed", category: "tasks" },
+      ],
+    },
+  },
+};
+
 export const QuietFocusWithWorkInQueue: Story = {
   args: {
     state: "ready",

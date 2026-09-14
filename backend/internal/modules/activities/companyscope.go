@@ -412,8 +412,14 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return "", nil, "", nil, err
 	}
+	if where, err = appendRequestReviewClause(ctx, in, arg, where); err != nil {
+		return "", nil, "", nil, err
+	}
 	where = append(where, activityRowClauses(in, arg)...)
 	if in.Cursor != nil && *in.Cursor != "" {
+		if in.RequestReviewAsOf != nil {
+			return "", nil, "", nil, errRequestReviewWithCursor
+		}
 		if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 			return "", nil, "", nil, errOpenAndDueByWithCursor
 		}
@@ -469,5 +475,5 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.ReadableOnly
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly
 }

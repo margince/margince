@@ -125,7 +125,7 @@ export function ProjectContractRow({
     <PanelRow className="project-row">
       <span>{contract.title}</span>
       <span className="project-row-meta t-caption">
-        <Badge quiet>{contract.status}</Badge>
+        <Badge>{contract.status}</Badge>
         <span className="t-mono">
           {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
         </span>

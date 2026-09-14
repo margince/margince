@@ -2770,6 +2770,10 @@ public.contact_provider_claim.contact_provider_claim_pkey PRIMARY KEY (id)
 public.contact_provider_claim.contact_provider_claim_run_id_claim_key_key UNIQUE (run_id, claim_key)
 public.contact_provider_claim.contact_provider_claim_run_id_fkey FOREIGN KEY (run_id) REFERENCES provider_run(id) ON DELETE CASCADE
 public.contact_provider_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.contact_provider_claim.employment_processed_at timestamp with time zone gen=- def=-
+public.contact_provider_claim.employment_processing_error text gen=- def=-
+public.contact_provider_claim.employment_retry_at timestamp with time zone gen=- def=-
+public.contact_provider_claim.employment_retry_count integer NOT NULL gen=- def=0
 public.contact_provider_claim.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_provider_claim.provider text NOT NULL gen=- def=-
 public.contact_provider_claim.retrieved_at timestamp with time zone NOT NULL gen=- def=-
@@ -5127,6 +5131,27 @@ public.provider_connection_budget_pkey CREATE UNIQUE INDEX provider_connection_b
 public.provider_connection_credential_ref_key CREATE UNIQUE INDEX provider_connection_credential_ref_key ON public.provider_connection USING btree (credential_ref)
 public.provider_connection_pkey CREATE UNIQUE INDEX provider_connection_pkey ON public.provider_connection USING btree (id)
 public.provider_connection_provider_key CREATE UNIQUE INDEX provider_connection_provider_key ON public.provider_connection USING btree (provider)
+public.provider_employment_contact CREATE INDEX provider_employment_contact ON public.provider_employment_resolution USING btree (contact_id, episode_key)
+public.provider_employment_pending CREATE INDEX provider_employment_pending ON public.contact_provider_claim USING btree (contact_id) WHERE ((employment_processed_at IS NULL) AND (claim_key = ANY (ARRAY['current_employment'::text, 'job_history'::text])))
+public.provider_employment_resolution acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.provider_employment_resolution.claim_id uuid NOT NULL gen=- def=-
+public.provider_employment_resolution.company_id uuid gen=- def=-
+public.provider_employment_resolution.contact_id uuid NOT NULL gen=- def=-
+public.provider_employment_resolution.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.provider_employment_resolution.episode_key text NOT NULL gen=- def=-
+public.provider_employment_resolution.id uuid NOT NULL gen=- def=uuidv7()
+public.provider_employment_resolution.provider_employment_resolution_claim_id_episode_key_key UNIQUE (claim_id, episode_key)
+public.provider_employment_resolution.provider_employment_resolution_claim_id_fkey FOREIGN KEY (claim_id) REFERENCES contact_provider_claim(id) ON DELETE CASCADE
+public.provider_employment_resolution.provider_employment_resolution_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
+public.provider_employment_resolution.provider_employment_resolution_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.provider_employment_resolution.provider_employment_resolution_pkey PRIMARY KEY (id)
+public.provider_employment_resolution.provider_employment_resolution_relationship_id_fkey FOREIGN KEY (relationship_id) REFERENCES relationship(id) ON DELETE SET NULL
+public.provider_employment_resolution.provider_employment_resolution_state_check CHECK ((state = ANY (ARRAY['linked'::text, 'needs_match'::text, 'needs_review'::text, 'dismissed'::text])))
+public.provider_employment_resolution.relationship_id uuid gen=- def=-
+public.provider_employment_resolution.state text NOT NULL gen=- def=-
+public.provider_employment_resolution.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.provider_employment_resolution_claim_id_episode_key_key CREATE UNIQUE INDEX provider_employment_resolution_claim_id_episode_key_key ON public.provider_employment_resolution USING btree (claim_id, episode_key)
+public.provider_employment_resolution_pkey CREATE UNIQUE INDEX provider_employment_resolution_pkey ON public.provider_employment_resolution USING btree (id)
 public.provider_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.provider_run.applied_at timestamp with time zone gen=- def=-
 public.provider_run.attempt_count integer NOT NULL gen=- def=0
@@ -5290,15 +5315,23 @@ public.relationship.counterparty_company_id uuid gen=- def=-
 public.relationship.counterparty_contact_id uuid gen=- def=-
 public.relationship.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.deal_id uuid gen=- def=-
+public.relationship.employment_status text gen=- def=-
 public.relationship.ended_at date gen=- def=-
+public.relationship.ended_precision text gen=- def=-
 public.relationship.id uuid NOT NULL gen=- def=uuidv7()
 public.relationship.is_current_primary boolean NOT NULL gen=- def=false
 public.relationship.kind text NOT NULL gen=- def=-
 public.relationship.project_id uuid gen=- def=-
 public.relationship.rel_billing_contact_role CHECK (((kind <> 'billing_contact'::text) OR ((role IS NOT NULL) AND (role = ANY (ARRAY['recipient'::text, 'approver'::text, 'accounts_payable'::text])))))
 public.relationship.rel_billing_contact_shape CHECK (((kind <> 'billing_contact'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL) AND (counterparty_company_id IS NULL))))
-public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at)))
+public.relationship.rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR
+CASE
+    WHEN (ended_precision = 'month'::text) THEN (((date_trunc('month'::text, (ended_at)::timestamp with time zone) + '1 mon'::interval))::date > started_at)
+    ELSE (ended_at >= started_at)
+END))
+public.relationship.rel_employment_primary_status CHECK (((NOT is_current_primary) OR (COALESCE(employment_status, 'current'::text) = 'current'::text)))
 public.relationship.rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL))))
+public.relationship.rel_employment_status_kind CHECK (((employment_status IS NULL) OR (kind = 'employment'::text)))
 public.relationship.rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((company_id IS NOT NULL) AND (counterparty_company_id IS NOT NULL) AND (company_id <> counterparty_company_id) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL))))
 public.relationship.rel_project_company_shape CHECK (((kind <> 'project_company'::text) OR ((project_id IS NOT NULL) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (counterparty_contact_id IS NULL))))
 public.relationship.rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (counterparty_contact_id IS NULL))))
@@ -5309,13 +5342,17 @@ public.relationship.relationship_contact_id_fkey FOREIGN KEY (contact_id) REFERE
 public.relationship.relationship_counterparty_company_id_fkey FOREIGN KEY (counterparty_company_id) REFERENCES company(id) ON DELETE CASCADE
 public.relationship.relationship_counterparty_contact_id_fkey FOREIGN KEY (counterparty_contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.relationship.relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.relationship.relationship_employment_status_check CHECK ((employment_status = ANY (ARRAY['current'::text, 'former'::text, 'unknown'::text])))
+public.relationship.relationship_ended_precision_check CHECK ((ended_precision = ANY (ARRAY['day'::text, 'month'::text])))
 public.relationship.relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text, 'billing_contact'::text])))
 public.relationship.relationship_last_activity CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION trg_relationship_last_activity()
 public.relationship.relationship_pkey PRIMARY KEY (id)
 public.relationship.relationship_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
+public.relationship.relationship_started_precision_check CHECK ((started_precision = ANY (ARRAY['day'::text, 'month'::text])))
 public.relationship.role text gen=- def=-
 public.relationship.source text NOT NULL gen=- def=-
 public.relationship.started_at date gen=- def=-
+public.relationship.started_precision text gen=- def=-
 public.relationship.trg_relationship_updated CREATE TRIGGER trg_relationship_updated BEFORE UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.relationship.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.relationship.version bigint NOT NULL gen=- def=1
@@ -6156,7 +6193,7 @@ public.uq_record_assignment_project_user CREATE UNIQUE INDEX uq_record_assignmen
 public.uq_rel_billing_contact CREATE UNIQUE INDEX uq_rel_billing_contact ON public.relationship USING btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL))
 public.uq_rel_current_primary_employer CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (contact_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL))
 public.uq_rel_deal_contact_role CREATE UNIQUE INDEX uq_rel_deal_contact_role ON public.relationship USING btree (deal_id, contact_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL))
-public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (contact_id, company_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL))
+public.uq_rel_employment CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (contact_id, company_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL) AND (COALESCE(employment_status, 'current'::text) = 'current'::text))
 public.uq_rel_project_company CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, company_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL))
 public.uq_rel_project_stakeholder CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, contact_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL))
 public.uq_rel_works_with CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(contact_id, counterparty_contact_id), GREATEST(contact_id, counterparty_contact_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL))

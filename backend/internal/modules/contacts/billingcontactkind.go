@@ -3,6 +3,8 @@
 
 package contacts
 
+import "github.com/margince/margince/backend/internal/shared/kernel/employment"
+
 // The one relationship kind whose role is part of what the row MEANS: who
 // handles a company's invoices, and in what capacity. Its vocabulary and its
 // refusals live here rather than among the generic edge rules, because they
@@ -63,9 +65,9 @@ func validBillingContactRole(kind string, role *string) error {
 // the partial unique index before the relink runs, so nothing conflicts and the
 // merge reports success over an account that just lost its recipient.
 //
-// Every other kind keeps the coarser rule: there the role is a label on one
-// edge rather than part of its identity, and two employments at one company are
-// a duplicate whether or not the titles match.
+// Employment history also carries episode identity: distinct titles or dates
+// survive a merge. Two undated current rows still compete for the one live
+// slot at the company, so that duplicate follows the index's coarser rule.
 //
 // Both merge paths ask it of the same index, so it is written here rather than
 // spelled in each — the half that drifted would be the one nobody noticed
@@ -75,5 +77,10 @@ func validBillingContactRole(kind string, role *string) error {
 // TestMergingTwoCompaniesKeepsBothBillingRolesOfOneContact
 // (backend/internal/compose/integration/mergerolededupe_integration_test.go),
 // which fail if either path stops applying it.
-const roleKeyedDuplicateSQL = `(a.kind NOT IN ('deal_stakeholder', '` + BillingContactKind + `')
-		         OR b.role IS NOT DISTINCT FROM a.role)`
+var roleKeyedDuplicateSQL = `(a.kind NOT IN ('deal_stakeholder', '` + BillingContactKind + `')
+		         OR b.role IS NOT DISTINCT FROM a.role)
+ AND (a.kind <> 'employment' OR
+   ( ` + employment.LiveSlotSQL("a") + ` AND ` + employment.LiveSlotSQL("b") + ` )
+   OR (a.role IS NOT DISTINCT FROM b.role AND a.started_at IS NOT DISTINCT FROM b.started_at
+       AND a.ended_at IS NOT DISTINCT FROM b.ended_at
+       AND a.employment_status IS NOT DISTINCT FROM b.employment_status))`

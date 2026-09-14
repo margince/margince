@@ -126,6 +126,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seedresetparity_test.go` | H3 | "What survives a reset" is one decision, and it is written down twice: the in-product data reset applies it in Go (internal/compose/datasweep.go's preservedResetTables), and the developer's `make seed-reset` applies it in SQL (scripts/seed-reset.sql). |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 | `shippingloopreachesthelane_test.go` | H2 | The routine the rulebook tells a contributor to run reaches the integration lane. |
+| `sitereadstops_test.go` | H3 | A website read that stopped is classified TWICE, and both answers reach the same reader. |
 | `teamoutlookmirror_test.go` | H3 | The team's frozen outlook and the rep's are the same fact over different books, so they are the same SHAPE or one of them is lying. |
 | `transcriptmarker_test.go` | H3 | One value, spelled in two modules, because a module never imports a sibling. |
 | `wonreasondetailbound_test.go` | H2 | The paperless-win detail's length bound is ONE number, in three places that each need it. |
@@ -133,7 +134,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (148)
+## Census (149)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -176,6 +177,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
@@ -341,7 +343,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 | `writeliveness_test.go` | H2 | The LIVENESS obligation as a fitness function: a write that targets one standing row of a table which can be archived either REFUSES an archived row, DECLARES that it deliberately reaches one, or is ratified with a reason. |
 
-## Prohibition (59)
+## Prohibition (60)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -363,6 +365,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0120 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `followablecitations_test.go` | H1 | A file this push touched does not send its reader to a document they cannot open. |
+| `forkheadcheckout_test.go` | H2 | Code from a pull request's own branch never runs with a token GitHub has not downgraded. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in ONE place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in ONE function, because putting one INTO the registry is a decision about REACHABILITY and that decision has been wrong once. |

@@ -12,6 +12,15 @@ There is deliberately no empty `Unreleased` section: `scripts/check-changelog-
 sections.sh` refuses a release heading with nothing under it, so one appears
 when it has content.
 
+## [Unreleased]
+
+### Fixed
+
+- Customer meeting requests remain actionable on won or lost deals and outside
+  recent email history. Source-linked reminders reconcile without duplicates;
+  accepting or completing one updates request state across the deal and email
+  views. Background deal refresh updates facts without model calls.
+
 ## [0.0.1] - 2026-09-10
 
 ### Removed

@@ -72,6 +72,15 @@
   font-weight: var(--fw-regular);
   color: inherit;
 }
+/* An address or a number is a `ContactLink`, a button in the accent, and it
+   KEEPS the accent: it is an action, not a fact the row edits. What it gives
+   up is the button's centring. `overflow-wrap: anywhere` above lets a long
+   address break inside the rung, and a button centres every line it breaks
+   into, so the tail of a wrapped address floated to the middle of the column
+   under a first line that started at the edge. Left, like every other value. */
+.fieldgrid-value .link-button {
+  text-align: left;
+}
 /* An empty row states an absence, and it states it the way a form's own
    placeholder does: the "Add …" text sits BELOW the filled values in weight
    and tone, so a reader scanning the column reads the record's actual facts
