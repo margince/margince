@@ -18,12 +18,6 @@ import { FactList } from "./factlist";
 // and the alert tint are `color-mix()`es of canonical tokens, so a tile can be
 // correct in light and wrong in dark.
 
-const stack: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "1rem",
-};
-
 // The row every frame below draws into: the record page's own readings shape,
 // so a tile is judged at the width it actually gets.
 const row: CSSProperties = {
@@ -155,63 +149,6 @@ export const ReadingsAtOneSize: Story = {
         detail="Across 14 closed deals"
         meter={{ filled: 11, total: 14 }}
       />
-    </div>
-  ),
-};
-
-// THE TWO DENSITIES, one above the other, which is the only way to see that
-// they are the same card. Read down each column: the figure, the label and the
-// basis line draw at exactly the same size in both rows — what changes is the
-// AIR, and nothing else. A density that reached the type scale would be the
-// `hero` variant coming back under a new name, which is how one reading came to
-// draw three ways.
-//
-// `compact` is for a row read as ONE glance rather than a reading at a time —
-// the Brief's morning plate, where the default floor put the day's own work
-// below the fold on a laptop. Every other caller keeps the roomier default, and
-// the default is what a record page's readings still wear.
-//
-// Read it in BOTH themes with the toolbar's Theme control: the tile's ground and
-// hairline are `color-mix()`es of canonical tokens, and a tighter tile is where
-// too little contrast between the two first shows.
-export const ReadingsDensities: Story = {
-  name: "Readings — the default tile and the compact one",
-  render: () => (
-    <div style={stack}>
-      {[undefined, "compact" as const].map((density) => (
-        <div key={density ?? "default"} style={row}>
-          <StatCard
-            label="Urgent"
-            value="4"
-            tone="warn"
-            detail="somebody waiting or a promise breaking"
-            density={density}
-          />
-          <StatCard
-            label="Meetings today"
-            value="4"
-            detail="1 needs prep"
-            density={density}
-          />
-          {/* A basis that runs to its two-line clamp: the tighter tile has to
-              hold the same clamp, or a long basis would make one slot of a
-              glance taller than the four beside it. */}
-          <StatCard
-            label="Leads owed a reply"
-            value="3"
-            detail="owed a first answer · next due 31 Aug 15:00, and the three behind it are all this week"
-            density={density}
-          />
-          {/* A figure the read could not finish counting. The `+` is the whole
-              caveat, so the tile owes it no extra line. */}
-          <StatCard
-            label="Decisions waiting"
-            value="8+"
-            detail="waiting on your answer"
-            density={density}
-          />
-        </div>
-      ))}
     </div>
   ),
 };

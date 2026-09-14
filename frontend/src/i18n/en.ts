@@ -465,6 +465,12 @@ export const en = {
   "deal.archived": "archived",
   "deal.closes": "closes {date}",
   "deal.undated": "no close date",
+  "deal.lastMail": "Last email",
+  "deal.mail.title": "Previous emails",
+  "deal.mail.sent": "Sent {ago}",
+  "deal.mail.received": "Received {ago}",
+  "deal.mail.none": "No email on this deal yet",
+  "deal.mail.viewAll": "View all activity",
   "deal.closesProvisional": "provisional close date, not confirmed by a human",
   "record.notShown": "Not shown",
   "record.timelineLoading": "Loading this record’s history…",
@@ -2669,6 +2675,7 @@ export const en = {
   "deals.amount": "Value",
   "deals.lastSignal": "Last signal",
   "deals.lastSignalNone": "no signal yet",
+  "deals.lastMailNone": "no email yet",
   "deals.stage": "Stage",
   "deals.close": "Expected close",
   "deals.confirmAdvance": "Move to {stage}?",
@@ -3593,7 +3600,7 @@ export const en = {
   "co.spine.earlier_one": "{count} earlier conversation",
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
-  "today.quiet": "Nothing here needs you today.",
+  "today.quiet": "No outstanding work found in this view.",
   "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",
@@ -10156,6 +10163,37 @@ export const en = {
   "stageAutomation.saveFailed": "That change did not save",
   "stageAutomation.nothingReviewed":
     "Proposed, but nobody has answered one yet.",
+  "employment.importLoading": "Reading purchased employment history…",
+  "employment.apply": "Link imported companies",
+  "employment.status.current": "Current",
+  "employment.status.former": "Former",
+  "employment.status.unknown": "Status unknown",
+  "employment.statusLabel": "Employment status",
+  "employment.review": "Review this role before linking it.",
+  "employment.matchNeeded": "Company match needed.",
+  "employment.resolve": "Match company",
+  "employment.dismiss": "Dismiss this evidence",
+  "employment.research": "Research",
+  "employment.researchDeferred":
+    "Waiting for research settings and available budget",
+  "employment.website": "Confirmed company website",
+  "employment.websiteHint":
+    "Choose an existing company above, or confirm its own website to create it.",
+  "employment.saveMatch": "Save company link",
+  "employment.researchNeedsWebsite": "Website needed",
+  "employment.research.queued": "Queued",
+  "employment.research.running": "Researching",
+  "employment.research.done": "Completed",
+  "employment.research.partial": "Partially completed",
+  "employment.research.failed": "Failed — open the company to retry",
+  "employment.research.cancelled": "Cancelled",
+  "employment.researchQueued":
+    "Research status is available on the company page.",
+  "employment.edit": "Edit employment",
+  "employment.start": "Start date",
+  "employment.end": "End date",
+  "employment.dateHint": "Use YYYY-MM or YYYY-MM-DD. Leave blank when unknown.",
+  "employment.more": "Show more employment",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -56,15 +56,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// sitePageFactsFixture is ONE crawled page in exactly the three fields that
+// sitePageFactsFixture is ONE crawled page in the fields that
 // reach the prompt or the gate. The kind is not decoration — it selects the
 // menu, and the menu decides what this call asks for at all. A crawled page also
 // carries its byte count and fetch duration, and those reach the debug report
 // alone: a fixture carrying them would describe a crawl rather than a prompt.
 type sitePageFactsFixture struct {
-	URL  string                        `json:"url"`
-	Kind crmcontracts.SiteReadPageKind `json:"kind"`
-	Text string                        `json:"text"`
+	URL      string                        `json:"url"`
+	Kind     crmcontracts.SiteReadPageKind `json:"kind"`
+	Text     string                        `json:"text"`
+	Sections []string                      `json:"sections,omitempty"`
 }
 
 // sitePageFactsSite names this site in every refusal the shared expectation
@@ -111,7 +112,7 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 			"site_fact_extract/page_facts: a page of kind %q states too few facts to be worth a call, so the lane makes "+
 				"none — and a scenario over one would certify a request the product never issues", f.Kind)
 	}
-	page := crawlPage{URL: f.URL, Kind: f.Kind, Text: f.Text}
+	page := crawlPage{URL: f.URL, Kind: f.Kind, Text: f.Text, Sections: f.Sections}
 	// The SAME excerpt the lane applies. A certification that indexed the
 	// whole page would certify a prompt this product never sends.
 	excerpt, _ := pageFactsExcerpt(page)

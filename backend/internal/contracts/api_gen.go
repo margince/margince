@@ -5302,6 +5302,63 @@ func (e Contact360SectionsOmitted) Valid() bool {
 	}
 }
 
+// Defines values for Contact360EmploymentEmploymentStatus.
+const (
+	Contact360EmploymentEmploymentStatusCurrent Contact360EmploymentEmploymentStatus = "current"
+	Contact360EmploymentEmploymentStatusFormer  Contact360EmploymentEmploymentStatus = "former"
+	Contact360EmploymentEmploymentStatusUnknown Contact360EmploymentEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the Contact360EmploymentEmploymentStatus enum.
+func (e Contact360EmploymentEmploymentStatus) Valid() bool {
+	switch e {
+	case Contact360EmploymentEmploymentStatusCurrent:
+		return true
+	case Contact360EmploymentEmploymentStatusFormer:
+		return true
+	case Contact360EmploymentEmploymentStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Contact360EmploymentEndedPrecision.
+const (
+	Contact360EmploymentEndedPrecisionDay   Contact360EmploymentEndedPrecision = "day"
+	Contact360EmploymentEndedPrecisionMonth Contact360EmploymentEndedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the Contact360EmploymentEndedPrecision enum.
+func (e Contact360EmploymentEndedPrecision) Valid() bool {
+	switch e {
+	case Contact360EmploymentEndedPrecisionDay:
+		return true
+	case Contact360EmploymentEndedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Contact360EmploymentStartedPrecision.
+const (
+	Contact360EmploymentStartedPrecisionDay   Contact360EmploymentStartedPrecision = "day"
+	Contact360EmploymentStartedPrecisionMonth Contact360EmploymentStartedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the Contact360EmploymentStartedPrecision enum.
+func (e Contact360EmploymentStartedPrecision) Valid() bool {
+	switch e {
+	case Contact360EmploymentStartedPrecisionDay:
+		return true
+	case Contact360EmploymentStartedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactConsentGuardEntryChannel.
 const (
 	ContactConsentGuardEntryChannelEmail ContactConsentGuardEntryChannel = "email"
@@ -6859,6 +6916,45 @@ func (e CreateRecordGrantRequestSubjectType) Valid() bool {
 	}
 }
 
+// Defines values for CreateRelationshipRequestEmploymentStatus.
+const (
+	CreateRelationshipRequestEmploymentStatusCurrent CreateRelationshipRequestEmploymentStatus = "current"
+	CreateRelationshipRequestEmploymentStatusFormer  CreateRelationshipRequestEmploymentStatus = "former"
+	CreateRelationshipRequestEmploymentStatusUnknown CreateRelationshipRequestEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the CreateRelationshipRequestEmploymentStatus enum.
+func (e CreateRelationshipRequestEmploymentStatus) Valid() bool {
+	switch e {
+	case CreateRelationshipRequestEmploymentStatusCurrent:
+		return true
+	case CreateRelationshipRequestEmploymentStatusFormer:
+		return true
+	case CreateRelationshipRequestEmploymentStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateRelationshipRequestEndedPrecision.
+const (
+	CreateRelationshipRequestEndedPrecisionDay   CreateRelationshipRequestEndedPrecision = "day"
+	CreateRelationshipRequestEndedPrecisionMonth CreateRelationshipRequestEndedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the CreateRelationshipRequestEndedPrecision enum.
+func (e CreateRelationshipRequestEndedPrecision) Valid() bool {
+	switch e {
+	case CreateRelationshipRequestEndedPrecisionDay:
+		return true
+	case CreateRelationshipRequestEndedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateRelationshipRequestKind.
 const (
 	CreateRelationshipRequestKindBillingContact     CreateRelationshipRequestKind = "billing_contact"
@@ -6889,6 +6985,24 @@ func (e CreateRelationshipRequestKind) Valid() bool {
 	case CreateRelationshipRequestKindReferredBy:
 		return true
 	case CreateRelationshipRequestKindWorksWith:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateRelationshipRequestStartedPrecision.
+const (
+	CreateRelationshipRequestStartedPrecisionDay   CreateRelationshipRequestStartedPrecision = "day"
+	CreateRelationshipRequestStartedPrecisionMonth CreateRelationshipRequestStartedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the CreateRelationshipRequestStartedPrecision enum.
+func (e CreateRelationshipRequestStartedPrecision) Valid() bool {
+	switch e {
+	case CreateRelationshipRequestStartedPrecisionDay:
+		return true
+	case CreateRelationshipRequestStartedPrecisionMonth:
 		return true
 	default:
 		return false
@@ -7414,6 +7528,24 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealLastEmailDirection.
+const (
+	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
+	DealLastEmailDirectionOutbound DealLastEmailDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the DealLastEmailDirection enum.
+func (e DealLastEmailDirection) Valid() bool {
+	switch e {
+	case DealLastEmailDirectionInbound:
+		return true
+	case DealLastEmailDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealRoomDeliveryState.
 const (
 	DealRoomDeliveryStateConsumed   DealRoomDeliveryState = "consumed"
@@ -7819,6 +7951,96 @@ func (e EmbedReindexStatusStatus) Valid() bool {
 	case EmbedReindexStatusStatusIdle:
 		return true
 	case EmbedReindexStatusStatusReembedding:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmploymentImportItemEmploymentStatus.
+const (
+	EmploymentImportItemEmploymentStatusCurrent EmploymentImportItemEmploymentStatus = "current"
+	EmploymentImportItemEmploymentStatusFormer  EmploymentImportItemEmploymentStatus = "former"
+	EmploymentImportItemEmploymentStatusUnknown EmploymentImportItemEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the EmploymentImportItemEmploymentStatus enum.
+func (e EmploymentImportItemEmploymentStatus) Valid() bool {
+	switch e {
+	case EmploymentImportItemEmploymentStatusCurrent:
+		return true
+	case EmploymentImportItemEmploymentStatusFormer:
+		return true
+	case EmploymentImportItemEmploymentStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmploymentImportItemState.
+const (
+	EmploymentImportItemStateDismissed   EmploymentImportItemState = "dismissed"
+	EmploymentImportItemStateLinked      EmploymentImportItemState = "linked"
+	EmploymentImportItemStateNeedsMatch  EmploymentImportItemState = "needs_match"
+	EmploymentImportItemStateNeedsReview EmploymentImportItemState = "needs_review"
+	EmploymentImportItemStatePending     EmploymentImportItemState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the EmploymentImportItemState enum.
+func (e EmploymentImportItemState) Valid() bool {
+	switch e {
+	case EmploymentImportItemStateDismissed:
+		return true
+	case EmploymentImportItemStateLinked:
+		return true
+	case EmploymentImportItemStateNeedsMatch:
+		return true
+	case EmploymentImportItemStateNeedsReview:
+		return true
+	case EmploymentImportItemStatePending:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmploymentImportRequestAction.
+const (
+	EmploymentImportRequestActionApply   EmploymentImportRequestAction = "apply"
+	EmploymentImportRequestActionDismiss EmploymentImportRequestAction = "dismiss"
+	EmploymentImportRequestActionResolve EmploymentImportRequestAction = "resolve"
+)
+
+// Valid indicates whether the value is a known member of the EmploymentImportRequestAction enum.
+func (e EmploymentImportRequestAction) Valid() bool {
+	switch e {
+	case EmploymentImportRequestActionApply:
+		return true
+	case EmploymentImportRequestActionDismiss:
+		return true
+	case EmploymentImportRequestActionResolve:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmploymentImportRequestEmploymentStatus.
+const (
+	EmploymentImportRequestEmploymentStatusCurrent EmploymentImportRequestEmploymentStatus = "current"
+	EmploymentImportRequestEmploymentStatusFormer  EmploymentImportRequestEmploymentStatus = "former"
+	EmploymentImportRequestEmploymentStatusUnknown EmploymentImportRequestEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the EmploymentImportRequestEmploymentStatus enum.
+func (e EmploymentImportRequestEmploymentStatus) Valid() bool {
+	switch e {
+	case EmploymentImportRequestEmploymentStatusCurrent:
+		return true
+	case EmploymentImportRequestEmploymentStatusFormer:
+		return true
+	case EmploymentImportRequestEmploymentStatusUnknown:
 		return true
 	default:
 		return false
@@ -11509,6 +11731,45 @@ func (e RefusedRecipientSubjectKind) Valid() bool {
 	}
 }
 
+// Defines values for RelationshipEmploymentStatus.
+const (
+	RelationshipEmploymentStatusCurrent RelationshipEmploymentStatus = "current"
+	RelationshipEmploymentStatusFormer  RelationshipEmploymentStatus = "former"
+	RelationshipEmploymentStatusUnknown RelationshipEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipEmploymentStatus enum.
+func (e RelationshipEmploymentStatus) Valid() bool {
+	switch e {
+	case RelationshipEmploymentStatusCurrent:
+		return true
+	case RelationshipEmploymentStatusFormer:
+		return true
+	case RelationshipEmploymentStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RelationshipEndedPrecision.
+const (
+	RelationshipEndedPrecisionDay   RelationshipEndedPrecision = "day"
+	RelationshipEndedPrecisionMonth RelationshipEndedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipEndedPrecision enum.
+func (e RelationshipEndedPrecision) Valid() bool {
+	switch e {
+	case RelationshipEndedPrecisionDay:
+		return true
+	case RelationshipEndedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipKind.
 const (
 	RelationshipKindBillingContact     RelationshipKind = "billing_contact"
@@ -11542,6 +11803,24 @@ func (e RelationshipKind) Valid() bool {
 	case RelationshipKindReferredBy:
 		return true
 	case RelationshipKindWorksWith:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RelationshipStartedPrecision.
+const (
+	RelationshipStartedPrecisionDay   RelationshipStartedPrecision = "day"
+	RelationshipStartedPrecisionMonth RelationshipStartedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipStartedPrecision enum.
+func (e RelationshipStartedPrecision) Valid() bool {
+	switch e {
+	case RelationshipStartedPrecisionDay:
+		return true
+	case RelationshipStartedPrecisionMonth:
 		return true
 	default:
 		return false
@@ -14035,6 +14314,63 @@ func (e UpdateProductRequestBillingModel) Valid() bool {
 	case UpdateProductRequestBillingModelOneTime:
 		return true
 	case UpdateProductRequestBillingModelRecurring:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateRelationshipRequestEmploymentStatus.
+const (
+	UpdateRelationshipRequestEmploymentStatusCurrent UpdateRelationshipRequestEmploymentStatus = "current"
+	UpdateRelationshipRequestEmploymentStatusFormer  UpdateRelationshipRequestEmploymentStatus = "former"
+	UpdateRelationshipRequestEmploymentStatusUnknown UpdateRelationshipRequestEmploymentStatus = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the UpdateRelationshipRequestEmploymentStatus enum.
+func (e UpdateRelationshipRequestEmploymentStatus) Valid() bool {
+	switch e {
+	case UpdateRelationshipRequestEmploymentStatusCurrent:
+		return true
+	case UpdateRelationshipRequestEmploymentStatusFormer:
+		return true
+	case UpdateRelationshipRequestEmploymentStatusUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateRelationshipRequestEndedPrecision.
+const (
+	UpdateRelationshipRequestEndedPrecisionDay   UpdateRelationshipRequestEndedPrecision = "day"
+	UpdateRelationshipRequestEndedPrecisionMonth UpdateRelationshipRequestEndedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the UpdateRelationshipRequestEndedPrecision enum.
+func (e UpdateRelationshipRequestEndedPrecision) Valid() bool {
+	switch e {
+	case UpdateRelationshipRequestEndedPrecisionDay:
+		return true
+	case UpdateRelationshipRequestEndedPrecisionMonth:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateRelationshipRequestStartedPrecision.
+const (
+	UpdateRelationshipRequestStartedPrecisionDay   UpdateRelationshipRequestStartedPrecision = "day"
+	UpdateRelationshipRequestStartedPrecisionMonth UpdateRelationshipRequestStartedPrecision = "month"
+)
+
+// Valid indicates whether the value is a known member of the UpdateRelationshipRequestStartedPrecision enum.
+func (e UpdateRelationshipRequestStartedPrecision) Valid() bool {
+	switch e {
+	case UpdateRelationshipRequestStartedPrecisionDay:
+		return true
+	case UpdateRelationshipRequestStartedPrecisionMonth:
 		return true
 	default:
 		return false
@@ -25168,15 +25504,36 @@ type Contact360Employment struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
 	CompanyName *string            `json:"company_name,omitempty"`
 
-	// EndedAt Null means ongoing. A former employment keeps its row — history is never overwritten.
-	EndedAt          *time.Time         `json:"ended_at,omitempty"`
-	IsCurrentPrimary bool               `json:"is_current_primary"`
-	RelationshipId   openapi_types.UUID `json:"relationship_id"`
+	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	EmploymentStatus *Contact360EmploymentEmploymentStatus `json:"employment_status,omitempty"`
+
+	// EndedAt Missing date; consult employment_status. Historical roles retain their own rows.
+	EndedAt          *time.Time                          `json:"ended_at,omitempty"`
+	EndedPrecision   *Contact360EmploymentEndedPrecision `json:"ended_precision,omitempty"`
+	IsCurrentPrimary bool                                `json:"is_current_primary"`
+	RelationshipId   openapi_types.UUID                  `json:"relationship_id"`
 
 	// Role The title as the edge records it, which may differ from the contact's own title field.
-	Role      *string    `json:"role,omitempty"`
-	StartedAt *time.Time `json:"started_at,omitempty"`
+	Role             *string                               `json:"role,omitempty"`
+	StartedAt        *time.Time                            `json:"started_at,omitempty"`
+	StartedPrecision *Contact360EmploymentStartedPrecision `json:"started_precision,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying. Applies to the native SoR path,
+	// not only overlay mode.
+	Version *RowVersion `json:"version,omitempty"`
 }
+
+// Contact360EmploymentEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+type Contact360EmploymentEmploymentStatus string
+
+// Contact360EmploymentEndedPrecision defines model for Contact360Employment.EndedPrecision.
+type Contact360EmploymentEndedPrecision string
+
+// Contact360EmploymentStartedPrecision defines model for Contact360Employment.StartedPrecision.
+type Contact360EmploymentStartedPrecision string
 
 // Contact360NextMeeting The soonest booked meeting with this contact. Absent means either none is booked or the
 // caller cannot read meetings — `sections_omitted` is what separates the two.
@@ -26264,11 +26621,14 @@ type CreateActivityRequest struct {
 	Raw           *map[string]interface{}             `json:"raw,omitempty"`
 
 	// RemindAt Task only.
-	RemindAt     *time.Time `json:"remind_at,omitempty"`
-	Source       string     `json:"source"`
-	SourceId     *string    `json:"source_id,omitempty"`
-	SourceSystem *string    `json:"source_system,omitempty"`
-	Subject      *string    `json:"subject,omitempty"`
+	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
+	SourceId          *string             `json:"source_id,omitempty"`
+	SourceSystem      *string             `json:"source_system,omitempty"`
+	Subject           *string             `json:"subject,omitempty"`
 }
 
 // CreateActivityRequestDirection defines model for CreateActivityRequest.Direction.
@@ -26836,22 +27196,36 @@ type CreateRecordRoleRequest struct {
 
 // CreateRelationshipRequest defines model for CreateRelationshipRequest.
 type CreateRelationshipRequest struct {
-	CompanyId             *openapi_types.UUID           `json:"company_id,omitempty"`
-	ContactId             *openapi_types.UUID           `json:"contact_id,omitempty"`
-	CounterpartyCompanyId *openapi_types.UUID           `json:"counterparty_company_id,omitempty"`
-	CounterpartyContactId *openapi_types.UUID           `json:"counterparty_contact_id,omitempty"`
-	DealId                *openapi_types.UUID           `json:"deal_id,omitempty"`
-	EndedAt               *openapi_types.Date           `json:"ended_at,omitempty"`
-	IsCurrentPrimary      *bool                         `json:"is_current_primary,omitempty"`
-	Kind                  CreateRelationshipRequestKind `json:"kind"`
-	ProjectId             *openapi_types.UUID           `json:"project_id,omitempty"`
-	Role                  *string                       `json:"role,omitempty"`
-	Source                string                        `json:"source"`
-	StartedAt             *openapi_types.Date           `json:"started_at,omitempty"`
+	CompanyId             *openapi_types.UUID `json:"company_id,omitempty"`
+	ContactId             *openapi_types.UUID `json:"contact_id,omitempty"`
+	CounterpartyCompanyId *openapi_types.UUID `json:"counterparty_company_id,omitempty"`
+	CounterpartyContactId *openapi_types.UUID `json:"counterparty_contact_id,omitempty"`
+	DealId                *openapi_types.UUID `json:"deal_id,omitempty"`
+
+	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	EmploymentStatus *CreateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
+	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
+	EndedPrecision   *CreateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
+	IsCurrentPrimary *bool                                      `json:"is_current_primary,omitempty"`
+	Kind             CreateRelationshipRequestKind              `json:"kind"`
+	ProjectId        *openapi_types.UUID                        `json:"project_id,omitempty"`
+	Role             *string                                    `json:"role,omitempty"`
+	Source           string                                     `json:"source"`
+	StartedAt        *openapi_types.Date                        `json:"started_at,omitempty"`
+	StartedPrecision *CreateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
+
+// CreateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+type CreateRelationshipRequestEmploymentStatus string
+
+// CreateRelationshipRequestEndedPrecision defines model for CreateRelationshipRequest.EndedPrecision.
+type CreateRelationshipRequestEndedPrecision string
 
 // CreateRelationshipRequestKind defines model for CreateRelationshipRequest.Kind.
 type CreateRelationshipRequestKind string
+
+// CreateRelationshipRequestStartedPrecision defines model for CreateRelationshipRequest.StartedPrecision.
+type CreateRelationshipRequestStartedPrecision string
 
 // CreateRetentionPolicyRequest defines model for CreateRetentionPolicyRequest.
 type CreateRetentionPolicyRequest struct {
@@ -26962,7 +27336,10 @@ type CreateTaskRequest struct {
 		EntityId   openapi_types.UUID               `json:"entity_id"`
 		EntityType CreateTaskRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
-	Source string `json:"source"`
+
+	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
+	Source            string              `json:"source"`
 
 	// Subject What has to be done, as one line.
 	Subject string `json:"subject"`
@@ -27172,6 +27549,9 @@ type Deal struct {
 	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	LastEmail *DealLastEmail `json:"last_email,omitempty"`
+
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
@@ -27332,6 +27712,16 @@ type DealDocumentOrigin struct {
 	OccurredAt time.Time `json:"occurred_at"`
 	Subject    *string   `json:"subject,omitempty"`
 }
+
+// DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+type DealLastEmail struct {
+	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+	Direction  *DealLastEmailDirection `json:"direction"`
+	OccurredAt time.Time               `json:"occurred_at"`
+}
+
+// DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+type DealLastEmailDirection string
 
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
@@ -28275,6 +28665,9 @@ type EmailSummary struct {
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
 
+	// RequestHasReminder An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+	RequestHasReminder *bool `json:"request_has_reminder,omitempty"`
+
 	// Subject Null when the message has none, and when the content is withheld.
 	Subject *string `json:"subject,omitempty"`
 
@@ -28361,6 +28754,84 @@ type EmbedReindexStatus struct {
 
 // EmbedReindexStatusStatus The marker's own job-lifecycle state (embed_store_binding.status).
 type EmbedReindexStatusStatus string
+
+// EmploymentBackfillReport defines model for EmploymentBackfillReport.
+type EmploymentBackfillReport struct {
+	Applied    bool                     `json:"applied"`
+	HasMore    bool                     `json:"has_more"`
+	NextCursor *openapi_types.UUID      `json:"next_cursor,omitempty"`
+	Reports    []EmploymentImportReport `json:"reports"`
+}
+
+// EmploymentImportItem defines model for EmploymentImportItem.
+type EmploymentImportItem struct {
+	CompanyId        *openapi_types.UUID                  `json:"company_id,omitempty"`
+	CompanyName      string                               `json:"company_name"`
+	Domain           *string                              `json:"domain,omitempty"`
+	EmploymentStatus EmploymentImportItemEmploymentStatus `json:"employment_status"`
+
+	// Ended Provider date at its original precision, YYYY-MM or YYYY-MM-DD.
+	Ended          *string             `json:"ended,omitempty"`
+	Key            string              `json:"key"`
+	Provider       string              `json:"provider"`
+	RelationshipId *openapi_types.UUID `json:"relationship_id,omitempty"`
+
+	// ResearchState Current company research state or a reason it cannot yet run.
+	ResearchState *string    `json:"research_state,omitempty"`
+	RetrievedAt   *time.Time `json:"retrieved_at,omitempty"`
+	Role          string     `json:"role"`
+
+	// Started Provider date at its original precision, YYYY-MM or YYYY-MM-DD.
+	Started *string                   `json:"started,omitempty"`
+	State   EmploymentImportItemState `json:"state"`
+}
+
+// EmploymentImportItemEmploymentStatus defines model for EmploymentImportItem.EmploymentStatus.
+type EmploymentImportItemEmploymentStatus string
+
+// EmploymentImportItemState defines model for EmploymentImportItem.State.
+type EmploymentImportItemState string
+
+// EmploymentImportReport defines model for EmploymentImportReport.
+type EmploymentImportReport struct {
+	ContactId openapi_types.UUID     `json:"contact_id"`
+	Items     []EmploymentImportItem `json:"items"`
+
+	// Warnings Retained evidence that requires administrator review.
+	Warnings *[]string `json:"warnings,omitempty"`
+}
+
+// EmploymentImportRequest defines model for EmploymentImportRequest.
+type EmploymentImportRequest struct {
+	Action *EmploymentImportRequestAction `json:"action,omitempty"`
+
+	// CompanyId Existing company explicitly selected by the user.
+	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
+
+	// Domain Company website explicitly confirmed by the user; creates a missing company only after identity resolution.
+	Domain *string `json:"domain,omitempty"`
+
+	// EmploymentStatus Explicit user correction of this episode status.
+	EmploymentStatus *EmploymentImportRequestEmploymentStatus `json:"employment_status,omitempty"`
+
+	// Ended Corrected end as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date.
+	Ended *string `json:"ended,omitempty"`
+
+	// Key Episode key returned by the preview; required for resolve or dismiss.
+	Key *string `json:"key,omitempty"`
+
+	// ResolveGroup Apply the company choice to unresolved roles at the same employer; date and status corrections affect only the selected key.
+	ResolveGroup *bool `json:"resolve_group,omitempty"`
+
+	// Started Corrected start as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date.
+	Started *string `json:"started,omitempty"`
+}
+
+// EmploymentImportRequestAction defines model for EmploymentImportRequest.Action.
+type EmploymentImportRequestAction string
+
+// EmploymentImportRequestEmploymentStatus Explicit user correction of this episode status.
+type EmploymentImportRequestEmploymentStatus string
 
 // EnrichCompanyRequest Optional override. With no body the company's own domain is read.
 type EnrichCompanyRequest struct {
@@ -34145,9 +34616,13 @@ type Relationship struct {
 	CreatedAt             time.Time           `json:"created_at"`
 	DealId                *openapi_types.UUID `json:"deal_id,omitempty"`
 
-	// EndedAt Null = current/ongoing.
-	EndedAt *openapi_types.Date `json:"ended_at,omitempty"`
-	Id      openapi_types.UUID  `json:"id"`
+	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	EmploymentStatus *RelationshipEmploymentStatus `json:"employment_status,omitempty"`
+
+	// EndedAt Missing date; employment_status distinguishes former and unknown from ongoing.
+	EndedAt        *openapi_types.Date         `json:"ended_at,omitempty"`
+	EndedPrecision *RelationshipEndedPrecision `json:"ended_precision,omitempty"`
+	Id             openapi_types.UUID          `json:"id"`
 
 	// IsCurrentPrimary Employment — the one current primary employer (≤1 per contact).
 	IsCurrentPrimary *bool            `json:"is_current_primary,omitempty"`
@@ -34158,10 +34633,11 @@ type Relationship struct {
 
 	// Role employment: cto/vp_sales/...; deal or project stakeholder: champion/economic_buyer/blocker/influencer/user, plus sponsor/project_lead/delivery_lead/subject_matter_expert on a project.
 	// `billing_contact` is the one kind where this field is REQUIRED and bounded: `recipient` (the invoice is addressed to them), `approver` (they sign it off internally) or `accounts_payable` (they pay it). An edge saying only that somebody is a billing contact would not say which of the three to do with them, so the server refuses it. Every other kind keeps free text.
-	Role      *string             `json:"role,omitempty"`
-	Source    string              `json:"source"`
-	StartedAt *openapi_types.Date `json:"started_at,omitempty"`
-	UpdatedAt time.Time           `json:"updated_at"`
+	Role             *string                       `json:"role,omitempty"`
+	Source           string                        `json:"source"`
+	StartedAt        *openapi_types.Date           `json:"started_at,omitempty"`
+	StartedPrecision *RelationshipStartedPrecision `json:"started_precision,omitempty"`
+	UpdatedAt        time.Time                     `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -34171,8 +34647,17 @@ type Relationship struct {
 	Version *RowVersion `json:"version,omitempty"`
 }
 
+// RelationshipEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+type RelationshipEmploymentStatus string
+
+// RelationshipEndedPrecision defines model for Relationship.EndedPrecision.
+type RelationshipEndedPrecision string
+
 // RelationshipKind defines model for Relationship.Kind.
 type RelationshipKind string
+
+// RelationshipStartedPrecision defines model for Relationship.StartedPrecision.
+type RelationshipStartedPrecision string
 
 // RelationshipListResponse defines model for RelationshipListResponse.
 type RelationshipListResponse struct {
@@ -37593,11 +38078,30 @@ type UpdateRecordRoleRequest struct {
 
 // UpdateRelationshipRequest defines model for UpdateRelationshipRequest.
 type UpdateRelationshipRequest struct {
-	EndedAt          *openapi_types.Date `json:"ended_at,omitempty"`
-	IsCurrentPrimary *bool               `json:"is_current_primary,omitempty"`
-	Role             *string             `json:"role,omitempty"`
-	StartedAt        *openapi_types.Date `json:"started_at,omitempty"`
+	// ClearEndedAt Remove an incorrect end date and its precision.
+	ClearEndedAt *bool `json:"clear_ended_at,omitempty"`
+
+	// ClearStartedAt Remove an incorrect start date and its precision.
+	ClearStartedAt *bool `json:"clear_started_at,omitempty"`
+
+	// EmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+	EmploymentStatus *UpdateRelationshipRequestEmploymentStatus `json:"employment_status,omitempty"`
+	EndedAt          *openapi_types.Date                        `json:"ended_at,omitempty"`
+	EndedPrecision   *UpdateRelationshipRequestEndedPrecision   `json:"ended_precision,omitempty"`
+	IsCurrentPrimary *bool                                      `json:"is_current_primary,omitempty"`
+	Role             *string                                    `json:"role,omitempty"`
+	StartedAt        *openapi_types.Date                        `json:"started_at,omitempty"`
+	StartedPrecision *UpdateRelationshipRequestStartedPrecision `json:"started_precision,omitempty"`
 }
+
+// UpdateRelationshipRequestEmploymentStatus Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.
+type UpdateRelationshipRequestEmploymentStatus string
+
+// UpdateRelationshipRequestEndedPrecision defines model for UpdateRelationshipRequest.EndedPrecision.
+type UpdateRelationshipRequestEndedPrecision string
+
+// UpdateRelationshipRequestStartedPrecision defines model for UpdateRelationshipRequest.StartedPrecision.
+type UpdateRelationshipRequestStartedPrecision string
 
 // UpdateRetentionPolicyRequest A sparse policy patch. The scope is not patchable — a different scope is a different policy.
 type UpdateRetentionPolicyRequest struct {
@@ -42685,6 +43189,9 @@ type RevertStageProgressionParams struct {
 
 // GetDealStatusParams defines parameters for GetDealStatus.
 type GetDealStatusParams struct {
+	// FactsOnly Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
+	FactsOnly *bool `form:"facts_only,omitempty" json:"facts_only,omitempty"`
+
 	// Refresh Rewrite even when the fingerprint still matches. The reader asking for a second opinion.
 	Refresh *bool `form:"refresh,omitempty" json:"refresh,omitempty"`
 }
@@ -42737,6 +43244,13 @@ type SendAccountEmailParams struct {
 	// match the operation being executed (`403 code: approval_token_invalid`). Required when an
 	// AGENT principal invokes a 🟡 operation; a human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// BackfillEmploymentImportJSONBody defines parameters for BackfillEmploymentImport.
+type BackfillEmploymentImportJSONBody struct {
+	After *openapi_types.UUID `json:"after,omitempty"`
+	Apply *bool               `json:"apply,omitempty"`
+	Limit *int                `json:"limit,omitempty"`
 }
 
 // GetFieldHistoryParams defines parameters for GetFieldHistory.
@@ -45575,6 +46089,9 @@ type LiftSuppressionJSONRequestBody LiftSuppressionJSONBody
 // DraftContactEmailJSONRequestBody defines body for DraftContactEmail for application/json ContentType.
 type DraftContactEmailJSONRequestBody DraftContactEmailJSONBody
 
+// ApplyContactEmploymentImportJSONRequestBody defines body for ApplyContactEmploymentImport for application/json ContentType.
+type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
+
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
 
@@ -45679,6 +46196,9 @@ type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
 // EmbedReindexStartJSONRequestBody defines body for EmbedReindexStart for application/json ContentType.
 type EmbedReindexStartJSONRequestBody = EmbedReindexStartRequest
+
+// BackfillEmploymentImportJSONRequestBody defines body for BackfillEmploymentImport for application/json ContentType.
+type BackfillEmploymentImportJSONRequestBody BackfillEmploymentImportJSONBody
 
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
@@ -49916,6 +50436,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_email"]; found {
+		err = json.Unmarshal(raw, &a.LastEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_email': %w", err)
+		}
+		delete(object, "last_email")
+	}
+
 	if raw, found := object["lost_reason"]; found {
 		err = json.Unmarshal(raw, &a.LostReason)
 		if err != nil {
@@ -50234,6 +50762,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastEmail != nil {
+		object["last_email"], err = json.Marshal(a.LastEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
 		}
 	}
 
@@ -56494,6 +57029,12 @@ type ServerInterface interface {
 	// Draft an email to this contact, grounded in their record.
 	// (POST /contacts/{id}/draft-email)
 	DraftContactEmail(w http.ResponseWriter, r *http.Request, id Id)
+	// Read retained provider roles and their company-link outcomes without buying another lookup.
+	// (GET /contacts/{id}/employment-import)
+	PreviewContactEmploymentImport(w http.ResponseWriter, r *http.Request, id Id)
+	// Apply retained employer evidence, resolve a company match, or dismiss an incorrect role.
+	// (POST /contacts/{id}/employment-import)
+	ApplyContactEmploymentImport(w http.ResponseWriter, r *http.Request, id Id)
 	// Queue an on-demand contact-data enrichment run.
 	// (POST /contacts/{id}/enrichment-runs)
 	CreateContactEnrichmentRun(w http.ResponseWriter, r *http.Request, id Id, params CreateContactEnrichmentRunParams)
@@ -56755,6 +57296,9 @@ type ServerInterface interface {
 	// The embed-store binding marker + the derived reindex-needed signal.
 	// (GET /embeddings/reindex/status)
 	EmbedReindexStatus(w http.ResponseWriter, r *http.Request)
+	// Administratively preview or apply one resumable batch of retained employment evidence.
+	// (POST /employment-import/backfill)
+	BackfillEmploymentImport(w http.ResponseWriter, r *http.Request)
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
@@ -59203,6 +59747,18 @@ func (_ Unimplemented) DraftContactEmail(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Read retained provider roles and their company-link outcomes without buying another lookup.
+// (GET /contacts/{id}/employment-import)
+func (_ Unimplemented) PreviewContactEmploymentImport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Apply retained employer evidence, resolve a company match, or dismiss an incorrect role.
+// (POST /contacts/{id}/employment-import)
+func (_ Unimplemented) ApplyContactEmploymentImport(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Queue an on-demand contact-data enrichment run.
 // (POST /contacts/{id}/enrichment-runs)
 func (_ Unimplemented) CreateContactEnrichmentRun(w http.ResponseWriter, r *http.Request, id Id, params CreateContactEnrichmentRunParams) {
@@ -59722,6 +60278,12 @@ func (_ Unimplemented) EmbedReindexPreview(w http.ResponseWriter, r *http.Reques
 // The embed-store binding marker + the derived reindex-needed signal.
 // (GET /embeddings/reindex/status)
 func (_ Unimplemented) EmbedReindexStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Administratively preview or apply one resumable batch of retained employment evidence.
+// (POST /employment-import/backfill)
+func (_ Unimplemented) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -71712,6 +72274,74 @@ func (siw *ServerInterfaceWrapper) DraftContactEmail(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewContactEmploymentImport operation middleware
+func (siw *ServerInterfaceWrapper) PreviewContactEmploymentImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewContactEmploymentImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ApplyContactEmploymentImport operation middleware
+func (siw *ServerInterfaceWrapper) ApplyContactEmploymentImport(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ApplyContactEmploymentImport(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateContactEnrichmentRun operation middleware
 func (siw *ServerInterfaceWrapper) CreateContactEnrichmentRun(w http.ResponseWriter, r *http.Request) {
 
@@ -75648,6 +76278,19 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetDealStatusParams
 
+	// ------------- Optional query parameter "facts_only" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "facts_only", r.URL.Query(), &params.FactsOnly, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "facts_only"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "facts_only", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "refresh" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "refresh", r.URL.Query(), &params.Refresh, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
@@ -76024,6 +76667,28 @@ func (siw *ServerInterfaceWrapper) EmbedReindexStatus(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.EmbedReindexStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// BackfillEmploymentImport operation middleware
+func (siw *ServerInterfaceWrapper) BackfillEmploymentImport(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.BackfillEmploymentImport(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90317,6 +90982,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/contacts/{id}/draft-email", wrapper.DraftContactEmail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/employment-import", wrapper.PreviewContactEmploymentImport)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/employment-import", wrapper.ApplyContactEmploymentImport)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/enrichment-runs", wrapper.CreateContactEnrichmentRun)
 	})
 	r.Group(func(r chi.Router) {
@@ -90576,6 +91247,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/embeddings/reindex/status", wrapper.EmbedReindexStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/employment-import/backfill", wrapper.BackfillEmploymentImport)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/exports", wrapper.CreateFilteredExport)

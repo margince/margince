@@ -43,6 +43,13 @@ import (
 )
 
 func TestACachedMoveStopsNamingAMessageTheReaderMayNoLongerRead(t *testing.T) {
+	for _, key := range []string{"activity_id", "request_activity_id"} {
+		t.Run(key, func(t *testing.T) { cachedMoveSourceVisibility(t, key) })
+	}
+}
+
+func cachedMoveSourceVisibility(t *testing.T, key string) {
+	t.Helper()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -62,7 +69,7 @@ func TestACachedMoveStopsNamingAMessageTheReaderMayNoLongerRead(t *testing.T) {
 
 	reader := dealReader(e)
 	svc := dealstatus.NewService(e.Pool, nil, nil, nil, nil)
-	seedCachedMove(t, e, readerOf(reader, t), deal, mail)
+	seedCachedMove(t, e, readerOf(reader, t), deal, mail, key)
 
 	// While the reader is in the audience the move names its message — this is
 	// the feature, and asserting it first is what makes the refusal below mean
@@ -123,7 +130,7 @@ func TestACachedMoveStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
 	// ONE cached card, read by two seats that differ in exactly one grant. The
 	// card is keyed per reader, so each seat needs its own copy of it.
 	granted := dealReader(e)
-	seedCachedMove(t, e, readerOf(granted, t), deal, mail)
+	seedCachedMove(t, e, readerOf(granted, t), deal, mail, "activity_id")
 
 	before, err := svc.CachedMoves(granted, []ids.UUID{deal})
 	if err != nil {
@@ -259,12 +266,12 @@ func readerOf(ctx context.Context, t *testing.T) ids.UUID {
 // seedCachedMove writes the card a deal page would have written for this reader
 // while they could still read the message: the unanswered-inbound move, naming
 // that message.
-func seedCachedMove(t *testing.T, e *SearchEnv, userID, deal, activity ids.UUID) {
+func seedCachedMove(t *testing.T, e *SearchEnv, userID, deal, activity ids.UUID, key string) {
 	t.Helper()
 	seedCachedCard(t, e, userID, deal, crmcontracts.DealStatusCardMove{
 		Action:    "draft_email",
 		Reason:    "They wrote 6 days ago and nobody has answered — draft the reply.",
-		Arguments: &map[string]any{"activity_id": activity.String()},
+		Arguments: &map[string]any{key: activity.String()},
 	})
 }
 

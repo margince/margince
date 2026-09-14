@@ -90,6 +90,7 @@ type facts struct {
 	health    *deals.DealHealth
 	timeline  []crmcontracts.Activity
 	openTasks []activities.OpenTask
+	requests  []crmcontracts.Activity
 	// moreTasks says the open-task read was cut at its window, so the count
 	// is a floor rather than the number.
 	moreTasks bool
@@ -127,6 +128,20 @@ type stored struct {
 // cached. A refresh forces the rewrite: the reader asking for a second
 // opinion.
 func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crmcontracts.DealStatusCard, error) {
+	return s.readCard(ctx, dealID, cardReadPolicy{refresh: refresh})
+}
+
+// ReadFacts refreshes the card and its shared move cache without asking a model.
+func (s *Service) ReadFacts(ctx context.Context, dealID ids.DealID) (crmcontracts.DealStatusCard, error) {
+	return s.readCard(ctx, dealID, cardReadPolicy{factsOnly: true})
+}
+
+type cardReadPolicy struct {
+	refresh   bool
+	factsOnly bool
+}
+
+func (s *Service) readCard(ctx context.Context, dealID ids.DealID, policy cardReadPolicy) (crmcontracts.DealStatusCard, error) {
 	// The object question at the entry point. gather below reaches
 	// deals.GetDeal, which asks it and the row question both, and that is
 	// still what refuses an unreadable deal — but the card is also served
@@ -140,7 +155,7 @@ func (s *Service) Get(ctx context.Context, dealID ids.DealID, refresh bool) (crm
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	card, timeline, err := s.cardAndTimeline(ctx, dealID, refresh)
+	card, timeline, err := s.cardAndTimeline(ctx, dealID, policy)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
@@ -180,7 +195,7 @@ func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
 // two travel together because the caller enriches from the second — reading the
 // deal's messages again would ask the same gate the same question.
 func (s *Service) cardAndTimeline(
-	ctx context.Context, dealID ids.DealID, refresh bool,
+	ctx context.Context, dealID ids.DealID, policy cardReadPolicy,
 ) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
 	userID, err := actingUser(ctx)
 	if err != nil {
@@ -198,11 +213,11 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, refresh, f.now)
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
 	if verdict.serve {
-		return verdict.card, f.timeline, nil
+		return verdict.card, append(f.timeline, f.requests...), nil
 	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel)
+	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly)
 	if laneFailed {
 		// The lane was wired and did not answer: a timeout, a budget, an
 		// unparseable reply. The reader gets the floor, which is a working
@@ -215,7 +230,7 @@ func (s *Service) cardAndTimeline(
 		// the fingerprint now, so an installation that switches to German mints
 		// a new key, and a lane that happens to be down while it does would
 		// freeze the ENGLISH floor as that installation's German card.
-		return card, f.timeline, nil
+		return card, append(f.timeline, f.requests...), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
 		Fingerprint: fingerprint,
@@ -225,7 +240,7 @@ func (s *Service) cardAndTimeline(
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	return card, f.timeline, nil
+	return card, append(f.timeline, f.requests...), nil
 }
 
 // cacheVerdict says what to do with the stored card.
@@ -335,6 +350,15 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
 	}
 	f.timeline = timeline
+	requestKind := "email"
+	requests, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
+		RequestReviewAsOf: &f.now, Kind: &requestKind,
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
+	}
+	f.requests = requests
 	open, more, err := s.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: timelineWindow,
 	})

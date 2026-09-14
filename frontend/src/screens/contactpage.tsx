@@ -51,6 +51,9 @@ import {
   ContactTimelineTab,
 } from "./contacttabs";
 import { transportForActivity, useTransports } from "./contacttransports";
+
+import { currentEmployer } from "./employmentcurrency";
+
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
@@ -745,7 +748,7 @@ function useBriefedMeeting(): [
 // link because it is a record of its own, not a label.
 function ContactSubtitle({ view }: Readonly<{ view: Contact360 }>): ReactNode {
   const contact = view.contact;
-  const employment = view.employments?.data?.[0];
+  const employment = currentEmployer(view.employments?.data);
   return (
     <div>
       {contact.title}

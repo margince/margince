@@ -139,6 +139,8 @@ type ListActivitiesInput struct {
 	// this filter and the rest of the page judging against two different
 	// clock reads.
 	WaitingReplyAsOf *time.Time
+	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
+	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
 	// against. Unexported and set by the store beside the transaction it reads
 	// in, never by a caller: it is one read's snapshot, not a request parameter,

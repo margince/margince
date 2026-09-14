@@ -226,6 +226,77 @@ func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
 	}
 }
 
+// A contract returned to draft sheds the conversion it froze, so the walk back
+// through draft cannot leave a rate naming a currency the row no longer holds.
+//
+// Each step is legal on its own, which is what made the sequence reachable:
+// active is not terminal so it may go back to draft, a draft's currency is the
+// human's to correct, and an activation never re-freezes a rate the row already
+// carries. Composed, they restated an agreement's base-currency worth with
+// nobody renegotiating it — the rollup multiplies the new figure by a rate
+// frozen for the old currency.
+func TestReturningAContractToDraftClearsTheFrozenConversion(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Acme", nil)
+	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
+	seedRate(t, e, "JPY", "EUR", "0.006", time.Now())
+
+	id := draftInCurrency(t, e, company, "USD")
+	activated, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("activating: %v", err)
+	}
+	if activated.FxRateToBase == nil {
+		t.Fatal("the activation froze no rate, so this test would prove nothing about clearing one")
+	}
+
+	reverted, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusDraft, nil)
+	if err != nil {
+		t.Fatalf("returning the contract to draft: %v", err)
+	}
+	if reverted.FxRateToBase != nil || reverted.FxRateDate != nil {
+		// Dereferenced, because the rate is a *string and the failure has to
+		// name the figure the row kept rather than where it is in memory.
+		rate := "none"
+		if reverted.FxRateToBase != nil {
+			rate = *reverted.FxRateToBase
+		}
+		t.Fatalf("a contract back in draft still carries the conversion it froze (rate %s, dated %v) — "+
+			"its currency is the human's to correct again, so the rate would go on pricing money "+
+			"the row is free to stop holding", rate, reverted.FxRateDate)
+	}
+
+	// The redenomination the draft state exists to allow, with the figure
+	// restated in the new currency as refuseARedenominatedDraft requires.
+	jpy := "JPY"
+	restated := int64(30_000_000)
+	moved, err := e.Contracts.UpdateContract(e.Admin(), id,
+		crmcontracts.UpdateContractRequest{Currency: &jpy, ValueMinor: &restated}, nil)
+	if err != nil {
+		t.Fatalf("restating the draft in another currency: %v", err)
+	}
+	if moved.Currency == nil || *moved.Currency != "JPY" {
+		t.Fatalf("the draft's currency reads %v after the restatement, want JPY", moved.Currency)
+	}
+
+	// Re-activation freezes for the currency the row actually holds now.
+	again, err := e.Contracts.ChangeStatus(e.Admin(), id, contracts.StatusActive, nil)
+	if err != nil {
+		t.Fatalf("re-activating: %v", err)
+	}
+	if again.FxRateToBase == nil {
+		t.Fatal("the re-activated contract carries no frozen rate")
+	}
+	frozen, err := strconv.ParseFloat(*again.FxRateToBase, 64)
+	if err != nil {
+		t.Fatalf("the frozen rate %q does not parse as a number: %v", *again.FxRateToBase, err)
+	}
+	if frozen != 0.006 {
+		t.Errorf("the re-activated contract converts at %v, want the published JPY rate 0.006 — "+
+			"any other figure is a rate frozen for a currency this agreement no longer names", frozen)
+	}
+}
+
 // A contract with no currency has nothing to convert, and freezing nothing is
 // the right answer rather than a refusal.
 func TestAContractWithNoCurrencyActivatesWithoutARate(t *testing.T) {

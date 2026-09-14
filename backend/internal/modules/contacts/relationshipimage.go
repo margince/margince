@@ -47,8 +47,11 @@ func relationshipFieldImage(rel relationshipRow) map[string]any {
 		// undo refuses a change nobody has touched, blaming a supersession that
 		// never happened. imageTime reads both spellings, because images written
 		// the old way are already in every deployed database.
-		"started_at": edgeImageDate(rel.StartedAt),
-		"ended_at":   edgeImageDate(rel.EndedAt),
+		"started_at":        edgeImageDate(rel.StartedAt),
+		"ended_at":          edgeImageDate(rel.EndedAt),
+		"employment_status": rel.EmploymentStatus,
+		"started_precision": rel.StartedPrecision,
+		"ended_precision":   rel.EndedPrecision,
 	}
 }
 

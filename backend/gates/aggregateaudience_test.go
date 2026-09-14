@@ -36,6 +36,7 @@ import (
 var aggregateReaders = map[string]string{
 	"internal/modules/contacts/strength.go":           "relationship strength and warmth, shown on a contact and an account to any seat",
 	"internal/modules/deals/health.go":                "the deal's recency score, shown to anybody who can open the deal",
+	"internal/modules/deals/lastemail.go":             "the deal's newest email, dated on every board card for anybody who can list deals",
 	"internal/compose/meetingbrief/meeting.go":        "last-touch per attendee, the number a brief's reader trusts most",
 	"internal/modules/search/graphedge.go":            "the global who-knows-whom projection, readable by everyone",
 	"internal/modules/capture/digestcounts.go":        "the weekly digest's counts of what came in",
