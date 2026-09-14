@@ -33,9 +33,9 @@ export function DealBriefEdit({
   open: boolean;
   onClose: () => void;
   dealId: string;
-  // The version the panel READ. It pins the save, so an edit that landed
-  // while this modal sat open comes back as a conflict rather than silently
-  // overwriting somebody's words.
+  // The deal's LIVE version, which moves while this modal is open: the record
+  // page refetches itself every LIVE_RECORD_MS. What pins the save is the
+  // reading the modal opened on, captured below — see openedVersion.
   version: number | undefined;
   brief?: string | null;
 }>) {
@@ -48,6 +48,17 @@ export function DealBriefEdit({
   // everything the form compares against has to be the reading it opened on,
   // or a colleague saving elsewhere silently rewrites what is being typed.
   const [opened, setOpened] = useState<string>("");
+  // The version this modal OPENED on, and the reason it is not the `version`
+  // prop: that one is the live deal's, and the record page re-reads itself
+  // every sixty seconds (app/queryclient.ts, LIVE_RECORD_MS). Pinning the save
+  // to the live reading makes If-Match agree with a version the FORM never
+  // saw, so a colleague's rewrite that landed while somebody was typing is
+  // answered 200 and silently replaced — the exact loss this pin exists to
+  // refuse, and it only appeared once the page had re-read.
+  //
+  // The sibling editor beside this one pins the same way. Two forms over one
+  // record cannot disagree about which reading a conflict is judged against.
+  const [openedVersion, setOpenedVersion] = useState<number | undefined>();
   const save = useSaveBrief(dealId);
   // Pulled out because the effect below depends on THIS function rather than
   // on the mutation object, which is a new object every render: depending on
@@ -59,6 +70,10 @@ export function DealBriefEdit({
   // current at the moment of opening and never again.
   const briefRef = useRef(brief);
   briefRef.current = brief;
+  // The version travels the same way and for the same reason: read at the
+  // moment of opening, never depended on, so a refetch cannot move it.
+  const versionRef = useRef(version);
+  versionRef.current = version;
 
   // Seeded on the OPENING edge alone. The modal stays mounted for the life of
   // the panel, so an initializer would hand back whatever the brief said the
@@ -68,6 +83,7 @@ export function DealBriefEdit({
       const current = briefRef.current ?? "";
       setText(current);
       setOpened(current);
+      setOpenedVersion(versionRef.current);
       resetSave();
     }
   }, [open, resetSave]);
@@ -84,7 +100,9 @@ export function DealBriefEdit({
       return;
     }
     await save.mutateAsync({
-      version,
+      // Pinned to the reading the FORM holds, not the live one. See
+      // openedVersion.
+      version: openedVersion,
       // Sent as typed. The server stores the description verbatim, so
       // trimming here would silently drop leading or trailing whitespace a
       // reader deliberately wrote — and make a whitespace-only correction

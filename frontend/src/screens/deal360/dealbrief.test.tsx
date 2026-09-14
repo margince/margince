@@ -151,3 +151,40 @@ it("keeps an unsaved draft when the deal refetches underneath it", async () => {
   );
   expect(box.value).toBe("Half a sentence");
 });
+
+// The half the test above does not reach, and the one that was losing words.
+//
+// Keeping the DRAFT across a refetch was already right. What moved underneath
+// it was the version the save pins to: `version` is the live deal's, the record
+// page re-reads itself every sixty seconds, and the save took whatever the
+// latest reading said. So If-Match agreed with a version the form had never
+// seen, the server answered 200, and the colleague's rewrite was replaced with
+// a draft written against the words before it — neither author told.
+//
+// Pinned to the opening reading, the same save is a 412 the reader is shown.
+it("pins the save to the version it opened on, not the one that arrived since", async () => {
+  const sent: Sent[] = [];
+  stubFetch(sent);
+  const { rerender } = render(
+    <DealBrief dealId={DEAL_ID} version={2} brief="Original words." />,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const box = screen.getByRole("textbox") as HTMLTextAreaElement;
+  await userEvent.clear(box);
+  await userEvent.type(box, "My rewrite");
+
+  // A colleague saves, and the page's own re-read lands while the modal sits
+  // open. This is the step that made the overwrite possible: before it, the
+  // stale save was correctly refused.
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider>
+        <DealBrief dealId={DEAL_ID} version={3} brief="Their rewrite." />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+
+  await userEvent.click(screen.getByRole("button", { name: "Save brief" }));
+  expect(sent).toHaveLength(1);
+  expect(sent[0].ifMatch).toBe("2");
+});
