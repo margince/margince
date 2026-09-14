@@ -51,6 +51,13 @@ export function BillingContactsPanel({
   // grant half, a read-seat colleague was shown three enabled buttons and
   // learned they could not use them from a refusal after submitting.
   const mayWrite = useCanWrite("relationship", "create") && !readOnly;
+  // TAKING SOMEBODY OFF IS ITS OWN VERB, and the default seat is exactly where
+  // sharing the create gate showed. `rep` holds `writeNoDelete` on
+  // relationship, so it passes the check above and is refused by the server on
+  // Remove alone — the most common seat in the product, learning from an error
+  // after pressing that the button was never for it. The fix above closed this
+  // for read-only seats and left it open for the one that writes.
+  const mayRemove = useCanWrite("relationship", "delete") && !readOnly;
   const actions = useBillingContactActions(
     companyId,
     t("billing.versionUnresolved"),
@@ -91,6 +98,7 @@ export function BillingContactsPanel({
                 key={c.relationship_id}
                 contact={c}
                 canWrite={mayWrite}
+                canRemove={mayRemove}
                 busy={actions.remove.isPending}
                 onChange={() => setEditing(c)}
                 onRemove={() => actions.remove.mutate(c)}
@@ -117,12 +125,17 @@ export function BillingContactsPanel({
 function BillingContactRow({
   contact,
   canWrite,
+  canRemove,
   busy,
   onChange,
   onRemove,
 }: Readonly<{
   contact: BillingContact;
   canWrite: boolean;
+  // Separate from canWrite because the server separates them: naming and
+  // moving are relationship:create, taking off is relationship:delete, and the
+  // default seat holds the first without the second.
+  canRemove: boolean;
   busy: boolean;
   onChange: () => void;
   onRemove: () => void;
@@ -147,15 +160,17 @@ function BillingContactRow({
             >
               {t("billing.change")}
             </Button>
-            <Button
-              small
-              variant="ghost"
-              onClick={onRemove}
-              disabled={busy}
-              aria-label={t("billing.removeOne", { who: contact.full_name })}
-            >
-              {t("billing.remove")}
-            </Button>
+            {canRemove && (
+              <Button
+                small
+                variant="ghost"
+                onClick={onRemove}
+                disabled={busy}
+                aria-label={t("billing.removeOne", { who: contact.full_name })}
+              >
+                {t("billing.remove")}
+              </Button>
+            )}
           </span>
         )}
       </div>
