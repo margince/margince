@@ -773,6 +773,67 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------- /contacts ----------------------------------
+  /contacts/{id}/employment-import:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: previewContactEmploymentImport
+      summary: Read retained provider roles and their company-link outcomes without buying another lookup.
+      responses:
+        '200':
+          description: Employment evidence and resolution outcomes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentImportReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Contacts]
+      operationId: applyContactEmploymentImport
+      x-agent-access: human-only
+      summary: Apply retained employer evidence, resolve a company match, or dismiss an incorrect role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmploymentImportRequest' }
+      responses:
+        '200':
+          description: Applied employment evidence and unresolved items.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentImportReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /employment-import/backfill:
+    post:
+      tags: [Contacts]
+      operationId: backfillEmploymentImport
+      x-agent-access: human-only
+      summary: Administratively preview or apply one resumable batch of retained employment evidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apply: { type: boolean, default: false }
+                after: { type: string, format: uuid }
+                limit: { type: integer, minimum: 1, maximum: 25, default: 10 }
+      responses:
+        '200':
+          description: Batch outcomes; pass next_cursor to continue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentBackfillReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts:
     get:
       tags: [Contacts]
@@ -5639,6 +5700,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateTaskRequest' }
       responses:
+        '200':
+          description: The existing source-linked reminder, including an explicitly restored reminder.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
         '201':
           description: The task, as an activity.
           headers:
@@ -20382,6 +20448,11 @@ paths:
         deterministically and `generated_by` says which wrote it. There is no blank
         AI card and no spinner that never resolves.
       parameters:
+        - name: facts_only
+          in: query
+          required: false
+          schema: { type: boolean }
+          description: Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh.
         - name: refresh
           in: query
           required: false
@@ -24548,6 +24619,9 @@ components:
         `display_status` says so — the row stays, the words do not.
       required: [activity_id, occurred_at, display_status, attachment_count, move, version]
       properties:
+        request_has_reminder:
+          type: boolean
+          description: An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
         activity_id: { type: string, format: uuid }
         subject:
           type: [string, 'null']
@@ -29312,11 +29386,59 @@ components:
           type: [string, 'null']
           description: Why, in the human's own words, when they gave a reason.
 
+    EmploymentImportRequest:
+      type: object
+      properties:
+        resolve_group: { type: boolean, default: false, description: Apply the company choice to unresolved roles at the same employer; date and status corrections affect only the selected key. }
+        started: { type: string, description: Corrected start as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. }
+        ended: { type: string, description: Corrected end as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. }
+        action: { type: string, enum: [apply, resolve, dismiss], default: apply }
+        key: { type: string, description: Episode key returned by the preview; required for resolve or dismiss. }
+        company_id: { type: string, format: uuid, description: Existing company explicitly selected by the user. }
+        domain: { type: string, description: Company website explicitly confirmed by the user; creates a missing company only after identity resolution. }
+        employment_status: { type: string, enum: [current, former, unknown], description: Explicit user correction of this episode status. }
+
+    EmploymentImportItem:
+      type: object
+      required: [key, provider, company_name, role, employment_status, state]
+      properties:
+        key: { type: string }
+        provider: { type: string }
+        company_name: { type: string }
+        role: { type: string }
+        domain: { type: string }
+        started: { type: string, description: 'Provider date at its original precision, YYYY-MM or YYYY-MM-DD.' }
+        ended: { type: string, description: 'Provider date at its original precision, YYYY-MM or YYYY-MM-DD.' }
+        employment_status: { type: string, enum: [current, former, unknown] }
+        state: { type: string, enum: [pending, linked, needs_match, needs_review, dismissed] }
+        company_id: { type: string, format: uuid }
+        relationship_id: { type: string, format: uuid }
+        retrieved_at: { type: string, format: date-time }
+        research_state: { type: string, description: Current company research state or a reason it cannot yet run. }
+
+    EmploymentImportReport:
+      type: object
+      required: [contact_id, items]
+      properties:
+        warnings: { type: array, items: { type: string }, description: Retained evidence that requires administrator review. }
+        contact_id: { type: string, format: uuid }
+        items: { type: array, items: { $ref: '#/components/schemas/EmploymentImportItem' } }
+
+    EmploymentBackfillReport:
+      type: object
+      required: [reports, applied, has_more]
+      properties:
+        reports: { type: array, items: { $ref: '#/components/schemas/EmploymentImportReport' } }
+        applied: { type: boolean }
+        has_more: { type: boolean }
+        next_cursor: { type: string, format: uuid }
+
     Contact360Employment:
       type: object
       description: One employment edge, current primary first.
       required: [relationship_id, company_id, is_current_primary]
       properties:
+        version: { $ref: '#/components/schemas/RowVersion' }
         relationship_id: { type: string, format: uuid }
         company_id: { type: string, format: uuid }
         company_name: { type: [string, 'null'] }
@@ -29324,8 +29446,11 @@ components:
           type: [string, 'null']
           description: The title as the edge records it, which may differ from the contact's own title field.
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date-time }
-        ended_at: { type: [string, 'null'], format: date-time, description: Null means ongoing. A former employment keeps its row — history is never overwritten. }
+        ended_at: { type: [string, 'null'], format: date-time, description: Missing date; consult employment_status. Historical roles retain their own rows. }
 
     Contact360DealRole:
       type: object
@@ -31918,8 +32043,11 @@ components:
             which of the three to do with them, so the server refuses it. Every
             other kind keeps free text.
         is_current_primary: { type: boolean, default: false, description: Employment — the one current primary employer (≤1 per contact). }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
-        ended_at: { type: [string, 'null'], format: date, description: Null = current/ongoing. }
+        ended_at: { type: [string, 'null'], format: date, description: Missing date; employment_status distinguishes former and unknown from ongoing. }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -31949,6 +32077,9 @@ components:
         # primary — so declaring a default would tell every generated client to
         # materialize `false` and state a decision its caller never made.
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
         ended_at: { type: [string, 'null'], format: date }
         source: { type: string }
@@ -31956,8 +32087,13 @@ components:
     UpdateRelationshipRequest:
       type: object
       properties:
+        clear_started_at: { type: boolean, description: Remove an incorrect start date and its precision. }
+        clear_ended_at: { type: boolean, description: Remove an incorrect end date and its precision. }
         role: { type: [string, 'null'] }
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
         ended_at: { type: [string, 'null'], format: date }
 
@@ -31969,6 +32105,19 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Deal ----
+    DealLastEmail:
+      type: object
+      description: The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+      required: [occurred_at, direction]
+      properties:
+        occurred_at: { type: string, format: date-time }
+        direction:
+          type: [string, 'null']
+          enum: [inbound, outbound, null]
+          description: >-
+            Which way the mail went. Null on a logged email that named no direction,
+            which is a fact about how it was captured rather than about the exchange.
+
     Deal:
       type: object
       description: A deal. Mirrors the `deal` table.
@@ -32083,6 +32232,19 @@ components:
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
         stalled: { type: boolean, readOnly: true, description: Derived — no activity past the threshold (absolute duration). }
+        last_email:
+          allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
+          nullable: true
+          readOnly: true
+          description: >-
+            The newest email on this deal that the whole workspace may see — what a board
+            card states as "last mail, N days ago" beside the deal, so a rep reads the
+            silence without opening every card. Null on a deal nobody has mailed about.
+            Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows
+            only, and never the product's own system writing — a message limited to its
+            participants must not move a date every colleague reads, and a mail the
+            installation sent itself is not the buyer engaging. The rows a reader may
+            discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         raw: { type: [object, 'null'], additionalProperties: true }
@@ -33937,6 +34099,17 @@ components:
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        request_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            Accept this inbound request for the authenticated human, with activity read and create
+            authority. Task only; agents cannot accept and assignee_id must name the caller
+            when provided. The server verifies source access and copies its links instead
+            of caller-supplied links. Subject and body are honored on creation. Retries return
+            the same personal reminder without changing it. Explicit acceptance can restore
+            an archived unfinished reminder with update authority. Completion settles the
+            source request; automatic reconciliation never restores a reminder.
         subject: { type: string, minLength: 1, description: 'What has to be done, as one line.' }
         body: { type: [string, 'null'], description: 'Detail, if one line is not enough.' }
         due_at: { type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.' }
@@ -33956,6 +34129,17 @@ components:
       type: object
       required: [kind, source]
       properties:
+        request_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            Accept this inbound request for the authenticated human, with activity read and create
+            authority. Task only; agents cannot accept and assignee_id must name the caller
+            when provided. The server verifies source access and copies its links instead
+            of caller-supplied links. Subject and body are honored on creation. Retries return
+            the same personal reminder without changing it. Explicit acceptance can restore
+            an archived unfinished reminder with update authority. Completion settles the
+            source request; automatic reconciliation never restores a reminder.
         kind:
           type: string
           enum: [email, call, meeting, note, task, message]

@@ -68,99 +68,35 @@ func TestABookedMeetingOutranksEverythingElse(t *testing.T) {
 	}
 }
 
-func TestAnUnansweredInboundMailBecomesADraft(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
+func TestAnOutstandingRequestOffersAnEvidenceLinkedTask(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
 	mv := decideMove(f)
-	if mv.Action != ActionDraftEmail {
-		t.Fatalf("action = %q, want a drafted reply", mv.Action)
+	if mv.Action != ActionCreateTask {
+		t.Fatalf("action = %q, want a task accepting the request", mv.Action)
 	}
-	if mv.Arguments == nil || (*mv.Arguments)["activity_id"] == nil {
-		t.Fatalf("the draft names no mail to answer: %+v", mv.Arguments)
-	}
-}
-
-func TestAnAnsweredInboundMailIsNotStillWaiting(t *testing.T) {
-	outbound := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2))
-	dir := crmcontracts.ActivityDirectionOutbound
-	outbound.Direction = &dir
-	// The timeline is newest first, so the reply sits above the mail it answers.
-	f := facts{
-		deal: openDeal(), now: testNow,
-		timeline: []crmcontracts.Activity{outbound, inboundMail(testNow.AddDate(0, 0, -5))},
-	}
-	if mv := decideMove(f); mv.Action == ActionDraftEmail {
-		t.Fatal("a mail that was already answered was offered as unanswered")
+	if mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] == nil {
+		t.Fatalf("the task names no source request: %+v", mv.Arguments)
 	}
 }
 
-// A reply this reader may not READ is still a reply. Skipping it would walk
-// past it to the inbound behind it and offer to answer a mail somebody has
-// already answered — the card would send a rep to write a duplicate.
-func TestAWithheldReplyStillCountsAsAnAnswer(t *testing.T) {
-	outbound := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -2))
-	dir := crmcontracts.ActivityDirectionOutbound
-	outbound.Direction = &dir
-	state := crmcontracts.ActivityContentStateWithheld
-	outbound.ContentState = &state
-	outbound.Subject = nil
-	f := facts{
-		deal: openDeal(), now: testNow,
-		timeline: []crmcontracts.Activity{outbound, inboundMail(testNow.AddDate(0, 0, -5))},
-	}
-	if _, ok := unansweredInbound(f); ok {
-		t.Fatal("a withheld reply was ignored, so an answered mail read as unanswered")
-	}
-}
-
-// The card's move and the deal page's email box both answer "is an answer
-// owed?", and they must never answer it differently: a rep told "draft the
-// reply" by one and offered "send an email" by the other cannot tell which is
-// right. This fails if either stops reading unansweredInbound.
 func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
-	cases := map[string][]crmcontracts.Activity{
-		"an unanswered mail": {inboundMail(testNow.AddDate(0, 0, -3))},
-		"nothing logged":     {},
-		// The mail is NOT the newest row. Without this case both readings
-		// coincide on every input and the comparison can never fail — which is
-		// exactly how the first version of this test passed against a reply_to
-		// that named the wrong record.
-		"a newer note sits above the mail": {
-			act(crmcontracts.ActivityKindNote, testNow.AddDate(0, 0, -1)),
-			inboundMail(testNow.AddDate(0, 0, -4)),
-		},
-		"only an outbound": func() []crmcontracts.Activity {
-			out := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -1))
-			dir := crmcontracts.ActivityDirectionOutbound
-			out.Direction = &dir
-			return []crmcontracts.Activity{out}
-		}(),
-	}
-	for name, timeline := range cases {
-		t.Run(name, func(t *testing.T) {
-			f := facts{deal: openDeal(), now: testNow, timeline: timeline}
-			card := composeDeterministic(f, decideMove(f))
+	for _, status := range []crmcontracts.DealStatus{crmcontracts.DealStatusOpen, crmcontracts.DealStatusWon, crmcontracts.DealStatusLost} {
+		t.Run(string(status), func(t *testing.T) {
+			request := inboundMail(testNow.AddDate(0, 0, -200))
+			deal := openDeal()
+			deal.Status = status
+			f := facts{deal: deal, now: testNow, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, requests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
 			mv := decideMove(f)
-
-			// What the button would open, and what the box would open.
-			var fromMove string
-			if mv.Action == ActionDraftEmail && mv.Arguments != nil {
-				if id, ok := (*mv.Arguments)["activity_id"].(openapi_types.UUID); ok {
-					fromMove = id.String()
-				}
+			card := composeDeterministic(f, mv)
+			if mv.Action != ActionCreateTask || mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] != request.Id || card.ReplyTo == nil || *card.ReplyTo != request.Id {
+				t.Fatalf("request was lost or its two actions disagree: move=%+v card=%+v", mv, card)
 			}
-			var fromBox string
-			if card.ReplyTo != nil {
-				fromBox = card.ReplyTo.String()
+			in := project(f, mv)
+			if !citableIDs(in)[request.Id.String()] {
+				t.Fatal("old request lost its evidence outside the timeline")
 			}
-			// A draft_email move ALWAYS names a mail. Asserting that here is
-			// what stops the comparison below going vacuous: read the operand
-			// out with the wrong type and fromMove stays empty, the comparison
-			// is skipped, and the test passes having compared nothing.
-			if mv.Action == ActionDraftEmail && fromMove == "" {
-				t.Fatalf("the move offers a draft but names no mail: %#v", *mv.Arguments)
-			}
-			if fromMove != "" && fromMove != fromBox {
-				t.Fatalf("the move answers %q and the email box answers %q", fromMove, fromBox)
+			if _, ok := citedRecord(f, request.Id.String()); !ok {
+				t.Fatal("old request cannot be cited")
 			}
 		})
 	}
@@ -224,8 +160,8 @@ func TestAWithheldRowIsNeverNamedAsTheOperand(t *testing.T) {
 	state := crmcontracts.ActivityContentStateWithheld
 	withheldMail.ContentState = &state
 	withheldMail.Subject = nil
-	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{withheldMail}}
-	if mv := decideMove(f); mv.Action == ActionDraftEmail {
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{withheldMail}}
+	if _, ok := unansweredInbound(f); ok {
 		t.Fatal("a withheld mail was offered as the one to answer")
 	}
 }
@@ -359,5 +295,34 @@ func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
 	}
 	if !bytes.Contains(encoded, []byte(`"arguments":{}`)) {
 		t.Errorf("a move with no operand did not ship an empty object: %s", encoded)
+	}
+}
+
+func TestRemindersAndNotesDoNotCountAsCustomerContact(t *testing.T) {
+	request := inboundMail(testNow.AddDate(0, 0, -200))
+	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{
+		act(crmcontracts.ActivityKindTask, testNow), act(crmcontracts.ActivityKindNote, testNow), request,
+	}}
+	last, ok := lastContact(f)
+	if !ok || last.Id != request.Id {
+		t.Fatal("internal work reset the last customer contact")
+	}
+}
+
+func TestACoveredRequestDoesNotOfferAnotherReadersPrivateTask(t *testing.T) {
+	request := inboundMail(testNow.Add(-time.Hour))
+	covered := true
+	request.EmailSummary = &crmcontracts.EmailSummary{RequestHasReminder: &covered}
+	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{request}}
+	mv := decideMove(f)
+	if mv.Action != ActionDraftEmail {
+		t.Fatalf("covered request offered %s", mv.Action)
+	}
+	if (*mv.Arguments)["activity_id"] != request.Id {
+		t.Fatal("covered request must name only its readable source")
+	}
+	card := composeDeterministic(f, mv)
+	if card.ReplyTo == nil || *card.ReplyTo != request.Id {
+		t.Fatal("source reply remains unavailable")
 	}
 }

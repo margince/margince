@@ -341,3 +341,30 @@ describe("Deal360's brief discloses the machine that wrote it", () => {
     expect(brief.queryByText("Written by Margince")).toBeNull();
   });
 });
+
+it("background reads explicitly refuse model work", async () => {
+  serve({});
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider>
+        <DealStatusCardPanel dealId={DEAL} dealName="Scheduling" />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("They asked for slots.");
+  const calls = vi.mocked(globalThis.fetch).mock.calls;
+  const status = calls
+    .map(
+      ([input]) =>
+        new URL(
+          input instanceof Request ? input.url : String(input),
+          "http://localhost",
+        ),
+    )
+    .find((url) => url.pathname.endsWith("/status"));
+  expect(status?.searchParams.get("facts_only")).toBe("true");
+  client.clear();
+});

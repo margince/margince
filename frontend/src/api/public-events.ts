@@ -815,8 +815,10 @@ export interface components {
              */
             entity_id: string;
         };
-        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
+        /** @description activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /** @description True when explicit request acceptance restores an archived unfinished reminder. */
+            restored?: boolean;
             /** @description The activity's new subject (absent when this update did not touch it). */
             subject?: string;
             /** @description Whether the body was touched (a presence flag, not the content — bodies can be large and are never echoed onto the wire). */

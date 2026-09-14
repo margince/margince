@@ -62,6 +62,7 @@ func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRow
 		summary.Delivery = contractDelivery(state.Delivery, known && state.Delivery.Status != "")
 		if known {
 			summary.Move = state.Move
+			summary.RequestHasReminder = &state.RequestHasReminder
 		}
 	}
 }

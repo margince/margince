@@ -8,7 +8,7 @@
 // the datasource provider, flat per ADR-0054 §3.
 //
 // Tables owned: contact, contact_email, contact_phone, contact_consent,
-// contact_profile_field, company, company_domain, relationship,
+// contact_profile_field, company, company_domain, relationship, provider_employment_resolution,
 // partner, lead, lead_score_history, lead_manual_signal, lead_source,
 // lead_disqualify_reason, contact_signature_enrich_state,
 // contact_provider_claim, provider_applied_field, company_vat_check,

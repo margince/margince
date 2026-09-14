@@ -13,7 +13,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
 import { SurfaceState } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
-import { formatDayMonth } from "../format/format";
+import { formatDateAbbrev } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { AddEmploymentModal } from "./addemploymentmodal";
 import { problemMessageOf, throwProblem } from "./common";
@@ -24,6 +24,10 @@ import {
   withheldSections,
 } from "./contactrail";
 import { stillHeld, today } from "./employmentcurrency";
+import { EmploymentEdit } from "./employmentedit";
+import { ImportedEmploymentHistory } from "./employmentimport";
+import { useEmploymentPages } from "./employmentpages";
+import { sameEditValue, saveIndependentEdit } from "./independentedit";
 
 // --- Employers ---------------------------------------------------------
 
@@ -48,83 +52,88 @@ export async function searchCompanyCandidates(
   }));
 }
 
-// Contact360Employment is the 360's own projection of an employment edge — it
-// carries `relationship_id` but not the relationship row's own `version`, and
-// there is no `GET /relationships/{id}` in the contract to re-read one by id
-// (relationships.tsx's RelationshipsTab keeps the same note, for the same
-// reason). The one honest way to get an If-Match for a row this rail only
-// knows by id is to re-read it through the list endpoint, scoped tight enough
-// (this contact, this company, this kind) that it can only answer with the one
-// edge this row is already showing.
-async function fetchEmploymentVersion(
-  employment: Employment,
-  contactId: string,
-): Promise<number | undefined> {
-  const { data, error } = await api.GET("/relationships", {
-    params: {
-      query: {
-        contact_id: contactId,
-        company_id: employment.company_id,
-        kind: "employment",
-      },
-    },
-  });
-  if (error) {
-    throwProblem(error);
-  }
-  return data.data.find((rel) => rel.id === employment.relationship_id)
-    ?.version;
-}
-
-// The one write path for everything on an employment row that is neither its
-// creation nor its removal: the role InlineText commits below and the
-// "mark as ended" verb both patch through here, so a role edit and an ended
-// date answer the same version-skew and permission failures the same way.
-//
-// An unresolved version is refused here rather than sent unpinned: a write with
-// no precondition writes straight over whatever changed underneath it instead of
-// failing loud with a 409. The list scoping fetchEmploymentVersion uses can
-// legitimately come back without this row (a narrower read scope, a paged
-// response, an edge whose kind changed), and this rail is the one place that
-// knows to say so — hence its own sentence for the reader rather than the shared
-// refusal, which can only report that the write did not happen.
-async function patchEmployment(
+// Re-read through the scoped list endpoint when a concurrent edit requires a
+// comparison; the relationship contract has no single-record GET.
+export async function patchEmployment(
   employment: Employment,
   contactId: string,
   body: UpdateRelationshipRequest,
   t: ReturnType<typeof useT>,
 ): Promise<void> {
-  const version = await fetchEmploymentVersion(employment, contactId);
-  if (version === undefined) {
-    throwProblem({
-      detail: t("contact.rail.employmentVersionUnresolved"),
+  const read = async () => {
+    const { data, error } = await api.GET("/relationships", {
+      params: {
+        query: {
+          contact_id: contactId,
+          company_id: employment.company_id,
+          kind: "employment",
+          limit: 200,
+        },
+      },
     });
+    if (error) throwProblem(error);
+    const row = data.data.find((row) => row.id === employment.relationship_id);
+    if (!row)
+      throwProblem({ detail: t("contact.rail.employmentVersionUnresolved") });
+    return row;
+  };
+  const original = {
+    ...employment,
+    id: employment.relationship_id,
+    started_at: employment.started_at?.slice(0, 10),
+    ended_at: employment.ended_at?.slice(0, 10),
+  };
+  // Older snapshots may lack a version. Compare visible fields before using
+  // their fresh version; never pin an unseen change as the user's baseline.
+  if (original.version === undefined) {
+    const fresh = await read();
+    for (const key of [
+      "role",
+      "started_at",
+      "ended_at",
+      "employment_status",
+    ] as const) {
+      if (!sameEditValue(original[key], fresh[key]))
+        throwProblem({ code: "version_skew" });
+    }
+    original.version = fresh.version;
   }
-  const { error } = await api.PATCH("/relationships/{id}", {
-    params: {
-      path: { id: employment.relationship_id },
-      ...ifMatch(version),
+  await saveIndependentEdit({
+    opened: { id: original.id, original },
+    patch: body,
+    groups: [
+      ["started_at", "started_precision", "clear_started_at"],
+      [
+        "ended_at",
+        "ended_precision",
+        "clear_ended_at",
+        "employment_status",
+        "is_current_primary",
+      ],
+    ],
+    read,
+    write: async (patch, version) => {
+      const { data, error } = await api.PATCH("/relationships/{id}", {
+        params: { path: { id: original.id }, ...ifMatch(version) },
+        body: patch,
+      });
+      if (error) throwProblem(error);
+      return data;
     },
-    body,
   });
-  if (error) {
-    throwProblem(error);
-  }
 }
 
-// The four writes the Companies section makes, sharing one invalidation:
-// contact360 is what this section itself reads its rows from, and contactBrief
-// comes with it because the brief's first sentence names the employer. The
-// role InlineText below goes through `update` rather than calling
-// patchEmployment on its own, so every write this section makes — role,
-// ended date, create, remove — ends in the same refetch and the rail never
-// shows a saved edit next to its own stale value.
+// Refresh the record, paginated roles and brief together after any employment
+// edit so the saved value and employer summary agree.
 function useEmploymentActions(contactId: string) {
   const t = useT();
   const queryClient = useQueryClient();
   const invalidate = async () => {
     await queryClient.invalidateQueries({
       queryKey: ["contact360", contactId],
+    });
+    await queryClient.invalidateQueries({
+      queryKey: ["contactEmployments", contactId],
     });
     await queryClient.invalidateQueries({
       queryKey: ["contactBrief", contactId],
@@ -166,7 +175,7 @@ function useEmploymentActions(contactId: string) {
     },
     onSuccess: invalidate,
   });
-  return { create, end, update, remove };
+  return { create, end, update, remove, invalidate };
 }
 
 export type EmploymentActions = ReturnType<typeof useEmploymentActions>;
@@ -186,12 +195,27 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // cannot edit which company they work at either.
   const canEdit = useCanWriteRecord("contact", contact) && !readOnlyReason;
   const actions = useEmploymentActions(contact.id);
+  const more = useEmploymentPages(view);
+  const allEmployments = [
+    ...new Map(
+      [
+        ...(more.data?.pages.flatMap((page) => page.roles) ?? []),
+        ...(view.employments?.data ?? []),
+      ].map((role) => [role.relationship_id, role]),
+    ).values(),
+  ];
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Employment | null>(null);
   const [removing, setRemoving] = useState<Employment | null>(null);
-  const employments = [...(view.employments?.data ?? [])].sort(
+  const primaryCompany = allEmployments.find(
+    (e) => e.is_current_primary && stillHeld(e),
+  )?.company_id;
+  const employments = [...allEmployments].sort(
     (a, b) =>
-      Number(b.is_current_primary && stillHeld(b)) -
-      Number(a.is_current_primary && stillHeld(a)),
+      Number(b.company_id === primaryCompany) -
+        Number(a.company_id === primaryCompany) ||
+      stable(a.company_id, b.company_id) ||
+      stable(b.started_at ?? "", a.started_at ?? ""),
   );
   // Every company this contact already has a live edge to — the 360 projection
   // drops an edge the moment it is removed, so this list IS the live set,
@@ -236,17 +260,51 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
           )}
           emptyLabel={t("contact.rail.noEmployment")}
         >
-          {employments.map((employment) => (
+          {employments.map((employment, index) => (
             <EmploymentRow
               key={employment.relationship_id}
+              showCompany={
+                index === 0 ||
+                employments[index - 1]?.company_id !== employment.company_id
+              }
               employment={employment}
               canEdit={canEdit}
               readOnlyReason={readOnlyReason}
               actions={actions}
               onRemove={() => setRemoving(employment)}
+              onEdit={() => setEditing(employment)}
             />
           ))}
         </SurfaceState>
+        {more.isError && <p role="alert">{problemMessageOf(more.error, t)}</p>}
+        {more.hasNextPage && (
+          <Button
+            small
+            pending={more.isFetchingNextPage}
+            onClick={() => more.fetchNextPage()}
+          >
+            {t("employment.more")}
+          </Button>
+        )}
+        {!withheldSections(view).employments && (
+          <ImportedEmploymentHistory
+            key={contact.id}
+            view={{
+              ...view,
+              employments: { data: employments, page: { has_more: false } },
+            }}
+            canEdit={canEdit}
+          />
+        )}
+        {editing && (
+          <EmploymentEdit
+            key={contact.id + editing.relationship_id}
+            employment={editing}
+            contactId={contact.id}
+            onClose={() => setEditing(null)}
+            onSaved={actions.invalidate}
+          />
+        )}
         <AddEmploymentModal
           open={adding}
           onClose={() => setAdding(false)}
@@ -305,26 +363,26 @@ function EmploymentRow({
   readOnlyReason,
   actions,
   onRemove,
+  onEdit,
+  showCompany = true,
 }: Readonly<{
   employment: Employment;
+  showCompany?: boolean;
   canEdit: boolean;
   readOnlyReason: string | undefined;
   actions: EmploymentActions;
   onRemove: () => void;
+  onEdit: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const detail = employmentDetail(employment, t, locale, recordZone);
+  const zone = useRecordZone();
+  const detail = employmentDetail(employment, t, locale, zone);
   const ending =
     actions.end.isPending &&
     actions.end.variables?.relationship_id === employment.relationship_id;
-  // isPending and isError can never both hold at once (one shared mutation
-  // status behind both), so a failure that only rendered while "ending" was
-  // also true could never actually draw: pending clears before error sets.
-  // This row's own failure is instead keyed on the same identifier ending
-  // uses, just checked against isError rather than isPending, so the row
-  // that failed keeps its message once the mutation has settled.
+  // A settled mutation is no longer pending. Match errors by relationship
+  // so only the failed row keeps its message after the mutation settles.
   const endFailed =
     actions.end.isError &&
     actions.end.variables?.relationship_id === employment.relationship_id;
@@ -332,24 +390,34 @@ function EmploymentRow({
     <div className="pe-employment">
       <span className="pe-employment-body">
         <span className="pe-employment-company">
-          {employment.company_name ? (
-            <button
-              type="button"
-              className="pe-meta-link"
-              onClick={() =>
-                navigate({
-                  screen: "companies",
-                  id: employment.company_id,
-                })
-              }
-            >
-              {employment.company_name}
-            </button>
-          ) : (
-            <span className="inlinetext">{t("field.unset")}</span>
-          )}
-          {employment.is_current_primary && stillHeld(employment) && (
+          {showCompany &&
+            (employment.company_name ? (
+              <button
+                type="button"
+                className="pe-meta-link"
+                onClick={() =>
+                  navigate({
+                    screen: "companies",
+                    id: employment.company_id,
+                  })
+                }
+              >
+                {employment.company_name}
+              </button>
+            ) : (
+              <span className="inlinetext">{t("field.unset")}</span>
+            ))}
+          {stillHeld(employment) && (
             <span className="pe-rail-value-good">{t("rel.current")}</span>
+          )}
+          {!stillHeld(employment) && (
+            <span className="t-caption">
+              {t(
+                employment.employment_status === "unknown"
+                  ? "employment.status.unknown"
+                  : "employment.status.former",
+              )}
+            </span>
           )}
         </span>
         <span className="pe-employment-role">
@@ -374,7 +442,10 @@ function EmploymentRow({
       {canEdit && (
         <span className="pe-employment-actions">
           <OverflowMenu label={t("record.moreActions")}>
-            {!employment.ended_at && (
+            <Button small onClick={onEdit}>
+              {t("employment.edit")}
+            </Button>
+            {stillHeld(employment) && (
               <Button
                 small
                 disabled={ending}
@@ -401,19 +472,18 @@ function employmentDetail(
   employment: Employment,
   t: ReturnType<typeof useT>,
   locale: Locale,
-  recordZone: string,
+  zone: string,
 ): string {
-  // The record's zone. These arrive as instants (`format: date-time`), but they
-  // are WRITTEN from a date picker, so what is stored is midnight on the day a
-  // human chose and the time carries no information. Rendered in a reader's own
-  // zone west of UTC that midnight falls on the previous day, and two
-  // colleagues would quote different start dates for one employment. The
-  // record's zone is never behind UTC, so it renders the day that was picked.
+  // Career dates keep the year and the precision actually recorded.
   const start = employment.started_at
-    ? formatDayMonth(employment.started_at, locale, recordZone)
+    ? employment.started_precision === "month"
+      ? employment.started_at.slice(0, 7)
+      : formatDateAbbrev(employment.started_at.slice(0, 10), locale, zone)
     : undefined;
   const end = employment.ended_at
-    ? formatDayMonth(employment.ended_at, locale, recordZone)
+    ? employment.ended_precision === "month"
+      ? employment.ended_at.slice(0, 7)
+      : formatDateAbbrev(employment.ended_at.slice(0, 10), locale, zone)
     : undefined;
   if (start && end) {
     return `${start} – ${end}`;
@@ -422,7 +492,7 @@ function employmentDetail(
     return t("rel.endedOn", { when: end });
   }
   if (start) {
-    return `${start} – ${t("rel.current")}`;
+    return `${start} – ${t(stillHeld(employment) ? "employment.status.current" : employment.employment_status === "unknown" ? "employment.status.unknown" : "employment.status.former")}`;
   }
   return "";
 }
