@@ -77,6 +77,16 @@ func sarCommunicationSections(
 		      OR lower(address) = ANY($3)`,
 			[]any{identities, leads, lowerAll(emails)},
 		},
+		// A rep vouching that a machine refusal may be overruled for this
+		// subject. No address arm, unlike the suppression above: an override
+		// carries no address column, so it is reached by the subject's own ids
+		// alone.
+		{
+			&pkg.CommunicationOverrides, `SELECT category, reason, decided_by_level, recorded_at, revoked_at
+		   FROM communication_override
+		   WHERE contact_id = ANY($1) OR lead_id = ANY($2)`,
+			[]any{identities, leads},
+		},
 		// REACHED THROUGH THE REVIEW, because an instruction names no subject
 		// directly: it answers a refusal, and the refusal is what named the
 		// recipients. The explanation is exported as stored, which for an

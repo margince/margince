@@ -202,6 +202,13 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
 	"internal/modules/privacy/retentionactions.go",
+	// The lead half of the same sweep — anonymizeLead and the communication
+	// record it clears (communication_basis, communication_suppression,
+	// communication_override, communication_decision). Split into its own file
+	// for the reason retentionactions.go's own header gives for the contact
+	// arm; absent from this list, a column this file stops destroying would
+	// pass here with nothing to notice.
+	"internal/modules/privacy/retention_leadrecord.go",
 	// Everything an activity's TEXT leaves behind, which every arm destroys
 	// through one function. It arrived here when that function was extracted,
 	// and its absence was the regression this list's header describes twice
