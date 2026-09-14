@@ -54,6 +54,7 @@
 }
 
 .board-doc {
+  position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--borderSubtle);
@@ -134,8 +135,57 @@
 }
 
 .board-doc-title {
+  margin: 0;
   font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
+}
+
+/* The tile's door, stretched over the whole tile the way a deal card's name
+   is: the text stays where the title belongs, the ::after is what makes the
+   paper clickable. A button rather than a link because what opens is a
+   dialog over this page, not another page. */
+.board-doc-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.board-doc-open::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.board-doc-open:focus-visible {
+  outline: none;
+}
+
+/* The ring goes on the tile, because the tile is what the press opens. */
+.board-doc:has(.board-doc-open:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Everything with a press of its own sits ABOVE the stretched door, which is
+   the only reason those presses can reach it at all. The unanswered mark is
+   already placed on the stage and only needs the layer. */
+.board-doc-status,
+.board-doc-verbs,
+.board-doc-threads,
+.board-doc > .thread-composer,
+.board-doc > .card-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.board-doc-unanswered {
+  z-index: 1;
 }
 
 .board-doc-meta {
@@ -191,6 +241,11 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+}
+
+.board-doc-threads-head svg {
+  flex: none;
+  color: var(--textTertiary);
 }
 
 .board-threads {
