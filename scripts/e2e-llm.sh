@@ -141,8 +141,21 @@ echo "==> model $E2E_LLM_MODEL"
 echo "==> credential $CREDENTIAL"
 echo "==> judge $E2E_LLM_JUDGE"
 
+# The seed's stdout is its TRAIL — one line per fixture, saying which it wrote
+# and which it found already there. Discarding it outright cost a diagnosis: a
+# seed that stopped on a 422 left only its one-line stderr in the log, with no
+# way to tell which of ninety-odd fixtures it had reached. It is kept out of a
+# green run's log, which is the only thing the redirect was ever buying, and
+# replayed when the seed stops — the run is over either way, and only one of the
+# two says where.
 seed_everything() {
-  (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >/dev/null)
+  local trail="$ROOT/e2e/llm/records/seed.log"
+  mkdir -p "$(dirname "$trail")"
+  if ! (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >"$trail"); then
+    echo "==> the seed stopped; its trail to that point:" >&2
+    cat "$trail" >&2
+    return 1
+  fi
 }
 seed_everything
 
