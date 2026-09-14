@@ -216,24 +216,23 @@ it("opens another message's full text in place without changing the reply target
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByDisplayValue("Re: Pricing");
   const delivery = screen.getByRole("listitem", { name: /Re: Delivery/ });
-  const fold = delivery.querySelector("details");
-  if (!fold) {
-    throw new Error("the other message draws no fold for its text");
-  }
-  expect(fold.open).toBe(false);
-  fireEvent.click(within(delivery).getByText("Message text"));
-  expect(fold.open).toBe(true);
-  expect(within(fold).getByText(/Full text of Re: Delivery\./)).toBeTruthy();
   expect(
-    within(fold).getByText(/A second paragraph beyond the preview\./),
+    within(delivery).queryByText(/Full text of Re: Delivery\./),
+  ).toBeNull();
+  fireEvent.click(within(delivery).getByRole("button", { name: "Read it" }));
+  expect(
+    within(delivery).getByText(/Full text of Re: Delivery\./),
+  ).toBeTruthy();
+  expect(
+    within(delivery).getByText(/A second paragraph beyond the preview\./),
   ).toBeTruthy();
   expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
 
-  // The envelope and the attachments are the full drawer's, opened from the
-  // foot of the text: a second dialog over the composer, whose draft stays.
+  // The envelope and the attachments are the full drawer's, opened beside the
+  // fold-back: a second dialog over the composer, whose draft stays.
   expect(screen.getAllByRole("dialog")).toHaveLength(1);
   fireEvent.click(
-    within(fold).getByRole("button", { name: "Read full email" }),
+    within(delivery).getByRole("button", { name: "Read full email" }),
   );
   await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
   expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();

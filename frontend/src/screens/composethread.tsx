@@ -6,7 +6,7 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { Button, Disclosure, PendingBody } from "../design-system/atoms";
+import { Button, PendingBody } from "../design-system/atoms";
 import { TimelineRow } from "../design-system/composed";
 import { EmailDetail } from "../design-system/emaildetail";
 import { EmailEntry } from "../design-system/emailentry";
@@ -155,6 +155,10 @@ export function ThreadPane({
   const { locale } = useLocale();
   const zone = viewerZone();
   const [reading, setReading] = useState<string | null>(null);
+  // The one message whose words stand open under its row. One at a time, so
+  // the pane stays a list the reader scans with one message read in place,
+  // rather than a column of bodies the draft beside it has to compete with.
+  const [open, setOpen] = useState<string | null>(null);
   return (
     <section className="compose-thread" aria-labelledby="compose-thread-head">
       <div className="compose-thread-head">
@@ -164,7 +168,7 @@ export function ThreadPane({
         {onLeave && (
           <Button
             small
-            className="compose-thread-leave"
+            className="compose-textlink"
             onClick={onLeave}
             disabled={disabled}
           >
@@ -193,14 +197,16 @@ export function ThreadPane({
                     <TimelineRow key={entry.id} entry={entry} zone={zone} />
                   ));
                 }
+                const withheld =
+                  message.content_state === "withheld" ||
+                  message.email_summary.display_status === "withheld";
                 return (
                   <li
                     key={message.id}
                     className="compose-message"
                     aria-label={`${message.subject || t("email.noSubject")} · ${formatDateTime(message.occurred_at, locale, zone)}`}
                   >
-                    {message.content_state === "withheld" ||
-                    message.email_summary.display_status === "withheld" ? (
+                    {withheld ? (
                       <EmailEntry
                         summary={message.email_summary}
                         timestamp={formatDateTime(
@@ -223,38 +229,16 @@ export function ThreadPane({
                         disabled={disabled || !onSelect}
                       />
                     )}
-                    {/* The text folds open UNDER its row, one message at a
-                        time, so the reader re-reads the exchange without
-                        leaving the draft beside it. The row itself stays the
-                        control that picks what the reply answers: opening a
-                        message to read it must not retarget the draft. The
-                        full drawer remains the way to the envelope and the
-                        attachments, which the text alone does not carry, and
-                        it is offered at the foot of the text rather than on
-                        the summary's line: a verb beside the summary keeps
-                        its column for the whole open body, and in the
-                        drawer's narrow half that wrapped every sentence. */}
-                    {message.content_state !== "withheld" &&
-                      message.email_summary?.display_status !== "withheld" && (
-                        <div className="compose-message-fold">
-                          <Disclosure
-                            summary={t("compose.messageText")}
-                            name="compose-thread-message"
-                            className="compose-message-text"
-                          >
-                            <EmailText body={message.body ?? ""} />
-                            <p className="compose-message-read">
-                              <Button
-                                small
-                                variant="link"
-                                onClick={() => setReading(message.id)}
-                              >
-                                {t("compose.readEmail")}
-                              </Button>
-                            </p>
-                          </Disclosure>
-                        </div>
-                      )}
+                    {!withheld && (
+                      <MessageWords
+                        message={message}
+                        open={open === message.id}
+                        onToggle={() =>
+                          setOpen(open === message.id ? null : message.id)
+                        }
+                        onRead={() => setReading(message.id)}
+                      />
+                    )}
                   </li>
                 );
               })}
@@ -272,6 +256,54 @@ export function ThreadPane({
         />
       )}
     </section>
+  );
+}
+
+/**
+ * A message's words, read in place under its row.
+ *
+ * Set the way the timeline sets a body under its title: on the same ground,
+ * opened by one quiet link that then folds them back, with no chrome between
+ * the row and its text. The row itself stays the control that picks what the
+ * reply answers, so reading a message retargets nothing. The full drawer,
+ * offered beside "show less" once the words are open, remains the way to the
+ * envelope and the attachments the text alone does not carry.
+ */
+function MessageWords({
+  message,
+  open,
+  onToggle,
+  onRead,
+}: Readonly<{
+  message: Activity;
+  open: boolean;
+  onToggle: () => void;
+  onRead: () => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="compose-message-words">
+      {open && (
+        <div className="compose-message-body">
+          <EmailText body={message.body ?? ""} />
+        </div>
+      )}
+      <span className="compose-message-links">
+        <Button
+          small
+          className="compose-textlink"
+          aria-expanded={open}
+          onClick={onToggle}
+        >
+          {t(open ? "timeline.textLess" : "timeline.textMore")}
+        </Button>
+        {open && (
+          <Button small className="compose-textlink" onClick={onRead}>
+            {t("compose.readEmail")}
+          </Button>
+        )}
+      </span>
+    </div>
   );
 }
 

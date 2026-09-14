@@ -1,4 +1,9 @@
-import { LoaderCircle, MoreHorizontal, Search } from "lucide-react";
+import {
+  ChevronRight,
+  LoaderCircle,
+  MoreHorizontal,
+  Search,
+} from "lucide-react";
 import {
   type ComponentPropsWithRef,
   type CSSProperties,
@@ -21,10 +26,6 @@ import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Popover } from "./popover";
 import "./atoms.css";
-
-// Disclosure is furniture like the rest of this file and every caller reaches
-// it from here; its declaration stands in disclosure.tsx beside its own story.
-export { Disclosure } from "./disclosure";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
 // system, no gw-ui port; atoms are added as screens need them). Copy always
@@ -1943,6 +1944,57 @@ export function OverflowMenu({
         </div>,
         document.body,
       )}
+    </div>
+  );
+}
+
+export function Disclosure({
+  summary,
+  action,
+  open,
+  className,
+  children,
+}: Readonly<{
+  summary: ReactNode;
+  /**
+   * One verb belonging to this section, drawn on the summary's line and OUTSIDE
+   * the `<summary>` element.
+   *
+   * That is the whole point of the prop. A `<summary>` is itself the control
+   * that opens the section, so a button placed inside it is a control inside a
+   * control: axe fails it as `nested-interactive`, and a reader who presses the
+   * button also toggles the section under it. Two rail sections had done exactly
+   * that, and the verb they nested was the one that opens a form — so pressing
+   * "Add employment" collapsed the employments it was about to add to.
+   *
+   * It stays visible while the section is closed, which is what a section-level
+   * verb wants: "Add employment" is a thing to do whether or not the list is on
+   * screen.
+   */
+  action?: ReactNode;
+  open?: boolean;
+  className?: string;
+  children: ReactNode;
+}>) {
+  const details = (
+    <details
+      className={className ? `disclosure ${className}` : "disclosure"}
+      open={open}
+    >
+      <summary className="disclosure-summary">
+        <ChevronRight className="disclosure-chevron" aria-hidden="true" />
+        <span className="t-label">{summary}</span>
+      </summary>
+      <div className="disclosure-body">{children}</div>
+    </details>
+  );
+  if (!action) {
+    return details;
+  }
+  return (
+    <div className="disclosure-wrap">
+      {details}
+      <span className="disclosure-action">{action}</span>
     </div>
   );
 }

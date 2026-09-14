@@ -106,10 +106,11 @@
   gap: var(--space-3);
 }
 
-/* The design system's button, worn as a text link: the head's baseline row has
-   no room for a boxed control, and the way back is a small move rather than a
-   verb. Focus, refusal and pending semantics stay the shared ones. */
-.compose-thread-leave {
+/* The design system's button, worn as a text link — the timeline's own quiet
+   "read it" under a body, and the head's way back out of a conversation: a
+   small move rather than a verb, in a line with no room for a boxed control.
+   Focus, refusal and pending semantics stay the shared ones. */
+.compose-textlink {
   flex: none;
   min-inline-size: 0;
   block-size: auto;
@@ -119,7 +120,7 @@
   font-size: var(--fs-meta);
   color: var(--accentText);
 }
-.compose-thread-leave:hover {
+.compose-textlink:hover {
   background: none;
   text-decoration: underline;
 }
@@ -165,24 +166,21 @@
   color: var(--textMeta);
 }
 
-/* A message's text, folded under its row, inside the row's own inset. The atom
-   draws a rule above and a margin below for a section standing on its own in
-   a page; here the row is the section's head, so both go — kept, the rule
-   would draw a line through every message of the list. */
-.compose-message-fold {
+/* A message's words under its row, on the same ground and in the row's own
+   inset — the way the timeline sets a body under its title. No plate and no
+   rule between the two: a frame around the words would draw them as a second
+   card under the first, where they are the rest of the same message. */
+.compose-message-words {
   padding: 0 var(--space-3) var(--space-3);
 }
-.compose-message-text {
-  border-top: 0;
-  margin-bottom: 0;
-}
-.compose-message-read {
-  margin: var(--space-3) 0 0;
-}
-/* The words at the row's own size: the pane is the narrower column, and a
-   body at the reading size beside the form's fields read as a second form. */
-.compose-message-text > .disclosure-body {
+.compose-message-body {
   font-size: var(--fs-sm);
+  padding-block-end: var(--space-2);
+}
+.compose-message-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
 }
 
 .compose-thread-list > .compose-message {

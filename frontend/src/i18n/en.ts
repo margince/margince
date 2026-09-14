@@ -3794,7 +3794,6 @@ export const en = {
   "compose.reply": "Reply",
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
-  "compose.messageText": "Message text",
   "compose.readEmail": "Read full email",
   "compose.replyIntent": "Reply with…",
   "compose.newIntent": "What should this email achieve?",

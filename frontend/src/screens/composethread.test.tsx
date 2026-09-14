@@ -142,11 +142,11 @@ function message(
 }
 
 // Reading a message and answering it are two different moves on one row. The
-// row picks what the reply answers; the fold under it opens the text in place,
-// so re-reading the exchange neither retargets the draft nor covers it with a
-// second drawer. The folds share a name, which is what makes them an
-// accordion: the browser closes one as the next opens.
-it("folds each readable message's text open under its row without retargeting the reply", async () => {
+// row picks what the reply answers; the quiet link under it opens the words in
+// place, so re-reading the exchange neither retargets the draft nor covers it
+// with a second drawer. One message stands open at a time: opening the next
+// folds the last, so the pane stays the list it was.
+it("opens a readable message's words under its row without retargeting the reply", async () => {
   const user = userEvent.setup();
   const select = vi.fn();
   render(
@@ -168,41 +168,53 @@ it("folds each readable message's text open under its row without retargeting th
     </LocaleProvider>,
   );
 
+  const pricing = screen.getByRole("listitem", { name: /Re: Pricing/ });
   const delivery = screen.getByRole("listitem", { name: /Re: Delivery/ });
-  const fold = delivery.querySelector("details");
-  if (!fold) {
-    throw new Error("a readable message draws no fold for its text");
-  }
-  expect(fold.open).toBe(false);
-  expect(fold.getAttribute("name")).toBe("compose-thread-message");
   expect(
-    screen
-      .getByRole("listitem", { name: /Re: Pricing/ })
-      .querySelector("details")
-      ?.getAttribute("name"),
-  ).toBe("compose-thread-message");
+    screen.queryByText(/A second paragraph beyond the preview\./),
+  ).toBeNull();
 
-  await user.click(within(delivery).getByText("Message text"));
-  expect(fold.open).toBe(true);
+  // Opened, the words stand under the row and the same link folds them back.
+  const read = within(delivery).getByRole("button", { name: "Read it" });
+  expect(read.classList.contains("btn")).toBe(true);
+  await user.click(read);
   expect(
-    within(fold).getByText(/A second paragraph beyond the preview\./),
+    within(delivery).getByText(/A second paragraph beyond the preview\./),
   ).toBeTruthy();
-  // Opening the text was a read, not a pick.
+  expect(
+    within(delivery).getByRole("button", { name: "Show less" }),
+  ).toBeTruthy();
+  // Opening the words was a read, not a pick.
   expect(select).not.toHaveBeenCalled();
 
-  // The way to the whole message stands at the foot of the opened text, as
-  // the design system's button and outside the fold's own control, so
-  // pressing it does not toggle the text under it.
-  const read = within(fold).getByRole("button", { name: "Read full email" });
-  expect(read.classList.contains("btn")).toBe(true);
-  expect(read.closest("summary")).toBeNull();
-
-  // A withheld message keeps its row and gets no text to open: the fold would
-  // open on nothing, and a control that opens nothing is a claim there was
-  // nothing to say.
+  // The way to the whole message is offered beside the fold-back, as the
+  // design system's button, and only while the words are open.
   expect(
-    screen
-      .getByRole("listitem", { name: /Re: Terms/ })
-      .querySelector("details"),
+    within(delivery).getByRole("button", { name: "Read full email" }),
+  ).toBeTruthy();
+  expect(
+    within(pricing).queryByRole("button", { name: "Read full email" }),
+  ).toBeNull();
+
+  // The next message opened folds the last.
+  await user.click(within(pricing).getByRole("button", { name: "Read it" }));
+  expect(
+    within(pricing).getByText(/A second paragraph beyond the preview\./),
+  ).toBeTruthy();
+  expect(
+    within(delivery).queryByText(/A second paragraph beyond the preview\./),
+  ).toBeNull();
+  await user.click(within(pricing).getByRole("button", { name: "Show less" }));
+  expect(
+    screen.queryByText(/A second paragraph beyond the preview\./),
+  ).toBeNull();
+
+  // A withheld message keeps its row and gets no words to open: a link that
+  // opens nothing is a claim there was nothing to say.
+  expect(
+    within(screen.getByRole("listitem", { name: /Re: Terms/ })).queryByRole(
+      "button",
+      { name: "Read it" },
+    ),
   ).toBeNull();
 });
