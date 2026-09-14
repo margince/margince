@@ -46,6 +46,26 @@ export function namedSiteReadKind(
   return KIND_LABELS_BY_NAME[kind];
 }
 
+type SiteReadStopReason = NonNullable<
+  components["schemas"]["SiteReadReport"]["stopped_reason"]
+>;
+
+/**
+ * The stop reasons that are a CEILING the read was given, rather than something
+ * that got in its way.
+ *
+ * This one list is what every surface asks. It lives beside the page-kind
+ * vocabulary for the same reason: the company panel and the onboarding dossier
+ * must not disagree about whether the same stop was a problem.
+ */
+const CONFIGURED_STOPS = [
+  "page_cap",
+  "byte_cap",
+] as const satisfies readonly SiteReadStopReason[];
+
+/** A stop reason that names a budget the read spent. */
+export type ConfiguredStopReason = (typeof CONFIGURED_STOPS)[number];
+
 /**
  * Whether a stop reason means the read ran to the size it was configured for.
  *
@@ -56,12 +76,12 @@ export function namedSiteReadKind(
  * further and a reader should be told to look.
  *
  * Both still bound the read and both are still SAID. This decides the tone, not
- * whether a reader is told. It lives beside the page-kind vocabulary for the
- * same reason: the company panel and the onboarding dossier must not disagree
- * about whether the same stop was a problem.
+ * whether a reader is told.
  */
 export function stopIsConfigured(
   reason: components["schemas"]["SiteReadReport"]["stopped_reason"],
-): boolean {
-  return reason === "page_cap" || reason === "byte_cap";
+): reason is ConfiguredStopReason {
+  return (CONFIGURED_STOPS as readonly (string | null | undefined)[]).includes(
+    reason,
+  );
 }

@@ -21,7 +21,7 @@ import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import { stopIsConfigured } from "./sitereadkind";
+import { type ConfiguredStopReason, stopIsConfigured } from "./sitereadkind";
 
 type SiteReadReport = components["schemas"]["SiteReadReport"];
 
@@ -111,13 +111,34 @@ function ScanSteps({ report }: Readonly<{ report: SiteReadReport }>) {
   );
 }
 
+type SiteReadStopReason = NonNullable<SiteReadReport["stopped_reason"]>;
+
+/**
+ * What a read that spent one of its own ceilings is CALLED.
+ *
+ * Exhaustive over `ConfiguredStopReason`, so adding a ceiling to that list in
+ * sitereadkind.ts fails the build here until this names it. One line per
+ * ceiling: a crawl stopped by the byte cap did not reach a page limit, and the
+ * point of naming a configured stop is that the name is right about which
+ * budget ran out.
+ */
+const SITE_READ_CAPPED_LABELS: Record<ConfiguredStopReason, MessageKey> = {
+  page_cap: "deepread.statusPageCapped",
+  byte_cap: "deepread.statusByteCapped",
+};
+
+/**
+ * Why a read was INTERRUPTED, for the warn badge.
+ *
+ * Only the stops a later run might get past appear here. A configured ceiling
+ * is named by the status instead, so a label for one would be unreachable copy
+ * — the kind a translator keeps current and nobody ever sees.
+ */
 const SITE_READ_STOP_LABELS: Record<
-  NonNullable<SiteReadReport["stopped_reason"]>,
+  Exclude<SiteReadStopReason, ConfiguredStopReason>,
   MessageKey
 > = {
   budget: "deepread.stopBudget",
-  page_cap: "deepread.stopPageCap",
-  byte_cap: "deepread.stopByteCap",
   deadline: "deepread.stopDeadline",
 };
 
@@ -131,14 +152,12 @@ const SITE_READ_STOP_LABELS: Record<
  * than for what it stopped short of.
  */
 function statusLabelOf(report: SiteReadReport): MessageKey {
-  if (
-    report.status === "partial" &&
-    report.stopped_reason &&
-    stopIsConfigured(report.stopped_reason)
-  ) {
-    return "deepread.statusCapped";
+  if (report.status !== "partial" || !report.stopped_reason) {
+    return SITE_READ_STATUS_LABELS[report.status];
   }
-  return SITE_READ_STATUS_LABELS[report.status];
+  return stopIsConfigured(report.stopped_reason)
+    ? SITE_READ_CAPPED_LABELS[report.stopped_reason]
+    : SITE_READ_STATUS_LABELS[report.status];
 }
 
 function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
@@ -344,13 +363,15 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
   // What the panel is FOR, which changes the moment a read exists. Until then
   // it offers a capability nobody here has used, and the two sentences
   // explaining it are the point. After that the offer has been answered: the
-  // reader wants last read's outcome and a way to run it again, and a pitch for
-  // something already done reads as though the read never happened.
+  // reader wants the last read's outcome and a way to run it again, and a pitch
+  // for something already done reads as though the read never happened.
   //
-  // The latest query is still loading on the first frame, and an offer drawn
-  // there would flip to a report a moment later. Pitching only once the server
-  // has said there is nothing keeps the panel from contradicting itself.
-  const offering = !latest.isPending && shownReadId === null;
+  // A KNOWN read is what stands the offer down — not merely the absence of a
+  // pitch-worthy answer. While `latest` is still in flight, and if it fails
+  // outright, there is no read to report on, so the panel keeps offering: the
+  // worst case is a rep reading one sentence too many, where the other way
+  // round is a header promising a report the panel cannot draw.
+  const offering = shownReadId === null;
 
   return (
     // The badge and not the tint: this zone OFFERS an AI verb, while its body

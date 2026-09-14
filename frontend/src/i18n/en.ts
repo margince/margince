@@ -3401,10 +3401,12 @@ export const en = {
   "deepread.statusRunning": "Reading…",
   "deepread.statusDone": "Done",
   "deepread.statusPartial": "Stopped early",
-  // A read that spent the page or byte budget it was given did what it
-  // was configured to do, so it is named for that rather than for the
-  // rest of the site it was never going to reach.
-  "deepread.statusCapped": "Read up to the page limit",
+  // A read that spent the budget it was given did what it was configured to
+  // do, so it is named for that rather than for the rest of the site it was
+  // never going to reach. One line per ceiling: a byte cap did not reach a
+  // page limit, and saying so would be wrong about which budget ran out.
+  "deepread.statusPageCapped": "Read up to the page limit",
+  "deepread.statusByteCapped": "Read up to the size limit",
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Cancelled",
   "deepread.resumesAt": "Resumes automatically {when}.",
@@ -3417,8 +3419,6 @@ export const en = {
   "deepread.step.running": "under way",
   "deepread.step.queued": "waiting",
   "deepread.stopBudget": "model budget",
-  "deepread.stopPageCap": "page cap",
-  "deepread.stopByteCap": "byte cap",
   "deepread.stopDeadline": "deadline",
   "deepread.factCount_one": "{count} evidenced fact staged",
   "deepread.factCount_other": "{count} evidenced facts staged",

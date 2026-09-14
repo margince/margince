@@ -70,7 +70,7 @@ function stubDeepRead(options: {
    * offer is written for, and it is what decides whether the panel pitches the
    * capability or reports on a read that already ran.
    */
-  latest?: () => Response;
+  latest?: () => Response | Promise<Response>;
 }) {
   // Only the requests this suite answers itself are recorded: what the deep read
   // does is a sequence of POSTs and report polls, and the page-shell reads the
@@ -249,25 +249,93 @@ describe("company-360 deep read", () => {
     // capability nobody here has used, then reports on the read that answered
     // the offer. A pitch drawn over a finished read tells a rep the site was
     // never looked at.
+    const settled = {
+      ...runningRead,
+      status: "done",
+      fact_count: 9,
+      finished_at: "2026-07-17T08:05:00Z",
+    };
+    // Both endpoints answer the SAME settled read. The report poll defaulting
+    // to a running one would leave it ambiguous which state the assertions
+    // below were actually reading.
     stubDeepRead({
-      latest: () =>
-        jsonResponse({
-          ...runningRead,
-          status: "done",
-          fact_count: 9,
-          finished_at: "2026-07-17T08:05:00Z",
-        }),
+      latest: () => jsonResponse(settled),
+      report: () => jsonResponse(settled),
     });
     render(<CompanyScreen id="o-1" />);
 
+    // Waits for content only the SETTLED read produces. "Website research" is
+    // the panel's own title and would be there for a read still loading, so
+    // waiting on it alone could pass without the report ever arriving.
     await waitFor(() =>
-      expect(screen.getByText("Website research")).toBeTruthy(),
+      expect(screen.getByText("9 evidenced facts staged")).toBeTruthy(),
     );
+    expect(screen.getByText("Website research")).toBeTruthy();
     expect(screen.queryByText("Margince can fill this in")).toBeNull();
     expect(screen.queryByText(/It reads the company's website/)).toBeNull();
     expect(
       screen.getByRole("button", { name: "Read the website again" }),
     ).toBeTruthy();
+  });
+
+  it("keeps offering while the last-read lookup is still unanswered", async () => {
+    // A pitch is the safe thing to draw when nothing is known yet: one extra
+    // sentence costs a reader nothing, while a "Website research" header over
+    // a panel with no report to show promises something that never arrives.
+    //
+    // The lookup is held OPEN rather than failed, because that is the state
+    // that tells the two rules apart: a settled failure and a settled 404 both
+    // leave the query idle, and only a request still in flight distinguishes
+    // "no read exists" from "we have not asked yet".
+    let answerLatest: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      answerLatest = resolve;
+    });
+    stubDeepRead({
+      latest: async () => {
+        await held;
+        return new Response(null, { status: 404 });
+      },
+    });
+    render(<CompanyScreen id="o-1" />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Margince can fill this in")).toBeTruthy(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Start company research" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Website research")).toBeNull();
+
+    // Released so the test leaves no request hanging behind it.
+    answerLatest?.();
+    await waitFor(() =>
+      expect(screen.getByText("Margince can fill this in")).toBeTruthy(),
+    );
+  });
+
+  it("names the ceiling a read actually spent, not whichever came first", async () => {
+    // page_cap and byte_cap are both budgets the read was given, but a crawl
+    // stopped by the byte cap never reached a page limit — one sentence for
+    // both would be wrong about which one ran out.
+    const { calls } = stubDeepRead({
+      report: () =>
+        jsonResponse({
+          ...runningRead,
+          status: "partial",
+          stopped_reason: "byte_cap",
+          fact_count: 4,
+          finished_at: "2026-07-17T08:04:00Z",
+        }),
+    });
+    render(<CompanyScreen id="o-1" />);
+    await startDeepRead(calls);
+
+    await waitFor(() =>
+      expect(screen.getByText("Read up to the size limit")).toBeTruthy(),
+    );
+    expect(screen.queryByText("Read up to the page limit")).toBeNull();
+    expect(screen.queryByText(/Stopped early/)).toBeNull();
   });
 
   it("a done report links staged leads to the inbox and lists no crawl URLs", async () => {
