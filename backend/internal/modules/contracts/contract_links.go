@@ -94,7 +94,8 @@ func ensureLinksShareCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 		// optional. project.company_id is NOT NULL, so only the deal arm
 		// ever reads absent.
 		var linkedCompany *ids.UUID
-		//nolint:gosec // the table name is a package literal from dealRef/projectRef, never client input
+		// ref.table is a package literal from dealRef/projectRef, never client
+		// input, so this concatenation carries no injection surface.
 		query := "SELECT company_id FROM " + ref.table + " WHERE id = $1"
 		err := tx.QueryRow(ctx, query, *ref.id).Scan(&linkedCompany)
 		if errors.Is(err, pgx.ErrNoRows) {
