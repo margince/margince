@@ -46,7 +46,7 @@ func TestANoiseVerdictHidesEveryMessageThatSenderWrote(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", first)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestAForgedSenderCannotReachTheWorkspacesOwnCorrespondence(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, victim, "corp.example", forged)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestRedactionCollectsMailWhoseOriginalOutlivedItsText(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "loud@bulk.example", "bulk.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestANoiseVerdictWithoutBulkCorroborationHidesButNeverDestroys(t *testing.T
 	dispositionID := seedPendingDisposition(t, e, "real.contact@partner.example", "partner.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -241,7 +241,7 @@ func TestANoiseVerdictCannotReachMailSentLongAfterIt(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "cfo@bigcorp.example", "bigcorp.example", poisoned)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -352,7 +352,7 @@ func TestABlastIsHiddenThoughItCopiesAContact(t *testing.T) {
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", blast)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestTheSendersOwnRecordStillCallsTheSweepOff(t *testing.T) {
 
 	dispositionID := seedPendingDisposition(t, e, "bulk@flood.example", "flood.example", mail)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -467,7 +467,7 @@ func TestAnOwnerDecidingDuringTheModelCallIsNotOverruled(t *testing.T) {
 	brain := &decidingBrain{inner: scripted, record: func() {
 		seedSenderOverride(t, e, e.Rep1, "dana.olsen@partner.example", capture.OverrideBusiness)
 	}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

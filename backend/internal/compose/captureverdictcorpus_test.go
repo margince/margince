@@ -73,6 +73,23 @@ func TestNoVerdictScenarioCertifiesAnAddressTheListAlreadyAnswers(t *testing.T) 
 				"give different answers, and only the scenario is measured",
 				entry.Name(), scenario.Fixture.Email, scenario.Expect.Answer)
 		}
+		// The same census for the sibling gate: an address nobody answers at all
+		// is settled as `transactional` before the model is asked.
+		//
+		// The domain is deliberately not supplied. This arm asks only about the
+		// LOCAL PART — `receipts@`, `noreply@` — which is the class the gate
+		// settles regardless of where it sends from, and the class a scenario is
+		// most likely to be authored at. A domain-only refusal (a bulk relay, a
+		// personal-service product) depends on the deployment's own allowlist,
+		// which a corpus file cannot know, so this census stays silent about it
+		// rather than failing a scenario that some installations still ask.
+		if addressNamesNoContact(scenario.Fixture.Email, "", nil) &&
+			scenario.Expect.Answer != capture.KindTransactional {
+			t.Errorf("%s certifies %s as %q, but the address gate settles it as "+
+				"transactional before the model is asked — production and this scenario "+
+				"give different answers, and only the scenario is measured",
+				entry.Name(), scenario.Fixture.Email, scenario.Expect.Answer)
+		}
 	}
 	// A census that read nothing reports the same silence as one that found
 	// nothing wrong.

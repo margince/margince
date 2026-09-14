@@ -43,7 +43,7 @@ func TestAnAddressWeWroteToThatNeverAnsweredStaysTheOwners(t *testing.T) {
 	activity := seedOutboundMail(t, e, email, "Access card")
 	id := seedPendingDisposition(t, e, email, "citygarden.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -77,7 +77,7 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 	seedThreadedMail(t, e, email, "Re: Our proposal", "inbound", "thr-answered")
 	id := seedPendingDisposition(t, e, email, "prospect.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -130,7 +130,7 @@ func TestASenderOnAHeldThreadIsNotAnnouncedToTheWorkspace(t *testing.T) {
 	seedThreadHold(t, e, "thr-held", "held")
 	id := seedPendingDisposition(t, e, email, "confidential.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -157,7 +157,7 @@ func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
 	seedThreadHold(t, e, "thr-cleared", "cleared")
 	id := seedPendingDisposition(t, e, email, "ordinary.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -219,7 +219,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 	}
 	id := seedPendingDisposition(t, e, email, "restricted.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -261,7 +261,7 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 	}
 	id := seedPendingDisposition(t, e, email, "marked.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -288,7 +288,7 @@ func TestAWithheldContactIsMarkedOnTheLedgerTheOtherReadersConsult(t *testing.T)
 	activity := seedThreadedMail(t, e, email, "Access card", "outbound", "thr-withheld")
 	id := seedPendingDisposition(t, e, email, "withheld.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -318,7 +318,7 @@ func TestAPublishedContactIsNotMarkedWithheld(t *testing.T) {
 	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-published")
 	id := seedPendingDisposition(t, e, email, "published.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
@@ -427,7 +427,7 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 	}
 	id := seedPendingDisposition(t, e, email, "waiting.example", activity)
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)

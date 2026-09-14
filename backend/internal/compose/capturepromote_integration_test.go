@@ -146,7 +146,7 @@ func openDisposition(t *testing.T, e *integration.Env, email string) (ids.UUID, 
 
 func runVerdict(t *testing.T, e *integration.Env, brain *scriptedVerdictBrain) {
 	t.Helper()
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

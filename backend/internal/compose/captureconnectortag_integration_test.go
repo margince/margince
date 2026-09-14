@@ -146,7 +146,7 @@ func TestTwoConnectorsFileUnderTheirOwnWord(t *testing.T) {
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{
 		nordID.String(): "contact", suedID.String(): "contact",
 	}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestAConnectorWithNoWordFilesNothing(t *testing.T) {
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "c@plain.example", "plain.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestAnArchivedWordFilesNothingAndTheContactIsStillMade(t *testing.T) {
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, "d@retired.example", "retired.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestAContactThatWasAlreadyHereIsNotFiledUnderTheConnectorsWord(t *testing.T
 	dispositionID := seedOwnedDisposition(t, e, e.Rep1, address, "nord.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): "contact"}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
