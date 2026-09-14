@@ -372,9 +372,14 @@ func aStopThatBindsTheMessage(
 	// carries. An empty one means the engine never got that far, and the safe
 	// reading is that any live stop binds — the direction suppressionBinds
 	// itself fails in for a kind it does not recognise.
+	//
+	// nil, nil for the purpose pair: this reader's own query above selects
+	// kind alone, not purpose_id, so it cannot narrow a row even were one
+	// narrow — same as asking with no send-purpose in hand, which is the
+	// conservative side of the boundary suppressionBinds documents.
 	category := commsauthz.Category(refusal.Category)
 	for _, kind := range kinds {
-		if category == "" || suppressionBinds(kind, category) {
+		if category == "" || suppressionBinds(kind, category, nil, nil) {
 			return kind, nil
 		}
 	}

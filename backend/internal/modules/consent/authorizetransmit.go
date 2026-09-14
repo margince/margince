@@ -275,11 +275,11 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	// READ FIRST, APPLY AFTER THE CATEGORY IS KNOWN. What a suppression binds
 	// depends on what the message is, and nothing knows that until the record
 	// has been resolved — see applySuppression.
-	kinds, err := liveSuppression(ctx, tx, contactID, r)
+	stops, err := liveSuppression(ctx, tx, contactID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if kind, absolute := bindsEveryCategory(kinds); absolute {
+	if kind, absolute := bindsEveryCategory(stopKinds(stops)); absolute {
 		// Nothing a category could say would change this answer, so the record
 		// is not resolved at all. An objection and a restriction do NOT come
 		// through here — both need the category before they can be applied.
@@ -289,14 +289,14 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		return d, nil
 	}
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
-	d, err = g.decideResolved(ctx, tx, req, subjectRef{
+	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityContact, ID: contactID, Address: address,
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
-	}, d, phase, len(kinds) > 0)
+	}, d, phase, len(stops) > 0)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	d = applySuppression(d, kinds)
+	d = applySuppression(d, stops, sendPurpose)
 	return d, nil
 }
 

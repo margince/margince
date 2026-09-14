@@ -129,11 +129,11 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 
 	// A suppression binds a lead exactly as it binds a contact: the row may
 	// name a lead_id or bare address, and liveSuppression already reads both.
-	kinds, err := liveSuppression(ctx, tx, leadID, r)
+	stops, err := liveSuppression(ctx, tx, leadID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	if kind, absolute := bindsEveryCategory(kinds); absolute {
+	if kind, absolute := bindsEveryCategory(stopKinds(stops)); absolute {
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = kind
 		d.Suppression = kind
@@ -145,19 +145,22 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	// an earlier version applied it at three separate returns and the third was
 	// a hand-inlined partial copy that set Suppression without consulting the
 	// rule.
-	decided, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, len(kinds) > 0)
+	decided, sendPurpose, err := g.decideLeadOnItsRecord(ctx, tx, r, req, d, phase, leadID, len(stops) > 0)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	decided = applySuppression(decided, kinds)
+	decided = applySuppression(decided, stops, sendPurpose)
 	return decided, nil
 }
 
 // decideLeadOnItsRecord answers about a lead from evidence and grant alone.
 //
 // Suppression is its caller's business: this reaches a verdict as though the
-// recipient had said nothing, and decideLead narrows it once.
-func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, suppressed bool) (commsauthz.Decision, error) {
+// recipient had said nothing, and decideLead narrows it once. Also returns the
+// purpose this send resolved to — nil on the evidence arm, set once the
+// purpose-key arm below has read one off the record — for the same reason
+// decideResolved returns it on the contact path.
+func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, suppressed bool) (commsauthz.Decision, *ids.UUID, error) {
 	purposeKey := req.LegacyPurposeKey
 
 	// The evidence arms, before any purpose key is consulted, through the same
@@ -174,7 +177,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 	}, phase, suppressed)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	if res.Supported {
 		// The same question the contact arm asks: the evidence arms never read
@@ -186,43 +189,47 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 				ChannelProvider: channelProvider, ChannelUserID: channelUserID,
 			}, res.Category)
 		if err != nil {
-			return commsauthz.Decision{}, err
+			return commsauthz.Decision{}, nil, err
 		}
 		if stopped {
 			d.Resolved = res.Category
 			d.Verdict = commsauthz.VerdictDeny
 			d.ReasonCode = commsauthz.ReasonConsentWithdrawn
-			return d, nil
+			return d, nil, nil
 		}
-		return allowOn(d, res), nil
+		return allowOn(d, res), nil, nil
 	}
 
 	purpose, defined, err := purposeRowFor(ctx, tx, purposeKey)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	if !defined {
 		d.Verdict = commsauthz.VerdictDeny
 		d.ReasonCode = commsauthz.ReasonUnknownPurpose
-		return d, nil
+		return d, nil, nil
+	}
+	purposeID, err := ids.Parse(purpose.ID)
+	if err != nil {
+		return commsauthz.Decision{}, nil, fmt.Errorf("consent: the resolved purpose is not an id: %w", err)
 	}
 
 	d.Resolved = categoryForClass(purpose.Class)
 	granted, err := grantedForLead(ctx, tx, r, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
 	if granted {
 		d.Verdict = commsauthz.VerdictAllow
 		d.ReasonCode = commsauthz.ReasonAllowed
-		return d, nil
+		return d, &purposeID, nil
 	}
 	d.Verdict = commsauthz.VerdictDeny
 	d.ReasonCode, err = leadRefusalReason(ctx, tx, leadID, purpose)
 	if err != nil {
-		return commsauthz.Decision{}, err
+		return commsauthz.Decision{}, nil, err
 	}
-	return d, nil
+	return d, &purposeID, nil
 }
 
 // leadRefusalReason names WHY a lead's send was refused, in the same vocabulary

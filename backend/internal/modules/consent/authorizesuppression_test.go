@@ -12,6 +12,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -75,13 +76,41 @@ func TestWhatEachSuppressionBinds(t *testing.T) {
 		// A reason code this function does not recognise refuses everything.
 		"a_code_nobody_added_here": all,
 	}
-	for kind, stops := range bound {
+	for kind, categories := range bound {
 		for _, c := range all {
-			want := slices.Contains(stops, c)
-			if got := suppressionBinds(kind, c); got != want {
+			want := slices.Contains(categories, c)
+			// nil, nil: a broad row (no purpose_id) against a send with no
+			// resolved purpose — the case every existing row was, and still is,
+			// before a writer ever narrows one.
+			if got := suppressionBinds(kind, c, nil, nil); got != want {
 				t.Errorf("%s against %s: binds = %v, want %v", kind, c, got, want)
 			}
 		}
+	}
+}
+
+// TestAPurposeScopedObjectionBindsOnlyItsPurpose covers the four cases the
+// purpose column adds: broad-vs-narrow row, crossed against a send with and
+// without its own resolved purpose. A narrow row must narrow, and a
+// purpose-less send (the evidence arms) must never be caught by one — see
+// suppressionBinds's doc comment for why.
+func TestAPurposeScopedObjectionBindsOnlyItsPurpose(t *testing.T) {
+	p1, p2 := ids.NewV7(), ids.NewV7()
+	// broad row (nil purpose) binds all marketing, as today
+	if !suppressionBinds(commsauthz.ReasonObjection, commsauthz.CategoryMarketing, nil, &p1) {
+		t.Fatal("a broad objection must bind a marketing send")
+	}
+	// narrow row binds a send for the SAME purpose
+	if !suppressionBinds(commsauthz.ReasonObjection, commsauthz.CategoryMarketing, &p1, &p1) {
+		t.Fatal("a narrow objection must bind its own purpose")
+	}
+	// narrow row does NOT bind a send for a DIFFERENT purpose
+	if suppressionBinds(commsauthz.ReasonObjection, commsauthz.CategoryMarketing, &p1, &p2) {
+		t.Fatal("a narrow objection must not bind a different purpose")
+	}
+	// narrow row does NOT bind a purpose-less (evidence-arm) send
+	if suppressionBinds(commsauthz.ReasonObjection, commsauthz.CategoryMarketing, &p1, nil) {
+		t.Fatal("a narrow objection must not bind a send with no resolved purpose")
 	}
 }
 
@@ -99,7 +128,7 @@ func TestTheEarlyExitAgreesWithTheRule(t *testing.T) {
 			continue
 		}
 		for _, c := range commsauthz.Categories() {
-			if !suppressionBinds(kind, c) {
+			if !suppressionBinds(kind, c, nil, nil) {
 				t.Errorf("%s skips resolution but does not bind %s: a message in that category "+
 					"is refused without the engine ever working out what it is", kind, c)
 			}
@@ -121,8 +150,12 @@ func TestEveryLiveKindIsAsked(t *testing.T) {
 		{commsauthz.ReasonObjection, commsauthz.ReasonHardBounce},
 		{commsauthz.ReasonHardBounce, commsauthz.ReasonObjection},
 	} {
+		stops := make([]liveStop, len(order))
+		for i, kind := range order {
+			stops[i] = liveStop{Kind: kind}
+		}
 		d := applySuppression(
-			commsauthz.Decision{Resolved: reply, Verdict: commsauthz.VerdictAllow}, order)
+			commsauthz.Decision{Resolved: reply, Verdict: commsauthz.VerdictAllow}, stops, nil)
 		if d.Verdict != commsauthz.VerdictDeny {
 			t.Errorf("%v against %s: verdict = %q, want deny — the objection does not bind a "+
 				"reply, so the hard bounce beside it must be the one that answers",
