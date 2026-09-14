@@ -65,6 +65,7 @@ decision rather than an omission.
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
 
 ### How-to — accomplish a task
+- [write-an-email.md](how-to/write-an-email.md) — start a contextual email, select an exact reply target, and read the conversation while writing.
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
 - [add-a-module.md](how-to/add-a-module.md) — add a new capability (module) or a cross-module edge, wired into compose.
 - [add-a-job.md](how-to/add-a-job.md) — declare a background job kind in the job contract, then write and register its worker.

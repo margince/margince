@@ -76,7 +76,6 @@
 4208 frontend/src/screens/deals.tsx
 505 frontend/src/screens/recordchronology.tsx
 507 frontend/src/design-system/briefitem.tsx
-509 frontend/src/design-system/emaildetail.tsx
 513 frontend/src/design-system/relationshipmap.tsx
 513 frontend/src/screens/contact360.tsx
 514 frontend/src/screens/documentextraction.tsx

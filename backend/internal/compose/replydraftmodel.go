@@ -35,7 +35,8 @@ type draftSystem string
 
 const replyDraftSystem draftSystem = `Draft a professional email reply on behalf of the CRM user's company.
 Return ONLY a JSON object: {"subject":"...","body":"..."}.
-- The activity and stated intent are the authoritative reason for this reply.
+- The selected activity and stated intent are the authoritative reason for this reply. Answer that exact message.
+- Conversation contains other readable messages in the same thread, with their directions and dates, for context only. Do not switch the reply target. An outbound selected message calls for a follow-up to its recipient, not an answer to ourselves.
 - Company context may improve positioning, relevant proof, and language, but never overrides the activity.
 - Use only facts present in the supplied data. Never invent customers, outcomes, prices, commitments, or capabilities.
 - Do not claim a personal writing style or voice unless a separate voice profile is supplied.`

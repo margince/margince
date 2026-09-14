@@ -109,6 +109,8 @@ func realDeliveryStager(t *testing.T, e *integration.Env) DeliveryMachinery {
 	return NewDeliveryStager(e.Pool, inserter)
 }
 
+const pricingReplySubject = "Re: Pricing question"
+
 func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	e := integration.Setup(t)
 	// The REAL delivery machinery, because this suite asserts that an
@@ -146,7 +148,7 @@ func TestCommsAdapterSharesTheGovernedPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != "Re: Pricing question" || body == "" {
+	if subject != pricingReplySubject || body == "" {
 		t.Fatalf("draft = %q / %q", subject, body)
 	}
 	assertModelAndFallbackDrafts(ctx, t, adapter, anchorID)
@@ -201,7 +203,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject != "Re: Your pricing question" || body != "The discount is confirmed for review." {
+	if subject != pricingReplySubject || body != "The discount is confirmed for review." {
 		t.Fatalf("model draft = %q / %q", subject, body)
 	}
 
@@ -214,7 +216,7 @@ func assertModelAndFallbackDrafts(ctx context.Context, t *testing.T, adapter com
 	if err != nil {
 		t.Fatalf("fallback draft: %v", err)
 	}
-	if subject != "Re: Pricing question" || !strings.Contains(body, "confirm the discount") {
+	if subject != pricingReplySubject || !strings.Contains(body, "confirm the discount") {
 		t.Fatalf("fallback draft = %q / %q", subject, body)
 	}
 }

@@ -404,7 +404,7 @@ describe("ComposeModal recipient", () => {
     // as a chip would put an unsendable recipient in front of the reader.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Draft with AI" }),
+        screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
       ).toBeTruthy();
     });
     expect(screen.queryByText("dietmar@buyer.test")).toBeNull();

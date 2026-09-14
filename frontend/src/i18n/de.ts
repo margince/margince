@@ -3677,6 +3677,16 @@ export const de = {
   "compose.reply": "Antworten",
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
+  "compose.previewEmail": "Vorschau",
+  "compose.readEmail": "Vollständige E-Mail lesen",
+  "compose.replyIntent": "Antworten mit…",
+  "compose.newIntent": "Was soll diese E-Mail erreichen?",
+  "compose.draftReply": "Antwort mit KI entwerfen",
+  "compose.newEmail": "Neue E-Mail",
+  "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
+  "compose.followingUp": "Nachfrage zu Ihrer E-Mail „{subject}“ · {when}",
+  "compose.draftContextHint":
+    "Beschreiben Sie das Ziel. Margince nutzt den verfügbaren Kontext des Datensatzes.",
   "compose.draftWithAi": "Mit KI entwerfen",
   "compose.drafting": "Wird entworfen…",
   "compose.discardDraft": "Entwurf verwerfen",
@@ -3692,13 +3702,7 @@ export const de = {
   "compose.provisional": "Vorläufige Stimme",
   "compose.provisionalHint":
     "Ihre Voice DNA wird noch aufgebaut. Sie prägt diesen Entwurf schon genauso wie eine fertige — es wird nichts zurückgehalten.",
-  "compose.intent": 'Entwurf steuern (optional), z. B. "höfliche Nachfrage"',
   "compose.to": "An",
-  "compose.answering": "Antwort auf „{subject}“ · {when}",
-  "compose.answeringTo": "Antwort an {who} · „{subject}“ · {when}",
-  "compose.answeringNoSubject": "Antwort auf die Nachricht vom {when}",
-  "compose.answeringNothing":
-    "Hier gibt es keine frühere Nachricht — das beginnt einen neuen Verlauf.",
   "compose.cc": "Cc",
   "compose.subject": "Betreff",
   "compose.noGroundableRecipient":
@@ -3720,7 +3724,6 @@ export const de = {
   "compose.bodyHint": "In den Text klicken, um ihn zu bearbeiten.",
   "compose.transport": "Versandweg",
   "compose.transportEmail": "E-Mail",
-  "compose.intentLabel": "Worum soll es gehen?",
   "compose.recipientHint": "Name oder Adresse",
   "compose.subjectHint": "Worum es geht",
   "compose.bodyPlaceholder": "Nachricht schreiben…",
@@ -3835,10 +3838,14 @@ export const de = {
   "compose.sendConfirmTitle": "E-Mail entwerfen",
   "compose.threadHeading": "Dieser Verlauf",
   "compose.continueHeading": "Einen Verlauf fortsetzen?",
-  "compose.threadLeave": "Anderen wählen",
+  "compose.threadLeave": "Neue E-Mail",
   "compose.messageCount_one": "{count} Nachricht",
   "compose.messageCount_other": "{count} Nachrichten",
   "compose.threadContinuing": "Der letzte Austausch, den dies fortsetzt",
+  "compose.draftKept":
+    "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du bereit bist.",
+  "compose.threadFailed":
+    "Diese Nachricht konnte nicht gelesen werden. Versuche es in der Unterhaltung erneut.",
   "compose.threadPending": "Verlauf wird geladen\u2026",
   "compose.sendBody":
     "Prüfen und bearbeiten Sie Ihren Entwurf. Ein Klick auf Senden verschickt die E-Mail und kann nicht rückgängig gemacht werden.",

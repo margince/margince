@@ -48,8 +48,9 @@ export function useSoleProjectDefault(
   projects: readonly PickableProject[],
   projectId: string,
   onChange: (next: string) => void,
+  scope = "",
 ) {
-  const defaultedFor = useRef("");
+  const defaultedFor = useRef(new Map<string, string>());
   const sole = projects.length === 1 ? projects[0].project_id : "";
   // A choice the list still offers stands, and counts as this sole project's
   // default having been settled. A choice it no longer offers is about to be
@@ -57,18 +58,18 @@ export function useSoleProjectDefault(
   // value that follows — so it is not settled here.
   const standing = projects.some((project) => project.project_id === projectId);
   useEffect(() => {
-    if (!sole || defaultedFor.current === sole) {
+    if (!sole || defaultedFor.current.get(scope) === sole) {
       return;
     }
     if (standing) {
-      defaultedFor.current = sole;
+      defaultedFor.current.set(scope, sole);
       return;
     }
     if (!projectId) {
-      defaultedFor.current = sole;
+      defaultedFor.current.set(scope, sole);
       onChange(sole);
     }
-  }, [sole, projectId, standing, onChange]);
+  }, [sole, projectId, standing, onChange, scope]);
 }
 
 // A chosen project that the list no longer offers — closed since, withheld

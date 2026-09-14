@@ -1440,6 +1440,7 @@ export function Modal({
   size = "default",
   placement = "center",
   returnFocusTo,
+  initialFocusTo,
   children,
 }: Readonly<{
   open: boolean;
@@ -1465,25 +1466,22 @@ export function Modal({
   // that completely: `size` names widths for a centred box and there is
   // nothing left for one to vary here.
   placement?: "center" | "right" | "full";
-  // Where focus should land instead of the opener, for a dialog whose OWN
-  // mutation removes the control that opened it — a Deactivate button that
-  // becomes Reactivate, a row the delete drops from the list.
-  //
-  // A callback rather than a ref because the resting place frequently does not
-  // exist while the dialog is open: it is produced by the very mutation the
-  // dialog performs, and the opener is detached by the time anything could ask
-  // about it. Resolving at restore time is the only moment the answer is known.
-  // A caller that does hold a ref passes `() => ref.current`, so the ref form
-  // is a subset of this one rather than a second API.
+  // Resolve at close time when a mutation replaces the opener (for example,
+  // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
+  /** The writing field can take focus before supporting context controls. */
+  initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
 }>) {
   const dialog = useRef<HTMLDivElement | null>(null);
-  // Escape, the Tab trap and focus in-and-back live in `dialogfocus.ts`,
-  // because this is not the only dialog in the product: the ⌘K palette draws
-  // its own box and had grown its own, weaker, answer to the same three
-  // questions. The chrome below stays this component's; the keyboard does not.
-  useDialogFocus({ open, onClose, container: dialog, returnFocusTo });
+  // The palette shares keyboard behavior without sharing modal chrome.
+  useDialogFocus({
+    open,
+    onClose,
+    container: dialog,
+    returnFocusTo,
+    initialFocusTo,
+  });
 
   if (!open) {
     return null;
