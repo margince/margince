@@ -56,6 +56,7 @@ export function RowActs({
   equals,
   onReview,
   onOpenEmail,
+  quiet = false,
 }: Readonly<{
   item: WorklistItem;
   href: string | undefined;
@@ -81,6 +82,14 @@ export function RowActs({
   /** Where a grouped row is reviewed, on the surface that has a filter. */
   onReview?: () => void;
   onOpenEmail?: (id: string) => void;
+  /**
+   * ONE VERB. The Brief's Focus draws the lane's answer and the way to the
+   * record, and nothing else: the pin, the hand-off, the equal verbs and the
+   * ways to put a row down all belong to the queue, where a reader is
+   * working the day rather than reading it. Six rows each carrying four
+   * controls made the right edge the loudest thing on the page.
+   */
+  quiet?: boolean;
 }>) {
   return (
     <div className="worklist-row-acts">
@@ -98,7 +107,7 @@ export function RowActs({
       {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN and this lifts one up — so it
           stands before them rather than among them. */}
-      {allowPin && <PinVerb item={item} />}
+      {allowPin && !quiet && <PinVerb item={item} />}
       {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move.
 
@@ -111,15 +120,15 @@ export function RowActs({
 
           Beside the pin, because it is the row's other GLYPH — see the doc
           above: the two stand together among the labelled verbs. */}
-      {item.source === "task" && !item.batch && (
+      {item.source === "task" && !item.batch && !quiet && (
         <ReassignControl item={item} owner={owner} />
       )}
-      {equals}
+      {!quiet && equals}
       {/* The ways this row can be PUT DOWN, as the server declares them. Drawn
           from `dispositions` rather than inferred from `source`: which rows a
           rep may judge is a server rule, and a client keeping its own copy
           draws a verb that 404s or hides one the rep is entitled to. */}
-      <DispositionVerbs item={item} />
+      {!quiet && <DispositionVerbs item={item} />}
       {/* WHAT THE LANE IS ASKING FOR, at the end of the line and on the row's
           trailing edge. A reader who has read the work looks here for the move,
           and finds it at the same x on every row of the queue. */}

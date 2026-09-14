@@ -3222,6 +3222,11 @@ export const de = {
   "brief.readings.label": "Dein Morgen in fünf Kennzahlen",
   "brief.readings.floorTip":
     "Eine Quelle wurde bis zur Grenze gelesen, diese Zahl ist also ein Mindestwert.",
+  "brief.readings.chip.urgent": "dringend",
+  "brief.readings.chip.meetings": "Termine",
+  "brief.readings.chip.leads": "Leads ohne Antwort",
+  "brief.readings.chip.risk": "gefährdet",
+  "brief.readings.chip.decisions": "zu prüfen",
   "brief.readings.urgent": "Dringend",
   "brief.readings.openUrgent": "Dringendes prüfen",
   "brief.readings.openMeetings": "Heutige Termine ansehen",

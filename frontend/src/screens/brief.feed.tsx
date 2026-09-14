@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { navigate } from "../app/router";
 import { Badge, Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -45,7 +45,6 @@ export function BriefFeed({
   const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
   const client = useQueryClient();
-  const titleId = useId();
   const rows = waitingRows(day);
   const partial = Boolean(
     !day?.focus ||
@@ -53,70 +52,69 @@ export function BriefFeed({
       day?.sources_unavailable?.length,
   );
   return (
-    <section id="brief-today" className="brief-focus" aria-labelledby={titleId}>
-      {/* No panel band. The greeting above already heads the page, and a
-          card around six cards was a box around boxes: the section has an
-          eyebrow, the lead is the one elevated surface, and the rest is a
-          list on the page's own ground. */}
-      <header className="brief-focus-head">
-        <h2 id={titleId} className="eyebrow">
-          {t(
-            day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
-          )}
-        </h2>
-        {day?.summary && (
-          <span className="t-caption">
-            {plural("brief.feed.visible", rows.length, {
-              count: formatNumber(rows.length, locale),
-            })}
-          </span>
+    <section id="brief-today" className="brief-focus">
+      {/* ONE house panel, the same card the rail draws: a head with the
+          count, ranked rows on hairlines, and the one door in the foot. The
+          lead is the first row, taller and on a quiet tint — not a card of
+          its own standing over five others. */}
+      <Panel
+        title={t(
+          day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
         )}
-        {changed && (
-          <a className="entity-link" href={changed.href}>
-            <Badge>
-              {plural("brief.feed.changedBadge", changed.count, {
-                count: formatNumber(changed.count, locale),
-              })}
-            </Badge>
-          </a>
-        )}
-      </header>
-      {refreshFailed && (
-        <p className="t-caption brief-focus-note" role="alert">
-          {t("brief.feed.refreshFailed")}{" "}
-          <Button variant="ghost" onClick={onRetry}>
-            {t("brief.coverage.retry")}
-          </Button>
-        </p>
-      )}
-      <SurfaceState
-        state={
-          state !== "ready"
-            ? state
-            : rows.length > 0 || partial
-              ? "ready"
-              : "empty"
+        sub={
+          day?.summary
+            ? plural("brief.feed.visible", rows.length, {
+                count: formatNumber(rows.length, locale),
+              })
+            : undefined
         }
-        emptyLabel={t("brief.feed.clear")}
-        loadingLabel={t("brief.feed.loading")}
+        titleAction={
+          changed ? (
+            <a className="entity-link" href={changed.href}>
+              <Badge>
+                {plural("brief.feed.changedBadge", changed.count, {
+                  count: formatNumber(changed.count, locale),
+                })}
+              </Badge>
+            </a>
+          ) : undefined
+        }
+        footer={day ? <AgendaFoot day={day} /> : undefined}
       >
-        {rows.length === 0 && partial && (
-          <p className="t-caption brief-focus-note">
-            {t("brief.feed.incomplete")}
-          </p>
+        {refreshFailed && (
+          <PanelBody>
+            <p role="alert">
+              {t("brief.feed.refreshFailed")}{" "}
+              <Button variant="ghost" onClick={onRetry}>
+                {t("brief.coverage.retry")}
+              </Button>
+            </p>
+          </PanelBody>
         )}
-        <AgendaRows
-          rows={rows}
-          onOpenEmail={setOpenEmail}
-          onContext={onContext}
-          focus
-        />
-      </SurfaceState>
-      {day && (
-        <footer className="brief-focus-foot">
-          <AgendaFoot day={day} />
-        </footer>
-      )}
+        <SurfaceState
+          state={
+            state !== "ready"
+              ? state
+              : rows.length > 0 || partial
+                ? "ready"
+                : "empty"
+          }
+          emptyLabel={t("brief.feed.clear")}
+          loadingLabel={t("brief.feed.loading")}
+        >
+          {rows.length === 0 && partial && (
+            <PanelBody>
+              <p className="t-caption">{t("brief.feed.incomplete")}</p>
+            </PanelBody>
+          )}
+          <AgendaRows
+            rows={rows}
+            onOpenEmail={setOpenEmail}
+            onContext={onContext}
+            focus
+          />
+        </SurfaceState>
+      </Panel>
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
@@ -213,20 +211,21 @@ function AgendaRows({
   const [lead, ...rest] = rows;
   return (
     <ol className="brief-focus-list">
-      <li key={`${lead.source}-${lead.id}`} className="brief-focus-lead">
-        <Panel className={staged(lead)}>
-          <WorklistRow
-            allowPin={false}
-            item={lead}
-            density="compact"
-            card
-            hero
-            onOpen={door(lead)}
-            owner=""
-            onOpenEmail={onOpenEmail}
-            onReview={review(lead)}
-          />
-        </Panel>
+      <li
+        key={`${lead.source}-${lead.id}`}
+        className={["brief-focus-lead", staged(lead) ?? ""].join(" ").trim()}
+      >
+        <WorklistRow
+          allowPin={false}
+          item={lead}
+          density="compact"
+          card
+          hero
+          onOpen={door(lead)}
+          owner=""
+          onOpenEmail={onOpenEmail}
+          onReview={review(lead)}
+        />
       </li>
       {rest.map((item) => (
         <li key={`${item.source}-${item.id}`} className={staged(item)}>
@@ -234,6 +233,7 @@ function AgendaRows({
             allowPin={false}
             item={item}
             density="compact"
+            card
             onOpen={door(item)}
             owner=""
             onOpenEmail={onOpenEmail}

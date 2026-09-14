@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   morningReadings,
   openLane,
@@ -31,12 +32,21 @@ export function BriefReadingsLine({ day }: Readonly<{ day: Worklist }>) {
     >
       <ul className="brief-readline">
         {morningReadings(day, t, locale, plural).map(({ key, ...reading }) => (
-          <LineReading key={key} {...reading} />
+          <LineReading key={key} {...reading} label={t(CHIP_LABEL[key])} />
         ))}
       </ul>
     </section>
   );
 }
+
+/** The chip's word for each reading: short, because five chips share a line. */
+const CHIP_LABEL: Record<string, MessageKey> = {
+  urgent: "brief.readings.chip.urgent",
+  meetings: "brief.readings.chip.meetings",
+  leads: "brief.readings.chip.leads",
+  risk: "brief.readings.chip.risk",
+  decisions: "brief.readings.chip.decisions",
+};
 
 function LineReading({
   label,
@@ -55,25 +65,29 @@ function LineReading({
   const marked = floor === true && count !== null && count > 0;
   const openable =
     count === null || count > 0 || floor === true || spans === true;
+  // A TOPIC AT ZERO SAYS NOTHING and takes a chip to say it. The spanning
+  // reading — urgent — stands at zero, because "nothing urgent" is the one
+  // zero a reader opens the page for; the risk reading, which spells its
+  // figure in words, drops out with the others when no deal is flagged.
+  if (count === 0 && (spans !== true || spelled !== undefined)) {
+    return null;
+  }
   const figure = readingFigure(
     spelled ?? readingWords(count, t, locale),
     marked,
   );
-  // The basis rides the line only where it changes the reading: a breach, a
-  // floor, or a figure that could not be read. "assigned and awaiting first
-  // contact" under every "2" is a caption the tile had room for and a line
-  // does not.
   const qualified = warn === true || marked || count === null;
   const words = (
     <>
-      <span className="brief-readline-label">{label}</span>{" "}
       <strong className={warn ? "brief-readline-warn" : undefined}>
         {figure}
-      </strong>
+      </strong>{" "}
+      <span className="brief-readline-label">{label}</span>
+      {qualified && <span className="brief-readline-basis"> · {basis}</span>}
     </>
   );
   return (
-    <li>
+    <li className="brief-readline-chip">
       {openable ? (
         <button
           type="button"
@@ -86,7 +100,6 @@ function LineReading({
       ) : (
         <span className="brief-readline-door">{words}</span>
       )}
-      {qualified && <span className="t-caption"> · {basis}</span>}
     </li>
   );
 }

@@ -88,32 +88,10 @@
 }
 
 /* Focus cards keep the shared row actions and the server's reading order. */
-/* ── Focus: the lead, then the order ─────────────────────────────────────
-   No panel around the section. The eyebrow names it, the lead is the one
-   elevated surface, and the ranked rows sit on the page's own ground with a
-   hairline between them and their rank in the margin. */
-.brief-focus-head {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-.brief-focus-head > h2 {
-  margin: 0;
-}
-.brief-focus-note {
-  margin: 0 0 var(--space-3);
-}
-.brief-focus-foot {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  padding: var(--space-3) 0 0 var(--brief-rank-w);
-  font-size: var(--fs-sm);
-  color: var(--textMeta);
-}
-
+/* ── Focus: one panel, ranked rows, the lead first ──────────────────────
+   The house card the rail draws, with the day's order inside it: rows on
+   hairlines, the rank in a margin column, the kind in a fixed column so the
+   titles share one left edge, and one verb on the trailing edge. */
 .brief-focus-list {
   --brief-rank-w: 2rem;
   list-style: none;
@@ -123,7 +101,6 @@
 }
 .brief-focus-list > li {
   position: relative;
-  padding-left: var(--brief-rank-w);
   counter-increment: brief-rank;
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
 }
@@ -147,71 +124,56 @@
 
 /* THE RANK IN THE MARGIN. The list element carries the order for a screen
    reader; the numeral states it for everybody else, in the caption register
-   the queue's own rank column uses, on the same x for every row. */
+   the queue's own rank column uses, on one x for every row. It sits inside
+   the panel's own inset, so the row primitive keeps its interval. */
 .brief-focus-list > li::before {
   content: counter(brief-rank);
   position: absolute;
-  left: 0;
+  z-index: 1;
+  left: var(--padPanel);
   top: var(--space-3);
   width: var(--brief-rank-w);
   font-size: var(--fs-meta);
+  line-height: var(--lh-normal);
   color: var(--textMeta);
   font-variant-numeric: tabular-nums;
 }
-/* The rows sit on the page's own ground, and the rank margin is the LIST
-   ITEM's padding, so the row primitive keeps its own interval untouched. */
-.brief-focus-list > li > .panel-row {
-  padding-inline: 0; /* ds:ignore a ranked row on the page's ground has no panel edge to inset from; the list item pays the rank margin */
+.brief-focus-list .panel-row.worklist-row-compact {
+  /* The kind takes a fixed column so every title starts at one x. */
+  grid-template-columns: var(--worklist-kind-w, 7.5rem) minmax(0, 1fr) auto;
 }
-/* The rule between two ranked rows spans the row, not the panel inset it
-   inherits from `PanelRow`. */
-.brief-focus-list > li > .panel-row::before {
-  inset: 0 0 auto;
+.brief-focus-list .worklist-row-kind {
+  padding-left: var(--brief-rank-w);
 }
-.brief-focus-list > li:nth-child(2) > .panel-row::before {
+/* The hairline between rows is the panel's own; the first row has none. */
+.brief-focus-list > li:first-child > .panel-row::before {
   content: none;
 }
 
-/* The lead. Its numeral sits on the card's own top line, and the card is
-   the one surface on the page that stands off the ground. */
-.brief-focus-lead {
-  margin-bottom: var(--space-2);
+/* The lead: taller, its evidence open, on the panel's quiet tint. */
+.brief-focus-lead > .panel-row {
+  background: var(--bgWell);
 }
 .brief-focus-lead::before {
-  top: calc(var(--space-4) + var(--space-1));
-}
-.brief-focus-lead > .panel {
-  box-shadow: var(--shadow-card);
+  top: var(--space-4);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
 }
 .brief-focus-lead .panel-row.worklist-row-compact {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--padPanel);
-}
-.brief-focus-lead .worklist-row-text,
-.brief-focus-lead .worklist-row-acts {
-  order: 0;
-  flex: none;
-  width: 100%;
-}
-.brief-focus-lead .worklist-row-kind {
-  align-self: flex-start;
-}
-.brief-focus-lead .worklist-row-acts {
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: start;
+  padding-block: var(
+    --space-4
+  ); /* ds:ignore the lead row stands a rung taller than the ranked rows under it: it is the one row whose evidence is open */
 }
 .brief-focus-lead .worklist-row-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 .brief-focus-lead .worklist-row-hero > .worklist-row-title {
-  font-size: var(--fs-h2);
+  font-size: var(--fs-h3);
   font-weight: var(--fw-semibold);
-  line-height: 1.25;
+  line-height: 1.3;
   flex-wrap: wrap;
   overflow: visible;
   white-space: normal;
@@ -226,7 +188,6 @@
   overflow-wrap: anywhere;
 }
 .brief-focus-lead .worklist-row-hero > .worklist-row-inline {
-  font-size: var(--fs-sm);
   white-space: normal;
   overflow: visible;
 }
@@ -238,12 +199,19 @@
 .brief-focus-lead .worklist-row-reason {
   color: var(--textContent);
 }
+.brief-focus-lead .worklist-row-acts {
+  align-self: center;
+}
 
-/* The name is the door. A task has no record to link, so its name is a button
-   that opens its evidence — drawn as the name, not as a control. */
+/* TITLES IN INK. A link's green is right for a word in a sentence; six green
+   titles down a list are six claims for attention. The name shows it is a
+   door on hover, and the verb on the trailing edge is the coloured thing. */
+.brief-focus-list .worklist-row-title > a,
+.brief-focus-list .worklist-row-open {
+  color: var(--textPrimary);
+}
 .brief-focus-list .worklist-row-open {
   font: inherit;
-  color: inherit;
   background: none;
   border: 0;
   padding: 0;
@@ -260,28 +228,36 @@
 .brief-focus-list .worklist-row-reason {
   margin: 0;
 }
+/* Only the lead spends a line on what doing nothing costs; a ranked row is
+   one line, and six copies of the same sentence drowned the one that mattered. */
+.brief-focus-list > li:not(.brief-focus-lead) .worklist-row-reason {
+  display: none;
+}
 
 /* A decision the runner proposed and nobody has accepted. The design system's
-   one spelling of "staged": dashed indigo, going solid on acceptance. */
-.brief-focus-lead > .panel.brief-focus-staged {
+   one spelling of "staged": dashed indigo, going solid on acceptance. Drawn
+   on the kind's own words rather than as a box around the row, so a ranked
+   list stays a list. */
+.brief-focus-list > li.brief-focus-staged > .panel-row {
+  background: var(--aiLight);
+}
+.brief-focus-list > li.brief-focus-staged::after {
+  content: "";
+  position: absolute;
+  inset: 0 var(--space-2);
   border: 1.5px dashed var(--aiMed);
-  background: var(--aiLight);
-}
-.brief-focus-list > li.brief-focus-staged {
-  background: var(--aiLight);
-  box-shadow: inset 0 0 0 1.5px var(--aiMed);
   border-radius: var(--r-sm);
-}
-.brief-focus-list > li.brief-focus-staged > .panel-row::before {
-  content: none;
+  pointer-events: none;
 }
 
-/* On a phone the rank margin is narrower and the lead's verbs wrap. */
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .brief-focus-list {
     --brief-rank-w: 1.5rem;
   }
+  .brief-focus-list .panel-row.worklist-row-compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .brief-focus-lead .worklist-row-hero > .worklist-row-title {
-    font-size: var(--fs-h3);
+    font-size: var(--fs-lead);
   }
 }

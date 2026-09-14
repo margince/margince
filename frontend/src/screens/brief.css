@@ -395,17 +395,15 @@
   margin-left: auto;
 }
 
-/* The readings as one line under Focus, and the page's stamps beside it.
-   Ink only: a figure is coloured when it is breaching (`brief-readline-warn`,
-   the warn family) and never for being large. The doors are words, not tiles. */
+/* The readings as a row of quiet chips under the greeting, and the page's
+   stamps beside them. Ink only: a figure is coloured when it is breaching
+   (`brief-readline-warn`, the warn family) and never for being large. */
 .brief-overview {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-5);
-  margin: 0 0 var(--space-6);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-5);
 }
 .brief-overview > .brief-readings-line {
   flex: 1 1 32rem;
@@ -422,38 +420,42 @@
 .brief-readline {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) 0;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: var(--fs-sm);
   color: var(--textContent);
 }
-.brief-readline > li {
+.brief-readline-chip {
   display: inline-flex;
-  align-items: baseline;
   min-width: 0;
-}
-.brief-readline > li + li::before {
-  content: "\00B7";
-  color: var(--textTertiary);
-  margin-inline: var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  background: var(--bgElevated);
 }
 .brief-readline-door {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
   font: inherit;
   color: inherit;
   background: none;
   border: 0;
-  padding: 0;
+  padding: var(--space-1) var(--space-3);
   text-align: left;
+  white-space: nowrap;
 }
 button.brief-readline-door {
   cursor: pointer;
 }
-button.brief-readline-door:hover .brief-readline-label {
-  color: var(--accentText);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+button.brief-readline-door:hover {
+  background: var(--bgHover);
+  border-radius: inherit;
+}
+.brief-readline-label,
+.brief-readline-basis {
+  color: var(--textMeta);
 }
 .brief-readline strong {
   font-weight: var(--fw-semibold);
@@ -462,14 +464,6 @@ button.brief-readline-door:hover .brief-readline-label {
 }
 .brief-readline strong.brief-readline-warn {
   color: var(--warn);
-}
-@media (max-width: 720px) {
-  .brief-readline {
-    flex-direction: column;
-  }
-  .brief-readline > li + li::before {
-    content: none;
-  }
 }
 
 /* Receipts with nothing to report: one line where a card stood. */

@@ -3183,6 +3183,11 @@ export const vi = {
   "brief.readings.label": "Buổi sáng của bạn qua năm chỉ số",
   "brief.readings.floorTip":
     "Một nguồn đã được đọc đến giới hạn, nên con số này là mức tối thiểu.",
+  "brief.readings.chip.urgent": "việc gấp",
+  "brief.readings.chip.meetings": "cuộc họp",
+  "brief.readings.chip.leads": "lead chờ trả lời",
+  "brief.readings.chip.risk": "có nguy cơ",
+  "brief.readings.chip.decisions": "cần xem xét",
   "brief.readings.urgent": "Việc gấp",
   "brief.readings.openUrgent": "Xem việc gấp",
   "brief.readings.openMeetings": "Xem lịch họp hôm nay",

@@ -321,6 +321,7 @@ export function WorklistRow({
           item={item}
           href={href}
           density={actsDensity(density, card, answer)}
+          quiet={card}
           owner={owner}
           primary={answer.primary}
           equals={answer.equals}

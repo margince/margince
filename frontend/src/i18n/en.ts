@@ -3308,6 +3308,11 @@ export const en = {
   // one most readers never read.
   "brief.readings.floorTip":
     "A source was read to its limit, so this figure is a floor.",
+  "brief.readings.chip.urgent": "urgent",
+  "brief.readings.chip.meetings": "meetings",
+  "brief.readings.chip.leads": "leads owed a reply",
+  "brief.readings.chip.risk": "at risk",
+  "brief.readings.chip.decisions": "to review",
   "brief.readings.urgent": "Urgent",
   // THE DOOR'S OWN WORD, per reading. Five cards each saying "Open" were five
   // identical entries in a screen reader's control list. Each says what its
