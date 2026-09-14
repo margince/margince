@@ -181,6 +181,7 @@ function AgendaRows({
         }
       >
         <WorklistRow
+          allowPin={!focus}
           item={item}
           density="compact"
           owner=""

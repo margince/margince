@@ -292,7 +292,9 @@ describe("ConsentSection", () => {
     // The fixture holds a granted non-DOI purpose and an unknown DOI one. The
     // granted row keeps Withdraw; the DOI row offers nothing, so no Grant
     // button survives anywhere on the section.
-    expect(screen.queryByRole("button", { name: /^grant$/i })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^record consent$/i }),
+    ).toBeNull();
     expect(screen.getAllByRole("button", { name: /^withdraw$/i })).toHaveLength(
       1,
     );
@@ -303,9 +305,9 @@ describe("ConsentSection", () => {
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);
     await screen.findByText("Marketing");
     // One row requires DOI in the fixture; the note belongs to it alone.
-    expect(
-      screen.getAllByText(/confirmed by the contact themselves/i),
-    ).toHaveLength(1);
+    expect(screen.getAllByText(/Only this contact can confirm/i)).toHaveLength(
+      1,
+    );
   });
 
   // Asserted through the withdraw verb on the NON-DOI row, which is the live
@@ -399,7 +401,7 @@ describe("ConsentSection", () => {
     // p1's — rows render in the order GET /contacts/{id}/consent lists them.
     await screen.findByText("Deal messages");
     await userEvent.click(
-      screen.getAllByRole("button", { name: /^grant$/i })[0],
+      screen.getAllByRole("button", { name: /^record consent$/i })[0],
     );
     await waitFor(() =>
       expect(

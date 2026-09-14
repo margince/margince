@@ -114,17 +114,14 @@ func thinRelationshipMoment(_ context.Context, _ time.Time, page *crmcontracts.C
 	if len(page.Activities.Data) > 0 || len(page.Network.Colleagues) > 0 {
 		return crmcontracts.ContactMoment{}, false
 	}
-	evidence := []crmcontracts.ContactMomentEvidence{{
-		Type:  crmcontracts.ContactMomentEvidenceTypeRelationshipChange,
-		Label: "Nothing captured, nobody connected",
-	}}
+	evidence := []crmcontracts.ContactMomentEvidence{}
 	return crmcontracts.ContactMoment{
 		ClaimKey:            "moment:thin_relationship",
 		Rule:                crmcontracts.ContactMomentRuleThinRelationship,
 		RuleVersion:         ptr(ruleVersion),
 		EvidenceFingerprint: fingerprintOf(evidence),
-		Headline:            "Nothing is captured about them yet",
-		WhyNow:              "There is no correspondence and no colleague who knows them. Everything about this record is still to be learned.",
+		Headline:            "No interactions recorded",
+		WhyNow:              "No interactions or colleague connections were found in the records available to you.",
 		Confidence:          crmcontracts.ContactMomentConfidenceObservedFact,
 		Evidence:            evidence,
 		RecommendedAction:   logInteraction(),
