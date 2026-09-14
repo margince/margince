@@ -87,6 +87,8 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 
 	"internal/modules/capture:CorrespondsWith": "a bool the verdict engine asks itself while deciding whether an address corresponds with us, under the system principal on the capture path. It returns no row and reaches no caller: the answer goes into a verdict that is itself audited, and a human never invokes it",
 
+	"internal/modules/capture:TimesJudgedNotAContact": "a COUNT the verdict engine asks itself before letting one creating answer overturn an address's own settled history, under the system principal on the capture path. What leaves the call is an integer — never a row, never an address, never a kind or a confidence — so there is nothing for a row gate to withhold. Its subject is not caller-chosen in the sense a gate protects: the address comes off the ledger row the pass already claimed, never from a request, and the answer is the same for anyone who could name that address. Same posture and same bound as CorrespondsWith above, which the same engine asks on the same store",
+
 	"internal/modules/capture:ListMine": "the caller's OWN traffic, and the predicate is the caller: it reads the actor off the context and refuses an invocation naming no member, then selects on that user id. There is no id from the request to gate — a caller can only ever ask about themselves",
 
 	"internal/modules/capture:SweepOlderThan":                 "a retention sweep that deletes traces past their window and returns a count. Run by the worker under the system principal, on a clock rather than a request; no caller names a row and nothing is disclosed",

@@ -61,7 +61,7 @@ func TestAnEntirelyBorderlinePassStaysInsideItsCallBudget(t *testing.T) {
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
 	const senders = 12
 	brain := borderlineBacklog(t, e, senders)
 
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), senders); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

@@ -37,7 +37,7 @@ func TestANoiseVerdictRetractsTheContactItsSenderAlreadyHad(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, junk, "spesen.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestANoiseVerdictLeavesACorrespondedSendersContact(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, supplier, "lieferant.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindTransactional}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestAPersonalVerdictRetractsTheContactEvenWhenTheOwnerWroteToThem(t *testin
 	dispositionID := seedPendingDisposition(t, e, clinic, "health.example", mail)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPersonal}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestAKeepOutRetractsOnlyTheDecidersOwnContact(t *testing.T) {
 	seedSenderOverride(t, e, e.Rep1, sender, "keep_out")
 
 	// No scripted verdict: the owner's decision answers before any model.
-	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

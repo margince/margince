@@ -88,7 +88,7 @@ func TestVerdictRealCreatesTheCounterpartyCaptureWithheld(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "ada@realco.example", "realco.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestVerdictNoiseHidesNowAndRedactsOnlyAfterTheUndoWindow(t *testing.T) {
 	dispositionID := seedPendingDisposition(t, e, "blast@bulk.example", "bulk.example", activityID)
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindSpam}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestVerdictBelowTheFloorAbstainsAndAsksAHuman(t *testing.T) {
 		verdicts:   map[string]string{dispositionID.String(): capture.KindSpam},
 		confidence: map[string]float64{dispositionID.String(): 0.4},
 	}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestEachSendersPromptContainsOnlyThatSendersText(t *testing.T) {
 	attacker := seedPendingDisposition(t, e, "attacker@evil.example", "evil.example", attackerActivity)
 
 	brain := &promptRecordingBrain{}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -442,7 +442,7 @@ func TestEachSenderIsJudgedOnItsOwnMessage(t *testing.T) {
 			attacker.String(): capture.KindSpam,
 		},
 	}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -503,7 +503,7 @@ func TestAnAddressErasedBeforeTheVerdictRecordsSuppressedNotReal(t *testing.T) {
 	suppressAddress(t, e, "gone@erased.example")
 
 	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -562,7 +562,7 @@ func TestOnlyTheContactKindCreatesAContact(t *testing.T) {
 			activity := seedCapturedMail(t, e, tc.email, "hello")
 			id := seedPendingDisposition(t, e, tc.email, "example", activity)
 			brain := &scriptedVerdictBrain{verdicts: map[string]string{id.String(): tc.kind}}
-			engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
 			}
@@ -619,7 +619,7 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 			activity := seedCapturedMail(t, e, address, "hello")
 			id := seedPendingDisposition(t, e, address, "example", activity)
 			brain := &scriptedVerdictBrain{}
-			engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+			engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 				t.Fatalf("verdict pass: %v", err)
 			}
@@ -661,7 +661,7 @@ func TestARoleMailboxIsSettledWithoutAskingTheModel(t *testing.T) {
 func TestAnInstallationWithNoModelStillAnswersItsSenders(t *testing.T) {
 	e := integration.Setup(t)
 	// No brain at all: this is an installation that never configured AI.
-	engine := NewCounterpartyVerdictEngine(e.Pool, nil, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, nil, CaptureConfig{}, slog.Default())
 	if engine.CanJudge() {
 		t.Fatal("the fixture composed a model — the case under test needs none")
 	}
@@ -703,7 +703,7 @@ func TestTheLedgerRecordsHowSureTheVerdictWasAndWhoAnswered(t *testing.T) {
 		confidence:  map[string]float64{dispositionID.String(): 0.91},
 		servedModel: "some-local-model:8b",
 	}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -729,7 +729,7 @@ func TestADeterministicAnswerRecordsNoConfidence(t *testing.T) {
 	activityID := seedCapturedMail(t, e, "billing@realco.example", "your invoice")
 	dispositionID := seedPendingDisposition(t, e, "billing@realco.example", "realco.example", activityID)
 	brain := &scriptedVerdictBrain{}
-	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}
@@ -763,7 +763,7 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 			verdicts:   map[string]string{dispositionID.String(): capture.KindContact},
 			confidence: map[string]float64{dispositionID.String(): 0.75},
 		}
-		engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+		engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 		if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 			t.Fatalf("verdict pass: %v", err)
 		}
@@ -785,7 +785,7 @@ func TestAWeakContactAnswerAsksAHumanWhileAWeakNoiseAnswerStands(t *testing.T) {
 			verdicts:   map[string]string{dispositionID.String(): capture.KindSpam},
 			confidence: map[string]float64{dispositionID.String(): 0.75},
 		}
-		engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
+		engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
 		if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 			t.Fatalf("verdict pass: %v", err)
 		}
