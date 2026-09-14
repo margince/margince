@@ -10,4 +10,4 @@
 -- the send engine binds it only when the message resolves to the same purpose.
 SET LOCAL lock_timeout = '3s';   -- read on every send; do not queue behind a long txn
 ALTER TABLE communication_suppression
-    ADD COLUMN purpose_id uuid REFERENCES consent_purpose(id);
+    ADD COLUMN purpose_id uuid REFERENCES consent_purpose(id) ON DELETE RESTRICT;
