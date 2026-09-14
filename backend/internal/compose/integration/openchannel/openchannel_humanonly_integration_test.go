@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package integration
+package openchannel
 
 // openchannel's 7 operations declare x-agent-access: human-only rather than
 // x-mcp-tool — the end-to-end proof that DESIGN.md's mechanism actually
@@ -13,14 +13,17 @@ package integration
 // registry.Invoke directly), and MCP tools/list (via Offered's HumanOnly
 // filter). A human session is unaffected on both routes.
 //
-// The composed extension set (openchannel included) is registered here via
-// the generated "composition" package rather than a synthetic fixture, the
-// same call cmd/api/main.go makes at boot — apptest.SetupApp's harness never
-// calls compose.RegisterExtensions itself, so a suite whose subject IS an
-// extension route has to. It resolves to the real generated module only under
-// the composed go.work (`make test-it`/`make test-integration`); a bare `go
-// test` here would 404 on every /ext/ route, which is exactly the signal that
-// this suite needs the composed lane.
+// OWN PACKAGE, deliberately, not a file under internal/compose/integration
+// alongside the several hundred other suites there. compose.RegisterExtensions
+// is a package-level, process-wide reconciliation (extensions.go's own doc) —
+// it stays applied for the rest of the test BINARY, not just this test — and
+// registering the real composed set (which the parent integration package
+// never does) made every openchannel_* tool visible to that package's own
+// whole-surface census (toolschema_conformance_integration_test.go), which
+// then failed on tools nothing in ITS scenario list calls. A dedicated test
+// binary contains the pollution to exactly the suite that needs it — the same
+// reason internal/compose/integration/webhooks, /capture, /collections are
+// their own packages rather than files in the parent one.
 
 import (
 	"context"
@@ -34,17 +37,17 @@ import (
 	"github.com/margince/margince/composition"
 )
 
-// registerOpenchannelOnce guards compose.RegisterExtensions: it is a
-// package-level, process-wide reconciliation (extensions.go's own doc) —
-// jurisdiction.Register beneath it refuses a second registration of the same
-// pack outright — so every test in this binary that needs the composed set
-// shares one call rather than each racing to be first.
+// registerOpenchannelOnce guards compose.RegisterExtensions: jurisdiction.Register
+// beneath it refuses a second registration of the same pack outright, so every
+// test in this binary that needs the composed set shares one call rather than
+// each racing to be first.
 var registerOpenchannelOnce sync.Once
 
 // bootWithOpenchannel registers the real composed extension set (which
 // includes openchannel) into the core registries before booting the app
 // harness — this must run before compose.New assembles anything that reads
-// it, and apptest.SetupApp's harness never calls it itself.
+// it, and apptest.SetupApp's harness never calls it itself (only cmd/api and
+// cmd/worker do, at real boot).
 func bootWithOpenchannel(t *testing.T, opts ...compose.Option) *apptest.AppEnv {
 	t.Helper()
 	var registerErr error
@@ -65,12 +68,10 @@ func bootWithOpenchannel(t *testing.T, opts ...compose.Option) *apptest.AppEnv {
 }
 
 // grantOpenchannelEndpointToAdmin gives the bootstrapped admin the one RBAC
-// object openchannel_open gates on. DESIGN.md's own contract comment says
-// this object is "held by no seeded role" — an operator grants it
-// deliberately — so the human-works case needs it granted explicitly, the
-// same way other suites rewrite a role's permissions directly
-// (webhooks_integration_test.go's dropObjectReadFromEveryRole is the sibling
-// pattern, the other direction).
+// object openchannel_open gates on. The contract's own comment says this
+// object is "held by no seeded role" — an operator grants it deliberately —
+// so the human-works case needs it granted explicitly, the same way other
+// suites rewrite a role's permissions directly over SQL.
 func grantOpenchannelEndpointToAdmin(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(),
@@ -78,6 +79,46 @@ func grantOpenchannelEndpointToAdmin(t *testing.T, e *apptest.AppEnv) {
 			'{"create":true,"read":true,"update":true,"delete":true}'::jsonb, true)
 		 WHERE key = 'admin'`); err != nil {
 		t.Fatalf("granting ext_openchannel_endpoint to the admin role: %v", err)
+	}
+}
+
+// capRefusal is the slice of the RFC 7807 problem these cases assert on: the
+// machine code a client branches on, plus the detail a human reads.
+type capRefusal struct {
+	Code   string `json:"code"`
+	Detail string `json:"detail"`
+}
+
+// assertNothingStaged proves a refusal never reached the 🟡 admission gate: a
+// staged approval is a durable authority object, so its absence is the
+// observable difference between "refused outright" and "asked a human".
+func assertNothingStaged(t *testing.T, e *apptest.AppEnv, what string) {
+	t.Helper()
+	var staged int
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatal(err)
+	}
+	if staged != 0 {
+		t.Fatalf("%s staged %d approval(s) — a human-only refusal must never reach the approval gate", what, staged)
+	}
+}
+
+// assertRefusalLeaksNothing holds the refusal body to both halves of the
+// error bar: it names why the caller was refused, and it carries no
+// operator-only detail.
+func assertRefusalLeaksNothing(t *testing.T, detail, mustName string) {
+	t.Helper()
+	if !strings.Contains(detail, mustName) {
+		t.Fatalf("refusal %q does not name %q", detail, mustName)
+	}
+	lower := strings.ToLower(detail)
+	for _, leak := range []string{
+		"select ", "insert ", "update ", "app_user", "workspace_id",
+		"pgx", "apperrors", ".go:", "goroutine", "/users/", "internal/platform",
+	} {
+		if strings.Contains(lower, leak) {
+			t.Fatalf("refusal %q leaks internals (%q)", detail, leak)
+		}
 	}
 }
 
@@ -93,7 +134,7 @@ func TestOpenchannelOpenIsRefusedForAnAgentPrincipal(t *testing.T) {
 	bearer := apptest.PassportBearer(t, e, "drafting agent", "read", "write")
 
 	var refusal capRefusal
-	status := e.Call(t, "PUT", "/v1/ext/openchannel/endpoint", AnyMap{}, bearer, &refusal)
+	status := e.Call(t, "PUT", "/v1/ext/openchannel/endpoint", map[string]any{}, bearer, &refusal)
 	if status != http.StatusForbidden || refusal.Code != "permission_denied" {
 		t.Fatalf("agent openchannel_open → %d %q, want 403 permission_denied (human-only)", status, refusal.Code)
 	}
@@ -134,7 +175,7 @@ func TestOpenchannelOpenStillWorksForAHuman(t *testing.T) {
 		ID  string `json:"id"`
 		Ref string `json:"ref"`
 	}
-	if status := e.Call(t, "PUT", "/v1/ext/openchannel/endpoint", AnyMap{}, nil, &endpoint); status != http.StatusOK {
+	if status := e.Call(t, "PUT", "/v1/ext/openchannel/endpoint", map[string]any{}, nil, &endpoint); status != http.StatusOK {
 		t.Fatalf("human openchannel_open → %d, want 200", status)
 	}
 	if endpoint.ID == "" || endpoint.Ref == "" {
