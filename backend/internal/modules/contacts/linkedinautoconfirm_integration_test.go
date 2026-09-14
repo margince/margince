@@ -226,6 +226,57 @@ func TestAnAddressIsNotConfirmedOntoAContactAlreadyMet(t *testing.T) {
 	}
 }
 
+// Two of the owner's addresses resolving to ONE contact is the same rival case
+// as an already-confirmed connection, but arising WITHIN a single pass: both
+// ghosts are unmatched when the candidate query reads them, so both surface as
+// confirmable, and only the write's own recheck stops the second. Exactly one
+// confirms and the write shape lands exactly once; the other stays unmatched.
+func TestTwoAddressesForOneContactConfirmOnlyOnce(t *testing.T) {
+	e := setupDedupe(t)
+	dana := e.seedVisibleContact(t, "Dana Buyer")
+	e.seedEmail(t, dana, "dana@acme.test")
+	// A second address on the same contact. is_primary=false: uq_contact_email_primary
+	// admits only one primary of a type, and a second primary is not this test's point.
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.as(), `
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+			VALUES ($1, 'dana.alt@acme.test', false, 'manual', 'human:test')`, dana)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the second address: %v", err)
+	}
+	// Two unmatched ghosts of the owner's, one per address, both onto Dana.
+	e.seedEmailGhost(t, "Dana Buyer", "dana@acme.test", "https://www.linkedin.com/in/dana-1")
+	e.seedEmailGhost(t, "Dana B Buyer", "dana.alt@acme.test", "https://www.linkedin.com/in/dana-2")
+
+	res, err := e.store.MatchLinkedInConnections(e.as(), e.rep)
+	if err != nil {
+		t.Fatalf("matching: %v", err)
+	}
+	if res.Confirmed != 1 || res.Suggested != 0 {
+		t.Fatalf("the pass reported %+v, want 1 confirmed and 0 suggested — one contact is one connection", res)
+	}
+	var confirmed int
+	if err := e.store.tx(e.as(), func(tx pgx.Tx) error {
+		return tx.QueryRow(e.as(),
+			`SELECT count(*) FROM linkedin_connection WHERE matched_contact_id = $1 AND match_status = 'confirmed'`,
+			dana).Scan(&confirmed)
+	}); err != nil {
+		t.Fatalf("counting confirmed connections: %v", err)
+	}
+	if confirmed != 1 {
+		t.Errorf("%d connections confirmed onto one contact, want 1 — the second doubled the colleague's reach", confirmed)
+	}
+	// The write shape owes exactly one contact audit row and one decided event;
+	// a second confirm would have written them twice against the same contact.
+	if n := e.auditCount(t, "contact", dana.UUID); n != 1 {
+		t.Errorf("the contact carries %d update audit rows, want 1 — the write ran once", n)
+	}
+	if n := e.eventCount(t, "linkedin_match.decided"); n != 1 {
+		t.Errorf("the pass emitted %d decided events, want 1", n)
+	}
+}
+
 // assertConfirmWroteEverything checks the whole write shape a confirmation owes:
 // the handle on the contact, an audit row on both the connection and the
 // contact, and the two events.

@@ -136,7 +136,10 @@ func applyMatchCandidates(ctx context.Context, tx pgx.Tx, cands []matchCandidate
 // confirmOneMatch links the ghost to its contact and performs the whole write.
 // It reports false when the ghost is no longer there to confirm — a human
 // decided it, or the address tier already claimed it earlier in this same pass —
-// because confirming a row that moved is a link that does not exist.
+// and when the contact already carries the owner's confirmed connection, because
+// one contact is not two of a colleague's connections. In every case confirming
+// would be a link that does not exist or one that doubles a reach already
+// counted.
 func confirmOneMatch(ctx context.Context, tx pgx.Tx, c matchCandidate) (bool, error) {
 	// The write-authority probe on the contact, and the contact held ahead of
 	// the connection. holdConfirmContacts already took this lock in the pass's
@@ -159,6 +162,18 @@ func confirmOneMatch(ctx context.Context, tx pgx.Tx, c matchCandidate) (bool, er
 		 WHERE c.id = $1 AND was.id = c.id
 		   AND c.match_status = 'unmatched'
 		   AND c.tombstoned_at IS NULL
+		   -- noConfirmedRivalConnection, re-asked in the write's own aliases. The
+		   -- candidate query already excluded a contact with a confirmed rival,
+		   -- but that read ran before the contact lock: it cannot see a rival
+		   -- confirmed EARLIER in this same pass (two of the owner's addresses on
+		   -- one contact), nor one a concurrent pass committed while this one
+		   -- waited on the lock. Under the lock this predicate is what holds the
+		   -- invariant — the second confirm finds the first and returns no row.
+		   AND NOT EXISTS (
+		       SELECT 1 FROM linkedin_connection other
+		        WHERE other.matched_contact_id = $2
+		          AND other.owner_user_id = c.owner_user_id
+		          AND other.match_status = 'confirmed')
 		 RETURNING was.match_status, was.matched_contact_id`,
 		c.ghost, c.contact).Scan(&wasStatus, &wasContact)
 	if errors.Is(err, pgx.ErrNoRows) {
