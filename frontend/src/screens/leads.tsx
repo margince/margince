@@ -1,14 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowUpRight,
-  BriefcaseBusiness,
-  Building2,
-  FolderKanban,
-  Link as LinkIcon,
-  Mail,
-  Rss,
-  User,
-} from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -31,9 +22,6 @@ import {
 import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ContactLink } from "../design-system/contactlink";
-import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
-import { InlineChoice, InlineText } from "../design-system/inlinechoice";
-import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
@@ -70,12 +58,10 @@ import {
   useViewerId,
 } from "./common";
 import type { CreateField } from "./create";
-import { CustomFieldsPanel } from "./customfields.card";
-import { useObjectCustomFields } from "./customfields.form";
-import { EditAction } from "./edit";
 import {
   EntityRef,
   RosterPartialNote,
+  useEntityName,
   useRoster,
   useRosterPartial,
 } from "./entityref";
@@ -83,6 +69,7 @@ import { RecordHistoryTab, useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
 import { MergedLeadPanel } from "./leadmerged";
 import {
+  leadStatusLabel,
   promoteEligible,
   scoreFactorLabel,
   scoreTone,
@@ -104,7 +91,11 @@ import {
   TodayPanel,
   TodoRow,
 } from "./record360";
+import { RecordCustomFields } from "./recordcustomfields";
+import { saveRecordEdit } from "./recordedit";
 import { RecordEmailAside, RecordEmailVerb } from "./recordemail";
+import { RecordFields } from "./recordfields";
+import { searchProjectReferences, useRecordOwners } from "./recordreferences";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
 import "./leads.css";
@@ -122,11 +113,7 @@ import "./leads.css";
 type Lead = components["schemas"]["Lead"];
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
-import {
-  sourceLabelFor,
-  sourcePickOptions,
-  useLeadSources,
-} from "./leadsources";
+import { sourcePickOptions, useLeadSources } from "./leadsources";
 
 export { promoteEligible, scoreTone } from "./leadpresentation";
 export { terminalBadge } from "./leadstanding";
@@ -159,16 +146,23 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-// Builds the PATCH body: only the five scalar fields this task surfaces —
-// status and score are Phase 4 and never sent from this form.
+// Status and score use their domain actions; Details sends only submitted identity fields.
 export function mapLeadUpdate(
   values: Record<string, unknown>,
 ): UpdateLeadRequest {
+  const field = (key: string) =>
+    Object.hasOwn(values, key)
+      ? stringField(values[key]).trim() || null
+      : undefined;
   return {
-    full_name: stringField(values.full_name).trim() || undefined,
-    email: stringField(values.email).trim() || undefined,
-    title: stringField(values.title).trim() || undefined,
-    company_name: stringField(values.company_name).trim() || undefined,
+    full_name: field("full_name"),
+    email: field("email"),
+    title: field("title"),
+    company_name: field("company_name"),
+    source: stringField(values.source).trim() || undefined,
+    candidate_company_key: field("candidate_company_key"),
+    project_id: field("project_id"),
+    owner_id: stringField(values.owner_id).trim() || undefined,
   };
 }
 
@@ -653,97 +647,87 @@ function LeadScorePanel({
  */
 function LeadIdentityFields({
   lead,
-  save,
-  saving,
-  readOnlyReason,
-}: Readonly<{
-  lead: Lead;
-  save: (body: UpdateLeadRequest) => Promise<void>;
-  saving: boolean;
-  readOnlyReason?: string;
-}>) {
+  writer,
+}: Readonly<{ lead: Lead; writer: LeadWriter }>) {
   const t = useT();
+  const overlay = useSorMode() === "overlay";
+  const project = useEntityName("project", lead.project_id);
   const sources = useLeadSources();
-  const fromConnector = (lead.source ?? "").startsWith("connector:");
-  // One write at a time: a second row opened while a save is in flight would
-  // carry the If-Match the first write is about to make stale.
-  const canEdit = !readOnlyReason && !saving;
+  const owners = useRecordOwners(lead.owner_id);
+  const connector = (lead.source ?? "").startsWith("connector:");
   return (
-    <Panel title={t("lead.details")}>
-      <PanelBody>
-        <FieldGrid icons>
-          <FieldRow label={t("create.fullName")} icon={<User />}>
-            <InlineText
-              label={t("create.fullName")}
-              value={lead.full_name ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ full_name: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow
-            label={t("create.contactTitle")}
-            icon={<BriefcaseBusiness />}
-          >
-            <InlineText
-              label={t("create.contactTitle")}
-              value={lead.title ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ title: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow label={t("create.companyName")} icon={<Building2 />}>
-            <InlineText
-              label={t("create.companyName")}
-              value={lead.company_name ?? ""}
-              placeholder={t("lead.detailsUnset")}
-              canEdit={canEdit}
-              readOnlyReason={readOnlyReason}
-              onSave={(next) => save({ company_name: next.trim() || null })}
-            />
-          </FieldRow>
-          <FieldRow label={t("create.email")} icon={<Mail />}>
-            {lead.email ?? t("lead.detailsUnset")}
-          </FieldRow>
-          <FieldRow label={t("create.linkedinUrl")} icon={<LinkIcon />}>
-            {lead.linkedin_url ? (
-              <OffsiteLink href={lead.linkedin_url}>
-                {t("lead.openLinkedIn")}
-              </OffsiteLink>
-            ) : (
-              t("lead.detailsUnset")
-            )}
-          </FieldRow>
-          <FieldRow label={t("lead.source")} icon={<Rss />}>
-            <InlineChoice
-              label={t("lead.source")}
-              hideLabel
-              value={lead.source ?? ""}
-              options={sourcePickOptions(sources.data?.data, lead.source, t)}
-              // A connector's value stays where the connector put it; the
-              // administered list is what a human may pick from.
-              canEdit={canEdit && !fromConnector}
-              readOnlyReason={
-                fromConnector ? t("lead.sourceFromConnector") : readOnlyReason
+    <>
+      <RecordFields
+        title={t("lead.details")}
+        notice={overlay ? t("overlay.partialWriteBack") : undefined}
+        kind="lead"
+        links={
+          lead.linkedin_url
+            ? {
+                linkedin_url: {
+                  href: lead.linkedin_url,
+                  label: t("record.openProfile"),
+                },
               }
-              render={() => sourceLabelFor(lead, sources.data?.data, t)}
-              onSave={(next) => save({ source: next })}
-            />
-          </FieldRow>
-          {lead.project_id && (
-            <FieldRow label={t("lead.project")} icon={<FolderKanban />}>
-              <EntityRef kind="project" id={lead.project_id} />
-            </FieldRow>
-          )}
-        </FieldGrid>
-        {/* Email is read-only here because it is the lead's dedupe key. The Edit
-            modal owns the write so a 409 collision with a live lead has a place
-            to link the incumbent record. */}
-      </PanelBody>
-    </Panel>
+            : undefined
+        }
+        record={lead}
+        fields={[
+          ...leadEditFields,
+          {
+            key: "owner_id",
+            label: "list.owner",
+            type: "select",
+            options: owners,
+            required: true,
+          },
+          {
+            key: "status",
+            label: "history.field.status",
+            toInput: () => {
+              const label = leadStatusLabel(lead.status);
+              return label ? t(label) : lead.status;
+            },
+          },
+          { key: "score", label: "lead.score", type: "number" },
+          { key: "linkedin_url", label: "create.linkedinUrl" },
+          { key: "candidate_company_key", label: "record.companyRoutingKey" },
+          {
+            key: "project_id",
+            label: "lead.project",
+            searchTargets: searchProjectReferences,
+            options: lead.project_id
+              ? [
+                  {
+                    value: lead.project_id,
+                    label: project.name ?? lead.project_id,
+                  },
+                ]
+              : [],
+          },
+          {
+            key: "source",
+            label: "lead.source",
+            type: "select",
+            required: true,
+            options: sourcePickOptions(sources.data?.data, lead.source, t),
+          },
+        ]}
+        groups={[{ label: t("create.email"), keys: ["email"] }]}
+        canEdit={!writer.readOnly}
+        readOnlyFields={{
+          linkedin_url: t("record.leadProfileReadOnly"),
+          status: t("record.leadStatusAction"),
+          score: t("record.leadScoreAction"),
+          ...(connector ? { source: t("lead.sourceFromConnector") } : {}),
+        }}
+        resolveExisting={(_code, id) => ({ screen: "leads", id })}
+        save={async (values, _rows, opened) =>
+          saveRecordEdit("lead", opened, mapLeadUpdate(values))
+        }
+      />
+      <RecordCustomFields kind="lead" record={lead} />
+    </>
   );
 }
 
@@ -755,17 +739,6 @@ function LeadIdentityFields({
  */
 export type LeadWriter = ReturnType<typeof useLeadPatch>;
 
-/**
- * The lead page's ONE write, and the two facts every control on it reads.
- *
- * The ladder, the identity grid, the owner picker and the score override are
- * now in two different columns, and they were one card when they shared this
- * mutation. Sharing it is the part that matters: one PATCH shape, one
- * If-Match, one invalidation, so two edits a second apart cannot send two
- * versions of the same row. A second `useMutation` in the rail would be a
- * second writer of one invariant, which is the defect this hook exists to
- * make impossible rather than to document.
- */
 /**
  * One write's variables: what to change, and the record it is changing.
  *
@@ -842,14 +815,7 @@ function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
     onSuccess: onChanged,
   });
 
-  // The inline rows await their save and render what it throws, so they need a
-  // promise rather than the mutation's fire-and-forget. mutateAsync is that
-  // same mutation — one PATCH shape, one If-Match, one invalidation.
-  const saveField = async (body: UpdateLeadRequest) => {
-    await patch.mutateAsync(write(body));
-  };
-
-  return { patch, claim, readOnly, readOnlyReason, save, saveField };
+  return { patch, claim, readOnly, readOnlyReason, save };
 }
 
 /**
@@ -979,12 +945,7 @@ function LeadRail({
 }>) {
   return (
     <div className="record-stack">
-      <LeadIdentityFields
-        lead={lead}
-        save={writer.saveField}
-        saving={writer.patch.isPending}
-        readOnlyReason={writer.readOnlyReason}
-      />
+      <LeadIdentityFields lead={lead} writer={writer} />
     </div>
   );
 }
@@ -1619,7 +1580,6 @@ function LeadOverviewPane({
           detectWaitingReply
         />
       )}
-      <CustomFieldsPanel object="lead" record={lead} />
     </div>
   );
 }
@@ -1631,7 +1591,6 @@ function LeadOverviewPane({
 function LeadActions({
   lead,
   id,
-  cf,
   overlay,
   onQualify,
   onDisqualify,
@@ -1640,7 +1599,6 @@ function LeadActions({
 }: Readonly<{
   lead: Lead;
   id: string;
-  cf: ReturnType<typeof useObjectCustomFields>;
   overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
@@ -1704,46 +1662,6 @@ function LeadActions({
           sentence is passed in rather than minted here: a reason living in
           the panel would not exist until the menu was first opened. */}
       <OverflowMenu label={t("record.moreActions")}>
-        <EditAction<Lead>
-          labelled
-          disabledReasonId={refusedReasonId}
-          label={t("record.edit")}
-          savedMessage={(saved) =>
-            t("record.saveDone", { name: saved.full_name ?? "" })
-          }
-          notice={overlay ? t("overlay.partialWriteBack") : undefined}
-          fields={[...leadEditFields, ...cf.formFields]}
-          record={{
-            id: lead.id,
-            version: lead.version,
-            full_name: lead.full_name ?? "",
-            email: lead.email ?? "",
-            title: lead.title ?? "",
-            company_name: lead.company_name ?? "",
-            ...cf.recordSlice(lead),
-          }}
-          update={async (values, _rows, opened) => {
-            const { data, error } = await api.PATCH("/leads/{id}", {
-              params: {
-                path: { id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              body: {
-                ...mapLeadUpdate(values),
-                // A diff against what the form prefilled from: a snapshot
-                // sends `null` for every empty custom field, and the API
-                // reads that as clearing a column nobody touched.
-                ...cf.toPatch(values, opened ?? {}),
-              },
-            });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
-          }}
-          invalidate="leads"
-          recordKey="lead"
-        />
         {/* The overlay seam refuses disqualify (a cross-type lifecycle
             transition) and share (a grant probes a native row a mirror lead
             does not have), so in overlay these are genuinely UNSUPPORTED
@@ -1844,12 +1762,10 @@ function LeadDialogs({
 function LeadRecord({
   lead,
   id,
-  cf,
   overlay,
 }: Readonly<{
   lead: Lead;
   id: string;
-  cf: ReturnType<typeof useObjectCustomFields>;
   // Read ABOVE the query gate and handed down, so the posture is known on the
   // page's FIRST paint. Read here it would start loading only once the lead
   // had arrived, and the page would draw one frame of native affordances — an
@@ -1957,7 +1873,6 @@ function LeadRecord({
         <LeadActions
           lead={lead}
           id={id}
-          cf={cf}
           overlay={overlay}
           terminalReasonId={terminalReasonId}
           refusedReasonId={writer.readOnly ? terminalReasonId : undefined}
@@ -2059,7 +1974,6 @@ function LeadRecord({
 
 export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const cf = useObjectCustomFields("lead");
   // The seam serves update for a mirrored lead (write-back projects onto the
   // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
   // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
@@ -2087,13 +2001,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
           // Keyed by lead: every piece of page state below — the open dialog,
           // the tab, a half-typed score override — is about THIS lead, and
           // this screen stays mounted from one to the next.
-          <LeadRecord
-            key={lead.id}
-            lead={lead}
-            id={id}
-            cf={cf}
-            overlay={overlay}
-          />
+          <LeadRecord key={lead.id} lead={lead} id={id} overlay={overlay} />
         )}
       </QueryGate>
     </div>

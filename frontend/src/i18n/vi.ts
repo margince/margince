@@ -462,6 +462,23 @@ export const vi = {
   "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
+
+  "record.fieldRequired": "Trường này là bắt buộc.",
+  "record.registration": "Thông tin đăng ký",
+  "record.leadProfileReadOnly":
+    "Không thể thay đổi LinkedIn của khách hàng tiềm năng.",
+  "record.leadStatusAction":
+    "Dùng các thao tác trạng thái để thay đổi trạng thái.",
+  "record.leadScoreAction": "Dùng chức năng điều chỉnh điểm và cung cấp lý do.",
+  "record.openProfile": "Mở hồ sơ",
+  "record.fieldsFailed": "Không thể tải trường tùy chỉnh.",
+  "record.fieldsLoading": "Đang tải trường tùy chỉnh…",
+  "record.fieldsRetry": "Thử lại",
+
+  "record.visibilityOwner": "Chỉ chủ sở hữu",
+  "record.companyRoutingKey": "Khóa định tuyến công ty",
+  "record.finishFieldEdit":
+    "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng Chi tiết.",
   "record.save": "Lưu",
   "record.saveDone": "Đã lưu “{name}”",
   "record.archiveDone": "Đã lưu trữ “{name}”",
@@ -1021,7 +1038,7 @@ export const vi = {
   "co.strip.noOpenDeals": "Không có deal mở",
   "co.strip.pipeline": "Pipeline đang mở",
   "co.description.label": "Mô tả",
-  "co.description.placeholder": "Thêm mô tả",
+
   "co.strip.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
   "co.strip.notAssessed": "Chưa đánh giá",
   "co.strip.lifetimeOf": "{amount} tổng cộng",
@@ -1723,7 +1740,7 @@ export const vi = {
   "co.rail.contacts.empty": "Chưa có liên hệ nào. Không có ai để viết thư.",
   "co.rail.contacts.add": "Thêm liên hệ",
   "co.rail.contacts.inTouch": "Đã liên hệ với họ",
-  "co.rail.details.all": "Tất cả trường",
+
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
   "co.commercial.allDeals": "Tất cả deal",
@@ -2228,7 +2245,7 @@ export const vi = {
   "lead.scoreNoSignals": "Chưa có tín hiệu đủ điều kiện",
   "lead.source": "Nguồn",
   "lead.project": "Dự án",
-  "lead.openLinkedIn": "Mở hồ sơ LinkedIn",
+
   "lead.filterSource": "Nguồn",
   "lead.filterSourceAll": "Tất cả nguồn",
   "lead.source.manual": "Tạo thủ công",
@@ -2356,7 +2373,7 @@ export const vi = {
     "Không đọc được các khách hàng tiềm năng này. Số lượng ở trên vẫn đúng.",
   "lead.boardTerminalOnly":
     "Không còn mục nào đang mở — chúng được tính ở cột Đã chuyển đổi và Đã loại.",
-  "contact.fromLead": "Từ khách hàng tiềm năng",
+
   "lead.mergedTitle": "Đã gộp vào một khách hàng tiềm năng khác",
   "lead.mergedBody":
     "Khách hàng tiềm năng này hoá ra trùng với một mục khác. Dòng thời gian, chấp thuận và điểm số đã chuyển sang đó; bản ghi này ở lại làm dấu vết.",
@@ -2581,7 +2598,7 @@ export const vi = {
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
-  "deal.edit": "Sửa deal",
+
   "deal.ownerKeep": "Giữ người phụ trách hiện tại",
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Bỏ giao",
@@ -2670,17 +2687,7 @@ export const vi = {
   "outcomeReview.noAnswer": "Chưa trả lời",
   "outcomeReview.notes": "Nội dung khác",
   "deal.commercialContext": "Bối cảnh thương mại",
-  "deal.commercialEdit": "Sửa",
-  "deal.commercialAdd": "Ghi nhận bối cảnh",
-  "deal.commercialEditTitle": "Bối cảnh thương mại",
-  "deal.commercialSave": "Lưu bối cảnh",
-  "deal.commercialEmpty": "Chưa ghi nhận gì",
-  "deal.commercialEmptyDetail":
-    "Vì sao có thương vụ này, nó quan trọng đến đâu, đến từ đâu, và mỗi năm đáng giá bao nhiêu.",
-  "deal.arrHint": "Giá trị định kỳ cho một năm, tính bằng {currency}.",
-  "deal.arrNeedsCurrency":
-    "ARR dự kiến cần một loại tiền tệ. Hãy đặt giá trị và tiền tệ trong phần sửa thương vụ trước.",
-  "deal.arrClear": "Gỡ bỏ",
+
   "deal.arrFromOffer":
     "ARR dự kiến đến từ báo giá đã được chấp nhận và không sửa ở đây.",
   "deal.brief": "Tóm tắt thương vụ",
@@ -2689,12 +2696,11 @@ export const vi = {
   "deal.briefLess": "Thu gọn",
   "deal.briefEdit": "Sửa",
   "deal.briefAdd": "Viết tóm lược",
-  "deal.briefEditTitle": "Tóm lược thương vụ",
+
   "deal.briefEmpty": "Chưa có tóm lược nào",
   "deal.briefEmptyDetail":
     "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để đồng nghiệp tiếp nhận không phải dựng lại từ đầu.",
-  "deal.briefSave": "Lưu tóm lược",
-  "deal.briefTooLong": "Một bản tóm lược dài nhiều nhất {max} ký tự.",
+
   "deal.motion": "Loại giao dịch",
   "deal.motionUnset": "Chưa đặt",
   "deal.motionNewBusiness": "Khách hàng mới",
@@ -2710,7 +2716,7 @@ export const vi = {
   "deal.priorityLow": "Thấp",
   "deal.acquisitionSource": "Nguồn tiếp cận",
   "deal.expectedArr": "ARR dự kiến",
-  "deal.monthlyEquivalent": "Tương đương hàng tháng",
+
   "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Phụ trách",
   "assignments.noAccessNote":
@@ -3347,7 +3353,7 @@ export const vi = {
   "create.industry": "Ngành",
   "create.sizeBand": "Quy mô công ty",
   "co.address.summary": "Địa chỉ",
-  "co.address.add": "Thêm địa chỉ",
+
   "create.addressLine1": "Số nhà và tên đường",
   "create.addressLine2": "Địa chỉ bổ sung",
   "create.city": "Thành phố",
@@ -3366,23 +3372,14 @@ export const vi = {
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
   "field.addDomain": "Thêm tên miền",
-  "field.addLegalName": "Thêm tên pháp lý",
-  "field.addIndustry": "Thêm ngành",
-  "field.addLinkedinUrl": "Thêm URL LinkedIn",
+
   "field.addRegisterVat": "Thêm mã số thuế",
   "field.addRegisteredAddress": "Thêm địa chỉ đăng ký",
-  "field.addFullName": "Thêm họ và tên",
+
   "field.addTitle": "Thêm chức danh",
-  "field.addAddressLine1": "Thêm số nhà và tên đường",
-  "field.addAddressLine2": "Thêm địa chỉ dòng 2",
-  "field.addPostalCode": "Thêm mã bưu chính",
-  "field.addCity": "Thêm thành phố",
-  "field.addRegion": "Thêm bang / khu vực",
-  "field.addCountry": "Thêm mã quốc gia, ví dụ DE",
-  "field.country": "Quốc gia",
+
   "field.domain": "Tên miền",
-  "field.domainRequired":
-    "Không thể xóa tên miền tại đây — hãy dùng trình chỉnh sửa đầy đủ để xóa.",
+
   "field.emailType": "Loại",
   "field.emailWork": "Công việc",
   "field.emailPersonal": "Cá nhân",
@@ -8460,7 +8457,7 @@ export const vi = {
   "contact.page.owner": "Người phụ trách",
   "contact.page.ownerUnassigned": "Chưa giao",
   "contact.page.linkedin": "LinkedIn",
-  "contact.page.openProfile": "Mở hồ sơ",
+
   "contact.rail.detailsTitle": "Chi tiết",
   "contact.rail.archivedReadOnly":
     "Liên hệ này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",

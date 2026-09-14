@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { ifMatch, requireVersion } from "../api/version";
+
 // The company form: what a create or an edit sends, and the fields that
 // collect it.
 //
@@ -122,8 +124,12 @@ export function mapCompanyBody(
 export function mapCompanyUpdate(
   values: Record<string, unknown>,
   rows: FormRows,
-  currentDomains: Company["domains"] = [],
+  currentDomains: readonly { domain: string; is_primary: boolean }[] = [],
 ): UpdateCompanyRequest {
+  const nullable = (key: string) =>
+    values[key] === undefined
+      ? undefined
+      : stringField(values[key]).trim() || null;
   const desired = mapDomainRowsReplaceSet(rows);
   const current: DomainPatch = (currentDomains ?? []).map((domain) => ({
     domain: domain.domain,
@@ -131,12 +137,17 @@ export function mapCompanyUpdate(
   }));
   const body: UpdateCompanyRequest = {
     display_name: stringField(values.display_name).trim() || undefined,
-    legal_name: stringField(values.legal_name).trim() || undefined,
-    industry: stringField(values.industry).trim() || undefined,
-    size_band: asSizeBand(stringField(values.size_band)),
-    owner_id: stringField(values.owner_id).trim() || undefined,
+    legal_name: nullable("legal_name"),
+    industry: nullable("industry"),
+    size_band:
+      values.size_band === ""
+        ? null
+        : asSizeBand(stringField(values.size_band)),
+    owner_id: nullable("owner_id"),
+    description: nullable("description"),
+    parent_company_id: nullable("parent_company_id"),
   };
-  if (!sameDomainSet(desired, current)) {
+  if (Object.hasOwn(rows, "domains") && !sameDomainSet(desired, current)) {
     body.domains = desired;
   }
   const lifecycle = stringField(values.lifecycle).trim();
@@ -172,7 +183,7 @@ export function mapCompanyUpdate(
 // one nested object; the form channel is flat string values, so the two are
 // mapped at the boundary (addressFrom / addressPatch) rather than teaching the
 // form about nesting for one record type.
-const ADDRESS_FIELDS: CreateField[] = [
+export const ADDRESS_FIELDS: CreateField[] = [
   { key: "address_line1", label: "create.addressLine1" },
   { key: "address_line2", label: "create.addressLine2" },
   { key: "address_postal_code", label: "create.postalCode" },
@@ -204,7 +215,7 @@ export function addressFrom(
 //
 // The whole object is omitted only when the form never rendered the fields at
 // all, so a surface that does not offer the address cannot blank one.
-function addressPatch(
+export function addressPatch(
   values: Record<string, unknown>,
 ): UpdateCompanyRequest["address"] | undefined {
   if (values.address_line1 === undefined) {
@@ -307,6 +318,7 @@ export function companyEditFields(
     // neither was editable from this page at all.
     {
       key: "lifecycle",
+      required: true,
       label: "company.lifecycle",
       type: "select",
       options: LIFECYCLE_OPTIONS.map((value) => ({
@@ -357,6 +369,22 @@ export async function createCompany(
     throwProblem(error, t);
   }
   return data;
+}
+
+export async function patchCompanyField(
+  company: Pick<Company, "id" | "version">,
+  body: UpdateCompanyRequest,
+): Promise<void> {
+  const { error } = await api.PATCH("/companies/{id}", {
+    params: {
+      path: { id: company.id },
+      ...ifMatch(requireVersion(company.version)),
+    },
+    body,
+  });
+  if (error) {
+    throwProblem(error);
+  }
 }
 
 // The editable domain shape excludes row ids and other server metadata.

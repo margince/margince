@@ -127,6 +127,14 @@ func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 		t.Fatalf("ListDeals returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, "mid-market")
+
+	cleared, err := f.store.UpdateDeal(f.ctx, dealIDOf(ids.UUID(created.Id)), deals.UpdateDealInput{
+		Clear: []string{col}, CustomFields: map[string]any{col: nil},
+	})
+	if err != nil {
+		t.Fatalf("clear custom value: %v", err)
+	}
+	assertNoCF(t, cleared.AdditionalProperties, col)
 }
 
 // The project round trip, and the case the deal one above could not stand
@@ -162,6 +170,14 @@ func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
 		t.Fatalf("UpdateProject: %v", err)
 	}
 	assertCF(t, updated.AdditionalProperties, col, "fixed-price")
+
+	cleared, err := f.projects.UpdateProject(f.ctx, projectIDOf(ids.UUID(created.Id)), projects.UpdateProjectInput{
+		CustomFields: map[string]any{col: nil}, Clear: []string{col},
+	})
+	if err != nil {
+		t.Fatalf("clear project custom field: %v", err)
+	}
+	assertNoCF(t, cleared.AdditionalProperties, col)
 }
 
 // dealIDOf mirrors ContactIDOf/companyIDOf for the deal suites.

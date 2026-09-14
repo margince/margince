@@ -124,6 +124,13 @@ func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, curren
 		if !present {
 			continue
 		}
+		if v == nil {
+			if current[c.Name] == nil {
+				continue
+			}
+			p.setQuoted(c.Name, current[c.Name], nil)
+			continue
+		}
 		sv, ok := SQLValue(c, v)
 		if !ok {
 			continue

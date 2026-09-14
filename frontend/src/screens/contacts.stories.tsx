@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
-import { ContactScreen, ContactsScreen } from "./contacts";
+import { ContactsScreen } from "./contacts";
 import {
   installFetchStub,
   jsonResponse,
@@ -14,7 +13,7 @@ import {
 
 type Contact = components["schemas"]["Contact"];
 
-// ContactsScreen (list) and ContactScreen (360 Overview) both read through
+// ContactsScreen reads through
 // the api client on mount — fixtures mirror contacts.test.tsx's `anna` +
 // dormant-strength default (the Overview tab fires the strength GET
 // unconditionally).
@@ -34,13 +33,6 @@ const anna = {
   captured_by: "connector:gmail",
   source: "gmail",
   version: 1,
-};
-
-const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
 };
 
 export const ContactsList: Story = {
@@ -203,53 +195,5 @@ export const ContactsListArchivedRow: Story = {
         <ContactsScreen />
       </StoryProviders>
     );
-  },
-};
-
-// ContactScreen (the 360 view below) is UNROUTED DEAD CODE: App.tsx routes
-// ContactsScreen for the list and ContactPageV2 for the record, never this
-// component. Left in place rather than expanded or deleted so a future
-// reader does not mistake it for a live surface.
-function contactOverviewRoutes() {
-  installFetchStub({
-    "GET /me": meRoute({ contact: ["read", "update"] }),
-    "GET /contacts/p-1": () => jsonResponse(anna),
-    "GET /contacts/p-1/strength": () => jsonResponse(dormantStrength),
-    "GET /activities": () => jsonResponse({ data: [] }),
-    "GET /records/contact/p-1/context": () =>
-      jsonResponse({ anchor: { type: "contact", id: "p-1" }, sections: [] }),
-  });
-}
-
-export const ContactOverview: Story = {
-  render: () => {
-    contactOverviewRoutes();
-    return (
-      <StoryProviders>
-        <ContactScreen id="p-1" />
-      </StoryProviders>
-    );
-  },
-};
-
-// Edit, merge, share and archive are rows of the header's one menu here too,
-// the same division the contact page carries — the badges beside the name say
-// what the record IS, and the ellipsis holds what may be done to it.
-export const ContactOverviewMenu: Story = {
-  render: () => {
-    contactOverviewRoutes();
-    return (
-      <StoryProviders>
-        <ContactScreen id="p-1" />
-      </StoryProviders>
-    );
-  },
-  play: async () => {
-    // The panel portals to the body, so it is reached through `screen` and
-    // never through a canvas-scoped query.
-    await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
-    );
-    await screen.findByTestId("edit-record");
   },
 };

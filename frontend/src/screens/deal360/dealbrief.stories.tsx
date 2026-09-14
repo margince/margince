@@ -31,11 +31,8 @@ export default meta;
 
 type Story = StoryObj<typeof DealBrief>;
 
-const DEAL = { dealId: "11111111-1111-1111-1111-111111111111", version: 2 };
-
 export const Short: Story = {
   args: {
-    ...DEAL,
     brief:
       "They run payroll for about 400 seasonal staff and close the month by hand. They want the close down to two days.",
   },
@@ -43,7 +40,6 @@ export const Short: Story = {
 
 export const Long: Story = {
   args: {
-    ...DEAL,
     brief: [
       "They run payroll for about 400 seasonal staff across six sites.",
       "Month-end close is manual and takes nine working days.",
@@ -61,13 +57,13 @@ export const Long: Story = {
 // reader cannot see a form they have not opened, so every unbriefed deal
 // looked like a product with no such field. It now names what it holds and
 // offers to fill it.
-export const Absent: Story = { args: { ...DEAL, brief: null } };
+export const Absent: Story = { args: { brief: null } };
 
 // The same, for a stored empty string: whitespace is not a brief.
-export const Blank: Story = { args: { ...DEAL, brief: "   " } };
+export const Blank: Story = { args: { brief: "   " } };
 
 // A deal this reader may not write: archived, somebody else's, or a mirror.
 // The panel still says the field exists; only the verb goes.
 export const ReadOnly: Story = {
-  args: { ...DEAL, brief: "They close the month by hand.", readOnly: true },
+  args: { brief: "They close the month by hand.", readOnly: true },
 };

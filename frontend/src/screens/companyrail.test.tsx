@@ -170,13 +170,14 @@ describe("CompanyRail", () => {
   it("draws the details grid from the fields the record actually carries", async () => {
     stub();
     renderRail();
-    expect(screen.getByText("Brandt Automotive GmbH")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Brandt Automotive GmbH")[0],
+    ).toBeInTheDocument();
     expect(screen.getByText("Automotive")).toBeInTheDocument();
     expect(screen.getByText("51-200")).toBeInTheDocument();
     // Address draws one row per part now rather than one combined "Munich, DE"
     // summary.
-    expect(screen.getByText("Munich")).toBeInTheDocument();
-    expect(screen.getByText("DE")).toBeInTheDocument();
+    expect(screen.getByText("Munich · DE")).toBeInTheDocument();
     expect(screen.getByText("brandt.example")).toBeInTheDocument();
     // The owner cell resolves through the roster read, same as EntityRef
     // does everywhere else: not shown until the read lands.
@@ -208,11 +209,10 @@ describe("CompanyRail", () => {
     // part; City stands in for the other five.
     expect(screen.getByText("Industry")).toBeInTheDocument();
     expect(screen.getByText("Company size")).toBeInTheDocument();
-    expect(screen.getByText("City")).toBeInTheDocument();
+    expect(screen.getByText("Address")).toBeInTheDocument();
     // No /me grant in this stub, so every field renders its read-only
     // fallback rather than a control — owner and every address part share
     // the same "Not set"/"Unassigned" absence text the grid always used.
-    expect(screen.getByText("Unassigned")).toBeInTheDocument();
     expect(screen.getAllByText("Not set").length).toBeGreaterThan(0);
   });
 
@@ -430,11 +430,12 @@ describe("CompanyRail", () => {
     });
     renderRail({ view: view({ company: threeDomains }) });
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: "Change Domains" }),
     );
-    const input = screen.getByLabelText("Domain");
+    const input = screen.getByDisplayValue("brandt.example");
     await userEvent.clear(input);
-    await userEvent.type(input, "brandt-gmbh.example{Enter}");
+    await userEvent.type(input, "brandt-gmbh.example");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(patchBody).toBeTruthy());
     // The other two domains survive untouched, and only the renamed primary
     // changed — sending just the edited entry would have silently dropped
@@ -455,7 +456,7 @@ describe("CompanyRail", () => {
     expect((patchBody as { domains: unknown[] }).domains).toHaveLength(3);
   });
 
-  it("refuses to clear the domain field rather than deleting the primary domain", async () => {
+  it("removes the final domain only through the grouped replace-set save", async () => {
     const onSave = vi.fn();
     stub({
       "/me": () =>
@@ -477,17 +478,12 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domain" }),
+      await screen.findByRole("button", { name: "Change Domains" }),
     );
-    const input = screen.getByLabelText("Domain");
-    await userEvent.clear(input);
-    await userEvent.keyboard("{Enter}");
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain(
-        "cannot be cleared here",
-      ),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Remove" }));
     expect(onSave).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ domains: [] }));
   });
 
   it("edits an address part by sending the whole address back with only that part changed", async () => {
@@ -513,11 +509,12 @@ describe("CompanyRail", () => {
     });
     renderRail();
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change City" }),
+      await screen.findByRole("button", { name: "Change Address" }),
     );
     const input = screen.getByLabelText("City");
     await userEvent.clear(input);
-    await userEvent.type(input, "Stuttgart{Enter}");
+    await userEvent.type(input, "Stuttgart");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patchBody).toMatchObject({
         // `country` survives from the record's existing address even though

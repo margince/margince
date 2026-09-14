@@ -75,6 +75,7 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return fmt.Errorf("read project before update: %w", err)
 		}
 
+		in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 		p, err := projectUpdatePatch(current, in)
 		if err != nil {
 			return err

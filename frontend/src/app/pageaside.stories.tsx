@@ -5,12 +5,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { RecordView } from "../design-system/composed";
+import { InlineText } from "../design-system/inlinechoice";
 import { Panel, PanelBody } from "../design-system/panel";
 import { RecordTabs } from "../design-system/recordtabs";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { installFetchStub } from "../screens/story-utils";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
+import { UnsavedGuard, useUnsavedGuard } from "./unsaved";
 
 // The record's details pane, in the three states a reader can put it in: open
 // beside the work under the tab row, folded away, and absent because the
@@ -146,5 +148,53 @@ export const WorkQueueControl: Story = {
     });
     await userEvent.click(toggle);
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  },
+};
+
+function ProtectedDetails() {
+  const details = usePageAside();
+  const [dirty, setDirty] = useState(false);
+  useUnsavedGuard(dirty, "details");
+  return (
+    <>
+      <PageAsideToggle />
+      {details.open && (
+        <InlineText
+          label="Name"
+          placeholder="Not set"
+          value="Original"
+          canEdit
+          onDirtyChange={setDirty}
+          onSave={async () => undefined}
+        />
+      )}
+    </>
+  );
+}
+export const DraftProtected: Story = {
+  render: () => (
+    <LocaleProvider initial="en">
+      <UnsavedGuard address="record" onKeep={() => undefined}>
+        {() => (
+          <PageAsideProvider open>
+            <ProtectedDetails />
+          </PageAsideProvider>
+        )}
+      </UnsavedGuard>
+    </LocaleProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    await user.click(
+      await canvas.findByRole("button", { name: "Change Name" }),
+    );
+    await expect(canvas.getByRole("button", { name: "Details" })).toBeEnabled();
+    await user.type(canvas.getByRole("textbox", { name: "Name" }), " revised");
+    await expect(
+      canvas.getByRole("button", { name: "Details" }),
+    ).toBeDisabled();
+    await user.keyboard("{Escape}");
+    await expect(canvas.getByRole("button", { name: "Details" })).toBeEnabled();
   },
 };

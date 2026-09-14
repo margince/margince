@@ -316,6 +316,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		if err := refuseUnreadableResult(current, in); err != nil {
 			return err
 		}
+		in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 		p, err := buildContactPatch(current, in)
 		if err != nil {
 			return err
@@ -344,6 +345,9 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 			}
 		}
 		if err := p.ApplyGuarded(ctx, tx, "contact", id.UUID, in.IfVersion); err != nil {
+			if constraint, ok := storekit.CheckViolation(err); ok && constraint == "contact_owner_private_names_its_owner" {
+				return &RequiredFieldError{Field: filterOwnerID}
+			}
 			return fmt.Errorf("apply contact patch: %w", err)
 		}
 		if in.Social != nil {
@@ -388,15 +392,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 	return out, err
 }
 
-// buildContactPatch stages only the fields the caller supplied, each
-// diffed against the current row so the audit before/after captures the
-// real change and an unchanged field is left out of the UPDATE.
-// contactChangeImages is the before/after pair the audit row records.
-//
-// The patch knows the columns it staged; the relations it does not, because
-// they are written as their own rows rather than as columns on the contact. So
-// the three replaced sets are folded in here, and a relation the caller did not
-// supply stays out of both images rather than appearing as an unchanged one.
+// Child sets are separate rows, so their audit images supplement the column patch.
 func contactChangeImages(
 	p *storekit.Patch, current crmcontracts.Contact, in UpdateContactInput,
 ) (before, after map[string]any) {

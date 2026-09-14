@@ -39,6 +39,7 @@ export const view: Contact360 = {
     // page asks for. Absent it the fixture describes a contact this reader
     // may not write, and the controls correctly disappear.
     writable: true,
+    version: 1,
     emails: [
       {
         id: "pe-1",
@@ -134,10 +135,7 @@ export function mount(
 // header's overflow menu, and the menu does not mount its rows until it has
 // been opened once — so a spec reaching for one opens it first.
 //
-// Both contact surfaces draw that menu (ContactPageV2 through contactactions.tsx,
-// ContactScreen through contacts.tsx), so both suites reach for these: a copy
-// per suite would be two answers to where those verbs live, and the suite
-// holding the stale one would go on passing against a header nobody ships.
+// The record suites share the routed contact header's menu.
 export async function openRecordMenu(): Promise<void> {
   await userEvent.click(
     await screen.findByRole("button", { name: en["record.moreActions"] }),

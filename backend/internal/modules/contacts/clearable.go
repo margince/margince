@@ -53,6 +53,7 @@ func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.C
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns
 func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
+		"email":                 {Column: "email", Current: current.Email},
 		"title":                 {Column: "title", Current: current.Title},
 		"company_name":          {Column: leadCompanyColumn, Current: current.CompanyName},
 		"candidate_company_key": {Column: "candidate_company_key", Current: current.CandidateCompanyKey},

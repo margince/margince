@@ -27,11 +27,6 @@ import {
   mapDealUpdate,
 } from "./deals";
 
-// B-EP09.11 acceptance: board renders per-column sub-lines from the fetched
-// set, mixed-currency columns refuse a sum, the board↔table control keeps
-// the SAME deal set with no reload, terminal drop opens the 🟡 confirm and
-// nothing posts until confirmed, and an open-stage drop posts the advance.
-
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -69,7 +64,7 @@ const render = (ui: ReactNode) => {
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write SAYS mounts it the same way. */}
         <ToastProvider>
-          {ui}
+          <RecordShell>{ui}</RecordShell>
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -780,7 +775,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     const dealFetches = () =>
       fetchMock.mock.calls.filter((call) =>
@@ -792,7 +787,7 @@ describe("DealsScreen", () => {
       ).length;
     const before = dealFetches();
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy(); // same set, table view
+    expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(); // same set, table view
     expect(dealFetches()).toBe(before); // no reload
   });
 
@@ -1073,7 +1068,7 @@ describe("DealsScreen", () => {
       </QueryClientProvider>,
     );
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     for (const query of client.getQueryCache().getAll()) {
@@ -1148,7 +1143,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     expect(totalsAsked).toBe(false);
@@ -1169,7 +1164,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({ id: "a", stage_id: "s1" })]));
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     expect(
@@ -1193,7 +1188,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     expect(sentBody).toMatchObject({
       group_by: ["stage_id", "currency"],
@@ -1208,7 +1203,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     // simulate the drop on the Won column via the drop handler path
@@ -1245,7 +1240,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1299,7 +1294,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1374,7 +1369,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1399,7 +1394,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1444,7 +1439,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1485,7 +1480,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     const wonColumn = document.querySelector(
@@ -1514,7 +1509,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     const proposalColumn = document.querySelector(
@@ -1784,8 +1779,9 @@ async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
-  await openHeaderMenu(user);
-  await user.click(await screen.findByTestId("edit-record"));
+  await user.click(
+    await screen.findByRole("button", { name: "Change Deal name" }),
+  );
 }
 
 describe("DealScreen — edit, archive, FX line (A3)", () => {
@@ -1803,8 +1799,10 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
     render(<DealScreen id="x" />);
     await openEditForm();
-    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
     await waitFor(() => expect(patches.length).toBe(1));
     expect(patches[0].ifMatch).toBe("4");
   });
@@ -1840,8 +1838,14 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     expect(screen.getByText("via")).toBeTruthy();
   });
 
-  // A stored partner outside the picker's page must still appear selected.
-  // Otherwise an unrelated save can clear its commission attribution.
+  // A form offers nothing the record already carries as a blank. The partner
+  // picker offers one capped page of partners, so a deal's own partner can be
+  // missing from it — and a select whose stored value is not an option shows
+  // blank, which the patch then reads as the contact having chosen "Unset" and
+  // sends as a real null, clearing the partner and its commission attribution.
+  //
+  // The save says nothing about the partner at all, which is what makes it
+  // safe: omitted means unchanged.
   it("keeps a partner the picker cannot reach, rather than clearing it on save", async () => {
     const user = userEvent.setup();
     const patches: { body: unknown }[] = [];
@@ -1862,8 +1866,10 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await openEditForm(user);
-    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
@@ -1897,8 +1903,10 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await openEditForm(user);
-    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
@@ -2217,7 +2225,6 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     // companies.header.test.tsx: only the first was, and the rest were
     // read in the tick it arrived in.
     const refused = [
-      await screen.findByTestId("edit-record"),
       await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
@@ -2268,7 +2275,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     // band on the FIRST render — one minted inside the menu would name no
     // element until the menu had been opened.
     await openHeaderMenu();
-    for (const testId of ["edit-record", "archive-record", "share-record"]) {
+    for (const testId of ["archive-record", "share-record"]) {
       const control = await screen.findByTestId(testId);
       expect(control.hasAttribute("disabled")).toBe(true);
       expect(
@@ -2289,8 +2296,9 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
     await openHeaderMenu();
-    const edit = await screen.findByTestId("edit-record");
-    expect(edit.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.queryByRole("button", { name: "Change Deal name" }),
+    ).toBeNull();
   });
 });
 
@@ -2353,7 +2361,7 @@ describe("DealScreen — overlay mode write affordances", () => {
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
     await openHeaderMenu();
-    expect(await screen.findByTestId("edit-record")).toBeTruthy();
+    expect(screen.queryByTestId("edit-record")).toBeNull();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
     // The mirror owns the deal's mail, so the header offers no Email verb.
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
@@ -2368,13 +2376,15 @@ describe("DealScreen — overlay mode write affordances", () => {
     );
     render(<DealScreen id="x" />);
     await openEditForm();
-    const nameInput = screen.getByLabelText("Deal name *");
+    const nameInput = screen.getByRole("textbox", { name: "Deal name" });
     await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Fleet retrofit — expanded scope");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(nameInput, "Fleet retrofit — expanded scope{Enter}");
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(
-      await screen.findByText("Fleet retrofit — expanded scope"),
+      await screen.findByRole("heading", {
+        name: "Fleet retrofit — expanded scope",
+        level: 1,
+      }),
     ).toBeTruthy();
   });
 
@@ -2393,7 +2403,7 @@ describe("DealScreen — overlay mode write affordances", () => {
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
     await openHeaderMenu();
-    await screen.findByTestId("edit-record"); // the menu's items are mounted
+    await screen.findByTestId("archive-record");
     expect(screen.queryByTestId("reopen-open")).toBeNull();
     expect(screen.queryByTestId("share-record")).toBeNull();
   });
@@ -2423,7 +2433,7 @@ describe("DealScreen reopen", () => {
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
     render(<DealScreen id="y" />);
     await openHeaderMenu();
-    await screen.findByTestId("edit-record"); // the menu's items are mounted
+    await screen.findByTestId("archive-record");
     expect(screen.queryByTestId("reopen-open")).toBeNull();
   });
 });
@@ -2459,7 +2469,7 @@ describe("DealScreen offers panel", () => {
     );
     render(<DealScreen id="d1" />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: "New offer" }));
     await waitFor(() => expect(creates).toHaveLength(1));
@@ -2484,11 +2494,6 @@ describe("DealScreen pending approvals", () => {
     evidence: [],
   } as Approval;
 
-  // The panel states the same two facts the approvals inbox states, in the same
-  // words: the kind through the shared catalog map, the proposer through the
-  // provenance tag. Off the wire those facts read `advance_deal` and
-  // `agent:capture` — the API's vocabulary on a page whose reader never sees
-  // the API.
   it("names the staged kind and its proposer in the product's words, not the wire's", async () => {
     vi.stubGlobal("fetch", stubDealBackend(deal({}), [], undefined, [staged]));
     render(<DealScreen id="d1" />);
@@ -2518,13 +2523,8 @@ describe("DealScreen — History tab", () => {
   });
 });
 
-// Which partner, not just whether there is one.
-//
-// The boolean partner_sourced chip could say "these came from some partner"
-// and never say which — the same gap the deals-by-stage report had before it
-// gained the dimension. The picker's options come from usePartnerOptions, so
-// a partner whose company this reader cannot open is not offered: picking it
-// would name a company the screen could not then show them.
+// Partner choices are limited to companies this reader may open.
+
 describe("the partner filter", () => {
   it("narrows the list to one named partner", async () => {
     const urls: string[] = [];
