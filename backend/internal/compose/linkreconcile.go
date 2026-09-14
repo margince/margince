@@ -147,6 +147,14 @@ func (w *linkReconcileWorker) reconcileLinksForWorkspace(ctx context.Context, wo
 		w.log.InfoContext(ctx, "link reconcile: contacts a noise verdict already covered are retracted",
 			"workspace", workspace.String(), "contacts", retracted)
 	}
+	withdrawn, err := w.retractPrivateThreadContacts(sweepCtx)
+	if err != nil {
+		failed = errors.Join(failed, err)
+	}
+	if withdrawn > 0 {
+		w.log.InfoContext(ctx, "link reconcile: contacts a private thread earned after its verdict are retracted",
+			"workspace", workspace.String(), "contacts", withdrawn)
+	}
 	// Mail a seat holds at an address they own but claimed too late. Held with
 	// nothing scheduled to judge it until this runs, which is indistinguishable
 	// from the product being broken — and, where the address is a private
