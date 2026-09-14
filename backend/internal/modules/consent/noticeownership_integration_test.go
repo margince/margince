@@ -428,7 +428,7 @@ func seedNoticeCaseDue(t *testing.T, e *channelConsentEnv, due time.Time) ids.UU
 // It refuses to loop forever rather than trusting the cursor to advance: a
 // walk that never terminates is how a paging bug arrives as a hung lane rather
 // than a failing assertion.
-func walkQueue(t *testing.T, e *channelConsentEnv, ctx context.Context, perPage int) []ids.UUID {
+func walkQueue(ctx context.Context, t *testing.T, e *channelConsentEnv, perPage int) []ids.UUID {
 	t.Helper()
 	var seen []ids.UUID
 	cursor := ""
@@ -470,7 +470,7 @@ func TestEveryDutyIsReachableHoweverManyThereAre(t *testing.T) {
 		want = append(want, seedNoticeCaseDue(t, e, base.Add(time.Duration(i)*time.Hour)))
 	}
 
-	got := walkQueue(t, e, ctx, 2)
+	got := walkQueue(ctx, t, e, 2)
 	if len(got) != len(want) {
 		t.Fatalf("walking the queue two at a time saw %d duties, want %d — a duty past the "+
 			"first page is one the installation owes and nobody can see", len(got), len(want))
@@ -510,7 +510,7 @@ func TestTwoDutiesFallingDueTogetherAreBothReached(t *testing.T) {
 	// id-keyed cursor can still reach every row while serving one of them
 	// twice and another out of deadline order, which is the same officer
 	// reading the same duty on two pages and trusting the order of neither.
-	got := walkQueue(t, e, ctx, 1)
+	got := walkQueue(ctx, t, e, 1)
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("walking one at a time saw %v, want %v — two duties sharing a deadline are "+
 			"separated by the id tie-break, and a cursor carrying only one half of the key "+

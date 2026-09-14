@@ -59,7 +59,7 @@ func (h Handlers) ListNoticeCases(w http.ResponseWriter, r *http.Request, params
 	if page.NextCursor != "" {
 		info.NextCursor = &page.NextCursor
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, "page": info})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{keyData: data, keyPage: info})
 }
 
 // AssignNoticeCase records who is working a disclosure duty.
