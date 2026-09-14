@@ -226,8 +226,8 @@ func readableActivities(
 // NamedActivity reads the record a verb acts on out of a move's arguments.
 //
 // Nothing rather than a zero id for a value this cannot parse, and nothing for a
-// verb that names no record at all — a create_task or an opening outreach acts
-// on no existing row, so there is nothing here for the audience gate to judge.
+// verb that names no record at all. Request acceptance acts on its source
+// message; a generic task or opening outreach has no source to judge.
 //
 // EXPORTED because the queue reads the same key when it lifts the id onto the
 // wire, and the two answers must agree: an id the wire names but this did not
@@ -240,7 +240,10 @@ func NamedActivity(move crmcontracts.DealStatusCardMove) (ids.UUID, bool) {
 	if args == nil {
 		return ids.UUID{}, false
 	}
-	raw, present := (*args)["activity_id"]
+	raw, present := (*args)["request_activity_id"]
+	if !present {
+		raw, present = (*args)["activity_id"]
+	}
 	if !present {
 		return ids.UUID{}, false
 	}

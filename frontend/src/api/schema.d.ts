@@ -16944,6 +16944,8 @@ export interface components {
          *     `display_status` says so — the row stays, the words do not.
          */
         EmailSummary: {
+            /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
+            request_has_reminder?: boolean;
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -22914,6 +22916,16 @@ export interface components {
             data: components["schemas"]["Relationship"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description The newest workspace-visible email on a deal, as `Deal.last_email` carries it. */
+        DealLastEmail: {
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+             * @enum {string|null}
+             */
+            direction: "inbound" | "outbound" | null;
+        };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
             tags?: components["schemas"]["RowTag"][];
@@ -23029,6 +23041,8 @@ export interface components {
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). */
             readonly stalled?: boolean;
+            /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
+            readonly last_email?: components["schemas"]["DealLastEmail"] | null;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -24678,6 +24692,11 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @description What has to be done, as one line. */
             subject: string;
             /** @description Detail, if one line is not enough. */
@@ -24702,6 +24721,11 @@ export interface components {
             source: string;
         };
         CreateActivityRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
             /**
@@ -42237,6 +42261,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The existing source-linked reminder, including an explicitly restored reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
             /** @description The task, as an activity. */
             201: {
                 headers: {
@@ -57465,6 +57498,8 @@ export interface operations {
     getDealStatus: {
         parameters: {
             query?: {
+                /** @description Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh. */
+                facts_only?: boolean;
                 /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
                 refresh?: boolean;
             };

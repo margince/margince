@@ -17,45 +17,12 @@ package activities
 
 import "fmt"
 
-// waitingRepliesSQL finds, per thread, the newest inbound with no later
-// outbound in the same thread — where the thread is a SALES conversation the
-// workspace is answerable for, recent enough to still be one.
-//
-// Every eligibility rule is applied before ORDER BY and LIMIT, so the cap falls
-// on qualified rows only. A rule applied after the cap reads as a working
-// filter and fails as a silent one: the scan fills with rows the rule would
-// have removed, the customer behind them never arrives, and the page reports an
-// empty queue with nothing to say it was truncated.
-//
-// NOT EXISTS rather than a window function or a join: it expresses the question
-// directly — "nobody wrote back after this" — and it stops at the first later
-// outbound rather than materializing every thread's history to sort it.
-//
-// The outbound side deliberately ignores the audience arm. A reply this reader
-// may not READ still answered the customer, and skipping it would report a
-// message as unanswered because the answer was somebody else's to see — the
-// worst failure available here, since it sends a rep to write a second reply.
-//
-// A thread is matched within ONE medium: same kind, same channel provider. A
-// mail thread key comes from headers the sender controls, and channel keys
-// share the flat namespace with them, so comparing keys alone lets a crafted
-// References value silence an unrelated conversation. The capture side's own
-// reply detector matches the same way.
-//
-// The anti-joins are bounded by the read instant too, so the answer is a
-// snapshot: a message dated in the future — mail carries the sender's own Date
-// header — cannot suppress a thread that is genuinely waiting now.
-//
-// Equal timestamps are broken by id, because second-precision mail makes ties
-// ordinary and both halves of "newest inbound, no later outbound" would
-// otherwise be wrong at once.
-//
-// A message with NO thread_key is excluded rather than matched loosely. SQL
-// equality would never join two NULLs, and IS NOT DISTINCT FROM joins them ALL
-// — so an unthreaded message would be silenced by any other unthreaded
-// outbound in the workspace, and one unthreaded reply would hide every
-// unthreaded question at once. Excluding them under-reports, which is the
-// direction that costs a row rather than a customer.
+// waitingRepliesSQL includes outstanding requests and incidental unanswered
+// sales conversations. Requests survive replies, age and closed deals until
+// explicit resolution; incidental mail retains the conversation guardrails.
+// All eligibility predicates precede the cap. Thread comparisons stay within
+// the same medium and read instant; unrelated or future mail cannot answer one.
+// Unthreaded mail is admitted only with request evidence.
 const waitingRepliesSQL = `
 	SELECT a.id, a.kind, COALESCE(a.subject, ''),
 	       COALESCE((array_agg(sender.address ORDER BY sender.address)
@@ -198,23 +165,15 @@ const waitingRepliesSQL = `
 	   -- waiting on the very record this asks about. "TRUE" for the
 	   -- workspace-wide Worklist read.
 	   AND (%[11]s)
-	   AND a.thread_key IS NOT NULL
+	   AND (a.thread_key IS NOT NULL OR (` + requestCandidateSQL + `))
 	   AND NOT EXISTS (SELECT 1 FROM activity request_task
 	     WHERE request_task.source_system = '` + EmailRequestTaskSource + `'
 	       AND request_task.source_activity_id = a.id
        AND (request_task.is_done OR (request_task.archived_at IS NULL
          AND (request_task.assignee_id = $%[10]d OR $%[10]d = '00000000-0000-0000-0000-000000000000'::uuid))))
-	   -- Old enough and it is history, not work — UNLESS an open deal is on it.
-	   --
-	   -- The horizon and the caller's staleness rule have to agree about money,
-	   -- or the looser of the two is decoration. The caller keeps a long wait
-	   -- that still has a deal behind it, on the ground that there the silence
-	   -- IS the problem; a horizon that removed those rows first would make that
-	   -- branch unreachable and the rep would never see the one case where a
-	   -- half-year of quiet costs something.
-	   --
-	   -- Before the cap, like every other exclusion here.
-	   AND (a.occurred_at >= $%[1]d - make_interval(days => %[5]d)
+	   -- Age bounds incidental unanswered mail, never a recognized request.
+	   -- Old requests remain reviewable; the attention rank decides prominence.
+	   AND ((` + requestCandidateSQL + `) OR a.occurred_at >= $%[1]d - make_interval(days => %[5]d)
 	     OR EXISTS (
 	          SELECT 1 FROM activity_link funded
 	          JOIN deal fd ON fd.id = funded.deal_id AND %[9]s
@@ -236,9 +195,9 @@ const waitingRepliesSQL = `
 	            AND (sales.contact_id IS NOT NULL
 	              OR sales.company_id IS NOT NULL
 	              OR EXISTS (SELECT 1 FROM deal d
-	                          WHERE d.id = sales.deal_id AND %[6]s)
+	                          WHERE d.id = sales.deal_id AND ( %[6]s OR (d.archived_at IS NULL AND (` + requestCandidateSQL + `))))
 	              OR EXISTS (SELECT 1 FROM lead ld
-	                          WHERE ld.id = sales.lead_id AND %[7]s))))
+	                          WHERE ld.id = sales.lead_id AND ( %[7]s OR (ld.archived_at IS NULL AND (` + requestCandidateSQL + `)))))))
 	   -- A COLLEAGUE is not a customer waiting.
 	   --
 	   -- Our own domains are read through the seam that owns them and passed in
@@ -264,7 +223,7 @@ const waitingRepliesSQL = `
 	   -- Deliberately coarse: it removes what nothing could mistake for a
 	   -- contact, and the caller's own rule (capture's address list, which
 	   -- knows the operator's allowlist) still runs over what survives.
-	   AND NOT EXISTS (
+	   AND ((` + outstandingRequestSQL + `) OR NOT EXISTS (
 	         SELECT 1 FROM activity_participant machine
 	          WHERE machine.activity_id = a.id
 	            AND machine.role = 'from'
@@ -273,9 +232,9 @@ const waitingRepliesSQL = `
 	              OR machine.address ILIKE '%%do-not-reply%%'
 	              OR machine.address ILIKE '%%donotreply%%'
 	              OR machine.address ILIKE '%%notification%%'
-	              OR machine.address ILIKE '%%mailer-daemon%%'))
+	              OR machine.address ILIKE '%%mailer-daemon%%')))
 	   AND %[18]s
-	   AND NOT EXISTS (
+	   AND ((` + requestCandidateSQL + `) OR NOT EXISTS (
 	         SELECT 1 FROM activity newer
 	          WHERE newer.thread_key = a.thread_key
 	            AND newer.kind = a.kind
@@ -283,7 +242,7 @@ const waitingRepliesSQL = `
 	            AND newer.direction = 'inbound'
 	            AND newer.archived_at IS NULL
 	            AND newer.occurred_at <= $%[1]d
-	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id))
+	            AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)))
 	   -- Judged NOT a sales conversation, by anybody. A property of the THREAD,
 	   -- so it holds for every reader AND for every later reply: one rep
 	   -- recognizing the procurement newsletter settles what the conversation

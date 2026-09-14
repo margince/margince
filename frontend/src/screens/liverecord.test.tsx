@@ -113,9 +113,6 @@ describe("a record the reader has open", () => {
     ["a contact", () => useContact360("p-1"), "/v1/contacts/p-1/360"],
     ["an account", () => useCompany360("o-1"), "/v1/companies/o-1/360"],
     ["a project", () => useProject360("pr-1"), "/v1/projects/pr-1/360"],
-    // The deal reads its RECORD live and its briefing not at all: that one is
-    // model-written and rewritten whenever the deal has moved, so a cadence on
-    // it would spend the workspace's AI budget on an open tab.
     ["a deal", () => useDeal("d-1"), "/v1/deals/d-1"],
   ];
 
@@ -130,16 +127,11 @@ describe("a record the reader has open", () => {
     });
   }
 
-  // The exception, pinned so that adding the cadence to it is a decision
-  // somebody makes rather than a spread they copy. The briefing is written by
-  // a model and rewritten server-side whenever the deal has moved, so a read
-  // every twenty seconds is the workspace's AI budget spent on an open tab.
-  it("leaves the model-written deal briefing on its one read", async () => {
+  it("re-reads the deal's obligations while its cached prose stays server governed", async () => {
     const { paths } = mount(() => useDealStatusCard("d-1"));
     await advance(0);
-
-    await advance(LIVE_RECORD_MS * 3);
-    expect(paths).toEqual(["/v1/deals/d-1/status"]);
+    await advance(LIVE_RECORD_MS);
+    expect(paths).toEqual(["/v1/deals/d-1/status", "/v1/deals/d-1/status"]);
   });
 
   // The return is what the minute-long cadence is priced against, so it has

@@ -3,7 +3,10 @@
 
 package relstrength
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // interactionKinds is the closed set of activity kinds that represent a real
 // exchange worth SCORING: the deal-health window, contact strength, and the
@@ -22,8 +25,7 @@ import "strings"
 // and it is answered there rather than by keeping the kind out, because the
 // membership question and the counting question have different answers.
 //
-// It is unexported and reached only through the SQL renderers below, because
-// every reader of it is a query.
+// Go and SQL readers share this set so reminders cannot count as contact.
 var interactionKinds = []string{"email", "call", "meeting", "message"}
 
 // participantKinds is the closed set of kinds that HAVE participants — an
@@ -54,6 +56,11 @@ func IsParticipantKind(kind string) bool {
 		}
 	}
 	return false
+}
+
+// IsInteractionKind reports whether the activity represents an exchange.
+func IsInteractionKind(kind string) bool {
+	return slices.Contains(interactionKinds, kind)
 }
 
 // InteractionKindSQLList renders the scoring set as a SQL IN list, so a query

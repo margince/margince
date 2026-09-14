@@ -843,7 +843,7 @@ type PublicEventActivityCaptured struct {
 	SourceSystem *string `json:"source_system,omitempty"`
 }
 
-// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+// PublicEventActivityChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 type PublicEventActivityChangedFields struct {
 	// AssigneeId The activity's new assignee (absent when this update did not touch it).
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -871,6 +871,9 @@ type PublicEventActivityChangedFields struct {
 
 	// RemindAt The activity's new remind_at (absent when this update did not touch it).
 	RemindAt *time.Time `json:"remind_at,omitempty"`
+
+	// Restored True when explicit request acceptance restores an archived unfinished reminder.
+	Restored *bool `json:"restored,omitempty"`
 
 	// Subject The activity's new subject (absent when this update did not touch it).
 	Subject *string `json:"subject,omitempty"`
@@ -904,7 +907,7 @@ type PublicEventActivityRelinkedRef struct {
 
 // PublicEventActivityUpdated Payload for activity.updated — a BOUNDED delta (unlike the contact/company/deal/lead family's genuinely open patch): UpdateActivity and RelinkActivity together cover a fixed, KNOWN set of inner keys, so changed_fields is a typed struct here, not an open map.
 type PublicEventActivityUpdated struct {
-	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
+	// ChangedFields activity.updated's BOUNDED delta: UpdateActivity's known mutable fields (subject, body, occurred_at, due_at, remind_at, assignee_id, is_done, meeting_status) each carried only when this update touched them, plus RelinkActivity's relinked target and SetActivityAudience's audience, plus explicit request-reminder restoration's restored flag — a fixed, KNOWN key set (unlike contact/company/deal/lead.updated's genuinely open patch), so it is typed rather than an open map.
 	ChangedFields PublicEventActivityChangedFields `json:"changed_fields"`
 }
 
