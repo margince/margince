@@ -202,6 +202,12 @@ var retentionSweepFiles = []string{
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
 	"internal/modules/privacy/retentionactions.go",
+	// The contact/anonymize action's full implementation — split out of
+	// retentionactions.go once that file conflated the dispatch table with it,
+	// exactly the shape this list's own header warns against: absent here, this
+	// gate would read a file split as the sweep having stopped clearing every
+	// table anonymizeContactRecord and its helpers still do.
+	"internal/modules/privacy/retentionanonymize.go",
 	// The lead half of the same sweep — anonymizeLead and the communication
 	// record it clears (communication_basis, communication_suppression,
 	// communication_override, communication_decision). Split into its own file

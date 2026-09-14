@@ -400,15 +400,18 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 	}
 }
 
-// liveOverrideCount counts one subject's live overrides for a category, the
-// override table's equivalent of liveObjections above.
-func liveOverrideCount(t *testing.T, e *integration.Env, contactID ids.UUID, category string) int {
+// liveOverrideCount counts one subject's live "marketing" overrides, the
+// override table's equivalent of liveObjections above. Every case in this
+// file vouches for marketing — the one category seedMarketingPurpose wires a
+// Preview call to resolve — so a category parameter would carry a choice no
+// caller here makes.
+func liveOverrideCount(t *testing.T, e *integration.Env, contactID ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_override
-		 WHERE contact_id = $1 AND category = $2 AND revoked_at IS NULL`,
-		contactID, category).Scan(&n); err != nil {
+		 WHERE contact_id = $1 AND category = 'marketing' AND revoked_at IS NULL`,
+		contactID).Scan(&n); err != nil {
 		t.Fatalf("counting live overrides: %v", err)
 	}
 	return n
@@ -430,7 +433,7 @@ func seedMarketingPurpose(t *testing.T, e *integration.Env, key string) {
 // Gate.Preview reaches decideOne exactly as AuthorizeStagingTx does — and
 // records nothing, so this can be asked before and after a merge without
 // itself changing what it is asking about.
-func previewMarketing(t *testing.T, ctx context.Context, gate *consent.Gate, address string) commsauthz.Decision {
+func previewMarketing(ctx context.Context, t *testing.T, gate *consent.Gate, address string) commsauthz.Decision {
 	t.Helper()
 	set, err := gate.Preview(ctx, commsauthz.Request{
 		Recipients:       []connector.Recipient{{Email: address}},
@@ -469,7 +472,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	// cannot support a marketing send to them on its own reading. Asserting
 	// this first is what makes the "after" assertion mean something — without
 	// it, an ALREADY-allowed send would pass whether or not the carry works.
-	before := previewMarketing(t, admin, consentGate, address)
+	before := previewMarketing(admin, t, consentGate, address)
 	if before.Verdict == commsauthz.VerdictAllow {
 		t.Fatalf("verdict = allow before any override reached the survivor — the fixture proves nothing")
 	}
@@ -481,7 +484,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
 	}
-	if got := liveOverrideCount(t, e, survivor, "marketing"); got != 0 {
+	if got := liveOverrideCount(t, e, survivor); got != 0 {
 		t.Fatalf("precondition: the survivor already holds %d override(s)", got)
 	}
 
@@ -504,14 +507,14 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 
 	// AND THE ORIGINAL SURVIVES, as evidence about the record whose rep
 	// actually made the vouch.
-	if got := liveOverrideCount(t, e, vouched, "marketing"); got != 1 {
+	if got := liveOverrideCount(t, e, vouched); got != 1 {
 		t.Errorf("the retired record holds %d override(s), want its own kept as evidence", got)
 	}
 
 	// THE CARRIED VOUCH ACTUALLY WORKS: the same Preview call that refused
 	// before the merge now allows, because the survivor is the record the
 	// engine evaluates and it now carries the rep's override.
-	after := previewMarketing(t, admin, consentGate, address)
+	after := previewMarketing(admin, t, consentGate, address)
 	if after.Verdict != commsauthz.VerdictAllow {
 		t.Fatalf("verdict = %q (%s) after the merge, want allow: a carried override should have "+
 			"vouched for this send", after.Verdict, after.ReasonCode)
@@ -549,7 +552,7 @@ func TestACarryDoesNotDuplicateAnOverrideTheSurvivorAlreadyHolds(t *testing.T) {
 		t.Fatalf("merging: %v", err)
 	}
 
-	if got := liveOverrideCount(t, e, survivor, "marketing"); got != 1 {
+	if got := liveOverrideCount(t, e, survivor); got != 1 {
 		t.Errorf("the survivor holds %d live overrides after the merge, want exactly 1", got)
 	}
 }
@@ -584,7 +587,7 @@ func TestAnUnwiredMergeRefusesOnlyWhenAnOverrideWouldBeLost(t *testing.T) {
 	}
 	// And the override is still where it was: the refusal rolled the merge
 	// back rather than half-applying it.
-	if got := liveOverrideCount(t, e, vouched, "marketing"); got != 1 {
+	if got := liveOverrideCount(t, e, vouched); got != 1 {
 		t.Errorf("the refused merge left %d override(s) on the source, want its own intact", got)
 	}
 }

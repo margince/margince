@@ -14,9 +14,9 @@ package privacy
 // cannot detach an override the way it detaches a suppression, because the
 // table has no address column to detach onto), and the Art. 15 export. Each
 // case here mirrors an existing suppression test one statement over, proving
-// the table this task added is not a standing "allow" that outlives the person
-// it was written about — a leftover vouch on an erased subject is a live
-// privacy defect, not a cosmetic gap.
+// the table this task added is not a standing "allow" that outlives the
+// subject it was written about — a leftover vouch on an erased subject is a
+// live privacy defect, not a cosmetic gap.
 
 import (
 	"context"
