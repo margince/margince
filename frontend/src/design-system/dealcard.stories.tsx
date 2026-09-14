@@ -4,6 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { type BoardDeal, DealCard } from "./composed";
+import { EmailReference } from "./emailreference";
+import { Eyebrow } from "./eyebrow";
 
 // The card on its own, for the states the board canvases (composed.stories.tsx)
 // cannot hold still: a flyout open under a settled pointer.
@@ -30,9 +32,9 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
 
 // A card's mail line with the flyout a caller gave it: the last few subjects,
 // read on hover, without opening the deal. The aside's content is the
-// caller's — here a static list standing in for what screens/dealmailaside.tsx
-// reads from the timeline — so what this canvas holds is the trigger, the
-// panel and where it sits against the card.
+// caller's — here the same stacked citations screens/dealmailaside.tsx reads
+// from the timeline, handed in as fixtures — so what this canvas holds is the
+// trigger, the panel and where it sits against the card.
 export const BoardCardMailFlyout: StoryObj = {
   render: () => (
     <div style={{ maxWidth: 280 }}>
@@ -45,11 +47,26 @@ export const BoardCardMailFlyout: StoryObj = {
         href="#/deals/d2"
         zone="Europe/Berlin"
         mailAside={() => (
-          <ul style={{ margin: 0, paddingLeft: "1rem" }}>
-            <li>AW: Ausbildungsoffensive Bayern — sent 10 d ago</li>
-            <li>Ausbildungsoffensive Bayern, final — sent 11 d ago</li>
-            <li>AW: RetrieverClub MVP — received 2 months ago</li>
-          </ul>
+          <div
+            style={{ display: "grid", gap: "var(--space-2)", width: "18rem" }}
+          >
+            <Eyebrow>Previous emails</Eyebrow>
+            <EmailReference
+              subject="AW: Ausbildungsoffensive Bayern"
+              occurredAt="Sent 10 d ago"
+              stacked
+            />
+            <EmailReference
+              subject="Ausbildungsoffensive Bayern, final"
+              occurredAt="Sent 11 d ago"
+              stacked
+            />
+            <EmailReference
+              subject="AW: RetrieverClub MVP"
+              occurredAt="Received 61 d ago"
+              stacked
+            />
+          </div>
         )}
       />
     </div>
