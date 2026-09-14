@@ -34,37 +34,13 @@ func (e *CounterpartyVerdictEngine) apply(
 	var acted bool
 	var triageDomain string
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		// The owner's decision, re-read HERE rather than trusted from judgeOne.
-		//
-		// judgeOne reads it in a transaction of its own and then spends one or
-		// two model calls before this one opens. A contact who answers during
-		// that gap was answered by a stale read: the contact half already
-		// re-checks under the contact row lock, but the mail hide and the domain
-		// suppression ran on what was true before they spoke — so a seat who
-		// said "this is business" still had the sender's domain suppressed for
-		// the whole workspace.
-		fresh, err := capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
+		settled, err := reconcileWithTheOwner(ctx, tx, row, answered{
+			kind: kind, verdict: verdict, measured: measured, byOwner: ownerSaidSo,
+		})
 		if err != nil {
 			return err
 		}
-		if ownerKind, spoke := kindForOverride(fresh); spoke && ownerKind != kind {
-			// They answered, and differently. THEIR answer is the one applied —
-			// the same one judgeOne would reach through ownerDecided on the next
-			// pass, taken now rather than leaving the row to wait out a backoff
-			// it was already leased under. Abandoning would have been a stall
-			// dressed as caution.
-			kind = ownerKind
-			if verdict, known = statusForKind(kind); !known {
-				return fmt.Errorf("verdict: owner decision maps to %q, which is not a sender kind", kind)
-			}
-			// The measurement described the MODEL's answer, and this is no
-			// longer the model's answer. Recording it against a decision a
-			// contact made would put a confidence score on a human.
-			measured = capture.VerdictMeasurement{}
-		}
-		// An override that AGREES still makes this the owner's act rather than
-		// the model's — the domain suppression turns on that distinction.
-		ownerSaidSo = ownerSaidSo || fresh != ""
+		kind, verdict, measured, ownerSaidSo = settled.kind, settled.verdict, settled.measured, settled.byOwner
 
 		won, err := e.pending.ResolveAs(ctx, tx, row, verdict, kind, verdictReason, ownerSaidSo, measured)
 		if err != nil || !won {
@@ -85,43 +61,7 @@ func (e *CounterpartyVerdictEngine) apply(
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil
 		case capture.KindNewsletter, capture.KindTransactional, capture.KindSpam:
-			// A seat's own `keep out` does NOT suppress the domain. The two
-			// statements are different sizes: the classifier calling a sender
-			// noise is a judgement about the sender, and suppressing their
-			// domain workspace-wide follows from it; a contact saying "keep this
-			// out of my mail" is a statement about their own mailbox, and one
-			// rep who once received mail from a partner could otherwise refuse
-			// that company to every colleague — with a per-record contact grant
-			// and no capture-settings grant at all.
-			//
-			// The mail hide still runs: it is what "keep out" means, and the
-			// noise scope already excludes anything a colleague corresponded
-			// with.
-			corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
-			if err != nil {
-				return err
-			}
-			if !ownerSaidSo {
-				if err := e.suppressSenderDomain(ctx, tx, row, kind, corresponds); err != nil {
-					return err
-				}
-			}
-			if err := e.hideNoise(ctx, tx, row); err != nil {
-				return err
-			}
-			// An address the workspace has provably written to keeps its
-			// record whatever the classifier called one message — the same
-			// bound the domain suppression draws, read once for both.
-			if corresponds {
-				return nil
-			}
-			// An owner's own keep_out claims only their record; a machine's
-			// noise answer is about the address and reaches every seat's.
-			ownersOnly := retractEveryOwners
-			if ownerSaidSo {
-				ownersOnly = retractOwnersOnly
-			}
-			return e.retractSendersContacts(ctx, tx, row, ownersOnly)
+			return e.applyNoise(ctx, tx, row, kind, ownerSaidSo)
 		case capture.KindAdvisor:
 			// A genuine contact who is the OWNER's. The record is made — a
 			// founder's lawyer is somebody they correspond with — and stays
@@ -164,6 +104,107 @@ func (e *CounterpartyVerdictEngine) apply(
 		e.triage.domainPending(ctx, triageDomain)
 	}
 	return acted, nil
+}
+
+// answered is one verdict as it stands: what kind of sender, the ledger status
+// that follows, how it was measured, and whether a human is the one saying it.
+//
+// The four travel together because reconcileWithTheOwner can change all of them
+// at once, and a caller that took three of the four would apply a human's
+// decision under the model's provenance.
+type answered struct {
+	kind     string
+	verdict  string
+	measured capture.VerdictMeasurement
+	byOwner  bool
+}
+
+// reconcileWithTheOwner re-reads the mailbox owner's own decision on THIS
+// transaction and reports the verdict that should actually be applied.
+//
+// judgeOne reads that decision in a transaction of its own and then spends one
+// or two model calls before apply's opens. A contact who answers during that
+// gap was answered by a stale read: the contact half already re-checks under
+// the contact row lock, but the mail hide and the domain suppression ran on
+// what was true before they spoke — so a seat who said "this is business" still
+// had the sender's domain suppressed for the whole workspace.
+func reconcileWithTheOwner(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, in answered,
+) (answered, error) {
+	fresh, err := capture.OverrideForTx(ctx, tx, row.OwnerID, row.Email)
+	if err != nil {
+		return answered{}, err
+	}
+	out := in
+	if ownerKind, spoke := kindForOverride(fresh); spoke && ownerKind != in.kind {
+		// They answered, and differently. THEIR answer is the one applied — the
+		// same one judgeOne would reach through ownerDecided on the next pass,
+		// taken now rather than leaving the row to wait out a backoff it was
+		// already leased under. Abandoning would have been a stall dressed as
+		// caution.
+		verdict, known := statusForKind(ownerKind)
+		if !known {
+			return answered{}, fmt.Errorf(
+				"verdict: owner decision maps to %q, which is not a sender kind", ownerKind)
+		}
+		out.kind, out.verdict = ownerKind, verdict
+		// The measurement described the MODEL's answer, and this is no longer
+		// the model's answer. Recording it against a decision a contact made
+		// would put a confidence score on a human.
+		out.measured = capture.VerdictMeasurement{}
+	}
+	// An override that AGREES still makes this the owner's act rather than the
+	// model's — the domain suppression turns on that distinction.
+	out.byOwner = in.byOwner || fresh != ""
+	return out, nil
+}
+
+// applyNoise is what a `noise` answer does: it hides the sender's mail, may
+// suppress their domain, and withdraws the records capture minted before the
+// answer arrived.
+//
+// Its own method rather than an arm of apply's switch, because it is the only
+// arm that DOES anything conditional — the others create a record or create
+// nothing — and holding four decisions inside a switch inside a transaction
+// callback put the whole function past what a reader can carry at once.
+func (e *CounterpartyVerdictEngine) applyNoise(
+	ctx context.Context, tx pgx.Tx, row capture.PendingCounterparty, kind string, ownerSaidSo bool,
+) error {
+	// A seat's own `keep out` does NOT suppress the domain. The two statements
+	// are different sizes: the classifier calling a sender noise is a judgement
+	// about the sender, and suppressing their domain workspace-wide follows from
+	// it; a contact saying "keep this out of my mail" is a statement about their
+	// own mailbox, and one rep who once received mail from a partner could
+	// otherwise refuse that company to every colleague — with a per-record
+	// contact grant and no capture-settings grant at all.
+	//
+	// The mail hide still runs: it is what "keep out" means, and the noise scope
+	// already excludes anything a colleague corresponded with.
+	corresponds, err := e.pending.CorrespondsWith(ctx, tx, row.Email)
+	if err != nil {
+		return err
+	}
+	if !ownerSaidSo {
+		if err := e.suppressSenderDomain(ctx, tx, row, kind, corresponds); err != nil {
+			return err
+		}
+	}
+	if err := e.hideNoise(ctx, tx, row); err != nil {
+		return err
+	}
+	// An address the workspace has provably written to keeps its record whatever
+	// the classifier called one message — the same bound the domain suppression
+	// draws, read once for both.
+	if corresponds {
+		return nil
+	}
+	// An owner's own keep_out claims only their record; a machine's noise answer
+	// is about the address and reaches every seat's.
+	ownersOnly := retractEveryOwners
+	if ownerSaidSo {
+		ownersOnly = retractOwnersOnly
+	}
+	return e.retractSendersContacts(ctx, tx, row, ownersOnly)
 }
 
 // verdictReason is what the ledger records as the authority for a machine
