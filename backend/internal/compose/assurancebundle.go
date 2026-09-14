@@ -451,15 +451,18 @@ func adoptOpenTask(
 	}
 	// TaskIDsForSubject answers newest first, so the head is the survivor.
 	for _, extra := range open[1:] {
+		// SKEW IS NOT A FAULT HERE. Somebody wrote to this task between the
+		// read above and this line — most often the rep completing it — and
+		// their answer stands: the duplicate is left alone and the next cycle
+		// reads it afresh, which is the same judgement this function makes
+		// about a task that was already done when it looked.
+		//
+		// One condition rather than an arm of its own, so a lost race and an
+		// ordinary success leave this loop by the same path: the sweep settles
+		// what it still may and reports nothing unusual, because nothing
+		// unusual happened.
 		_, err := deps.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](extra.id), extra.version)
-		if errors.Is(err, apperrors.ErrVersionSkew) {
-			// Somebody wrote to this task between the read and here — most
-			// often the rep completing it. Their answer stands: the duplicate
-			// is left alone and the next cycle reads it afresh, which is the
-			// same judgement this function makes about a task already done.
-			continue
-		}
-		if err != nil {
+		if err != nil && !errors.Is(err, apperrors.ErrVersionSkew) {
 			return ids.UUID{}, false, fmt.Errorf("compose: settling a duplicate task: %w", err)
 		}
 	}
