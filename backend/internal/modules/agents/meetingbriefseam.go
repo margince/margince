@@ -6,7 +6,7 @@ package agents
 // The pre-meeting brief, as the agent surface reads it.
 //
 // There were two answers to "prepare me for this meeting", and the agent got
-// the weaker one. A person opened eight cited sections — goal, attendees,
+// the weaker one. A contact opened eight cited sections — goal, attendees,
 // commitments, risks, and the rest — while an agent asking the same question
 // got the assembled context walk with its open tasks pulled to the front, from
 // a code path that shares nothing with the brief. Both were individually
@@ -24,7 +24,7 @@ import (
 )
 
 // MeetingBriefReader assembles the brief for ONE meeting, under the calling
-// principal's own scope — the identical read the person page performs.
+// principal's own scope — the identical read the contact page performs.
 //
 // It answers ErrNotFound for an activity that is not a booked meeting, which
 // is what lets the tool route on the anchor without pre-checking the kind.

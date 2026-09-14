@@ -235,18 +235,18 @@ func recordExtractedEvent(
 		return false, fmt.Errorf("cited message id: %w", err)
 	}
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
-		Kind:           event.Kind,
-		OrganizationID: thread.OrganizationID,
-		Summary:        event.Summary,
-		Severity:       extractKinds[event.Kind],
-		Fingerprint:    signalFingerprint(event.Kind, thread.OrganizationID, cited),
+		Kind:        event.Kind,
+		CompanyID:   thread.CompanyID,
+		Summary:     event.Summary,
+		Severity:    extractKinds[event.Kind],
+		Fingerprint: signalFingerprint(event.Kind, thread.CompanyID, cited),
 		Evidence: []signals.DerivedEvidence{
 			{Snippet: event.Summary, ActivityID: cited},
 		},
 		// As shareable as the conversation it was read from, and no more.
 		// Everything this producer writes is drawn from what messages SAY, so a
 		// summary filed on a workspace-visible account would hand the whole
-		// workspace the contents of correspondence that answers to one person.
+		// workspace the contents of correspondence that answers to one contact.
 		PrivateTo: thread.PrivateTo,
 		Audit: map[string]any{
 			paramKind:               event.Kind,

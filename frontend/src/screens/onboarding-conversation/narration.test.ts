@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -47,7 +47,7 @@ function read(overrides: Partial<CompanySiteRead>): CompanySiteRead {
     profile_fields: [],
     facts: [],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "h1",

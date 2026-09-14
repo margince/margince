@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -267,7 +267,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          data: [{ type: "person", id: "p1", title: "Dana Buyer at Acme" }],
+          data: [{ type: "contact", id: "p1", title: "Dana Buyer at Acme" }],
           page: { next_cursor: null, has_more: false },
         }),
       ),
@@ -321,7 +321,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () =>
         jsonResponse({
-          data: [{ type: "organization", id: "o1", title: "Brandt GmbH" }],
+          data: [{ type: "company", id: "o1", title: "Brandt GmbH" }],
           page: { next_cursor: null, has_more: false },
         }),
       ),
@@ -332,7 +332,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // The row's OWN second line, read exactly: asserting on page text would
     // pass off the fixture command list's subtitle, and asserting `contains`
     // would pass on the wire word itself once the label is capitalised.
-    expect(row.querySelector(".sub")?.textContent).toBe("Organization");
+    expect(row.querySelector(".sub")?.textContent).toBe("Company");
   });
 
   // A catalog row has no page of its own — it lives on the data-model settings
@@ -386,10 +386,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
             id: "pr-2",
             name: "Rollout",
             key: null,
-            organization_id: "o-9",
+            company_id: "o-9",
           });
         }
-        if (url.endsWith("/organizations/o-9")) {
+        if (url.endsWith("/companies/o-9")) {
           return jsonResponse({ id: "o-9", display_name: "Brandt Automotive" });
         }
         return jsonResponse({ data: [], page: { next_cursor: null } });
@@ -469,7 +469,7 @@ describe("useBuiltinCommands", () => {
             // The write, which is what Company profile asks: the read is held
             // by every seat and stopped opening the page when the four
             // configuration pages moved off the reads.
-            allow: { organization: ["read", "update"] },
+            allow: { company: ["read", "update"] },
             settingsAvailability:
               opts.companyContext === null
                 ? null
@@ -517,11 +517,11 @@ describe("useBuiltinCommands", () => {
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader
-  // who learned "People" or "Pipeline" types it, and the row it named must be
+  // who learned "Contacts" or "Pipeline" types it, and the row it named must be
   // what answers — against the REAL rail rows, because the alias lives on the
   // nav item and a fixture command list would only prove the fixture.
   it.each([
-    ["people", "Contacts", "#/contacts"],
+    ["contacts", "Contacts", "#/contacts"],
     ["pipeline", "Deals", "#/deals"],
   ])(
     "reaches %s's destination by the name it used to print",

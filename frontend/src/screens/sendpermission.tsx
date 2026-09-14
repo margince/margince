@@ -13,7 +13,7 @@ import { useT } from "../i18n";
 //
 // THREE STATES, and a rep sees exactly one. Which one is chosen by the engine's
 // answer, never by asking the rep to classify their own message: they already
-// said what they are writing by picking a person and a thread.
+// said what they are writing by picking a contact and a thread.
 //
 //   1. allowed      one quiet line, no interaction. The overwhelming majority
 //                   of sends, and it should cost no attention at all.

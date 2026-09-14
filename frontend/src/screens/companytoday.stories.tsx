@@ -17,7 +17,7 @@ import { StoryProviders } from "./story-utils";
 //
 // The withheld story is the one no seeded demo account can reach: every one
 // grants the viewer full RBAC, so `state_strip` (whose move, the open risk)
-// and `people` (the best route in) are never omitted on a live session. A
+// and `contacts` (the best route in) are never omitted on a live session. A
 // role scoped away from either still reads the rest of the brief; it just
 // says so for the two it cannot answer, rather than silently dropping them.
 
@@ -28,11 +28,11 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
-const org = {
+const company = {
   id: "o-1",
   workspace_id: "w-1",
   display_name: "Brandt Automotive GmbH",
@@ -44,7 +44,7 @@ const org = {
 
 const populated = {
   as_of: "2026-07-13T09:00:00Z",
-  organization: org,
+  company: company,
   sections_omitted: [],
   state_strip: {
     account: { lifecycle: "customer", relationship_types: ["customer"] },
@@ -59,10 +59,10 @@ const populated = {
       headline: "Depot pilot has had no activity in 18 days.",
     },
   },
-  people: {
+  contacts: {
     data: [
       {
-        person_id: "p-1",
+        contact_id: "p-1",
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         deal_roles: [],
@@ -70,7 +70,7 @@ const populated = {
         routes: {
           top: [
             {
-              person_id: "u-1",
+              contact_id: "u-1",
               display_name: "Mira Voss",
               strength_bucket: "strong",
             },
@@ -95,7 +95,7 @@ const populated = {
     activity_id: "a-1",
     starts_at: "2026-07-14T09:00:00Z",
     subject: "Renewal review",
-    participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+    participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
   },
   suggestions: [
     {
@@ -145,15 +145,15 @@ const rated = {
   },
 } as unknown as View;
 
-// state_strip and people withheld — the two readings no seeded demo account
+// state_strip and contacts withheld — the two readings no seeded demo account
 // ever omits, so this is the only place the brief's own withheld path for
 // either one renders.
 const withheld = {
   ...populated,
   state_strip: undefined,
-  people: undefined,
+  contacts: undefined,
   next_meeting: undefined,
-  sections_omitted: ["state_strip", "people", "next_meeting"],
+  sections_omitted: ["state_strip", "contacts", "next_meeting"],
 } as unknown as View;
 
 function Brief({
@@ -171,7 +171,7 @@ function Brief({
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <TodayOnThisAccount
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={loading}
           failed={failed}
@@ -235,7 +235,7 @@ export const BeingRead: Story = {
     <Brief
       view={populated}
       scan={{
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "running",
         findings: populated.suggestions ?? [],
         findings_dropped: 0,
@@ -251,7 +251,7 @@ export const Scanned: Story = {
     <Brief
       view={populated}
       scan={{
-        organization_id: "o-1",
+        company_id: "o-1",
         state: "done",
         generated_at: "2026-08-07T08:58:00Z",
         generated_by: "model",
@@ -292,12 +292,12 @@ export const Scanned: Story = {
 // has a definition and no working to show.
 function Call({ view }: Readonly<{ view: View }>) {
   const reading = useTodayReading({
-    orgId: "o-1",
+    companyId: "o-1",
     view,
     loading: false,
     failed: false,
   });
-  return <Company360Call reading={reading} name={org.display_name} />;
+  return <Company360Call reading={reading} name={company.display_name} />;
 }
 
 export const Reading: Story = {

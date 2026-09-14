@@ -41,7 +41,7 @@ type EmailSummaryReader func(
 // email produced no hit to enrich in the first place, and the reader runs that
 // same content gate a second time rather than trusting this one — the two
 // agree by construction, and the one that would matter if they ever did not is
-// the reader's, which is the one standing between a preview and a person who
+// the reader's, which is the one standing between a preview and a contact who
 // may not read it.
 //
 // A read failure fails the search rather than answering with a silent gap. The

@@ -73,7 +73,7 @@ func seedHeldDraft(t *testing.T, e *integration.Env, svc *approvals.Service) hel
 	t.Helper()
 	const to = draftRecipient
 	owner := integration.OwnerConn(t)
-	person := e.SeedPerson(t, "Anna Weber", nil)
+	contact := e.SeedContact(t, "Anna Weber", nil)
 	anchor := integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, direction, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'inbound', 'Kickoff', now(), 'test', 'human:seed')`)
@@ -88,22 +88,22 @@ func seedHeldDraft(t *testing.T, e *integration.Env, svc *approvals.Service) hel
 		VALUES ('business_correspondence', 'Business correspondence', false, 'business_correspondence')
 		ON CONFLICT (key) DO NOTHING`)
 
-	// The address on the PERSON record as well as on the thread. The consent
-	// gate resolves a recipient address to a subject through person_email, so
+	// The address on the CONTACT record as well as on the thread. The consent
+	// gate resolves a recipient address to a subject through contact_email, so
 	// without this the counterparty is a stranger to the gate and the send
 	// refuses — correctly, and for a reason that has nothing to do with the
 	// release under test.
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'test', 'human:seed')`, person, to)
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'test', 'human:seed')`, contact, to)
 
 	// The counterparty on the thread, carrying the address a reply answers.
 	e.WsExec(t, `
-		INSERT INTO activity_participant (id, activity_id, role, person_id, address)
-		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), anchor, person, to)
+		INSERT INTO activity_participant (id, activity_id, role, contact_id, address)
+		VALUES ($1, $2, 'from', $3, $4)`, ids.NewV7(), anchor, contact, to)
 	e.WsExec(t, `
-		INSERT INTO activity_link (id, activity_id, entity_type, person_id)
-		VALUES ($1, $2, 'person', $3)`, ids.NewV7(), anchor, person)
+		INSERT INTO activity_link (id, activity_id, entity_type, contact_id)
+		VALUES ($1, $2, 'contact', $3)`, ids.NewV7(), anchor, contact)
 
 	proposal := automation.HeldDraftProposal{
 		AnchorActivityID: anchor,
@@ -124,7 +124,7 @@ func seedHeldDraft(t *testing.T, e *integration.Env, svc *approvals.Service) hel
 	//
 	// The owner is Rep1, the same human decider() releases as, and that is not
 	// incidental. Releasing a held draft SENDS it from the approver's own
-	// mailbox, so only the person it goes out as may release it; a fixture
+	// mailbox, so only the contact it goes out as may release it; a fixture
 	// staging under nobody would build a card no one could press.
 	approvalID, err := svc.Stage(e.AutomationCtx(e.Rep1), approvals.StageInput{
 		Kind:           automation.HeldDraftKind,
@@ -421,7 +421,7 @@ func TestAnEditedHeldDraftCannotBeReAimedAtAnotherRecipient(t *testing.T) {
 		t.Errorf("outbound activities = %d, want 0 — nothing may go to a recipient nobody approved", n)
 	}
 	// Refused BEFORE the decision, so the original draft is still there to
-	// release to the person it was actually written to.
+	// release to the contact it was actually written to.
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
 		WHERE id = $1 AND status = 'pending'`, f.approval); n != 1 {
 		t.Error("the retargeting attempt decided the approval — a refused edit must leave the honest draft releasable")

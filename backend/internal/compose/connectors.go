@@ -269,7 +269,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// The signed state is the only trustworthy carrier here (no session cookie
 	// on the cross-site redirect), and it is what names the surface the human
 	// started from. Verify it BEFORE branching on the outcome: a denial that
-	// began in Settings has to land back in Settings, or the person never sees
+	// began in Settings has to land back in Settings, or the contact never sees
 	// the note explaining what happened. An unverifiable state yields no
 	// trustworthy ReturnTo, so those paths keep the default.
 	st, err := h.signer.verify(params.State, time.Now())
@@ -323,7 +323,7 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	// state. Resolving above would mean an anonymous request unseals a live
 	// client secret before anything has authenticated it, on a path with no rate
 	// limit. It also answers a browser redirect with a JSON error, where every
-	// other failure here lands the person back on a page that explains itself.
+	// other failure here lands the contact back on a page that explains itself.
 	// runCtx, not ctx: a stored app is per-workspace and this route is
 	// session-less, so the raw request context has no workspace to read it
 	// under. Under ctx the lookup finds nothing and falls back to the

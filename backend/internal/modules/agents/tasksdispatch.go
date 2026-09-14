@@ -128,7 +128,7 @@ func (s *Dispatcher) answerTaskMethod(ctx context.Context, resp rpcResponse, met
 		}
 	case methodTasksUpdate:
 		// An empty acknowledgement, which is the whole of it. This server never
-		// raises an inputRequest — a 🟡 decision is a person visiting Margince,
+		// raises an inputRequest — a 🟡 decision is a contact visiting Margince,
 		// not a round trip back through the agent's client — so every key a
 		// client could send is one the specification tells servers to ignore.
 		resp.Result = map[string]any{}
@@ -198,7 +198,7 @@ func unknownTaskError() *rpcError {
 // cancelTask retracts the proposal behind a task and settles the handle.
 //
 // Withdrawing is the point rather than a side effect. Cancelling the handle and
-// leaving the staging in a person's inbox would leave a decision that can no
+// leaving the staging in a contact's inbox would leave a decision that can no
 // longer take effect and that nobody can retract — the same zombie authority
 // object refuseStagingElsewhere declines to mint.
 //
@@ -225,7 +225,7 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 	if err != nil {
 		// Answered as an error rather than acked. An empty ack would tell the
 		// client its cancellation succeeded while the proposal stayed live in a
-		// person's inbox — and the client would stop polling the very task that
+		// contact's inbox — and the client would stop polling the very task that
 		// could still act.
 		s.log.Error("mcp: withdrawing a cancelled task's approval failed",
 			"task", task.ID, "approval", task.ApprovalID, "err", err)
@@ -277,7 +277,7 @@ func (s *Dispatcher) cancelTask(ctx context.Context, task Task) (map[string]any,
 //
 // Every failure below falls back to the plain refusal, which is the answer the
 // client would have got anyway. A handle this server could not create is worth
-// nothing; the sentence telling the agent a person must approve is worth
+// nothing; the sentence telling the agent a human must approve is worth
 // something.
 func (s *Dispatcher) mintTask(ctx context.Context, fr framing, tool string, refusal error) (createTaskResult, bool) {
 	var staged *workflow.StagedApprovalError

@@ -8,7 +8,7 @@ import "./evidencemark.css";
 
 // The ONE provenance affordance (design-language §4).
 //
-// A field that came from somewhere other than a person typing it carries a
+// A field that came from somewhere other than a contact typing it carries a
 // dotted underline. Opening the mark says where it came from, how sure the
 // system was, the text it was read from, and when — with a way through to
 // the full history of that field.

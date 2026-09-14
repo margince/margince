@@ -545,7 +545,7 @@ func (e *SearchEnv) repNoRoutingCtx() context.Context {
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"person": {Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})

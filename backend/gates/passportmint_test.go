@@ -16,7 +16,7 @@ package gates
 // Nothing held that. A second INSERT taking a user id from anywhere else —
 // a request body, a loop over colleagues, an "issue on behalf of" convenience —
 // would compile, pass every existing test, and quietly turn standing authority
-// into something one person can create for another. The whole overnight-agent
+// into something one contact can create for another. The whole overnight-agent
 // feature is built on the property, so it is gated here.
 
 import (
@@ -75,7 +75,7 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 				// The identity argument must be a plain identifier — a variable
 				// the function obtained. A composite literal is somebody
 				// building an identity, which is exactly the shape that mints
-				// for a person who did not ask.
+				// for a contact who did not ask.
 				if _, plain := identityArg.(*ast.Ident); !plain {
 					t.Errorf("%s calls %s with a constructed identity (%s) — "+
 						"the user must come from the session, or the mint acts for "+
@@ -126,7 +126,7 @@ func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
 				if !strings.HasPrefix(filepath.ToSlash(path), passportOwner) {
 					t.Errorf("%s mints a passport, but only %s may — a second mint "+
 						"path is how a credential starts being created for somebody "+
-						"other than the person it acts as", path, passportOwner)
+						"other than the contact it acts as", path, passportOwner)
 					continue
 				}
 				if !mintsForOneUser(stmt) {
@@ -265,7 +265,7 @@ func sqlStringsIn(t *testing.T, path string, body []byte) []string {
 // session path calls IssuePassport, and a caller with its own half of the same
 // fact to commit calls IssuePassportTx so the two land in one transaction. A
 // gate matching one name proves nothing about the other, and the one it misses
-// is the one a future caller reaches for — which is how a mint for a person who
+// is the one a future caller reaches for — which is how a mint for a contact who
 // never asked would get past a green gate.
 //
 // Held by: TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser (backend/gates/passportmint_test.go)

@@ -102,7 +102,7 @@ func TestSplitTypedQuerySeparatesFinishedWordsFromTheOneBeingTyped(t *testing.T)
 // parameters would prove nothing about the caller that actually has the bug.
 func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	t.Parallel()
-	ctx := teamReaderFor("organization")
+	ctx := teamReaderFor("company")
 
 	var bound []any
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
@@ -111,7 +111,7 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 	head, tail := splitTypedQuery("acme ein")
 	headPos, tailPos := arg(head), arg(tail)
 
-	branches, err := admittedBranchSQL(ctx, []string{"organization"}, headPos, tailPos, true, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -135,12 +135,12 @@ func TestSearchBindsNoParameterItsSQLDoesNotUse(t *testing.T) {
 // and quietly stop matching.
 func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 	t.Parallel()
-	ctx := teamReaderFor("organization")
+	ctx := teamReaderFor("company")
 	var bound []any
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 	headPos, tailPos := arg("acme"), arg("ein")
 
-	branches, err := admittedBranchSQL(ctx, []string{"organization"}, headPos, tailPos, true, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, tailPos, true, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestTheBranchSQLCarriesBothHalvesOfTheQuery(t *testing.T) {
 // before this change.
 func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	t.Parallel()
-	ctx := teamReaderFor("organization")
+	ctx := teamReaderFor("company")
 	var bound []any
 	arg := func(v any) int { bound = append(bound, v); return len(bound) }
 
@@ -178,7 +178,7 @@ func TestAQueryWithNoFragmentGetsNoPrefixArm(t *testing.T) {
 	}
 	headPos := arg(head)
 
-	branches, err := admittedBranchSQL(ctx, []string{"organization"}, headPos, 0, false, arg)
+	branches, err := admittedBranchSQL(ctx, []string{"company"}, headPos, 0, false, arg)
 	if err != nil {
 		t.Fatalf("building the branch SQL: %v", err)
 	}

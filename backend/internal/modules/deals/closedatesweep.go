@@ -3,19 +3,9 @@
 
 package deals
 
-// The nightly close-date corrector: the enforcement half of
-// INV-CLOSE-PAST. Every open deal the assessment flags is corrected the
-// same night on its risk tier — 🟢 a low-stakes clear-overdue date is
-// rolled forward, 🟡 a forecast-bearing / missing / unrealistic date is
-// replaced with a machine estimate that keeps the deal out of Commit,
-// 🔻 a deal that has gone quiet is downgraded one forecast notch AND
-// re-dated, because notching the number while leaving a date nobody
-// believes corrected half the lie.
-//
-// EVERY TIER WRITES, and none of them asks first. The 🟡 tier used to
-// write the date and then stage an approval asking a human to confirm
-// the date it had already written — a question whose answer changed
-// nothing, which expired unanswered in 72 hours. What replaces it is
+// The nightly corrector estimates missing or overdue dates and lowers forecast
+// confidence on quiet deals. A recorded future date remains unchanged.
+// Every applied change produces
 // the morning receipt: the deal's owner is shown what moved and why,
 // with a Put back that restores the audit row's before-image. A rep who
 // does not want this sets their close-date autonomy to manual or veto
@@ -409,7 +399,7 @@ func dateString(t *time.Time) *string {
 // between them — the same window the status re-check beside it exists for. A
 // deal handed over inside that window belongs to a rep whose answer was never
 // sought, and if they had switched corrections off, or sat on veto, the sweep
-// would be writing for the one person who declined.
+// would be writing for the one contact who declined.
 //
 // Asked only when the owner actually moved, so the ordinary deal costs no
 // second query and no second authority resolution.
@@ -424,7 +414,7 @@ func (c *CloseDateCorrector) ownerStillConsents(ctx context.Context, before, now
 	return c.policy.CorrectsWithoutAsking(ctx, owner)
 }
 
-// sameOwner reports whether a deal is still held by the person the candidate
+// sameOwner reports whether a deal is still held by the contact the candidate
 // page named. Both sides are nullable — owner_id is ON DELETE SET NULL — and
 // two unowned deals are the same owner, which is what lets the re-ask below
 // stay off the ordinary path.

@@ -29,6 +29,13 @@ import (
 func TestEveryProducerStatesAnOwner(t *testing.T) {
 	t.Parallel()
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
+	planService.taskScope = TasksMine
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
+	if missing != nil {
+		t.Fatalf("plan source: %+v", missing)
+	}
+	rows = append(rows, planRows.planRows...)
 	// The two lanes read BESIDE the assembled day rather than as part of it —
 	// the who-is-waiting and owed-leads reads take the scope as a query argument
 	// — so classifyDay never produces them and a census over it alone would
@@ -90,7 +97,7 @@ func TestAReaderLaneNamesTheReader(t *testing.T) {
 	if owner == nil {
 		t.Fatal("a personal lane's row carries no owner, which reads as a lane that never answered")
 	}
-	if owner.Kind != crmcontracts.WorklistOwnerUser {
+	if owner.Kind != crmcontracts.WorklistOwnerKindWorklistOwnerUser {
 		t.Errorf("a personal lane's row answers %q, want a named user", owner.Kind)
 	}
 	if owner.Id == nil || ids.UUID(*owner.Id) != reader {
@@ -133,7 +140,7 @@ func TestUnassignedIsSaidRatherThanImplied(t *testing.T) {
 	silent := ranked{item: crmcontracts.WorklistItem{Source: crmcontracts.WorklistItemSourceTask}}
 
 	said := ownerOnTheWire(stated, ids.UUID{})
-	if said == nil || said.Kind != crmcontracts.WorklistOwnerUnassigned {
+	if said == nil || said.Kind != crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned {
 		t.Errorf("a lane that found no owner answered %v, want an explicit unassigned", said)
 	}
 	if quiet := ownerOnTheWire(silent, ids.UUID{}); quiet != nil {
@@ -167,7 +174,7 @@ func TestATasksOwnerAgreesWithItsOwnReason(t *testing.T) {
 				}
 			}
 			owner := ownerOnTheWire(row, ids.UUID{})
-			ownerSaysUnassigned := owner != nil && owner.Kind == crmcontracts.WorklistOwnerUnassigned
+			ownerSaysUnassigned := owner != nil && owner.Kind == crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned
 			if saysUnassigned != ownerSaysUnassigned {
 				t.Errorf("the row's reasons say unassigned=%v and its owner says %v: "+
 					"a reader is told two different things about one fact",
@@ -218,7 +225,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 // TestOnlyAReaderBoundLaneNamesTheReader is the claim's evidence.
 //
 // `ownedByWhoeverIsReading` asserts something specific about the LANE: its
-// query takes the acting user, so no other person's row could have come back.
+// query takes the acting user, so no other contact's row could have come back.
 // That is checkable, and four of the lanes that first carried the claim failed
 // it — decisions, meetings, DSR and three of the five system sources are read
 // under the caller's ROW SCOPE instead, which is a different thing. A
@@ -236,10 +243,17 @@ func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
 		"bounce":               "HardBouncesFor is the comms store's per-user read",
 		"undelivered":          "the same per-user read as the bounce beside it",
-		"notice":               "a notice is addressed to one person",
-		"capture_health":       "a mailbox belongs to one person",
+		"notice":               "a notice is addressed to one contact",
+		"capture_health":       "a mailbox belongs to one contact",
 	}
 	rows := classifyDay(dayOfEveryLane(), rankInstant, dayMoney{})
+	planService := meetingPrepService(nil).WithWeeklyPlans(planWorkStub{entries: []PlanWork{{ID: ids.NewV7(), OwnerID: readerOf(meetingPrepReader()), Label: "Prepare proposal", DueAt: rankInstant}}})
+	planService.taskScope = TasksMine
+	planRows, missing := planService.readingPlan(meetingPrepReader(), rankInstant)
+	if missing != nil {
+		t.Fatalf("plan source: %+v", missing)
+	}
+	rows = append(rows, planRows.planRows...)
 	for _, row := range rows {
 		why, claimed := readerBound[row.item.Source]
 		isReaderBound := row.ownerRef.kind == ownerTheReader
@@ -313,7 +327,7 @@ func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
 	}
 }
 
-// taskAssignedTo is a task one named person holds.
+// taskAssignedTo is a task one named contact holds.
 func taskAssignedTo(assignee ids.UUID) crmcontracts.AttentionItem {
 	at := item("assigned", "task")
 	held := openapi_types.UUID(assignee)
@@ -344,7 +358,7 @@ func TestAWithheldOwnerIsNotAnUnassignedOne(t *testing.T) {
 		t.Errorf("a withheld owner reached the wire as %+v, want the field absent — "+
 			"`unassigned` would say nobody owes a reply somebody does owe", *owner)
 	}
-	// And a readable one still names its person, so the case above is about
+	// And a readable one still names its contact, so the case above is about
 	// the reading rather than about the lane.
 	owed := ids.MustParse("01a05500-0000-7000-8000-0000000000ed")
 	named := classifyWaiting(WaitingCustomer{Since: rankInstant, OwnerID: owed}, rankInstant)

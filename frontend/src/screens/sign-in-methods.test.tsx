@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -8,7 +8,7 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { SignInMethodsCard } from "./sign-in-methods";
 
-// Which ways people may sign in. The list is the DEPLOYMENT's — an admin
+// Which ways contacts may sign in. The list is the DEPLOYMENT's — an admin
 // narrows it and can never widen it — and password is not in it at all.
 
 afterEach(() => {

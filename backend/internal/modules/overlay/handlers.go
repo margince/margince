@@ -148,11 +148,12 @@ func (h Handlers) GetOverlaySyncStatus(w http.ResponseWriter, r *http.Request) {
 // []struct{...} api_gen.go declares and assigns straight into
 // crmcontracts.OverlaySyncStatus.Objects with no per-field copy.
 type wireSyncObject = struct {
-	BackfillComplete *bool                                       `json:"backfillComplete,omitempty"` //nolint:tagliatelle // must match the generated OverlaySyncStatus.Objects element shape verbatim (crm.yaml's own camelCase)
-	FrozenForFlip    *bool                                       `json:"frozenForFlip,omitempty"`    //nolint:tagliatelle // see above
-	LastSyncedAt     *time.Time                                  `json:"lastSyncedAt,omitempty"`     //nolint:tagliatelle // see above
-	Object           *string                                     `json:"object,omitempty"`
-	State            *crmcontracts.OverlaySyncStatusObjectsState `json:"state,omitempty"`
+	BackfillComplete  *bool                                       `json:"backfillComplete,omitempty"` //nolint:tagliatelle // must match the generated OverlaySyncStatus.Objects element shape verbatim (crm.yaml's own camelCase)
+	FrozenForFlip     *bool                                       `json:"frozenForFlip,omitempty"`    //nolint:tagliatelle // see above
+	LastSyncedAt      *time.Time                                  `json:"lastSyncedAt,omitempty"`     //nolint:tagliatelle // see above
+	Object            *string                                     `json:"object,omitempty"`
+	State             *crmcontracts.OverlaySyncStatusObjectsState `json:"state,omitempty"`
+	UnprojectableRows *int                                        `json:"unprojectableRows,omitempty"` //nolint:tagliatelle // see above
 }
 
 // syncStatusToWire maps the domain []ObjectSyncStatus onto the contract's
@@ -167,9 +168,15 @@ func syncStatusToWire(objects []ObjectSyncStatus) crmcontracts.OverlaySyncStatus
 	for i, o := range objects {
 		object, lastSyncedAt, complete, frozen := o.Object, o.LastSyncedAt, o.BackfillComplete, o.FrozenForFlip
 		state := crmcontracts.OverlaySyncStatusObjectsState(o.State)
+		// Sent on every entry, including zero. Zero is the answer an operator
+		// needs most — it is what says a stale class is converging and wants
+		// nothing from them — so omitting it would withhold the reassurance
+		// and leave the field looking like one that only appears in trouble.
+		unprojectable := o.Unprojectable
 		wire[i] = wireSyncObject{
 			BackfillComplete: &complete, FrozenForFlip: &frozen,
 			LastSyncedAt: &lastSyncedAt, Object: &object, State: &state,
+			UnprojectableRows: &unprojectable,
 		}
 	}
 	return crmcontracts.OverlaySyncStatus{Objects: &wire}

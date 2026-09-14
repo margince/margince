@@ -21,6 +21,7 @@ import {
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { ProjectContractRow } from "./contractterms";
 import { EntityRef } from "./entityref";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import {
@@ -38,7 +39,6 @@ import { projectRoleLabel } from "./record360";
 export type Project360 = components["schemas"]["Project360"];
 type Project360Section = components["schemas"]["Project360Section"];
 type Deal = components["schemas"]["Deal"];
-type Contract = components["schemas"]["Contract"];
 type Attachment = components["schemas"]["Attachment"];
 type Stakeholder = components["schemas"]["Project360Stakeholder"];
 type Commitment = components["schemas"]["Project360Commitment"];
@@ -233,7 +233,7 @@ function ProjectDealRow({
 }
 
 /**
- * The people seated on the project, each with the seat they hold — and the
+ * The contacts seated on the project, each with the seat they hold — and the
  * verbs that put them there.
  *
  * The verbs ride `titleAction`, which `SectionPanel` draws only on a section
@@ -309,14 +309,14 @@ function StakeholderRow({
   const t = useT();
   return (
     <PanelRow className="project-row">
-      <EntityRef kind="person" id={seat.person_id} name={seat.person_name} />
+      <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
       <span className="project-row-meta t-caption">
         {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
             projectId={projectId}
-            personId={seat.person_id}
-            personName={seat.person_name}
+            contactId={seat.contact_id}
+            contactName={seat.contact_name}
             returnFocusTo={returnFocusTo}
           />
         )}
@@ -345,33 +345,13 @@ export function ProjectContractsCard({
       emptyLabel={t("project.contracts.empty")}
     >
       {contracts.map((contract) => (
-        <ContractRow key={contract.id} contract={contract} locale={locale} />
+        <ProjectContractRow
+          key={contract.id}
+          contract={contract}
+          locale={locale}
+        />
       ))}
     </SectionPanel>
-  );
-}
-
-function ContractRow({
-  contract,
-  locale,
-}: Readonly<{
-  contract: Contract;
-  locale: ReturnType<typeof useLocale>["locale"];
-}>) {
-  const recordZone = useRecordZone();
-  return (
-    <PanelRow className="project-row">
-      <span>{contract.title}</span>
-      <span className="project-row-meta t-caption">
-        <Badge quiet>{contract.status}</Badge>
-        <span className="t-mono">
-          {formatMoneyOrAbsent(contract.value_minor, contract.currency, locale)}
-        </span>
-        {contract.ends_on && (
-          <span>{formatDateAbbrev(contract.ends_on, locale, recordZone)}</span>
-        )}
-      </span>
-    </PanelRow>
   );
 }
 

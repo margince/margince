@@ -28,7 +28,7 @@ import (
 
 func TestResetDataEndpointGates(t *testing.T) {
 	e := integration.Setup(t)
-	e.SeedPerson(t, "Alice", nil)
+	e.SeedContact(t, "Alice", nil)
 
 	call := func(ctx context.Context, allowed bool, body string) *httptest.ResponseRecorder {
 		h := dataResetHandlers{

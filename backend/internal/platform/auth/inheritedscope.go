@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // ActivityAvailableClause is the predicate under which an activity is in the
@@ -41,7 +42,7 @@ func ActivityAvailableClause(alias string) string {
 // that an activity EXISTS — its occurred_at, direction, kind, who owns it —
 // without its content. Activities have no owner, but their free-text
 // inherits the sensitivity of the records they attach to. An activity is
-// discoverable when ANY linked person/organization/deal/lead/project is
+// discoverable when ANY linked contact/company/deal/lead/project is
 // visible under the caller's row scope, or when it has no links at all (a
 // workspace-shared note). It lives here, not in a module: it is the one
 // scope rule that spans the record tables and activity_link rows, and scope
@@ -89,10 +90,10 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// is visible, so a meeting filed under a contact private to the seat that
 	// captured it fails that test for a colleague who was IN the meeting — the
 	// invitation is on their calendar and the row denies them. Membership is
-	// the honest answer to "may this person learn this exists": they were on it.
+	// the honest answer to "may this contact learn this exists": they were on it.
 	//
 	// It admits EXISTENCE only. Content still needs the audience arm, the linked
-	// private person stays unreadable with its own visibility check, and neither
+	// private contact stays unreadable with its own visibility check, and neither
 	// the availability test nor object RBAC is relaxed. Nothing here reads
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
@@ -191,7 +192,23 @@ func ActivityContentClause(ctx context.Context, alias string, arg func(any) int)
 	if p.Type == principal.PrincipalSystem {
 		return discover, nil
 	}
-	return discover + " AND " + activityAudienceArm(p, alias, arg), nil
+	return discover + " AND " + activityContentAudienceArm(p, alias, arg), nil
+}
+
+// Source availability is independent of the task's audience. A reminder cannot
+// grant access to evidence that the reader can no longer open.
+func activityContentAudienceArm(p principal.Principal, alias string, arg func(any) int) string {
+	own := activityAudienceArm(p, alias, arg)
+	// Reassignment hands over the reminder, never a grant to its source email.
+	own = fmt.Sprintf("(%s OR coalesce(%s.source_system = '%s' AND %s.assignee_id = $%d, false))",
+		own, alias, provenance.EmailRequestSource, alias, arg(p.UserID))
+	// A captured request is a personal reminder of its source, not a new grant
+	// to that correspondence. Archiving or restricting the source withholds it.
+	source := activityDiscoverClause(p, "request_source", arg) + " AND " + activityAudienceArm(p, "request_source", arg)
+	return own + fmt.Sprintf(` AND (coalesce(%[1]s.source_system, '') <> '`+provenance.EmailRequestSource+`'
+	 OR EXISTS (SELECT 1 FROM activity request_source
+	   WHERE request_source.id = %[1]s.source_activity_id AND request_source.archived_at IS NULL
+	     AND request_source.restricted_at IS NULL AND %[2]s))`, alias, source)
 }
 
 // ActivityAudienceArm renders the audience membership test alone — the
@@ -207,12 +224,12 @@ func ActivityAudienceArm(ctx context.Context, alias string, arg func(any) int) (
 	if p.Type == principal.PrincipalSystem {
 		return "TRUE", nil
 	}
-	return activityAudienceArm(p, alias, arg), nil
+	return activityContentAudienceArm(p, alias, arg), nil
 }
 
 // activityAudienceArm renders the audience membership test for one human (or
 // the human behind an agent). The participant arms hold for every audience:
-// a person on a conversation always reads it, limited or not.
+// a contact on a conversation always reads it, limited or not.
 //
 // Its existential twin — does ANYBODY match, which is the question an audience
 // write owes before it narrows a row — is ActivityHasAReaderTx in
@@ -336,12 +353,12 @@ func probeExistsLive(ctx context.Context, tx pgx.Tx, from, alias string, idPos i
 //
 // Every non-null endpoint must be visible under the caller's row scope, on read
 // exactly as on write. Only a caller unbounded over EVERY endpoint table carries
-// no clause; person and organization hold capture privacy, so that is the system
+// no clause; contact and company hold capture privacy, so that is the system
 // principal alone.
 //
-// It lives here rather than in people for the reason the two rules above do:
+// It lives here rather than in contacts for the reason the two rules above do:
 // scope policy has exactly one spelling (ADR-0054 §8), and this rule now has two
-// readers in different modules — people's own list and read SQL, and the
+// readers in different modules — contacts's own list and read SQL, and the
 // approvals inbox, which must decide whether a staged archive of an edge is
 // visible to the human being asked to approve it. A second copy of a conjunction
 // is a second place for one of its five arms to be forgotten.
@@ -368,15 +385,15 @@ func RelationshipEndpointScope(ctx context.Context, alias string, arg func(any) 
 }
 
 // relationshipEndpointColumns is every endpoint an edge can carry, paired with
-// the table it points at. Two columns point at `organization`, which is why this
+// the table it points at. Two columns point at `company`, which is why this
 // is a slice and not a map.
 var relationshipEndpointColumns = []struct{ column, table string }{
-	{"person_id", tablePerson},
-	{"counterparty_person_id", tablePerson},
-	{"organization_id", tableOrganization},
-	{"counterparty_org_id", tableOrganization},
-	{"deal_id", tableDeal},
-	{"project_id", tableProject},
+	{contactIDColumn, tableContact},
+	{"counterparty_contact_id", tableContact},
+	{companyIDColumn, tableCompany},
+	{"counterparty_company_id", tableCompany},
+	{dealIDColumn, tableDeal},
+	{projectIDColumn, tableProject},
 }
 
 // relationshipEndpoints is the distinct endpoint TABLES, for the unbounded

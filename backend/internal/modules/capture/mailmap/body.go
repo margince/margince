@@ -122,7 +122,7 @@ func readInlinePart(
 	// LAST, deliberately. A part admitted mid-walk spends an ordinal, a count
 	// slot and message budget that the sender's own files needed, so an
 	// invitation arriving before twenty attachments silently pushed the
-	// twentieth off the cap. The files a person chose to send are what a rep
+	// twentieth off the cap. The files a contact chose to send are what a rep
 	// opens; the invitation is evidence, and evidence yields.
 	if isCalendarType(contentType) {
 		*calendar = true

@@ -66,7 +66,7 @@ import "./shell.css";
 // above the content (app/topbar.tsx) carries everything else that is true of the
 // whole session — where you are, how you search, and who you are signed in as.
 // The sidebar holds destinations and nothing else, because a panel that also
-// held the search, the settings door and the person had four different kinds of
+// held the search, the settings door and the contact had four different kinds of
 // row in one column and read as a list of everything.
 //
 // The content column carries only what is true of THIS screen: its heading,
@@ -126,8 +126,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       {narrow ? narrowVersion() : displayVersion()}
     </span>
   );
-  // The installation's own organization (A107/ADR-0061: one installation, one
-  // organization), OBSERVED on the entry the onboarding gate already filled.
+  // The installation's own company (ADR-0061: one installation, one
+  // company), OBSERVED on the entry the onboarding gate already filled.
   // A disabled observer: it never fetches, so it cannot re-trigger the gate's
   // read and walk the app back through its splash, but it does re-render when
   // the company card writes a new mark into the entry — a plain cache peek
@@ -143,7 +143,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
   if (!installation) {
     return (
       <>
-        <a className="ws" href="#/brief" aria-label={t("shell.logoAria")}>
+        <a className="ws" href="#/home" aria-label={t("shell.logoAria")}>
           <span className="ws-chip">
             <Logomark />
           </span>
@@ -153,7 +153,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
         </a>
         {/* No attribution line here: the product's own mark is already above it,
             and a company name is never invented to fill the row. */}
-        <span className="ws-org">{marker}</span>
+        <span className="ws-company">{marker}</span>
       </>
     );
   }
@@ -173,7 +173,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
       <>
         <a
           className="ws ws-logo"
-          href="#/brief"
+          href="#/home"
           aria-label={t("shell.companyLogoAria", {
             company: installation.display_name,
           })}
@@ -184,8 +184,8 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             fallback={<b>{installation.display_name}</b>}
           />
         </a>
-        <span className="ws-org">
-          <span className="ws-org-text">
+        <span className="ws-company">
+          <span className="ws-company-text">
             {t("shell.poweredByPrefix")}{" "}
             <span className="ws-logo-product">{t("shell.logoAria")}</span>
           </span>
@@ -198,7 +198,7 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
     <>
       <a
         className="ws"
-        href="#/brief"
+        href="#/home"
         aria-label={t("shell.companyLogoAria", {
           company: installation.display_name,
         })}
@@ -211,17 +211,17 @@ function BrandBlock({ narrow }: Readonly<{ narrow: boolean }>) {
             declared no icon has a face rather than a gap. */}
         <span className="ws-chip ws-chip-company">
           <Avatar
-            identity={installation.organization_id}
+            identity={installation.company_id}
             name={installation.display_name}
-            shape="organization"
+            shape="company"
           />
         </span>
         <span className="ws-name">
           <b>{installation.display_name}</b>
         </span>
       </a>
-      <span className="ws-org">
-        <span className="ws-org-text">{t("shell.poweredBy")}</span>
+      <span className="ws-company">
+        <span className="ws-company-text">{t("shell.poweredBy")}</span>
         {marker}
       </span>
     </>
@@ -1018,7 +1018,7 @@ export function Shell({
         </main>
         {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
-          person is working in, and a contour that stopped at the sidebar would
+          contact is working in, and a contour that stopped at the sidebar would
           read as a panel border. Last in the tree, because it is an overlay and
           not a column. */}
         <AgentEdge />

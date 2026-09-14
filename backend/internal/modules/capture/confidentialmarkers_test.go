@@ -29,7 +29,7 @@ func TestASubjectMarkerIsRecognisedInTheFormsSendersActuallyWrite(t *testing.T) 
 
 		// Naming an agreement is not asking for confidence. An NDA is a routine
 		// contract between two COMPANIES, signed by the company rather than by a
-		// person, and that one exists is not itself a secret. These are threads
+		// contact, and that one exists is not itself a secret. These are threads
 		// ABOUT ordinary contracting, and holding them took a deal's own
 		// paperwork away from the team doing the deal.
 		{"NDA for review", false, "the abbreviation names a document and asks for nothing"},

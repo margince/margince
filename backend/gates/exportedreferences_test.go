@@ -12,7 +12,7 @@ package gates
 //
 // The pairs live in compose (referencesByTable) and this derives the SAME set
 // from the schema's own foreign keys, so the two cannot drift. A column added
-// next year that names an organization is covered the day its FK is declared,
+// next year that names a company is covered the day its FK is declared,
 // rather than the day somebody remembers the export.
 //
 // UNDER-RECOGNITION is the whole risk here. A missing pair is not a failing

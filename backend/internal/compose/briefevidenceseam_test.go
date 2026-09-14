@@ -19,7 +19,7 @@ import (
 // AssertAllMatched fails a waiver whose construction has since gone — so a
 // ratified worker that later grows a reader-side call is not silently exempt.
 var emailReaderNotNeeded = gatekit.Waive(map[string]string{
-	"jobs_accountscan.go:orgscan:newAccountScanWorker": "the worker role only ever calls Run, which WRITES findings; the summaries are attached by wire on the reader's side, out of the reader's own grants, so a reader here would be wired to a path that never asks it anything",
+	"jobs_accountscan.go:companyscan:newAccountScanWorker": "the worker role only ever calls Run, which WRITES findings; the summaries are attached by wire on the reader's side, out of the reader's own grants, so a reader here would be wired to a path that never asks it anything",
 })
 
 // A service that grounds prose in records is constructed in two places — the

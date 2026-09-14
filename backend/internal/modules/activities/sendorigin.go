@@ -42,7 +42,7 @@ type SendOrigin struct {
 	// also are records a REPLY is filed under beyond what its anchor carries.
 	//
 	// Added rather than substituted, and that is the whole shape of it: a reply
-	// belongs to the same people and the same deal as the conversation it
+	// belongs to the same contacts and the same deal as the conversation it
 	// continues, so a caller that could replace the inherited set could detach
 	// a thread from the records it is about. What it is for is the link the
 	// anchor cannot have — a deal whose project was attached after the
@@ -185,7 +185,7 @@ func (o SendOrigin) lockAnchorLive(ctx context.Context, tx pgx.Tx) error {
 	}
 	// FOR SHARE, not FOR UPDATE. All this needs is that the anchor cannot be
 	// archived — an UPDATE — while the reply is being written, and a share lock
-	// refuses exactly that. FOR UPDATE would additionally serialize two people
+	// refuses exactly that. FOR UPDATE would additionally serialize two contacts
 	// replying to the same thread and block ordinary edits to it (a relink, a
 	// subject fix) for the length of the write, which is a cost this check has
 	// no reason to impose.

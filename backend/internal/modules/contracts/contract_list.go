@@ -18,11 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // ListContractsInput selects one account's agreements.
 type ListContractsInput struct {
-	OrganizationID ids.OrganizationID
+	CompanyID ids.CompanyID
 	// Status filters to one asserted status. Nil means every status, which
 	// includes the superseded predecessors that make a renewal chain readable.
 	Status *string
@@ -34,33 +35,37 @@ type ListContractsInput struct {
 	Limit             *int
 }
 
-// ListOrganizationContracts reads one account's agreements, newest term first.
-func (s *Store) ListOrganizationContracts(ctx context.Context, in ListContractsInput) (crmcontracts.ContractListResponse, error) {
+// ListCompanyContracts reads one account's agreements, newest term first.
+func (s *Store) ListCompanyContracts(ctx context.Context, in ListContractsInput) (crmcontracts.ContractListResponse, error) {
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
 
 	var out crmcontracts.ContractListResponse
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// Naming the account is a read of it: a caller who cannot see the
 		// company does not learn how many agreements it holds.
-		if err := auth.EnsureLinkTarget(ctx, tx, organizationTable, in.OrganizationID.UUID); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID); err != nil {
 			return err
 		}
 		var err error
-		out, err = listContractsTx(ctx, tx, in, s.today())
+		out, err = listContractsTx(ctx, tx, in, s.today(), active)
 		return err
 	})
 	return out, err
 }
 
-func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf time.Time) (crmcontracts.ContractListResponse, error) {
+func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.ContractListResponse, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(in.OrganizationID)
+	companyPos := arg(in.CompanyID)
 	asOfPos := arg(asOf)
 
-	where := []string{storekit.SQLf("organization_id = $%d", orgPos), "archived_at IS NULL"}
+	where := []string{storekit.SQLf("company_id = $%d", companyPos), "archived_at IS NULL"}
 
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {
@@ -85,8 +90,9 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 
 	limit := storekit.ClampLimit(in.Limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, underContractSQL(asOfPos), strings.Join(where, " AND "), arg(limit+1)), args...)
+		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
+		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
+		strings.Join(where, " AND "), arg(limit+1)), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list contracts: %w", err)
 	}
@@ -94,7 +100,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 
 	contracts := make([]crmcontracts.Contract, 0, limit)
 	for rows.Next() {
-		c, err := scanContract(rows)
+		c, err := scanContract(rows, active)
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, fmt.Errorf("scan contract: %w", err)
 		}
@@ -136,7 +142,7 @@ func cursorTime(t *time.Time) time.Time {
 // first, inside a caller-opened transaction — the project page's contracts
 // section. The project itself is the caller's to see before its paper is:
 // naming it is a read of it, the same rule the account list keeps for the
-// organization.
+// company.
 func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID, limit *int) (crmcontracts.ContractListResponse, error) {
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.ContractListResponse{}, err
@@ -144,6 +150,17 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	if err := auth.EnsureLinkTarget(ctx, tx, projectTable, projectID.UUID); err != nil {
 		return crmcontracts.ContractListResponse{}, err
 	}
+	// NO catalog fetch here, deliberately. This runs INSIDE a transaction the
+	// caller opened — the 360 assembly holds one across every section — and the
+	// catalog reader opens a second transaction of its own to answer. On a pool
+	// with one connection, or a busy one, that waits for a connection this
+	// caller is itself holding, which is a deadlock rather than a slow page.
+	//
+	// The cost is that the project page's contract rows carry no custom values.
+	// That is the right trade for a compact section listing title, value and
+	// dates: the full record is one click away and reads them through the
+	// handler path, which fetches the catalog before it opens anything.
+	var active []fieldcatalog.Column
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	asOfPos := arg(s.today())
@@ -157,15 +174,16 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	}
 	lim := storekit.ClampLimit(limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, underContractSQL(asOfPos), strings.Join(where, " AND "), arg(lim+1)), args...)
+		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
+		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
+		strings.Join(where, " AND "), arg(lim+1)), args...)
 	if err != nil {
 		return crmcontracts.ContractListResponse{}, fmt.Errorf("list project contracts: %w", err)
 	}
 	defer rows.Close()
 	contracts := make([]crmcontracts.Contract, 0, lim)
 	for rows.Next() {
-		c, err := scanContract(rows)
+		c, err := scanContract(rows, active)
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, fmt.Errorf("scan contract: %w", err)
 		}

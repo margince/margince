@@ -391,7 +391,12 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 		// options rather than the constant, so the two cannot be changed
 		// apart: there is exactly one place the ladder length is declared.
 		sendInsertOpts().MaxAttempts,
-	), relay, vault)}
+		// What the jurisdiction demands of the composed message, checked on the
+		// bytes about to leave rather than on the code that should have put
+		// them there. Injected here for the reason the consent gate is: this is
+		// the one construction every send goes through, so no surface can end
+		// up with a dispatcher that checks nothing and looks green doing it.
+	).WithRequirementChecker(requirementCheckerFor(pool)), relay, vault)}
 }
 
 // controllerLaneOn gives the dispatcher the transport for the installation's own
@@ -400,7 +405,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, pacing SendPa
 // A role with no relay gets the dispatcher unchanged, and a controller delivery
 // it picks up parks with a reason naming the missing relay. That is the honest
 // outcome: an unconfigured relay is a deployment fact, and retrying it forever
-// would leave a person's confirmation link expiring in a queue nobody watches.
+// would leave a contact's confirmation link expiring in a queue nobody watches.
 func controllerLaneOn(d *comms.Dispatcher, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	if relay == nil || vault == nil {
 		return d

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -10,7 +10,7 @@ import {
 } from "../api/model-inflight";
 import type { components } from "../api/schema";
 import { useAiActivity, watchStartedAiRun } from "./ai-activity";
-import { displayedKinds, speak } from "./ai-activity-lines";
+import { displayedKinds, speak } from "./ai-activity-speak";
 
 // What the rail asks the runner, and how often. Three things here can only be
 // wrong invisibly, which is why each has its own case: a poll left running for
@@ -412,7 +412,7 @@ describe("the kinds filter", () => {
 // time. The projection is written from an event the router publishes, so there
 // is a window between the button and the feed in which the agent is working and
 // the poll has not looked; at the idle cadence that window was thirty seconds,
-// which is longer than most of the tasks a person triggers and then waits on.
+// which is longer than most of the tasks a contact triggers and then waits on.
 describe("the reader's own ask", () => {
   it("reports the agent as asked the moment a model call opens", async () => {
     const { result } = mount(() => jsonResponse(activity([])));

@@ -191,7 +191,7 @@ func TestCorrectionAndReversalShareTheSafetyNumeratorWithoutDoubleCountingOneOut
 // Both are refusals in the approvals module's vocabulary, and the product's
 // answer to each is opposite: a rejected transition needs a better proposal, an
 // expired one needs somebody to look. Counting expiry as rejection would make a
-// transition nobody has time to read indistinguishable from one people actively
+// transition nobody has time to read indistinguishable from one contacts actively
 // disagree with — and neither belongs in the reviewed denominator, because
 // nobody answered.
 func TestAnExpiredProposalCountsAsExpiredNotRejected(t *testing.T) {
@@ -259,7 +259,7 @@ func TestAnOpenProposalIsReportedButNotReviewed(t *testing.T) {
 // A transition with nothing answered has NO rate, and the zero it reports must
 // not be read as one.
 //
-// Reviewed is the guard: a caller that showed 0% here would be saying people
+// Reviewed is the guard: a caller that showed 0% here would be saying contacts
 // refuse this move every time, when nobody has looked at it once.
 func TestATransitionNobodyAnsweredReportsZeroReviewed(t *testing.T) {
 	e := setupConfigEnv(t)
@@ -328,7 +328,7 @@ func TestObservationDaysMeasureTheSpanWatchedNotTheWindow(t *testing.T) {
 
 // A move recorded as reversed is unsafe even with no timestamp against it.
 //
-// reversed_at is nullable, and the table's constraint only forbids a PERSON
+// reversed_at is nullable, and the table's constraint only forbids a CONTACT
 // with no instant — so a row standing at `reversed` with a null timestamp is
 // legal. Reading only the timestamp would count that undone move as a safe
 // one, and under-counting is the single direction this number must never fail
@@ -362,8 +362,8 @@ func TestAReversedOutcomeIsUnsafeWithoutATimestamp(t *testing.T) {
 // An `auto_applied` move is the automation agreeing with itself. In the
 // denominator it dilutes every rate the launch gate reads, so a transition
 // already running on automatic would report a FALLING clean-acceptance rate as
-// its own volume grew — and the gate would read that as people losing
-// confidence, when every person who looked agreed.
+// its own volume grew — and the gate would read that as contacts losing
+// confidence, when every contact who looked agreed.
 func TestAnAutomaticMoveDoesNotDiluteTheHumanRates(t *testing.T) {
 	e := setupConfigEnv(t)
 	dealID, fromID, toID := twoStagePipeline(t, e)
@@ -389,7 +389,7 @@ func TestAnAutomaticMoveDoesNotDiluteTheHumanRates(t *testing.T) {
 			"whether it may keep running", r.Reviewed)
 	}
 	if rate := r.CleanAcceptanceRate(); rate != 1 {
-		t.Fatalf("clean acceptance reads %.2f, want 1 — every PERSON who looked agreed, "+
+		t.Fatalf("clean acceptance reads %.2f, want 1 — every CONTACT who looked agreed, "+
 			"and the autopilot's own volume must not read as them losing confidence", rate)
 	}
 }

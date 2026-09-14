@@ -2,12 +2,12 @@
 
 Margince normally runs as a server: containers, a managed Postgres, an
 operator who configures it. This is the other shape — **one folder a
-non-technical person downloads, starts, and uses in their browser**, with no
+non-technical contact downloads, starts, and uses in their browser**, with no
 Docker, no terminal setup and no services to configure. (On Windows, one
 prerequisite is real and named in the how-to: the Microsoft Visual C++ x64
 redistributable, which is not redistributed here.)
 
-It exists for a single audience: one person, one computer, their own CRM. That
+It exists for a single audience: one contact, one computer, their own CRM. That
 audience is what justifies it. For anyone able to run `docker compose up`,
 [ci-pipeline.md](ci-pipeline.md) and
 [deployment.md](../deployment.md) already serve them better, and this build
@@ -90,7 +90,7 @@ that cannot notice.
 
 Architecture is the limit that stays. The bundle is whatever the builder was —
 Apple silicon or Intel, never universal — because a universal Postgres means
-building it twice and `lipo`-ing the result, and the audience is one person on
+building it twice and `lipo`-ing the result, and the audience is one contact on
 one machine. `build-dist.sh` prints the architecture rather than leaving it to
 be discovered.
 

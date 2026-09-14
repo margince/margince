@@ -19,13 +19,13 @@ import "./preferences.css";
 // outgoing message lands.
 //
 // It exists because that link used to point at the RFC 8058 endpoint,
-// which is POST-only by design — so a person clicking it in their mail
+// which is POST-only by design — so a contact clicking it in their mail
 // client got 405. That endpoint is still the right answer for a mailbox
-// provider, which POSTs it without a browser. A person needs a page.
+// provider, which POSTs it without a browser. A contact needs a page.
 //
 // The page does NOT unsubscribe on arrival. Mail scanners and link
 // prefetchers follow links in a mailbox with no human involved, so a GET
-// that withdrew consent would unsubscribe people who never clicked
+// that withdrew consent would unsubscribe contacts who never clicked
 // anything. One explicit press does it.
 export function UnsubscribeScreen({
   token,
@@ -127,7 +127,7 @@ function UnsubscribeBody({
     // token that rode with it, and it carries no authority to READ a consent
     // state — so this page's opening fetch 404s for exactly the links that
     // still work. Treating that as a dead end would put "this link is no
-    // longer valid" in front of the person whose link we just fixed.
+    // longer valid" in front of the contact whose link we just fixed.
     //
     // The press is its own authority: the POST resolves the credential itself
     // and refuses it if it is genuinely dead. So the button stays, and what
@@ -264,7 +264,7 @@ function PressError({ error }: Readonly<{ error: unknown }>) {
 }
 
 // StoppedBody is the outcome panel both bodies land on, so the two cannot
-// drift into telling a person two different things about the same press.
+// drift into telling a contact two different things about the same press.
 //
 // The empty array is NOT the same as a stop: it is the server saying nothing
 // moved, which is how a replay is told apart from a first press.

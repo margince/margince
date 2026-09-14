@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RecordZoneProvider } from "../app/recordzone";
@@ -28,7 +28,7 @@ afterEach(() => {
 // on the address that shows it — the dial itself is tested in
 // brief.dials.test.tsx.
 beforeEach(() => {
-  window.location.hash = "#/brief?view=weekly";
+  window.location.hash = "#/home?view=weekly";
 });
 
 // ── The week just gone ──
@@ -340,7 +340,7 @@ describe("BriefScreen — the weekly retrospective", () => {
       await screen.findByRole("group", { name: en["brief.view.label"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: en["brief.panel.weekly"] }),
+      screen.getByRole("heading", { name: en["brief.panel.weekly"], level: 2 }),
     ).toBeTruthy();
   });
 });
@@ -421,7 +421,8 @@ describe("BriefScreen — the week's sentence", () => {
 
     // Never a blank week, never a silent one: the counts are still the week's,
     // and a rep reading silence would conclude there was nothing to remark on.
-    await screen.findByText(en["brief.weekly.noNarrative"]);
+    await screen.findByText(en["brief.weekly.dealsWon"]);
+    expect(screen.queryByTestId("weekly-narrative")).toBeNull();
     // The mirror of the tinted case: no model wrote anything here, so nothing
     // wears the mark that says one did.
     expect(weeklySection().querySelector(".panel-ai")).toBeNull();
@@ -447,7 +448,7 @@ describe("BriefScreen — the week's sentence", () => {
     await screen.findByText(en["brief.weekly.tasksDelivered"]);
     // A pass that honestly found nothing is not a pass that never ran, and
     // claiming otherwise would tell the rep their week was never looked at.
-    expect(screen.queryByText(en["brief.weekly.noNarrative"])).toBeNull();
+    expect(screen.queryByTestId("weekly-narrative")).toBeNull();
   });
 });
 
@@ -507,8 +508,19 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"].replace("{delta}", "+2"),
+      en["brief.weekly.sincePrior"]
+        .replace("{delta}", "+2")
+        .replace("{week}", "22/06/2026"),
     );
+  });
+
+  it("names an older comparison week when a report is missing in between", async () => {
+    const strip = await mount({
+      ...withPrior,
+      prior: { ...withPrior.prior, local_week_start: "2026-06-01" },
+    });
+    expect(strip.textContent).toContain("+2 vs week of 01/06/2026");
+    expect(strip.textContent).not.toContain("vs last week");
   });
 
   // A week that stayed exactly level is a real answer. Printing "+0" dresses it
@@ -517,7 +529,9 @@ describe("BriefScreen — the week against the one before", () => {
     const strip = await mount(withPrior);
 
     expect(strip.textContent).toContain(
-      en["brief.weekly.sincePrior"].replace("{delta}", "±0"),
+      en["brief.weekly.sincePrior"]
+        .replace("{delta}", "±0")
+        .replace("{week}", "22/06/2026"),
     );
   });
 
@@ -536,10 +550,10 @@ describe("BriefScreen — the week against the one before", () => {
   // The strip is read ACROSS as one comparison, so its width is the claim. At
   // ten slots it folded into two ranks at 1280 and stopped being one reading —
   // which is what #3709 reported.
-  it("draws five slots, not the ten the week has figures for", async () => {
+  it("keeps seven outcome readings above supporting activity", async () => {
     const strip = await mount(withPrior);
 
-    expect(strip.querySelectorAll(".stat-card")).toHaveLength(5);
+    expect(strip.querySelectorAll(".stat-card")).toHaveLength(7);
   });
 
   // The five are the week's OUTCOMES: what the rep planned and kept, what
@@ -571,9 +585,9 @@ describe("BriefScreen — the week against the one before", () => {
   // near-synonym, and the likely reading of a leading 0 of 0 is "I kept
   // nothing" rather than "I never wrote a plan".
   //
-  // "Promise" is the wrong word for either. The Morning rail reserves it for
-  // something the product does not track yet and says so on screen, so a
-  // headline figure wearing it names a third thing again.
+  // "Promise" is the wrong word for either. A promise made in conversation is
+  // not something this product tracks — only tasks are — so a headline figure
+  // wearing the word names a third thing again.
   it("names the plan and the task figures apart, and neither as a promise", async () => {
     await mount(withPrior);
 
@@ -583,10 +597,6 @@ describe("BriefScreen — the week against the one before", () => {
     expect(screen.getByText(planned)).toBeTruthy();
     expect(screen.getByText(delivered)).toBeTruthy();
 
-    // Asserted rather than assumed: the reservation is what makes "promise"
-    // wrong here, so if the rail ever starts tracking them this rule wants
-    // rereading instead of quietly continuing to hold.
-    expect(en["brief.promises.untracked"]).toContain("not tracked yet");
     for (const label of [planned, delivered]) {
       expect(label.toLowerCase()).not.toContain("promise");
     }
@@ -596,13 +606,11 @@ describe("BriefScreen — the week against the one before", () => {
   // figures and a reader who wants them has to be able to find them — a strip
   // that got shorter by dropping readings would be a worse answer than the row
   // that folded.
-  it("keeps the other five figures, under the strip", async () => {
+  it("keeps supporting activity below the outcome strip", async () => {
     const strip = await mount(withPrior);
 
     for (const key of [
       "brief.weekly.tasksDelivered",
-      "brief.weekly.dealsMoved",
-      "brief.weekly.dealsLost",
       "brief.weekly.decided",
       "brief.weekly.queueWorked",
     ] as const) {

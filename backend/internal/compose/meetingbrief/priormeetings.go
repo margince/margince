@@ -47,7 +47,7 @@ type priorMeeting struct {
 //     named to them;
 //   - the same project rule the rest of the brief runs, so a scoped brief does
 //     not reach into the other engagement for its history;
-//   - overlapping attendees, because "this room" is the people, not the
+//   - overlapping attendees, because "this room" is the contacts, not the
 //     recurring calendar entry — a series that changed its title is still the
 //     same conversation, and two different meetings on one account are not.
 //
@@ -61,7 +61,7 @@ type priorMeeting struct {
 func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time) ([]priorMeeting, error) {
 	// room.Room, not room.Attendees: the latter is the DISPLAY list and stops
 	// at eight, so matching on it would lose history shared only with the ninth
-	// person in a large room.
+	// contact in a large room.
 	if len(room.Room) == 0 {
 		return nil, nil
 	}
@@ -126,7 +126,7 @@ func (s *Service) readPriorMeetings(ctx context.Context, tx pgx.Tx, room meeting
 	return out, nil
 }
 
-// priorMeetingsQuery reads the newest meetings before this one sharing a person
+// priorMeetingsQuery reads the newest meetings before this one sharing a contact
 // with it. DISTINCT because a meeting with three of the same attendees is one
 // meeting, not three.
 const priorMeetingsQuery = `
@@ -136,7 +136,7 @@ const priorMeetingsQuery = `
 	WHERE m.kind = 'meeting' AND m.archived_at IS NULL
 	  AND m.id <> $%[3]d AND m.occurred_at < $%[4]d AND m.occurred_at <= $%[5]d
 	  AND (m.meeting_status IS NULL OR m.meeting_status = 'held')
-	  AND mp.person_id = ANY($%[6]d)
+	  AND mp.contact_id = ANY($%[6]d)
 	  AND %[1]s
 	  AND %[2]s
 	ORDER BY m.occurred_at DESC

@@ -8,7 +8,7 @@ import { useSyncExternalStore } from "react";
  *
  * The edge (`agent-edge.tsx`) is the one thing on a workspace screen that moves
  * without being asked for, and it moves in the periphery of the whole window —
- * which is exactly where movement is hardest to work beside for some people,
+ * which is exactly where movement is hardest to work beside for some contacts,
  * and merely unwanted for others. `prefers-reduced-motion` already reaches the
  * loop and calms the waves; this is the other half of the same courtesy, for
  * the reader whose machine states no preference and who wants the frame still.

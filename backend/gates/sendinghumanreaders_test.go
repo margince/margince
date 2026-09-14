@@ -7,7 +7,7 @@ package gates
 
 // principal.SendingHuman has ONE reader, and it answers one question.
 //
-// The value names the person an outbound message goes out AS when that differs
+// The value names the contact an outbound message goes out AS when that differs
 // from the acting principal — an automation composes under the system actor
 // while the mail leaves under its owner's name. It is deliberately not a
 // principal: it moves no authority, no row scope and no audit attribution, and
@@ -19,8 +19,8 @@ package gates
 // already there, and now something else — a permission check, a row filter, a
 // send identity — turns on a value that was never authorised to decide it. The
 // one existing reader already had to be reordered once, in review, because it
-// consulted this before the actor and would have let one person's call read
-// another person's private writing.
+// consulted this before the actor and would have let one contact's call read
+// another contact's private writing.
 //
 // WHAT THIS GATE CAN AND CANNOT SEE. It matches a syntactic reference to
 // principal.SendingHuman, so it catches a new call site wherever it is written.
@@ -52,7 +52,7 @@ var sendingHumanSites = gatekit.Waive(map[string]string{
 	// a bound sender can never redirect a human's own read.
 	"internal/modules/ai/voice_draftread.go": "resolves whose voice a draft is written in",
 	// The draft_email executor refuses a firing with no owner: a held draft is
-	// released by the person it goes out as, so one naming nobody can be
+	// released by the contact it goes out as, so one naming nobody can be
 	// released by nobody. It asks only whether an owner EXISTS and never decides
 	// whose anything is — the engine put the value on this context one call
 	// earlier, so re-deriving it here would be a second answer to one question.

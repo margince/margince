@@ -79,9 +79,10 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     }),
   ).toBeVisible();
 
-  // 2. Attach a deal on the deal's own form — the project picker offers the
-  // company's live projects by name.
+  // 2. Attach a deal on the deal's own form, reached from the deal's overflow
+  // menu — the project picker offers the company's live projects by name.
   await page.goto("/#/deals/d-fleet");
+  await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Deal bearbeiten" }).click();
   await choose(
     page,
@@ -151,7 +152,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await timeline.getByRole("button", { name: "Neu verknüpfen" }).click();
   await dialog
     .getByRole("searchbox", {
-      name: "Kontakt, Organisation, Deal, Lead oder Projekt suchen",
+      name: "Kontakt, Firma, Deal, Lead oder Projekt suchen",
     })
     .fill("Brandt ERP");
   await dialog.getByRole("button", { name: "Brandt ERP" }).click();

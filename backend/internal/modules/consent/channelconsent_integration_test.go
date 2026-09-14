@@ -35,7 +35,7 @@ type channelConsentEnv struct {
 	ws, user   ids.UUID
 	newsletter ids.PurposeID
 	doiNews    ids.PurposeID
-	person     ids.PersonID
+	contact    ids.ContactID
 	account    string
 }
 
@@ -75,11 +75,11 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 		ws:    ids.NewV7(), user: ids.NewV7(),
 		newsletter: ids.New[ids.PurposeKind](),
 		doiNews:    ids.New[ids.PurposeKind](),
-		person:     ids.New[ids.PersonKind](),
+		contact:    ids.New[ids.ContactKind](),
 	}
 	// A digit run, as Telegram reports it, and unique per run so two runs of
 	// this suite cannot collide on the identity's uniqueness index.
-	e.account = e.person.String()[:8]
+	e.account = e.contact.String()[:8]
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -94,17 +94,17 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 		e.newsletter, e.doiNews); err != nil {
 		t.Fatal(err)
 	}
-	// A Telegram-only subject: no person_email row at all, which is exactly the
-	// person the address-shaped gate could never answer about.
+	// A Telegram-only subject: no contact_email row at all, which is exactly the
+	// contact the address-shaped gate could never answer about.
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by)
+		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'Tilda Telegram', 'connector:telegram', 'connector:telegram')`,
-		e.person); err != nil {
+		e.contact); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO person_channel_identity (person_id, provider, channel_user_id, username, source, captured_by)
-		VALUES ($1, 'telegram', $2, 'tilda', 'connector:telegram', 'connector:telegram')`, e.person, e.account); err != nil {
+		INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, username, source, captured_by)
+		VALUES ($1, 'telegram', $2, 'tilda', 'connector:telegram', 'connector:telegram')`, e.contact, e.account); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,7 +126,7 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Create: true, Read: true, Update: true, Delete: true},
+				"contact": {Create: true, Read: true, Update: true, Delete: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -145,21 +145,21 @@ func TestConsentGateRefusesAChannelRecipientWithoutAGrant(t *testing.T) {
 	gate := NewGate(e.store)
 	rs := []connector.Recipient{e.recipient()}
 
-	// Default-deny: the identity resolves to a real person, and that is not
+	// Default-deny: the identity resolves to a real contact, and that is not
 	// consent.
 	if err := gate.RequireGrantedForRecipients(e.ctx, rs, "newsletter"); !errors.Is(err, apperrors.ErrConsentNotGranted) {
 		t.Fatalf("pre-grant channel gate: %v, want ErrConsentNotGranted", err)
 	}
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted",
 		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	// The grant reaches the channel because it is the PERSON's grant, and the
-	// channel identity resolves to that person.
+	// The grant reaches the channel because it is the CONTACT's grant, and the
+	// channel identity resolves to that contact.
 	if err := gate.RequireGrantedForRecipients(e.ctx, rs, "newsletter"); err != nil {
 		t.Fatalf("post-grant channel gate: %v, want pass", err)
 	}
@@ -186,7 +186,7 @@ func TestConsentGateRefusesAChannelRecipientAfterWithdrawal(t *testing.T) {
 	rs := []connector.Recipient{e.recipient()}
 
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted",
 		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)
@@ -195,7 +195,7 @@ func TestConsentGateRefusesAChannelRecipientAfterWithdrawal(t *testing.T) {
 		t.Fatalf("granted channel gate: %v", err)
 	}
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "withdrawn",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -232,10 +232,10 @@ func TestConsentGateRefusesAMalformedRecipientAsAFault(t *testing.T) {
 func TestRequireGrantedForEmailsStillAnswersThroughTheSharedRule(t *testing.T) {
 	e := setupChannelConsent(t)
 	gate := NewGate(e.store)
-	address := "tilda-" + e.person.String() + "@example.test"
+	address := "tilda-" + e.contact.String() + "@example.test"
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		 VALUES ($1, lower($2), true, 'test', 'human:x')`, e.person, address); err != nil {
+		`INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		 VALUES ($1, lower($2), true, 'test', 'human:x')`, e.contact, address); err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,7 +243,7 @@ func TestRequireGrantedForEmailsStillAnswersThroughTheSharedRule(t *testing.T) {
 		t.Fatalf("pre-grant mail gate: %v, want ErrConsentNotGranted", err)
 	}
 	if _, err := e.store.Record(e.ctx, RecordInput{
-		PersonID: e.person, PurposeID: e.newsletter, NewState: "granted",
+		ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted",
 		PolicyText: &grantWording,
 	}); err != nil {
 		t.Fatal(err)

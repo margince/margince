@@ -35,7 +35,7 @@ import (
 //
 //   - the match ends on whitespace, a NEWLINE, the end of the text, or a
 //     delimiter. Requiring a trailing space misses every statement whose line
-//     ends at `FROM person`;
+//     ends at `FROM contact`;
 //   - the end-of-text alternate only fires against UNQUOTED text. A literal's
 //     token still carries its closing delimiter, so a statement ENDING at the
 //     table name is invisible unless the text has been unquoted — which is what
@@ -97,7 +97,7 @@ type TableRead struct {
 //
 // Attribution is by DECLARATION SUBTREE rather than by looking a name up in an
 // index, and that is not an implementation detail. A module routinely spells the
-// same method on two receivers — people has both a Store.RemoveProjectStakeholder
+// same method on two receivers — contacts has both a Store.RemoveProjectStakeholder
 // and a Handlers.RemoveProjectStakeholder — so a by-name index lets one vouch
 // for the other, and which one wins is map iteration order. A gate built on that
 // is nondeterministic about the thing it exists to be certain of.

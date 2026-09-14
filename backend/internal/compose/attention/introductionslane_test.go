@@ -44,7 +44,7 @@ func TestAnIntroductionAskNamesTheContactAndOffersOneVerb(t *testing.T) {
 	due := readInstant.Add(7 * 24 * time.Hour)
 	svc := introductionsLaneService(&stubIntroductions{rows: []PendingIntroduction{
 		{
-			ID: ids.NewV7(), PersonID: contact,
+			ID: ids.NewV7(), ContactID: contact,
 			Reason:      "Dana reopened the retrofit conversation after 41 days.",
 			RequestedAt: readInstant, DueAt: due,
 		},

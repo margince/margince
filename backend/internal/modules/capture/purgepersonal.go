@@ -25,19 +25,19 @@ import (
 // destroyed, per authority.
 //
 // Two windows because two authorities reach the same verdict and they are not
-// worth the same. A person who marked a sender personal said so on purpose and
+// worth the same. A contact who marked a sender personal said so on purpose and
 // can say otherwise on the same page; the classifier's answer is a guess nobody
 // has yet looked at, and silence is a rep on holiday as readily as it is
 // agreement.
 type PersonalPurgeWindows struct {
-	// ByOwner applies when a person reached the verdict.
+	// ByOwner applies when a contact reached the verdict.
 	ByOwner string
 	// ByClassifier applies when the model did. Longer, deliberately.
 	ByClassifier string
 }
 
 // DefaultPersonalPurgeWindows is the product's answer: a week for a decision a
-// person made, a month for one nobody has confirmed.
+// contact made, a month for one nobody has confirmed.
 func DefaultPersonalPurgeWindows() PersonalPurgeWindows {
 	return PersonalPurgeWindows{ByOwner: "7 days", ByClassifier: "30 days"}
 }
@@ -68,7 +68,7 @@ func PersonalPurgeScope(seatCol string) string {
 	return `-- Mail this seat RECEIVED, captured by a connector. A verdict is
 		   -- about a SENDER, and the workspace's own sent mail is its own
 		   -- record: destroying the owner's replies because of what was
-		   -- concluded about the person they replied to takes away the half of
+		   -- concluded about the contact they replied to takes away the half of
 		   -- the correspondence nobody classified. A hand-logged activity is
 		   -- somebody's own work and no capture verdict reaches it.
 		   a.kind = 'email' AND a.captured_by LIKE 'connector:%'
@@ -77,12 +77,12 @@ func PersonalPurgeScope(seatCol string) string {
 		   -- An obligation the installation owes somebody else outranks a
 		   -- verdict about a sender.
 		   AND a.restricted_at IS NULL
-		   -- Mail already filed against a person is somebody's work, and the
+		   -- Mail already filed against a contact is somebody's work, and the
 		   -- filing is independent evidence the address is a real correspondent
 		   -- whatever the classifier said.
 		   AND NOT EXISTS (
 		     SELECT 1 FROM activity_link l
-		      WHERE l.activity_id = a.id AND l.person_id IS NOT NULL)
+		      WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
 		   -- Writing to an address is the T1 signal that they are a real
 		   -- counterparty, and it is the recovery path: reply to a wrongly
 		   -- judged sender and this sweep lets go.
@@ -143,7 +143,7 @@ func personalPurgeDue(seatCol string) string {
 //     message's own Date header, which its sender writes: keying the window
 //     there lets a forged date destroy a message on arrival.
 //  3. No live `business` override for that address. The override is how a
-//     person cancels — SenderOverrideStore.Set never touches this ledger, so
+//     contact cancels — SenderOverrideStore.Set never touches this ledger, so
 //     without the anti-join the overrule writes a row and the purge proceeds
 //     anyway.
 //

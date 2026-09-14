@@ -15,8 +15,8 @@ import (
 // Separate from Phrases because these say something SPECIFIC — about a claim,
 // a deal, a commitment, a thread — while Phrases is the skeleton around them.
 // Which of these a caller reaches for is the caller's own ranking, and the
-// person and account composers deliberately rank them differently: what a
-// person SAID outranks the deal it was said about, while on an account a
+// contact and account composers deliberately rank them differently: what a
+// contact SAID outranks the deal it was said about, while on an account a
 // commitment we made outranks the deal it belongs to.
 //
 // The "%s" in each takes the thing being named.

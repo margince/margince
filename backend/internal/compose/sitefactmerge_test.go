@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // factsOfField builds n distinct facts of one field, in merge order.
-func factsOfField(field string, n int) []people.DeepReadFact {
-	out := make([]people.DeepReadFact, 0, n)
+func factsOfField(field string, n int) []contacts.DeepReadFact {
+	out := make([]contacts.DeepReadFact, 0, n)
 	for i := range n {
 		value := fmt.Sprintf("%s %02d", field, i)
-		out = append(out, people.DeepReadFact{
+		out = append(out, contacts.DeepReadFact{
 			Field: field, Value: value, ValueKey: value,
 			Category: factCategoryByField[field],
 		})
@@ -24,7 +24,7 @@ func factsOfField(field string, n int) []people.DeepReadFact {
 	return out
 }
 
-func countByField(facts []people.DeepReadFact) map[string]int {
+func countByField(facts []contacts.DeepReadFact) map[string]int {
 	byField := map[string]int{}
 	for _, f := range facts {
 		byField[f.Field]++
@@ -64,7 +64,7 @@ func TestEveryFactFieldIsBanded(t *testing.T) {
 func TestCapFactsKeepsWhatTheCompanySellsOverItsPartnerWall(t *testing.T) {
 	// The shape that made a head-of-list cut wrong: the partner wall and
 	// the office list commit early, the offering pages commit last.
-	var facts []people.DeepReadFact
+	var facts []contacts.DeepReadFact
 	facts = append(facts, factsOfField("technology", 70)...)
 	facts = append(facts, factsOfField("location", 22)...)
 	facts = append(facts, factsOfField("service", 60)...)
@@ -96,7 +96,7 @@ func TestCapFactsLendsUnfilledQuotaToLaterBands(t *testing.T) {
 	// A company with almost nothing to sell still gets a full page: the
 	// offering band lends its unspent share down the priority order
 	// rather than returning a short read.
-	var facts []people.DeepReadFact
+	var facts []contacts.DeepReadFact
 	facts = append(facts, factsOfField("service", 3)...)
 	facts = append(facts, factsOfField("technology", 200)...)
 
@@ -120,7 +120,7 @@ func TestCapFactsLeavesASmallReadAlone(t *testing.T) {
 
 // The merge's order is the read's order: curation selects, it never sorts.
 func TestCapFactsPreservesMergeOrder(t *testing.T) {
-	var facts []people.DeepReadFact
+	var facts []contacts.DeepReadFact
 	facts = append(facts, factsOfField("technology", 40)...)
 	facts = append(facts, factsOfField("service", 80)...)
 

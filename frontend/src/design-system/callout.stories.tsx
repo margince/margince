@@ -169,8 +169,8 @@ export const Kinds: Story = {
       </Derives>
 
       <Derives announces='kind="standing" → no role at all'>
-        <Callout kind="standing" title="People arrive with the work">
-          A person is only visible here once a deal or a thread names them.
+        <Callout kind="standing" title="Contacts arrive with the work">
+          A contact is only visible here once a deal or a thread names them.
         </Callout>
       </Derives>
     </Stack>
@@ -232,7 +232,7 @@ export const WithActions: Story = {
 export const Prose: Story = {
   render: () => (
     <Callout tone="danger" title="This cannot be undone">
-      <p>Erasure removes the person and everything captured about them.</p>
+      <p>Erasure removes the contact and everything captured about them.</p>
       <p>A tombstone stays in the audit log. Nothing else survives.</p>
     </Callout>
   ),

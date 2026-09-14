@@ -123,7 +123,7 @@ func TestSkipReasonCancelledSkips(t *testing.T) {
 func TestExternallyOrganizedMeetingIsCaptured(t *testing.T) {
 	// A client organizes; the owner attends. There is an external party, so it
 	// is a real customer touch → captured.
-	raw := eventJSON(t, "evt-ext-org", "confirmed", "Vendor review", "2026-07-16T14:00:00Z",
+	raw := eventJSON(t, "evt-ext-company", "confirmed", "Vendor review", "2026-07-16T14:00:00Z",
 		"host@acme.com", gcalOwner, "host@acme.com")
 	m := mustParse(t, raw)
 	if _, skip := m.SkipReason(); skip {
@@ -138,7 +138,7 @@ func TestExternalOrganizerWithOnlyOwnerAttendeeIsCaptured(t *testing.T) {
 	// An external party organizes and only the owner is listed as an attendee.
 	// The external organizer alone makes it a customer touch → captured, not
 	// dropped as all-internal.
-	raw := eventJSON(t, "evt-org-only", "confirmed", "Client-hosted call", "2026-07-16T15:00:00Z",
+	raw := eventJSON(t, "evt-company-only", "confirmed", "Client-hosted call", "2026-07-16T15:00:00Z",
 		"host@acme.com", gcalOwner)
 	if reason, skip := mustParse(t, raw).SkipReason(); skip {
 		t.Fatalf("external organizer with only the owner attending must be captured, got skip %q", reason)

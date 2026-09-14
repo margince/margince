@@ -9,13 +9,13 @@ package agents
 // their activities, the relationships behind them — was already agent-readable,
 // so withholding the ASSEMBLED answer while granting all of its parts "is a
 // distinction the surface cannot honestly explain". The queue itself stays a
-// human surface: acting, dismissing and snoozing an item are how a person
+// human surface: acting, dismissing and snoozing an item are how a colleague
 // notices what an agent did, and an agent that curates that queue is reviewing
 // itself.
 //
 // WHOSE BRIEF IT IS. The brief is a personal lens, resolved through the acting
 // principal's own user id — and a passport carries the granting human's
-// (identity mints it as OnBehalfOf). So an agent reads the brief of the person
+// (identity mints it as OnBehalfOf). So an agent reads the brief of the contact
 // it acts for, never a shared one and never another rep's, and that follows
 // from the principal rather than from anything this tool does.
 //
@@ -50,7 +50,7 @@ import (
 // is the same entry point the human's own home route calls, the flip is decided
 // by the clock rather than by the caller, and reading twice changes nothing the
 // first read did not — but it does mean an agent's read can be what materializes
-// a state the person then sees.
+// a state the contact then sees.
 type BriefReader func(ctx context.Context) (ReadBriefResult, error)
 
 // RegisterBriefTool joins read_brief to the surface once a reader exists — the
@@ -126,13 +126,13 @@ type BriefItem struct {
 	// 0..1. It travels WITH the score because the score without it is the
 	// mystery number the brief's own contract exists to forbid: an agent that
 	// can only say "this ranked first" restates the queue, while one that can
-	// say "it ranked first on momentum and warmth" has told the person
+	// say "it ranked first on momentum and warmth" has told the contact
 	// something. It is the persisted vector, not a re-derivation.
 	Factors BriefFactors `json:"factors"`
 	// State is the acting human's own queue state — new, acted, dismissed or
 	// snoozed — and StateAt when they left it there. An agent reads both to
-	// avoid re-raising what a person has already dealt with, and how long ago
-	// is part of that judgement; only that person may change either.
+	// avoid re-raising what a contact has already dealt with, and how long ago
+	// is part of that judgement; only that contact may change either.
 	State   string     `json:"state"`
 	StateAt *time.Time `json:"state_at,omitempty"`
 	// EvidenceIDs are the rows the ranking rests on, so an answer cites rather
@@ -148,13 +148,13 @@ type BriefItem struct {
 	// meeting being over. SERVED rather than withheld, and served BECAUSE
 	// SnoozedUntil is: without it a snooze with no moment reads as a snooze
 	// that never lifts, and an agent would report a deal as abandoned when the
-	// person is simply waiting for the customer to write back.
+	// contact is simply waiting for the customer to write back.
 	ReopenOn values.ReopenCondition `json:"reopen_on,omitempty"`
 	// ReopenRef is the meeting being waited for, set only when ReopenOn names
 	// one. Charged like the other ids: naming a record to an agent hands that
 	// record over.
 	ReopenRef *ids.UUID `json:"reopen_ref,omitempty"`
-	// Lineage is set when this deal is back after the person dismissed it, and
+	// Lineage is set when this deal is back after the contact dismissed it, and
 	// it is SERVED rather than withheld: it is a deterministic fact about what
 	// they did, not something an agent wrote, so reading it is not a loop
 	// reading its own output. It is also the context an agent most needs — a
@@ -163,7 +163,7 @@ type BriefItem struct {
 	Lineage *BriefItemLineage `json:"lineage,omitempty"`
 	// PreviousRank is where this deal stood in the run PreviousLocalDay names,
 	// so a finding can say what has happened since rather than reporting a deal
-	// the person has been looking at all week as though it were news. It is
+	// the contact has been looking at all week as though it were news. It is
 	// SERVED for the reason Lineage is: a rank persisted before anything read
 	// it is a fact about the queue, not something an agent wrote.
 	//
@@ -175,7 +175,7 @@ type BriefItem struct {
 
 // BriefItemLineage is why a dismissed deal came back.
 type BriefItemLineage struct {
-	// DismissedOn is the local day the person dismissed it, as a calendar date
+	// DismissedOn is the local day the contact dismissed it, as a calendar date
 	// in the installation's reporting zone.
 	DismissedOn string `json:"dismissed_on"`
 	// ReturnedWith is when the activity that re-qualified it occurred — the
@@ -309,7 +309,7 @@ type AnnotateBriefItem struct {
 	// ItemID names a row in the brief this caller just read. An id from
 	// anywhere else refuses.
 	ItemID ids.UUID `json:"item_id"`
-	// Finding is the prose the person reads beside the rank.
+	// Finding is the prose the reader reads beside the rank.
 	Finding string `json:"finding"`
 	// CitedEvidence is what the finding rests on. Every id is checked against
 	// the evidence the run recorded for this item — a uuid that merely parses
@@ -326,9 +326,9 @@ func (t annotateBrief) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "annotate_brief", Title: "Write findings onto the morning brief", Version: toolVersionV1,
 		Description: annotateBriefCopy.render(),
-		// Write, because it changes a row a person reads. TierAutoExecute
+		// Write, because it changes a row a reader reads. TierAutoExecute
 		// because there is nothing here for a human to approve in the moment:
-		// the write is confined to prose on that person's own brief, it is
+		// the write is confined to prose on that contact's own brief, it is
 		// reversible by the next pass, and a nightly agent pausing at 2am for
 		// an approval nobody is awake to give would simply never finish.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,

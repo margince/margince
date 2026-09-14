@@ -9,7 +9,7 @@ package activities
 // Capture stamps participants going forward, but every message already in the
 // timeline predates the table. Without this, the whole who-knows-whom surface
 // reads empty on a workspace with years of history until new mail happens to
-// arrive — which is indistinguishable, to the person looking at it, from the
+// arrive — which is indistinguishable, to the contact looking at it, from the
 // feature not working.
 //
 // It runs as a resumable job rather than an UPDATE inside migration 0157. A
@@ -42,7 +42,7 @@ package activities
 // a DIFFERENT Google account re-points the same row and `account_bound_at`
 // records when. That changes which MAILBOX the row holds — never which human.
 // Since class 2 attributes an activity to a user and not to an address, an
-// activity captured before a rebind still belongs to the same person, and the
+// activity captured before a rebind still belongs to the same contact, and the
 // rebind is irrelevant to it.
 
 import (
@@ -140,28 +140,28 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		     ORDER BY a.id
 		     LIMIT $1
 		)
-		INSERT INTO activity_participant (activity_id, user_id, person_id, address, role)
-		SELECT c.id, r.user_id, r.person_id, r.address, r.role
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role)
+		SELECT c.id, r.user_id, r.contact_id, r.address, r.role
 		  FROM candidate c
 		  CROSS JOIN LATERAL (
 		       -- Our side: the role follows the direction, exactly as capture
 		       -- stamps it live, so a backfilled row and a captured one are
 		       -- indistinguishable to the derivation that reads them.
-		       SELECT c.user_id AS user_id, NULL::uuid AS person_id, NULL::text AS address,
+		       SELECT c.user_id AS user_id, NULL::uuid AS contact_id, NULL::text AS address,
 		              CASE WHEN c.direction = 'inbound' THEN 'to' ELSE 'from' END AS role
 		        UNION ALL
-		       -- Their side: the person if the timeline already links one,
+		       -- Their side: the contact if the timeline already links one,
 		       -- else the address the message carried. A link is stronger
 		       -- evidence than the header, and it is what capture's own
 		       -- promotion would have produced.
 		       SELECT NULL::uuid,
-		              (SELECT l.person_id FROM activity_link l
-		                WHERE l.activity_id = c.id AND l.entity_type = 'person'
+		              (SELECT l.contact_id FROM activity_link l
+		                WHERE l.activity_id = c.id AND l.entity_type = 'contact'
 		                ORDER BY l.created_at LIMIT 1),
 		              lower(nullif(trim(c.counterparty_email), '')),
 		              CASE WHEN c.direction = 'inbound' THEN 'from' ELSE 'to' END
   ) r
-		 WHERE r.user_id IS NOT NULL OR r.person_id IS NOT NULL OR r.address IS NOT NULL
+		 WHERE r.user_id IS NOT NULL OR r.contact_id IS NOT NULL OR r.address IS NOT NULL
 		ON CONFLICT DO NOTHING`, limit)
 	if err != nil {
 		return 0, fmt.Errorf("activities: backfilling interaction participants: %w", err)

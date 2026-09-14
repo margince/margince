@@ -6,7 +6,7 @@ package consent
 // The buyer-facing preference center + RFC 8058 one-click unsubscribe
 // (B-E11.32): the no-login surface over THIS module's consent engine. A
 // recipient reaches it through an unguessable preference_token carried in
-// the List-Unsubscribe URL; the token resolves to (workspace, person)
+// the List-Unsubscribe URL; the token resolves to (workspace, contact)
 // before any session exists, and every choice rides the normal consent
 // write shape (proof row + audit + consent.changed) with a distinct
 // `preference_center` source. The token holder proved control of the
@@ -53,11 +53,11 @@ func LockedPurpose(key string) bool {
 //
 // EmailID is nil for a token minted before the address was recorded, and for
 // one whose address the subject has since erased. The page falls back to the
-// person's primary address there, which is what it always did — a NULL is the
+// contact's primary address there, which is what it always did — a NULL is the
 // honest record of "not known" rather than a guess that would read like a fact.
 type PreferenceRef struct {
-	PersonID ids.PersonID
-	EmailID  *ids.UUID
+	ContactID ids.ContactID
+	EmailID   *ids.UUID
 }
 
 // PurposeChoice is one row of the preference center: the purpose, the
@@ -116,9 +116,9 @@ func (s *Store) ResolvePreferenceToken(ctx context.Context, token string) (Prefe
 	var ref PreferenceRef
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			SELECT person_id, person_email_id FROM preference_token
+			SELECT contact_id, contact_email_id FROM preference_token
 			 WHERE token = $1 AND revoked_at IS NULL AND expires_at > now()`,
-			token).Scan(&ref.PersonID, &ref.EmailID)
+			token).Scan(&ref.ContactID, &ref.EmailID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -130,55 +130,55 @@ func (s *Store) ResolvePreferenceToken(ctx context.Context, token string) (Prefe
 	return ref, nil
 }
 
-// addressedPerson is one live address and the person who holds it — the pair a
+// addressedContact is one live address and the contact who holds it — the pair a
 // preference token is minted for. The ADDRESS is half of it: a token that
-// remembered only the person would open a page naming whichever address the
-// record happens to call primary, which for a person holding several is one the
+// remembered only the contact would open a page naming whichever address the
+// record happens to call primary, which for a contact holding several is one the
 // link's holder was never written at.
-type addressedPerson struct {
-	PersonID ids.PersonID
-	EmailID  ids.UUID
+type addressedContact struct {
+	ContactID ids.ContactID
+	EmailID   ids.UUID
 }
 
 // PreferenceTokenForEmail resolves a recipient address to their live
 // preference token, minting one lazily on first use, so the send path can
-// build the List-Unsubscribe URL. An address no person carries yields no
+// build the List-Unsubscribe URL. An address no contact carries yields no
 // token (found=false): the send would fail the consent gate anyway, so
 // nothing is disclosed. The lookup carries its own workspace predicate —
 // core 0217 retired the policy that used to supply one — and the row-scope
 // probe below scopes it to the caller.
 func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (token string, found bool, err error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return "", false, err
 	}
 	email = strings.ToLower(strings.TrimSpace(email))
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The SAME resolution the send gate applies (gate.go resolvePerson), and
+		// The SAME resolution the send gate applies (gate.go resolveContact), and
 		// it has to be: this mints the unsubscribe credential for a send the
-		// gate has already authorized against one person, so a lookup that can
-		// name a different one puts that person's link in this recipient's
+		// gate has already authorized against one contact, so a lookup that can
+		// name a different one puts that contact's link in this recipient's
 		// mailbox.
 		//
-		// Only a LIVE address resolves. uq_person_email_dedupe is partial on
-		// archived_at IS NULL, so one string can sit archived on one person and
+		// Only a LIVE address resolves. uq_contact_email_dedupe is partial on
+		// archived_at IS NULL, so one string can sit archived on one contact and
 		// live on another — and the archived arm belongs to nobody who currently
 		// holds it.
 		//
 		// Ambiguity refuses rather than picks, for the reason the gate gives:
 		// a bare LIMIT 1 over two live matches is a silent choice between two
-		// people made by row order. The dedupe index should make that
+		// contacts made by row order. The dedupe index should make that
 		// impossible; this refuses anyway rather than trusting an invariant it
 		// does not check.
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT pe.person_id, pe.id
-			FROM person_email pe
-			JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+			SELECT DISTINCT pe.contact_id, pe.id
+			FROM contact_email pe
+			JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 			WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
 			LIMIT 2`, email)
 		if err != nil {
 			return err
 		}
-		matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedPerson])
+		matches, err := pgx.CollectRows(rows, pgx.RowToStructByPos[addressedContact])
 		if err != nil {
 			return err
 		}
@@ -186,17 +186,17 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 			return nil // not a known recipient in this workspace: no token, no header
 		}
 		if len(matches) > 1 {
-			return fmt.Errorf("consent: the recipient address is live on more than one person, so no unsubscribe link can name which: %w",
+			return fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
 				apperrors.ErrConflict)
 		}
-		personID := matches[0].PersonID
+		contactID := matches[0].ContactID
 		// The token this mints is a bearer credential over the recipient's
 		// consent record — it reads their per-purpose state, withdraws, and
 		// grants, all with no session. So the mint carries the SAME row-scope
 		// probe the sibling read applies (PublicPurposeStates): the object
-		// grant above says the caller may read people, this says they may read
+		// grant above says the caller may read contacts, this says they may read
 		// THIS one. Without it a row_scope=own seat obtains durable authority
-		// over a person who 404s to them on every authenticated surface.
+		// over a contact who 404s to them on every authenticated surface.
 		//
 		// A row-scope miss refuses the send (404, existence-hiding) rather
 		// than falling through to found=false: that branch means "this address
@@ -211,11 +211,11 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 		// answering "yes, still yours" for the tombstone — its own doc names
 		// that case — and this path would then mint a NEW public credential
 		// for the subject whose old one the erasure just deleted.
-		if err := auth.EnsureVisibleLive(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		found = true
-		token, err = ensurePreferenceTokenTx(ctx, tx, personID, matches[0].EmailID)
+		token, err = ensurePreferenceTokenTx(ctx, tx, contactID, matches[0].EmailID)
 		return err
 	})
 	if err != nil {
@@ -225,9 +225,9 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 }
 
 // ensurePreferenceTokenTx returns the token this message's unsubscribe link
-// will carry: the person's existing one when it is still honourable, a fresh
+// will carry: the contact's existing one when it is still honourable, a fresh
 // one when it is not. The partial unique index guarantees at most one live
-// token per person; a concurrent minter that wins the INSERT is read back
+// token per contact; a concurrent minter that wins the INSERT is read back
 // rather than duplicated.
 //
 // "Honourable" is the SAME test the public resolver applies, plus the age
@@ -237,24 +237,24 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 // preference centre is revisitable, and one message's link must keep working
 // after the next one goes out); what 0144 ends is reuse without a bound.
 func ensurePreferenceTokenTx(
-	ctx context.Context, tx pgx.Tx, personID ids.PersonID, emailID ids.UUID,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emailID ids.UUID,
 ) (string, error) {
 	var token string
 	err := tx.QueryRow(ctx, `
 		UPDATE preference_token
 		   SET expires_at = now() + make_interval(days => $2)
-		 WHERE person_id = $1 AND person_email_id = $4 AND revoked_at IS NULL
+		 WHERE contact_id = $1 AND contact_email_id = $4 AND revoked_at IS NULL
 		   AND expires_at > now()
 		   AND created_at > now() - make_interval(days => $3)
 		RETURNING token`,
-		personID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID).Scan(&token)
+		contactID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID).Scan(&token)
 	if err == nil {
 		return token, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return "", err
 	}
-	// Nothing honourable left. Retire whatever still holds this person's slot
+	// Nothing honourable left. Retire whatever still holds this contact's slot
 	// in the partial unique index before minting — the INSERT would otherwise
 	// collide with an expired-but-unrevoked row, and a token the resolver has
 	// stopped honouring must stop existing rather than linger as a row that
@@ -268,8 +268,8 @@ func ensurePreferenceTokenTx(
 	// which is what makes the adapter's allowlist safe to rely on.
 	if _, err := tx.Exec(ctx, `
 		UPDATE preference_token SET revoked_at = now(), revoked_reason = 'rotated'
-		 WHERE person_id = $1 AND person_email_id = $2 AND revoked_at IS NULL`,
-		personID, emailID); err != nil {
+		 WHERE contact_id = $1 AND contact_email_id = $2 AND revoked_at IS NULL`,
+		contactID, emailID); err != nil {
 		return "", err
 	}
 	fresh, err := newPreferenceToken()
@@ -277,18 +277,18 @@ func ensurePreferenceTokenTx(
 		return "", err
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO preference_token (person_id, person_email_id, token, expires_at)
+		INSERT INTO preference_token (contact_id, contact_email_id, token, expires_at)
 		VALUES ($1, $4, $2, now() + make_interval(days => $3))
-		ON CONFLICT (person_id, person_email_id) WHERE revoked_at IS NULL DO NOTHING
-		RETURNING token`, personID, fresh, preferenceTokenTTLDays, emailID).Scan(&token)
+		ON CONFLICT (contact_id, contact_email_id) WHERE revoked_at IS NULL DO NOTHING
+		RETURNING token`, contactID, fresh, preferenceTokenTTLDays, emailID).Scan(&token)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A concurrent send won the INSERT — read the winner. Scanned into
 		// token and returned only after, so the caller receives the winning
 		// value rather than the zero one this scan is about to overwrite.
 		if err := tx.QueryRow(ctx, `
 			SELECT token FROM preference_token
-			 WHERE person_id = $1 AND person_email_id = $2 AND revoked_at IS NULL`,
-			personID, emailID).Scan(&token); err != nil {
+			 WHERE contact_id = $1 AND contact_email_id = $2 AND revoked_at IS NULL`,
+			contactID, emailID).Scan(&token); err != nil {
 			return "", err
 		}
 		return token, nil
@@ -307,15 +307,15 @@ func newPreferenceToken() (string, error) {
 // PublicPurposeStates is the preference center's read: every tracked
 // purpose with the recipient's current state and its locked flag. The
 // system principal the public middleware binds is unbounded, so the read
-// answers for the resolved person; a caller without the token never
+// answers for the resolved contact; a caller without the token never
 // reaches this method.
-func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) ([]PurposeChoice, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+func (s *Store) PublicPurposeStates(ctx context.Context, contactID ids.ContactID) ([]PurposeChoice, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return nil, err
 	}
 	var out []PurposeChoice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}
 		// requires_double_opt_in comes from the catalog rather than a constant:
@@ -324,9 +324,9 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 		rows, err := tx.Query(ctx, `
 			SELECT cp.key, cp.label, coalesce(pc.state, 'unknown'), cp.requires_double_opt_in
 			FROM consent_purpose cp
-			LEFT JOIN person_consent pc ON pc.purpose_id = cp.id AND pc.person_id = $1
+			LEFT JOIN contact_consent pc ON pc.purpose_id = cp.id AND pc.contact_id = $1
 			WHERE cp.archived_at IS NULL
-			ORDER BY cp.key`, personID)
+			ORDER BY cp.key`, contactID)
 		if err != nil {
 			return err
 		}
@@ -353,11 +353,11 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 //
 // The two halves part company once the subject is archived. A withdrawal
 // still applies — Record admits one against any subject — while a re-grant is
-// refused, because an anonymized person goes on accruing consent rows through
+// refused, because an anonymized contact goes on accruing consent rows through
 // a capability their erasure destroyed. UpdatePreferences records the
 // withdrawals in a save before its grants for that reason, so a refused
 // re-grant costs the re-grant and nothing beside it.
-func (s *Store) PublicSetConsent(ctx context.Context, personID ids.PersonID, purposeKey, newState string, wording *string) (State, error) {
+func (s *Store) PublicSetConsent(ctx context.Context, contactID ids.ContactID, purposeKey, newState string, wording *string) (State, error) {
 	purposeKey = normalizedPurposeKey(purposeKey)
 	if LockedPurpose(purposeKey) {
 		return State{}, &ValidationError{Field: "purpose_key", Reason: "transactional consent is locked and cannot be changed from the preference center"}
@@ -368,7 +368,7 @@ func (s *Store) PublicSetConsent(ctx context.Context, personID ids.PersonID, pur
 	}
 	source := "preference_center"
 	return s.Record(ctx, RecordInput{
-		PersonID:   personID,
+		ContactID:  contactID,
 		PurposeID:  purposeID,
 		NewState:   newState,
 		Source:     &source,

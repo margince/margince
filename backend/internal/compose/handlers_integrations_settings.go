@@ -39,7 +39,7 @@ func (h integrationsSettingsHandlers) UpdateIntegrationsSettings(w http.Response
 		return
 	}
 	// Human-only (x-agent-access): an agent never decides whether this
-	// installation buys data about the people in it.
+	// installation buys data about the contacts in it.
 	if err := auth.RequireHuman(r.Context()); err != nil {
 		httperr.Write(w, r, err)
 		return

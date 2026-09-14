@@ -39,7 +39,7 @@ func TestAStagedViewArchiveIsDecidableByItsOwnerAlone(t *testing.T) {
 
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, collectionsPerms())
 	view, err := views.CreateSavedView(owner, collections.CreateSavedViewInput{
-		Resource: "people", Name: "My pipeline", Query: map[string]any{"columns": []any{"full_name"}},
+		Resource: "contacts", Name: "My pipeline", Query: map[string]any{"columns": []any{"full_name"}},
 	})
 	if err != nil {
 		t.Fatalf("create saved view: %v", err)

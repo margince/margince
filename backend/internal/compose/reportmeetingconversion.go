@@ -31,8 +31,8 @@ import (
 const (
 	// fieldHostUser names the seat that ran the meeting — the SDR whose rate this
 	// is. It reads the activity's own host column rather than the handoff's
-	// submitter: the question is whose MEETINGS converted, and the person who
-	// held the meeting is not always the person who later wrote the handoff.
+	// submitter: the question is whose MEETINGS converted, and the contact who
+	// held the meeting is not always the contact who later wrote the handoff.
 	fieldMeetingHost = "host_user_id"
 
 	// fieldBecameOpportunity is the conversion itself, as a dimension rather
@@ -70,7 +70,7 @@ const (
 	// meetings converted", which is 100% and tells nobody anything.
 	//
 	// The join reaches the prospect through activity_link, which carries both a
-	// lead_id and a person_id — the same two subjects a handoff names, so the
+	// lead_id and a contact_id — the same two subjects a handoff names, so the
 	// two shapes meet without a translation step in between.
 	// The select list carries h.id ALONE. The acceptance's deal_id is the
 	// tempting thing to add — it names what the meeting became — but this
@@ -84,7 +84,7 @@ const (
 		  FROM sdr_handoff h
 		  JOIN activity_link al ON al.activity_id = t.id
 		 WHERE h.status = 'accepted'
-		   AND (h.lead_id = al.lead_id OR h.person_id = al.person_id)
+		   AND (h.lead_id = al.lead_id OR h.contact_id = al.contact_id)
 		   AND h.decided_at >= t.occurred_at
 		 ORDER BY h.decided_at
 		 LIMIT 1
@@ -131,7 +131,7 @@ func meetingConversionSpec() reportSpec {
 		},
 		defaultBy: []string{fieldBecameOpportunity},
 		// The conversion is a fact about a HANDOFF, so it takes the handoff's
-		// object grant. sdr_handoff gates on `lead` (people/sdrhandoff.go), and
+		// object grant. sdr_handoff gates on `lead` (contacts/sdrhandoff.go), and
 		// a seat holding activity.read alone can see the meeting while having no
 		// business reading what an AE decided about the prospect.
 		//

@@ -3,7 +3,7 @@
 
 package deals
 
-// The sentence a person reads when asked whether a quiet deal is still alive.
+// The sentence a reader reads when asked whether a quiet deal is still alive.
 //
 // It replaced a fixed string ("deal has gone quiet; confirm it is still alive")
 // which was true of every quiet deal and therefore told the reader nothing they
@@ -17,8 +17,8 @@ package deals
 //	we wrote last    → they went cold, and the name is who stopped answering
 //	neither          → nobody has ever corresponded on this deal at all
 //
-// Names arrive already resolved. This module cannot read the person table, and
-// a reason that silently drops the name when the reader lacks person:read is
+// Names arrive already resolved. This module cannot read the contact table, and
+// a reason that silently drops the name when the reader lacks contact:read is
 // better than one that leaks it — so an unknown name degrades to "the contact"
 // rather than to an identifier or an empty gap.
 
@@ -34,7 +34,7 @@ import (
 // that are so all of this surface's prose reads as one voice.
 //
 // The reason is written for a RECEIPT rather than for a card. The sweep has
-// already moved the date by the time a person reads this, so the sentence says
+// already moved the date by the time a reader reads this, so the sentence says
 // what was done and why, and never asks them to confirm anything: the way back
 // is the Undo on the row, not an approval they have to go and find.
 const (
@@ -57,8 +57,8 @@ func pacedBasis(remainingStages int) string {
 }
 
 // QuietNames maps the counterparty on each side of ReadQuietFacts to a display
-// name. A side whose person is unknown — an unmatched address, an erased link,
-// or a reader without person:read — is simply absent from the map.
+// name. A side whose contact is unknown — an unmatched address, an erased link,
+// or a reader without contact:read — is simply absent from the map.
 type QuietNames map[ids.UUID]string
 
 // quietReason composes the sentence. `today` is the sweep's own day so the
@@ -141,7 +141,7 @@ func quietSilenceSince(kind string) string {
 // differs by position in the sentence, so the caller supplies it: "The contact
 // wrote" opens a sentence, "we wrote to the contact" does not.
 func quietWho(side *QuietSide, names QuietNames, unknown string) string {
-	if name, ok := names[side.PersonID]; ok && name != "" {
+	if name, ok := names[side.ContactID]; ok && name != "" {
 		return name
 	}
 	return unknown
@@ -171,7 +171,7 @@ func dayIn(at time.Time, loc *time.Location) time.Time {
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
-// quietFor is the elapsed span, in the unit a person would say it in. Days up to
+// quietFor is the elapsed span, in the unit a contact would say it in. Days up to
 // a fortnight, then weeks: "38 days" makes a reader do arithmetic to learn what
 // "5 weeks" says outright.
 func quietFor(since, today time.Time, loc *time.Location) string {

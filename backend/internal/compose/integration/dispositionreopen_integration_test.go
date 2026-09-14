@@ -44,9 +44,9 @@ func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
 	e := Setup(t)
 	const thread = "thread-reopen-reply"
 	const subject = "Waiting on their answer"
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, thread, "inbound", subject,
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, subject)
 
 	// Present before anybody judges it, or every assertion below is a query
@@ -72,7 +72,7 @@ func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
 	// is the SNOOZED row, so this asserts through the disposition directly.
 	replyAt := waitingInstant.Add(2 * time.Hour)
 	const answer = "Their answer"
-	seedWaitingMessageLinked(t, e, thread, "inbound", answer, replyAt, person)
+	seedWaitingMessageLinked(t, e, thread, "inbound", answer, replyAt, contact)
 
 	if !waitsForAt(t, e, e.Rep1, answer, replyAt.Add(time.Hour)) {
 		t.Fatal("they replied and the conversation stayed off the rep's day")
@@ -90,9 +90,9 @@ func TestAMessageSnoozedUntilTheyReplyComesBackWhenTheyDo(t *testing.T) {
 func TestAReplySnoozeOnAThreadThatGetsNoNewInboundStillHolds(t *testing.T) {
 	e := Setup(t)
 	const subject = "Still waiting on them"
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-reopen-quiet", "inbound", subject,
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
@@ -117,9 +117,9 @@ func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
 	e := Setup(t)
 	const thread = "thread-reopen-private"
 	const subject = "Waiting on a private thread"
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, thread, "inbound", subject,
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
@@ -129,7 +129,7 @@ func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
 	// The reply arrives on the same thread, but narrowed to its participants —
 	// which this reader is not one of.
 	replyAt := waitingInstant.Add(2 * time.Hour)
-	reply := seedWaitingMessageLinked(t, e, thread, "inbound", "Their private answer", replyAt, person)
+	reply := seedWaitingMessageLinked(t, e, thread, "inbound", "Their private answer", replyAt, contact)
 	if _, err := OwnerConn(t).Exec(context.Background(),
 		`UPDATE activity SET audience = 'participants' WHERE id = $1`, reply); err != nil {
 		t.Fatal(err)
@@ -141,14 +141,14 @@ func TestAReplyThisReaderCannotSeeDoesNotLiftTheirSnooze(t *testing.T) {
 }
 
 // TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor is why the predicate matches
-// the whole thread identity rather than the customer. Mail from the same person
+// the whole thread identity rather than the customer. Mail from the same contact
 // about something else is not the answer the rep was waiting for.
 func TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor(t *testing.T) {
 	e := Setup(t)
 	const subject = "Waiting on the contract"
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, "thread-reopen-contract", "inbound", subject,
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
@@ -157,10 +157,10 @@ func TestAnUnrelatedThreadIsNotTheReplyBeingWaitedFor(t *testing.T) {
 	}
 	// The same customer, a different conversation.
 	other := waitingInstant.Add(2 * time.Hour)
-	seedWaitingMessageLinked(t, e, "thread-reopen-invoice", "inbound", "About the invoice", other, person)
+	seedWaitingMessageLinked(t, e, "thread-reopen-invoice", "inbound", "About the invoice", other, contact)
 
 	if waitsForAt(t, e, e.Rep1, subject, other.Add(time.Hour)) {
-		t.Fatal("mail on another thread lifted the snooze; the rep is waiting on this conversation, not this person")
+		t.Fatal("mail on another thread lifted the snooze; the rep is waiting on this conversation, not this contact")
 	}
 }
 
@@ -170,9 +170,9 @@ func TestOurOwnReplyDoesNotLiftAMessageSnooze(t *testing.T) {
 	e := Setup(t)
 	const thread = "thread-reopen-ours"
 	const subject = "Waiting after our chaser"
-	person := seedWaitingPerson(t, e)
+	contact := seedWaitingContact(t, e)
 	seedWaitingMessageLinked(t, e, thread, "inbound", subject,
-		waitingInstant.Add(-3*24*time.Hour), person)
+		waitingInstant.Add(-3*24*time.Hour), contact)
 	id := waitingMessageID(t, e, subject)
 
 	if err := atWaitingInstant(e).SnoozeMessage(
@@ -180,7 +180,7 @@ func TestOurOwnReplyDoesNotLiftAMessageSnooze(t *testing.T) {
 		t.Fatalf("snoozing until they reply: %v", err)
 	}
 	ours := waitingInstant.Add(2 * time.Hour)
-	seedWaitingMessageLinked(t, e, thread, "outbound", "Just chasing", ours, person)
+	seedWaitingMessageLinked(t, e, thread, "outbound", "Just chasing", ours, contact)
 
 	if waitsForAt(t, e, e.Rep1, subject, ours.Add(time.Hour)) {
 		t.Fatal("our own chaser lifted the snooze; the rep is waiting on the customer, not on themselves")

@@ -10,7 +10,7 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-// Which OAuth clients are holding one of this person's passports. A passport
+// Which OAuth clients are holding one of this contact's passports. A passport
 // with no `connection` is a minted credential nobody has redeemed, so it is not
 // a connection and does not appear here.
 //

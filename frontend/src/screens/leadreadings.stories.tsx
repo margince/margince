@@ -119,6 +119,41 @@ export const ScoreReceipt: Story = {
   },
 };
 
+// The same receipt with a human's judgement in it, which is the case the frame
+// above cannot show: a manual factor carries WHO said it and how certain they
+// claimed to be, and a machine factor beside it carries neither. Read the two
+// rows together — the qualifier under one and the bare number under the other
+// is the whole distinction, and a catalog that only ever showed machine
+// factors is how it would quietly disappear.
+export const ScoreReceiptWithAHumansJudgement: Story = {
+  render: readings(
+    { ...lead, first_response_at: "2026-06-02T09:12:00Z" },
+    {
+      ...explained,
+      current: {
+        ...explained.current,
+        factors: [
+          ...explained.current.factors,
+          {
+            factor: "manual:employees",
+            points: 8,
+            set_by: "u-7",
+            signal_kind: "assumption",
+            reason: "they list four offices on the site",
+          },
+        ],
+      },
+    },
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Evidence",
+      }),
+    );
+  },
+};
+
 // Nobody has answered and the deadline has passed. The one slot on this row
 // that carries a verdict rather than a fact says it in a word, in the danger
 // family, with the dot that lets a reader catch it without reading — and names

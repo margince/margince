@@ -16,10 +16,10 @@ package agents
 
 // list_approvals — the queue itself.
 var listApprovalsCopy = toolCopy{
-	Purpose: "The staged actions waiting for a person's decision: what was proposed and what each " +
+	Purpose: "The staged actions waiting for a contact's decision: what was proposed and what each " +
 		"would do. It is where a proposal that is already waiting turns up — a message staged and " +
 		"unsent is not one that needs writing again.",
-	Limits: "It lists what the person you act for could decide themselves; anything else is absent " +
+	Limits: "It lists what the colleague you act for could decide themselves; anything else is absent " +
 		"rather than refused. A proposal past its expiry reads as expired and can no longer be " +
 		"answered. Each item carries its one-line summary, not the change itself.",
 	Instead: "read_approval opens one and shows what it holds; decide_approval answers it.",
@@ -30,7 +30,7 @@ var listApprovalsCopy = toolCopy{
 var readApprovalCopy = toolCopy{
 	Purpose: "Read one staged action in full: the exact change proposed, the record it acts on, and " +
 		"the evidence it was formed on — enough to answer it without opening the app.",
-	Limits: "Reading performs nothing. An id the person you act for could not decide answers as not " +
+	Limits: "Reading performs nothing. An id the colleague you act for could not decide answers as not " +
 		"found, exactly as an id naming nothing does.",
 	Instead: "list_approvals yields the id; decide_approval answers it.",
 	Retain:  "Keep the staged_action_id, and the bundle_id if the item names one.",
@@ -38,7 +38,7 @@ var readApprovalCopy = toolCopy{
 
 // decide_approval — the answer.
 var decideApprovalCopy = toolCopy{
-	Purpose: "Answer one staged action for the person asking you: approve it, which lets it happen, " +
+	Purpose: "Answer one staged action for the colleague asking you: approve it, which lets it happen, " +
 		"or reject it, which discards it.",
 	Limits: "The verdict is theirs — take an explicit approve or reject rather than deciding what " +
 		"they would have wanted. Approving is what makes the change real, including sending a " +
@@ -55,7 +55,7 @@ var decideBundleCopy = toolCopy{
 	Purpose: "Answer every still-waiting proposal that one act staged together — the overnight run " +
 		"that proposed six corrections is six proposals under one bundle_id.",
 	Limits: "Each member is answered on its own terms and reported on its own; one already decided, " +
-		"or lapsed, is left as it is. Members the person could not decide alone are not decided " +
+		"or lapsed, is left as it is. Members the colleague could not decide alone are not decided " +
 		"here, and a bundle holding none of theirs reads as not found.",
 	Instead: "decide_approval answers a single item; list_approvals is where a bundle_id comes from.",
 	Retain:  "Each member carries its own outcome — decided here, already decided, or expired.",

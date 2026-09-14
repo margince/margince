@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+// A logo reference is half-resolved when it names stored bytes with no origin
+// URL, or an origin with no bytes: either way the field's provenance would be
+// blank, so the write is refused at the door — ahead of the transaction, which
+// is what lets this probe run over a nil pool.
+//
+// The workspace and the actor ARE bound, so the refusal is the only thing that
+// can produce the error: a guard that ever slipped behind the query would
+// reach the nil pool and panic instead of quietly passing for the wrong reason.
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+func TestSetCompanyLogoRefusesAHalfResolvedWrite(t *testing.T) {
+	store := NewStore(nil)
+	rep := ids.NewV7()
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + rep.String(), UserID: rep,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{"company": {Update: true}},
+		},
+	})
+	companyID := ids.New[ids.CompanyKind]()
+
+	// Naming the sentinel the refusal must NOT be keeps the comment above honest:
+	// were a seat or admission check ever to land ahead of the shape guard, this
+	// would start passing on ErrPermissionDenied while proving nothing about
+	// provenance.
+	if _, _, err := store.SetCompanyLogo(ctx, companyID, "", "https://halbmond.test/f.png"); err == nil ||
+		errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a logo with no storage key must be refused by the shape guard, got %v", err)
+	}
+	if _, _, err := store.SetCompanyLogo(ctx, companyID, "k", ""); err == nil ||
+		errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a logo with no source URL must be refused by the shape guard — its provenance would be blank, got %v", err)
+	}
+}
+
+func TestLogoURLChangesWithTheStoredRevisionWithoutExposingItsKey(t *testing.T) {
+	companyID := ids.New[ids.CompanyKind]()
+	firstKey := "workspaces/private/company_logo/first-revision"
+	secondKey := "workspaces/private/company_logo/second-revision"
+	first := LogoURL(companyID.UUID, &firstKey, LogoWide)
+	second := LogoURL(companyID.UUID, &secondKey, LogoWide)
+	if first == nil || second == nil {
+		t.Fatal("stored logo keys produced no display URL")
+	}
+	if *first == *second {
+		t.Fatalf("two stored revisions share %q, so a browser can keep the old logo cached", *first)
+	}
+	if !strings.HasPrefix(*first, "/v1/companies/"+companyID.String()+"/logo?v=") {
+		t.Fatalf("logo URL = %q, want the record endpoint with a revision query", *first)
+	}
+	if strings.Contains(*first, firstKey) {
+		t.Fatalf("the storage key leaked into the display URL %q", *first)
+	}
+}

@@ -7,7 +7,6 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan } from "../app/capability";
 import { Badge, EmptyState } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
 import { CardBoundary } from "../design-system/cardboundary";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -30,6 +29,7 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
+import { DeadWorkCallout } from "./jobhealthdead";
 import "./jobhealth.css";
 
 // GET /admin/job-health — the operator's only window onto the background
@@ -328,23 +328,9 @@ function JobHealthBody({
     return <EmptyState>{t("jobs.empty")}</EmptyState>;
   }
 
-  const dead = health.kinds.reduce((total, kind) => total + kind.dead, 0);
   return (
     <>
-      {dead > 0 && (
-        // The one thing on this card an operator must not scroll past: dead
-        // work does not resume on its own. An `event` would be mentioned
-        // quietly; this one interrupts, because the reader has to act on it and
-        // nothing else on the page says so again.
-        <Callout
-          tone="danger"
-          kind="event"
-          live="alert"
-          title={t("jobs.deadTitle")}
-        >
-          <p>{t("jobs.deadBody", { count: formatNumber(dead, locale) })}</p>
-        </Callout>
-      )}
+      <DeadWorkCallout health={health} />
       <SettingList>
         <KindSection
           label={t("jobs.workspaceKinds")}

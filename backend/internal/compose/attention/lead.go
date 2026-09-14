@@ -8,7 +8,7 @@ package attention
 //
 // The clock is not this file's to invent. `sla_state` and `sla_deadline_at`
 // are derived on every lead read (formulas §18.1), so what happens here is
-// ranking an answer the people module already gave — a second opinion about
+// ranking an answer the contacts module already gave — a second opinion about
 // when a reply is late would be one the lead screen could disagree with.
 
 import (
@@ -41,8 +41,9 @@ type LeadResponses interface {
 
 // OwedLead is one inbound lead nobody has replied to yet.
 type OwedLead struct {
-	ID   ids.UUID
-	Name string
+	Facts *crmcontracts.WorklistLeadFacts
+	ID    ids.UUID
+	Name  string
 	// OwnerID is zero when the lead is assigned to nobody, which is its own
 	// kind of urgency rather than a missing field.
 	OwnerID ids.UUID
@@ -84,7 +85,11 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 		Consequence: "buyer_waits",
 		Because:     because,
 		Subject:     subjectOf(string(subjectLead), lead.ID),
+		Lead:        lead.Facts,
 		Actions:     []crmcontracts.WorklistItemActions{crmcontracts.WorklistItemActions(actionOpen)},
+	}
+	if lead.State == "" {
+		row.Consequence = valueNone
 	}
 	if name != "" {
 		row.Title = &name
@@ -113,7 +118,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 	}
 }
 
-// leadStanding reads the state the people module derived, and says what it
+// leadStanding reads the state the contacts module derived, and says what it
 // means for the day's order.
 //
 // An unrecognised state ranks as agreed work rather than being dropped: the
@@ -122,7 +127,7 @@ func classifyLead(lead OwedLead, asOf time.Time) ranked {
 // could see.
 func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistReason) {
 	switch lead.State {
-	case string(crmcontracts.LeadSlaStateBreached):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateBreached):
 		because := []crmcontracts.WorklistReason{reason("response_overdue", nil)}
 		if !lead.DeadlineAt.IsZero() {
 			days := daysSince(lead.DeadlineAt, asOf)
@@ -131,7 +136,7 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 			}
 		}
 		return levelWaiting, because
-	case string(crmcontracts.LeadSlaStateAtRisk):
+	case string(crmcontracts.LeadSlaStateLeadSlaStateAtRisk):
 		// The deadline travels with the reason, because "reply due soon" alone
 		// asks the rep to guess how soon. Its breached sibling above already
 		// carries a figure (the days it has been overdue); this is the same
@@ -164,10 +169,12 @@ func leadStanding(lead OwedLead, asOf time.Time) (int, []crmcontracts.WorklistRe
 // task filed under this lead, while the lead is on the page owing a reply, is
 // about that reply. The notice is left alone — it is read-once and personal,
 // and it names no lead to match on.
+// Fold only when the lead exposes the deadline the task would otherwise carry.
+// Disabling a response policy does not cancel an existing dated activity.
 func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	owed := map[string]bool{}
 	for _, row := range rows {
-		if row.item.Source == sourceLeadResponse && row.item.Subject != nil {
+		if row.item.Source == sourceLeadResponse && row.item.Subject != nil && row.item.DueAt != nil {
 			owed[row.item.Subject.Id.String()] = true
 		}
 	}
@@ -176,7 +183,8 @@ func dropEscalationTasksAlreadyOwed(rows []ranked) []ranked {
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {
-		if row.item.Source == sourceTask && row.item.Subject != nil &&
+		if row.item.Source == sourceTask && row.item.Kind != nil &&
+			*row.item.Kind == "lead_response_escalation" && row.item.Subject != nil &&
 			row.item.Subject.Type == subjectLead && owed[row.item.Subject.Id.String()] {
 			continue
 		}

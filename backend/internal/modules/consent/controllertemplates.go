@@ -30,10 +30,28 @@ import (
 
 // Template keys. Each names one thing the installation may say for itself.
 const (
-	// TemplateRecordConfirmation asks a person to check what is held about them.
+	// TemplateRecordConfirmation asks a contact to check what is held about them.
 	TemplateRecordConfirmation = "record_confirmation"
 	// TemplateConsentConfirmation carries the double-opt-in link.
 	TemplateConsentConfirmation = "consent_confirmation"
+	// TemplatePrivacyNotice tells a contact what is held about them and asks
+	// for nothing.
+	//
+	// Separate from the record confirmation because the two do different jobs
+	// and only one of them is owed: Art. 14 requires telling somebody, not
+	// asking them anything. It also reaches contacts the record confirmation
+	// cannot — a contact who asked us to stop is still owed their disclosure,
+	// and only CategoryPrivacyNotice survives that stop.
+	TemplatePrivacyNotice = "privacy_notice"
+	// TemplateOptOutAcknowledgement confirms that a refusal of advertising was
+	// received. Decree 91/2020/ND-CP Art. 16 owes a Vietnamese recipient one
+	// within twenty-four hours.
+	//
+	// THE ONE TEMPLATE THAT CARRIES NO LINK. It goes to somebody who has just
+	// told the product to stop, so anything beyond "we heard you" is the thing
+	// they asked not to receive — and a link asking them to do something more
+	// would read as a message that did not take the first answer.
+	TemplateOptOutAcknowledgement = "optout_acknowledgement"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -46,7 +64,7 @@ type Rendered struct {
 
 // ConfirmationSend is one confirmation message, ready to stage.
 type ConfirmationSend struct {
-	PersonID  ids.PersonID
+	ContactID ids.ContactID
 	Recipient string
 	// Category is what the engine is asked about. It is set from the template
 	// rather than by a caller: the whole point of the lane is that these
@@ -87,6 +105,9 @@ type controllerTemplate struct {
 	subject func(mailcopy.Copy) string
 	intro   func(mailcopy.Copy) string
 	closing func(mailcopy.Copy) string
+	// linkless says this template carries no one-time link, so the renderer
+	// writes no placeholder and comms stages it with no material.
+	linkless bool
 }
 
 // controllerTemplates is the closed catalog.
@@ -109,6 +130,26 @@ var controllerTemplates = map[string]controllerTemplate{
 		subject:  func(w mailcopy.Copy) string { return w.ConfirmConsentSubject },
 		intro:    func(w mailcopy.Copy) string { return w.ConfirmConsentBody },
 		closing:  func(w mailcopy.Copy) string { return w.ConfirmConsentIgnore },
+	},
+	// Version 1, because this wording has never shipped. The two above are at 2
+	// for changes made after they had.
+	TemplatePrivacyNotice: {
+		version:  1,
+		category: commsauthz.CategoryPrivacyNotice,
+		subject:  func(w mailcopy.Copy) string { return w.NoticeSubject },
+		intro:    func(w mailcopy.Copy) string { return w.NoticeBody },
+		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
+	},
+	TemplateOptOutAcknowledgement: {
+		version:  1,
+		category: commsauthz.CategoryOptoutConfirmation,
+		subject:  func(w mailcopy.Copy) string { return w.OptOutAckSubject },
+		intro:    func(w mailcopy.Copy) string { return w.OptOutAckBody },
+		closing:  func(w mailcopy.Copy) string { return w.OptOutAckIgnore },
+		// The one template with nothing to click. comms refuses a body whose
+		// placeholder count disagrees with the material it was staged with, and
+		// this is staged with none.
+		linkless: true,
 	},
 }
 
@@ -148,6 +189,16 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 	}
 	words := mailcopy.For(language)
 	var body strings.Builder
+	if t.linkless {
+		// NOTHING TO CLICK and nothing about a link's life, so the personal-link
+		// sentence and the expiry line are both absent rather than rendered
+		// about a link that does not exist.
+		body.WriteString(t.intro(words) + "\n\n" + t.closing(words) + "\n")
+		return Rendered{
+			Key: key, Version: t.version, Subject: t.subject(words),
+			Body: body.String(),
+		}, t.category, nil
+	}
 	body.WriteString(t.intro(words) + "\n\n  " + linkPlaceholder + "\n\n" + words.ConfirmPersonal)
 	if !expiresAt.IsZero() {
 		// Appended to the personal-link sentence rather than substituted into

@@ -156,7 +156,7 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if s.blob == nil {
 		return "", "", 0, ErrBlobstoreUnconfigured
 	}
-	// The name a person TYPED, made safe — the same call every other uploaded
+	// The name a contact TYPED, made safe — the same call every other uploaded
 	// name in this tree goes through. It is presentational only (nothing opens
 	// a file by it) but it is read back in a citation, a list and an ingest
 	// failure, and a path separator or a bidirectional override in it rewrites

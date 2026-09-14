@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func mustID(t *testing.T, s string) ids.OrganizationID {
+func mustID(t *testing.T, s string) ids.CompanyID {
 	t.Helper()
-	id, err := ids.ParseAs[ids.OrganizationKind](s)
+	id, err := ids.ParseAs[ids.CompanyKind](s)
 	if err != nil {
 		t.Fatalf("parse %q: %v", s, err)
 	}
@@ -52,9 +52,9 @@ func TestParseRawRefClassifiesAttributableAndDropsNoise(t *testing.T) {
 func TestSortCandidatesIsDeterministicByConfidenceThenID(t *testing.T) {
 	// Two candidates at the same confidence must order by id, so the same
 	// evidence always reports the same top candidate (no flapping).
-	low := candidate{OrgID: mustID(t, "00000000-0000-7000-8000-000000000002"), Confidence: 0.90}
-	highA := candidate{OrgID: mustID(t, "00000000-0000-7000-8000-000000000001"), Confidence: 0.95}
-	highB := candidate{OrgID: mustID(t, "00000000-0000-7000-8000-000000000003"), Confidence: 0.95}
+	low := candidate{CompanyID: mustID(t, "00000000-0000-7000-8000-000000000002"), Confidence: 0.90}
+	highA := candidate{CompanyID: mustID(t, "00000000-0000-7000-8000-000000000001"), Confidence: 0.95}
+	highB := candidate{CompanyID: mustID(t, "00000000-0000-7000-8000-000000000003"), Confidence: 0.95}
 	cs := []candidate{low, highB, highA}
 	sortCandidates(cs)
 	if cs[0] != highA || cs[1] != highB || cs[2] != low {

@@ -50,7 +50,7 @@ const CORE_BEATS: ReadonlyArray<{
   { at: 0, state: "ingest", progress: 0.12 },
   // The answer arrived and is being made sense of.
   { at: 2100, state: "working", progress: 0.62 },
-  // Bound, and waiting for the person who bound it.
+  // Bound, and waiting for the contact who bound it.
   { at: 3900, state: "idle", progress: 1 },
 ];
 

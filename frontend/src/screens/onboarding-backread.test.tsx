@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -408,8 +408,8 @@ describe("the tallies", () => {
         messages_scanned: 600,
         captured: 512,
         skipped: 88,
-        people_created: 90,
-        organizations_created: 20,
+        contacts_created: 90,
+        companies_created: 20,
         dedupe_candidates: 7,
       },
     });

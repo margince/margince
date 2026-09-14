@@ -119,7 +119,7 @@ func grantRefusals() []refusal {
 func policyRefusals() []refusal {
 	return []refusal{{
 		// A workspace column, the shape the tier carried until an installation
-		// became single-organization. Refused rather than tolerated: it is the
+		// became single-company. Refused rather than tolerated: it is the
 		// column a policy would key on, and its presence is what makes the next
 		// author believe there is a tenant wall here.
 		tag: "tenantcolumn",

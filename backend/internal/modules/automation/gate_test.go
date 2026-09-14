@@ -155,7 +155,7 @@ func TestCheckOwnerPermissionSkipsForANullOwner(t *testing.T) {
 // TestCheckOwnerPermissionTargetScopedResolvesObjectFromTheActionsOwnTarget
 // proves a target-scoped action (assign_owner) gates the object the ACTION
 // itself writes (action.Target.Type) — never a fixed guess. Every shipped
-// handler's Plan sets Target to the entity it fired on (people/
+// handler's Plan sets Target to the entity it fired on (contacts/
 // leadrouting.go's ActionAssignOwner case), so this is the common,
 // coinciding shape; the divergent-target case below is the one that
 // actually exercises the distinction.

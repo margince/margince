@@ -7,7 +7,7 @@ package gates
 
 // One lock, two modules, and no import between them.
 //
-// people.RetractCaptureOnlyPersonTx must not read a sender override that a
+// contacts.RetractCaptureOnlyContactTx must not read a sender override that a
 // human is committing underneath it, so it takes the same advisory lock
 // capture's OverrideForTx takes. A module may not import a sibling, so the key
 // is spelled twice — and two spellings of one lock that drift apart do not
@@ -27,10 +27,10 @@ func TestTheSenderOverrideLockIsSpelledTheSameOnBothSides(t *testing.T) {
 	const entity = `"capture_sender_override"`
 	root := moduleRoot(t)
 	capturedIn := readSource(t, filepath.Join(root, "internal/modules/capture/senderoverride.go"))
-	peopleIn := readSource(t, filepath.Join(root, "internal/modules/people/personprivate.go"))
+	contactsIn := readSource(t, filepath.Join(root, "internal/modules/contacts/contactprivate.go"))
 
 	for _, side := range []struct{ name, source string }{
-		{"capture", capturedIn}, {"people", peopleIn},
+		{"capture", capturedIn}, {"contacts", contactsIn},
 	} {
 		if !strings.Contains(side.source, "senderOverrideEntity = "+entity) {
 			t.Fatalf("%s no longer names the lock entity %s. Both sides build the advisory lock key "+
@@ -39,14 +39,14 @@ func TestTheSenderOverrideLockIsSpelledTheSameOnBothSides(t *testing.T) {
 		}
 	}
 	// The identity is `<owner uuid>:<folded address>` on both sides. capture
-	// builds it in senderOverrideIdentity; people builds it inline because it
-	// holds the person rather than one address.
+	// builds it in senderOverrideIdentity; contacts builds it inline because it
+	// holds the contact rather than one address.
 	if !strings.Contains(capturedIn, `user.String() + ":" + foldedAddress`) {
-		t.Fatal("capture's sender-override lock identity changed shape. people/personprivate.go " +
+		t.Fatal("capture's sender-override lock identity changed shape. contacts/contactprivate.go " +
 			"builds the same key by hand and cannot see this change")
 	}
-	if !strings.Contains(peopleIn, `ownerID.String()+":"+address`) {
-		t.Fatal("people's sender-override lock identity changed shape and no longer matches " +
+	if !strings.Contains(contactsIn, `ownerID.String()+":"+address`) {
+		t.Fatal("contacts's sender-override lock identity changed shape and no longer matches " +
 			"capture's senderOverrideIdentity — the two stop excluding each other silently")
 	}
 }

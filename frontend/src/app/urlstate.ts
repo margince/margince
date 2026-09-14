@@ -27,7 +27,7 @@ export const NO_URL_PARAMS: UrlParams = new Map<string, string>();
  *
  * An empty value reads as ABSENT rather than as a dial set to nothing, so
  * `#/companies?q=` and `#/companies` mean the same thing. The writer below
- * never emits one; a person editing the address bar can, and the two spellings
+ * never emits one; a contact editing the address bar can, and the two spellings
  * answering differently is the kind of difference nobody can see.
  */
 export function parseParams(hash: string): UrlParams {

@@ -122,7 +122,7 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
 		// The deal carries an owner because the gone-quiet review reads its
-		// correspondence under that person's authority — an unowned deal is
+		// correspondence under that contact's authority — an unowned deal is
 		// reviewed unnamed, which is a case its own test covers.
 		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
 		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5, $6,
@@ -453,14 +453,8 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	}
 }
 
-// A deal nobody has touched is notched down AND re-dated.
-//
-// It used to keep its date: only the invariant forced one onto a quiet deal,
-// on the reading that an optimistic re-date on top of a downgrade said too
-// much. That left the forecast corrected and the calendar lying, which is the
-// half a rep actually reads. Both move now, both are the sweep's estimate, and
-// both are on one Undo.
-func TestCloseDateSweepDowngradesAndRedatesAQuietDeal(t *testing.T) {
+// Quietness lowers confidence while a recorded future date stays intact.
+func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	e := setupCloseDate(t)
 	// Quiet 90 days, commit override, date still future but inside the
 	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
@@ -476,14 +470,11 @@ func TestCloseDateSweepDowngradesAndRedatesAQuietDeal(t *testing.T) {
 	if swept.forecastCat == nil || *swept.forecastCat != "best_case" {
 		t.Errorf("forecast_category = %v, want best_case (one notch down from commit)", swept.forecastCat)
 	}
-	if swept.expectedClose == nil || swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, still the original %s — a deal nobody has touched carries "+
-			"a date nobody believes, and notching the forecast while leaving the "+
-			"calendar alone corrects the number and leaves the date lying",
-			swept.expectedClose, originalDate.Format(time.DateOnly))
+	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date = %v, want retained %s", swept.expectedClose, originalDate)
 	}
-	if !swept.provisional {
-		t.Error("the replacement is the sweep's own estimate and must say so")
+	if swept.provisional {
+		t.Error("retaining the date must not make a human date provisional")
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+
@@ -947,7 +938,7 @@ func TestAReaderWithNoDealGrantStillSeesTheirOtherReceipts(t *testing.T) {
 	noDeals := principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person": {Read: true},
+			"contact": {Read: true},
 		},
 		RowScope: principal.RowScopeTeam,
 	}

@@ -50,7 +50,7 @@
 }
 
 /* The square slot's preview is square, because the shape IS the thing this
-   field is asking for: a person looking at a 360 × 112 box has been shown the
+   field is asking for: a contact looking at a 360 × 112 box has been shown the
    wrong question, and a wide file dropped here would look correct in it. */
 .company-logo-preview-square {
   width: 112px;

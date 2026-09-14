@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { DateFormatsProvider } from "../app/dateformats";
 import { InstallationSettingsCard } from "./installation-settings";
 import {
   installFetchStub,
@@ -19,8 +20,16 @@ import {
 
 const SETTINGS = {
   name: "Brandt Automotive GmbH",
+  base_language: "en",
+  fiscal_year_start_month: 1,
+  sign_in_providers: [],
+  max_upload_bytes: 25000000,
+  dead_work_banner_hours: 24,
+  forecast_forward_measure: "commit_evidence",
   timezone: "Europe/Berlin",
   base_currency: "EUR",
+  date_format: "dmy",
+  time_format: "24h",
   base_currency_locked: false,
 };
 
@@ -35,7 +44,9 @@ function story(
     });
     return (
       <StoryProviders>
-        <InstallationSettingsCard />
+        <DateFormatsProvider>
+          <InstallationSettingsCard />
+        </DateFormatsProvider>
       </StoryProviders>
     );
   };
@@ -68,7 +79,7 @@ export const Editable: Story = { render: story(SETTINGS, MANAGER) };
 export const ProfileDialog: Story = {
   render: story(SETTINGS, MANAGER),
   play: async ({ canvasElement }) => {
-    await openFrom(canvasElement, /edit organization name/i);
+    await openFrom(canvasElement, /edit company name/i);
   },
 };
 
@@ -121,4 +132,11 @@ export const EditablePhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: story(SETTINGS, MANAGER),
+};
+
+export const RegionalFormats: Story = {
+  render: story(SETTINGS, MANAGER),
+  play: async ({ canvasElement }) => {
+    await openFrom(canvasElement, /edit date format/i);
+  },
 };

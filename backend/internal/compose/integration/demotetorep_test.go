@@ -21,8 +21,8 @@ import (
 // The seat is read from the app (`GET /v1/me`), not picked out of app_user.
 // The lookup here used to be `WHERE is_agent = false ORDER BY created_at LIMIT
 // 1` under a comment claiming it demoted the bootstrap admin, and the two agree
-// only while the installation holds exactly one person. Rows inserted in one
-// transaction share now(), so a second person makes the pick arbitrary — and an
+// only while the installation holds exactly one contact. Rows inserted in one
+// transaction share now(), so a second contact makes the pick arbitrary — and an
 // arbitrary pick fails in the worst direction available: it demotes a seat the
 // session is not using, the session stays admin, and the caller's assertion
 // that an admin-only endpoint answers 403 gets a 200. That is the shape of the
@@ -117,7 +117,7 @@ func assertSignedInAsRep(t *testing.T, e *apptest.AppEnv) {
 	}
 }
 
-// The helper's own spec, on an installation that holds more than one person.
+// The helper's own spec, on an installation that holds more than one contact.
 //
 // This is the case the previous lookup could not survive. It chose with
 // `ORDER BY created_at LIMIT 1` over every non-agent row, which pins nothing to

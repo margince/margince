@@ -222,7 +222,7 @@ export function ImapMailboxForm({
         submit();
       }}
     >
-      {/* Before the fields, not after: a person connecting a mailbox from
+      {/* Before the fields, not after: a contact connecting a mailbox from
           Settings is told the same thing onboarding tells them, and reading
           it after typing a password is reading it too late. */}
       <div className="imap-mailbox-span">

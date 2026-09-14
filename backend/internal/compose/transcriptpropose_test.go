@@ -241,7 +241,7 @@ func TestADueDateIsACalendarDayOrEmpty(t *testing.T) {
 		{"2026-02-30", false, "February has no thirtieth — a regex would admit this"},
 		{"2026-13-01", false, "there is no thirteenth month"},
 		{"2026-9-8", false, "acceptance parses YYYY-MM-DD, so a short form fails later"},
-		{"Friday", false, "the day a person says out loud is the model's job to resolve"},
+		{"Friday", false, "the day a contact says out loud is the model's job to resolve"},
 		{"2026-09-08T00:00:00Z", false, "an instant fixes a zone extraction has no business fixing"},
 	} {
 		if got := validProposedDueDate(c.day); got != c.admit {

@@ -5,16 +5,16 @@
 
 package compose
 
-// A merge carries the retiring subject's STOPS, through the real people→consent
+// A merge carries the retiring subject's STOPS, through the real contacts→consent
 // edge.
 //
-// Here rather than in either module because neither can prove it alone: people
+// Here rather than in either module because neither can prove it alone: contacts
 // owns the merge and cannot import consent, consent owns
-// communication_suppression and cannot import people, and the seam between
+// communication_suppression and cannot import contacts, and the seam between
 // them is wired in this package. A test on either side would have to fake the
 // other, and the defect this closes was precisely that nothing connected them.
 //
-// The defect: a merge moved person_consent and left communication_suppression
+// The defect: a merge moved contact_consent and left communication_suppression
 // pointing at the retired record. The stop was not deleted — it was orphaned,
 // which is worse, because an export still shows it while the send path no
 // longer asks about it. Somebody objects to marketing, their contact is later
@@ -28,39 +28,39 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // liveObjections counts one subject's live marketing objections, which is the
 // question the send engine asks of them.
-func liveObjections(t *testing.T, e *integration.Env, personID ids.UUID) int {
+func liveObjections(t *testing.T, e *integration.Env, contactID ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
-		 WHERE person_id = $1 AND kind = $2 AND revoked_at IS NULL`,
-		personID, commsauthz.ReasonObjection).Scan(&n); err != nil {
+		 WHERE contact_id = $1 AND kind = $2 AND revoked_at IS NULL`,
+		contactID, commsauthz.ReasonObjection).Scan(&n); err != nil {
 		t.Fatalf("counting live stops: %v", err)
 	}
 	return n
 }
 
-func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
+func TestAMergeCarriesTheRetiringContactsObjection(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	// The person who objected, and the duplicate they will be merged into.
-	objector := e.SeedPerson(t, "Objector", nil)
-	survivor := e.SeedPerson(t, "Survivor", nil)
+	// The contact who objected, and the duplicate they will be merged into.
+	objector := e.SeedContact(t, "Objector", nil)
+	survivor := e.SeedContact(t, "Survivor", nil)
 
 	if err := consentStore.Suppress(admin, consent.SuppressInput{
-		PersonID: ids.From[ids.PersonKind](objector),
-		Kind:     commsauthz.ReasonObjection,
-		Reason:   "asked on the phone to stop the newsletter",
+		ContactID: ids.From[ids.ContactKind](objector),
+		Kind:      commsauthz.ReasonObjection,
+		Reason:    "asked on the phone to stop the newsletter",
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
 		t.Fatalf("precondition: the survivor already holds %d objection(s)", got)
 	}
 
-	if _, err := peopleStore.MergePerson(admin, ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
 	}
 	// AND THE ORIGINAL SURVIVES, because it is evidence about the record that
 	// actually made the objection. Repointing it would make the history say
-	// the objection was made about a different person.
+	// the objection was made about a different contact.
 	if got := liveObjections(t, e, objector); got != 1 {
 		t.Errorf("the retired record holds %d objection(s), want its own kept as evidence", got)
 	}
@@ -90,7 +90,7 @@ func TestAMergeCarriesTheRetiringPersonsObjection(t *testing.T) {
 	var carriedFrom *ids.UUID
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT carried_from FROM communication_suppression
-		 WHERE person_id = $1 AND revoked_at IS NULL`, survivor).Scan(&carriedFrom); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, survivor).Scan(&carriedFrom); err != nil {
 		t.Fatalf("reading the carried row: %v", err)
 	}
 	if carriedFrom == nil {
@@ -104,24 +104,24 @@ func TestACarriedObjectionKeepsTheSubjectsAuthority(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	objector := e.SeedPerson(t, "Authority Source", nil)
-	survivor := e.SeedPerson(t, "Authority Survivor", nil)
+	objector := e.SeedContact(t, "Authority Source", nil)
+	survivor := e.SeedContact(t, "Authority Survivor", nil)
 
 	if err := consentStore.Suppress(admin, consent.SuppressInput{
-		PersonID: ids.From[ids.PersonKind](objector), Kind: commsauthz.ReasonObjection, Reason: "stop the newsletter",
+		ContactID: ids.From[ids.ContactKind](objector), Kind: commsauthz.ReasonObjection, Reason: "stop the newsletter",
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
-	if _, err := peopleStore.MergePerson(admin, ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
 	var level string
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT decided_by_level FROM communication_suppression
-		 WHERE person_id = $1 AND revoked_at IS NULL`, survivor).Scan(&level); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, survivor).Scan(&level); err != nil {
 		t.Fatalf("reading the carried row: %v", err)
 	}
 	if level != string(commsauthz.LevelSubject) {
@@ -138,20 +138,20 @@ func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	objector := e.SeedPerson(t, "Duplicate Source", nil)
-	survivor := e.SeedPerson(t, "Duplicate Survivor", nil)
+	objector := e.SeedContact(t, "Duplicate Source", nil)
+	survivor := e.SeedContact(t, "Duplicate Survivor", nil)
 
 	for _, id := range []ids.UUID{objector, survivor} {
 		if err := consentStore.Suppress(admin, consent.SuppressInput{
-			PersonID: ids.From[ids.PersonKind](id), Kind: commsauthz.ReasonObjection, Reason: "no marketing",
+			ContactID: ids.From[ids.ContactKind](id), Kind: commsauthz.ReasonObjection, Reason: "no marketing",
 		}); err != nil {
 			t.Fatalf("recording the objection: %v", err)
 		}
 	}
 
-	if _, err := peopleStore.MergePerson(admin, ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin, ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -165,40 +165,40 @@ func TestACarryDoesNotDuplicateAStopTheSurvivorAlreadyHolds(t *testing.T) {
 // The refusal is conditioned on the DATA, not the wiring. A subject with no
 // stop has none to lose, so an unwired installation merges them exactly as it
 // did before this seam existed — refusing there would break every caller that
-// builds a people store for a purpose with nothing to do with consent, and
+// builds a contacts store for a purpose with nothing to do with consent, and
 // protect nobody.
 func TestAnUnwiredMergeRefusesOnlyWhenAStopWouldBeLost(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
 	// Deliberately NOT .WithStopCarrier(...).
-	unwired := people.NewStore(e.DB())
+	unwired := contacts.NewStore(e.DB())
 
 	// A pair with nothing recorded: merging them loses nothing.
-	plainSrc := e.SeedPerson(t, "Plain Source", nil)
-	plainDst := e.SeedPerson(t, "Plain Survivor", nil)
-	if _, err := unwired.MergePerson(admin,
-		ids.From[ids.PersonKind](plainSrc), ids.From[ids.PersonKind](plainDst)); err != nil {
+	plainSrc := e.SeedContact(t, "Plain Source", nil)
+	plainDst := e.SeedContact(t, "Plain Survivor", nil)
+	if _, err := unwired.MergeContact(admin,
+		ids.From[ids.ContactKind](plainSrc), ids.From[ids.ContactKind](plainDst)); err != nil {
 		t.Fatalf("an ordinary merge was refused for want of a seam it did not need: %v", err)
 	}
 
 	// A pair where the retiring record objected: merging them WOULD lose it.
-	stoppedSrc := e.SeedPerson(t, "Stopped Source", nil)
-	stoppedDst := e.SeedPerson(t, "Stopped Survivor", nil)
+	stoppedSrc := e.SeedContact(t, "Stopped Source", nil)
+	stoppedDst := e.SeedContact(t, "Stopped Survivor", nil)
 	if err := consentStore.Suppress(admin, consent.SuppressInput{
-		PersonID: ids.From[ids.PersonKind](stoppedSrc),
-		Kind:     commsauthz.ReasonObjection,
-		Reason:   "no marketing",
+		ContactID: ids.From[ids.ContactKind](stoppedSrc),
+		Kind:      commsauthz.ReasonObjection,
+		Reason:    "no marketing",
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
 
-	_, err := unwired.MergePerson(admin,
-		ids.From[ids.PersonKind](stoppedSrc), ids.From[ids.PersonKind](stoppedDst))
+	_, err := unwired.MergeContact(admin,
+		ids.From[ids.ContactKind](stoppedSrc), ids.From[ids.ContactKind](stoppedDst))
 	if err == nil {
 		t.Fatal("a merge that would have dropped a recorded stop went through unnoticed")
 	}
-	var notWired *people.StopCarrierNotWiredError
+	var notWired *contacts.StopCarrierNotWiredError
 	if !errors.As(err, &notWired) {
 		t.Fatalf("the merge failed with %v, want StopCarrierNotWiredError", err)
 	}
@@ -222,10 +222,10 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	objector := e.SeedPerson(t, "Stronger Source", nil)
-	survivor := e.SeedPerson(t, "Weaker Survivor", nil)
+	objector := e.SeedContact(t, "Stronger Source", nil)
+	survivor := e.SeedContact(t, "Weaker Survivor", nil)
 
 	// BOTH ROWS ARE THE SAME KIND, or the guard never fires and this test
 	// proves nothing — found by mutation: with two different kinds it passed
@@ -234,9 +234,9 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 	// The survivor's, written at the SEAT's level: an admin recorded it, so it
 	// lands at admin and any admin can lift it.
 	if err := consentStore.Suppress(admin, consent.SuppressInput{
-		PersonID: ids.From[ids.PersonKind](survivor),
-		Kind:     commsauthz.ReasonObjection,
-		Reason:   "recorded by an admin",
+		ContactID: ids.From[ids.ContactKind](survivor),
+		Kind:      commsauthz.ReasonObjection,
+		Reason:    "recorded by an admin",
 	}); err != nil {
 		t.Fatalf("recording the survivor's stop: %v", err)
 	}
@@ -247,20 +247,20 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 	// exactly the shape an installation holds.
 	if _, err := e.Pool.Exec(context.Background(), `
 		UPDATE communication_suppression SET decided_by_level = 'user'
-		 WHERE person_id = $1 AND revoked_at IS NULL`, survivor); err != nil {
+		 WHERE contact_id = $1 AND revoked_at IS NULL`, survivor); err != nil {
 		t.Fatalf("planting the weaker survivor row: %v", err)
 	}
 	// The retiring record's, at the SUBJECT's level.
 	if err := consentStore.Suppress(admin, consent.SuppressInput{
-		PersonID: ids.From[ids.PersonKind](objector),
-		Kind:     commsauthz.ReasonObjection,
-		Reason:   "objected to marketing",
+		ContactID: ids.From[ids.ContactKind](objector),
+		Kind:      commsauthz.ReasonObjection,
+		Reason:    "objected to marketing",
 	}); err != nil {
 		t.Fatalf("recording the objection: %v", err)
 	}
 
-	if _, err := peopleStore.MergePerson(admin,
-		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
@@ -275,7 +275,7 @@ func TestAStrongerStopCarriesOverAWeakerOneTheSurvivorHolds(t *testing.T) {
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT EXISTS (
 			SELECT 1 FROM communication_suppression
-			 WHERE person_id = $1 AND kind = $2 AND revoked_at IS NULL
+			 WHERE contact_id = $1 AND kind = $2 AND revoked_at IS NULL
 			   AND decided_by_level = $3)`,
 		survivor, commsauthz.ReasonObjection, string(commsauthz.LevelSubject)).Scan(&reached); err != nil {
 		t.Fatalf("reading the survivor's stops: %v", err)
@@ -297,30 +297,30 @@ func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	objector := e.SeedPerson(t, "Twice Asked", nil)
-	survivor := e.SeedPerson(t, "Twice Survivor", nil)
+	objector := e.SeedContact(t, "Twice Asked", nil)
+	survivor := e.SeedContact(t, "Twice Survivor", nil)
 
 	for _, reason := range []string{"asked in January", "asked again in March"} {
 		if err := consentStore.Suppress(admin, consent.SuppressInput{
-			PersonID: ids.From[ids.PersonKind](objector),
-			Kind:     "subject_request",
-			Reason:   reason,
+			ContactID: ids.From[ids.ContactKind](objector),
+			Kind:      "subject_request",
+			Reason:    reason,
 		}); err != nil {
 			t.Fatalf("recording %q: %v", reason, err)
 		}
 	}
 
-	if _, err := peopleStore.MergePerson(admin,
-		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 
 	var n int
 	if err := e.Pool.QueryRow(context.Background(), `
 		SELECT count(*) FROM communication_suppression
-		 WHERE person_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
+		 WHERE contact_id = $1 AND kind = 'subject_request' AND revoked_at IS NULL`,
 		survivor).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
@@ -333,11 +333,11 @@ func TestASubjectHoldingTwoStopsOfOneKindCarriesOne(t *testing.T) {
 // A STOP RECORDED WHILE THE MERGE RUNS must still reach the survivor.
 //
 // The two writers touch different rows — Suppress inserts against the retiring
-// person, the carry reads them and inserts against the survivor — so nothing in
+// contact, the carry reads them and inserts against the survivor — so nothing in
 // Postgres makes them queue on their own. Before suppressionlock.go they did
 // not, and the loser was the stop:
 //
-//	Suppress(objector)              MergePerson(objector -> survivor)
+//	Suppress(objector)              MergeContact(objector -> survivor)
 //	   BEGIN                            BEGIN
 //	                                    reads the objector's live rows: none
 //	   INSERT the objection
@@ -355,10 +355,10 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 	e := integration.Setup(t)
 	admin := e.Admin()
 	consentStore := consent.NewStore(e.DB())
-	peopleStore := people.NewStore(e.DB()).WithStopCarrier(consentStore)
+	contactsStore := contacts.NewStore(e.DB()).WithStopCarrier(consentStore)
 
-	objector := e.SeedPerson(t, "Late Objector", nil)
-	survivor := e.SeedPerson(t, "Survivor", nil)
+	objector := e.SeedContact(t, "Late Objector", nil)
+	survivor := e.SeedContact(t, "Survivor", nil)
 
 	// The concurrent writer, started first so its transaction is genuinely
 	// open while the merge runs. It reports back rather than failing from
@@ -366,9 +366,9 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 	suppressed := make(chan error, 1)
 	go func() {
 		suppressed <- consentStore.Suppress(admin, consent.SuppressInput{
-			PersonID: ids.From[ids.PersonKind](objector),
-			Kind:     commsauthz.ReasonObjection,
-			Reason:   "called while their duplicate was being merged",
+			ContactID: ids.From[ids.ContactKind](objector),
+			Kind:      commsauthz.ReasonObjection,
+			Reason:    "called while their duplicate was being merged",
 		})
 	}()
 
@@ -376,8 +376,8 @@ func TestAStopRecordedDuringAMergeStillReachesTheSurvivor(t *testing.T) {
 	// end up holding the objection: either the carry saw it, or the carry ran
 	// first and the stop landed on a record the merge had already retired —
 	// which is the case the lock exists to make impossible.
-	if _, err := peopleStore.MergePerson(admin,
-		ids.From[ids.PersonKind](objector), ids.From[ids.PersonKind](survivor)); err != nil {
+	if _, err := contactsStore.MergeContact(admin,
+		ids.From[ids.ContactKind](objector), ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatalf("merging: %v", err)
 	}
 	if err := <-suppressed; err != nil {

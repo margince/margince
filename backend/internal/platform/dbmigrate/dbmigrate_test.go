@@ -4,6 +4,8 @@
 package dbmigrate
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -144,11 +146,11 @@ func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 	t.Parallel()
 	applied := map[string]appliedRow{"0209": {name: "drop_workspace_identity_columns"}}
 
-	err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"})
+	err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "contact_record_page_v2"})
 	if err == nil {
 		t.Fatal("a version applied under another name read as a match; the migration on disk would be skipped as done")
 	}
-	for _, want := range []string{"drop_workspace_identity_columns", "person_record_page_v2", "dev-fresh"} {
+	for _, want := range []string{"drop_workspace_identity_columns", "contact_record_page_v2", "dev-fresh"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal must name both migrations and the repair; %q is missing from %q", want, err)
 		}
@@ -160,9 +162,9 @@ func TestALedgerRowNamingADifferentMigrationStopsTheRun(t *testing.T) {
 // trip the guard, or every run would refuse.
 func TestALedgerRowMatchingItsMigrationIsNotARenumber(t *testing.T) {
 	t.Parallel()
-	applied := map[string]appliedRow{"0209": {name: "person_record_page_v2"}}
+	applied := map[string]appliedRow{"0209": {name: "contact_record_page_v2"}}
 
-	if err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "person_record_page_v2"}); err != nil {
+	if err := assertLedgerMatches("core", applied, Migration{Version: "0209", Name: "contact_record_page_v2"}); err != nil {
 		t.Errorf("an exact match refused: %v", err)
 	}
 	if err := assertLedgerMatches("core", applied, Migration{Version: "0210", Name: "consumer_mail_create_grant"}); err != nil {
@@ -228,6 +230,119 @@ func TestARevertOfAnUnverifiableRowIsAdmitted(t *testing.T) {
 			"the same as mismatched, and treating it as one strands every database that migrated "+
 			"before the column existed", err)
 	}
+}
+
+func TestContactRenameAcceptsThePreviouslyShippedContent(t *testing.T) {
+	t.Parallel()
+	// This is the fingerprint recorded before the trigger optimization. Keep
+	// it independent of the catalog so removing the allowance fails this test.
+	applied := "416edd1aa2a69937fc7be3c3faf77eb64367f22707d1df038a0df7f9205fe1a2"
+	for _, m := range loadNamespaceMigrations(t, "core") {
+		if m.Version != "1789170001" {
+			continue
+		}
+		ledger := map[string]appliedRow{m.Version: {name: m.Name, digest: &applied}}
+		if err := assertContentMatches("core", ledger, m); err != nil {
+			t.Fatalf("an existing contact database cannot start: %v", err)
+		}
+		return
+	}
+	t.Fatal("the shipped contact rename migration is missing")
+}
+
+// Every recorded equivalent digest is admitted only for its exact source and
+// namespace. Unrelated applied content and later source edits remain errors.
+func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
+	t.Parallel()
+	for _, m := range loadNamespaceMigrations(t, "core") {
+		for _, entry := range equivalentContent["core"][m.Version] {
+			t.Run(m.Version+"/"+entry.applied, func(t *testing.T) {
+				version := m.Version
+				admitted := entry.applied
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err != nil {
+					t.Errorf("a database holding applied-but-equivalent content refused: %v — it reached the "+
+						"schema this source builds and has nowhere else to go", err)
+				}
+
+				// Some OTHER applied content on the same version is still a mismatch.
+				stranger := "bb" + strings.Repeat("0", 62)
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &stranger}}, m); err == nil {
+					t.Error("applied content that is not the recorded one was admitted — an entry excuses one " +
+						"known byte sequence, not every database on this version")
+				}
+
+				// And the entry must expire when the SOURCE changes again. Without this the
+				// first excused edit would excuse every later one nobody checked.
+				edited := m
+				edited.UpSQL += "\n-- a further edit, which is a new claim\n"
+				if err := assertContentMatches("core", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, edited); err == nil {
+					t.Error("a FURTHER edit to this migration was admitted because the database held the " +
+						"equivalent content — an entry names one source, not permission to keep editing")
+				}
+
+				// The allowance is per namespace, so custom's same version is unaffected.
+				if err := assertContentMatches("custom", map[string]appliedRow{version: {name: m.Name, digest: &admitted}}, m); err == nil {
+					t.Error("a core equivalence admitted the same version in the custom namespace")
+				}
+			})
+		}
+	}
+}
+
+// Every entry must describe the migrations that actually ship: its source half
+// must equal what the file hashes to today, and its applied half must differ
+// from that. A stale source half silently stops excusing anything, which is the
+// failure nobody would notice until a deployed database refused to migrate.
+//
+// The APPLIED half cannot be checked from this tree, and nothing here pretends
+// to. It names bytes that no longer exist in the working tree — that is what
+// makes it the applied half — so what it describes survives in version control
+// and in the ledgers of the databases it names. A wrong one fails safe: it
+// matches no ledger, those databases keep getting the ordinary refusal, and no
+// unchecked content is ever let through, because a typo does not find a second
+// preimage of a SHA-256. Verify an applied digest when you ADD an entry, against
+// the content as committed; this test cannot do it for you later.
+func TestEveryEquivalenceMatchesTheMigrationThatShips(t *testing.T) {
+	t.Parallel()
+	for namespace, versions := range equivalentContent {
+		shipped := map[string]Migration{}
+		for _, m := range loadNamespaceMigrations(t, namespace) {
+			shipped[m.Version] = m
+		}
+		for version, entries := range versions {
+			m, ok := shipped[version]
+			if !ok {
+				t.Errorf("%s %s: no such migration ships; the entry names nothing", namespace, version)
+				continue
+			}
+			if len(entries) == 0 {
+				t.Errorf("%s %s: an empty list excuses nothing; remove the entry", namespace, version)
+			}
+			for _, eq := range entries {
+				if eq.source != Digest(m) {
+					t.Errorf("%s %s: the entry's source digest is %s but the migration now hashes to "+
+						"%s — the file changed again, so this equivalence describes content that no "+
+						"longer ships and admits nobody", namespace, version, eq.source, Digest(m))
+				}
+				if eq.applied == eq.source {
+					t.Errorf("%s %s: applied and source digests are equal, so the entry excuses "+
+						"nothing the plain comparison did not already admit", namespace, version)
+				}
+			}
+		}
+	}
+}
+
+// loadNamespaceMigrations reads one namespace's migrations off disk, so the test
+// above compares against what ships rather than a copy of it.
+func loadNamespaceMigrations(t *testing.T, namespace string) []Migration {
+	t.Helper()
+	root := filepath.Join("..", "..", "..", "migrations")
+	migrations, err := Load(os.DirFS(root), namespace)
+	if err != nil {
+		t.Fatalf("loading the %s migrations: %v", namespace, err)
+	}
+	return migrations
 }
 
 // A version this database never applied has no content to disagree about.

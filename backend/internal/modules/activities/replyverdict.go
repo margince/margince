@@ -57,7 +57,7 @@ const (
 	// interest, a question worth answering, an ask to meet.
 	ReplyVerdictPositive = "positive"
 	// ReplyVerdictNegative is a reply that closes it: not interested, wrong
-	// person with no referral, stop writing.
+	// contact with no referral, stop writing.
 	ReplyVerdictNegative = "negative"
 	// ReplyVerdictNeutral is a reply that is neither — an out-of-office, an
 	// acknowledgement, a redirect to somebody else without a judgement.
@@ -146,7 +146,7 @@ func (s *Store) CorrectReplyVerdict(ctx context.Context, id ids.UUID, verdict *s
 		// A HUMAN write takes the row-scope gate, where the classifier's does
 		// not. The classifier runs as the system principal over the whole
 		// workspace and its population is bounded by the backlog predicate; a
-		// person correcting a verdict is bounded by what they may write, and
+		// contact correcting a verdict is bounded by what they may write, and
 		// without this any seat holding activity:update could re-judge a
 		// colleague's message. The gate answers 404 for a row out of scope, so
 		// the refusal does not disclose that the message exists.

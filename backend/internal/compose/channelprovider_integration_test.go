@@ -113,7 +113,7 @@ func TestReconcileChannelProvidersRefusesAProviderNameTheGrammarRejects(t *testi
 }
 
 // A provider whose supplier is gone on a LATER boot is kept, never deleted —
-// activity and person_channel_identity rows may still reference it.
+// activity and contact_channel_identity rows may still reference it.
 func TestReconcileChannelProvidersNeverDeletesARetiredRow(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := context.Background()
@@ -280,7 +280,7 @@ func TestReconcileChannelProvidersRegistersACaptureOnlyUnitTransportAsUnsendable
 // A unit SHADOWING a core connector fails the boot, and this is the sharpest
 // failure the whole surface has: every Telegram reply a rep wrote would leave on
 // the unit's per-member credential instead of the workspace's bot — the same
-// message, sent by a different person, with nothing on the screen different.
+// message, sent by a different contact, with nothing on the screen different.
 //
 // It is refused HERE rather than in the extension preflight because this is the
 // first point at which both sets exist: the core's transports are decided when
@@ -427,7 +427,7 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 }
 
 // Reconcile runs over an infra transaction, never a workspace-bound one: the
-// boot step runs BEFORE the installation is bootstrapped, when no organization
+// boot step runs BEFORE the installation is bootstrapped, when no company
 // exists. A workspace-bound transaction cannot resolve which workspace to bind,
 // which halts every fresh install rather than some corner of one.
 func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) {
@@ -457,10 +457,10 @@ func TestTheBootStepReconcilesBeforeTheInstallationIsBootstrapped(t *testing.T) 
 	}
 
 	if err := ReconcileChannelProviders(ctx, e.Pool); err != nil {
-		t.Fatalf("the boot step with no organization bootstrapped yet: %v", err)
+		t.Fatalf("the boot step with no company bootstrapped yet: %v", err)
 	}
 	if !activities.CanSendOnProvider("prebootstrap_chat") {
-		t.Error("the boot step did not reconcile with no organization bootstrapped yet")
+		t.Error("the boot step did not reconcile with no company bootstrapped yet")
 	}
 }
 

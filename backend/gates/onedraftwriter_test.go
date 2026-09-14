@@ -11,7 +11,7 @@ package gates
 // somewhere else — it is the assertion, in both directions, and the two tests
 // are what fail when it stops being true.
 //
-// accountdraft and persondraft each held a FULL copy of it: Write,
+// accountdraft and contactdraft each held a FULL copy of it: Write,
 // writeChecked, writeWithModel, buildRequest and ParseDraft, plus a 124-line
 // voicefloor.go that differed from the other only in its package line. The two
 // copies differed in error-message wording and one word of one comment. Nothing
@@ -54,7 +54,7 @@ const (
 // adding one here is the deliberate act of widening the rule. The reply lane in
 // `internal/compose` itself is not here — it is not a package of its own and it
 // answers an activity rather than a record, which is a different grounding.
-var draftingPackages = []string{"accountdraft", "persondraft"}
+var draftingPackages = []string{"accountdraft", "contactdraft"}
 
 // modelCall is how a package reaches a model lane directly: the ask, and the
 // request it would have to build first.

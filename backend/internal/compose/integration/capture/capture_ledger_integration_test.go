@@ -69,9 +69,9 @@ func TestCaptureLedgerStopsDeferringAtTheWorkspaceCeiling(t *testing.T) {
 	// And no record was minted as a consolation: at the cap the sender stays
 	// exactly as unknown as it was.
 	if n := countRows(t, e, `
-		SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
+		SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 		WHERE pe.email = 'late@stranger.example'`); n != 0 {
-		t.Fatal("a capped deferral created the person it declined to ask about")
+		t.Fatal("a capped deferral created the contact it declined to ask about")
 	}
 }
 

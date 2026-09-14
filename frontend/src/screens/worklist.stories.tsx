@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { WorklistScreen } from "./worklist";
@@ -73,6 +74,7 @@ export const AFullDay: Story = {
       reach: [],
       // A full day: money drifting, buyers waiting, a decision pile.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 384_500_00,
         revenue_currency: "EUR",
         buyer_replies: 14,
@@ -203,6 +205,7 @@ export const WorkDueLater: Story = {
       sources_unavailable: [],
       reach: [],
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,
@@ -294,6 +297,7 @@ export const NothingWaiting: Story = {
       reach: [],
       // Nothing waiting: every figure honestly zero, and the money priced.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,
@@ -327,6 +331,7 @@ export const PartlyUnread: Story = {
       reach: [],
       // Partly unread: the figures are floors, so the strip says so.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 42_000_00,
         revenue_currency: "EUR",
         buyer_replies: 2,
@@ -364,6 +369,7 @@ export const ALeadsDay: Story = {
       reach: [],
       // A leads day: prospecting carries it, and nothing at risk could be priced.
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: null,
         buyer_replies: 1,
         prospecting: 9,
@@ -401,17 +407,23 @@ export const ALeadsDay: Story = {
 // "50" over a number that is really 50-or-more would not go looking, which is
 // the one direction this surface must not get wrong.
 export const ATeamBiggerThanTheBoardCanCount: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "My team" }),
+    );
+  },
   render: () => {
     stubDay(
       {
         as_of: "2026-08-31T09:00:00Z",
-        scope: "mine",
+        scope: "team",
         scope_options: ["mine", "unassigned", "team", "all"],
         summary: { urgent: 0, due: 0, lower_priority: 0, total: 0 },
         sources_unavailable: [],
         reach: [],
         // A team bigger than the board can count: every figure a floor.
         readings: {
+          changed_since_brief: 0,
           revenue_at_risk_minor: 1_250_000_00,
           revenue_currency: "EUR",
           buyer_replies: 61,
@@ -453,6 +465,7 @@ export const WhatWentWrong: Story = {
       sources_unavailable: [],
       reach: [],
       readings: {
+        changed_since_brief: 0,
         revenue_at_risk_minor: 0,
         revenue_currency: "EUR",
         buyer_replies: 0,

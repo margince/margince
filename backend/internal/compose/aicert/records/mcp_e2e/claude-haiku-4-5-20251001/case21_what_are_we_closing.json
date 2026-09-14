@@ -4,15 +4,16 @@
     1,
     4
   ],
-  "passed": 3,
+  "passed": 1,
   "runs": 3,
   "pass_at": 2,
   "usage": {
-    "input_tokens": 62,
-    "output_tokens": 4176,
-    "cache_creation_input_tokens": 16757,
-    "cache_read_input_tokens": 292909,
+    "input_tokens": 54,
+    "output_tokens": 3881,
+    "cache_creation_input_tokens": 16038,
+    "cache_read_input_tokens": 255113,
     "runs_measured": 3,
-    "cost_usd": 0.0837
+    "runs_costed": 3,
+    "cost_usd": 0.08
   }
 }

@@ -2,8 +2,8 @@
  *
  * The overview a rep reads in ten seconds (DESIGN.md §7, "Glance, then
  * depth"): the readings row, the 360 as the first pane at the full measure,
- * then two columns — what needs a person and the money on the left; Ask,
- * About and People on the right. Two column STACKS rather than one grid, so
+ * then two columns — what needs a contact and the money on the left; Ask,
+ * About and Contacts on the right. Two column STACKS rather than one grid, so
  * each column packs its own panes and a tall needs list never opens a gap
  * beside a short one. */
 .co-glance-cols {
@@ -96,10 +96,10 @@
   margin-top: var(--space-3);
 }
 
-/* The remainder line under the cards: how many people the glance did not
+/* The remainder line under the cards: how many contacts the glance did not
    draw. Not a card and not a chip — it names no record, so it reads as the
    caption it is. */
-.co-people-rest {
+.co-contacts-rest {
   padding-inline-start: var(--space-2);
 }
 

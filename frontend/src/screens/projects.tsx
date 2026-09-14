@@ -12,6 +12,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem, useMe, useSorMode } from "./common";
 import { CreateAction } from "./create";
+import { useObjectCustomFields } from "./customfields.form";
 import { EntityRef } from "./entityref";
 import {
   type ListPage,
@@ -116,9 +117,9 @@ export function ProjectKeyChip({
  */
 export function useCompanyOptions(): ProjectCompanyOption[] {
   const companies = useQuery({
-    queryKey: ["organizations"],
+    queryKey: ["companies"],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
+      const { data, error } = await api.GET("/companies", {
         params: { query: { limit: 50 } },
       });
       if (error) {
@@ -130,9 +131,12 @@ export function useCompanyOptions(): ProjectCompanyOption[] {
   return companies.data?.data ?? [];
 }
 
-async function createProject(values: Record<string, string>): Promise<Project> {
+async function createProject(
+  values: Record<string, string>,
+  custom: Record<string, unknown>,
+): Promise<Project> {
   const { data, error } = await api.POST("/projects", {
-    body: mapProjectCreate(values),
+    body: { ...mapProjectCreate(values), ...custom },
   });
   if (error) {
     throwProblem(error);
@@ -150,19 +154,23 @@ function NewProjectAction({
   me,
 }: Readonly<{ companies: ProjectCompanyOption[]; me: string }>) {
   const t = useT();
+  const cf = useObjectCustomFields("project");
   return (
     <CreateAction
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
-      create={createProject}
+      create={(values) => createProject(values, cf.toBody(values))}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
-      fields={projectFields(t, {
-        companies,
-        me,
-        currentOwner: null,
-        mode: "create",
-      })}
+      fields={[
+        ...projectFields(t, {
+          companies,
+          me,
+          currentOwner: null,
+          mode: "create",
+        }),
+        ...cf.formFields,
+      ]}
     />
   );
 }
@@ -252,14 +260,19 @@ export function ProjectsScreen() {
             // reader who wanted the account behind it had to open the project
             // first and come back out.
             cell: (project: Project) => (
-              <EntityRef kind="organization" id={project.organization_id} />
+              <EntityRef kind="company" id={project.company_id} />
             ),
+            // By the company's NAME. One outside this reader's scope orders
+            // the page by nothing rather than by a name it withholds.
+            sort: "company_id",
           },
           {
             key: "phase",
             header: t("project.phaseLabel"),
-            // Not sortable: phase is not in the list's sort vocabulary, and
-            // the chip beside the table is the way to read one phase at a time.
+            // By how LIVE the work is — delivering, pursuing, initiative, then
+            // closed — which is the arrangement the account page already uses.
+            // Alphabetical would be that order shuffled.
+            sort: "phase",
             cell: (project: Project) => <PhaseBadge phase={project.phase} />,
           },
           ownerColumn<Project>(t),

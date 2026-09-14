@@ -16,7 +16,7 @@ func fhRow(actorType string, before, after map[string]any) auditDiffRow {
 	return auditDiffRow{
 		id:         ids.NewV7(),
 		action:     "update",
-		entityType: "person",
+		entityType: "contact",
 		entityID:   ids.NewV7(),
 		actorType:  actorType,
 		actorID:    "user-1",
@@ -213,7 +213,7 @@ func TestStringifyStructuredValuesRenderAsJSONNotGoSyntax(t *testing.T) {
 }
 
 // A site-read confirmation audits the pipeline's own state under the
-// organization: which draft it applied, where it read, and the entire applied
+// company: which draft it applied, where it read, and the entire applied
 // payload. None of those is a field of the record — nobody can see one as a
 // live value — so "what changed on this record" must not recite them.
 func TestDiffWithholdsTheWritingPipelinesOwnBookkeeping(t *testing.T) {

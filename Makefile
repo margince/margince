@@ -15,7 +15,7 @@ GO ?= go
 # The deterministic script gates `check-backend` fans out. One list, one
 # consumer — see the comment on check-backend for why they are not that
 # target's prerequisites.
-ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
+ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-api-entrypoint \
   test-dev-cleanup \
   test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict \
   test-review-coverage \
@@ -27,7 +27,9 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-desktop-launcher changelog-sections \
   test-changelog-sections test-dev-postgres-container test-e2e-llm-check \
-  test-craft-review
+  test-release-version-stamped test-closing-declaration test-release-patch-base \
+  test-published-tag \
+  test-craft-review test-release-tag-version
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
 # CI runner and an 18-core laptop each get the width they have without anybody
@@ -63,7 +65,7 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
+.PHONY: help install dev-fresh check check-all check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture bench-dispatch perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab handbook-embed gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-reset verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check perfdoc e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows fitness-jurisdiction storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-ci-verdict test-merge-verdict test-review-coverage test-laneorder secret-scan test-secret-scan test-sbom-sign test-dev-dsn test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations check-extension-modules contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze changelog-sections test-changelog-sections test-release-tag-version test-release-version-stamped test-closing-declaration test-release-patch-base test-published-tag test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check sbom-gate
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -165,11 +167,17 @@ check:
 ## minutes and needs Postgres up, so paying it on a README edit would train
 ## everybody to skip the gate that also holds the security cases.
 ##
-## Not in the pre-push hook either, and the reason is this machine rather than
-## principle: parallel sessions share one test template, so a hook running the
-## lane on every push would have them rebuilding each other's schema mid-run —
-## failures that are schema-shaped and look nothing like their cause. The hook
-## keeps the checks that are fast, need nothing running, and cannot collide.
+## The pre-push hook DOES run the lane, for a push that changes backend Go or
+## SQL — a migration is the likeliest thing of all to redden it.
+## It did not until 2026-09-12, and the reason it gave had expired: parallel
+## sessions were said to share one test template, so a hook would have them
+## rebuilding each other's schema mid-run. scripts/lib-testdb.sh has derived a
+## template per linked worktree since 2026-08-24 (_testdb_worktree_slug), which
+## is two weeks before that reasoning was written down.
+##
+## What is still shared: two shells in the SAME worktree, and the primary
+## checkout. The hook skips rather than blocks when pg_isready says Postgres is
+## not ready, because a push blocked on a stopped stack gets the hook disabled.
 check-all:
 	@bash scripts/phase-timer.sh reset
 	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
@@ -224,7 +232,7 @@ infra-down:
 ## the derived slug for a second stack inside one worktree. A bound port stops
 ## the boot loudly rather than letting you poll a server from an older branch;
 ## `make dev-sweep` is the machine-wide clear. Boots COLD: the
-## organization + admin the api bootstraps from config/margince.yaml and no
+## company + admin the api bootstraps from config/margince.yaml and no
 ## other data, so onboarding and empty states are the default view — run
 ## `make seed-dev` on top when you want the demo records. Reads an optional
 ## Anthropic BYOK key from .env.local for the live cold-start read-back. Logs +
@@ -233,7 +241,7 @@ dev:
 	@bash scripts/dev.sh up "$(DEV_SLUG)"
 
 ## dev-fresh — `make dev` onto a REBUILT database: drops it, re-migrates,
-## and boots the installation a first customer gets (organization + admin,
+## and boots the installation a first customer gets (company + admin,
 ## no records). Use it when the last session left data behind; plain
 ## `make dev` keeps whatever is there.
 ##
@@ -447,7 +455,7 @@ seed-dev:
 	$(MAKE) -C backend seed-dev-db
 
 ## verify-boot — prove a running, seeded stack end to end: seeded-admin
-## login, seeded people visible over /v1, frontend production build.
+## login, seeded contacts visible over /v1, frontend production build.
 ## Pure client (make dev, then make seed-dev — dev boots cold); fails loudly,
 ## never skips.
 verify-boot:
@@ -635,6 +643,16 @@ fe-typecheck-composed: composition
 ## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
 ## + PERF-1's held-read claim) against the built app over the seed mock.
 ## Set BASE_URL to point the same suite at a live backend.
+##
+## `pnpm e2e` builds the BUNDLE and not the typecheck in front of it. That
+## typecheck is `pnpm build`'s first half and it dominates the build — vite
+## emits in seconds and `tsc -b` takes over a minute of them. This
+## lane is about what the built app renders; whether the sources typecheck is
+## fe-bundle's question, it runs the same `tsc -b` on every change that reaches
+## here (both jobs sit behind the same frontend classifier and both are in the
+## `ci` aggregate), and a type error therefore still fails the merge. What the
+## two share is `build:bundle`, so the app this suite exercises cannot quietly
+## become a different artefact from the one that ships.
 frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
 
@@ -674,7 +692,7 @@ bench-mobile-check:
 ## because the two states that must look right — a populated account and a
 ## freshly imported one — are data states rather than fixtures.
 ## Screenshots land OUTSIDE the repo for eyeball comparison against the PNGs.
-## Override E2E_ORG_POPULATED / E2E_ORG_SPARSE to aim it at other companies.
+## Override E2E_COMPANY_POPULATED / E2E_COMPANY_SPARSE to aim it at other companies.
 E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
@@ -692,7 +710,7 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 ##
 ## HALF THE JUDGING IS A MODEL. A scenario's mechanical assertions are regexes —
 ## does the answer carry this name, this date, this count; its `judge:` criteria
-## are sentences a person can read, decided per run by a pinned model, because
+## are sentences a human can read, decided per run by a pinned model, because
 ## the regexes that used to carry them scored 15% and 20% of CORRECT answers as
 ## failures on two paid sweeps. That costs a few extra calls per run, and a lane
 ## whose judge cannot be reached STOPS rather than scoring: E2E_LLM_JUDGE
@@ -728,8 +746,8 @@ e2e-company:
 	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
 	cd frontend && BASE_URL="$$app" \
 		E2E_SHOT_DIR="$(E2E_SHOT_DIR)" \
-		E2E_ORG_POPULATED="$(E2E_ORG_POPULATED)" \
-		E2E_ORG_SPARSE="$(E2E_ORG_SPARSE)" \
+		E2E_COMPANY_POPULATED="$(E2E_COMPANY_POPULATED)" \
+		E2E_COMPANY_SPARSE="$(E2E_COMPANY_SPARSE)" \
 		pnpm exec playwright test company-record.spec.ts
 	@echo "screenshots: $(E2E_SHOT_DIR)"
 
@@ -1161,6 +1179,49 @@ changelog-sections:
 ## above the first release, and a file it can read nothing out of.
 test-changelog-sections:
 	@./scripts/test-check-changelog-sections.sh
+
+## test-release-version-stamped — prove the release bake refuses to publish a set
+## that carries no release version. An empty or "dev" VERSION builds and pushes
+## perfectly well and ships a fleet whose mixed-release guard is inert, which
+## nothing downstream can tell from a working one — so the one path that must
+## always stamp proves it, and this proves the proof still refuses.
+test-release-version-stamped:
+	@./scripts/release-version-stamped.test.sh
+
+## test-closing-declaration — prove the closing-declaration report still refuses
+## a pull request that declares nothing, and still accepts one that declares
+## either way. The case that matters is the prose one: the check exists because
+## "Closes the residual half of #548" reads as a declaration and closes nothing,
+## so a version reading the BODY would pass the exact pull request it was written
+## for and report the defect as absent.
+test-closing-declaration:
+	@./scripts/check-closing-declaration.test.sh
+
+## test-release-patch-base — prove a release patch is cut from what was last
+## PUBLISHED, not from this push's previous tip. The two agree only while every
+## lane publishes, and a cancelled or failed one drops its commit's files from
+## every patch a consumer will ever apply — silently, and identically to a
+## correct run from the publishing side. The case that matters walks the
+## sequence that made it a defect: publish, skip, publish.
+test-release-patch-base:
+	@./scripts/release-patch-base.test.sh
+
+## test-published-tag — prove the tag that base is read from only ever moves
+## FORWARD. The move is a job outside the publish concurrency group, so two
+## releases in flight are serialized at the publish and not at the tag: an older
+## one's move landing last would point the tag backward, and every later patch
+## would then be cut from a base ahead of what consumers actually have. The case
+## that matters records an older release after a newer one already recorded
+## itself.
+test-published-tag:
+	@./scripts/publish-released-tag.test.sh
+
+## test-release-tag-version — the release tag reader's own test: what the
+## grammar accepts, and what shelf each accepted tag lands on. The reader has
+## exactly one caller, a tag push, so without this the grammar's only test is a
+## release named `v0.1` that orders against nothing.
+test-release-tag-version:
+	@./scripts/release-tag-version.test.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears

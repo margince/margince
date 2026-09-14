@@ -49,7 +49,7 @@ func TestOnlyADeliveryAboveEveryHopIsTrusted(t *testing.T) {
 			want: "alias@founder.example",
 		},
 		{
-			// The attack. A sender submits a Delivered-To naming the person
+			// The attack. A sender submits a Delivered-To naming the contact
 			// they want silenced; the receiving hop's Received lands above it.
 			name: "below a hop, where the sender could have written it",
 			lines: []string{

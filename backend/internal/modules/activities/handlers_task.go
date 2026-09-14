@@ -53,7 +53,7 @@ func (h Handlers) CreateTask(w http.ResponseWriter, r *http.Request, _ crmcontra
 func activityOfTask(req crmcontracts.CreateTaskRequest) (crmcontracts.CreateActivityRequest, error) {
 	subject := req.Subject
 	out := crmcontracts.CreateActivityRequest{
-		Kind:       crmcontracts.CreateActivityRequestKindTask,
+		Kind:       crmcontracts.CreateActivityRequestKindCreateActivityRequestKindTask,
 		Subject:    &subject,
 		Body:       req.Body,
 		DueAt:      req.DueAt,

@@ -7,12 +7,12 @@ package integration
 
 // Erasing a subject who was invited into a Deal Room.
 //
-// A room seat is the one place a named outside person is stored WITHOUT a
-// person row: the buyer is invited by address long before anybody decides they
-// are a contact. Erasure resolves a subject through their person row and their
+// A room seat is the one place a named outside contact is stored WITHOUT a
+// contact row: the buyer is invited by address long before anybody decides they
+// are a contact. Erasure resolves a subject through their contact row and their
 // addresses, so a seat is reached only by the address match — and this suite is
 // what says it stays reached. Every row here is written by the real writers
-// (people.Store, deals.Store, dealrooms.Store) and erased by the real
+// (contacts.Store, deals.Store, dealrooms.Store) and erased by the real
 // privacy.Eraser: hand-inserted rows would prove nothing about either.
 
 import (
@@ -21,8 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,7 +36,7 @@ import (
 var roomErasureAdmin = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
-		"person":    {Create: true, Read: true, Update: true, Delete: true},
+		"contact":   {Create: true, Read: true, Update: true, Delete: true},
 		"deal":      {Create: true, Read: true, Update: true, Delete: true},
 		"deal_room": {Create: true, Read: true, Update: true, Delete: true},
 		"activity":  {Create: true, Read: true, Update: true, Delete: true},
@@ -47,10 +47,10 @@ var roomErasureAdmin = principal.Permissions{
 // buyerSeat is one erasable subject as the room knows them: the contact record
 // erasure resolves, and the room seat carrying the same address.
 type buyerSeat struct {
-	person ids.PersonID
-	room   ids.DealRoomID
-	seat   ids.DealRoomParticipantID
-	email  string
+	contact ids.ContactID
+	room    ids.DealRoomID
+	seat    ids.DealRoomParticipantID
+	email   string
 }
 
 // seedBuyerInARoom creates a contact, a deal, a room on it, and a seat for that
@@ -59,9 +59,9 @@ func seedBuyerInARoom(t *testing.T, e *Env, email string) buyerSeat {
 	t.Helper()
 	ctx := e.As(e.AdminUser, nil, roomErasureAdmin)
 	name := "Rita Reviewer"
-	person, err := people.NewStore(e.DB()).CreatePerson(ctx, people.CreatePersonInput{
+	contact, err := contacts.NewStore(e.DB()).CreateContact(ctx, contacts.CreateContactInput{
 		FullName: name, Source: "ui",
-		Emails: []people.PersonEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("seeding the buyer's contact record: %v", err)
@@ -83,16 +83,16 @@ func seedBuyerInARoom(t *testing.T, e *Env, email string) buyerSeat {
 		t.Fatalf("seeding the buyer's seat: %v", err)
 	}
 	return buyerSeat{
-		person: ids.From[ids.PersonKind](ids.UUID(person.Id)),
-		room:   roomID,
-		seat:   ids.From[ids.DealRoomParticipantKind](ids.UUID(invited.Participant.Id)),
-		email:  email,
+		contact: ids.From[ids.ContactKind](ids.UUID(contact.Id)),
+		room:    roomID,
+		seat:    ids.From[ids.DealRoomParticipantKind](ids.UUID(invited.Participant.Id)),
+		email:   email,
 	}
 }
 
 // readSeat returns the seat's stored name, address and revocation as they are
 // on disk, past every read gate: the question is what the DATABASE still holds
-// about an erased person, not what an API chooses to show.
+// about an erased contact, not what an API chooses to show.
 func readSeat(t *testing.T, e *Env, seat ids.DealRoomParticipantID) (name, email string, revoked bool) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -119,7 +119,7 @@ func TestErasingASubjectWipesTheDealRoomSeatCarryingTheirAddress(t *testing.T) {
 			before, beforeEmail, beforeRevoked)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.person.UUID, "an erasure request from the subject"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -140,7 +140,7 @@ func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
 	seeded := seedBuyerInARoom(t, e, "trail.erasure@acme.test")
 
 	// A sign-in is what the buyer's own door writes, and it is the row that
-	// says WHEN this person was here. Written through the real exchange rather
+	// says WHEN this contact was here. Written through the real exchange rather
 	// than inserted, so the test cannot pass against a trail the product never
 	// produces.
 	rooms := dealrooms.NewStore(e.DB())
@@ -156,7 +156,7 @@ func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
 		t.Fatal("signing in recorded nothing, so this test would pass against a product that records nothing")
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.person.UUID, "an erasure request from the subject"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -184,8 +184,8 @@ func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
 		t.Fatalf("the seat carried %d erase row(s) before any erasure ran", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(
-		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.person.UUID,
+	if err := privacy.NewEraser(e.DB()).EraseContact(
+		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID,
 		"an erasure request from the subject"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}

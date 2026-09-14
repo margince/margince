@@ -496,7 +496,7 @@ func TestAClassifiedFailureStillSendsItsCauseToTheLog(t *testing.T) {
 // copying a sentence out of rendered prose to use as a template brings one along.
 func TestAnInvisibleRuneCannotSmuggleASubstituteSentencePastTheCollisionCheck(t *testing.T) {
 	// The runes are written as ESCAPES rather than pasted in. A test whose input
-	// is invisible in its own source cannot be read, and the next person to touch
+	// is invisible in its own source cannot be read, and the next contact to touch
 	// it would have no way to see what makes each case different.
 	for _, tc := range []struct{ name, sentence string }{
 		{"a non-breaking space for a space", strings.Replace(UnvettedFailureReason, " ", "\u00a0", 1)},

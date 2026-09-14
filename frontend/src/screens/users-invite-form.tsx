@@ -19,7 +19,7 @@ import "./users-admin.css";
 
 // The invite form: an address, a name, a role and the teams the member lands
 // in, committed together. Two surfaces ask it — the roster's dialog in
-// Settings → People and the setup journey's team step — and it is one form so
+// Settings → Contacts and the setup journey's team step — and it is one form so
 // the two cannot come to invite differently. What happens after the write
 // (closing a dialog, minting a set-password link, moving the journey on) is
 // the caller's, through `onInvited`.
@@ -67,9 +67,9 @@ export type InvitedMember = Readonly<{ id: string; name: string }>;
 
 /**
  * The name a member is created under when the form asks for none: the part
- * of the address before the @, with the dots and underscores people write
+ * of the address before the @, with the dots and underscores contacts write
  * between their names read as spaces and each word capitalised. It is a
- * starting point the admin can change in Settings → People, and it is what
+ * starting point the admin can change in Settings → Contacts, and it is what
  * the roster shows until they do — so it has to read as a name, not as an
  * address fragment.
  */
@@ -95,7 +95,7 @@ export function InviteUserForm({
   titleId?: string;
   /**
    * Whether the form asks for the member's name. The setup journey does not:
-   * one address is enough to get a first person in, and the name is derived
+   * one address is enough to get a first contact in, and the name is derived
    * from it (`nameFromEmail`) until somebody changes it.
    */
   askName?: boolean;
@@ -226,7 +226,7 @@ export function InviteUserForm({
         )}
         {/* "No teams yet" is a claim about the workspace, so only a roster
             read to its end may make it: a walk that stopped early would have
-            an admin invite people into no team at all on the strength of
+            an admin invite contacts into no team at all on the strength of
             pages nothing read. */}
         {teams.data?.length === 0 && !teamsPartial && (
           <p className="t-caption">{t("users.noTeamsYet")}</p>

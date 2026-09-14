@@ -27,7 +27,7 @@
 # standing decision here, not an incident, and `ci` is a fan-in that only starts
 # once every lane has finished — so it posts roughly ten minutes after a run
 # begins and a merge inside that window sees nothing. Reporting that was
-# reporting the decision back to the people who made it: seventeen issues in
+# reporting the decision back to the contacts who made it: seventeen issues in
 # under five hours, every one of them describing a bypass working as intended.
 # An alarm that fires on the expected state is an alarm that gets turned off,
 # and it would have buried the two findings above.

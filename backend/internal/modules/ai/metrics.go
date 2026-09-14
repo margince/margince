@@ -164,7 +164,7 @@ func modelLabel(servedModel string) string {
 //
 // Not railsubject's boundedLabel, which bounds a company name for a wire
 // payload at a different limit and cuts silently: a truncated name is still a
-// name a person recognises, while a truncated series label that did not say so
+// name a contact recognises, while a truncated series label that did not say so
 // would read as a model that does not exist.
 func boundedSeriesLabel(value string) string {
 	runes := []rune(value)

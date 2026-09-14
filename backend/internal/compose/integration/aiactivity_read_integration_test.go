@@ -5,7 +5,7 @@
 
 package integration
 
-// One person's feed, read from the projection against a real database.
+// One seat's feed, read from the projection against a real database.
 //
 // Every row here arrives the way production writes one — a real reading moved
 // by activities.Store, announced on the bus, projected by the real consumer.
@@ -28,10 +28,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// feed reads one person's own view.
+// feed reads one contact's own view.
 //
-// The person comes from the BOUND PRINCIPAL, because that is the only way the
-// read can be asked at all — another person's feed is not expressible. "Today"
+// The contact comes from the BOUND PRINCIPAL, because that is the only way the
+// read can be asked at all — another seat's feed is not expressible. "Today"
 // comes from the database clock, so the boundary is the one the rows were
 // stamped against rather than the test host's idea of the date.
 func (f *readingFixture) feed(t *testing.T, user ids.UUID) aiactivity.Feed {
@@ -55,9 +55,9 @@ func (f *readingFixture) midnight(t *testing.T) time.Time {
 	return midnight
 }
 
-// A queued reading is LIVE for the person who asked for it — queued is work in
+// A queued reading is LIVE for the contact who asked for it — queued is work in
 // progress to them, not an absence.
-func TestAQueuedReadingIsLiveInItsOwnPersonsFeed(t *testing.T) {
+func TestAQueuedReadingIsLiveInItsOwnContactsFeed(t *testing.T) {
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -92,7 +92,7 @@ func TestTheFeedIdentifiesTheRecordAnOccurrenceIsAbout(t *testing.T) {
 
 // The feed is PERSONAL. Another seat sees none of it, and the separation is the
 // row's own actor rather than anything the caller passes.
-func TestOnePersonsWorkIsNotInAnothersFeed(t *testing.T) {
+func TestOneContactsWorkIsNotInAnothersFeed(t *testing.T) {
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -163,7 +163,7 @@ func TestASettledOccurrenceIsNeverStalled(t *testing.T) {
 
 // A read with nobody bound is refused rather than answered with everybody's
 // work. There is no id to pass, so this is the ONLY way to ask wrongly.
-func TestAFeedWithNoPersonIsRefused(t *testing.T) {
+func TestAFeedWithNoContactIsRefused(t *testing.T) {
 	f := newReadingFixture(t)
 	if _, err := aiactivity.NewStore(f.env.DB()).
 		Mine(context.Background(), f.midnight(t), nil); err == nil {

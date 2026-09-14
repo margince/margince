@@ -38,7 +38,7 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 		// A .vcf is a text file of a few hundred bytes per card, so it rides
 		// the CSV import's ceiling rather than earning an operator dial of its
 		// own — the two are the same kind of upload, a delimited address book.
-		"/v1/people/vcard-import":              limits.CSVImport,         // importVCards
+		"/v1/contacts/vcard-import":            limits.CSVImport,         // importVCards
 		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
 		// A company mark, and the only ceiling here an operator cannot move.
 		// The others bound what a workspace ACCUMULATES — attachments, imports,
@@ -57,7 +57,7 @@ func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 }
 
 // What a company mark may arrive as. Generous for what it holds — a 5 MB
-// source is a photograph, not a logo — because the cost of refusing a person's
+// source is a photograph, not a logo — because the cost of refusing a contact's
 // own file is that they go and find image software, while the cost of
 // accepting it is one decode of an image this server immediately shrinks.
 const companyLogoUploadBytes = 5_000_000

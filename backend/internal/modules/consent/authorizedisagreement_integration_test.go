@@ -104,7 +104,7 @@ func TestADecisionWithNoLegacyAnswerIsNotADisagreement(t *testing.T) {
 	}
 }
 
-// ONE MESSAGE TO FIVE PEOPLE IS ONE MESSAGE. An operator asking what
+// ONE MESSAGE TO FIVE CONTACTS IS ONE MESSAGE. An operator asking what
 // enforcement costs is asking how many SENDS stop, not how many rows changed —
 // counting recipients would inflate the number by the size of the To line.
 func TestOneMessageToSeveralRecipientsCountsOnce(t *testing.T) {
@@ -135,7 +135,7 @@ func TestOneMessageToSeveralRecipientsCountsOnce(t *testing.T) {
 }
 
 // The report discloses nothing about any subject, so it is gated on reading the
-// installation's own settings rather than on a person. A caller without that
+// installation's own settings rather than on a contact. A caller without that
 // grant is refused.
 func TestTheReportNeedsTheSettingsReadGrant(t *testing.T) {
 	e := setupResolve(t)

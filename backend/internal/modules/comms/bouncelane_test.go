@@ -18,10 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestHardBouncesForRefusesACallerWithNoPersonBehindIt(t *testing.T) {
+func TestHardBouncesForRefusesACallerWithNoContactBehindIt(t *testing.T) {
 	store := NewStore(nil, nil, nil)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	if _, err := store.HardBouncesFor(ctx, time.Time{}, 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("HardBouncesFor with no person = %v, want the permission sentinel the lane withholds on", err)
+		t.Fatalf("HardBouncesFor with no contact = %v, want the permission sentinel the lane withholds on", err)
 	}
 }

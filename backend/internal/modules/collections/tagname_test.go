@@ -34,7 +34,7 @@ func TestNormalizeTagName(t *testing.T) {
 	}
 }
 
-// The two spellings a database would hold as separate rows and a person would
+// The two spellings a database would hold as separate rows and a contact would
 // read as one word. This is the whole reason the rule exists, so it is asserted
 // as a property rather than left implied by the cases above.
 func TestNormalizeTagNameFoldsWhatAReaderCannotTellApart(t *testing.T) {

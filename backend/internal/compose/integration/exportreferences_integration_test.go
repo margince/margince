@@ -8,9 +8,9 @@ package integration
 // An exported row does not name a record the exporter could not open.
 //
 // A deal is customer identity — every seat of the workspace reads every deal —
-// and the organization it points at is not: capture privacy makes a company
+// and the company it points at is not: capture privacy makes a company
 // private to the colleague who captured it. So the two halves of one bundle can
-// disagree about the same record: the organization member omits a company the
+// disagree about the same record: the company member omits a company the
 // exporter may not open, while deal.csv names its id in a reference column.
 //
 // Field masking cannot close that. It asks what this role may see of any row,
@@ -35,16 +35,16 @@ func seedDealOnAPrivateCompany(t *testing.T, e *SearchEnv) (deal, hidden ids.UUI
 	pipelineID := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, 'Sales', true, 0)`)
 	stageID := e.SeedID(t, `INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability)
 		VALUES ($1, $2, 'Qualify', 0, 'open', 10)`, pipelineID)
-	hidden = e.SeedID(t, `INSERT INTO organization (id, display_name, owner_id, visibility, source, captured_by)
+	hidden = e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
 		VALUES ($1, 'Meridian Labs', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
-	deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, organization_id,
+	deal = e.SeedID(t, `INSERT INTO deal (id, owner_id, name, pipeline_id, stage_id, company_id,
 		forecast_category, source, captured_by)
 		VALUES ($1, $2, 'Meridian renewal', $3, $4, $5, 'commit', 'manual', 'human:x')`,
 		e.Rep1, pipelineID, stageID, hidden)
 	return deal, hidden
 }
 
-// dealAndCompanyReader holds deal AND organization read at team scope.
+// dealAndCompanyReader holds deal AND company read at team scope.
 //
 // Both grants, deliberately. VisibleSubset withholds every id when the OBJECT
 // grant is missing, so a reader holding only `deal` blanks the reference
@@ -57,7 +57,7 @@ func (e *SearchEnv) dealAndCompanyReader(user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"deal":             {Read: true},
-				"organization":     {Read: true},
+				"company":          {Read: true},
 				objInstallSettings: {Read: true},
 			},
 			RowScope: principal.RowScopeTeam,
@@ -86,12 +86,12 @@ func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {
 		t.Fatalf("exported ids = %v, want the one visible deal %s", ids, deal)
 	}
 
-	for _, got := range CSVColumn(t, result.Body, "organization_id") {
+	for _, got := range CSVColumn(t, result.Body, "company_id") {
 		if got == hidden.String() {
-			t.Errorf("the export names organization %s, which this exporter's own organization read would refuse — the id alone is an existence oracle over a capture-private company", hidden)
+			t.Errorf("the export names company %s, which this exporter's own company read would refuse — the id alone is an existence oracle over a capture-private company", hidden)
 		}
 		if got != "" {
-			t.Errorf("organization_id = %q, want empty for a company this exporter cannot open", got)
+			t.Errorf("company_id = %q, want empty for a company this exporter cannot open", got)
 		}
 	}
 }
@@ -109,8 +109,8 @@ func TestAFilteredExportKeepsACompanyTheExporterCanOpen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)
 	}
-	named := CSVColumn(t, result.Body, "organization_id")
+	named := CSVColumn(t, result.Body, "company_id")
 	if len(named) != 1 || named[0] != hidden.String() {
-		t.Errorf("organization_id = %v, want %s — the company is private TO this reader, so the export owes them the reference", named, hidden)
+		t.Errorf("company_id = %v, want %s — the company is private TO this reader, so the export owes them the reference", named, hidden)
 	}
 }

@@ -266,7 +266,7 @@ func censusSourceFiles(t *testing.T) []string {
 //
 // values/ is excluded because it OWNS the conversion: MajorUnits and MinorUnits
 // are where the ISO-4217 digit table is applied, and a census refusing the
-// implementation it points people at would be refusing the answer.
+// implementation it points contacts at would be refusing the answer.
 func TestNoMinorUnitAmountIsScaledByAHardCodedPowerOfTen(t *testing.T) {
 	t.Parallel()
 	var findings []string

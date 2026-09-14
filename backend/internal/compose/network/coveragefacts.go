@@ -41,9 +41,9 @@ const scopeAll = "true"
 
 // dealFacts is the deal's own row, as the risk rules need it.
 type dealFacts struct {
-	status         string
-	organizationID ids.UUID
-	lastTouchAt    time.Time
+	status      string
+	companyID   ids.UUID
+	lastTouchAt time.Time
 	// everTouched says an activity has actually been captured against the
 	// deal, which lastTouchAt cannot answer: it coalesces to the creation
 	// date, so a deal nobody has contacted and one contacted the day it was
@@ -62,17 +62,17 @@ type dealFacts struct {
 // measures from, not a second coalesce that agrees with it by inspection.
 func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts, error) {
 	var out dealFacts
-	var org *ids.UUID
+	var company *ids.UUID
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT status, organization_id, %s,
+		SELECT status, company_id, %s,
 		       last_activity_at IS NOT NULL, now()
 		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).
-		Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched, &out.asOf)
+		Scan(&out.status, &company, &out.lastTouchAt, &out.everTouched, &out.asOf)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}
-	if org != nil {
-		out.organizationID = *org
+	if company != nil {
+		out.companyID = *company
 	}
 	return out, nil
 }
@@ -85,7 +85,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // departure flag on nearly every deal in a young workspace — a warning that is
 // always on is a warning nobody reads.
 //
-// So a person qualifies only when BOTH halves hold: an employment at this
+// So a contact qualifies only when BOTH halves hold: an employment at this
 // account with an end date that has PASSED, and no live employment there now. A
 // contract renewed after a gap, or a role change recorded as end-then-start,
 // leaves a live row and correctly raises nothing.
@@ -111,25 +111,25 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts
 // database disagreed about the date — which is precisely what
 // employment.IsCurrentSQL's own comment says the predicate exists to prevent.
 //
-// No person visibility probe: the caller passes the stakeholder ids it already
-// read under its own person row scope, so a seat this caller cannot see never
+// No contact visibility probe: the caller passes the stakeholder ids it already
+// read under its own contact row scope, so a seat this caller cannot see never
 // reaches here. Re-probing would be a second enforcement of the same rule with
 // its own way of being wrong.
 //
 // The EDGE gate is a different rule and is taken here. A departure IS an
-// employment edge — "this person no longer works at Acme" is a fact about the
+// employment edge — "this contact no longer works at Acme" is a fact about the
 // pair — and CoverageFor only reaches this after the seat read passed the same
 // gate, so in practice it admits. It is taken anyway because nothing structural
 // stops a future caller arriving another way, and a read whose safety rests on
 // the order its package happens to call things in is one refactor from
 // disclosing.
-func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.UUID) ([]ids.UUID, error) {
-	if orgID == ids.Nil || len(people) == 0 {
+func readDeparted(ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID) ([]ids.UUID, error) {
+	if companyID == ids.Nil || len(contacts) == 0 {
 		return nil, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos, peoplePos := arg(orgID), arg(people)
+	companyPos, contactsPos := arg(companyID), arg(contacts)
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if err != nil {
 		return nil, err
@@ -138,22 +138,22 @@ func readDeparted(ctx context.Context, tx pgx.Tx, orgID ids.UUID, people []ids.U
 		edgeBound = scopeAll
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT DISTINCT r.person_id
+		SELECT DISTINCT r.contact_id
 		  FROM relationship r
 		 WHERE r.kind = 'employment'
-		   AND r.organization_id = $%[1]d
-		   AND r.person_id = ANY($%[2]d)
+		   AND r.company_id = $%[1]d
+		   AND r.contact_id = ANY($%[2]d)
 		   AND r.archived_at IS NULL
 		   AND NOT `+employment.IsCurrentSQL("r.ended_at")+`
 		   AND (%[3]s)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship live
 		        WHERE live.kind = 'employment'
-		          AND live.organization_id = r.organization_id
-		          AND live.person_id = r.person_id
+		          AND live.company_id = r.company_id
+		          AND live.contact_id = r.contact_id
 		          AND live.archived_at IS NULL
 		          AND `+employment.IsCurrentSQL("live.ended_at")+`)
-		 ORDER BY r.person_id`, orgPos, peoplePos, edgeBound), args...)
+		 ORDER BY r.contact_id`, companyPos, contactsPos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("network: reading which stakeholders have left the account: %w", err)
 	}

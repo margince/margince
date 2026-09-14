@@ -17,11 +17,8 @@ package compose
 // the schema and a deterministic validator both bound the answer, and a verdict
 // below the confidence floor is re-asked once and then left unjudged.
 //
-// WHAT IT MAY DO WITH THE ANSWER: demote a row's band inside the queue, and
-// nothing else. It never deletes, archives or hides a message — the §3.2 hard
-// floor the capture label sits under, and the reason is sharper here: this is
-// one model call's opinion about a customer's mail, so a wrong one must cost a
-// rep a scroll rather than a customer.
+// Uncertain mail remains reviewable. Confirmed requests can produce a personal
+// reminder through the activities writer, preserving the message as evidence.
 
 import (
 	"context"
@@ -50,9 +47,7 @@ const (
 	// owedBodyLimit truncates each body for the prompt.
 	owedBodyLimit = 1500
 	// owedConfidenceFloor: below it the message is re-asked SOLO, and below it
-	// again it stays unjudged. Unjudged is a real answer here — the queue ranks
-	// such a row exactly as it did before this pass existed — so there is never
-	// a reason to guess.
+	// again it stays unjudged and reviewable, without claiming Focus priority.
 	owedConfidenceFloor = 0.7
 	// owedCatchUpCap bounds one pass PER WORKSPACE. Per workspace rather than
 	// shared, for the reason capture_counterparty_verdict states: a shared
@@ -81,7 +76,10 @@ informs_us. A one-line question about a small one is still asks_us.
 The recipient line matters: a message addressed to a shared desk address with the reader merely
 copied is usually informs_us, unless its text asks the recipient side directly. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
-answer.`
+answer.
+Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
+obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
+unless the new text separately asks the recipient to do something.`
 
 // owedSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func owedSystemFor(fence promptfence.Fence) string {
@@ -155,6 +153,19 @@ type owedPayload struct {
 // is simply still unjudged, which the next cycle reads again. Only
 // infrastructure faults return an error.
 func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) error {
+	if err := c.store.CaptureEmailRequests(ctx, c.now()); err != nil {
+		return err
+	}
+	if err := c.judgeWorkspace(ctx, maxVerdicts); err != nil {
+		return err
+	}
+	return c.store.CaptureEmailRequests(ctx, c.now())
+}
+
+func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) error {
+	if c.brain == nil {
+		return nil
+	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = owedCatchUpCap
 	}
@@ -280,7 +291,7 @@ func owedRequest(batch []owedCandidate) model.Request {
 		if m.HasCalendarPart {
 			message.WriteString("This message carried a calendar invitation.\n")
 		}
-		message.WriteString("\n" + m.Body)
+		message.WriteString("\n" + activities.SplitEmailBody(m.Body).Main)
 		prompt.WriteString(fence.WrapAttr("source_id", m.ID.String(), message.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry per supplied id.`)

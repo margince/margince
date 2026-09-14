@@ -143,7 +143,7 @@ func TestTheHeaderIsWiredAboveTheSessionMiddleware(t *testing.T) {
 // regression nobody would attribute to this middleware.
 func TestAPathWithNoCredentialIsLeftAlone(t *testing.T) {
 	for _, path := range []string{
-		"/v1/people",
+		"/v1/contacts",
 		"/v1/public/rooms/peek",
 		"/v1/public",
 		"/healthz",

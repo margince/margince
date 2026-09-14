@@ -50,7 +50,7 @@ func TestAdmitRefusesADocumentThatReachesOffOrigin(t *testing.T) {
 		{"an absolute script source", `<script src="https://cdn.example/x.js"></script>`},
 		{"a css import", `<style>@import url("/x.css");</style>`},
 		{"a font the sandbox can never load", `<style>@font-face{src:url(/f.woff2)}</style>`},
-		{"a fetch call", `<script>fetch("/v1/people")</script>`},
+		{"a fetch call", `<script>fetch("/v1/contacts")</script>`},
 		{"a websocket", `<script>new WebSocket("wss://x")</script>`},
 		{"a beacon", `<script>navigator.sendBeacon("/x")</script>`},
 		{"dev server residue", `<script src="/@vite/client"></script>`},

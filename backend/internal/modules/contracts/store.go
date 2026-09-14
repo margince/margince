@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Three different subjects in this module answer to the word "contract", and
@@ -45,9 +46,9 @@ const (
 // link check, the read's visibility clause and the read mask, and a table name
 // spelled at each of those is three places for one rename to miss.
 const (
-	organizationTable = "organization"
-	dealTable         = "deal"
-	projectTable      = "project"
+	companyTable = "company"
+	dealTable    = "deal"
+	projectTable = "project"
 )
 
 // Status values. Asserted by a human or an approved proposal — never derived
@@ -87,6 +88,27 @@ type Store struct {
 	// contract by its frozen rate, so a NULL one is a contract the guard
 	// cannot see and an installation can restate underneath.
 	freezeRate FreezeRateFunc
+	// catalog is the fieldcatalog seam (custom-field columns); nil means no
+	// catalog is wired and every read and write runs core-columns-only, which
+	// is the supported shape for a deployment that never mounted the module.
+	catalog fieldcatalog.Reader
+}
+
+// WithFieldCatalog wires the workspace custom-field catalog into this store.
+// Compose injects modules/customfields' Service; contracts may not import that
+// module, so the seam is the edge (ADR-0054 §3).
+func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+	s.catalog = catalog
+	return s
+}
+
+// catalogColumns answers the active custom-field columns for a contract, or
+// none when no catalog is wired.
+func (s *Store) catalogColumns(ctx context.Context) ([]fieldcatalog.Column, error) {
+	if s.catalog == nil {
+		return nil, nil
+	}
+	return s.catalog.ActiveColumns(ctx, contractObject)
 }
 
 // FreezeRateFunc answers what one currency converts to the installation's base
@@ -113,9 +135,9 @@ func (s *Store) today() time.Time {
 // scanContract expects. `under_contract` is computed in SQL rather than in Go
 // so that a filtered list and a single read cannot drift apart: one expression,
 // one meaning of the word (CONTRACT-FORM-1).
-const contractColumns = `id, organization_id, deal_id, project_id, contract_number, title,
-	value_minor, currency, value_basis, fx_rate_to_base, fx_rate_date,
-	starts_on, ends_on, renewal_on, auto_renew, notice_period_days,
+const contractColumns = `id, company_id, deal_id, project_id, contract_number, title,
+	value_minor, arr_minor, currency, value_basis, fx_rate_to_base, fx_rate_date,
+	starts_on, ends_on, renewal_on, auto_renew, notice_period_days, payment_term_days,
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
 	superseded_by_id, source, captured_by, version, created_at, updated_at, archived_at`
 
@@ -137,12 +159,16 @@ func underContractSQL(asOfPos int) string {
 	)`, asOfPos)
 }
 
-func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
+// scanContract reads one row. `active` is the custom-field columns the caller
+// asked for, appended to the select list in the same order — the values land
+// between the core columns and the derived under-contract flag, which is why
+// the flag's destination goes last rather than beside its neighbours.
+func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var (
 		c             crmcontracts.Contract
 		underContract bool
 		id            ids.UUID
-		orgID         ids.UUID
+		companyID     ids.UUID
 		dealID        *ids.UUID
 		projectID     *ids.UUID
 		supersededBy  *ids.UUID
@@ -157,17 +183,24 @@ func scanContract(row pgx.Row) (crmcontracts.Contract, error) {
 		effectiveOn   *time.Time
 		fxDate        *time.Time
 	)
-	err := row.Scan(&id, &orgID, &dealID, &projectID, &c.ContractNumber, &c.Title,
-		&c.ValueMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
-		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays,
+
+	dests := []any{
+		&id, &companyID, &dealID, &projectID, &c.ContractNumber, &c.Title,
+		&c.ValueMinor, &c.ArrMinor, &c.Currency, &basis, &c.FxRateToBase, &fxDate,
+		&startsOn, &endsOn, &renewalOn, &c.AutoRenew, &c.NoticePeriodDays, &c.PaymentTermDays,
 		&status, &signedOn, &noticeOn, &effectiveOn,
 		&supersededBy, &c.Source, &capturedBy, &c.Version, &c.CreatedAt, &c.UpdatedAt,
-		&c.ArchivedAt, &underContract)
-	if err != nil {
+		&c.ArchivedAt,
+	}
+	cf := storekit.ScanDests(active)
+	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
 		return crmcontracts.Contract{}, err
 	}
+	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
+		c.AdditionalProperties = values
+	}
 	c.Id = openapi_types.UUID(id)
-	c.OrganizationId = uuidPtr(&orgID)
+	c.CompanyId = uuidPtr(&companyID)
 	c.DealId = uuidPtr(dealID)
 	c.ProjectId = uuidPtr(projectID)
 	c.SupersededById = uuidPtr(supersededBy)
@@ -196,16 +229,16 @@ func datePtr(t *time.Time) *openapi_types.Date {
 
 // anchorOf is the counterparty of a contract that a WRITE is about to act on.
 //
-// organization_id left the wire's required set so a reader admitted through the
+// company_id left the wire's required set so a reader admitted through the
 // DEAL can be told nothing about a company they may not open. Every write path
 // takes its pre-image from readContract, which does not mask — so a nil anchor
 // here is a masked row that reached a write, not an agreement without a
 // company, and it stops rather than authorizing against a zero uuid.
 func anchorOf(c crmcontracts.Contract) (ids.UUID, error) {
-	if c.OrganizationId == nil {
+	if c.CompanyId == nil {
 		return ids.UUID{}, fmt.Errorf("contracts: a write reached contract %s with its counterparty withheld", ids.UUID(c.Id))
 	}
-	return ids.UUID(*c.OrganizationId), nil
+	return ids.UUID(*c.CompanyId), nil
 }
 
 func uuidPtr(id *ids.UUID) *openapi_types.UUID {
@@ -218,13 +251,17 @@ func uuidPtr(id *ids.UUID) *openapi_types.UUID {
 
 // GetContract reads one agreement.
 func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontracts.Contract, error) {
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	var out crmcontracts.Contract
-	err := s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		out, err = readContractForCaller(ctx, tx, id, s.today())
+		out, err = readContractForCaller(ctx, tx, id, s.today(), active)
 		return err
 	})
 	return out, err
@@ -233,7 +270,7 @@ func (s *Store) GetContract(ctx context.Context, id ids.ContractID) (crmcontract
 // readContract reads one agreement inside the caller's transaction, applying
 // the inherited row-scope gate. A row the caller cannot see answers ErrNotFound
 // rather than a denial, so a contract's existence stays hidden.
-func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time) (crmcontracts.Contract, error) {
+func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
@@ -249,9 +286,9 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 	}
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s, %s FROM contract WHERE %s`,
-		contractColumns, underContractSQL(asOfPos), where), args...)
-	out, err := scanContract(row)
+		`SELECT %s%s, %s FROM contract WHERE %s`,
+		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos), where), args...)
+	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound
 	}

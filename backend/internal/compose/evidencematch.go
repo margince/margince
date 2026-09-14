@@ -76,7 +76,7 @@ func normalizeEvidence(s string) string {
 // known.
 const (
 	laneFields    = "fields"
-	lanePeople    = "people"
+	laneContacts  = "contacts"
 	lanePageFacts = "page_facts"
 	laneProfile   = "profile"
 	laneLegal     = "legal"
@@ -95,11 +95,11 @@ const (
 	dropConfidenceRange   = "confidence_out_of_range"
 	dropNameRoleUnlinked  = "name_role_not_in_snippet"
 	dropNoPublishedEmail  = "no_published_email"
-	// dropEmailOffSiteDomain marks a published person whose printed address
+	// dropEmailOffSiteDomain marks a published contact whose printed address
 	// belongs to somebody else's domain — the testimonial case, where the page
 	// prints a customer's own address and the read would file them as staff.
 	dropEmailOffSiteDomain = "email_off_site_domain"
-	// dropAlreadyOnFile marks a published person the workspace already
+	// dropAlreadyOnFile marks a published contact the workspace already
 	// holds — a contact who has been emailing us for months does not
 	// become a decision because a crawler found their name.
 	dropAlreadyOnFile    = "already_on_file"
@@ -133,15 +133,15 @@ const (
 	// ATTRIBUTION, and reporting it as an ungrounded value would send a
 	// reader looking for text that is right there.
 	dropLegalBlockNotThisEntity = "legal_block_not_this_entity"
-	// dropSignatureNotThisPerson marks a signature field refused because the
+	// dropSignatureNotThisContact marks a signature field refused because the
 	// block it was read from names somebody else. The candidate query already
-	// requires this person to have SENT the message, so this catches the other
+	// requires this contact to have SENT the message, so this catches the other
 	// shape: their own mail carrying a colleague's or a correspondent's
 	// signature below theirs, quoted or forwarded. Its own reason for
 	// dropLegalBlockNotThisEntity's reason — the value is verbatim in the
 	// window, so reporting it as ungrounded would send a reader hunting for
 	// text that is plainly there.
-	dropSignatureNotThisPerson = "signature_not_this_person"
+	dropSignatureNotThisContact = "signature_not_this_contact"
 	// dropParaphraseLowOverlap is WARNING-class, never a refusal: a
 	// paraphrase profile field whose value shares no content word with
 	// its cited passage. Multilingual sites trip it legitimately; the

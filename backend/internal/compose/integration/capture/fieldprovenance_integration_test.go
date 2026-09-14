@@ -28,10 +28,10 @@ import (
 
 func TestFieldProvenanceCoversCaptureAcrossObjectTypes(t *testing.T) {
 	e := integration.SetupSearch(t)
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	fake := &mailFake{linkTo: personID}
+	fake := &mailFake{linkTo: contactID}
 	registry.Register(fake)
 
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -59,11 +59,11 @@ func TestFieldProvenanceCoversCaptureAcrossObjectTypes(t *testing.T) {
 		t.Fatalf("capture stamped %d fields as human-entered", humanStamped)
 	}
 
-	// Mixed-origin display read: the person was human-created and has no
+	// Mixed-origin display read: the contact was human-created and has no
 	// field rows — every requested field falls back to the row-level
 	// provenance (gate Q3 coexistence).
 	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		origins, err := storekit.FieldOrigins(context.Background(), tx, "person", personID,
+		origins, err := storekit.FieldOrigins(context.Background(), tx, "contact", contactID,
 			[]string{"full_name", "title"}, "manual", "human:x", time.Now().UTC())
 		if err != nil {
 			return err

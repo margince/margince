@@ -8,7 +8,7 @@ package comms
 // The undelivered-lane read against rows the real writers produced: staged
 // with StageTx, abandoned with Park, transmitted-then-parked with
 // ParkTransmitted — never hand-inserted. The predicates under test are SQL
-// (the stamp, the window, ownership, the person join), which a unit double
+// (the stamp, the window, ownership, the contact join), which a unit double
 // proves nothing about.
 
 import (
@@ -25,14 +25,14 @@ import (
 func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	e := setupStore(t)
 
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, person); err != nil {
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Anna Weber', 'test', 'human:x')`, contact); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity_link (id, activity_id, entity_type, person_id) VALUES ($1, $2, 'person', $3)`,
-		ids.NewV7(), e.activity, person); err != nil {
+		`INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
+		ids.NewV7(), e.activity, contact); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,8 +89,8 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	if got.Reason != "the mailbox is no longer send-capable" {
 		t.Errorf("reason = %q, want the dispatcher's own words", got.Reason)
 	}
-	if got.PersonID != person {
-		t.Errorf("person = %s, want the one the activity is filed under (%s)", got.PersonID, person)
+	if got.ContactID != contact {
+		t.Errorf("contact = %s, want the one the activity is filed under (%s)", got.ContactID, contact)
 	}
 	if got.Subject == "" {
 		t.Error("the send's subject line did not travel, so the card cannot name the send")
@@ -108,7 +108,7 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 		t.Fatalf("aged window = %+v, want empty", none)
 	}
 
-	// Another person's context reads nothing of this caller's.
+	// Another contact's context reads nothing of this caller's.
 	stranger := ids.New[ids.UserKind]()
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Other')`,
@@ -117,10 +117,10 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 	}
 	othersView, err := e.store.ParkedSendsFor(readerCtx(e.ws, stranger), since, 8)
 	if err != nil {
-		t.Fatalf("ParkedSendsFor as another person: %v", err)
+		t.Fatalf("ParkedSendsFor as another contact: %v", err)
 	}
 	if len(othersView) != 0 {
-		t.Fatalf("another person reads %+v, want nothing of this caller's", othersView)
+		t.Fatalf("another reader reads %+v, want nothing of this caller's", othersView)
 	}
 }
 

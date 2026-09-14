@@ -19,7 +19,7 @@ export const handoffFixture: Envelope = {
     name: "Acme ERP rollout",
     key: "ERP",
     phase: "delivering",
-    organization_id: "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6",
+    company_id: "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6",
     // No owner_id and no owner_name: nobody is receiving the work, which is
     // the gap below.
     started_at: "2026-05-01T00:00:00Z",
@@ -40,14 +40,14 @@ export const handoffFixture: Envelope = {
     ],
     stakeholders: [
       {
-        person_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        contact_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
         name: "Alice Müller",
         role: "Sponsor",
       },
-      // Named but untitled: the seat exists and the person is readable, and
+      // Named but untitled: the seat exists and the contact is readable, and
       // what nobody recorded is their part in the work.
       {
-        person_id: "0f8fad5b-d9cb-469f-a165-70867728950e",
+        contact_id: "0f8fad5b-d9cb-469f-a165-70867728950e",
         name: "Bob Schmidt",
       },
     ],

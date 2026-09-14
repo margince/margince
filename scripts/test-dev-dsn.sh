@@ -71,8 +71,8 @@ done
 echo "dev.sh: resolution order, and what it must not leak"
 
 # The order is asserted against the script's own text: running `make dev` here
-# would need Docker, a database and a free :8080, and would sweep every other
-# stack on the machine — including a colleague's.
+# would need Docker, a database and a free :8080, and would start a real
+# stack, while these checks need only the connection decisions.
 check yes "$(grep -q 'OWNER_DSN="${OWNER_DSN:-${MARGINCE_OWNER_DSN:-$COMPOSE_OWNER_DSN}}"' "$dev" && echo yes || echo no)" \
       "owner: an explicit argument, else MARGINCE_OWNER_DSN, else the compose default"
 check yes "$(grep -q 'APP_DSN="${APP_DSN:-${MARGINCE_DSN:-$COMPOSE_APP_DSN}}"' "$dev" && echo yes || echo no)" \
@@ -104,6 +104,54 @@ check yes "$(grep -q 'exec docker exec -i "$container" psql' "$root/scripts/dev-
 # A DSN carries a password. echo/printf must never be handed one.
 leaks="$(grep -nE '^[^#]*(echo|printf)[^|]*\$(dev_owner_url|dev_app_url|OWNER_DSN|APP_DSN|MARGINCE_DSN|MARGINCE_OWNER_DSN)' "$dev" || true)"
 check "" "$leaks" "no DSN is ever echoed"
+
+# Execute the actual API launch paragraph against a process stub. This checks
+# both what the API receives and what remains in its parent environment; a grep
+# for the setting alone would also accept a global export to every process.
+echo "dev.sh: custom fields use this stack's owner pool without changing the app role"
+launch="$(awk 'BEGIN { RS="" } /\.\/bin\/api --addr/ { print; found++ }
+    END { if (found != 1) exit 1 }' "$dev")"
+probe="$(mktemp -d)"
+trap 'rm -rf "$probe"' EXIT
+mkdir -p "$probe/bin"
+cat >"$probe/bin/api" <<'STUB'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "${MARGINCE_SCHEMA_DSN:-missing}" > schema
+while [[ $# -gt 0 ]]; do
+    if [[ "$1" == --dsn ]]; then printf '%s\n' "$2" > app; break; fi
+    shift
+done
+STUB
+chmod +x "$probe/bin/api"
+for database in margince margince_dev_alpha; do
+    for inherited in '' 'postgres://wrong:secret@other/base'; do
+        (
+            cd "$probe"
+            if [[ -n "$inherited" ]]; then
+                export MARGINCE_SCHEMA_DSN="$inherited"
+            else
+                unset MARGINCE_SCHEMA_DSN
+            fi
+            dev_owner_url="$(with_database 'postgres://owner:secret@db/base?sslmode=require' "$database")"
+            dev_app_url="$(with_database 'postgres://app:secret@db/base?sslmode=require' "$database")"
+            api_port=18093 MINIO_PORT=29000 blob_bucket=probe
+            deploy_cfg=probe.yaml REDIS_ADDR=localhost:16379
+            public_base_url_flag=(--public-base-url http://localhost:8093)
+            ai_flag=() gmail_api_flags=()
+            log_as() { cat > api.log; }
+            eval "$launch"
+            wait "$be_pid"
+            printf '%s\n' "${MARGINCE_SCHEMA_DSN-}" > parent-schema
+        )
+        check "$(with_database 'postgres://owner:secret@db/base?sslmode=require' "$database")" \
+              "$(cat "$probe/schema")" "$database: API schema pool uses the stack's owner database"
+        check "$(with_database 'postgres://app:secret@db/base?sslmode=require' "$database")" \
+              "$(cat "$probe/app")" "$database: ordinary API writes keep the app role"
+        check "$inherited" "$(cat "$probe/parent-schema")" \
+              "$database: API assignment does not export its owner credential to sibling processes"
+    done
+done
 
 if [[ "$failures" -ne 0 ]]; then
     echo "FAIL: $failures dev-stack DSN expectation(s) not met" >&2

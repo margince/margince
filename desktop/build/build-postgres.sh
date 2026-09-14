@@ -175,7 +175,7 @@ relocate() {
     # Developer ID afterwards.
     #
     # A failure here must stop the build. Left unsigned, the file runs
-    # nowhere but this machine's build directory — and the first person to
+    # nowhere but this machine's build directory — and the first contact to
     # find out is the user, whose database dies with "Killed: 9" and no
     # explanation.
     if ! codesign --force --sign - --timestamp=none "$file" >/dev/null 2>&1; then

@@ -19,7 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/geocode"
@@ -360,7 +360,7 @@ func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.Technic
 	return compose.NewTechnicalEnricher(
 		dnsread.New(dnsread.NewPacer(dnsReadInterval)),
 		certlog.NewCrtSh(baseURL, nil),
-		people.NewStore(compose.InstallationDB(pool)),
+		contacts.NewStore(compose.InstallationDB(pool)),
 		nil,
 	)
 }

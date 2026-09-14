@@ -304,7 +304,7 @@ describe("no product surface renders a browser-drawn dropdown", () => {
   });
 
   it("holds select.tsx to the same rule as everything else", () => {
-    // The file this gate points people AT is scanned like any other, and it
+    // The file this gate points contacts AT is scanned like any other, and it
     // passes — which is the evidence that the shell gate's exemption was
     // unnecessary rather than merely unused. Its `<select>` mentions are
     // comments citing what it replaces, and a parser drops those for free.

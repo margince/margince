@@ -3,8 +3,8 @@
 
 package compose
 
-// Every surface that drafts an email a person sends under their own name reads
-// that person's own voice, and this is what keeps that true.
+// Every surface that drafts an email a contact sends under their own name reads
+// that contact's own voice, and this is what keeps that true.
 //
 // Before this, only the reply drafter did. The two composers carried a comment
 // saying draftrules "carries the user's own voice instead" — it does not, and
@@ -29,8 +29,8 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/compose/persondraft"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -46,7 +46,7 @@ func newDraftFence() promptfence.Fence { return promptfence.New() }
 // one of them is exactly the drift a parity gate exists to catch.
 func voicedComposerPrompts(fence promptfence.Fence) map[string]string {
 	return map[string]string{
-		"the person composer":  persondraft.VoicedSystemPromptFor(fence),
+		"the contact composer": contactdraft.VoicedSystemPromptFor(fence),
 		"the account composer": accountdraft.VoicedSystemPromptFor(fence),
 	}
 }
@@ -54,7 +54,7 @@ func voicedComposerPrompts(fence promptfence.Fence) map[string]string {
 // unvoicedComposerPrompts is each composer's system turn with no profile.
 func unvoicedComposerPrompts(fence promptfence.Fence) map[string]string {
 	return map[string]string{
-		"the person composer":  persondraft.SystemPromptFor(fence),
+		"the contact composer": contactdraft.SystemPromptFor(fence),
 		"the account composer": accountdraft.SystemPromptFor(fence),
 	}
 }
@@ -108,7 +108,7 @@ func TestEveryDraftingSurfaceLoadsTheSenderVoice(t *testing.T) {
 	}
 	for _, where := range surfaces {
 		if !packagePassesOnALoadedVoice(t, where) {
-			t.Errorf("%s drafts correspondence a person sends under their own name, but nothing in its "+
+			t.Errorf("%s drafts correspondence a contact sends under their own name, but nothing in its "+
 				"package passes a draftvoice.Load result on to anything — so a rep who has built a voice "+
 				"profile is written by a generic writer here and by their own voice elsewhere. Load it "+
 				"with draftvoice.Load and hand the result to the call that renders the prompt", where)
@@ -333,11 +333,11 @@ func TestAVoicedComposerPromptCarriesTheProfile(t *testing.T) {
 // sender who has a voice profile.
 func voicedComposerRequests(t *testing.T, voice draftvoice.Context) map[string]model.Request {
 	t.Helper()
-	person, err := persondraft.GroundedRequest(persondraft.Input{
-		Recipient: persondraft.RecipientIn{ID: "p1", Name: "Marek", FirstName: "Marek"},
+	contact, err := contactdraft.GroundedRequest(contactdraft.Input{
+		Recipient: contactdraft.RecipientIn{ID: "p1", Name: "Marek", FirstName: "Marek"},
 	}, voice)
 	if err != nil {
-		t.Fatalf("the person composer builds no request: %v", err)
+		t.Fatalf("the contact composer builds no request: %v", err)
 	}
 	account, err := accountdraft.GroundedRequest(accountdraft.Input{
 		Company:   "Northwind",
@@ -347,7 +347,7 @@ func voicedComposerRequests(t *testing.T, voice draftvoice.Context) map[string]m
 		t.Fatalf("the account composer builds no request: %v", err)
 	}
 	return map[string]model.Request{
-		"the person composer":  person,
+		"the contact composer": contact,
 		"the account composer": account,
 	}
 }

@@ -94,12 +94,12 @@ type HandoffDeal struct {
 // it. Every other nested list in this answer names its records; the seat was
 // the one that did not.
 //
-// It is absent for a person the caller may not read — the seat itself survived
+// It is absent for a contact the caller may not read — the seat itself survived
 // the edge's own visibility rule, so this is the narrow case of a name read
 // that came back empty, and a reader shows the id rather than a blank.
 type HandoffStakeholder struct {
-	PersonID ids.UUID `json:"person_id"`
-	Name     string   `json:"name,omitempty"`
+	ContactID ids.UUID `json:"contact_id"`
+	Name      string   `json:"name,omitempty"`
 	// Role is absent for a seat nobody titled. It is the field the receiving
 	// side reads first, so an empty one is a gap rather than a blank.
 	Role string `json:"role,omitempty"`
@@ -113,13 +113,13 @@ type PreparedHandoff struct {
 	Key         string   `json:"key,omitempty"`
 	Phase       string   `json:"phase"`
 	Description string   `json:"description,omitempty"`
-	// OrganizationID is the account the work is for. A project always has one,
+	// CompanyID is the account the work is for. A project always has one,
 	// but it is omitted when the caller may not read that company — a project
 	// is readable across the workspace while its anchor can still be an
 	// unpromoted capture, and naming the id anyway would disclose it. Reported
 	// as a gap so the answer says the account is withheld rather than leaving
 	// a reader to conclude the project has none.
-	OrganizationID *ids.UUID `json:"organization_id,omitempty"`
+	CompanyID *ids.UUID `json:"company_id,omitempty"`
 	// OwnerID and OwnerName are absent together for a project nobody owns,
 	// which is reported as a gap rather than left to be noticed. The name is
 	// here for the reason HandoffStakeholder's is: "who is receiving this

@@ -28,7 +28,7 @@ import (
 // analyticsReportComposer renders a composed document for the tool surface.
 //
 // The floor is the installation's, taken here the way the HTTP handler takes
-// it: a figure a person may not see is a figure a model asking on their behalf
+// it: a figure a contact may not see is a figure a model asking on their behalf
 // may not see either, and a tool that floored differently would be a second
 // answer to what a reader is allowed to be told.
 func analyticsReportComposer(pool *pgxpool.Pool, floor analyticsquery.Floor) agents.AnalyticsReportComposer {

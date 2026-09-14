@@ -23,7 +23,7 @@ import (
 // message's one-click link will carry.
 //
 // IT RESOLVES A LEAD TOO, which is the second half of the defect this file
-// closes. PreferenceTokenForEmail resolves persons only, so a lead-only
+// closes. PreferenceTokenForEmail resolves contacts only, so a lead-only
 // recipient's marketing mail goes out with no List-Unsubscribe header at all —
 // the send path treats "no token" as "no unsubscribe surface" and carries none.
 //
@@ -71,26 +71,26 @@ func (s *Store) WithdrawalTokenForEmail(
 }
 
 // bindWithdrawalSubject attaches the record holding this address, when one
-// does. A person wins over a lead: a promoted lead's mail is the person's.
+// does. A contact wins over a lead: a promoted lead's mail is the contact's.
 //
 // AMBIGUITY LEAVES THE CREDENTIAL UNBOUND rather than picking. Two live
 // records on one address is a data problem, and choosing between them by row
-// order would stamp one person's id on the other's opt-out link. The credential
+// order would stamp one contact's id on the other's opt-out link. The credential
 // still works — it names the address, which is what the withdrawal acts on.
 func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInput) error {
 	// count(*) rather than a LIMIT and a Scan: a bare read of the first row is
 	// the silent pick this function exists not to make, and it looks identical
 	// to the unambiguous case at the call site.
-	person, err := theOneSubjectHolding(ctx, tx, `
-		SELECT pe.person_id
-		  FROM person_email pe
-		  JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
+	contact, err := theOneSubjectHolding(ctx, tx, `
+		SELECT pe.contact_id
+		  FROM contact_email pe
+		  JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 		 WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL`, in.Address)
 	if err != nil {
-		return fmt.Errorf("consent: resolving the person the unsubscribe link is for: %w", err)
+		return fmt.Errorf("consent: resolving the contact the unsubscribe link is for: %w", err)
 	}
-	if !person.IsZero() {
-		in.PersonID = ids.From[ids.PersonKind](person)
+	if !contact.IsZero() {
+		in.ContactID = ids.From[ids.ContactKind](contact)
 		return nil
 	}
 	lead, err := theOneSubjectHolding(ctx, tx, `
@@ -109,7 +109,7 @@ func bindWithdrawalSubject(ctx context.Context, tx pgx.Tx, in *WithdrawalMintInp
 // zero id when it matches none OR SEVERAL.
 //
 // Several is deliberately the same answer as none. Stamping one of two
-// candidates onto the credential would put one person's id on the other's
+// candidates onto the credential would put one contact's id on the other's
 // opt-out link, and the link works either way: it names the address, which is
 // what the withdrawal acts on.
 func theOneSubjectHolding(ctx context.Context, tx pgx.Tx, query, address string) (ids.UUID, error) {

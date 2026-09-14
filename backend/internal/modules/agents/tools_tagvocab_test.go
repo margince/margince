@@ -143,7 +143,7 @@ func TestUpdateTagOffersTheClearingValue(t *testing.T) {
 	}
 }
 
-// A write answers the WORD, not a counted detail. TagDetail declares people,
+// A write answers the WORD, not a counted detail. TagDetail declares contacts,
 // companies and deals as required fields, and a write has counted none of
 // them — shipping it would report a tag on fifty records as carried by none.
 func TestAVocabularyWriteAnswersTheWordWithoutInventingCounts(t *testing.T) {
@@ -158,7 +158,7 @@ func TestAVocabularyWriteAnswersTheWordWithoutInventingCounts(t *testing.T) {
 		if err := json.Unmarshal(spec.OutputSchema, &shape); err != nil {
 			t.Fatalf("%s: the output schema does not decode: %v", name, err)
 		}
-		for _, counted := range []string{"people", "companies", "deals"} {
+		for _, counted := range []string{"contacts", "companies", "deals"} {
 			if _, present := shape.Properties[counted]; present {
 				t.Errorf("%s answers a %q count it never took", name, counted)
 			}

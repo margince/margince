@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -115,20 +116,52 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	if s.authority == nil {
 		return errors.New("compose: no authorization authority is wired on this send path")
 	}
-	set, err := s.authority.AuthorizeStagingTx(ctx, tx, id, in.Authorization)
+	// TOLD WHERE TO LOOK when this message is being resumed from a held row:
+	// the intent names a review, and a review may carry a named human's
+	// recorded decision that this refused message goes anyway. The decision is
+	// resolved and spent inside this transaction, BEFORE the decision rows are
+	// written, because the authority is part of what each row records and
+	// those rows are never updated afterwards (migration 1788529047).
+	set, instruction, err := s.authority.AuthorizeStagingWithDecisionTx(
+		ctx, tx, id, in.Authorization, in.ResumingIntentID,
+		consent.SendingDigest(in.AuthoredSubject, in.AuthoredBody, in.AuthoredHTML))
 	if err != nil {
 		return err
 	}
-	if err := refuseAtStaging(set); err != nil {
-		// CARRIED OUT, NOT WRITTEN HERE. Recording the review needs its own
-		// transaction — this one is about to roll back and would take the row
-		// with it — and opening one now would hold two connections from the
-		// same pool at once. Sixteen concurrent refusals would then wait on
-		// each other for a connection none of them can release.
+	if refusal := refuseAtStaging(set); refusal != nil {
+		// A REFUSAL IS NOT ALWAYS THE END. If this message is being resumed
+		// from a held row, a named human may have read this very refusal and
+		// decided in writing that it goes anyway. That decision is spent here,
+		// inside the transaction that stages the message, so the send and the
+		// spending are one fact.
 		//
-		// So the snapshot travels on the error, and whoever unwinds the
-		// transaction writes it once the connection is back.
-		return &pendingReviewError{set: set, cause: err}
+		// The refusal itself is untouched whichever way this goes: the decision
+		// rows above still record what the engine said, and no suppression is
+		// lifted. What a spent instruction changes is the AUTHORITY the message
+		// leaves under.
+		//
+		// Already resolved and spent by the staging call above, which had to do
+		// it there: the authority is written into the decision rows as they are
+		// inserted, and re-asking here would spend a second decision after the
+		// record of the first had already been written without it.
+		if instruction.IsZero() {
+			// CARRIED OUT, NOT WRITTEN HERE. Recording the review needs its own
+			// transaction — this one is about to roll back and would take the
+			// row with it — and opening one now would hold two connections from
+			// the same pool at once. Sixteen concurrent refusals would then wait
+			// on each other for a connection none of them can release.
+			//
+			// So the snapshot travels on the error, and whoever unwinds the
+			// transaction writes it once the connection is back.
+			return &pendingReviewError{set: set, cause: refusal}
+		}
+		// The delivery says so too, because the WORKER reads this row and never
+		// reads the per-recipient decisions. A build that does not recognise
+		// the authority parks the message rather than sending one it has no
+		// rules for.
+		if err := s.store.RecordDirectedExecutionTx(ctx, tx, id, instruction); err != nil {
+			return err
+		}
 	}
 	return s.runner.EnqueueTx(ctx, tx, SendEmailArgs{
 		Workspace: ws, DeliveryID: id.String(),
@@ -166,7 +199,12 @@ func (e *pendingReviewError) Unwrap() error { return e.cause }
 // way, and answering a storage fault instead would tell the rep their message
 // was fine and the database was not. The original refusal is what they need to
 // see; the missing review is an operator's problem, not theirs.
-func (s commsStager) RecordPendingReview(ctx context.Context, err error) error {
+// intentID names the held scheduled_send the sender froze this message into, so
+// the review binds to something a human can resume. It is zero when nothing was
+// held — a channel reply, or a hold that failed — and the review is then opened
+// without an intent, which is every review this module wrote before the holder
+// existed.
+func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error {
 	var pending *pendingReviewError
 	if !errors.As(err, &pending) {
 		return err
@@ -174,11 +212,18 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error) error {
 	if s.authority == nil {
 		return pending.cause
 	}
-	review, recordErr := s.authority.RecordRefusal(ctx, pending.set, ids.UUID{})
+	review, recordErr := s.authority.RecordRefusal(ctx, pending.set, intentID)
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	return &consent.SendRefusedError{ReviewID: review.ID, Cause: pending.cause}
+	return &consent.SendRefusedError{
+		ReviewID: review.ID, Cause: pending.cause,
+		// DECIDED HERE, because this is where the principal is known. Routing a
+		// decision is human-only and bound to the review's own initiator, so
+		// naming it for an agent would promise a move it cannot make — and an
+		// agent that tries and is refused was sent there by us.
+		Actions: actionsForRefusal(ctx, review),
+	}
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row
@@ -267,4 +312,42 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 		}
 	}
 	return false
+}
+
+// actionsForRefusal names what THIS caller may do about a refusal.
+//
+// One action today and a list on purpose: the shape is what a caller reads, and
+// a second action arriving later should not change it. An empty list is a real
+// answer — the caller may do nothing but stop and report, and the reference
+// still travels so a human reading their transcript can pick the review up.
+func actionsForRefusal(ctx context.Context, review consent.Review) []string {
+	// The review must have a message to decide about. One refused without an
+	// intent — a channel reply, whose shape the held row cannot carry — is not
+	// routable, and offering the route would send the caller into a refusal.
+	if review.IntentID.IsZero() {
+		return nil
+	}
+	// A HUMAN, and the one whose message it was. Both doors below are
+	// human-only (agents and connectors are refused), so an agent acting for
+	// somebody is told nothing rather than told wrong.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return nil
+	}
+	// A HOLDER OF THE GRANT IS OFFERED THE SEND, not the ask.
+	//
+	// Directing a send and asking somebody to are answers to the same question
+	// — "this was refused, now what" — and which one a human is shown is
+	// decided by what they may actually do. Offering a rep who holds the
+	// authority the chance to ask a colleague would be telling them to go
+	// around themselves; offering one who does not the direct send would be a
+	// button that fails when pressed.
+	//
+	// ONE OR THE OTHER, never both. A human holding the grant can still route
+	// a review from the review itself if they want a second opinion, which is a
+	// deliberate act rather than a choice a refusal should press on them.
+	if auth.Require(ctx, consent.EntityCommunicationException, principal.ActionCreate) == nil {
+		return []string{"direct_send"}
+	}
+	return []string{"request_decision"}
 }

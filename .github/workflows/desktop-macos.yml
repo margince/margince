@@ -12,7 +12,7 @@
 # frontend dependencies at the workspace root), and a build lane nothing executes
 # is a lane whose green is an assertion.
 #
-# release.yml calls this workflow when a release is cutting a downloadable
+# release-tag.yml calls this workflow when a release is cutting a downloadable
 # bundle, rather than carrying a copy of the build: a copy would drift, and the
 # drift would show up as a release bundle differing from the one CI blessed.
 name: desktop-macos
@@ -51,9 +51,10 @@ on:
       ref:
         description: Branch, tag or SHA to build
         required: false
-  # Called by release.yml, so a release's downloadable bundle is built by THIS
-  # lane and not by a second copy of it. A copy would drift, and the drift shows
-  # up as a release bundle differing from the one the pull-request check blessed.
+  # Called by release-tag.yml, so a release's downloadable bundle is built by
+  # THIS lane and not by a second copy of it. A copy would drift, and the drift
+  # shows up as a release bundle differing from the one the pull-request check
+  # blessed.
   workflow_call:
     inputs:
       ref:

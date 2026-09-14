@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -27,7 +27,7 @@ func anchorDescription(t *testing.T, e *integration.Env) string {
 	var description *string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT description FROM organization WHERE is_anchor AND archived_at IS NULL`).Scan(&description)
+			`SELECT description FROM company WHERE is_anchor AND archived_at IS NULL`).Scan(&description)
 	}); err != nil {
 		t.Fatalf("reading the anchor's header line: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestALongOfferSummaryStillFillsTheCompanyHeader(t *testing.T) {
 			"this would pass without exercising anything", len([]rune(summary)))
 	}
 
-	if _, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+	if _, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 		DisplayName: "Acme Robotics",
 		Fields:      map[string]*string{"offer_summary": &summary},
 	}); err != nil {
@@ -93,7 +93,7 @@ func TestTheHeaderBoundaryWritesAtFiveHundredAndAtFiveHundredAndOne(t *testing.T
 			// headerline_test.go covers on its own.
 			summary := strings.TrimSpace(strings.Repeat("robotics ", tc.length/9+1))[:tc.length]
 
-			if _, err := e.People.SaveCompany(ctx, people.SaveCompanyInput{
+			if _, err := e.Contacts.SaveCompany(ctx, contacts.SaveCompanyInput{
 				DisplayName: "Acme Robotics",
 				Fields:      map[string]*string{"offer_summary": &summary},
 			}); err != nil {

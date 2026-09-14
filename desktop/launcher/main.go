@@ -215,7 +215,7 @@ func announce(baseURL string, l layout, adminPassword string) {
 	// closed the window on the first run would otherwise have no way to
 	// discover where the credentials went — and the file is the only copy.
 	// From margince.yaml, because that file decides it: it is write-once and the
-	// organization is bootstrapped from it, so an installation whose admin was
+	// company is bootstrapped from it, so an installation whose admin was
 	// named before its first run carries that name for good. A literal here could
 	// only ever agree with the default.
 	say("\n  Sign in as  %s\n", l.configuredAdminEmail())

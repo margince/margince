@@ -199,7 +199,7 @@ func (f fakeResolver) ResolveChannel(context.Context, ids.UserID, string) (conne
 
 // stubConsent records WHO it was asked about, not only what it answered. The
 // recipient list is the gate's whole subject: a gate handed the wrong
-// addressees answers correctly about the wrong people, which is
+// addressees answers correctly about the wrong contacts, which is
 // indistinguishable from a pass unless the argument itself is asserted.
 //
 // It records each recipient's own LABEL — the address for mail, provider:account

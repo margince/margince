@@ -12,18 +12,18 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
+import { middayInstant } from "../format/calendarday";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { AddCommitment } from "./brief.plan.add";
 import { PlanContract } from "./brief.plan.contract";
 import { useMe } from "./common";
 import { EntityRef } from "./entityref";
 import {
   type SettableState,
-  useAddCommitment,
   useAskForHelp,
   useSetCommitmentState,
   useStartWeeklyPlan,
@@ -110,8 +110,24 @@ function statesReadOnly(
   return reading.hasPlan ? !reading.mayEdit : !reading.mayStart;
 }
 
+/**
+ * Whether the save bar has anything in it.
+ *
+ * `Panel` draws its footer band whenever `footer` is a node at all, so a foot
+ * that could only return null underneath it left an empty bordered strip under
+ * a week with nothing on it. The answer belongs beside the panel rather than
+ * inside the band.
+ */
+function hasFoot(
+  reading: Readonly<{ editable: boolean; staged: number; unsaved: number }>,
+): boolean {
+  return reading.unsaved > 0 || (reading.editable && reading.staged > 0);
+}
+
 export function PlanSection() {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const plan = useWeeklyPlan();
   const start = useStartWeeklyPlan();
   const setState = useSetCommitmentState();
@@ -202,20 +218,32 @@ export function PlanSection() {
     <section id="brief-plan">
       <Panel
         title={t("plan.title")}
-        sub={t("plan.sub")}
+        sub={
+          plan.data
+            ? t("brief.plan.period", {
+                date: formatDate(
+                  middayInstant(plan.data.local_week_start, recordZone),
+                  locale,
+                  recordZone,
+                ),
+              })
+            : t("plan.sub")
+        }
         titleAction={
           editable && !adding ? (
             <Button onClick={() => setAdding(true)}>{t("plan.add")}</Button>
           ) : undefined
         }
         footer={
-          <PlanFoot
-            editable={editable}
-            staged={staged.size}
-            unsaved={unsaved}
-            saving={setState.isPending}
-            onSave={() => void save()}
-          />
+          hasFoot({ editable, staged: staged.size, unsaved }) ? (
+            <PlanFoot
+              editable={editable}
+              staged={staged.size}
+              unsaved={unsaved}
+              saving={setState.isPending}
+              onSave={() => void save()}
+            />
+          ) : undefined
         }
       >
         <SurfaceState
@@ -232,9 +260,9 @@ export function PlanSection() {
           {plan.isSuccess && plan.data === null && (
             <PanelBody>
               <p>{t("plan.none")}</p>
-              {/* The sentence above is a fact about the week and stays for
-                  every reader. The button is only an act, so a seat that may
-                  not perform it is shown none. */}
+              {/* The sentence is a fact about the week and stays for every
+                  reader; the button is an act, so a seat that may not perform
+                  it is shown none. */}
               {canStart && (
                 <Button
                   onClick={() => start.mutate()}
@@ -279,13 +307,9 @@ export function PlanSection() {
 }
 
 /**
- * The save bar, and the refusal that can stand where it was.
- *
- * Save appears only once a box has changed: a save bar standing in the resting
- * layout would say there is something to save on a week nobody has touched. The
- * refusal sits here rather than at the top of the panel, because it is about the
- * press the reader just made and the rows it names are the ones still ticked
- * under it.
+ * The save bar, and the refusal that can stand where it was. Drawn only when
+ * one of them has something to say — the caller holds that, so the band itself
+ * never renders empty.
  *
  * The two halves are gated differently on purpose. A refusal is history and
  * stays: `editable` goes false under a reader mid-stage when the weekly job
@@ -311,7 +335,6 @@ function PlanFoot({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  if (staged === 0 && unsaved === 0) return null;
   return (
     <>
       {/* `danger`: the write was refused, not merely at risk. */}
@@ -381,7 +404,11 @@ function CommitmentRow({
             {commitment.due_on && (
               <span>
                 {t("plan.due", {
-                  day: formatDate(commitment.due_on, locale, recordZone),
+                  day: formatDate(
+                    middayInstant(commitment.due_on, recordZone),
+                    locale,
+                    recordZone,
+                  ),
                 })}
               </span>
             )}
@@ -463,73 +490,5 @@ function HelpExchange({
         </Button>
       )}
     </div>
-  );
-}
-
-function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
-  const t = useT();
-  const add = useAddCommitment();
-  const [label, setLabel] = useState("");
-  const [dueOn, setDueOn] = useState<ISODate | "">("");
-
-  return (
-    <PanelBody>
-      <Field label={t("plan.new.label")} required>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={label}
-            maxLength={500}
-            onChange={(event) => setLabel(event.target.value)}
-          />
-        )}
-      </Field>
-      <Field label={t("plan.new.due")}>
-        {(control) => (
-          <DateInput
-            {...control}
-            value={dueOn}
-            // The element reports YYYY-MM-DD or "" and nothing else, so this
-            // narrows what it said rather than validating it.
-            onChange={(event) =>
-              setDueOn(isISODate(event.target.value) ? event.target.value : "")
-            }
-          />
-        )}
-      </Field>
-      {/* The submit row, not two buttons loose in the body: `.panel-body` is
-          padding and nothing else, so bare siblings sat against each other on
-          the line under the last field with no gap and no alignment of their
-          own. */}
-      <div className="form-actions">
-        <Button variant="ghost" onClick={onDone}>
-          {t("plan.new.cancel")}
-        </Button>
-        <Button
-          onClick={() => {
-            add.mutate(
-              // An empty date is no date, not an empty string: the contract
-              // types due_on as nullable, and "" is neither a date nor an
-              // absence.
-              { label, due_on: dueOn === "" ? null : dueOn },
-              {
-                onSuccess: () => {
-                  setLabel("");
-                  setDueOn("");
-                  onDone();
-                },
-              },
-            );
-          }}
-          // An empty label is a precondition the reader can meet; a write in
-          // flight is a wait of seconds. Spelling the second as `disabled`
-          // takes focus off the control they just pressed.
-          disabled={label.trim() === ""}
-          pending={add.isPending}
-        >
-          {t("plan.new.save")}
-        </Button>
-      </div>
-    </PanelBody>
   );
 }

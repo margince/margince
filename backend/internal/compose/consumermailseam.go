@@ -10,7 +10,7 @@ package compose
 // baseline gets wrong. The agent tool `qualify_lead` asks the same question
 // from the other end of the same capture path, and a module may not import a
 // sibling, so the edge is injected here, exactly as `newCounterpartyStore`
-// injects `capture.MatcherTx` into people's ensure ladder.
+// injects `capture.MatcherTx` into contacts's ensure ladder.
 //
 // It is the second half of one rule. `newCounterpartyStore` above makes the WEB
 // door read the operator's list; without this, the AGENT door still read a

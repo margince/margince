@@ -38,7 +38,7 @@ func (unboundEmbedder) EmbedIdentity() (string, int) { return "", 0 }
 // redelivery loop the fix removed.
 func TestUpsertEmbeddingNoOpsOnUnboundLane(t *testing.T) {
 	s := NewStore(nil)
-	fresh, err := s.UpsertEmbedding(context.Background(), "person", ids.NewV7(), "some text", unboundEmbedder{})
+	fresh, err := s.UpsertEmbedding(context.Background(), "contact", ids.NewV7(), "some text", unboundEmbedder{})
 	if err != nil {
 		t.Fatalf("unbound lane must not error, got %v", err)
 	}

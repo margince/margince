@@ -49,7 +49,7 @@ const screensRoot = join(sourceRoot, "screens");
  * place in a surface that already has a head of its own.
  *
  * A file, not a line: a line number moves whenever anything above it is edited,
- * and a baseline that churns on unrelated changes is one people regenerate
+ * and a baseline that churns on unrelated changes is one contacts regenerate
  * without reading.
  */
 const notARecordZone = new Map<string, string>([
@@ -58,7 +58,7 @@ const notARecordZone = new Map<string, string>([
     "one learning of a list, titled by kind, inside the learnings panel's body",
   ],
   [
-    "screens/personnetwork/edgedetail.tsx",
+    "screens/contactnetwork/edgedetail.tsx",
     "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],
   [
@@ -217,9 +217,9 @@ describe("a titled zone is a Panel", () => {
     // have reached — including one a directory deep, because a walk that
     // stopped at the top level clears any floor the flat screens supply.
     expect(modules.length).toBeGreaterThan(80);
-    expect(modules.map(pathOf)).toContain("screens/person360.tsx");
+    expect(modules.map(pathOf)).toContain("screens/contact360.tsx");
     expect(modules.map(pathOf)).toContain(
-      "screens/personnetwork/edgedetail.tsx",
+      "screens/contactnetwork/edgedetail.tsx",
     );
   });
 

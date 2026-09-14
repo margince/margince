@@ -7,7 +7,7 @@ import "./factlist.css";
 // FactList: label→value pairs a reader scans rather than edits.
 //
 // It exists because ten sheets already style the same `<dl> > div > dt + dd`
-// shape, and two sites style none at all — `person360.tsx` applies a
+// shape, and two sites style none at all — `contact360.tsx` applies a
 // `.fact-list` class no stylesheet has ever declared, so those rows render with
 // the browser's 40px `dd` indent and no alignment at all. A primitive that
 // nobody can forget to style is the fix; a eleventh sheet would not be.

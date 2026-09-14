@@ -53,7 +53,7 @@ func runAuthzDisagreement(ctx context.Context, pool *pgxpool.Pool, args []string
 	}
 
 	// The system principal, because this is the installation asking about its
-	// own rollout rather than a seat asking about a person. Nothing it returns
+	// own rollout rather than a seat asking about a contact. Nothing it returns
 	// names a subject: no address, no consent state, only how two rules have
 	// compared.
 	ctx = principal.WithWorkspaceID(ctx, wsID)

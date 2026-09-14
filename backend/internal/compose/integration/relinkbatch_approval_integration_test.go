@@ -62,7 +62,7 @@ func TestAStagedBatchRelinkBindsToItsProjectAndMovesOnlyTheApprovedIDs(t *testin
 	// harness seeds users but no roles at all — so the lender gets a real role
 	// row holding what the staging and the release read and write.
 	e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ('relink-lender', 'Relink lender', $1::jsonb)`,
-		`{"objects":{"activity":{"read":true,"update":true},"project":{"read":true},"person":{"read":true}},"row_scope":"all"}`)
+		`{"objects":{"activity":{"read":true,"update":true},"project":{"read":true},"contact":{"read":true}},"row_scope":"all"}`)
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'relink-lender'`, e.Rep1)
 	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink probe"))
 	svc := approvals.NewService(e.DB())

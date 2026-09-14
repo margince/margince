@@ -4,7 +4,7 @@ import { type Endpoint, inboundUrl } from "./contract";
 
 // The member's own address, and a request that actually verifies against it.
 //
-// A `curl` that does not verify is worse than no `curl` at all: the person who
+// A `curl` that does not verify is worse than no `curl` at all: the contact who
 // pastes it learns that the connector is broken rather than that the example
 // is, and the refusal they get back is the same opaque 401 a forged request
 // gets — deliberately, because a refusal that said which part was wrong would
@@ -47,7 +47,7 @@ function shellQuoted(value: string): string {
 }
 
 /**
- * The whole command, as one block a person copies.
+ * The whole command, as one block a contact copies.
  *
  * Kept a pure function of its inputs so what a member pastes is exactly what a
  * test holds against the verifier's rule, rather than something assembled

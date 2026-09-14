@@ -38,7 +38,7 @@
    reads like the front of a small, well-made site rather than the heading of a
    form: the kicker and the room's standing on one line, the name in the display
    face at the page's largest rung, the seller's welcome at reading size, and
-   the person on the other end under a hairline. */
+   the contact on the other end under a hairline. */
 .buyer-hero {
   display: flex;
   flex-direction: column;

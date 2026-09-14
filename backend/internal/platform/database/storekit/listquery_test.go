@@ -11,6 +11,7 @@ package storekit
 // parameter.
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -20,9 +21,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-var testVocab = SortVocabulary(map[string]string{
-	"created_at": KindTimestamp,
-	"full_name":  fieldcatalog.TypeText,
+var testVocab = SortVocabulary(map[string]SortField{
+	"created_at": Column(KindTimestamp),
+	"full_name":  Column(fieldcatalog.TypeText),
 }, []fieldcatalog.Column{
 	{Name: "cf_score", Type: fieldcatalog.TypeNumber},
 	{Name: "cf_strategic", Type: fieldcatalog.TypeBoolean},
@@ -30,21 +31,28 @@ var testVocab = SortVocabulary(map[string]string{
 
 func sortSpec(s string) *string { return &s }
 
+// noArgs is the binder for a vocabulary of plain columns: nothing in it renders
+// an expression, so nothing here binds a parameter. A call means the fixture
+// grew a reference sort and this file has to say what it binds.
+//
+//craft:ignore naked-any the parameter type is ParseListSort's own binder shape, which takes any bind value
+func noArgs(any) int { panic("a plain-column vocabulary binds no sort parameters") }
+
 func TestParseListSort_DefaultSpellings(t *testing.T) {
 	for _, spec := range []*string{nil, sortSpec(""), sortSpec("-created_at,id")} {
-		got, err := ParseListSort(spec, testVocab)
+		got, err := ParseListSort(context.Background(), spec, testVocab, noArgs)
 		if err != nil || got != nil {
-			t.Fatalf("ParseListSort(%v) = %v, %v — want the nil default sort", spec, got, err)
+			t.Fatalf("ParseListSort(context.Background(), %v) = %v, %v — want the nil default sort", spec, got, err)
 		}
 	}
 }
 
 func TestParseListSort_SingleField(t *testing.T) {
-	asc, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	asc, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil || asc == nil || asc.desc || asc.name != "cf_score" {
 		t.Fatalf("ascending cf_score: got %+v, %v", asc, err)
 	}
-	desc, err := ParseListSort(sortSpec("-full_name"), testVocab)
+	desc, err := ParseListSort(context.Background(), sortSpec("-full_name"), testVocab, noArgs)
 	if err != nil || desc == nil || !desc.desc || desc.name != "full_name" {
 		t.Fatalf("descending full_name: got %+v, %v", desc, err)
 	}
@@ -52,16 +60,16 @@ func TestParseListSort_SingleField(t *testing.T) {
 
 func TestParseListSort_OutOfVocabularyRefused(t *testing.T) {
 	for _, spec := range []string{"owner_id", "cf_retired_or_unknown", "-cf_retired_or_unknown", "-"} {
-		_, err := ParseListSort(sortSpec(spec), testVocab)
+		_, err := ParseListSort(context.Background(), sortSpec(spec), testVocab, noArgs)
 		var sortErr *SortError
 		if !errors.As(err, &sortErr) || sortErr.Code != CodeSortFieldNotAllowed {
-			t.Fatalf("ParseListSort(%q) err = %v, want SortError %s", spec, err, CodeSortFieldNotAllowed)
+			t.Fatalf("ParseListSort(context.Background(), %q) err = %v, want SortError %s", spec, err, CodeSortFieldNotAllowed)
 		}
 	}
 }
 
 func TestParseListSort_MultiFieldRefused(t *testing.T) {
-	_, err := ParseListSort(sortSpec("-created_at,full_name"), testVocab)
+	_, err := ParseListSort(context.Background(), sortSpec("-created_at,full_name"), testVocab, noArgs)
 	var sortErr *SortError
 	if !errors.As(err, &sortErr) || sortErr.Code != CodeSortUnsupported {
 		t.Fatalf("multi-field sort err = %v, want SortError %s", err, CodeSortUnsupported)
@@ -73,14 +81,14 @@ func TestListSort_OrderBy(t *testing.T) {
 	if got := def.OrderBy(); got != " ORDER BY created_at DESC, id DESC" {
 		t.Fatalf("default OrderBy = %q", got)
 	}
-	asc, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	asc, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := asc.OrderBy(); got != ` ORDER BY "cf_score" ASC NULLS LAST, created_at DESC, id DESC` {
 		t.Fatalf("ascending OrderBy = %q", got)
 	}
-	desc, err := ParseListSort(sortSpec("-cf_score"), testVocab)
+	desc, err := ParseListSort(context.Background(), sortSpec("-cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +102,7 @@ func TestListSort_CursorKeySuffix(t *testing.T) {
 	if got := def.CursorKeySuffix(); got != "" {
 		t.Fatalf("default CursorKeySuffix = %q, want empty", got)
 	}
-	s, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	s, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +137,7 @@ func TestKeysetClause_DefaultCursorRoundTrip(t *testing.T) {
 }
 
 func TestKeysetClause_SortedCursorRoundTrip(t *testing.T) {
-	s, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	s, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +161,7 @@ func TestKeysetClause_SortedCursorRoundTrip(t *testing.T) {
 }
 
 func TestKeysetClause_DescendingComparesBelow(t *testing.T) {
-	s, err := ParseListSort(sortSpec("-cf_score"), testVocab)
+	s, err := ParseListSort(context.Background(), sortSpec("-cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +178,7 @@ func TestKeysetClause_DescendingComparesBelow(t *testing.T) {
 }
 
 func TestKeysetClause_NullKeyContinuesInsideNullTail(t *testing.T) {
-	s, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	s, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,11 +199,11 @@ func TestKeysetClause_NullKeyContinuesInsideNullTail(t *testing.T) {
 // distinct from an undecodable token) rather than silently misordering
 // the page.
 func TestKeysetClause_SortMismatchIsTypedMismatch(t *testing.T) {
-	sorted, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	sorted, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	descending, err := ParseListSort(sortSpec("-cf_score"), testVocab)
+	descending, err := ParseListSort(context.Background(), sortSpec("-cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,9 +237,9 @@ func TestKeysetClause_SortMismatchIsTypedMismatch(t *testing.T) {
 // the client-fault type, never reach the typed bind cast where Postgres
 // would fail the whole query (22P02 → 500).
 func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
-	vocab := SortVocabulary(map[string]string{
-		"created_at": KindTimestamp,
-		"owner_id":   KindUUID,
+	vocab := SortVocabulary(map[string]SortField{
+		"created_at": Column(KindTimestamp),
+		"owner_id":   Column(KindUUID),
 	}, []fieldcatalog.Column{
 		{Name: "cf_score", Type: fieldcatalog.TypeNumber},
 		{Name: "cf_budget", Type: fieldcatalog.TypeCurrency},
@@ -249,7 +257,7 @@ func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 		"created_at":   "yesterday",
 	} {
 		t.Run(field, func(t *testing.T) {
-			s, err := ParseListSort(sortSpec(field), vocab)
+			s, err := ParseListSort(context.Background(), sortSpec(field), vocab, noArgs)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -269,9 +277,9 @@ func TestKeysetClause_UnparseableSortKeyIsMalformed(t *testing.T) {
 // cursor keys and bind under their own casts, so a legitimately minted
 // token round-trips.
 func TestKeysetClause_CoreKindKeysRoundTrip(t *testing.T) {
-	vocab := SortVocabulary(map[string]string{
-		"updated_at": KindTimestamp,
-		"owner_id":   KindUUID,
+	vocab := SortVocabulary(map[string]SortField{
+		"updated_at": Column(KindTimestamp),
+		"owner_id":   Column(KindUUID),
 	}, nil)
 	at, id := time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7()
 
@@ -280,7 +288,7 @@ func TestKeysetClause_CoreKindKeysRoundTrip(t *testing.T) {
 		"updated_at": {key: "2026-07-11 12:00:00.123456+00", wantCast: "::timestamptz"},
 	} {
 		t.Run(field, func(t *testing.T) {
-			s, err := ParseListSort(sortSpec(field), vocab)
+			s, err := ParseListSort(context.Background(), sortSpec(field), vocab, noArgs)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -396,7 +404,7 @@ func TestSortError_NamesTheFieldAndTheCode(t *testing.T) {
 // of them was covered: DecodeCursor rejects this one before KeysetClause has a
 // sort to compare against, so a nil ListSort reaches it too.
 func TestKeysetClause_UndecodableTokenIsMalformed(t *testing.T) {
-	sorted, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	sorted, err := ParseListSort(context.Background(), sortSpec("cf_score"), testVocab, noArgs)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,7 +7,7 @@ package search
 //
 // Postgres raises 57014 for three different things — a spent statement_timeout,
 // an operator cancelling the backend, and the client going away — and only one
-// of them is something the person typing can do anything about. Told apart
+// of them is something the contact typing can do anything about. Told apart
 // wrongly, a caller whose own request was cancelled is sent to rewrite a query
 // that was fine.
 //

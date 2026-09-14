@@ -9,18 +9,18 @@ import { Callout } from "../design-system/callout";
 import { FieldGrid } from "../design-system/fieldgrid";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
+import { profileFieldLabel } from "./companies";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid, SidecarFieldRow } from "./companyraildetails";
-import { useOrgProfileFields } from "./evidenceverdict";
-import { profileFieldLabel } from "./organizations";
+import { useCompanyProfileFields } from "./evidenceverdict";
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
 
 // The account's own story, in the order a rep reads it: what the company
 // sells, who it sells to, and how the sale actually happens. These eleven
-// fields have no column on `organization` — the profile-field row IS the
+// fields have no column on `company` — the profile-field row IS the
 // record of them — so every one is written through the same PATCH the rail's
 // registration rows use.
 //
@@ -64,11 +64,11 @@ const NARRATIVE_FIELDS = [
  * and withholding the page's one explanation is the defect.
  */
 export function CompanyProfileForm({
-  org,
+  company,
   onOpenHistory,
   tools,
 }: Readonly<{
-  org: Organization;
+  company: Company;
   // Opens the record's own history drawer, for a reader following an evidence
   // mark back to what changed.
   onOpenHistory?: () => void;
@@ -80,11 +80,11 @@ export function CompanyProfileForm({
 }>): ReactNode {
   const t = useT();
   const reasonId = useId();
-  const writable = useCanWriteRecord("organization", org);
+  const writable = useCanWriteRecord("company", company);
   // The archived/overlay/not-yours sentence, when there is one. It is the
   // more specific answer, so it wins over the generic refusal below whenever
   // it applies.
-  const specificReason = useCompanyReadOnlyReason(org);
+  const specificReason = useCompanyReadOnlyReason(company);
   // Every denial owes the reader a sentence. `useCanWriteRecord` also refuses
   // a read seat and a missing grant, neither of which the specific reason
   // knows about, and a control pointing at an id that renders nothing is a
@@ -93,7 +93,7 @@ export function CompanyProfileForm({
     ? undefined
     : (specificReason ?? t("record.notYoursToChange"));
   const canEdit = writable && !specificReason;
-  const profileQuery = useOrgProfileFields(org.id);
+  const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
 
   return (
@@ -109,7 +109,7 @@ export function CompanyProfileForm({
       )}
       <Panel title={t("co.details.title")}>
         <PanelBody>
-          <DetailsGrid organization={org} />
+          <DetailsGrid company={company} />
         </PanelBody>
       </Panel>
       <Panel title={t("co.narrative.title")} sub={t("co.narrative.sub")}>
@@ -118,7 +118,7 @@ export function CompanyProfileForm({
             {NARRATIVE_FIELDS.map((field) => (
               <SidecarFieldRow
                 key={field}
-                orgId={org.id}
+                companyId={company.id}
                 fields={fields}
                 // A pending or failed read is not the same claim as "this
                 // field has no row": editing on that guess sends no If-Match
@@ -142,7 +142,7 @@ export function CompanyProfileForm({
           time, and now addable and removable — which is a different act from
           stating a field, and needs the same write state this form derived. */}
       <CompanyFactsPanel
-        orgId={org.id}
+        companyId={company.id}
         canEdit={canEdit}
         reasonId={reason ? reasonId : undefined}
         onOpenHistory={onOpenHistory}

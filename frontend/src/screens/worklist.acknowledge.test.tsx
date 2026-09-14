@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -53,6 +53,7 @@ function day(queue: WorklistItem[]): Worklist {
     },
     sources_unavailable: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -9,7 +9,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { primaryEmail } from "../format/primaryemail";
 import { LocaleProvider } from "../i18n";
 import { ComposeModal } from "./compose";
 import {
@@ -22,7 +21,7 @@ import {
 //
 // Sending REQUIRES a recipient, so an empty To field is not a missing
 // nicety: it is a reply the reader must address by hand against a thread
-// that already names the person. These tests assert what stands in the
+// that already names the contact. These tests assert what stands in the
 // field on open, and that a reader's own typing survives it.
 
 type Sent = { key: string; body: unknown };
@@ -116,7 +115,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -169,47 +168,30 @@ describe("ComposeModal recipient", () => {
     expect(screen.queryByText("dung.ly@example.test")).toBeNull();
   });
 
-  // A CONTACT's address, picked by the shared rule rather than by this test.
-  // A person carries a list, so the page decides which one; what must not
-  // happen is a retired address being offered, and the rule that prevents it
-  // is format/primaryEmail — mirrored by the drafter and held by
-  // backend/gates/frontendprimaryemail_test.go.
+  // A CONTACT's address, as the SERVER picked it.
+  //
+  // The composer is handed one address and offers it — it does not choose from
+  // a list, and neither does any other screen: `contact.primary_email` is the
+  // product's one answer to "which address is this contact reachable at",
+  // decided in the read that builds the row. A retired address never reaches
+  // this prop, which is why the assertion below is about what is OFFERED
+  // rather than about a rule this test would otherwise have to restate.
   it("addresses a first message to the contact's live primary address", async () => {
     stubRoutes();
     render(
       <ComposeModal
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
-        personId="p-1"
-        recordAddress={primaryEmail([
-          {
-            id: "e-1",
-            email: "left@buyer.test",
-            email_type: "work",
-            is_primary: true,
-            position: 0,
-            source: "manual",
-            captured_by: "human:u-1",
-            archived_at: "2026-01-01T00:00:00Z",
-          },
-          {
-            id: "e-2",
-            email: "anna@buyer.test",
-            email_type: "work",
-            is_primary: false,
-            position: 1,
-            source: "manual",
-            captured_by: "human:u-1",
-          },
-        ])}
+        contactId="p-1"
+        recordAddress="anna@buyer.test"
         open
         onClose={vi.fn()}
       />,
     );
 
     expect(await screen.findByText("anna@buyer.test")).toBeTruthy();
-    // The retired one is never offered: mail sent there either bounces or
-    // reaches somebody who asked us to stop using it.
+    // Nothing else is offered: the composer has one address, not a list to
+    // pick from.
     expect(screen.queryByText("left@buyer.test")).toBeNull();
   });
 
@@ -260,7 +242,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -295,7 +277,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -336,7 +318,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -375,7 +357,7 @@ describe("ComposeModal recipient", () => {
         <LocaleProvider initial="en">
           <ComposeModal
             activityId={activityId}
-            entityType="person"
+            entityType="contact"
             entityId="p-1"
             open
             onClose={vi.fn()}
@@ -411,7 +393,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -422,7 +404,7 @@ describe("ComposeModal recipient", () => {
     // as a chip would put an unsendable recipient in front of the reader.
     await waitFor(() => {
       expect(
-        screen.getByRole("button", { name: "Draft with AI" }),
+        screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
       ).toBeTruthy();
     });
     expect(screen.queryByText("dietmar@buyer.test")).toBeNull();
@@ -452,7 +434,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}
@@ -483,7 +465,7 @@ describe("ComposeModal recipient", () => {
     render(
       <ComposeModal
         activityId="act-1"
-        entityType="person"
+        entityType="contact"
         entityId="p-1"
         open
         onClose={vi.fn()}

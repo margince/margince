@@ -115,7 +115,7 @@ func TestALeadGroundsNoDealProjectOrClaim(t *testing.T) {
 	}
 }
 
-// The correspondence reaches the draft through persondraft's own fold, so the
+// The correspondence reaches the draft through contactdraft's own fold, so the
 // window and the snippet rule are the ones a contact's draft uses.
 func TestTheConversationReachesTheDraft(t *testing.T) {
 	t.Parallel()

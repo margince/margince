@@ -28,7 +28,7 @@ func TestEveryRequiredBodyIDIsNamedWhenAbsent(t *testing.T) {
 	}
 }
 
-// A null through_person_id means a direct route and is the ordinary case. A
+// A null through_contact_id means a direct route and is the ordinary case. A
 // present-but-zero one is a client bug, and answering "that colleague has no
 // route to this contact" about the nil UUID would hide it behind a
 // plausible-sounding refusal.
@@ -38,19 +38,19 @@ func TestAPresentButZeroIntermediaryIsRefusedWhileAnAbsentOneIsFine(t *testing.T
 	zero := openapi_types.UUID(ids.UUID{})
 
 	err := checkNoteIDs(crmcontracts.DraftIntroNoteJSONRequestBody{
-		ViaUserId: present, ThroughPersonId: &zero,
+		ViaUserId: present, ThroughContactId: &zero,
 	})
 	if err == nil {
-		t.Fatal("a zero through_person_id was accepted")
+		t.Fatal("a zero through_contact_id was accepted")
 	}
-	assertNamesNoteField(t, err, "through_person_id")
+	assertNamesNoteField(t, err, "through_contact_id")
 
 	// The admit case, without which the refusals above would pass against a
 	// guard that refused every request.
 	if err := checkNoteIDs(crmcontracts.DraftIntroNoteJSONRequestBody{
 		ViaUserId: present,
 	}); err != nil {
-		t.Fatalf("an absent through_person_id must be accepted as a direct route: %v", err)
+		t.Fatalf("an absent through_contact_id must be accepted as a direct route: %v", err)
 	}
 }
 

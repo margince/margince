@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -101,26 +101,26 @@ describe("grants — the pure predicate the hook and the catalog share", () => {
   // non-React caller sees the same answer, because it never exercises that path.
 
   it("grants what the snapshot grants", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    expect(grants(me, "person", "read")).toBe(true);
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "read")).toBe(true);
   });
 
   it("denies an action the snapshot does not carry", () => {
-    const me = meFixture({ allow: { person: ["read"] } });
-    expect(grants(me, "person", "update")).toBe(false);
+    const me = meFixture({ allow: { contact: ["read"] } });
+    expect(grants(me, "contact", "update")).toBe(false);
   });
 
   it("denies an object absent from the snapshot", () => {
     // The index signature types a miss as PRESENT, so this is the case that
     // proves the optional chain rather than the type system is doing the work.
-    const me = meFixture({ allow: { person: ["read"] } });
+    const me = meFixture({ allow: { contact: ["read"] } });
     expect(grants(me, "deal", "read")).toBe(false);
   });
 
   it("denies while /me has not resolved", () => {
     // The state every surface is in on first paint. Answering true here would
     // flash a settings entry and then withdraw it.
-    expect(grants(undefined, "person", "read")).toBe(false);
+    expect(grants(undefined, "contact", "read")).toBe(false);
   });
 
   it("gives the hook and the pure call the same answer", async () => {
@@ -381,22 +381,20 @@ describe("useCanWriteRecord", () => {
   // Each case holds the object grant AND a full seat, so the only thing moving
   // is the row. A test that varied two axes at once could not say which one
   // produced the answer.
-  const granted = { allow: { organization: ["read", "update"] } } as const;
+  const granted = { allow: { company: ["read", "update"] } } as const;
 
   it("admits a record the server marked writable", async () => {
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", { writable: true })).toBe(true);
+    expect(await canWriteRecord("company", { writable: true })).toBe(true);
   });
 
   it("refuses a record the server marked not writable, grant and seat notwithstanding", async () => {
-    // The case the whole field exists for: a rep holds organization.update on
+    // The case the whole field exists for: a rep holds company.update on
     // the OBJECT and still may not edit a colleague's company.
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", { writable: false })).toBe(
-      false,
-    );
+    expect(await canWriteRecord("company", { writable: false })).toBe(false);
   });
 
   it("refuses a record carrying no writable flag at all", async () => {
@@ -405,23 +403,21 @@ describe("useCanWriteRecord", () => {
     // in this file gives.
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", {})).toBe(false);
+    expect(await canWriteRecord("company", {})).toBe(false);
   });
 
   it("refuses while the record has not arrived", async () => {
     stubMe(meFixture(granted));
 
-    expect(await canWriteRecord("organization", undefined)).toBe(false);
+    expect(await canWriteRecord("company", undefined)).toBe(false);
   });
 
   it("refuses a writable record when the OBJECT grant is missing", async () => {
     // The row half cannot buy the object half. A seat with no
-    // organization.update writes no company, however the row is marked.
-    stubMe(meFixture({ allow: { organization: ["read"] } } as const));
+    // company.update writes no company, however the row is marked.
+    stubMe(meFixture({ allow: { company: ["read"] } } as const));
 
-    expect(await canWriteRecord("organization", { writable: true })).toBe(
-      false,
-    );
+    expect(await canWriteRecord("company", { writable: true })).toBe(false);
   });
 });
 

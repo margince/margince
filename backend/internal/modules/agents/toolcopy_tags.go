@@ -12,20 +12,20 @@ var listTagsCopy = toolCopy{
 }
 
 var getTagCopy = toolCopy{
-	Purpose: "Read one tag and how many people, companies and deals carry it.",
+	Purpose: "Read one tag and how many contacts, companies and deals carry it.",
 	Limits: "The counts cover those three record types only. They say how much retiring or " +
 		"merging the word would touch; the records themselves come from list_records.",
 }
 
 var getRecordTagsCopy = toolCopy{
-	Purpose: "Read the tags on one person, company or deal, with who applied each and when.",
+	Purpose: "Read the tags on one contact, company or deal, with who applied each and when.",
 	Limits: "Those three record types only. `withheld` true means the vocabulary is not visible " +
 		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
 		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
 }
 
 var applyTagCopy = toolCopy{
-	Purpose: "Tag a person, company, deal, lead or project by tag_id, or by tag_name, which must " +
+	Purpose: "Tag a contact, company, deal, lead or project by tag_id, or by tag_name, which must " +
 		"name a tag the workspace already has.",
 	Limits: "This tool never creates a tag: an unknown name is refused, and only an admin or ops " +
 		"seat can add a word to the vocabulary. A name matches case-insensitively; an archived " +
@@ -46,7 +46,7 @@ var createTagCopy = toolCopy{
 	Limits: "list_tags FIRST: a workspace with \"Key Account\" does not want \"key accounts\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
 		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
-		"it, which a person restores in Settings; no tool does. Needs the tag.create grant, " +
+		"it, which a contact restores in Settings; no tool does. Needs the tag.create grant, " +
 		"which an ordinary seat does not hold.",
 }
 
@@ -56,12 +56,12 @@ var createTagCopy = toolCopy{
 var mergeTagsCopy = toolCopy{
 	Purpose: "Fold a duplicate word into the one the workspace keeps, moving every record that " +
 		"carries it.",
-	// The governance sentence the surface appends already says a person approves
+	// The governance sentence the surface appends already says a human approves
 	// this, so that is not repeated. What only this copy can say is that the act
 	// cannot be walked back, and which of the two words is the one that dies.
 	Limits: "NOT UNDOABLE once approved: the source is retired, its name is released — links " +
 		"to it stop working and someone may coin it again — and no pointer home is kept, " +
-		"unlike a person or company merge. The TARGET is the word that survives; read both " +
+		"unlike a contact or company merge. The TARGET is the word that survives; read both " +
 		"with get_tag first. Needs the tag.update grant.",
 }
 

@@ -153,9 +153,9 @@ export const MicrosoftPinnedToADirectory: Story = {
   ),
 };
 
-/** Unpinned: the same app authorizing any organization, which is what an
+/** Unpinned: the same app authorizing any company, which is what an
  * omitted tenant means rather than an empty one. */
-export const MicrosoftAnyOrganization: Story = {
+export const MicrosoftAnyCompany: Story = {
   render: () => (
     <Served
       app={{

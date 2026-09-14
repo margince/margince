@@ -13,7 +13,7 @@
   "budgets": [
     {
       "id": "PERF-1",
-      "name": "record_open_person",
+      "name": "record_open_contact",
       "p50_ms": 2.904166,
       "p95_ms": 3.246833,
       "p99_ms": 3.375625,
@@ -22,7 +22,7 @@
     },
     {
       "id": "PERF-1",
-      "name": "record_open_organization",
+      "name": "record_open_company",
       "p50_ms": 2.822916,
       "p95_ms": 3.172375,
       "p99_ms": 3.313667,
@@ -40,7 +40,7 @@
     },
     {
       "id": "PERF-4",
-      "name": "record_save_person",
+      "name": "record_save_contact",
       "p50_ms": 5.599875,
       "p95_ms": 6.073291,
       "p99_ms": 6.37425,

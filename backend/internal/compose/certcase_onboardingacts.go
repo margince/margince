@@ -127,7 +127,7 @@ func (onboardingActCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 // refuses the very changes it exists to propose.
 func refuseUnsendableActTurn(f onboardingActFixture) error {
 	switch crmcontracts.OnboardingAct(f.Act) {
-	case crmcontracts.OnboardingActVoice, crmcontracts.OnboardingActResults, crmcontracts.OnboardingActConnect:
+	case crmcontracts.OnboardingActOnboardingActVoice, crmcontracts.OnboardingActOnboardingActResults, crmcontracts.OnboardingActOnboardingActConnect:
 	default:
 		return fmt.Errorf(
 			"cold_start/acts: the fixture speaks to the %q act, and this site answers voice, results or connect", f.Act,

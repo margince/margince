@@ -343,8 +343,8 @@ func TestRFC7009RevocationIsReachableWithoutASession(t *testing.T) {
 	// The client the revocation goes through genuinely carries no session:
 	// without this, a 200 below could be coming from the harness's admin
 	// cookie rather than from the exemption under test.
-	if status := c.sessionlessGet(t, "/v1/people"); status != http.StatusUnauthorized {
-		t.Fatalf("the session-less client reached /v1/people → %d, want 401: it holds a session, so nothing below would be evidence", status)
+	if status := c.sessionlessGet(t, "/v1/contacts"); status != http.StatusUnauthorized {
+		t.Fatalf("the session-less client reached /v1/contacts → %d, want 401: it holds a session, so nothing below would be evidence", status)
 	}
 
 	if status := c.revoke(t, c.access, "access_token"); status != http.StatusOK {

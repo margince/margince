@@ -180,7 +180,7 @@ Two limits on this automatic move are worth knowing now:
 - It never reopens a **Closed** project. A renewal that closes years later
   does not silently resurrect an engagement somebody deliberately ended; the
   deal reads won, the project stays closed, and reopening is a decision a
-  person makes with a reason (step 6).
+  contact makes with a reason (step 6).
 
 ## 6. Live in delivery, then close and reopen
 
@@ -193,7 +193,7 @@ Delivery runs for months. The project page is where it is tracked:
 - **Open commitments** lists open tasks filed under the project, soonest due
   first, with an **overdue** badge where it applies.
 - **Stakeholders**, **Contracts** and **Documents** on the right fill in as
-  people are seated on the project, agreements name it, and files are attached
+  contacts are seated on the project, agreements name it, and files are attached
   to it.
 - **Timeline** is the mail and activity filed under the project. The filter
   row above it (**Activity kind**, **Search this timeline**, **From**, **To**)

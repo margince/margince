@@ -185,7 +185,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 // repContext binds one rep's own authority, which every read and write on their
 // behalf runs under.
 //
-// A fresh correlation id per rep, so one morning's work for one person is one
+// A fresh correlation id per rep, so one morning's work for one colleague is one
 // recoverable trace in the audit spine rather than a fleet pass nobody can take
 // apart.
 func (w *briefGenerateWorker) repContext(
@@ -255,7 +255,7 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 // your attention today" and "this cannot be answered here" read identically on
 // the screen while only one of them is true.
 //
-// Agents are excluded: a brief is a person's morning, and an agent seat has no
+// Agents are excluded: a brief is a colleague's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content
 // is deals to act on.
 func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID, now time.Time) (morningPass, error) {

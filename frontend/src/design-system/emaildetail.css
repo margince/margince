@@ -57,35 +57,6 @@
 
 /* The sender's own words. Wrapped, not clamped: this is the reading surface,
  * and the row is what had to stay one line. */
-.emaildetail__main {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-/* The sender's sign-off: their own words, so it reads as part of the message
- * rather than as metadata. Quieter than the sentence above and separated from
- * it, but SHOWN — it used to sit behind a control promising quoted history,
- * which is not what a sign-off is. */
-.emaildetail__signoff {
-  margin: var(--space-3) 0 0;
-  color: var(--textMeta);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.emaildetail__quoted > summary {
-  color: var(--accent);
-  cursor: pointer;
-}
-
-.emaildetail__quoted > p {
-  margin: var(--space-2) 0 0;
-  color: var(--textMeta);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 /* The heading and the way out, on one line. */
 .emaildetail__head {
   display: flex;

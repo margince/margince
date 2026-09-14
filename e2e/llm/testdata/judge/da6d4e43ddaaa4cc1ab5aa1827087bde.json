@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer falsely claims 'The duplicate check did not flag anything against her' when the criterion states a possible duplicate of Lucy Vo IS queued.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 4, the other direction. The answer never gives the reader an all-clear about the PERSON: no claim that nothing resembling Lucy Vo was already on file, that the duplicate check turned nothing up against her, that there were no possible matches for her, or that there is nothing for anybody to review. A possible duplicate of her IS queued, so each of those is false. Two kinds of sentence are NOT this criterion's subject and are answered yes. First, anything said about the COMPANY: Terralogic really is new and nothing matched it, so 'no existing organization matched' is true. Second, a statement about the WRITE rather than about what was found: 'no duplicate record was created', 'the match is only flagged, nothing was merged'. Answer no only where the answer tells the reader that the search for a matching person found nothing.",
+  "answer": "Lucy Vo — Cybersecurity Sales Manager, Terralogic — is on the system, with lucy.vo@terralogic-vn.test and the Bangkok mobile.\n\nThe duplicate check did not flag anything against her, so you can write to her straight away."
+}

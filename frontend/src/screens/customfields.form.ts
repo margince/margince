@@ -153,7 +153,7 @@ export function customFieldsToBody(
  * coerces to `null`, the API reads a top-level null as *forget this column*
  * (httperr.ClearedFields), and no `cf_*` column is clearable — so a full
  * snapshot refused every save of any record with an empty custom field, naming
- * a field the person had not touched. That is the same defect the core fields
+ * a field the contact had not touched. That is the same defect the core fields
  * had, in the other half of the same body.
  *
  * Compared on the FORM's own strings, the way the core diff is: a control left

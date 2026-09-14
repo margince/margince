@@ -81,7 +81,7 @@ func TestAMessageThatArrivedAfterTheVerdictGetsItsOwnWindow(t *testing.T) {
 
 func TestAVerdictNobodyConfirmedWaitsLonger(t *testing.T) {
 	// Two authorities reach the same verdict and they are not worth the same. A
-	// person said so on purpose; the classifier guessed and nobody has looked.
+	// contact said so on purpose; the classifier guessed and nobody has looked.
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "arzt@praxis.example", "Befund", e.Rep1)
 	resolvePersonal(t, e, "arzt@praxis.example", mail, e.Rep1, false)
@@ -186,7 +186,7 @@ func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
 	}
 }
 
-func TestMailThePersonRepliedToSurvivesAPersonalPurge(t *testing.T) {
+func TestMailTheContactRepliedToSurvivesAPersonalPurge(t *testing.T) {
 	// Writing to an address is the T1 signal that they are a real counterparty,
 	// and it is the documented recovery: reply to a wrongly judged sender and
 	// the sweep lets go. Without it a wrong verdict has no way back, because a
@@ -195,7 +195,7 @@ func TestMailThePersonRepliedToSurvivesAPersonalPurge(t *testing.T) {
 	mail := seedPurgeableMail(t, e, "steuer@kanzlei.example", "Jahresabschluss", e.Rep1)
 	resolvePersonal(t, e, "steuer@kanzlei.example", mail, e.Rep1, false)
 	agePersonalMail(t, e, mail, "steuer@kanzlei.example", 31*24*time.Hour)
-	// The owner writes back, which is what a person does on noticing the record
+	// The owner writes back, which is what a contact does on noticing the record
 	// is wrong. seedOutboundMail marks it attested, as the capture path does.
 	seedOutboundMail(t, e, "steuer@kanzlei.example", "anbei die Unterlagen")
 
@@ -322,7 +322,7 @@ func agePersonalMail(t *testing.T, e *integration.Env, activityID ids.UUID, from
 	}
 }
 
-// overruleAsBusiness records the owner's cancel through the store a person's own
+// overruleAsBusiness records the owner's cancel through the store a contact's own
 // click writes it with.
 func overruleAsBusiness(t *testing.T, e *integration.Env, seat ids.UUID, address string) {
 	t.Helper()

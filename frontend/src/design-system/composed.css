@@ -316,13 +316,13 @@
 }
 /* The company sits ABOVE the stretched link, which is the only reason its
    click can reach it at all. */
-.deal-org-link {
+.deal-company-link {
   position: relative;
   z-index: 1;
   color: inherit;
   text-decoration: none;
 }
-.deal-org-link:hover {
+.deal-company-link:hover {
   text-decoration: underline;
 }
 /* `.deal-card.staged` — the AI tint and the dashed edge — is declared with the
@@ -354,7 +354,7 @@
   color: var(--warnText);
   font-variant-numeric: tabular-nums;
 }
-.deal-card .deal-org {
+.deal-card .deal-company {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -365,10 +365,10 @@
 }
 /* The card is one line of company in a narrow column, so a long name elides
  * rather than wrapping under its own mark. */
-.deal-card .deal-org > .avatar {
+.deal-card .deal-company > .avatar {
   flex: none;
 }
-.deal-card .deal-org-name {
+.deal-card .deal-company-name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -1416,4 +1416,71 @@
 .tl-msg-open:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
+}
+
+/* One responsibility row in the Responsible panel (screens/recordteam.tsx).
+ *
+ * The row is the reader's unit: a role label over the colleague or team that
+ * holds it, with the verbs for that one responsibility beside the pair. So the
+ * li is a row, and the labelled pair inside it is a column — the same anatomy
+ * .firmo's own div children already have, which is why the pair carries no
+ * class of its own.
+ *
+ * Scoped to this list rather than to .firmo, which every firmographics block
+ * in the product uses and none of which has row verbs. */
+.assignments {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.assignments > li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+.assignments .assignrow-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* Pushed to the end of the row and never shrunk: a long team name wraps, and
+ * Change/Remove keep their hit targets whatever the name does. */
+.assignrow-verbs {
+  display: flex;
+  gap: var(--gapActions);
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/* The Delivery health panel (screens/projecthealth.tsx).
+ *
+ * Its rows are labelled pairs like .firmo's, but the panel had no sheet of its
+ * own, so the state badge, the date and the note ran together into one string:
+ * "At riskas of 13/09/2026". The current reading is a small stack; the history
+ * rows below it are the same shape as a responsibility row. */
+.health-current {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.health-current > .t-caption {
+  display: block;
+}
+.healthlog {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.healthlog > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+}
+/* The badge and the note share a line, and the note wraps under nothing. */
+.healthlog .healthlog-reading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
 }

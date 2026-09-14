@@ -35,7 +35,7 @@ import (
 // that forgot.
 //
 // It names no field, because at this depth the only thing that knows one is the
-// CONSTRAINT NAME, and that is schema: `organization_owner_id_fkey` tells a
+// CONSTRAINT NAME, and that is schema: `company_owner_id_fkey` tells a
 // caller our table and column names. A path that can name the field should
 // refuse before the database does, the way checkLifecycle and checkSizeBand do —
 // this answers the ones that do not, and the constraint goes to the operator's
@@ -188,7 +188,7 @@ func infrastructureCause(err error) bool {
 // act on it twice over: the request carried two ids (the path's and the
 // patch's) and it could not tell which was blamed, and the one that was blamed —
 // `owner_id` — references a USER, which no tool on this surface enumerates. It
-// then sent a person id that genuinely exists and got byte-identical text back.
+// then sent a contact id that genuinely exists and got byte-identical text back.
 // Advice that cannot be followed is worse than none: it reads as a transient
 // problem and invites the retry the rest of the sentence forbids.
 //
@@ -197,7 +197,7 @@ func infrastructureCause(err error) bool {
 func referenceNotFoundDetail(err error) string {
 	if field, ok := storekit.ForeignKeyColumn(err); ok {
 		return "`" + field + "` names no record of the kind it references (an owner is a user, a parent " +
-			"an organization). Send an id of the right kind; do not retry unchanged."
+			"a company). Send an id of the right kind; do not retry unchanged."
 	}
 	return "an id in this request names no record of the kind its field references. Check each id " +
 		"against the kind its field expects; do not retry unchanged."

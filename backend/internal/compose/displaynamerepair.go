@@ -15,7 +15,7 @@ package compose
 //
 // A companion to the attendee-name recovery beside it, not an arm of it: that
 // pass drains on activity_participant.display_name IS NULL, which these rows no
-// longer are — their attendee names were recovered, and it is the PERSON's
+// longer are — their attendee names were recovered, and it is the CONTACT's
 // display that stayed behind. Same originals, different question, so a separate
 // selector that drains on its own answer.
 
@@ -27,20 +27,20 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // repairStaleDisplayNamesBatch puts the learned name on the page for up to limit
-// people whose display still shows what a machine first guessed.
+// contacts whose display still shows what a machine first guessed.
 func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
 	if limit <= 0 {
 		return 0, nil
 	}
 	// storekit.EmitEvent REFUSES to publish without a correlation id, so a pass
-	// that omitted one would repair nothing at all: every person would fail on
+	// that omitted one would repair nothing at all: every contact would fail on
 	// their own event, the batch would roll back, and the backlog would sit there
 	// looking as though the job had simply not run yet.
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -50,11 +50,11 @@ func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit
 		if err != nil {
 			return err
 		}
-		for _, personID := range stale {
+		for _, contactID := range stale {
 			// Through the module that owns the write, under its own guards: the
 			// human-precedence check runs again here, so a name somebody typed
 			// between the select and this call is still theirs.
-			moved, err := people.RefreshDisplayNameTx(ctx, tx, personID)
+			moved, err := contacts.RefreshDisplayNameTx(ctx, tx, contactID)
 			if err != nil {
 				return err
 			}
@@ -69,29 +69,29 @@ func repairStaleDisplayNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit
 	}
 	if repaired > 0 {
 		log.InfoContext(ctx, "display name repair: contacts now show the name we learned",
-			"people", repaired)
+			"contacts", repaired)
 	}
 	return repaired, nil
 }
 
-// selectStaleDisplayNames finds people whose split columns name them and whose
-// display name says something else, where no person ever set that display.
+// selectStaleDisplayNames finds contacts whose split columns name them and whose
+// display name says something else, where no contact ever set that display.
 //
-// The two human tests are the same pair people.RefreshDisplayNameTx applies, and
+// The two human tests are the same pair contacts.RefreshDisplayNameTx applies, and
 // they are restated here for the reason every drain restates its writer's
 // predicate: a selector that offered rows the write refuses would return the
 // same page every tick and never empty.
-func selectStaleDisplayNames(ctx context.Context, tx pgx.Tx, limit int) ([]ids.PersonID, error) {
+func selectStaleDisplayNames(ctx context.Context, tx pgx.Tx, limit int) ([]ids.ContactID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT p.id
-		  FROM person p
+		  FROM contact p
 		 WHERE p.first_name IS NOT NULL
 		   AND p.last_name IS NOT NULL
 		   AND p.full_name IS DISTINCT FROM (p.first_name || ' ' || p.last_name)
 		   AND p.captured_by NOT LIKE 'human:%'
 		   AND NOT EXISTS (
 		       SELECT 1 FROM audit_log a
-		        WHERE a.entity_type = 'person' AND a.entity_id = p.id
+		        WHERE a.entity_type = 'contact' AND a.entity_id = p.id
 		          AND a.actor_type = 'human' AND a.action = 'update'
 		          AND (a.after ? 'full_name' OR a.before ? 'full_name'))
 		 ORDER BY p.id
@@ -100,9 +100,9 @@ func selectStaleDisplayNames(ctx context.Context, tx pgx.Tx, limit int) ([]ids.P
 		return nil, fmt.Errorf("compose: selecting the contacts whose display name is stale: %w", err)
 	}
 	defer rows.Close()
-	var out []ids.PersonID
+	var out []ids.ContactID
 	for rows.Next() {
-		var id ids.PersonID
+		var id ids.ContactID
 		if err := rows.Scan(&id); err != nil {
 			return nil, fmt.Errorf("compose: reading a contact whose display name is stale: %w", err)
 		}

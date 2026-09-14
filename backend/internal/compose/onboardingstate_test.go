@@ -27,7 +27,7 @@ func TestOnboardingStateResponsePreservesResumeFields(t *testing.T) {
 	}
 
 	response := onboardingStateResponse(state)
-	if response.Path == nil || *response.Path != crmcontracts.Creator {
+	if response.Path == nil || *response.Path != crmcontracts.OnboardingStatePathCreator {
 		t.Fatalf("path = %v, want creator", response.Path)
 	}
 	if response.Version == nil || *response.Version != 7 {

@@ -92,7 +92,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 			result.EmailSummary = ptr(*hit.EmailSummary)
 		}
 		// native records are authoritative
-		result.TrustTier = ptr(crmcontracts.SearchResultTrustTierAuthoritative)
+		result.TrustTier = ptr(crmcontracts.SearchResultTrustTierSearchResultTrustTierAuthoritative)
 		data = append(data, result)
 	}
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}

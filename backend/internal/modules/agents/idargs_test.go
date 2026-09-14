@@ -124,7 +124,7 @@ func (seamProbeProvider) AdvanceDeal(context.Context, datasource.AdvanceDealInpu
 // that means to probe THAT case uses its own v1-only stub and says so.
 func (seamProbeProvider) ArchivableTypes(context.Context) ([]datasource.EntityType, error) {
 	return []datasource.EntityType{
-		datasource.EntityPerson, datasource.EntityOrganization, datasource.EntityDeal,
+		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
 	}, nil
 }
@@ -309,6 +309,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	}, nil)
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterReportVocabularyTool(r, seamProbeReportVocabulary{})
+	RegisterRecordFieldsTool(r, RecordFieldsResource{})
 	RegisterAnalyticsVocabularyTool(r, seamProbeAnalyticsVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {

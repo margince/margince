@@ -53,7 +53,7 @@ import (
 //
 // Its own type rather than a bare conflict, because the ways this declines are
 // different situations for the reader: a correction already taken back
-// (somebody got there first), and a field a person has since edited (their work
+// (somebody got there first), and a field a contact has since edited (their work
 // would be overwritten). Both are 409s about the state of a record rather than
 // anything malformed in the request.
 type CorrectionReversalError struct{ Reason string }
@@ -178,7 +178,7 @@ func (s *Store) restoreCorrectedFields(
 	}
 	if patch.Empty() {
 		// The deal already holds everything the correction changed away from —
-		// a person put it back by hand. Nothing to restore, and the stamp still
+		// a contact put it back by hand. Nothing to restore, and the stamp still
 		// records that this correction is done.
 		return markReversedOrConflict(ctx, tx, correction)
 	}
@@ -272,7 +272,7 @@ func priorImage(ctx context.Context, tx pgx.Tx, c DealCorrection) (map[string]js
 	return before, nil
 }
 
-// buildReversalPatch puts each corrected field back, and refuses if a person has
+// buildReversalPatch puts each corrected field back, and refuses if a contact has
 // changed one since.
 //
 // The later-edit check is per FIELD rather than per record on purpose. A rep who
@@ -293,7 +293,7 @@ func (s *Store) buildReversalPatch(
 	}
 	// A restored PAST date leaves the provisional flag to
 	// markRestoredDateUnresolved, which SETS it rather than restoring it. The
-	// conflict check below still runs for that field: a person who confirmed
+	// conflict check below still runs for that field: a contact who confirmed
 	// the machine's date cleared the flag deliberately, and an undo that
 	// re-marked it without asking would overwrite their answer.
 	pastDate, err := s.restoresAPastDate(ctx, tx, before)
@@ -308,7 +308,7 @@ func (s *Store) buildReversalPatch(
 			wanted = json.RawMessage("null")
 		}
 		// ALREADY BACK is asked before CHANGED SINCE, and the order matters: a
-		// person who restored this field by hand has done the undo's work, and
+		// contact who restored this field by hand has done the undo's work, and
 		// reading their value as an unrelated later edit would refuse the undo
 		// for having already happened.
 		if jsonEqual(wanted, current[field]) {
@@ -414,7 +414,7 @@ func reversalFields(patch *storekit.Patch) map[string]any {
 	return fields
 }
 
-// markReversedOrConflict stamps a correction whose fields a person already
+// markReversedOrConflict stamps a correction whose fields a contact already
 // restored by hand.
 func markReversedOrConflict(ctx context.Context, tx pgx.Tx, c DealCorrection) error {
 	by, err := storekit.CapturedBy(ctx)

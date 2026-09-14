@@ -12,6 +12,7 @@ package storekit
 // fetch it with. Silent on the server, permanent for that list.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ import (
 var beyondJSON = time.Date(294276, 1, 1, 0, 0, 0, 0, time.UTC)
 
 func TestAPageWhoseCursorWillNotMintIsAnErrorNotAnEmptyPromise(t *testing.T) {
-	sorted, err := ParseListSort(sortSpec("full_name"), testVocab)
+	sorted, err := ParseListSort(context.Background(), sortSpec("full_name"), testVocab, noArgs)
 	if err != nil {
 		t.Fatalf("building a non-default sort: %v", err)
 	}

@@ -53,7 +53,7 @@ func TestAnEmptyBriefChargesNothing(t *testing.T) {
 
 // The run reaches the caller as the engine reported it: the ranking, the state
 // the human left, and the evidence each item rests on. A tool that dropped the
-// state would have an agent re-raise what a person already dismissed.
+// state would have an agent re-raise what a contact already dismissed.
 func TestTheServedBriefCarriesTheRunTheEngineAnswered(t *testing.T) {
 	tool := readBrief{read: briefOf(2)}
 

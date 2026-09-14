@@ -7,7 +7,7 @@ package capture
 
 // The workspace mail-sharing posture (capture.mail_sharing, ON by default):
 // switched OFF, an email captured from then on is born participants-only —
-// held to the people on the message and the capturing mailbox owner — while
+// held to the contacts on the message and the capturing mailbox owner — while
 // already-captured mail keeps the audience it has. The setting moves the
 // default for NEW mail; it rewrites no history.
 
@@ -25,9 +25,9 @@ import (
 
 func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	e := integration.SetupSearch(t)
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	fake := &mailFake{linkTo: personID}
+	fake := &mailFake{linkTo: contactID}
 	registry.Register(fake)
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	connID, err := registry.Connect(grantCtx, "graph", connector.Auth("token"))

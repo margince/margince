@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -20,7 +20,7 @@ import {
 // to name the author — `ProvenanceTag` takes a `renderUser` — and the header has
 // always had the roster in hand, because the owner control on the line above
 // reads it. Nobody connected the two, so a record every colleague could see
-// reported its author as "a person".
+// reported its author as "a contact".
 //
 // The fallback is the half worth pinning: the roster walk is bounded and the
 // list it walks excludes archived members, so a name that cannot be resolved
@@ -28,12 +28,12 @@ import {
 // "typed by 3f2b8c…" is not more information than "typed by a person", it is the
 // same non-answer with a reader-hostile spelling.
 
-type Organization = components["schemas"]["Organization"];
+type Company = components["schemas"]["Company"];
 
 // Typed, not asserted. A fixture cast into the contract type can drop a required
 // field and still compile, so the test would go on passing after the wire shape
 // moved under it — which is the one thing a fixture must not do.
-const ORG: Organization = {
+const COMPANY: Company = {
   // Absent reads as NOT writable, which is the fail-closed default a real
   // response never relies on: the server answers this per row.
   writable: true,
@@ -54,11 +54,11 @@ afterEach(() => {
 });
 
 // The grants the reader holds wherever a spec is about something other than
-// the grant: the record verbs ask `organization.update` before they draw, so a
+// the grant: the record verbs ask `company.update` before they draw, so a
 // /me with no authorization at all would refuse every Edit these specs open.
 const READER = {
   authorization: meFixture({
-    allow: { organization: ["read", "update", "delete"] },
+    allow: { company: ["read", "update", "delete"] },
   }).authorization,
 };
 
@@ -200,7 +200,7 @@ function renderInApp(ui: ReactNode) {
 }
 
 function renderLine() {
-  renderInApp(<CompanyIdentityLine org={ORG} />);
+  renderInApp(<CompanyIdentityLine company={COMPANY} />);
 }
 
 // The owner control's mount. It sits in the record's facts box beside the
@@ -208,7 +208,7 @@ function renderLine() {
 // one mount, so the three roster states below are asserted where a reader
 // actually meets them.
 function renderFacts() {
-  renderInApp(<CompanyFacts org={ORG} />);
+  renderInApp(<CompanyFacts company={COMPANY} />);
 }
 
 describe("who wrote this record", () => {
@@ -223,7 +223,7 @@ describe("who wrote this record", () => {
     expect(screen.queryByText("typed by a person")).toBeNull();
   });
 
-  it("says a person wrote it, not a uuid, when the roster cannot resolve them", async () => {
+  it("says a contact wrote it, not a uuid, when the roster cannot resolve them", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderLine();
 
@@ -311,7 +311,7 @@ describe("the owner the edit form prefills", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={ORG}
+        company={COMPANY}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -340,7 +340,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -367,7 +367,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({ activity: ["create"] });
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -388,7 +388,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const answer = stubMeInFlight();
     renderInApp(
       <CompanyPrimaryActions
-        org={ORG}
+        company={COMPANY}
         composerOpen={false}
         onComposerOpen={() => undefined}
       />,
@@ -426,7 +426,7 @@ describe("an archived account's verbs", () => {
     const user = userEvent.setup();
     renderInApp(
       <CompanyActionBadges
-        org={{ ...ORG, archived_at: "2026-07-13T00:00:00Z" }}
+        company={{ ...COMPANY, archived_at: "2026-07-13T00:00:00Z" }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,
@@ -477,22 +477,22 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
     // These badges are what this component draws; the lifecycle badge is the
     // other mount, so a duplicate here is one "Customer" too many on its own.
-    expect(await screen.findByText(en["org.relType.partner"])).toBeTruthy();
-    expect(screen.queryByText(en["org.relType.customer"])).toBeNull();
+    expect(await screen.findByText(en["company.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
   });
 
   it("still draws a relationship the lifecycle disagrees with", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyRelationshipBadges
-        org={{
-          ...ORG,
+        company={{
+          ...COMPANY,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}
@@ -502,6 +502,101 @@ describe("an account whose lifecycle and relationship agree", () => {
     // An account can be worked as a prospect and be a customer of something
     // else already — dropping the badge because the two words differ would hide
     // a true reading rather than a repeated one.
-    expect(await screen.findByText(en["org.relType.customer"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["company.relType.customer"]),
+    ).toBeTruthy();
+  });
+});
+
+// The header's two groups answer one question between them — which verbs are
+// worth a place on the page and which are worth a line in a list — and the
+// answer is legible only if each group keeps its own shape. A menu row that
+// grows a glyph puts its words on a second left edge; a header button that
+// loses its glyph becomes a link among three buttons. Both had happened here.
+describe("the shape of the header's verbs", () => {
+  // The order every record type carries: the four verbs common to all of them
+  // first, then what is particular to an account, then the one verb a reader
+  // cannot walk back. A menu whose rows move between record types is a menu
+  // read from the top every time instead of aimed at.
+  it("lists the menu's verbs in the order every record carries them", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyActionBadges
+        company={COMPANY}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    // Waited for by its own handle first: the panel mounts its children on the
+    // open, so reading the whole list in the tick the click returned in would
+    // catch whichever rows had committed by then.
+    await screen.findByTestId("archive-record");
+    const panel = document.querySelector(".overflow-menu-items");
+    if (!panel) {
+      throw new Error("the menu drew no panel");
+    }
+    expect(
+      [...panel.querySelectorAll("button")].map((row) => row.textContent),
+    ).toEqual([
+      en["record.edit"],
+      en["merge.company"],
+      en["record.share"],
+      en["record.fullHistory"],
+      en["company.partnerSetUp"],
+      en["record.archive"],
+    ]);
+  });
+
+  // Words, and only words. A row's glyph buys nothing a whole line of text
+  // does not already say, and one glyph among eight rows indents that row's
+  // words past every other row's — which is the ragged column `atoms.css`
+  // reserves an empty icon slot to repair when a caller does it anyway.
+  it("draws no glyph on any row of the menu", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    const user = userEvent.setup();
+    renderInApp(
+      <CompanyActionBadges
+        company={COMPANY}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await screen.findByTestId("archive-record");
+    const panel = document.querySelector(".overflow-menu-items");
+    expect(panel?.querySelector("svg")).toBeNull();
+  });
+
+  // Outside the menu the verbs are few enough to carry a glyph, and a header
+  // strip of label-only buttons reads as a list of links. The glyph is an
+  // addition, never a replacement: the accessible name is still the verb, so
+  // nothing about how this button is found has moved.
+  it("leads Log activity and Add task with a glyph, keeping their words", async () => {
+    stubGrants({ activity: ["create"] });
+    renderInApp(
+      <CompanyPrimaryActions
+        company={COMPANY}
+        composerOpen={false}
+        onComposerOpen={() => undefined}
+      />,
+    );
+
+    for (const name of [en["log.title"], en["log.addTask"]]) {
+      const verb = await screen.findByRole("button", { name });
+      expect(verb.textContent).toContain(name);
+      // aria-hidden, so the glyph adds nothing to the name the row is found
+      // by — which is what the findByRole above has already proved.
+      expect(verb.querySelector("svg")?.getAttribute("aria-hidden")).toBe(
+        "true",
+      );
+    }
   });
 });

@@ -47,18 +47,18 @@ func TestDispatcherRoutesEveryReadVerbToTheOverlayProviderWhenCached(t *testing.
 	now := dispatcherFixedNow
 	d := overlaySeededDispatcher(wsID, now)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	if _, err := d.Read(ctx, ref); err == nil {
 		t.Error("Read: want the overlay provider's nil-mirror-store error, got nil")
 	}
-	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}}); err == nil {
+	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}}); err == nil {
 		t.Error("Search: want the overlay provider's nil-mirror-store error, got nil")
 	}
 	if _, err := d.ListObjects(ctx); err == nil {
 		t.Error("ListObjects: want the overlay provider's nil-mirror-store error, got nil")
 	}
-	if _, err := d.ListFields(ctx, datasource.EntityPerson); err == nil {
+	if _, err := d.ListFields(ctx, datasource.EntityContact); err == nil {
 		t.Error("ListFields: want the overlay provider's nil-mirror-store error, got nil")
 	}
 	if _, err := d.RunReport(ctx, datasource.ReportPlan{Entity: datasource.EntityDeal}); err == nil {

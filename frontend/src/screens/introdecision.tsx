@@ -27,14 +27,14 @@ import {
  * into the wrong one.
  */
 export function IntroDecisionDrawer({
-  personId,
-  personName,
+  contactId,
+  contactName,
   request,
   open,
   onClose,
 }: Readonly<{
-  personId: string;
-  personName: string;
+  contactId: string;
+  contactName: string;
   request: IntroRequest;
   open: boolean;
   onClose: () => void;
@@ -44,7 +44,7 @@ export function IntroDecisionDrawer({
   const [answer, setAnswer] = useState<IntroDecision>("accepted");
   const [reason, setReason] = useState("");
 
-  const decide = useDecideIntroRequest(personId);
+  const decide = useDecideIntroRequest(contactId);
 
   // Suggesting somebody else without naming them is not an answer, and the
   // server refuses it. Until a colleague picker exists this surface offers the
@@ -79,26 +79,26 @@ export function IntroDecisionDrawer({
       size="wide"
     >
       <h2 id={titleId}>
-        {t("person.intro.decideTitle", { name: personName })}
+        {t("contact.intro.decideTitle", { name: contactName })}
       </h2>
 
       <p>{request.internal_reason}</p>
       {request.value_for_target ? (
         <p>
-          <strong>{t("person.intro.valueLabel")}: </strong>
+          <strong>{t("contact.intro.valueLabel")}: </strong>
           {request.value_for_target}
         </p>
       ) : null}
 
       {request.forwardable_note ? (
         <section>
-          <h3>{t("person.intro.noteLabel")}</h3>
+          <h3>{t("contact.intro.noteLabel")}</h3>
           {/* Provenance beside the words, not in a tooltip: the colleague is
               about to forward these under their own name, so whether a model
               wrote them is part of what they are deciding. */}
           {request.note_ai_generated ? (
             <Badge tone="ai" quiet>
-              {t("person.intro.noteByModel")}
+              {t("contact.intro.noteByModel")}
             </Badge>
           ) : null}
           <blockquote>{request.forwardable_note}</blockquote>
@@ -106,11 +106,11 @@ export function IntroDecisionDrawer({
       ) : null}
 
       {request.name_drop_allowed ? (
-        <p>{t("person.intro.nameDropRequested")}</p>
+        <p>{t("contact.intro.nameDropRequested")}</p>
       ) : null}
 
       <ChoiceList<IntroDecision>
-        legend={t("person.intro.decideLegend")}
+        legend={t("contact.intro.decideLegend")}
         value={answer}
         onChange={setAnswer}
         choices={answers.map((a) => ({
@@ -121,8 +121,8 @@ export function IntroDecisionDrawer({
       />
 
       <Field
-        label={t("person.intro.decideReasonLabel")}
-        hint={t("person.intro.decideReasonHint")}
+        label={t("contact.intro.decideReasonLabel")}
+        hint={t("contact.intro.decideReasonHint")}
       >
         {(control) => (
           <textarea
@@ -136,15 +136,15 @@ export function IntroDecisionDrawer({
 
       <div className="form-actions">
         <Button onClick={onClose} variant="ghost">
-          {t("person.intro.cancel")}
+          {t("contact.intro.cancel")}
         </Button>
         <Button onClick={submit} disabled={decide.isPending}>
-          {t("person.intro.decideAction")}
+          {t("contact.intro.decideAction")}
         </Button>
       </div>
       {decide.isError ? (
         <p role="alert">
-          <Badge tone="danger">{t("person.intro.decideFailed")}</Badge>
+          <Badge tone="danger">{t("contact.intro.decideFailed")}</Badge>
         </p>
       ) : null}
     </Modal>
@@ -157,18 +157,18 @@ const DECISION_LABEL: Record<
   IntroDecision,
   Parameters<ReturnType<typeof useT>>[0]
 > = {
-  accepted: "person.intro.answerAccept",
-  name_drop_approved: "person.intro.answerNameDrop",
-  suggest_other: "person.intro.answerSuggest",
-  declined: "person.intro.answerDecline",
+  accepted: "contact.intro.answerAccept",
+  name_drop_approved: "contact.intro.answerNameDrop",
+  suggest_other: "contact.intro.answerSuggest",
+  declined: "contact.intro.answerDecline",
 };
 
 const DECISION_HELP: Record<
   IntroDecision,
   Parameters<ReturnType<typeof useT>>[0]
 > = {
-  accepted: "person.intro.answerAcceptHelp",
-  name_drop_approved: "person.intro.answerNameDropHelp",
-  suggest_other: "person.intro.answerSuggestHelp",
-  declined: "person.intro.answerDeclineHelp",
+  accepted: "contact.intro.answerAcceptHelp",
+  name_drop_approved: "contact.intro.answerNameDropHelp",
+  suggest_other: "contact.intro.answerSuggestHelp",
+  declined: "contact.intro.answerDeclineHelp",
 };

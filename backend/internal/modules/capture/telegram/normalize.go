@@ -182,7 +182,7 @@ func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.Normaliz
 	// `from` at all — an anonymous group admin posts under `sender_chat`
 	// instead — decodes to sender id 0, which is not an account: it is a valid,
 	// non-empty key that every such sender shares, so they would collapse onto
-	// ONE Person, one identity row, and one conversation reading as reachable at
+	// ONE Contact, one identity row, and one conversation reading as reachable at
 	// chat 0. A negative id is not an account either — that is how Telegram
 	// numbers chats, not users. The identity is minted a few lines below, so the
 	// rule about what counts as an account belongs here — the chat-scope gate
@@ -211,7 +211,7 @@ func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.Normaliz
 			// not an account, but a connector that hashed only some of its keys
 			// would answer "was this hashed" with the chat's shape, which is
 			// the inference this field exists to replace.
-			SourceIDNamesAPerson: true,
+			SourceIDNamesAContact: true,
 		},
 		Fields: ActivityFields{
 			// The two axes, stated separately (ADR-0107/A158): WHAT happened is
@@ -259,7 +259,7 @@ func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.Normaliz
 // messageBody is what the timeline shows for one message. Telegram carries a
 // media message's words in `caption`, never in `text`, so reading `text` alone
 // files a photo-with-a-caption as an activity with an empty body — the rep sees
-// the Person and a blank line where the customer's sentence was.
+// the Contact and a blank line where the customer's sentence was.
 //
 // A message with no words at all reads as a bracketed placeholder naming what
 // arrived, deliberately NOT ErrSkip: the customer did reach out, and skipping

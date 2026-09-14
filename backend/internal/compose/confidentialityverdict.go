@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -58,13 +58,13 @@ const (
 type ConfidentialityVerdictEngine struct {
 	pool    *pgxpool.Pool
 	threads *capture.ThreadVerdictStore
-	// people is here for one reason: a personal verdict has to be able to
+	// contacts is here for one reason: a personal verdict has to be able to
 	// retract the contact capture already made. Capture decides which records a
-	// private thread orphaned; people archives them through its own writer, so
+	// private thread orphaned; contacts archives them through its own writer, so
 	// the write shape holds. Neither module imports the other.
-	people *people.Store
-	brain  completer
-	log    *slog.Logger
+	contacts *contacts.Store
+	brain    completer
+	log      *slog.Logger
 }
 
 // NewConfidentialityVerdictEngine builds the engine over the pool and the model
@@ -73,11 +73,11 @@ type ConfidentialityVerdictEngine struct {
 // not an error.
 func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog.Logger) *ConfidentialityVerdictEngine {
 	return &ConfidentialityVerdictEngine{
-		pool:    pool,
-		threads: capture.NewThreadVerdictStore(InstallationDB(pool)),
-		people:  people.NewStore(InstallationDB(pool)),
-		brain:   brain,
-		log:     log,
+		pool:     pool,
+		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
+		contacts: contacts.NewStore(InstallationDB(pool)),
+		brain:    brain,
+		log:      log,
 	}
 }
 

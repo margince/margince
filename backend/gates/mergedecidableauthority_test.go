@@ -18,7 +18,7 @@ package gates
 // If it does, the failure is silent and lands on the reader: a card that offers
 // a verb the endpoint refuses is the button that told a rep to try again
 // forever, and a card that withholds one the endpoint would accept hides work
-// from the person whose job it is.
+// from the contact whose job it is.
 //
 // So DecidableForMerge must reach its answer through auth.WritableSubset — the
 // same visibility-and-write-authority pair EnsureWritable asks, asked set-wise.
@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	decidableFile   = "internal/modules/people/mergeface.go"
+	decidableFile   = "internal/modules/contacts/mergeface.go"
 	decidableMethod = "DecidableForMerge"
 	decidableAsks   = "auth.WritableSubset"
 )

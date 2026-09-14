@@ -3,7 +3,7 @@
 
 package netguard
 
-// Whether the origin in an outgoing link can be opened by the person who
+// Whether the origin in an outgoing link can be opened by the contact who
 // receives it.
 //
 // This is the inverse of the rule a fetch source answers to. A fetch

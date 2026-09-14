@@ -86,7 +86,7 @@
      sentence over it and reads at full strength, the dot on it the same. */
   /* Behind today the axis is SOLID and carries the accent: this is time the
      record accounts for, and the tone is the one the product gives to work
-     people did. Ahead of today it goes dotted and grey — those stops have not
+     contacts did. Ahead of today it goes dotted and grey — those stops have not
      happened, and a solid rule to a date nobody has reached draws the future
      as firmly as the past. */
   border-block-start: 2px solid var(--accent);
@@ -99,7 +99,7 @@
   block-size: 9px;
   border-radius: 50%;
   corner-shape: round;
-  /* A filed stop is something a person did, so its mark carries the tone the
+  /* A filed stop is something a contact did, so its mark carries the tone the
      rest of the product gives to human work. Grey, it read as chrome on an
      axis whose whole job is to say which moments count. */
   background: var(--accent);
@@ -191,7 +191,7 @@
 }
 .co-spine-relation {
   /* --textMeta, the AA small-text role, never the muted one: this line carries
-     the kind of exchange and the people on it, which is the half of the stop a
+     the kind of exchange and the contacts on it, which is the half of the stop a
      reader is scanning for. Set lighter it failed contrast AND buried the
      fact. */
   color: var(--textMeta);

@@ -37,7 +37,7 @@ const documents: Attachment[] = [
     doc_state: "final",
     pinned: true,
     created_at: "2026-08-01T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
@@ -49,7 +49,7 @@ const documents: Attachment[] = [
     doc_state: "draft",
     pinned: false,
     created_at: "2026-08-02T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
@@ -62,7 +62,7 @@ const documents: Attachment[] = [
     doc_state: "current",
     pinned: false,
     created_at: "2026-08-03T09:00:00Z",
-    entity_type: "organization",
+    entity_type: "company",
     entity_id: "o-1",
     source: "upload",
     captured_by: "human:u-1",
@@ -72,7 +72,7 @@ const documents: Attachment[] = [
 const deal = {
   id: "deal-1",
   name: "Pallet Handling Programme — Graz",
-  organization_id: "o-1",
+  company_id: "o-1",
   status: "open",
 };
 
@@ -91,7 +91,7 @@ const dealDocument = {
 
 function Documents({
   data,
-  allow = { deal: ["update"], organization: ["update"] },
+  allow = { deal: ["update"], company: ["update"] },
   seat = "full",
 }: Readonly<{
   data: Attachment[];
@@ -99,7 +99,7 @@ function Documents({
   seat?: "full" | "read";
 }>) {
   installFetchStub({
-    "GET /organizations/o-1/documents": () => jsonResponse({ data, page }),
+    "GET /companies/o-1/documents": () => jsonResponse({ data, page }),
     // Spelled out rather than defaulted: the Accept control on a deal-scoped
     // reading and the Add a document button are both grant-gated, so a story
     // that left /me unrouted would draw the refused branch it is not named for.
@@ -114,7 +114,7 @@ function Documents({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
-        <CompanyDocumentsCard orgId="o-1" />
+        <CompanyDocumentsCard companyId="o-1" />
       </div>
     </StoryProviders>
   );

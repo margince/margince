@@ -38,14 +38,14 @@ func TestSourceLagByClassReportsTheOldestWatermarkPerClass(t *testing.T) {
 
 	fixedModified := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "1", Fields: map[string]any{"first_name": "Ada"}, ModifiedAt: fixedModified,
+		ObjectClass: "contact", ExternalID: "1", Fields: map[string]any{"first_name": "Ada"}, ModifiedAt: fixedModified,
 	}); err != nil {
-		t.Fatalf("ingesting the person fixture: %v", err)
+		t.Fatalf("ingesting the contact fixture: %v", err)
 	}
 	if err := ms.Ingest(ctx, Record{
-		ObjectClass: "person", ExternalID: "2", Fields: map[string]any{"first_name": "Bob"}, ModifiedAt: fixedModified,
+		ObjectClass: "contact", ExternalID: "2", Fields: map[string]any{"first_name": "Bob"}, ModifiedAt: fixedModified,
 	}); err != nil {
-		t.Fatalf("ingesting the second person fixture: %v", err)
+		t.Fatalf("ingesting the second contact fixture: %v", err)
 	}
 
 	// Ingest itself always stamps last_synced_at=now() (mirrorstore.go's
@@ -61,10 +61,10 @@ func TestSourceLagByClassReportsTheOldestWatermarkPerClass(t *testing.T) {
 	oldSyncedAt := now.Add(-2 * time.Hour).Truncate(time.Millisecond)
 	newSyncedAt := now.Add(-30 * time.Minute).Truncate(time.Millisecond)
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE overlay_mirror SET last_synced_at = $1 WHERE object_class = 'person' AND external_id = '1'`, oldSyncedAt); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE overlay_mirror SET last_synced_at = $1 WHERE object_class = 'contact' AND external_id = '1'`, oldSyncedAt); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `UPDATE overlay_mirror SET last_synced_at = $1 WHERE object_class = 'person' AND external_id = '2'`, newSyncedAt)
+		_, err := tx.Exec(ctx, `UPDATE overlay_mirror SET last_synced_at = $1 WHERE object_class = 'contact' AND external_id = '2'`, newSyncedAt)
 		return err
 	}); err != nil {
 		t.Fatalf("pinning the fixtures' last_synced_at: %v", err)
@@ -75,15 +75,15 @@ func TestSourceLagByClassReportsTheOldestWatermarkPerClass(t *testing.T) {
 		t.Fatalf("SourceLagByClass: %v", err)
 	}
 
-	personLag, ok := lag["person"]
+	contactLag, ok := lag["contact"]
 	if !ok {
-		t.Fatalf("lag = %#v, want a \"person\" entry", lag)
+		t.Fatalf("lag = %#v, want a \"contact\" entry", lag)
 	}
 	// The reported lag must be against the OLDEST last_synced_at seen for
 	// the class — the worst-case, never the freshest — so it is exactly
 	// now-oldSyncedAt, not the smaller now-newSyncedAt.
-	if want := now.Sub(oldSyncedAt); personLag != want {
-		t.Fatalf("lag[person] = %v, want exactly %v (measured against the OLDEST record, not the newest)", personLag, want)
+	if want := now.Sub(oldSyncedAt); contactLag != want {
+		t.Fatalf("lag[contact] = %v, want exactly %v (measured against the OLDEST record, not the newest)", contactLag, want)
 	}
 }
 

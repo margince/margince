@@ -28,7 +28,7 @@ const DEFAULT_WINDOW_DAYS = 30;
 /**
  * What each stage transition has earned, and what each is allowed to do.
  *
- * THE TABLE IS READ-ONLY, and that is the whole design. It exists so a person
+ * THE TABLE IS READ-ONLY, and that is the whole design. It exists so a contact
  * can decide whether a transition is trustworthy enough to move deals by
  * itself, and a control in every row would invite the flip before the reading.
  * The switches live BELOW it, in their own section, reached after the evidence
@@ -127,7 +127,7 @@ export function StageAutomationCard() {
             {/* Four columns mean something other than what their heading
                 suggests, and a reader deciding whether to trust a transition
                 has to know which. Below the table rather than in tooltips: a
-                number you must hover to understand is one people read wrong
+                number you must hover to understand is one contacts read wrong
                 once and then stop reading. */}
             <dl className="t-caption">
               <dt>{t("stageAutomation.reviewed")}</dt>
@@ -209,7 +209,7 @@ function beforeTheReport(
 // A rate, or a dash.
 //
 // A transition nobody has answered has NO rate — not a rate of zero. Printing
-// "0%" for it would say people reject it every time, when what happened is that
+// "0%" for it would say contacts reject it every time, when what happened is that
 // nobody looked, and those two ask for opposite fixes.
 function rateCell(rate: number, reviewed: number, locale: Locale): string {
   if (reviewed === 0) {

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -17,7 +17,7 @@ import { installFetchStub } from "./story-utils";
 // The connect-time backfill is the coldstart payoff: the scope must auto-load
 // (honest scope before any click), the spend must still wait for the explicit
 // start (ADR-0020 preview-before-spend), and the run must render the three
-// headline figures — captured mail, people, companies — from real persisted
+// headline figures — captured mail, contacts, companies — from real persisted
 // counts as they climb. Every number here is a server number.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -185,12 +185,33 @@ describe("the connect-time backfill payoff", () => {
     });
   });
 
+  // A capped count is a FLOOR, and shown as a count it is short by multiples on
+  // exactly the mailboxes where the cap binds — five years of a routine
+  // business mailbox crosses the limit. A reader has no way to tell the two
+  // kinds of number apart, and this is the number they are consenting to.
+  it("says 'at least' when the provider stopped counting", async () => {
+    stubApi({
+      statuses: [statusNone],
+      preview: { ...previewOf(20000), estimate_is_floor: true },
+    });
+    render(<BackfillPanel provider="gmail" />);
+
+    expect(
+      await screen.findByText(/At least 20,000 messages in that period/),
+    ).toBeTruthy();
+    // And not as a plain count, which is the statement this replaces.
+    expect(screen.queryByText(/^20,000 messages in that period/)).toBeNull();
+  });
+
   it("auto-loads the scope estimate without a click, and does not spend until start", async () => {
     const calls = stubApi({ statuses: [statusNone], preview: previewOf(1234) });
     render(<BackfillPanel provider="gmail" />);
 
-    // The estimate appears with no user interaction — honest scope up front.
-    expect(await screen.findByText(/~1,234/)).toBeTruthy();
+    // The scope appears with no user interaction, and the WINDOW leads it: the
+    // period of their own mailbox is what the mailbox owner agrees to, and the count
+    // describes that period.
+    expect(await screen.findByText(/6 months of your mailbox/)).toBeTruthy();
+    expect(screen.getByText(/1,234 messages in that period/)).toBeTruthy();
     expect(requestsTo(calls, "/backfill/preview", "POST").length).toBe(1);
     // But nothing has been imported: no start POST fired on its own.
     expect(requestsTo(calls, "/backfill", "POST").length).toBe(0);
@@ -221,7 +242,7 @@ describe("the connect-time backfill payoff", () => {
     });
     render(<BackfillPanel provider="gmail" />);
 
-    await screen.findByText(/~400/);
+    await screen.findByText(/400 messages in that period/);
     await userEvent.click(
       screen.getByRole("button", { name: /Start the import/ }),
     );
@@ -278,13 +299,13 @@ describe("the connect-time backfill payoff", () => {
     );
   });
 
-  it("renders the three headline figures — captured, people, companies — from the run counts", async () => {
+  it("renders the three headline figures — captured, contacts, companies — from the run counts", async () => {
     stubApi({
       statuses: [
         countsStatus("running", {
           captured: 128,
-          people_created: 47,
-          organizations_created: 12,
+          contacts_created: 47,
+          companies_created: 12,
           messages_scanned: 150,
         }),
       ],
@@ -306,8 +327,8 @@ describe("the connect-time backfill payoff", () => {
       statuses: [
         countsStatus("done", {
           captured: 512,
-          people_created: 90,
-          organizations_created: 20,
+          contacts_created: 90,
+          companies_created: 20,
           messages_scanned: 600,
         }),
       ],
@@ -380,7 +401,7 @@ describe("the connect-time backfill payoff", () => {
 
   it("surfaces an honest error class without hiding the counts captured so far", async () => {
     stubApi({
-      statuses: [countsStatus("error", { captured: 40, people_created: 9 })],
+      statuses: [countsStatus("error", { captured: 40, contacts_created: 9 })],
     });
     render(<BackfillPanel provider="gmail" />);
 
@@ -415,7 +436,28 @@ describe("honest capability and staleness", () => {
   // and a multi-year window reaches that cap far more often. A run that scans
   // past its own denominator has no percentage to show, and a full bar over a
   // still-running import would be the one number on this screen that lies.
-  it("drops the percentage once a run scans past its own estimate", () => {
+  // An overrun used to mean one thing because the estimate always was a floor.
+  // It is now two, and they read differently: a mailbox that grew past an EXACT
+  // count leaves a run at its end, while a FLOOR that has been passed leaves
+  // nobody knowing how much is left.
+  it("drops the percentage once a run scans past a FLOOR it cannot see beyond", () => {
+    render(
+      <BackfillPanel
+        provider="gmail"
+        initial={{
+          ...countsStatus("running", { captured: 900, messages_scanned: 900 }),
+          estimated_messages: 500,
+          estimate_is_floor: true,
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    // The absolute counts stay: scanned and captured, both past the bound.
+    expect(screen.getAllByText(/900/).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the bar full when an EXACT estimate was overrun by a growing mailbox", () => {
     render(
       <BackfillPanel
         provider="gmail"
@@ -426,9 +468,12 @@ describe("honest capability and staleness", () => {
       />,
     );
 
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    // The absolute counts stay: scanned and captured, both past the floor.
-    expect(screen.getAllByText(/900/).length).toBeGreaterThan(0);
+    // Drawn rather than dropped: the provider counted every message in the
+    // window, so what is left is the handful that arrived during the import —
+    // and withholding the bar there would say the run's progress is unknowable
+    // when it is nearly finished.
+    const bar = screen.getByRole("progressbar");
+    expect(bar.getAttribute("aria-valuenow")).toBe("100");
   });
 
   it("does not animate a running run whose updated_at is stale", () => {

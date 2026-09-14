@@ -30,11 +30,11 @@ func applyDealLinkPatches(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch, clearPartner bool,
 	ensurePartner EnsurePartner, ensureProjectAttachable EnsureProjectAttachable,
 ) error {
-	if in.OrganizationID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.OrganizationID.UUID); err != nil {
+	if in.CompanyID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 			return err
 		}
-		p.Set("organization_id", current.OrganizationId, *in.OrganizationID)
+		p.Set("company_id", current.CompanyId, *in.CompanyID)
 	}
 	if in.OwnerID != nil {
 		// A named owner is an assignment, and the destination is checked the

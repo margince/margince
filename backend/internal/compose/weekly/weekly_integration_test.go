@@ -453,7 +453,7 @@ func TestTheWeekCountsMeetingsByHostRatherThanByWhoFiledThem(t *testing.T) {
 		t.Errorf("counted %d meetings held for a rep who hosted one of the two, want 1",
 			review.Counts.MeetingsHeld)
 	}
-	// The other side of the same question, in the same test: the person who
+	// The other side of the same question, in the same test: the contact who
 	// FILED both meetings hosted neither, and must be credited with none. A
 	// broken NULL-guard in the fallback would show up here and nowhere else.
 	filer := e.As(e.Rep3, []ids.UUID{e.Team1}, integration.AdminPerms)
@@ -483,13 +483,13 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 		                      host_user_id, source, captured_by)
 		VALUES ($1, 'meeting', 'The meeting', $2, 'held', $3, 'manual', 'human:x')`,
 		inWeek, e.Rep1)
-	// A meeting is with a PERSON — the schema refuses a company link, and says
+	// A meeting is with a CONTACT — the schema refuses a company link, and says
 	// the company sees it through them — so the shared record the join runs
 	// over is the attendee.
-	person := integration.SeedIDRow(t, owner,
-		`INSERT INTO person (id, full_name, source, captured_by)
+	contact := integration.SeedIDRow(t, owner,
+		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'The attendee', 'manual', 'human:x')`)
-	linkToPerson(t, owner, meeting, person)
+	linkToContact(t, owner, meeting, contact)
 
 	// Raised AFTER the week closed, on the same account. Real work, and not
 	// this meeting's outcome.
@@ -498,7 +498,7 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 		                      assignee_id, source, captured_by)
 		VALUES ($1, 'task', 'Weeks later', $2, $2, $3, 'manual', 'human:x')`,
 		weekClock.AddDate(0, 0, 14), e.Rep1)
-	linkToPerson(t, owner, late, person)
+	linkToContact(t, owner, late, contact)
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -510,13 +510,13 @@ func TestAMeetingsNextStepMustBeRaisedInsideTheWeek(t *testing.T) {
 	}
 }
 
-// linkToPerson files one activity under a person, which is how a meeting and
+// linkToContact files one activity under a contact, which is how a meeting and
 // the task that follows it are related — there is no meeting_id on a task.
-func linkToPerson(t *testing.T, owner *pgx.Conn, activity, person ids.UUID) {
+func linkToContact(t *testing.T, owner *pgx.Conn, activity, contact ids.UUID) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, activity, person); err != nil {
-		t.Fatalf("linking the activity to its person: %v", err)
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activity, contact); err != nil {
+		t.Fatalf("linking the activity to its contact: %v", err)
 	}
 }

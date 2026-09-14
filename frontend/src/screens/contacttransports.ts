@@ -1,0 +1,185 @@
+import type { LucideIcon } from "lucide-react";
+import { Mail, MessageSquare, Send } from "lucide-react";
+
+import type { components } from "../api/schema";
+import { useT } from "../i18n";
+import { useProviderLabel } from "./channelproviders";
+
+// How this contact can be written to, and what a control that opens the writing
+// surface may therefore promise.
+//
+// It lives beside the contact screens rather than inside one of them because the
+// answer has two readers: the composer, which OFFERS the transports, and the
+// record page's lead verb, which NAMES the one the composer would pick. Those
+// two read the same reachability or the button misdescribes what pressing it
+// does: a lead verb reading `Email` on a contact who has no address names a
+// transport the record does not carry.
+
+type Contact360 = components["schemas"]["Contact360"];
+
+export type Transport = {
+  // `email` or a channel_provider id. The two live in one namespace because the
+  // composer picks one of them, and `email` is not a provider grammar match so
+  // it cannot collide with one.
+  id: string;
+  label: string;
+  // Absent for mail, which opens its own conversation. Present for every
+  // channel, because a channel reply is anchored by contract.
+  anchorId?: string;
+};
+
+// Which ways this contact can be written to, right now, in the order the
+// composer offers them.
+//
+// Mail leads when there is an address, because it is the one transport that can
+// OPEN a conversation: `POST /emails` names its addressee. A channel cannot —
+// `send-message` resolves the recipient from the conversation being answered
+// and there is deliberately no account-started twin — so a channel is offered
+// only when this contact already has a conversation on it, and the most recent
+// one is the anchor a reply would continue.
+//
+// Reachability and the anchor are BOTH required, and they answer different
+// questions: reachability says the identity is live and unblocked, the anchor
+// says there is something to continue. A transport with one and not the other
+// would be a choice that fails at the send.
+export function transportsFor(
+  view: Contact360,
+  providerLabel: (provider: string) => string,
+  t: ReturnType<typeof useT>,
+): Transport[] {
+  const out: Transport[] = [];
+  if (view.contact.emails?.[0]?.email) {
+    out.push({ id: "email", label: t("compose.transportEmail") });
+  }
+  const reachable = new Set(
+    (view.contact.reachability ?? [])
+      .filter((channel) => channel.reachable)
+      .map((channel) => channel.provider),
+  );
+  // Most recent first, so the first row seen for a provider IS its latest
+  // conversation — the one a rep means when they pick that transport.
+  const newestFirst = [...(view.activities?.data ?? [])].sort(
+    (a, b) =>
+      new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
+  );
+  for (const activity of newestFirst) {
+    const provider = activity.channel_provider;
+    if (
+      activity.kind !== "message" ||
+      !provider ||
+      !reachable.has(provider) ||
+      out.some((transport) => transport.id === provider)
+    ) {
+      continue;
+    }
+    out.push({
+      id: provider,
+      label: providerLabel(provider),
+      anchorId: activity.id,
+    });
+  }
+  return out;
+}
+
+/**
+ * Which transport a NAMED message is on, and whether it can still be answered.
+ *
+ * A worklist row is about one message. Opening the composer on whichever
+ * transport the contact happens to lead with would draft a reply to the wrong
+ * conversation — the same overstated promise that kept `moveHref` returning a
+ * bare record href until the composer could honour the link.
+ *
+ * `chosen` is the transport to open on, absent when the message names none this
+ * contact still has. `stale` says which of the two absences it is, and the
+ * distinction is the whole reason this returns a pair rather than a transport:
+ *
+ *   - no id asked         → nothing named, no claim to keep, `stale` is false
+ *   - named, resolved     → open on it
+ *   - named, unresolvable → open on the default AND say so
+ *
+ * The third is a real shape rather than a defensive one: a channel disconnected
+ * since the row was ranked, an address removed, a message archived out of the
+ * page's own window. Falling back silently there is the defect this pair
+ * exists to prevent — the reader asked to answer one conversation and would be
+ * writing into another without being told.
+ */
+export type AnchoredTransport = {
+  chosen: Transport | undefined;
+  stale: boolean;
+};
+
+export function transportForActivity(
+  transports: readonly Transport[],
+  view: Contact360,
+  activityId: string | undefined,
+): AnchoredTransport {
+  if (!activityId) {
+    return { chosen: undefined, stale: false };
+  }
+  const named = (view.activities?.data ?? []).find(
+    (activity) => activity.id === activityId,
+  );
+  if (!named) {
+    return { chosen: undefined, stale: true };
+  }
+  // A message belongs to its channel; anything else on the timeline — a mail,
+  // a note, a call — is answered by mail, which is the one transport that can
+  // OPEN a conversation rather than continue one.
+  const wanted = named.kind === "message" ? named.channel_provider : "email";
+  const chosen = transports.find((transport) => transport.id === wanted);
+  return chosen
+    ? // ANCHORED ON THE MESSAGE THE CALLER NAMED, not on the provider's newest.
+      // transportsFor offers the latest conversation per provider because that
+      // is what a rep means when they pick a transport from the list; a caller
+      // who named one means that one.
+      { chosen: { ...chosen, anchorId: named.id }, stale: false }
+    : { chosen: undefined, stale: true };
+}
+
+// The same answer for a caller that holds only the record.
+//
+// Both readers need the transport directory and the reader's own language to
+// name a provider, and both would otherwise reach for the two hooks themselves:
+// one place to forget one of them is enough.
+export function useTransports(view: Contact360): Transport[] {
+  const t = useT();
+  const providerLabel = useProviderLabel();
+  return transportsFor(view, providerLabel, t);
+}
+
+// What a control that opens the composer may call itself, and the mark it wears.
+export type TransportAction = {
+  label: string;
+  icon: LucideIcon;
+};
+
+// The lead verb for a record whose transport is chosen adaptively.
+//
+// With exactly ONE transport the verb names it, because that is what pressing
+// the button will do: mail for a contact with an address, the provider's own
+// name for one reachable only on a chat channel.
+//
+// With more than one it must NOT name any of them — the composer opens a picker,
+// and a button reading `Email` that lands on a chooser promised a transport it
+// then asked about. With none it cannot name one either; the caller disables it,
+// and the neutral verb is what a disabled control says while it explains why.
+//
+// The neutral glyph is a paper plane and never a pencil: the record header draws
+// this verb icon-only beside the record's Edit, and two pencil squares are one
+// verb drawn twice.
+export function primaryTransportAction(
+  transports: readonly Transport[],
+  t: ReturnType<typeof useT>,
+): TransportAction {
+  if (transports.length !== 1) {
+    return { label: t("contact.action.write"), icon: Send };
+  }
+  const only = transports[0];
+  if (only.id === "email") {
+    return { label: t("contact.action.email"), icon: Mail };
+  }
+  return {
+    label: t("contact.action.messageOn", { transport: only.label }),
+    icon: MessageSquare,
+  };
+}

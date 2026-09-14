@@ -3,7 +3,7 @@
 
 package compose
 
-// Serving a frozen snapshot to somebody narrower than the person who froze it.
+// Serving a frozen snapshot to somebody narrower than the contact who froze it.
 //
 // The stored headline is the sum over every deal the ISSUER could see. Handing
 // that number to a recipient who cannot see all of them discloses a total

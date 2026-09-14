@@ -26,7 +26,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -36,9 +36,9 @@ import (
 
 func TestTheAccessPackageCarriesWhatIsHeldAboutTheSubject(t *testing.T) {
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the package: %v", err)
 	}
@@ -56,41 +56,41 @@ func TestTheAccessPackageCarriesWhatIsHeldAboutTheSubject(t *testing.T) {
 }
 
 func TestAssemblingAPackageNeedsTheTrustErasureNeeds(t *testing.T) {
-	// AssembleSAR's own two conditions: the person.delete grant, and an
+	// AssembleSAR's own two conditions: the contact.delete grant, and an
 	// unbounded row scope because Art. 15 owes the subject everything held
 	// rather than the slice one colleague may see.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 
-	// read_only holds no person.delete and is refused by the grant.
+	// read_only holds no contact.delete and is refused by the grant.
 	readOnly := e.As(ids.NewV7(), []ids.UUID{e.Team1}, ReadOnlyPerms)
-	if _, err := privacy.AssembleSAR(readOnly, e.DB(), ids.From[ids.PersonKind](person)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := privacy.AssembleSAR(readOnly, e.DB(), ids.From[ids.ContactKind](contact)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("read_only assembled a subject-access package: err=%v, want permission denied", err)
 	}
 	// A bounded rep is refused twice over — no grant, and no scope.
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
-	if _, err := privacy.AssembleSAR(repCtx, e.DB(), ids.From[ids.PersonKind](person)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := privacy.AssembleSAR(repCtx, e.DB(), ids.From[ids.ContactKind](contact)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a bounded rep assembled a subject-access package: err=%v, want permission denied", err)
 	}
 }
 
 func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
 	// The gap this route must not open. AssembleSAR admits any unbounded human
-	// holding person.delete, and the seeded defaults give that to ops and
+	// holding contact.delete, and the seeded defaults give that to ops and
 	// management as well as admin — so the assembler ALONE is more open than the
 	// queue that owns this workflow.
 	//
 	// What closes it is reading the request first: GetDSR takes requireDSRAdmin,
 	// which is admin-only, so a handler that reaches the request before it
 	// assembles anything is gated by the narrower of the two. This pins both
-	// halves, because a future handler that assembled from a person id in the
+	// halves, because a future handler that assembled from a contact id in the
 	// path instead would silently be reachable by two more roles.
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 		Kind:       "access",
-		SubjectRef: person.String(),
+		SubjectRef: contact.String(),
 		DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
@@ -100,7 +100,7 @@ func TestTheQueueGateIsWhatKeepsTheExportAdminOnly(t *testing.T) {
 	opsCtx := e.As(ids.NewV7(), []ids.UUID{e.Team1}, OpsPerms)
 	// The assembler admits ops: this is the fact the route has to defend against,
 	// not a defect in AssembleSAR — its own contract is the erasure trust level.
-	if _, err := privacy.AssembleSAR(opsCtx, e.DB(), ids.From[ids.PersonKind](person)); err != nil {
+	if _, err := privacy.AssembleSAR(opsCtx, e.DB(), ids.From[ids.ContactKind](contact)); err != nil {
 		t.Fatalf("ops is refused by the assembler itself, so this test no longer describes the "+
 			"reason the queue gate matters: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestAnAgentIsRefusedTheAccessPackageWhateverItsPassportCarries(t *testing.T
 	// carries the granting human's live grants, so an admin's read-scoped
 	// passport would otherwise assemble a subject's entire record.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 
 	agent := principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:sdr",
@@ -126,7 +126,7 @@ func TestAnAgentIsRefusedTheAccessPackageWhateverItsPassportCarries(t *testing.T
 	ctx := principal.WithActor(
 		principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7()),
 		agent)
-	if _, err := privacy.AssembleSAR(ctx, e.DB(), ids.From[ids.PersonKind](person)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := privacy.AssembleSAR(ctx, e.DB(), ids.From[ids.ContactKind](contact)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent carrying an admin's grants assembled a package: err=%v, want permission denied", err)
 	}
 }
@@ -137,12 +137,12 @@ func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
 	// else is the export nobody asked for.
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 
 	for _, kind := range []string{"erasure", "rectify"} {
 		created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
 			Kind:       kind,
-			SubjectRef: person.String(),
+			SubjectRef: contact.String(),
 			DueAt:      time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
 		})
 		if err != nil {
@@ -159,7 +159,7 @@ func TestOnlyAnAccessRequestHasAPackage(t *testing.T) {
 }
 
 func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
-	// subject_ref is free text until somebody resolves it to a person. The
+	// subject_ref is free text until somebody resolves it to a contact. The
 	// erasure path already refuses one that names nobody; the access path owes
 	// the same answer rather than a confusing one from further in.
 	e := Setup(t)
@@ -177,7 +177,7 @@ func TestAnAccessRequestNamingNobodyHasNothingToAssemble(t *testing.T) {
 		t.Fatalf("reading back the request: %v", err)
 	}
 	if _, parseErr := ids.Parse(got.SubjectRef); parseErr == nil {
-		t.Fatal("an address parsed as a person id, so the handler's refusal is unreachable")
+		t.Fatal("an address parsed as a contact id, so the handler's refusal is unreachable")
 	}
 }
 
@@ -185,9 +185,9 @@ func TestTheAssembledPackageIsSerializable(t *testing.T) {
 	// The seam hands bytes across, so a package that cannot be marshalled is a
 	// 500 on the one endpoint an officer needs under a statutory deadline.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](person))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -241,8 +241,8 @@ func TestTheHandlerReadsTheRequestBeforeItAssemblesAnything(t *testing.T) {
 	// makes the route admin-only, and swapping the two calls would leave every
 	// other test in this file green.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
-	request := seedAccessRequest(t, e, person.String())
+	contact := seedSubjectWithMail(t, e)
+	request := seedAccessRequest(t, e, contact.String())
 
 	assembler := &recordingAssembler{}
 	opsCtx := e.As(ids.NewV7(), []ids.UUID{e.Team1}, OpsPerms)
@@ -261,8 +261,8 @@ func TestTheHandlerAnswersAnAdminWithThePackage(t *testing.T) {
 	// The admit case. Without it the refusals above could all pass against an
 	// authority that turns everybody away.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
-	request := seedAccessRequest(t, e, person.String())
+	contact := seedSubjectWithMail(t, e)
+	request := seedAccessRequest(t, e, contact.String())
 
 	assembler := &recordingAssembler{}
 	rec := downloadPackage(e.Admin(), t, e, request, assembler)
@@ -284,10 +284,10 @@ func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
 	// record to close a request that asked for something else is the export
 	// nobody asked for.
 	e := Setup(t)
-	person := seedSubjectWithMail(t, e)
+	contact := seedSubjectWithMail(t, e)
 	store := consent.NewStore(e.DB())
 	created, err := store.CreateDSR(e.Admin(), consent.CreateDSRInput{
-		Kind: "erasure", SubjectRef: person.String(),
+		Kind: "erasure", SubjectRef: contact.String(),
 		DueAt: time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
@@ -306,7 +306,7 @@ func TestTheHandlerRefusesARequestOfTheWrongKind(t *testing.T) {
 }
 
 func TestTheHandlerRefusesARequestNamingNobody(t *testing.T) {
-	// subject_ref is free text until somebody resolves it to a person id.
+	// subject_ref is free text until somebody resolves it to a contact id.
 	e := Setup(t)
 	request := seedAccessRequest(t, e, subjectAddress)
 
@@ -340,20 +340,20 @@ func seedAccessRequest(t *testing.T, e *Env, subjectRef string) ids.UUID {
 // than about a typo.
 const subjectAddress = "betroffene@example.test"
 
-// seedSubjectWithMail lands a person with an address and one message on their
+// seedSubjectWithMail lands a contact with an address and one message on their
 // timeline, which is the least a package has to be able to hand back.
 //
-// The person goes through the store that writes one in production, so what the
+// The contact goes through the store that writes one in production, so what the
 // export reads back is the row a real creation makes rather than a shape only
 // this test produces.
 func seedSubjectWithMail(t *testing.T, e *Env) ids.UUID {
 	const address = subjectAddress
 	const subject = "Angebot vom Dienstag"
 	t.Helper()
-	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Die Betroffene",
 		Source:   "manual",
-		Emails:   []people.PersonEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+		Emails:   []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatalf("creating the subject: %v", err)
@@ -368,11 +368,11 @@ func seedSubjectWithMail(t *testing.T, e *Env) ids.UUID {
 			return err
 		}
 		_, err := tx.Exec(context.Background(),
-			`INSERT INTO activity_link (activity_id, entity_type, person_id)
-			 VALUES ($1, 'person', $2)`, activity, person.Id)
+			`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+			 VALUES ($1, 'contact', $2)`, activity, contact.Id)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the subject's correspondence: %v", err)
 	}
-	return ids.UUID(person.Id)
+	return ids.UUID(contact.Id)
 }

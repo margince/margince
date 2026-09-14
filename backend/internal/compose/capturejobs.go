@@ -144,31 +144,31 @@ func (w *captureEnrichWorker) enqueueContinuation(ctx context.Context, workspace
 	}
 }
 
-// OrgNamePromotionArgs runs one org-name promotion pass (PO-F-2a).
-type OrgNamePromotionArgs struct{}
+// CompanyNamePromotionArgs runs one company-name promotion pass (PO-F-2a).
+type CompanyNamePromotionArgs struct{}
 
 // Kind is the stable job identifier River persists in river_job.
-func (OrgNamePromotionArgs) Kind() string { return "org_name_promotion" }
+func (CompanyNamePromotionArgs) Kind() string { return "company_name_promotion" }
 
 // FleetWide marks this as answering for the whole installation: it owns no
 // workspace, and walks them itself (jobs.FleetWide, ADR-0103).
-func (OrgNamePromotionArgs) FleetWide() {}
+func (CompanyNamePromotionArgs) FleetWide() {}
 
-// orgNamePromotionWorker promotes names for every live workspace.
+// companyNamePromotionWorker promotes names for every live workspace.
 //
 // One worker where there were two (ADR-0103).
-type orgNamePromotionWorker struct {
+type companyNamePromotionWorker struct {
 	pool     *pgxpool.Pool
-	promoter *OrgNamePromoter
+	promoter *CompanyNamePromoter
 }
 
-func (w *orgNamePromotionWorker) Work(ctx context.Context, _ *river.Job[OrgNamePromotionArgs]) error {
+func (w *companyNamePromotionWorker) Work(ctx context.Context, _ *river.Job[CompanyNamePromotionArgs]) error {
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, w.promoteWorkspace))
 }
 
-// orgNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
-// walk over the org_name evidence the enrich job collects.
-func (w *orgNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
+// companyNamePromotionWorkspaceWorker runs one workspace's pass: a database-only
+// walk over the company_name evidence the enrich job collects.
+func (w *companyNamePromotionWorker) promoteWorkspace(ctx context.Context, workspace ids.UUID) error {
 	wsCtx := principal.WithWorkspaceID(ctx, workspace)
 	return jobs.FaultContext(ctx, w.promoter.RunWorkspace(wsCtx, workspace))
 }

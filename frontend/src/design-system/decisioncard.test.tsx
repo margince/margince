@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -73,7 +73,7 @@ function card(over: Partial<Parameters<typeof DecisionCard>[0]> = {}) {
 
 describe("DecisionCard — what the reader is being asked", () => {
   // The defect this pins is the one the whole primitive exists to fix: the row
-  // it replaces named the addressee and stopped, so the one thing a person needs
+  // it replaces named the addressee and stopped, so the one thing a contact needs
   // in order to decide was the one thing not on screen.
   it("shows the drafted subject as the headline and the drafted body under it", () => {
     render(card());
@@ -195,7 +195,7 @@ describe("DecisionCard — a kind that says what it shows", () => {
   ];
 
   // The reason is the first thing in the body and carries no caption. It is a
-  // sentence the server wrote for a person, and labelling it would frame an
+  // sentence the server wrote for a contact, and labelling it would frame an
   // explanation as one more data point.
   it("leads the body with the reason, unlabelled", () => {
     const { container } = render(
@@ -209,7 +209,7 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(screen.queryByText("Why")).not.toBeInTheDocument();
   });
 
-  // The identifiers are the point of the whole exercise: a person asked to
+  // The identifiers are the point of the whole exercise: a contact asked to
   // decide something must not be shown the row it is stored in.
   it("shows the declared fields under their names and drops the rest", () => {
     render(card({ approval: CLOSE_DATE, display: CLOSE_DATE_DISPLAY }));
@@ -512,6 +512,114 @@ describe("DecisionStatusChip", () => {
       }),
     );
     expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+});
+
+// The dense form of the row: one line, the proposal behind a control, and the
+// two heavier verdicts behind a menu. What is being held here is what the line
+// may NOT carry — a queue of these is scanned, and anything on the line that a
+// reader has to weigh is a line they have to stop at.
+describe("DecisionCard at list density", () => {
+  const COMPACT = { detail: "What is being proposed", more: "Other answers" };
+
+  it("keeps the proposal off the line and behind a control", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      card({ layout: "row", compact: COMPACT, onSkip: () => undefined }),
+    );
+
+    const line = container.querySelector(".dcard-line");
+    expect(line).toBeTruthy();
+    expect(line?.textContent).not.toContain("Message");
+    expect(screen.queryByText("Subject")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: COMPACT.detail }));
+
+    expect(await screen.findByText("Message")).toBeInTheDocument();
+  });
+
+  // Escape closes it and the trigger takes its focus back. A panel a keyboard
+  // can open and not leave is a trap.
+  it("closes the proposal on Escape and hands the focus back", async () => {
+    const user = userEvent.setup();
+    render(card({ layout: "row", compact: COMPACT }));
+
+    const trigger = screen.getByRole("button", { name: COMPACT.detail });
+    await user.click(trigger);
+    expect(await screen.findByText("Message")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByText("Message")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("spells Accept and Later and folds reject and edit into the menu", async () => {
+    const user = userEvent.setup();
+    render(card({ layout: "row", compact: COMPACT, onSkip: () => undefined }));
+
+    expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Later" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Reject" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: COMPACT.more }));
+
+    expect(
+      await screen.findByRole("button", { name: "Reject" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  // A menu over no verbs is a control that opens nothing.
+  it("draws no menu when the caller offered neither reject nor edit", () => {
+    render(
+      card({
+        layout: "row",
+        compact: COMPACT,
+        onEdit: undefined,
+        onReject: undefined,
+        onSkip: () => undefined,
+      }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: COMPACT.more }),
+    ).not.toBeInTheDocument();
+  });
+
+  // The DECK form is the one place the whole payload belongs, so the density is
+  // the row's alone. A tall card that hid its proposal would be the one thing a
+  // whole plate exists not to do.
+  it("ignores the density in the deck layout", () => {
+    render(card({ layout: "deck", compact: COMPACT }));
+
+    expect(screen.getByText("Message")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: COMPACT.detail }),
+    ).not.toBeInTheDocument();
+  });
+
+  // Past the deadline the verbs are gone, and the row says so where they were
+  // rather than in a fold nobody opened.
+  it("says a lapsed row ran out of time on the line itself", () => {
+    const { container } = render(
+      card({
+        layout: "row",
+        compact: COMPACT,
+        approval: approval({
+          expires_at: new Date(NOW - HOUR).toISOString(),
+        }),
+      }),
+    );
+
+    expect(container.querySelector(".dcard-line")?.textContent).toContain(
+      LABELS.expired,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Accept" }),
+    ).not.toBeInTheDocument();
   });
 });
 

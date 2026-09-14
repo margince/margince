@@ -242,16 +242,16 @@ func TestRelinkActivityRefusesATargetTypeTheStoreWouldNotAccept(t *testing.T) {
 		t.Fatalf("the refusal reached the seam first (entity_type=%q)", seam.entityType)
 	}
 
-	if _, err := tool.Handle(context.Background(), args("person")); err != nil {
-		t.Fatalf("a person is a link target: %v", err)
+	if _, err := tool.Handle(context.Background(), args("contact")); err != nil {
+		t.Fatalf("a contact is a link target: %v", err)
 	}
-	if seam.entityType != "person" {
-		t.Fatalf("seam saw entity_type %q, want person", seam.entityType)
+	if seam.entityType != "contact" {
+		t.Fatalf("seam saw entity_type %q, want contact", seam.entityType)
 	}
 }
 
 // Closing a project without a reason is a 422 the contract states, so a call
-// that stages, waits for a human, and THEN fails is a person asked to decide
+// that stages, waits for a human, and THEN fails is a human asked to decide
 // something that could never have applied.
 func TestAdvanceProjectPhaseRefusesAClosureWithNoReasonBeforeStaging(t *testing.T) {
 	tool := advanceProjectPhase{advancer: unreachableAdvancer{}}
@@ -456,7 +456,7 @@ func assertRelinkTierReadsEntityType(t *testing.T, name string, spec mcp.ToolSpe
 		why         string
 	}{
 		{"project", mcp.TierConfirmationRequired, "filing under a project writes an irreversible six-year retention mark"},
-		{"person", mcp.TierAutoExecute, "an ordinary association a member can undo by relinking again"},
+		{"contact", mcp.TierAutoExecute, "an ordinary association a member can undo by relinking again"},
 		{"deal", mcp.TierAutoExecute, "the deal's own stamp is governed at the deal move, not here"},
 		{"not_a_record_type", mcp.TierConfirmationRequired, "an unrecognised destination fails toward the gate, never away from it"},
 	} {
@@ -497,7 +497,7 @@ func TestRelinkActivityHandsTheWriteTheVersionItsGateBound(t *testing.T) {
 		t.Helper()
 		tool := relinkActivity{relinker: seam}
 		args := json.RawMessage(`{"activity_id":"` + ids.NewV7().String() +
-			`","entity_type":"person","entity_id":"` + ids.NewV7().String() + `"}`)
+			`","entity_type":"contact","entity_id":"` + ids.NewV7().String() + `"}`)
 		if _, err := tool.Handle(ctx, args); err != nil {
 			t.Fatalf("relink: %v", err)
 		}

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package notices owns the durable informational notice: a line addressed to
-// one person that a system flow needed them to see — an automation's notify
+// one contact that a system flow needed them to see — an automation's notify
 // firing, the lead-SLA's escalation notice — with its own read-state. The
 // row IS the delivery transport: creating one is what "notified" means here,
 // which is what lets an engine record a notify action successful without

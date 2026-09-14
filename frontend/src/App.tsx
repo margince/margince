@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
+import { DateFormatsProvider } from "./app/dateformats";
 import {
   composedScreens,
   EXTENSION_SCREEN,
@@ -50,13 +51,13 @@ import {
   RESET_ROUTE,
 } from "./screens/auth";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
+import { isContactTab } from "./screens/contacttab";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
 import {
   OnboardingScreen,
   useCompany,
   useOnboardingProgress,
 } from "./screens/onboarding";
-import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
 import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 import { WriteToHost } from "./screens/writeto";
@@ -174,14 +175,14 @@ const OfferScreen = lazy(
 );
 const CompaniesScreen = lazy(
   routed(() =>
-    import("./screens/organizations").then((m) => ({
+    import("./screens/companies").then((m) => ({
       default: m.CompaniesScreen,
     })),
   ),
 );
 const CompanyScreen = lazy(
   routed(() =>
-    import("./screens/organizations").then((m) => ({
+    import("./screens/companies").then((m) => ({
       default: m.CompanyScreen,
     })),
   ),
@@ -196,9 +197,9 @@ const ContactsScreen = lazy(
     import("./screens/contacts").then((m) => ({ default: m.ContactsScreen })),
   ),
 );
-const PersonPageV2 = lazy(
+const ContactPageV2 = lazy(
   routed(() =>
-    import("./screens/personpage").then((m) => ({ default: m.PersonPageV2 })),
+    import("./screens/contactpage").then((m) => ({ default: m.ContactPageV2 })),
   ),
 );
 const BuyerRoomScreen = lazy(() =>
@@ -256,8 +257,10 @@ const ShareScreen = lazy(
     import("./screens/share").then((m) => ({ default: m.ShareScreen })),
   ),
 );
-const WorklistScreen = lazy(() =>
-  import("./screens/worklist").then((m) => ({ default: m.WorklistScreen })),
+const WorklistRedirect = lazy(() =>
+  import("./screens/brief.queue").then((m) => ({
+    default: m.WorklistRedirect,
+  })),
 );
 
 // safeDecode tolerates malformed percent-encoding (e.g. a stray "%2" from a
@@ -337,7 +340,7 @@ function ShareRoute({ id, id2 }: Readonly<{ id?: string; id2?: string }>) {
 // successful sign-in from this route would leave the reader signed in but still
 // looking at a login form.
 function ResetRoute() {
-  return <AuthScreen onAuthed={() => navigate({ screen: "brief" })} />;
+  return <AuthScreen onAuthed={() => navigate({ screen: "home" })} />;
 }
 
 // #/ext/<unit> (ADR-0120) — the composed extension tier's one route into the
@@ -444,13 +447,13 @@ type ScreenArgs = Readonly<{ id?: string; id2?: string }>;
 // gets. A fallback arm cannot tell an unwired screen from an unknown address.
 const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
   {
-    brief: () => <BriefScreen />,
+    home: () => <BriefScreen />,
     // The tab rides the URL, so it survives a reload and can be linked to.
     // An unknown segment falls back to overview rather than rendering an
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
       id ? (
-        <PersonPageV2 id={id} tab={isPersonTab(id2) ? id2 : "overview"} />
+        <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ) : (
         <ContactsScreen />
       ),
@@ -463,7 +466,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // One segment, and it is WHOSE day — the door a team board row needs. The
     // other three dials stay state: putting one of four in the address would
     // make it describe a fraction of what the reader is looking at.
-    worklist: ({ id }) => <WorklistScreen opensOn={id} />,
+    worklist: ({ id }) => <WorklistRedirect opensOn={id} />,
     analytics: () => <AnalyticsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
@@ -505,7 +508,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
     // #/unsubscribe/<token>/<purpose> — the page the VISIBLE unsubscribe
     // link in a message opens. Anonymous, and it never withdraws on arrival:
-    // a mail scanner following the link is not a person pressing a button.
+    // a mail scanner following the link is not a contact pressing a button.
     unsubscribe: ({ id, id2 }) => (
       <UnsubscribeScreen token={id} purpose={id2} />
     ),
@@ -573,7 +576,7 @@ function ScreenView({
   // deferred, with the same requests on the wire every time.
   //
   // Deferred as one value, never three: a screen that updated while an id lagged
-  // would render a company page against a person's id.
+  // would render a company page against a contact's id.
   const asked = useMemo(() => ({ screen, id, id2 }), [screen, id, id2]);
   const shown = useDeferredValue(asked);
   // One string for the whole displayed address, and it is what the unsaved-edit
@@ -593,7 +596,7 @@ function ScreenView({
           screen carries state about the record it was opened for — an expanded
           section, a half-typed note, a scroll position — and reconciling one
           record's screen into another's keeps all of it, which is how a note
-          begun on person A ends up on the form for person B. And an arrival
+          begun on contact A ends up on the form for contact B. And an arrival
           animation (design-system/enter.css) plays when a block is INSERTED:
           without a key the DOM nodes are reused, so walking from one record to
           the next would be the one navigation in the product where the page
@@ -708,8 +711,8 @@ export function App() {
 
 // UnavailableOrClaimable splits the 503 the boundary already reached into its
 // two product states. "Not ready" is true of both, but only one of them has
-// something the person in front of the browser can do: an installation that
-// holds no organization and is WAITING to be claimed (ADR-0105) gets the claim
+// something the contact in front of the browser can do: an installation that
+// holds no company and is WAITING to be claimed (ADR-0105) gets the claim
 // screen; anything else keeps the availability message.
 //
 // The probe runs only on this branch, and only for the installation kind: a
@@ -825,7 +828,7 @@ function AuthedApp({
   const progress = useJourneyProgress(
     authed && described && me.data?.authorization?.seat_type === "full",
   );
-  // The organization's clock, for every record date under this boundary. Read
+  // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
   // 401 and say nothing about the installation.
@@ -928,28 +931,26 @@ function AuthedApp({
   }
 
   return (
-    <RecordZoneProvider zone={recordZone.zone}>
-      {/* An address pressed on any screen writes from here: the composer is
+    <DateFormatsProvider>
+      <RecordZoneProvider zone={recordZone.zone}>
+        {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
-      <WriteToHost>
-        <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-          <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-        </AuthedShell>
-      </WriteToHost>
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        commands={commands}
-      />
-    </RecordZoneProvider>
+        <WriteToHost>
+          <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+            <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+          </AuthedShell>
+        </WriteToHost>
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          commands={commands}
+        />
+      </RecordZoneProvider>
+    </DateFormatsProvider>
   );
 }
 
-// The shell for a reader who has a session. It is a separate component so the
-// route warm-up runs only once past the login screen, and so a badge read added
-// back here fires no unauthenticated request on the login path. No primary-nav
-// row badges today (app/nav.ts BADGE_SCREENS): Today reports its own counts on
-// the page rather than on its row.
+// Route warm-up runs only after login.
 // Fetches the route chunks in the background, once, for a reader who is past
 // the login screen. It runs at idle so it never competes with the screen the
 // reader is actually looking at, and with a deadline so a busy tab cannot defer

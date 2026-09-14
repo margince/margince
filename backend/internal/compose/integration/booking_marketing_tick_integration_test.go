@@ -13,7 +13,7 @@ package integration
 // the form was confined to one operational purpose for exactly that reason.
 //
 // What a tick buys instead is one confirmation link, minted against the address
-// on the PERSON'S OWN record and mailed there. The grant exists only if that
+// on the CONTACT'S OWN record and mailed there. The grant exists only if that
 // mailbox answers. These tests hold both halves: the link appears, and the
 // grant does not.
 
@@ -71,7 +71,7 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 		t.Fatalf("a booking carrying a marketing tick → %d, want 201", status)
 	}
 
-	personID := personIDByEmail(t, e, "tessa@visitor.example")
+	contactID := contactIDByEmail(t, e, "tessa@visitor.example")
 
 	// The question was asked: a live consent link naming THIS purpose. The
 	// purpose rides the token because that is what stops one link granting a
@@ -79,9 +79,9 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 	var links int
 	if err := e.Owner.QueryRow(context.Background(), `
 		SELECT count(*) FROM confirm_token
-		 WHERE person_id = $1 AND purpose_id = $2
+		 WHERE contact_id = $1 AND purpose_id = $2
 		   AND kind = 'consent_confirmation' AND consumed_at IS NULL`,
-		personID, marketing).Scan(&links); err != nil {
+		contactID, marketing).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if links != 1 {
@@ -91,13 +91,13 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 	// And the answer was NOT recorded. This is the assertion the whole design
 	// rests on: a stranger who knows an address may cause one mail to be sent
 	// to its owner, never a subscription in their name.
-	assertNoMarketingGrant(t, e, personID, marketing)
+	assertNoMarketingGrant(t, e, contactID, marketing)
 }
 
 // A tick naming a purpose the form may not ask about is refused BEFORE the
-// person is ensured — the same before-any-write rule the operational half
+// contact is ensured — the same before-any-write rule the operational half
 // follows, and for the same reason: this door is anonymous, so a refusal after
-// the ensure would grow the person table one rejected request at a time.
+// the ensure would grow the contact table one rejected request at a time.
 func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -171,7 +171,7 @@ func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testi
 		}
 	}
 
-	// Nothing was written by any of them: no person, no meeting, no link.
+	// Nothing was written by any of them: no contact, no meeting, no link.
 	//
 	// The counts are taken as a DELTA against a successful booking rather than
 	// against zero. On a fresh workspace every one of these tables is already
@@ -189,7 +189,7 @@ func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testi
 		t.Fatalf("the control booking → %d, want 201", status)
 	}
 	after := bookingCounts(t, e)
-	if after.people <= before.people || after.meetings <= before.meetings || after.links <= before.links {
+	if after.contacts <= before.contacts || after.meetings <= before.meetings || after.links <= before.links {
 		t.Fatalf("the control booking moved nothing (%+v → %+v), so the counts below prove nothing",
 			before, after)
 	}
@@ -198,24 +198,24 @@ func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testi
 	// refusals leaving nothing behind rather than the table being empty.
 	var rex int
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM person_email WHERE email = 'rex@visitor.example'`).Scan(&rex); err != nil {
+		`SELECT count(*) FROM contact_email WHERE email = 'rex@visitor.example'`).Scan(&rex); err != nil {
 		t.Fatal(err)
 	}
 	if rex != 0 {
-		t.Fatalf("refused ticks left %d person rows behind for the refused booker, want 0", rex)
+		t.Fatalf("refused ticks left %d contact rows behind for the refused booker, want 0", rex)
 	}
 }
 
 // bookingCounts is the three tables a booking touches, read together.
-type counts struct{ people, meetings, links int }
+type counts struct{ contacts, meetings, links int }
 
 func bookingCounts(t *testing.T, e *apptest.AppEnv) counts {
 	t.Helper()
 	var c counts
 	if err := e.Owner.QueryRow(context.Background(), `
-		SELECT (SELECT count(*) FROM person),
+		SELECT (SELECT count(*) FROM contact),
 		       (SELECT count(*) FROM activity WHERE kind = 'meeting'),
-		       (SELECT count(*) FROM confirm_token)`).Scan(&c.people, &c.meetings, &c.links); err != nil {
+		       (SELECT count(*) FROM confirm_token)`).Scan(&c.contacts, &c.meetings, &c.links); err != nil {
 		t.Fatal(err)
 	}
 	return c
@@ -244,24 +244,24 @@ func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
 		t.Fatalf("a booking with no marketing tick → %d, want 201", status)
 	}
 
-	personID := personIDByEmail(t, e, "quinn@visitor.example")
+	contactID := contactIDByEmail(t, e, "quinn@visitor.example")
 
 	var links int
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, personID).Scan(&links); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contactID).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if links != 0 {
 		t.Fatalf("a booking with no tick minted %d confirm links, want 0", links)
 	}
-	assertNoMarketingGrant(t, e, personID, marketing)
+	assertNoMarketingGrant(t, e, contactID, marketing)
 
 	// The operational grant it DID carry is untouched, so the absence above is
 	// the tick's absence and not a booking that failed to record anything.
 	var state string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT state FROM person_consent WHERE person_id = $1 AND purpose_id = $2`,
-		personID, transactional).Scan(&state); err != nil {
+		`SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
+		contactID, transactional).Scan(&state); err != nil {
 		t.Fatalf("reading the operational grant: %v", err)
 	}
 	if state != "granted" {
@@ -269,12 +269,12 @@ func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
 	}
 }
 
-// personIDByEmail resolves the person the anonymous booker was ensured into.
-func personIDByEmail(t *testing.T, e *apptest.AppEnv, email string) string {
+// contactIDByEmail resolves the contact the anonymous booker was ensured into.
+func contactIDByEmail(t *testing.T, e *apptest.AppEnv, email string) string {
 	t.Helper()
 	var id string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT person_id FROM person_email WHERE email = $1`, email).Scan(&id); err != nil {
+		`SELECT contact_id FROM contact_email WHERE email = $1`, email).Scan(&id); err != nil {
 		t.Fatalf("resolving the booker %q: %v", email, err)
 	}
 	return id
@@ -283,13 +283,13 @@ func personIDByEmail(t *testing.T, e *apptest.AppEnv, email string) string {
 // assertNoMarketingGrant proves the subject holds no marketing consent and no
 // proof event for it — both, because a state row and an event row are written
 // by different statements and either alone would be a partial grant.
-func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, personID, purposeID string) {
+func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeID string) {
 	t.Helper()
 	var states, events int
 	if err := e.Owner.QueryRow(context.Background(), `
-		SELECT (SELECT count(*) FROM person_consent WHERE person_id = $1 AND purpose_id = $2),
-		       (SELECT count(*) FROM consent_event  WHERE person_id = $1 AND purpose_id = $2)`,
-		personID, purposeID).Scan(&states, &events); err != nil {
+		SELECT (SELECT count(*) FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2),
+		       (SELECT count(*) FROM consent_event  WHERE contact_id = $1 AND purpose_id = $2)`,
+		contactID, purposeID).Scan(&states, &events); err != nil {
 		t.Fatal(err)
 	}
 	if states != 0 || events != 0 {
@@ -303,9 +303,9 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, personID, purposeID
 // confirmations at is refused, and mails nothing.
 //
 // This is not hypothetical: it was found by probing this path rather than
-// reading it. EnsurePersonByEmail resolves the booking email to ANY existing
-// person holding it, including on a non-primary address, and the mint then
-// derives the destination from that person's PRIMARY. The link therefore
+// reading it. EnsureContactByEmail resolves the booking email to ANY existing
+// contact holding it, including on a non-primary address, and the mint then
+// derives the destination from that contact's PRIMARY. The link therefore
 // arrived at an address the form never named, asking its holder to confirm a
 // subscription requested from an address they had stopped using.
 //
@@ -321,17 +321,17 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 	marketing := seededMarketingPurposeID(t, e)
 	monday := nextMonday()
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Vera Verified",
 		"emails": []AnyMap{
 			{"email": "vera@corp.example", "email_type": "work", "is_primary": true},
 			{"email": "vera-old@corp.example", "email_type": "work", "is_primary": false},
 		},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 
 	tick := func(email string) AnyMap {
@@ -354,7 +354,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 	}
 	var links int
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, person.ID).Scan(&links); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contact.ID).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if links != 0 {
@@ -370,7 +370,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsRefused(t *testing.T) {
 		t.Fatalf("a tick from the primary address (differing in case) → %d, want 201", status)
 	}
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, person.ID).Scan(&links); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contact.ID).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if links != 1 {
@@ -399,12 +399,12 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	marketing := seededMarketingPurposeID(t, e)
 	monday := nextMonday()
 
-	newPerson := func(name, email string) string {
+	newContact := func(name, email string) string {
 		t.Helper()
 		var p struct {
 			ID string `json:"id"`
 		}
-		if status := e.Call(t, "POST", "/v1/people", AnyMap{
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 			"full_name": name,
 			"emails":    []AnyMap{{"email": email, "email_type": "work", "is_primary": true}},
 		}, nil, &p); status != http.StatusCreated {
@@ -426,19 +426,19 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 			},
 		}
 	}
-	linksFor := func(personID string) int {
+	linksFor := func(contactID string) int {
 		t.Helper()
 		var n int
 		if err := e.Owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM confirm_token WHERE person_id = $1 AND purpose_id = $2`,
-			personID, marketing).Scan(&n); err != nil {
+			`SELECT count(*) FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2`,
+			contactID, marketing).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		return n
 	}
 
-	withdrawn := newPerson("Wendy Withdrawn", "wendy@corp.example")
-	if status := e.Call(t, "POST", "/v1/people/"+withdrawn+"/consent",
+	withdrawn := newContact("Wendy Withdrawn", "wendy@corp.example")
+	if status := e.Call(t, "POST", "/v1/contacts/"+withdrawn+"/consent",
 		AnyMap{"purpose_id": marketing, "new_state": "withdrawn"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdrawing the purpose → %d", status)
 	}
@@ -451,9 +451,9 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 
 	// The positive control, and it is not optional: without it this test passes
 	// against a guard that refuses EVERY tick, which is the shape that looks
-	// like a fix and is a regression. A person who never answered is still
+	// like a fix and is a regression. A contact who never answered is still
 	// asked.
-	fresh := newPerson("Fiona Fresh", "fiona@corp.example")
+	fresh := newContact("Fiona Fresh", "fiona@corp.example")
 	if status := publicCall(t, e, "POST", base, tickAt(8*time.Hour, "fiona@corp.example"), nil, nil); status != http.StatusCreated {
 		t.Fatalf("a tick naming a subject with no decision on file → %d, want 201", status)
 	}

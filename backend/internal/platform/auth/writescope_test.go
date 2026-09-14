@@ -30,8 +30,37 @@ func writeArm(p principal.Principal, table string) string {
 	return writeAuthorityPredicate(p, table, arg)
 }
 
+// AAD-AC-4: a read-seat member may not hold write authority over a record.
+//
+// Its only guard was at grant CREATION, and nothing revokes a standing write
+// grant when a seat is downgraded — so between the downgrade and a cleanup
+// nobody has written yet, the stored data says the opposite of the rule. The
+// seat ceiling makes that inert on the doors that exist today, which is exactly
+// the state that stops being inert when a third door arrives.
+//
+// Both directions, because an arm that vanished for everybody would pass the
+// refusal half on its own: a FULL seat still reaches its grants, and only the
+// seat moved between the two.
+func TestAReadSeatReachesNoWriteGrant(t *testing.T) {
+	for _, table := range []string{"contact", "company", "deal", "lead", "project"} {
+		reader := human(principal.RowScopeTeam)
+		reader.SeatType = principal.SeatRead
+		if sql := writeArm(reader, table); strings.Contains(sql, "record_grant") {
+			t.Errorf("a read seat's %s write arm still counts a record_grant, so a share written "+
+				"before the downgrade still confers write: %s", table, sql)
+		}
+
+		writer := human(principal.RowScopeTeam)
+		writer.SeatType = principal.SeatFull
+		if sql := writeArm(writer, table); !strings.Contains(sql, "record_grant") {
+			t.Errorf("a full seat's %s write arm reaches no grant at all, so the share this "+
+				"product sells does nothing: %s", table, sql)
+		}
+	}
+}
+
 func TestTheWriteArmCountsOnlyAWriteGrant(t *testing.T) {
-	for _, table := range []string{"person", "organization", "deal", "lead", "project"} {
+	for _, table := range []string{"contact", "company", "deal", "lead", "project"} {
 		for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam} {
 			sql := writeArm(human(scope), table)
 			if !strings.Contains(sql, "rg.access = 'write'") {
@@ -56,7 +85,7 @@ func TestTheVisibilityArmStillCountsEveryLiveGrant(t *testing.T) {
 	// capture-private tables are left to check: every seat reads deal, lead
 	// and project whole (tableclass.go), so a grant has nothing to widen there
 	// and the arm is not rendered at all.
-	for _, table := range []string{"person", "organization"} {
+	for _, table := range []string{"contact", "company"} {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		sql := VisiblePredicate(human(principal.RowScopeTeam), table, arg)("t")
@@ -82,7 +111,7 @@ func TestTheWriteProbeDecidesWhatItCanBeforeItQueries(t *testing.T) {
 	id := ids.NewV7()
 
 	t.Run("an unbounded actor needs no grant", func(t *testing.T) {
-		if err := ensureWriteAuthority(as(human(principal.RowScopeAll)), nil, "person", id); err != nil {
+		if err := ensureWriteAuthority(as(human(principal.RowScopeAll)), nil, "contact", id); err != nil {
 			t.Errorf("row_scope=all refused a write it already holds every row for: %v", err)
 		}
 	})
@@ -123,8 +152,8 @@ func TestEveryGrantIsProbedBeforeItIsGranted(t *testing.T) {
 	// legitimate path (an admin extending or re-opening somebody's share) free
 	// of a round trip.
 	unbounded := principal.WithActor(context.Background(), human(principal.RowScopeAll))
-	if err := EnsureCanGrant(unbounded, nil, "person", id); err != nil {
-		t.Errorf("an unbounded caller sharing a person → %v, want allowed without a probe", err)
+	if err := EnsureCanGrant(unbounded, nil, "contact", id); err != nil {
+		t.Errorf("an unbounded caller sharing a contact → %v, want allowed without a probe", err)
 	}
 
 	// A bounded caller gets no such exemption at ANY access level. There is no
@@ -142,7 +171,7 @@ func TestEveryGrantIsProbedBeforeItIsGranted(t *testing.T) {
 		// Not discarded: if this ever RETURNS instead of reaching the probe,
 		// that is the exemption coming back by another route, and it should be
 		// reported rather than swallowed by the recover below.
-		if err := EnsureCanGrant(bounded, nil, "person", id); err != nil {
+		if err := EnsureCanGrant(bounded, nil, "contact", id); err != nil {
 			t.Errorf("a bounded caller was answered without a query → %v", err)
 		}
 	}()

@@ -55,8 +55,8 @@ func decodeAttachment(t *testing.T, rec *httptest.ResponseRecorder) crmcontracts
 func TestAttachmentMetadataTellsAnAbsentFieldFromAnExplicitNull(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	doc := seedDocument(t, e, org, "organization", org, "msa.pdf", "contract", false)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	doc := seedDocument(t, e, company, "company", company, "msa.pdf", "contract", false)
 
 	// Give it a title to have something an absent field could wrongly erase.
 	out := decodeAttachment(t, patchMetadata(t, e, h, doc, `{"title":"Master Services Agreement"}`))
@@ -83,9 +83,9 @@ func TestAttachmentMetadataTellsAnAbsentFieldFromAnExplicitNull(t *testing.T) {
 func TestAttachmentMetadataClearsSupersedesOnlyWhenAsked(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	first := seedDocument(t, e, org, "organization", org, "v1.pdf", "contract", false)
-	second := seedDocument(t, e, org, "organization", org, "v2.pdf", "contract", false)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	first := seedDocument(t, e, company, "company", company, "v1.pdf", "contract", false)
+	second := seedDocument(t, e, company, "company", company, "v2.pdf", "contract", false)
 
 	out := decodeAttachment(t, patchMetadata(t, e, h, second,
 		`{"supersedes_id":"`+first.String()+`"}`))
@@ -106,19 +106,19 @@ func TestAttachmentMetadataClearsSupersedesOnlyWhenAsked(t *testing.T) {
 	}
 }
 
-func TestOrganizationDocumentsHandlerMapsItsFilters(t *testing.T) {
+func TestCompanyDocumentsHandlerMapsItsFilters(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
-	seedDocument(t, e, org, "organization", org, "nda.pdf", "legal", false)
-	seedDocument(t, e, org, "organization", org, "msa.pdf", "contract", true)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	seedDocument(t, e, company, "company", company, "nda.pdf", "legal", false)
+	seedDocument(t, e, company, "company", company, "msa.pdf", "contract", true)
 
-	list := func(t *testing.T, params crmcontracts.ListOrganizationDocumentsParams) crmcontracts.AttachmentListResponse {
+	list := func(t *testing.T, params crmcontracts.ListCompanyDocumentsParams) crmcontracts.AttachmentListResponse {
 		t.Helper()
 		ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/organizations/x/documents", nil).WithContext(ctx)
-		h.ListOrganizationDocuments(rec, req, crmcontracts.Id(org), params)
+		req := httptest.NewRequest(http.MethodGet, "/companies/x/documents", nil).WithContext(ctx)
+		h.ListCompanyDocuments(rec, req, crmcontracts.Id(company), params)
 		if rec.Code != http.StatusOK {
 			t.Fatalf("documents status = %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 		}
@@ -130,20 +130,20 @@ func TestOrganizationDocumentsHandlerMapsItsFilters(t *testing.T) {
 	}
 
 	// No filter means no filter: both documents.
-	if all := list(t, crmcontracts.ListOrganizationDocumentsParams{}); len(all.Data) != 2 {
+	if all := list(t, crmcontracts.ListCompanyDocumentsParams{}); len(all.Data) != 2 {
 		t.Fatalf("unfiltered list returned %d documents, want 2", len(all.Data))
 	}
 
 	// The category param reaches the query rather than being dropped.
-	legal := crmcontracts.ListOrganizationDocumentsParamsCategory("legal")
-	only := list(t, crmcontracts.ListOrganizationDocumentsParams{Category: &legal})
+	legal := crmcontracts.ListCompanyDocumentsParamsCategory("legal")
+	only := list(t, crmcontracts.ListCompanyDocumentsParams{Category: &legal})
 	if len(only.Data) != 1 || only.Data[0].Filename != "nda.pdf" {
 		t.Fatalf("category=legal returned %d documents, want only nda.pdf", len(only.Data))
 	}
 
 	// pinned_only likewise.
 	pinned := true
-	got := list(t, crmcontracts.ListOrganizationDocumentsParams{PinnedOnly: &pinned})
+	got := list(t, crmcontracts.ListCompanyDocumentsParams{PinnedOnly: &pinned})
 	if len(got.Data) != 1 || got.Data[0].Filename != "msa.pdf" {
 		t.Fatalf("pinned_only returned %d documents, want only msa.pdf", len(got.Data))
 	}
@@ -160,9 +160,9 @@ func TestOrganizationDocumentsHandlerMapsItsFilters(t *testing.T) {
 func TestAnUploadedFileCannotClaimItArrivedOnAChannel(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	// seedDocument writes source 'upload' — a file a human handed over.
-	doc := seedDocument(t, e, org, "organization", org, "deck.png", "other", false)
+	doc := seedDocument(t, e, company, "company", company, "deck.png", "other", false)
 
 	rec := patchMetadata(t, e, h, doc, `{"category":"message_attachment"}`)
 	if rec.Code != http.StatusUnprocessableEntity {

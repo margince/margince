@@ -80,7 +80,7 @@ func TestATransitionRuleIsSavedAndReadBackOverHTTP(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("saving the rule: status %d, body %s", rec.Code, rec.Body.String())
 	}
@@ -93,7 +93,7 @@ func TestATransitionRuleIsSavedAndReadBackOverHTTP(t *testing.T) {
 		t.Fatalf("the pipeline reports %d rules, want 1", len(got.Data))
 	}
 	rule := got.Data[0]
-	if rule.Mode != crmcontracts.TransitionModeAuto {
+	if rule.Mode != crmcontracts.TransitionPolicyModeTransitionModeAuto {
 		t.Errorf("the saved rule reads %q on the wire, want auto", rule.Mode)
 	}
 	// The product's defaults travel, so a settings page can show the bar this
@@ -128,7 +128,7 @@ func TestSavingARuleKeepsTheThresholdsTheCallerDidNotName(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModePropose,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModePropose,
 		MinReviewed: &strict,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("saving the strict rule: %d %s", rec.Code, rec.Body.String())
@@ -143,7 +143,7 @@ func TestSavingARuleKeepsTheThresholdsTheCallerDidNotName(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("turning the rule on: %d %s", rec.Code, rec.Body.String())
 	}
@@ -157,7 +157,7 @@ func TestSavingARuleKeepsTheThresholdsTheCallerDidNotName(t *testing.T) {
 			"mentioned it: an admin turning a transition on silently reset a bar "+
 			"somebody set", strict, after.Data[0].MinReviewed)
 	}
-	if after.Data[0].Mode != crmcontracts.TransitionModeAuto {
+	if after.Data[0].Mode != crmcontracts.TransitionPolicyModeTransitionModeAuto {
 		t.Errorf("the mode reads %q, want the auto that was just asked for",
 			after.Data[0].Mode)
 	}
@@ -195,7 +195,7 @@ func TestARuleNamingAStageFromAnotherPipelineIsRefused(t *testing.T) {
 	rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(otherOpen.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	})
 	if rec.Code == http.StatusOK {
 		t.Fatal("a rule was saved about a move no deal in this pipeline can make")
@@ -227,7 +227,7 @@ func TestOnlyTheResumeVerbLiftsASuspension(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("saving the rule: %d %s", rec.Code, rec.Body.String())
 	}
@@ -240,7 +240,7 @@ func TestOnlyTheResumeVerbLiftsASuspension(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("re-saving the rule: %d %s", rec.Code, rec.Body.String())
 	}
@@ -281,7 +281,7 @@ func TestOnlyTheResumeVerbLiftsASuspension(t *testing.T) {
 	}
 	// Resuming does not re-decide. The admin's mode survives a suspension, so
 	// what comes back is what was actually asked for.
-	if resumed.Mode != crmcontracts.TransitionModeAuto {
+	if resumed.Mode != crmcontracts.TransitionPolicyModeTransitionModeAuto {
 		t.Errorf("the resumed rule reads %q, want the auto the admin had set — "+
 			"a suspension that rewrote the mode would make them re-enable "+
 			"something they never turned off", resumed.Mode)
@@ -303,7 +303,7 @@ func TestSavingARuleNeedsThePipelineGrant(t *testing.T) {
 	raw, err := json.Marshal(crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	})
 	if err != nil {
 		t.Fatalf("encoding the rule: %v", err)
@@ -361,7 +361,7 @@ func TestARuleOutsideTheContractsBoundsIsRefused(t *testing.T) {
 			body: crmcontracts.SetTransitionPolicyRequest{
 				FromStageId: openapi_types.UUID(open.UUID),
 				ToStageId:   openapi_types.UUID(won.UUID),
-				Mode:        crmcontracts.SetTransitionModeAuto,
+				Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 				WindowDays:  &tooLong,
 			},
 			names: "window_days",
@@ -371,7 +371,7 @@ func TestARuleOutsideTheContractsBoundsIsRefused(t *testing.T) {
 			body: crmcontracts.SetTransitionPolicyRequest{
 				FromStageId:     openapi_types.UUID(open.UUID),
 				ToStageId:       openapi_types.UUID(won.UUID),
-				Mode:            crmcontracts.SetTransitionModeAuto,
+				Mode:            crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 				UndoWindowHours: &tooManyHours,
 			},
 			names: "undo_window_hours",
@@ -381,7 +381,7 @@ func TestARuleOutsideTheContractsBoundsIsRefused(t *testing.T) {
 			body: crmcontracts.SetTransitionPolicyRequest{
 				FromStageId:              openapi_types.UUID(open.UUID),
 				ToStageId:                openapi_types.UUID(won.UUID),
-				Mode:                     crmcontracts.SetTransitionModeAuto,
+				Mode:                     crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 				CleanAcceptanceThreshold: &tooHigh,
 			},
 			names: "clean_acceptance_threshold",
@@ -419,7 +419,7 @@ func TestResumingAnswersTheRowItCommitted(t *testing.T) {
 	if rec := putPolicy(t, e, pipeline, crmcontracts.SetTransitionPolicyRequest{
 		FromStageId: openapi_types.UUID(open.UUID),
 		ToStageId:   openapi_types.UUID(won.UUID),
-		Mode:        crmcontracts.SetTransitionModeAuto,
+		Mode:        crmcontracts.SetTransitionPolicyRequestModeSetTransitionModeAuto,
 	}); rec.Code != http.StatusOK {
 		t.Fatalf("saving the rule: %d %s", rec.Code, rec.Body.String())
 	}

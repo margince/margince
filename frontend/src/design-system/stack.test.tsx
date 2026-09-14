@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 // The primitive exists so a unit can space two things without a stylesheet, so
 // what these hold is that the SCALE decides the spacing and the caller only

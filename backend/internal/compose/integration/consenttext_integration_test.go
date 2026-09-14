@@ -18,7 +18,7 @@ import (
 // TestBootstrapPublishesTheInstallationsWording is the wiring check.
 //
 // A table nothing writes is a table that answers "which wording was this
-// person shown" with silence — and silence reads as "no wording was
+// contact shown" with silence — and silence reads as "no wording was
 // published", which is an answer and a wrong one. The previous item in this
 // plan shipped exactly that shape: a writer with no production caller, tests
 // green, found only in review.

@@ -102,7 +102,7 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 
 // auditProjectAttribution records the link the ladder just wrote, under the
 // same action the human-driven relink uses: a reader asking "how did this
-// message end up on this project?" must find one answer whether a person or the
+// message end up on this project?" must find one answer whether a contact or the
 // ladder filed it, and the audit row's principal already says which.
 //
 // activity_relink maps to activity.update in auditActionGrant, and the caller

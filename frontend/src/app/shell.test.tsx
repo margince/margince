@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
@@ -98,7 +98,7 @@ describe("PageTitle", () => {
 
   // Whose state the page changes, beside its heading. Only a settings entry
   // carries a scope, and every settings page declares one in the catalog — the
-  // field had no reader at all until this, so a person could not tell a toggle
+  // field had no reader at all until this, so a contact could not tell a toggle
   // that changes their own signature from one that changes everybody's mail
   // routing.
   it("names whose state a settings page changes, beside its heading", () => {
@@ -249,7 +249,7 @@ describe("PageTitle", () => {
   // top-level headings is no document outline at all. Same yield-whole rule as
   // a record route below, for the same reason.
   it("renders nothing at all on a screen that heads itself", () => {
-    const { container } = render(<PageTitle route={{ screen: "brief" }} />);
+    const { container } = render(<PageTitle route={{ screen: "home" }} />);
     expect(container.querySelector(".pagetitle")).toBeNull();
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
@@ -265,7 +265,7 @@ describe("PageTitle", () => {
   // says where it may not appear.
   it("renders nothing at all on a record route", () => {
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <PageTitle route={{ screen: "contacts", id: "p-anna" }} />,
@@ -494,7 +494,7 @@ describe("Shell", () => {
   it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
     window.location.hash = "#/contacts/p-anna";
     const client = newClient();
-    client.setQueryData(["person", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
     const { container } = renderWith(
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,

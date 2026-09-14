@@ -59,20 +59,20 @@ type stagedApproval struct {
 	diffHash       string
 }
 
-// archivePersonPolicy is the operation both doors are asked to perform.
-var archivePersonPolicy = agentPolicy{
-	Op: "archivePerson", Access: accessTool, Tool: "archive_record",
-	RecordType: recordTypePerson, Tier: tierConfirmationRequired, Scope: scopeWrite,
+// archiveContactPolicy is the operation both doors are asked to perform.
+var archiveContactPolicy = agentPolicy{
+	Op: "archiveContact", Access: accessTool, Tool: "archive_record",
+	RecordType: recordTypeContact, Tier: tierConfirmationRequired, Scope: scopeWrite,
 }
 
 func TestBothDoorsStageOneRowForOneOperation(t *testing.T) {
 	e := integration.Setup(t)
 	native := NewProvider(e.Pool)
 	agent := scopedArchiveAgent(t, e)
-	person := seedVisiblePerson(t, e, native, "Ada Lovelace")
+	contact := seedVisibleContact(t, e, native, "Ada Lovelace")
 
-	restID := stageArchiveOverREST(agent, t, e, native, person)
-	toolID := stageArchiveOverTheToolDoor(agent, t, e, person)
+	restID := stageArchiveOverREST(agent, t, e, native, contact)
+	toolID := stageArchiveOverTheToolDoor(agent, t, e, contact)
 
 	rest := readStagedApproval(agent, t, e, restID)
 	tool := readStagedApproval(agent, t, e, toolID)
@@ -87,15 +87,15 @@ func TestBothDoorsStageOneRowForOneOperation(t *testing.T) {
 	}
 	if rest.kind != tool.kind {
 		t.Errorf("the doors staged kinds %q and %q — an approval's kind is what the decision grants are "+
-			"mapped by, so one of the two is decidable by a different set of people", rest.kind, tool.kind)
+			"mapped by, so one of the two is decidable by a different set of contacts", rest.kind, tool.kind)
 	}
 	if rest.targetType != tool.targetType || rest.targetID != tool.targetID {
 		t.Errorf("the doors bound one archive to two records: REST (%s,%s), tool (%s,%s) — the approvals "+
 			"surface scopes and probes an inbox row by exactly this pair",
 			rest.targetType, rest.targetID, tool.targetType, tool.targetID)
 	}
-	if rest.targetID != person.String() {
-		t.Errorf("the staged target is %s, want the person %s both doors were asked about", rest.targetID, person)
+	if rest.targetID != contact.String() {
+		t.Errorf("the staged target is %s, want the contact %s both doors were asked about", rest.targetID, contact)
 	}
 	if rest.pinned != tool.pinned {
 		t.Errorf("one door pinned a version and the other did not (REST %v, tool %v) — the same approved "+
@@ -103,7 +103,7 @@ func TestBothDoorsStageOneRowForOneOperation(t *testing.T) {
 			rest.pinned, tool.pinned)
 	}
 	if !rest.pinned {
-		t.Error("neither door pinned a version for a person, which has one — an approval released against " +
+		t.Error("neither door pinned a version for a contact, which has one — an approval released against " +
 			"an unpinned target is spent on whatever the record has become since")
 	}
 
@@ -141,29 +141,29 @@ func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
 	native := NewProvider(e.Pool)
 	agent := scopedArchiveAgent(t, e)
 
-	// Capture-private to a rep in another team: a person is otherwise readable
+	// Capture-private to a rep in another team: a contact is otherwise readable
 	// by every seat whoever owns it, so visibility='owner' is the one state that
 	// still hides the row from the human this agent acts for.
 	elsewhere := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
 	hidden, err := native.Create(elsewhere, datasource.CreateInput{
-		EntityType: datasource.EntityPerson,
+		EntityType: datasource.EntityContact,
 		Fields:     json.RawMessage(`{"full_name":"Out Of Scope","owner_id":"` + e.Rep3.String() + `"}`),
 		Source:     "test",
 	})
 	if err != nil {
-		t.Fatalf("seeding the out-of-scope person: %v", err)
+		t.Fatalf("seeding the out-of-scope contact: %v", err)
 	}
-	e.MakeCapturePrivate(t, "person", hidden.ID, e.Rep3)
+	e.MakeCapturePrivate(t, "contact", hidden.ID, e.Rep3)
 
 	rec := httptest.NewRecorder()
 	stageRefusal(rec, archiveRequestFor(agent, hidden.ID), approvalsAdapter{svc: approvals.NewService(e.DB())},
-		restCommandDeps{records: native}, archivePersonPolicy, nil)
+		restCommandDeps{records: native}, archiveContactPolicy, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("the REST door answered %d for a row outside the agent's scope, want 404", rec.Code)
 	}
 
 	_, invokeErr := archiveRegistry(e).Invoke(agent, "archive_record",
-		json.RawMessage(`{"record_type":"person","id":"`+hidden.ID.String()+`"}`))
+		json.RawMessage(`{"record_type":"contact","id":"`+hidden.ID.String()+`"}`))
 	var staged *workflow.StagedApprovalError
 	if errors.As(invokeErr, &staged) {
 		t.Errorf("the tool door staged approval %s for a row outside the agent's scope, where the REST door "+
@@ -175,27 +175,27 @@ func TestBothDoorsRefuseOneRecordNeitherCallerCanSee(t *testing.T) {
 	}
 }
 
-// seedVisiblePerson writes one person through the real provider, owned by the
+// seedVisibleContact writes one contact through the real provider, owned by the
 // human the agent acts for, so both doors can read it.
-func seedVisiblePerson(t *testing.T, e *integration.Env, native *Provider, name string) ids.UUID {
+func seedVisibleContact(t *testing.T, e *integration.Env, native *Provider, name string) ids.UUID {
 	t.Helper()
 	ref, err := native.Create(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), datasource.CreateInput{
-		EntityType: datasource.EntityPerson,
+		EntityType: datasource.EntityContact,
 		Fields:     json.RawMessage(`{"full_name":"` + name + `","owner_id":"` + e.Rep1.String() + `"}`),
 		Source:     "test",
 	})
 	if err != nil {
-		t.Fatalf("seeding the person both doors archive: %v", err)
+		t.Fatalf("seeding the contact both doors archive: %v", err)
 	}
 	return ref.ID
 }
 
 // archiveRequestFor is the request the router would hand the gate for
-// DELETE /v1/people/{id}, carrying the agent's own context.
-func archiveRequestFor(as context.Context, person ids.UUID) *http.Request {
-	req := httptest.NewRequest(http.MethodDelete, "/v1/people/"+person.String(), nil)
+// DELETE /v1/contacts/{id}, carrying the agent's own context.
+func archiveRequestFor(as context.Context, contact ids.UUID) *http.Request {
+	req := httptest.NewRequest(http.MethodDelete, "/v1/contacts/"+contact.String(), nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("id", person.String())
+	rctx.URLParams.Add("id", contact.String())
 	return req.WithContext(context.WithValue(as, chi.RouteCtxKey, rctx))
 }
 
@@ -223,16 +223,16 @@ func (repSeat) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType
 // approvals engine — the same adapter the composed api server injects, so the
 // row this door writes is written by production's own stager.
 // archiveRegistry builds the tool door with a FLOOR on archive_record for a
-// person, which is how this operation reaches confirm-first now: the verb
+// contact, which is how this operation reaches confirm-first now: the verb
 // executes by default — a passport does what its holder could do unaided — and
 // an installation that wants it confirmed declares the floor. The policy this
-// test compares against (archivePersonPolicy) declares exactly that, so both
+// test compares against (archiveContactPolicy) declares exactly that, so both
 // doors are asked the same question.
 func archiveRegistry(e *integration.Env) *agents.Registry {
 	native := NewProvider(e.Pool)
 	reg := agents.NewRegistry(approvalsAdapter{svc: approvals.NewService(e.DB())}, auth.NewGate(repSeat{e}),
 		agents.WithTierFloor(func(tool, recordType string) (mcp.RiskTier, bool) {
-			if tool == "archive_record" && recordType == string(recordTypePerson) {
+			if tool == "archive_record" && recordType == string(recordTypeContact) {
 				return mcp.TierConfirmationRequired, true
 			}
 			return mcp.TierAutoExecute, false
@@ -250,12 +250,12 @@ func archiveRegistry(e *integration.Env) *agents.Registry {
 // row it wrote — read back rather than parsed out of the refusal text, since
 // the row is what this test is about.
 func stageArchiveOverREST(agent context.Context, t *testing.T, e *integration.Env, native *Provider,
-	person ids.UUID,
+	contact ids.UUID,
 ) ids.ApprovalID {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	stageRefusal(rec, archiveRequestFor(agent, person), approvalsAdapter{svc: approvals.NewService(e.DB())},
-		restCommandDeps{records: native}, archivePersonPolicy, nil)
+	stageRefusal(rec, archiveRequestFor(agent, contact), approvalsAdapter{svc: approvals.NewService(e.DB())},
+		restCommandDeps{records: native}, archiveContactPolicy, nil)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("the REST archive answered %d, want 403 with the redemption instructions", rec.Code)
 	}
@@ -269,11 +269,11 @@ func stageArchiveOverREST(agent context.Context, t *testing.T, e *integration.En
 // stageArchiveOverTheToolDoor invokes the same archive as a tool call and
 // answers the id the staging refusal carries.
 func stageArchiveOverTheToolDoor(agent context.Context, t *testing.T, e *integration.Env,
-	person ids.UUID,
+	contact ids.UUID,
 ) ids.ApprovalID {
 	t.Helper()
 	_, err := archiveRegistry(e).Invoke(agent, "archive_record",
-		json.RawMessage(`{"record_type":"person","id":"`+person.String()+`"}`))
+		json.RawMessage(`{"record_type":"contact","id":"`+contact.String()+`"}`))
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
 		t.Fatalf("the tool door answered %v rather than staging the archive", err)

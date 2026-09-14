@@ -12,52 +12,6 @@ import type { MarginceCoreState } from "../design-system/margince-core";
  * here is the words those readings are said in.
  */
 
-/**
- * The agent's tasks, in words a person who does not work on this product can
- * read.
- *
- * The wire carries `growth_fit` and `site_fact_extract`, which are the names of
- * INVOCATION SITES — correct for a trace, and meaningless to the salesperson
- * whose company page they ran on. A recap that prints them is a log with a
- * friendlier heading: the reader learns that something happened five times and
- * nothing about what.
- *
- * Each line says what the agent DID, in the past tense, from the reader's side
- * rather than the pipeline's. A task with no entry falls back to its token with
- * the underscores opened up, so a task added upstream degrades to something
- * readable instead of disappearing.
- */
-export const TASK_SAID: Readonly<Record<string, string>> = {
-  account_scan: "Read what an account needs",
-  agent_loop: "Worked through a request",
-  brief_ranking: "Ranked your morning brief",
-  capture_classify: "Sorted captured mail",
-  owed_verdict: "Read which messages are waiting on you",
-  capture_counterparty_verdict: "Decided who a message was with",
-  cert_judge: "Checked its own answer",
-  cold_start: "Set up your workspace",
-  corpus_ask: "Answered from your documents",
-  deal_health: "Read the health of a deal",
-  document_extract: "Pulled fields out of a document",
-  draft_reply: "Drafted a reply",
-  embeddings: "Indexed records for search",
-  enrich: "Filled in contact details",
-  growth_fit: "Scored how well a company fits",
-  nl_search: "Answered a search",
-  offer_draft: "Drafted an offer",
-  rate_extract: "Read pricing off a page",
-  signal_extract: "Found signals in a thread",
-  stage_evidence_extract: "Checked what a deal still needs",
-  site_extract: "Read a company website",
-  site_fact_extract: "Pulled facts off a web page",
-  site_triage: "Picked which pages to read",
-  summarize: "Wrote a summary",
-  transcript: "Processed a call transcript",
-  propose_roles: "Read the buying roles from their messages",
-  transcript_propose: "Proposed next steps from a call",
-  voice_build: "Learned your writing voice",
-};
-
 export const LABELS = {
   /** The month's estimated spend, and it says estimated by saying "so far":
    *  the server prices on read, so the figure moves as rates change. */
@@ -76,7 +30,10 @@ export const LABELS = {
   recap: "What it has done",
   justNow: "just now",
   fullLog: "Full log",
-  logUnreadable: "The call log is not readable on this seat",
+  /** The recap when the feed answered and this contact's day holds nothing yet.
+   *  It is bounded to what SETTLED today, so an empty list is a quiet morning
+   *  rather than an agent that has never run. */
+  nothingToday: "nothing has finished today",
   model: "model",
   sources: "sources",
   tools: "tools",
@@ -143,7 +100,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  * The line under the orb names one thing at a time (`agentrail-ticker.ts`), and
  * this is the vocabulary it names them in: the words a salesperson uses about
  * their own day, not the words the cache uses about itself. "Reading this
- * company" is a sentence; "fetching organization360" is a key.
+ * company" is a sentence; "fetching company360" is a key.
  *
  * A key with no entry here produces NO LINE. That is the point of a table rather
  * than a fallback that opens up the key: half of what a session fetches is
@@ -174,7 +131,7 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
 export const IDLE_ORDER = [
   "waiting",
   // Second: what the scheduled runner finished while nobody was looking is news
-  // rather than a task, so it does not push the queue a person has to answer
+  // rather than a task, so it does not push the queue a contact has to answer
   // down the rotation.
   "finished",
   // Last, and standing rather than daily: an installation on the development
@@ -239,11 +196,11 @@ export const WROTE: Readonly<Record<string, [named: string, plain: string]>> = {
 export const NAMED: Readonly<Record<string, string>> = {
   deal: "Reading the %s deal",
   lead: "Reading %s",
-  organization: "Reading %s",
-  organization360: "Reading everything about %s",
-  person: "Reading %s",
-  person360: "Reading everything about %s",
-  personBrief: "Summarising %s",
+  company: "Reading %s",
+  company360: "Reading everything about %s",
+  contact: "Reading %s",
+  contact360: "Reading everything about %s",
+  contactBrief: "Summarising %s",
 };
 
 export const SAID: Readonly<Record<string, string>> = {
@@ -252,6 +209,8 @@ export const SAID: Readonly<Record<string, string>> = {
   "ai-calls": "Reading its own log",
   "ai-usage": "Adding up what it spent",
   companies: "Reading companies",
+  company: "Reading a company",
+  company360: "Reading everything about this company",
   connectors: "Checking its sources",
   deal: "Reading a deal",
   "deal-offers": "Reading the offers on a deal",
@@ -259,14 +218,11 @@ export const SAID: Readonly<Record<string, string>> = {
   dsrs: "Checking privacy requests",
   lead: "Reading a lead",
   leads: "Reading leads",
-  organization: "Reading a company",
-  organization360: "Reading everything about this company",
-  organizations: "Reading companies",
   overlay: "Reading what it wrote here",
-  people: "Reading contacts",
-  person: "Reading a contact",
-  person360: "Reading everything about this contact",
-  personBrief: "Summarising a contact",
+  contacts: "Reading contacts",
+  contact: "Reading a contact",
+  contact360: "Reading everything about this contact",
+  contactBrief: "Summarising a contact",
   pipelines: "Reading the pipeline",
   // The brief is written on every open, from the reader's own records, and the
   // rail's own line follows on its next poll: this is the sentence for the

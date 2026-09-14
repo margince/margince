@@ -41,7 +41,7 @@ func TestAnEventOfAnotherTypeIsIgnored(t *testing.T) {
 //
 // Both halves matter and they pull against each other. The event must not
 // reach the table — an unattributable occurrence filed as workspace work is one
-// person's work turned into a system sweep nobody can find. But it must also
+// contact's work turned into a system sweep nobody can find. But it must also
 // not stay pending: the subscriber leaves a failed entry for the reclaim pass,
 // which would hand the same unparseable bytes to every replica forever and
 // wedge a lane whose whole job is keeping a display current.

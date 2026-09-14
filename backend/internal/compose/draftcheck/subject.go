@@ -44,7 +44,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 
 	if trimmed == "" {
 		return []Finding{{
-			Rule:   "empty-subject",
+			Rule:   RuleEmptySubject,
 			Phrase: "",
 			Why:    "a message with no subject line arrives looking like spam",
 		}}
@@ -56,7 +56,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 		}
 		if !threaded {
 			findings = append(findings, Finding{
-				Rule:   "unearned-reply-prefix",
+				Rule:   RuleUnearnedReplyPrefix,
 				Phrase: strings.TrimSuffix(prefix, ":"),
 				Why: "there is no inbound thread with this subject, so the prefix claims " +
 					"a message that was never received",
@@ -72,7 +72,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 			assumedMemory[lang]...), firstTouchSubjects[lang]...) {
 			if contains(lowered, phrase) {
 				findings = append(findings, Finding{
-					Rule:   "invented-history-subject",
+					Rule:   RuleInventedHistorySubject,
 					Phrase: phrase,
 					Why:    "this is a first message, so the subject cannot refer back to anything",
 				})
@@ -83,7 +83,7 @@ func Subject(subject string, lang textlang.Lang, band convstate.Band, threaded b
 
 	if n := len([]rune(trimmed)); n > SubjectMaxRunes {
 		findings = append(findings, Finding{
-			Rule:   "long-subject",
+			Rule:   RuleLongSubject,
 			Phrase: trimmed[:40] + "…",
 			Why: "a subject this long is truncated by the client that shows it, so the " +
 				"part that carries the meaning may never be read",

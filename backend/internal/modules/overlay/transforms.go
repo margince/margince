@@ -86,7 +86,7 @@ func transformMsToSeconds(v any) (any, error) {
 	return ms / 1000, nil
 }
 
-// transformFullName assembles the required, always-present person.full_name
+// transformFullName assembles the required, always-present contact.full_name
 // display field (OVA-MAP-3) from a gathered {firstname, lastname, email}
 // property set: firstname + ' ' + lastname trimmed of surrounding
 // whitespace, falling back to the primary email's local part, and only then
@@ -228,7 +228,7 @@ func transformEmployeesToSizeBand(v any) (any, error) {
 		// smallest band — inventing "1-10" from it would fabricate a size.
 		return nil, fmt.Errorf("overlay: employees_to_size_band got a non-positive headcount %d", n)
 	}
-	// Buckets are the Organization.size_band enum verbatim (crm.yaml):
+	// Buckets are the Company.size_band enum verbatim (crm.yaml):
 	// a label outside that set is dropped by the typed response, so the
 	// boundaries must match the contract exactly, not an approximation.
 	switch {

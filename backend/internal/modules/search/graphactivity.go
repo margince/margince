@@ -154,13 +154,13 @@ func activityProfile(ctx context.Context, tx pgx.Tx, activityID ids.UUID, within
 // record for has no id of their own to name — the ref says where the address
 // came from, and the summary is the address and the part they played.
 //
-// A party matched to a person the caller cannot see is neither here nor a
+// A party matched to a contact the caller cannot see is neither here nor a
 // subject: it resolved to a record, and reclassifying it as an unmatched
 // address would disclose by the back door exactly what the row scope withheld.
 // Colleagues (user_id) are likewise absent — they resolved to a member.
 func unresolvedAttendees(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]graphItem, error) {
 	// DISTINCT ON the address, not on (address, role): one party copied as both
-	// `to` and `cc` is one person in the room, and listing them twice reads as
+	// `to` and `cc` is one contact in the room, and listing them twice reads as
 	// two. The role kept is the most significant one they held, which is also
 	// the order the window is cut by.
 	rows, err := tx.Query(ctx, `
@@ -168,7 +168,7 @@ func unresolvedAttendees(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([
 		    SELECT DISTINCT ON (ap.address) ap.address, ap.role, `+participantRoleOrder("ap")+` AS rank
 		      FROM activity_participant ap
 		     WHERE ap.activity_id = $1
-		       AND ap.person_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL
+		       AND ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL
 		     ORDER BY ap.address, rank
 		) parties
 		 ORDER BY rank, address LIMIT $2`, activityID, graphExpansionLimit)

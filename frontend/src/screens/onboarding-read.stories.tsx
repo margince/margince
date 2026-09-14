@@ -29,7 +29,7 @@ const norm = {
 const reading = {
   id: "018f3a1b-0000-7000-8000-0000000000b2",
   target_kind: "onboarding" as const,
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading" as const,
   status_code: null,
@@ -75,7 +75,7 @@ const reading = {
   ],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 2,
   proposal_hash: "proposal-2",

@@ -11,7 +11,7 @@ import (
 )
 
 // Email is a normalized address: parsed once, stored lowercased — the
-// same convention the schema enforces (person_email_norm/lead_email_norm
+// same convention the schema enforces (contact_email_norm/lead_email_norm
 // CHECKs), so dedupe by address can never miss on case.
 type Email struct{ s string }
 
@@ -33,7 +33,7 @@ func ParseEmail(raw string) (Email, error) {
 func (e Email) String() string { return e.s }
 func (e Email) IsZero() bool   { return e.s == "" }
 
-// Domain is the part after the last @ — the org-key derivation input.
+// Domain is the part after the last @ — the company-key derivation input.
 func (e Email) Domain() string {
 	at := strings.LastIndex(e.s, "@")
 	if at < 0 {

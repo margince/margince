@@ -9,15 +9,15 @@ export type ConversationAct =
   | "company"
   // The installation's reporting basis — base currency and reporting timezone
   // — asked of the creator once the company is confirmed and before any step
-  // about the person answering. A member's installation has already settled
+  // about the contact answering. A member's installation has already settled
   // it, so the act is the creator's alone.
   | "basis"
   // The question a creator is asked once the basis is settled: will they work
   // in Margince themselves? Voice and connect are walked now by someone who
   // will; an administrator setting the installation up for others finishes
-  // here, and the first person they invite walks them instead.
+  // here, and the first contact they invite walks them instead.
   | "invite"
-  // Where a creator who declined the invite adds the first person who will
+  // Where a creator who declined the invite adds the first contact who will
   // work in Margince, and finishes.
   | "team"
   | "voice"
@@ -240,7 +240,7 @@ export type ConversationEvent =
   | { type: "BASIS_DONE" }
   // The two answers to the invite. Accepting opens the voice act; declining
   // opens the team act instead, because the steps left are all about the
-  // person who just said they will not be here — so the one thing left to do
+  // contact who just said they will not be here — so the one thing left to do
   // is name who will be.
   | { type: "INVITE_ACCEPTED" }
   | { type: "INVITE_DECLINED" }

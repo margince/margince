@@ -292,7 +292,7 @@ func isAttributionLine(line string) bool {
 // It differs from the language detector's cut in exactly that missing floor.
 // Detection keeps a message that is only quoted text, because then the quote is
 // the only evidence of language there is and answering Unknown would be worse.
-// A caller asking "what did this person say" must not: the whole point is that
+// A caller asking "what did this contact say" must not: the whole point is that
 // text below the marker was written by somebody ELSE, and a reader who cannot
 // tell the difference can be fed words through a quoted chain. Capture's
 // correspondence gate reads a reply for its intent, so it takes this one.
@@ -316,7 +316,7 @@ func NewTextOnly(text string) string {
 // Unlike language detection's cutAt fallback, attribution must not substitute
 // somebody else's quoted words when the sender wrote little or nothing.
 // A forwarded original remains available in the full activity, not presented
-// here as the forwarding person's own statement.
+// here as the forwarding contact's own statement.
 func CurrentMessage(text string) string {
 	runes := []rune(text)
 	if offset := quoteStart(runes); offset >= 0 {

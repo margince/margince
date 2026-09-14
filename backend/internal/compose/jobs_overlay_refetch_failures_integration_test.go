@@ -93,7 +93,7 @@ func (f refetchFixture) signal(w *overlayRefetchWorker) error {
 // re-fetched record, the honest measure of whether the worker ingested.
 func (f refetchFixture) mirrored(t *testing.T) bool {
 	t.Helper()
-	_, err := f.ms.Get(overlayReaderCtx(f.e.WS, f.e.Rep1), "person", "c-1")
+	_, err := f.ms.Get(overlayReaderCtx(f.e.WS, f.e.Rep1), "contact", "c-1")
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("reading the mirror: %v", err)
 	}
@@ -108,7 +108,7 @@ func seededPortal() *fake.Adapter {
 	inc := fake.New()
 	inc.SeedOwner("owner-1", "a@authz.test")
 	rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-	rec.ObjectClass, rec.OwnerExternalID = "person", "owner-1"
+	rec.ObjectClass, rec.OwnerExternalID = "contact", "owner-1"
 	rec.ModifiedAt = time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	inc.Seed(overlay.IncumbentClassContacts, rec)
 	return inc

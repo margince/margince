@@ -65,11 +65,11 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 	wsID := ids.NewV7()
 	d, calls := cachedModeDispatcher(wsID, modeNative)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	writes := map[string]func() error{
 		"Create": func() error {
-			_, err := d.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityPerson})
+			_, err := d.Create(ctx, datasource.CreateInput{EntityType: datasource.EntityContact})
 			return err
 		},
 		"Update": func() error {
@@ -85,7 +85,7 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 			return err
 		},
 		"Merge": func() error {
-			_, err := d.Merge(ctx, datasource.MergeInput{Type: datasource.EntityPerson})
+			_, err := d.Merge(ctx, datasource.MergeInput{Type: datasource.EntityContact})
 			return err
 		},
 		"PromoteLead": func() error {
@@ -117,7 +117,7 @@ func TestOverlayWriteShadowResolvesTheModeOnce(t *testing.T) {
 	wsID := ids.NewV7()
 	d, calls := cachedModeDispatcher(wsID, modeNative)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
-	ref := datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}
+	ref := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 
 	// What the shadow does: resolve once, then dispatch with that answer.
 	ov, err := d.isOverlayUncached(ctx)
@@ -149,13 +149,38 @@ func TestDispatcherReadVerbsStillUseTheCachedMode(t *testing.T) {
 	d, calls := cachedModeDispatcher(wsID, modeOverlay)
 	ctx := principal.WithWorkspaceID(context.Background(), wsID)
 
-	if _, err := d.Read(ctx, datasource.EntityRef{Type: datasource.EntityPerson, ID: ids.NewV7()}); err == nil {
+	if _, err := d.Read(ctx, datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}); err == nil {
 		t.Fatal("Read: want the overlay provider's nil-mirror-store error, got nil")
 	}
-	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityPerson}}); err == nil {
+	if _, err := d.Search(ctx, datasource.SearchQuery{EntityTypes: []datasource.EntityType{datasource.EntityContact}}); err == nil {
 		t.Fatal("Search: want the overlay provider's nil-mirror-store error, got nil")
 	}
 	if *calls != 0 {
 		t.Errorf("cached reads re-queried overlay_mode.sor_mode %d time(s); avoiding that on every read is the whole reason the cache exists", *calls)
+	}
+}
+
+// TestTheCommsGuardIgnoresAStaleCachedMode holds the same window shut at the
+// seam comms.go guards its sends behind.
+//
+// IsExternalSoR is not a dispatched verb, so the verb census above cannot see
+// it — but it decides the same question for the same reason: a send, a message
+// and a booking are mutations, and one leaving on a stale 'native' answer is a
+// mail that went out on the authority of an ownership that had already moved.
+// Unlike a routed write, this one is not recoverable afterwards at all.
+func TestTheCommsGuardIgnoresAStaleCachedMode(t *testing.T) {
+	wsID := ids.NewV7()
+	d, calls := cachedModeDispatcher(wsID, modeNative)
+	ctx := principal.WithWorkspaceID(context.Background(), wsID)
+
+	external, err := d.IsExternalSoR(ctx)
+	if err != nil {
+		t.Fatalf("IsExternalSoR: %v", err)
+	}
+	if !external {
+		t.Error("answered native from the stale cache entry; the workspace row says overlay and a send would go out under an ownership that has moved")
+	}
+	if *calls != 1 {
+		t.Errorf("read the workspace row %d times, want exactly 1: the guard must not trust the cache, and must not cost a round trip per call either", *calls)
 	}
 }

@@ -176,7 +176,7 @@ func (e *sendEnv) as(scope principal.RowScope) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: scope,
 		},
@@ -210,7 +210,7 @@ func (e *sendEnv) readOnly() context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true},
-				"person":   {Read: true},
+				"contact":  {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -232,22 +232,22 @@ func (e *sendEnv) seedNonMailAnchor(t *testing.T, sourceID string) ids.ActivityI
 	return id
 }
 
-// linkToPersonOwnedBy ties the anchor to a capture-private person owned by
-// the given user (visibility='owner'): a person is workspace-readable
+// linkToContactOwnedBy ties the anchor to a capture-private contact owned by
+// the given user (visibility='owner'): a contact is workspace-readable
 // identity, so ownership alone no longer hides it, and capture privacy is
 // the state that still keeps the anchor outside every other caller's row
 // scope.
-func (e *sendEnv) linkToPersonOwnedBy(t *testing.T, anchor ids.ActivityID, owner ids.UUID) {
+func (e *sendEnv) linkToContactOwnedBy(t *testing.T, anchor ids.ActivityID, owner ids.UUID) {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person (id, full_name, owner_id, visibility, source, captured_by)
-		 VALUES ($1, 'Buyer', $2, 'owner', 'manual', 'human:x')`, person, owner); err != nil {
-		t.Fatalf("seeding the linked person: %v", err)
+		`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
+		 VALUES ($1, 'Buyer', $2, 'owner', 'manual', 'human:x')`, contact, owner); err != nil {
+		t.Fatalf("seeding the linked contact: %v", err)
 	}
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO activity_link (activity_id, entity_type, person_id)
-		 VALUES ($1, 'person', $2)`, anchor, person); err != nil {
+		`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		 VALUES ($1, 'contact', $2)`, anchor, contact); err != nil {
 		t.Fatalf("linking the anchor: %v", err)
 	}
 }
@@ -296,7 +296,7 @@ func sendInput(purpose string) SendEmailInput {
 
 // soloSendInput is the same message to ONE addressee. A send that carries an
 // unsubscribe surface must have exactly one, because the token in the header
-// and the footer belongs to a single person — so every case about what such a
+// and the footer belongs to a single contact — so every case about what such a
 // send derives has to be addressed this way to reach the derivation at all.
 func soloSendInput(purpose string) SendEmailInput {
 	in := sendInput(purpose)

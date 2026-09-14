@@ -23,13 +23,13 @@ expect:
       met: true
       settled_by: Martin
   rubric: >
-    The buyer names the person who approves the spend and describes the split
+    The buyer names the contact who approves the spend and describes the split
     between her role and his. economic_buyer_identified is met, cited on the
     second line where she says it. Note this criterion is one WE may observe as
     readily as they state it — it names something we learn, not something the
     buyer does — so a claim here is admissible whichever side said it. That
     does not make it free: a claim must still quote a passage that names the
-    person. Claiming problem_confirmed scores at the floor; nobody described a
+    contact. Claiming problem_confirmed scores at the floor; nobody described a
     problem. Reading Lars's question as the evidence scores low — a question is
     not an answer, and the citation must point at the line that states the fact.
   bands:

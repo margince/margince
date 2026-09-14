@@ -334,7 +334,7 @@ const settledOutcome = `CASE
 // The join carries the trace's OWNER, and that is the isolation rather than a
 // belt on one: the ledger row records who raised the disposition, an address is
 // not unique across members, and `d.email = a.counterparty_email` alone answers
-// with ANOTHER member's verdict about the same person. A disposition can say
+// with ANOTHER member's verdict about the same contact. A disposition can say
 // `personal` or `advisor` about a sender, which is a statement about that
 // member's own correspondence.
 //

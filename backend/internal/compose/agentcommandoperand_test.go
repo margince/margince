@@ -31,7 +31,7 @@ import (
 // operandRequest builds a request for a route carrying the router's own {id}
 // (as the raw path segment routeID — a malformed one is what proves the 404)
 // plus an optional second path parameter the chi router would have bound —
-// factKey, field, or person_id.
+// factKey, field, or contact_id.
 func operandRequest(method, path, routeID, extraParam, extraValue string, body []byte) *http.Request {
 	req := httptest.NewRequest(method, path+"/"+routeID, bytes.NewReader(body))
 	rctx := chi.NewRouteContext()
@@ -52,16 +52,16 @@ func TestAMalformedOperandRouteIDAnswersNotFound(t *testing.T) {
 		decode func(pol agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error)
 		req    *http.Request
 	}{
-		{"confirmOrganizationFact", confirmFactCommand, operandRequest(http.MethodPost, "/v1/organizations", "not-a-uuid", "factKey", "k", nil)},
-		{"updateOrganizationFact", updateFactCommand, operandRequest(http.MethodPatch, "/v1/organizations", "not-a-uuid", "factKey", "k", []byte(`{"value":"v"}`))},
-		{"confirmOrganizationProfileField", confirmProfileFieldCommand, operandRequest(http.MethodPost, "/v1/organizations", "not-a-uuid", "field", "icp", nil)},
-		{"updateOrganizationProfileField", updateProfileFieldCommand, operandRequest(http.MethodPatch, "/v1/organizations", "not-a-uuid", "field", "icp", []byte(`{"value":"v"}`))},
+		{"confirmCompanyFact", confirmFactCommand, operandRequest(http.MethodPost, "/v1/companies", "not-a-uuid", "factKey", "k", nil)},
+		{"updateCompanyFact", updateFactCommand, operandRequest(http.MethodPatch, "/v1/companies", "not-a-uuid", "factKey", "k", []byte(`{"value":"v"}`))},
+		{"confirmCompanyProfileField", confirmProfileFieldCommand, operandRequest(http.MethodPost, "/v1/companies", "not-a-uuid", "field", "icp", nil)},
+		{"updateCompanyProfileField", updateProfileFieldCommand, operandRequest(http.MethodPatch, "/v1/companies", "not-a-uuid", "field", "icp", []byte(`{"value":"v"}`))},
 		{"retireCustomField", retireCustomFieldCommand, operandRequest(http.MethodPost, "/v1/custom-fields", "not-a-uuid", "", "", nil)},
 		{"updateCustomFieldOptions", updateCustomFieldOptionsCommand, operandRequest(http.MethodPatch, "/v1/custom-fields", "not-a-uuid", "", "", []byte(`{"options":["a"]}`))},
-		{"setProjectStakeholder", setStakeholderCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"person_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`))},
-		{"removeProjectStakeholder", removeStakeholderCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "person_id", ids.NewV7().String(), nil)},
-		{"setProjectCompany", setCompanyCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`))},
-		{"removeProjectCompany", removeCompanyCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "organization_id", ids.NewV7().String(), nil)},
+		{"setProjectStakeholder", setStakeholderCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"contact_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`))},
+		{"removeProjectStakeholder", removeStakeholderCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "contact_id", ids.NewV7().String(), nil)},
+		{"setProjectCompany", setCompanyCommand, operandRequest(http.MethodPut, "/v1/projects", "not-a-uuid", "", "", []byte(`{"company_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`))},
+		{"removeProjectCompany", removeCompanyCommand, operandRequest(http.MethodDelete, "/v1/projects", "not-a-uuid", "company_id", ids.NewV7().String(), nil)},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestAMalformedOperandRouteIDAnswersNotFound(t *testing.T) {
 
 // A missing second path operand — a request built without the segment the
 // router would otherwise have bound — answers 422 naming it, not a panic on
-// an empty FactKey/Field downstream. removeProjectStakeholder's person_id is
+// an empty FactKey/Field downstream. removeProjectStakeholder's contact_id is
 // the one operand composed from pathOperand + ids.Parse (agentcommandoperand.go)
 // rather than pathOperand alone, so it is included here too: a missing one
 // must still answer "missing" through that composition, not fall through to
@@ -89,11 +89,11 @@ func TestAMissingSecondPathOperandAnswers422(t *testing.T) {
 		body      []byte
 		wantField string
 	}{
-		{"confirmOrganizationFact", http.MethodPost, "/v1/organizations", confirmFactCommand, nil, "factKey"},
-		{"updateOrganizationFact", http.MethodPatch, "/v1/organizations", updateFactCommand, nil, "factKey"},
-		{"confirmOrganizationProfileField", http.MethodPost, "/v1/organizations", confirmProfileFieldCommand, nil, "field"},
-		{"updateOrganizationProfileField", http.MethodPatch, "/v1/organizations", updateProfileFieldCommand, nil, "field"},
-		{"removeProjectStakeholder", http.MethodDelete, "/v1/projects", removeStakeholderCommand, nil, "person_id"},
+		{"confirmCompanyFact", http.MethodPost, "/v1/companies", confirmFactCommand, nil, "factKey"},
+		{"updateCompanyFact", http.MethodPatch, "/v1/companies", updateFactCommand, nil, "factKey"},
+		{"confirmCompanyProfileField", http.MethodPost, "/v1/companies", confirmProfileFieldCommand, nil, "field"},
+		{"updateCompanyProfileField", http.MethodPatch, "/v1/companies", updateProfileFieldCommand, nil, "field"},
+		{"removeProjectStakeholder", http.MethodDelete, "/v1/projects", removeStakeholderCommand, nil, "contact_id"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -113,21 +113,21 @@ func TestAMissingSecondPathOperandAnswers422(t *testing.T) {
 	}
 }
 
-// A malformed (non-empty) person_id on removeProjectStakeholder is also a
+// A malformed (non-empty) contact_id on removeProjectStakeholder is also a
 // 422, code "invalid" rather than "missing" — the other half of the
 // pathOperand + ids.Parse composition the test above proves the missing
-// case for. Neither is the 404 the routed {id} gets: person_id names WHICH
+// case for. Neither is the 404 the routed {id} gets: contact_id names WHICH
 // edge, not whether the project exists, so its shape being wrong is the
 // caller's mistake, never an existence leak.
-func TestARemoveStakeholderMalformedPersonIDAnswers422(t *testing.T) {
-	req := operandRequest(http.MethodDelete, "/v1/projects", ids.NewV7().String(), "person_id", "not-a-uuid", nil)
+func TestARemoveStakeholderMalformedContactIDAnswers422(t *testing.T) {
+	req := operandRequest(http.MethodDelete, "/v1/projects", ids.NewV7().String(), "contact_id", "not-a-uuid", nil)
 	_, err := removeStakeholderCommand(agentPolicy{Op: "removeProjectStakeholder"}, restCommandDeps{records: seamRecord{}}, req, nil)
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != http.StatusUnprocessableEntity {
-		t.Fatalf("a malformed person_id answered %v, want a 422", err)
+		t.Fatalf("a malformed contact_id answered %v, want a 422", err)
 	}
-	if len(detailed.Fields) != 1 || detailed.Fields[0].Field != "person_id" || detailed.Fields[0].Code != "invalid" {
-		t.Errorf("the 422 named %+v, want field \"person_id\" code \"invalid\"", detailed.Fields)
+	if len(detailed.Fields) != 1 || detailed.Fields[0].Field != "contact_id" || detailed.Fields[0].Code != "invalid" {
+		t.Errorf("the 422 named %+v, want field \"contact_id\" code \"invalid\"", detailed.Fields)
 	}
 }
 
@@ -135,7 +135,7 @@ func TestARemoveStakeholderMalformedPersonIDAnswers422(t *testing.T) {
 // through stageRefusal end to end, the same shape TestAPatchStagesItsRecordAndID
 // proves for a whole-record patch.
 func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
-	orgID, projectID, cfID := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	companyID, projectID, cfID := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	cases := []struct {
 		name           string
 		pol            agentPolicy
@@ -145,28 +145,28 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 		wantTargetID   ids.UUID
 	}{
 		{
-			"confirmOrganizationFact",
-			agentPolicy{Op: "confirmOrganizationFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization},
-			operandRequest(http.MethodPost, "/v1/organizations", orgID.String(), "factKey", "named_customer:acme-inc", nil), nil,
-			"organization", orgID,
+			"confirmCompanyFact",
+			agentPolicy{Op: "confirmCompanyFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany},
+			operandRequest(http.MethodPost, "/v1/companies", companyID.String(), "factKey", "named_customer:acme-inc", nil), nil,
+			"company", companyID,
 		},
 		{
-			"updateOrganizationFact",
-			agentPolicy{Op: "updateOrganizationFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization},
-			operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "factKey", "named_customer:acme-inc", []byte(`{"value":"Acme Inc"}`)),
-			[]byte(`{"value":"Acme Inc"}`), "organization", orgID,
+			"updateCompanyFact",
+			agentPolicy{Op: "updateCompanyFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany},
+			operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "factKey", "named_customer:acme-inc", []byte(`{"value":"Acme Inc"}`)),
+			[]byte(`{"value":"Acme Inc"}`), "company", companyID,
 		},
 		{
-			"confirmOrganizationProfileField",
-			agentPolicy{Op: "confirmOrganizationProfileField", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization},
-			operandRequest(http.MethodPost, "/v1/organizations", orgID.String(), "field", "icp", nil), nil,
-			"organization", orgID,
+			"confirmCompanyProfileField",
+			agentPolicy{Op: "confirmCompanyProfileField", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany},
+			operandRequest(http.MethodPost, "/v1/companies", companyID.String(), "field", "icp", nil), nil,
+			"company", companyID,
 		},
 		{
-			"updateOrganizationProfileField",
-			agentPolicy{Op: "updateOrganizationProfileField", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization},
-			operandRequest(http.MethodPatch, "/v1/organizations", orgID.String(), "field", "icp", []byte(`{"value":"Payments infra"}`)),
-			[]byte(`{"value":"Payments infra"}`), "organization", orgID,
+			"updateCompanyProfileField",
+			agentPolicy{Op: "updateCompanyProfileField", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany},
+			operandRequest(http.MethodPatch, "/v1/companies", companyID.String(), "field", "icp", []byte(`{"value":"Payments infra"}`)),
+			[]byte(`{"value":"Payments infra"}`), "company", companyID,
 		},
 		{
 			"retireCustomField",
@@ -183,25 +183,25 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 		{
 			"setProjectStakeholder",
 			agentPolicy{Op: "setProjectStakeholder", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
-			operandRequest(http.MethodPut, "/v1/projects", projectID.String(), "", "", []byte(`{"person_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`)),
-			[]byte(`{"person_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`), "project", projectID,
+			operandRequest(http.MethodPut, "/v1/projects", projectID.String(), "", "", []byte(`{"contact_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`)),
+			[]byte(`{"contact_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`), "project", projectID,
 		},
 		{
 			"removeProjectStakeholder",
 			agentPolicy{Op: "removeProjectStakeholder", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
-			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "person_id", ids.NewV7().String(), nil), nil,
+			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "contact_id", ids.NewV7().String(), nil), nil,
 			"project", projectID,
 		},
 		{
 			"setProjectCompany",
 			agentPolicy{Op: "setProjectCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
-			operandRequest(http.MethodPut, "/v1/projects", projectID.String(), "", "", []byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`)),
-			[]byte(`{"organization_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`), "project", projectID,
+			operandRequest(http.MethodPut, "/v1/projects", projectID.String(), "", "", []byte(`{"company_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`)),
+			[]byte(`{"company_id":"018f2a10-0000-7000-8000-000000000002","role":"partner"}`), "project", projectID,
 		},
 		{
 			"removeProjectCompany",
 			agentPolicy{Op: "removeProjectCompany", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject},
-			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "organization_id", ids.NewV7().String(), nil), nil,
+			operandRequest(http.MethodDelete, "/v1/projects", projectID.String(), "company_id", ids.NewV7().String(), nil), nil,
 			"project", projectID,
 		},
 	}
@@ -220,9 +220,9 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 
 // What resolving these eight through their own commands buys, and it is a
 // refusal rather than a label: Guards runs before anything stages.
-// An organization or project the caller cannot see stages NOTHING — the same
+// A company or project the caller cannot see stages NOTHING — the same
 // proof shape TestAnArchiveOfAnUnseeableRecordStagesNothing gives archive —
-// for one op from each seam-served family (organization, project). The two
+// for one op from each seam-served family (company, project). The two
 // custom_field ops have no such proof: the seam has never served that type,
 // so there is no read for Guards to skip. That they never attempt one is
 // TestCustomFieldCommandsStageAndAdmitOutsideTheRecordSeam's own claim
@@ -233,28 +233,28 @@ func TestEachOperandCommandStagesTheRoutedRecord(t *testing.T) {
 // read succeeds) cannot tell "never read" apart from "read and got lucky".
 func TestAnOperandCommandOfAnUnseeableRecordStagesNothing(t *testing.T) {
 	staging := &capturingApprovals{}
-	pol := agentPolicy{Op: "confirmOrganizationFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeOrganization}
-	req := operandRequest(http.MethodPost, "/v1/organizations", ids.NewV7().String(), "factKey", "named_customer:acme-inc", nil)
+	pol := agentPolicy{Op: "confirmCompanyFact", Access: accessTool, Tool: "update_record", RecordType: recordTypeCompany}
+	req := operandRequest(http.MethodPost, "/v1/companies", ids.NewV7().String(), "factKey", "named_customer:acme-inc", nil)
 	rec := httptest.NewRecorder()
 
 	stageRefusal(rec, req, staging, restCommandDeps{records: hiddenRecord{}}, pol, nil)
 
 	if rec.Code != http.StatusNotFound {
-		t.Errorf("confirming a fact on an organization the caller cannot see answered %d, want 404 — the "+
+		t.Errorf("confirming a fact on a company the caller cannot see answered %d, want 404 — the "+
 			"refusal must not tell a caller that a row they may not see exists", rec.Code)
 	}
 	if staging.last.Tool != "" {
-		t.Errorf("an approval was staged for %q against an organization nobody can decide about", staging.last.Tool)
+		t.Errorf("an approval was staged for %q against a company nobody can decide about", staging.last.Tool)
 	}
 }
 
-// The other refusal Guards makes: an organization/project the caller CAN see
+// The other refusal Guards makes: a company/project the caller CAN see
 // but whose authority lives in another system of record — readable, and
 // still unstageable, the same shape TestAnArchiveOfAnExternallyHeldRecordStagesNothing
 // gives archive.
 func TestAnOperandCommandOfARecordHeldElsewhereStagesNothing(t *testing.T) {
 	staging := &capturingApprovals{}
-	body := []byte(`{"person_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`)
+	body := []byte(`{"contact_id":"018f2a10-0000-7000-8000-000000000001","role":"champion"}`)
 	pol := agentPolicy{Op: "setProjectStakeholder", Access: accessTool, Tool: "update_record", RecordType: recordTypeProject}
 	req := operandRequest(http.MethodPut, "/v1/projects", ids.NewV7().String(), "", "", body)
 	rec := httptest.NewRecorder()
@@ -276,7 +276,7 @@ func TestAnOperandCommandOfARecordHeldElsewhereStagesNothing(t *testing.T) {
 // family's decoders to succeed without this test needing to know which
 // parameter names a given route carries (factKey and field accept any
 // non-empty string; a uuid satisfies that as well as anything, and is what
-// person_id's own ids.Parse requires).
+// contact_id's own ids.Parse requires).
 func syntheticOperandRequest(route string, id ids.UUID) *http.Request {
 	method, template, _ := strings.Cut(route, " ")
 	segments := strings.Split(strings.TrimPrefix(template, "/"), "/")

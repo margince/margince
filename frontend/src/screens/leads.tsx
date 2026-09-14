@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpRight,
   BriefcaseBusiness,
   Building2,
   FolderKanban,
@@ -23,6 +24,7 @@ import {
   Button,
   Disclosure,
   Field,
+  OverflowMenu,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
@@ -79,6 +81,7 @@ import {
 } from "./entityref";
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import { leadBand } from "./leadband";
+import { MergedLeadPanel } from "./leadmerged";
 import {
   promoteEligible,
   scoreFactorLabel,
@@ -108,7 +111,7 @@ import "./leads.css";
 
 // Leads (B-EP09.10a/b): visually SEGREGATED from the contact graph — the
 // lead surface is accent-tinted, lead detail is its own screen (never
-// person.html — gap §3.5), and promote is eligibility-gated. Lead score is
+// contact.html — gap §3.5), and promote is eligibility-gated. Lead score is
 // lead-local; the ≥60 / 40–59 / <40 colour thresholds are pinned by test.
 // Search/filter/sort/pagination (P-14), the rich create modal (P-15), the
 // If-Match edit form (P-1), and the dedupe view-existing link (P-16) are
@@ -125,11 +128,8 @@ import {
   useLeadSources,
 } from "./leadsources";
 
-export {
-  promoteEligible,
-  scoreTone,
-  terminalBadge,
-} from "./leadpresentation";
+export { promoteEligible, scoreTone } from "./leadpresentation";
+export { terminalBadge } from "./leadstanding";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
 import { invalidateRecord } from "./recordwritekeys";
@@ -175,7 +175,7 @@ export function mapLeadUpdate(
 const leadEditFields: CreateField[] = [
   { key: "full_name", label: "create.fullName", required: true },
   { key: "email", label: "create.email", type: "email" },
-  { key: "title", label: "create.personTitle" },
+  { key: "title", label: "create.contactTitle" },
   { key: "company_name", label: "create.companyName" },
 ];
 
@@ -683,11 +683,11 @@ function LeadIdentityFields({
             />
           </FieldRow>
           <FieldRow
-            label={t("create.personTitle")}
+            label={t("create.contactTitle")}
             icon={<BriefcaseBusiness />}
           >
             <InlineText
-              label={t("create.personTitle")}
+              label={t("create.contactTitle")}
               value={lead.title ?? ""}
               placeholder={t("lead.detailsUnset")}
               canEdit={canEdit}
@@ -1102,7 +1102,7 @@ function LeadCall({
   );
 }
 
-// What needs a person on this lead: the first response, while it is owed, and
+// What needs a contact on this lead: the first response, while it is owed, and
 // the next task on it. Neither is the agent's move — a lead carries no
 // suggestions — so both draw as to-dos the record already carries. A closed
 // lead is not worked and draws none.
@@ -1263,7 +1263,7 @@ function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
  * reads GET /leads/{id}/promote-preview, which runs the promotion's own dedupe
  * ladder without writing.
  *
- * An absent person on a `merge` never means "no match" — it means the matched
+ * An absent contact on a `merge` never means "no match" — it means the matched
  * contact is outside the reader's row scope, and the line says so rather than
  * promising a new contact the server will not create.
  */
@@ -1337,7 +1337,7 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
 /**
  * PromotedLeadPanel is what a promoted lead's page is FOR (ADR-0119/A170).
  *
- * The page used to redirect to the person, which told the reader the lead had
+ * The page used to redirect to the contact, which told the reader the lead had
  * ceased to exist — untrue of a record this product keeps, audits and can
  * reverse (ADR-0008 §4). It also left the reversal that ADR promises with no
  * surface to be started from, and hid whether promotion merged into a contact
@@ -1353,7 +1353,7 @@ function PromotedLeadPanel({
   const t = useT();
   const { locale } = useLocale();
   const triggerLabel = promotionTriggerLabel(promotion.trigger);
-  // Four states, not two. The person link below is a fact the LEAD row carries,
+  // Four states, not two. The contact link below is a fact the LEAD row carries,
   // so it renders either way; only the outcome waits on the audit read.
   const outcomeLine = () => {
     if (promotion.pending) {
@@ -1380,7 +1380,7 @@ function PromotedLeadPanel({
         <div className="lead-stack">
           <p className="t-body">{outcomeLine()}</p>
           <p className="t-body">
-            <EntityRef kind="person" id={lead.promoted_person_id} />
+            <EntityRef kind="contact" id={lead.promoted_contact_id} />
           </p>
           {lead.promoted_at && (
             <p className="t-caption">
@@ -1407,7 +1407,7 @@ function PromotedLeadPanel({
           )}
           {/* The reversal lives here and nowhere else: this is the record the
               promotion is a fact about. Not in overlay, where the mirror owns
-              the person. */}
+              the contact. */}
           {!overlay && <DemoteAction id={lead.id} />}
         </div>
       </PanelBody>
@@ -1426,7 +1426,7 @@ function isLeadTab(value: string | undefined): value is LeadTab {
 // The lead's tab, addressed rather than held beside the address: a tab that
 // survives a reload and can be linked to, and Back that steps between the tabs
 // a reader opened instead of leaving the lead altogether. Same shape as the
-// account's (screens/organizations.tsx) and the contact's.
+// account's (screens/companies.tsx) and the contact's.
 function useLeadTab(recordId: string): [LeadTab, (next: LeadTab) => void] {
   const route = useRoute();
   const addressed =
@@ -1528,9 +1528,14 @@ function LeadOverviewPane({
     <div className="record-stack">
       {/* The readings open the overview, as they do on every record page. */}
       <LeadReadings lead={lead} />
+      {/* A merged-away lead's page leads with where it went, for the same
+          reason: the reader arrived asking what happened to this prospect. */}
+      {lead.merged_into_id && (
+        <MergedLeadPanel mergedIntoId={lead.merged_into_id} />
+      )}
       {/* A promoted lead's page leads with what the promotion did — the
           reader arrived asking whether this became a contact, and which one. */}
-      {lead.promoted_person_id && (
+      {lead.promoted_contact_id && (
         <PromotedLeadPanel lead={lead} promotion={promotion} />
       )}
       <LeadLadderPanel
@@ -1541,7 +1546,7 @@ function LeadOverviewPane({
         onDisqualify={onDisqualify}
       />
       {/* ONE READING, IN PARTS — the shape every record page reads in: the
-          call with the lead's own thread under it, what needs a person, and
+          call with the lead's own thread under it, what needs a contact, and
           under them the two sections a reader consults rather than reads —
           why it scores what it scores, and what the rep knows about it. */}
       <RecordReading>
@@ -1666,7 +1671,11 @@ function LeadActions({
           }
           onClick={onQualify}
         >
-          {t("lead.promote")}
+          {/* The glyph is the promotion itself: a lead leaving this page
+              upward, for the contact and deal it becomes. No `size` — the
+              button owns its icon's geometry, and a call site that names one
+              is a second author of it. */}
+          <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
       {/* The shared Email verb every record header carries. Not in overlay,
@@ -1679,75 +1688,92 @@ function LeadActions({
           disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         />
       )}
-      {/* A terminal lead keeps its controls, DISABLED with the reason
+      {/* Everything else this lead offers, behind one trigger. Qualify and
+          Email are what a rep reaches for between calls; the rest are rare
+          enough that a reader hunting one of them should not have to read
+          past them to find a common verb. Worded and glyphless in here: a
+          list of named actions with one unnamed square in it makes that
+          square the only row a reader has to hover to identify.
+
+          A terminal lead keeps these controls, DISABLED with the reason
           (STATE-4a): the reason is the information, and hiding the control
           hides a fact the reader needs. Both closures reach this page — a
           disqualified lead and, since ADR-0119/A170, a promoted one — and the
           band above names which, so these controls point at that one
-          sentence rather than guessing at it. */}
-      <EditAction<Lead>
-        disabledReasonId={refusedReasonId}
-        label={t("record.edit")}
-        savedMessage={(saved) =>
-          t("record.saveDone", { name: saved.full_name ?? "" })
-        }
-        notice={overlay ? t("overlay.partialWriteBack") : undefined}
-        fields={[...leadEditFields, ...cf.formFields]}
-        record={{
-          id: lead.id,
-          version: lead.version,
-          full_name: lead.full_name ?? "",
-          email: lead.email ?? "",
-          title: lead.title ?? "",
-          company_name: lead.company_name ?? "",
-          ...cf.recordSlice(lead),
-        }}
-        update={async (values, _rows, opened) => {
-          const { data, error } = await api.PATCH("/leads/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
-              ...mapLeadUpdate(values),
-              // A diff against what the form prefilled from: a snapshot sends
-              // `null` for every empty custom field, and the API reads that as
-              // clearing a column nobody touched.
-              ...cf.toPatch(values, opened ?? {}),
-            },
-          });
-          if (error) {
-            throwProblem(error);
+          sentence rather than guessing at it. The band is also WHY the
+          sentence is passed in rather than minted here: a reason living in
+          the panel would not exist until the menu was first opened. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <EditAction<Lead>
+          labelled
+          disabledReasonId={refusedReasonId}
+          label={t("record.edit")}
+          savedMessage={(saved) =>
+            t("record.saveDone", { name: saved.full_name ?? "" })
           }
-          return data;
-        }}
-        invalidate="leads"
-        recordKey="lead"
-      />
-      {/* The overlay seam refuses disqualify (a cross-type lifecycle
-          transition) and share (a grant probes a native row a mirror lead
-          does not have), so in overlay these are genuinely UNSUPPORTED
-          rather than state-blocked — a different STATE-4a cause, and the
-          answer for that one is absence. */}
-      {!overlay && (
-        <>
-          {/* Disqualify asks why, in its own dialog — and is a secondary
-              verb, not a red one: closing a lead is routine work. A terminal
-              lead keeps the control, disabled with the page's one reason. */}
-          <Button
-            data-testid="lead-disqualify"
-            reasonId={refusedReasonId}
-            onClick={onDisqualify}
-          >
-            {t("record.disqualify")}
-          </Button>
-          <ShareAction
-            recordType="lead"
-            recordId={lead.id}
-            disabledReasonId={refusedReasonId}
-          />
-        </>
-      )}
+          notice={overlay ? t("overlay.partialWriteBack") : undefined}
+          fields={[...leadEditFields, ...cf.formFields]}
+          record={{
+            id: lead.id,
+            version: lead.version,
+            full_name: lead.full_name ?? "",
+            email: lead.email ?? "",
+            title: lead.title ?? "",
+            company_name: lead.company_name ?? "",
+            ...cf.recordSlice(lead),
+          }}
+          update={async (values, _rows, opened) => {
+            const { data, error } = await api.PATCH("/leads/{id}", {
+              params: {
+                path: { id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              body: {
+                ...mapLeadUpdate(values),
+                // A diff against what the form prefilled from: a snapshot
+                // sends `null` for every empty custom field, and the API
+                // reads that as clearing a column nobody touched.
+                ...cf.toPatch(values, opened ?? {}),
+              },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="leads"
+          recordKey="lead"
+        />
+        {/* The overlay seam refuses disqualify (a cross-type lifecycle
+            transition) and share (a grant probes a native row a mirror lead
+            does not have), so in overlay these are genuinely UNSUPPORTED
+            rather than state-blocked — a different STATE-4a cause, and the
+            answer for that one is absence. */}
+        {!overlay && (
+          <>
+            <ShareAction
+              recordType="lead"
+              recordId={lead.id}
+              disabledReasonId={refusedReasonId}
+            />
+            {/* Last: it is the one verb here a reader cannot walk back from
+                the header, so it does not sit where a pointer sliding down
+                the list reaches it on the way to something routine. It asks
+                why, in its own dialog, and stays a secondary verb rather than
+                a red one — closing a lead is ordinary work, and the panel's
+                seam (atoms.css) belongs to the destructive verbs. A terminal
+                lead keeps the control, disabled with the page's one reason. */}
+            <Button
+              small
+              data-testid="lead-disqualify"
+              reasonId={refusedReasonId}
+              onClick={onDisqualify}
+            >
+              {t("record.disqualify")}
+            </Button>
+          </>
+        )}
+      </OverflowMenu>
     </>
   );
 }
@@ -1780,7 +1806,7 @@ function LeadDialogs({
               {t("lead.qualify.done", {
                 name: leadIdentityName(lead),
               })}{" "}
-              <EntityRef kind="person" id={result.person.id} />
+              <EntityRef kind="contact" id={result.contact.id} />
               {result.deal_id && (
                 <>
                   {" · "}
@@ -1868,11 +1894,11 @@ function LeadRecord({
   // column as a second, permanent copy of the same news.
   const toast = useToast();
   // A promoted lead keeps its page (ADR-0119/A170). It no longer redirects to
-  // the person: the redirect said the lead had ceased to exist, which is
+  // the contact: the redirect said the lead had ceased to exist, which is
   // untrue of a record this product keeps, audits and can reverse — and it
   // left the reversal with nowhere to start from. The page reads the
   // promotion off its own audit row and says what happened.
-  const promotion = usePromotionRecord(id, Boolean(lead.promoted_person_id));
+  const promotion = usePromotionRecord(id, Boolean(lead.promoted_contact_id));
   const writer = useLeadPatch(lead, id, () => {
     for (const key of leadWriteKeys(id)) {
       queryClient.invalidateQueries({ queryKey: key });

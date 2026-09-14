@@ -9,7 +9,7 @@ package integration
 //
 // The reported loop, against real Postgres: an `enrich` call was refused 🟡,
 // staged, approved by a human, and then staged AGAIN three more times, so one
-// organization carried four approvals at the same version with the same diff
+// company carried four approvals at the same version with the same diff
 // hash. A human answered all four and not one was ever spent. Two things made
 // that possible and both are proven here — the gate minted a fresh approval per
 // attempt instead of recognizing the one already on the table, and a retry that
@@ -38,13 +38,13 @@ func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t 
 	// Driven through `enrich` rather than a send: what this proves is the
 	// APPROVAL mechanism — one row per refused call, single-use redemption —
 	// and that needs a verb that still stages. A passport no longer needs a
-	// second confirmation from the person who granted it, so the sends do not.
+	// second confirmation from the contact who granted it, so the sends do not.
 	c := setupChannelSend(t)
 	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
-	org := c.enrichTarget(t)
+	company := c.enrichTarget(t)
 
-	args := enrichArgs(org)
-	retry := func(approvalID string) string { return enrichRetry(org, approvalID) }
+	args := enrichArgs(company)
+	retry := func(approvalID string) string { return enrichRetry(company, approvalID) }
 
 	first := c.stagedApproval(t, invoke, args)
 	if first.AlreadyApproved {
@@ -156,14 +156,14 @@ func (c *channelSendEnv) assertApprovalCountOf(t *testing.T, kind string, want i
 // present an id, presents it, and is refused for a reason it cannot fix.
 //
 // A target that moved is the case that bit staging hardest. Four approved
-// enrich tokens were left pinned to organization v2 after the record reached v3,
+// enrich tokens were left pinned to company v2 after the record reached v3,
 // so every one of them would now fail the redemption's own skew check — pointing
 // a retry at any of them would strand the call permanently.
 func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t *testing.T) {
 	c := setupChannelSend(t)
 	invoke := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
-	org := c.enrichTarget(t)
-	args := enrichArgs(org)
+	company := c.enrichTarget(t)
+	args := enrichArgs(company)
 
 	staged := c.stagedApproval(t, invoke, args)
 	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
@@ -171,7 +171,7 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 	}
 	// A human edits the record the approval is pinned to, which is ordinary work
 	// on the very company the enrich would rewrite.
-	if status := c.Call(t, "PATCH", "/v1/organizations/"+org,
+	if status := c.Call(t, "PATCH", "/v1/companies/"+company,
 		AnyMap{"industry": "logistics"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human edit of the target → %d", status)
 	}
@@ -201,8 +201,8 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 // principal can be built without one.
 func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
 	c := setupChannelSend(t)
-	org := c.enrichTarget(t)
-	args := enrichArgs(org)
+	company := c.enrichTarget(t)
+	args := enrichArgs(company)
 
 	first := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	mine := c.stagedApproval(t, first, args)
@@ -230,10 +230,10 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Human"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Greta Human"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {
@@ -253,7 +253,7 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 			Code   string `json:"code"`
 			Detail string `json:"detail"`
 		}
-		status := e.Call(t, "PATCH", "/v1/people/"+person.ID, overwrite, bearer, &problem)
+		status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, bearer, &problem)
 		if status != http.StatusForbidden || problem.Code != "approval_required" {
 			t.Fatalf("%s → %d %q, want 403 approval_required", what, status, problem.Code)
 		}
@@ -268,7 +268,7 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	if !strings.Contains(secondDetail, "staged as approval") {
 		t.Fatalf("undecided refusal %q does not tell the agent to wait for a human", secondDetail)
 	}
-	assertPersonApprovalCount(t, e, 1, "two identical refused PATCHes")
+	assertContactApprovalCount(t, e, 1, "two identical refused PATCHes")
 
 	if status := e.Call(t, "POST", "/v1/approvals/"+first+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
@@ -283,22 +283,22 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	if !strings.Contains(releasedDetail, "already approved this exact request") {
 		t.Fatalf("refusal %q does not tell the agent its request is already approved", releasedDetail)
 	}
-	assertPersonApprovalCount(t, e, 1, "an identical PATCH after the approval")
+	assertContactApprovalCount(t, e, 1, "an identical PATCH after the approval")
 
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": first}
-	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, overwrite, withToken, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, withToken, nil); status != http.StatusOK {
 		t.Fatalf("approved retry → %d, want the patch to execute", status)
 	}
 	var current struct {
 		FullName string `json:"full_name"`
 	}
-	if status := e.Call(t, "GET", "/v1/people/"+person.ID, nil, bearer, &current); status != http.StatusOK || current.FullName != "Greta Machine" {
+	if status := e.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, bearer, &current); status != http.StatusOK || current.FullName != "Greta Machine" {
 		t.Fatalf("approved overwrite did not land: %d %q", status, current.FullName)
 	}
 }
 
-// assertPersonApprovalCount counts the update_record approvals in the workspace.
-func assertPersonApprovalCount(t *testing.T, e *apptest.AppEnv, want int, after string) {
+// assertContactApprovalCount counts the update_record approvals in the workspace.
+func assertContactApprovalCount(t *testing.T, e *apptest.AppEnv, want int, after string) {
 	t.Helper()
 	var got int
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {

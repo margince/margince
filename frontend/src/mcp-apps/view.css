@@ -214,7 +214,7 @@ h1 {
 /* The ONE control on these views, and it belongs to the location check alone.
    The product views render and offer nothing to press — see their own headers
    for why. This exists because asking the browser for a permission has to be a
-   deliberate act by a person, and a permission prompt fired on load spends the
+   deliberate act by a contact, and a permission prompt fired on load spends the
    one chance a host gives before anybody wanted the feature. */
 .probe-button {
   display: block;
@@ -237,7 +237,7 @@ h1 {
 }
 
 /* Keyboard focus stays visible. A control a host renders inside its own chrome
-   is one a person may well reach by tab rather than by pointer. */
+   is one a contact may well reach by tab rather than by pointer. */
 .probe-button:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;

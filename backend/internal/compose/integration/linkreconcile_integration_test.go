@@ -24,24 +24,24 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sweepPersonPerms may create the contact this fixture strands mail under.
-var sweepPersonPerms = principal.Permissions{
-	Objects:  map[string]principal.ObjectGrant{"person": {Create: true, Read: true}},
+// sweepContactPerms may create the contact this fixture strands mail under.
+var sweepContactPerms = principal.Permissions{
+	Objects:  map[string]principal.ObjectGrant{"contact": {Create: true, Read: true}},
 	RowScope: principal.RowScopeAll,
 }
 
 func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
 	e := Setup(t)
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 
 	// A contact, and mail captured under their address that no link reaches —
-	// the shape a backfill leaves when the person arrives mid-run.
-	person, err := store.EnsurePersonByEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, sweepPersonPerms),
+	// the shape a backfill leaves when the contact arrives mid-run.
+	contact, err := store.EnsureContactByEmail(e.As(e.Rep1, []ids.UUID{e.Team1}, sweepContactPerms),
 		"Stranded Sender", "stranded@sweep.test", "manual")
 	if err != nil {
 		t.Fatalf("seeding the contact: %v", err)
@@ -65,10 +65,10 @@ func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
 	}
 
 	linked := e.WsCount(t, `SELECT count(*) FROM activity_link
-	                         WHERE activity_id = $1 AND entity_type = 'person' AND person_id = $2`,
-		activity, person) > 0
+	                         WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id = $2`,
+		activity, contact) > 0
 	named := e.WsCount(t, `SELECT count(*) FROM activity_participant
-	                        WHERE activity_id = $1 AND person_id = $2`, activity, person) > 0
+	                        WHERE activity_id = $1 AND contact_id = $2`, activity, contact) > 0
 	if !linked || !named {
 		t.Errorf("after the sweep: linked=%v named=%v, want both — the job returning cleanly is not "+
 			"the repair landing, and that difference is what let a sweep that repaired nothing look healthy",

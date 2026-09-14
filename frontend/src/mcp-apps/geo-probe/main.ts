@@ -19,7 +19,7 @@
 // WHAT ANSWER IT PRODUCES. Not a yes or a no — the browser's own error string.
 // "disabled in this document by permissions policy" means the iframe carries no
 // allow attribute and nobody was ever prompted. "User denied Geolocation" means
-// a person saw a prompt and said no. Those are the same numeric code and they
+// a contact saw a prompt and said no. Those are the same numeric code and they
 // mean opposite things: the first is the host refusing, the second is the
 // feature working.
 //
@@ -31,7 +31,7 @@ import { el, onResult } from "../bridge";
 import { describeEnvironment, type GeoResult, readPosition } from "../geo";
 import "../view.css";
 
-/** What each refusal means for the person reading it — the finding in a
+/** What each refusal means for the reader reading it — the finding in a
  *  sentence, since the raw string is evidence and not an explanation. */
 const MEANING: Record<string, string> = {
   "host-blocked":
@@ -39,7 +39,7 @@ const MEANING: Record<string, string> = {
   "user-declined":
     "A prompt was shown and refused. The permission itself got through — try again and accept to confirm.",
   "refused-unclassified":
-    "Refused, and this build does not recognise the wording. It could be the host blocking the frame or a person declining — read the message above, and add it to the patterns in geo.ts once you know which.",
+    "Refused, and this build does not recognise the wording. It could be the host blocking the frame or a contact declining — read the message above, and add it to the patterns in geo.ts once you know which.",
   unavailable:
     "This document has no geolocation API at all, which usually means it is not a secure context.",
   timeout:

@@ -38,7 +38,7 @@ export type ThreadAudienceResult = {
  *
  * The decision releases only the CALLER's hold. A thread two colleagues
  * imported opens when both allow it, so the outcome reports how many other
- * seats still hold it — a count and never a name, because whose mail a person
+ * seats still hold it — a count and never a name, because whose mail a colleague
  * keeps private is itself private. A caller that does not say so renders a
  * control that looks broken when it in fact did exactly what it said.
  *
@@ -51,7 +51,7 @@ export type ThreadAudienceResult = {
  * records this screen is not on — so every read that could be drawing one is
  * refreshed here rather than left to each caller to remember. Refreshing only
  * the record on screen left the same message on a colleague's contact page, or
- * on the deal it also hangs off, still saying "Everyone in the organization"
+ * on the deal it also hangs off, still saying "Everyone in the company"
  * until a reload: the change did happen, and the second page was quietly wrong
  * about it, which is the harder version to trust.
  */

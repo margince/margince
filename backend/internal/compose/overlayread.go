@@ -5,7 +5,7 @@ package compose
 
 // The overlay-mode human read surface (design.md §4.1: "Overlay does not
 // fork the data API"). Server shadows the contract read ops for the five
-// mirror entity types — get/list for person, organization, deal, lead,
+// mirror entity types — get/list for contact, company, deal, lead,
 // activity, plus search — routing them through the same Dispatcher the
 // MCP/agent seam consumers already ride when the workspace runs in
 // overlay mode, and delegating to the native module handler otherwise.
@@ -54,7 +54,7 @@ const (
 	paramUnassigned       = "unassigned"
 	paramPipelineID       = "pipeline_id"
 	paramStageID          = "stage_id"
-	paramOrganizationID   = "organization_id"
+	paramCompanyID        = "company_id"
 	paramStatus           = "status"
 	paramForecastCategory = "forecast_category"
 	paramKind             = "kind"
@@ -201,18 +201,18 @@ func overlayList[T any](s Server, w http.ResponseWriter, r *http.Request, et dat
 	httperr.WriteJSON(w, http.StatusOK, respond(data, page))
 }
 
-// GetPerson shadows the person read: mirror-assembled in overlay mode,
-// the native people handler otherwise. Same split for every Get/List
+// GetContact shadows the contact read: mirror-assembled in overlay mode,
+// the native contacts handler otherwise. Same split for every Get/List
 // shadow below.
-func (s Server) GetPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	overlayGet(s, w, r, datasource.EntityPerson, id,
-		func() { s.peopleHandlers.GetPerson(w, r, id) }, overlayWirePerson)
+func (s Server) GetContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	overlayGet(s, w, r, datasource.EntityContact, id,
+		func() { s.contactsHandlers.GetContact(w, r, id) }, overlayWireContact)
 }
 
-// ListPeople shadows the person list.
-func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcontracts.ListPeopleParams) {
-	overlayList(s, w, r, datasource.EntityPerson,
-		func() { s.peopleHandlers.ListPeople(w, r, params) },
+// ListContacts shadows the contact list.
+func (s Server) ListContacts(w http.ResponseWriter, r *http.Request, params crmcontracts.ListContactsParams) {
+	overlayList(s, w, r, datasource.EntityContact,
+		func() { s.contactsHandlers.ListContacts(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramOwnerID, params.OwnerId != nil},
@@ -225,27 +225,27 @@ func (s Server) ListPeople(w http.ResponseWriter, r *http.Request, params crmcon
 			{paramTagMode, params.TagMode != nil},
 			// Employment is OUR edge: the mirror holds the incumbent's own
 			// contact-to-company links, under their ids, so a margince
-			// organization id names nothing there.
-			{paramOrganizationID, params.OrganizationId != nil},
+			// company id names nothing there.
+			{paramCompanyID, params.CompanyId != nil},
 			{paramCapturedByKind, params.CapturedByKind != nil},
 			{paramAiWritten, params.AiWritten != nil},
 		},
-		params.Q, params.Cursor, params.Limit, overlayWirePerson,
-		func(data []crmcontracts.Person, page crmcontracts.PageInfo) any {
-			return crmcontracts.PersonListResponse{Data: data, Page: page}
+		params.Q, params.Cursor, params.Limit, overlayWireContact,
+		func(data []crmcontracts.Contact, page crmcontracts.PageInfo) any {
+			return crmcontracts.ContactListResponse{Data: data, Page: page}
 		})
 }
 
-// GetOrganization shadows the organization read.
-func (s Server) GetOrganization(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	overlayGet(s, w, r, datasource.EntityOrganization, id,
-		func() { s.peopleHandlers.GetOrganization(w, r, id) }, overlayWireOrganization)
+// GetCompany shadows the company read.
+func (s Server) GetCompany(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	overlayGet(s, w, r, datasource.EntityCompany, id,
+		func() { s.contactsHandlers.GetCompany(w, r, id) }, overlayWireCompany)
 }
 
-// ListOrganizations shadows the organization list.
-func (s Server) ListOrganizations(w http.ResponseWriter, r *http.Request, params crmcontracts.ListOrganizationsParams) {
-	overlayList(s, w, r, datasource.EntityOrganization,
-		func() { s.peopleHandlers.ListOrganizations(w, r, params) },
+// ListCompanies shadows the company list.
+func (s Server) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
+	overlayList(s, w, r, datasource.EntityCompany,
+		func() { s.contactsHandlers.ListCompanies(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramOwnerID, params.OwnerId != nil},
@@ -273,9 +273,9 @@ func (s Server) ListOrganizations(w http.ResponseWriter, r *http.Request, params
 			// would read as satisfied and is not (ADR-0082/A127).
 			{"include_anchor", params.IncludeAnchor != nil},
 		},
-		params.Q, params.Cursor, params.Limit, overlayWireOrganization,
-		func(data []crmcontracts.Organization, page crmcontracts.PageInfo) any {
-			return crmcontracts.OrganizationListResponse{Data: data, Page: page}
+		params.Q, params.Cursor, params.Limit, overlayWireCompany,
+		func(data []crmcontracts.Company, page crmcontracts.PageInfo) any {
+			return crmcontracts.CompanyListResponse{Data: data, Page: page}
 		})
 }
 
@@ -297,10 +297,10 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 			{paramPipelineID, params.PipelineId != nil},
 			{paramStageID, params.StageId != nil},
 			{paramOwnerID, params.OwnerId != nil},
-			{paramOrganizationID, params.OrganizationId != nil},
+			{paramCompanyID, params.CompanyId != nil},
 			{paramStatus, params.Status != nil},
 			{"stalled", params.Stalled != nil},
-			{"partner_org_id", params.PartnerOrgId != nil},
+			{"partner_company_id", params.PartnerCompanyId != nil},
 			{"partner_sourced", params.PartnerSourced != nil},
 			// The partner program is ours: a mirrored deal carries the
 			// incumbent's own partner arrangement, not an attribution
@@ -317,6 +317,16 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 			// and answering the whole mirror while reading as "the commit
 			// bucket" is the failure this list refuses rather than makes.
 			{paramForecastCategory, params.ForecastCategory != nil},
+			// The commercial context is ours in exactly the forecast's sense.
+			// A mirrored deal carries whatever the incumbent recorded about
+			// why it exists, how much it matters and where it came from; this
+			// product neither writes those columns on a mirror nor maps the
+			// incumbent's own, so there is nothing here to narrow by. Refused
+			// rather than dropped, because a dropped dial answers the whole
+			// mirror while reading as the narrowed set.
+			{"commercial_motion", params.CommercialMotion != nil},
+			{"priority", params.Priority != nil},
+			{"acquisition_source", params.AcquisitionSource != nil},
 		},
 		nil, params.Cursor, params.Limit, overlayWireDeal,
 		func(data []crmcontracts.Deal, page crmcontracts.PageInfo) any {
@@ -327,13 +337,13 @@ func (s Server) ListDeals(w http.ResponseWriter, r *http.Request, params crmcont
 // GetLead shadows the lead read.
 func (s Server) GetLead(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	overlayGet(s, w, r, datasource.EntityLead, id,
-		func() { s.peopleHandlers.GetLead(w, r, id) }, overlayWireLead)
+		func() { s.contactsHandlers.GetLead(w, r, id) }, overlayWireLead)
 }
 
 // ListLeads shadows the lead list.
 func (s Server) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
 	overlayList(s, w, r, datasource.EntityLead,
-		func() { s.peopleHandlers.ListLeads(w, r, params) },
+		func() { s.contactsHandlers.ListLeads(w, r, params) },
 		[]overlayParam{
 			{paramSort, params.Sort != nil},
 			{paramStatus, params.Status != nil},

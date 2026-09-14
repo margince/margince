@@ -102,7 +102,7 @@ func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRow
 // widen (A52/ADR-0039); grants on anything else cannot exist (the
 // record_grant CHECK is the schema-side twin of this set).
 var shareableTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableDeal: true, tableLead: true, tableProject: true,
+	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 }
 
 // ownerPrivateTables carry capture privacy (migration 0095): a row is either
@@ -128,7 +128,7 @@ var shareableTables = map[string]bool{
 // TestEveryTableThatCanHoldAnOwnerRowIsOwnerPrivate keeps the two in step: add
 // 'owner' back to a table's CHECK and that test demands this map learn about
 // it, so the pair cannot drift into a silent disclosure again.
-var ownerPrivateTables = map[string]bool{tablePerson: true, tableOrganization: true}
+var ownerPrivateTables = map[string]bool{tableContact: true, tableCompany: true}
 
 // UnboundedFor reports whether the actor reads the named tables with NO
 // predicate at all: an unbounded actor, or an identity table (tableclass.go)
@@ -168,7 +168,7 @@ func UnboundedFor(p principal.Principal, tables ...string) bool {
 // names itself so a new caller that forwards an unvalidated string is
 // an error, never an injection.
 var ownerScopedTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableDeal: true, tableLead: true, tableProject: true,
+	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, tableProject: true,
 	"list": true, "saved_view": true, "automation": true, "voice_profile": true,
 }
 
@@ -185,7 +185,7 @@ var ownerScopedTables = map[string]bool{
 // is a deliberate human disclosure by someone who could already read it,
 // which is the same act that promotion is. Scope alone never widens one.
 func VisiblePredicate(p principal.Principal, table string, arg func(any) int) func(alias string) string {
-	return predicateFor(p, table, arg, withCapturePrivacy)
+	return predicateFor(p, table, arg, withCapturePrivacy, asClassified)
 }
 
 // capturePrivacy selects whether a rendered predicate enforces the
@@ -198,14 +198,22 @@ const (
 	withoutCapturePrivacy capturePrivacy = false
 )
 
-func predicateFor(p principal.Principal, table string, arg func(any) int, capture capturePrivacy) func(alias string) string {
+func predicateFor(p principal.Principal, table string, arg func(any) int, capture capturePrivacy, class readClass) func(alias string) string {
 	// Customer identity is workspace-readable (tableclass.go): the own/team
 	// arm is TRUE for every principal, and only capture privacy and a grant
 	// can still say anything about the row. The owner predicate is not even
 	// rendered for it — a registered parameter the SQL never names is a
-	// Postgres error, not a no-op.
+	// Postgres error, not a no-op. asOwnerScoped is the exception (tableclass.go).
+	ownerScoped := class == asOwnerScoped || !identityTables[table]
+	everyRow := readsEveryRow(p, table)
+	if class == asOwnerScoped {
+		everyRow = Unbounded(p)
+	}
 	scope := func(string) string { return "TRUE" }
-	if !identityTables[table] {
+	switch {
+	case class == asOwnerScoped:
+		scope = ownerPredicate(p, arg, unownedIsNobodys)
+	case ownerScoped:
 		scope = OwnerPredicate(p, arg)
 	}
 	// The system principal is trusted by construction and reads both
@@ -213,7 +221,7 @@ func predicateFor(p principal.Principal, table string, arg func(any) int, captur
 	private := bool(capture) && ownerPrivateTables[table] && p.Type != principal.PrincipalSystem
 	// An actor who reads every row needs no grant arm to see a shareable
 	// row — unless capture privacy just took it away from them again.
-	shareable := shareableTables[table] && (!readsEveryRow(p, table) || private)
+	shareable := shareableTables[table] && (!everyRow || private)
 	if !private && !shareable {
 		return scope
 	}
@@ -293,7 +301,7 @@ func ScopeClauseFor(ctx context.Context, table, alias string, arg func(any) int)
 // row never passes.
 //
 // Both differences are load-bearing where a record is served or referenced
-// outside the store that owns it. Art. 17 erasure anonymizes a person in
+// outside the store that owns it. Art. 17 erasure anonymizes a contact in
 // place and stamps archived_at while LEAVING owner_id alone, so the
 // tombstone still satisfies the original owner's predicate: a probe without
 // the live filter answers "yes, still yours" for a record every live read
@@ -330,11 +338,11 @@ func EnsureVisibleLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID
 // captured record is still held — a SAR that silently omitted it, or an
 // erasure that silently spared it, would be the defect. The crossing is
 // authorized by the stronger object gate every caller here passes first
-// (person.delete, the same trust level erasure needs) plus, on the SAR
+// (contact.delete, the same trust level erasure needs) plus, on the SAR
 // path, an explicit unbounded-scope check.
 //
-// It deliberately does not widen the OWNER scope: a rep with person.delete
-// still cannot erase a colleague's person. Only the capture-privacy arm
+// It deliberately does not widen the OWNER scope: a rep with contact.delete
+// still cannot erase a colleague's contact. Only the capture-privacy arm
 // is lifted, so the caller sees exactly what their scope tier holds.
 func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if !ownerScopedTables[table] {
@@ -350,7 +358,7 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(id)
-	clause := predicateFor(p, table, arg, withoutCapturePrivacy)("")
+	clause := predicateFor(p, table, arg, withoutCapturePrivacy, asClassified)("")
 
 	var visible bool
 	err = tx.QueryRow(ctx,

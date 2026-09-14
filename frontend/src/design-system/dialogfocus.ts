@@ -87,7 +87,10 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
 // prose, and a trap holding a container it cannot move focus within answers
 // every Tab by swallowing it. Falling back to the dialog leaves the panel on
 // screen and the reader still able to walk what is behind it.
-function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
+function openPanelIn(
+  dialog: HTMLElement | null,
+  needsTabStops = true,
+): HTMLElement | null {
   const panels = [
     ...(dialog?.querySelectorAll<HTMLElement>(
       '[aria-expanded="true"][aria-controls]',
@@ -100,7 +103,17 @@ function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
   const active = document.activeElement;
   const held = panels.find((panel) => panel.contains(active));
   const panel = held ?? panels[0];
-  return panel && focusableWithin(panel).length > 0 ? panel : null;
+  return panel && (!needsTabStops || focusableWithin(panel).length > 0)
+    ? panel
+    : null;
+}
+
+function ownsKeyboard(container: HTMLElement | null): boolean {
+  const layers = document.querySelectorAll<HTMLElement>(
+    '[role="dialog"][aria-modal="true"]',
+  );
+  const top = layers[layers.length - 1];
+  return !top || top === container || openPanelIn(top) === container;
 }
 
 /**
@@ -116,11 +129,13 @@ export function useDialogFocus({
   onClose,
   container,
   returnFocusTo,
+  initialFocusTo,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   container: React.RefObject<HTMLElement | null>;
   returnFocusTo?: () => HTMLElement | null;
+  initialFocusTo?: () => HTMLElement | null;
 }>) {
   // Held in a ref so the restore below calls the CURRENT resolver. The focus
   // effect is keyed on `open` alone — re-running it whenever an inline callback
@@ -128,9 +143,11 @@ export function useDialogFocus({
   // render of the page behind it — so the closure it captures is otherwise the
   // one from the render that opened the dialog.
   const returnFocus = useRef(returnFocusTo);
+  const initialFocus = useRef(initialFocusTo);
   useEffect(() => {
     returnFocus.current = returnFocusTo;
-  }, [returnFocusTo]);
+    initialFocus.current = initialFocusTo;
+  }, [returnFocusTo, initialFocusTo]);
 
   // A LAYOUT effect, because a passive one is scheduled after the browser
   // paints: between the commit that puts this dialog on screen and a passive
@@ -146,11 +163,20 @@ export function useDialogFocus({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      // A reader above a composer owns the keyboard until it closes. Marking
+      // Escape handled also prevents a lower listener closing after that unmount.
+      if (
+        !container.current ||
+        event.defaultPrevented ||
+        !ownsKeyboard(container.current)
+      )
+        return;
+      if (event.key === "Escape" && !openPanelIn(container.current, false)) {
+        event.preventDefault();
         onClose();
         return;
       }
-      if (event.key === "Tab" && container.current) {
+      if (event.key === "Tab") {
         keepTabInside(
           event,
           openPanelIn(container.current) ?? container.current,
@@ -170,7 +196,7 @@ export function useDialogFocus({
     }
     const opener = document.activeElement;
     const stops = container.current ? focusableWithin(container.current) : [];
-    (stops[0] ?? container.current)?.focus();
+    (initialFocus.current?.() ?? stops[0] ?? container.current)?.focus();
     return () => {
       // A named target outranks the opener even while the opener is still
       // attached: a caller names one precisely because the mutation this dialog

@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { PageAsideProvider } from "../app/pageaside";
 import { ProjectScreen } from "./project360";
-import { ORG, project, project360 } from "./projects.fixtures";
+import { COMPANY, project, project360 } from "./projects.fixtures";
 import {
   emptyPage,
   installFetchStub,
@@ -52,9 +52,9 @@ function installPage(view: unknown) {
     "GET /projects/pr-1": () => jsonResponse(project()),
     "GET /field-history": () => jsonResponse(emptyPage),
     "GET /pipelines": () => jsonResponse(emptyPage),
-    "GET /organizations": () =>
-      jsonResponse({ data: [ORG], page: { next_cursor: null } }),
-    [`GET /organizations/${ORG.id}`]: () => jsonResponse(ORG),
+    "GET /companies": () =>
+      jsonResponse({ data: [COMPANY], page: { next_cursor: null } }),
+    [`GET /companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-me", display_name: "Me", status: "active" }],

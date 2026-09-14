@@ -139,7 +139,7 @@ One consequence is latent rather than current: re-canonicalisation is avoided, s
 signature over a slimmed message still verifies once the part is restored** — but only if the
 object is there. Nothing in the product verifies DKIM today (the `dkim` references in
 `compose/techenrich.go` are DNS selector probes for tech enrichment, not signature checks), so this
-costs nothing now and is written down because the next person to reach for it should know.
+costs nothing now and is written down because the next contact to reach for it should know.
 
 ## What is still owed
 
@@ -147,7 +147,7 @@ costs nothing now and is written down because the next person to reach for it sh
   the `attachment` table. This sweep does not change that: it removes a copy from the database and
   never touches an object.
 - **`raw_capture` still has no retention sweep of its own.** It ages out only via the **activity**
-  sweep joined on `(source_system, source_id)`, plus Art. 17 person erasure. Slimming reduces the
+  sweep joined on `(source_system, source_id)`, plus Art. 17 contact erasure. Slimming reduces the
   slope of its growth by roughly twentyfold; it does not make it bounded.
 - **The ten-in-forty miss rate.** A repeated inline logo is never slimmed. Fixing it needs an
   identity for a part that survives duplication — an ordinal resolved against the MIME structure

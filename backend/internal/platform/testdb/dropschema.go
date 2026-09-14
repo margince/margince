@@ -49,7 +49,7 @@ const unreferencedTables = `
 // at a higher lock count for that one statement, which is the honest price of a
 // shape the leaf order cannot resolve.
 //
-// This schema DOES reach it, on the last handful of tables: person ↔ lead and
+// This schema DOES reach it, on the last handful of tables: contact ↔ lead and
 // passport ↔ oauth_grant are mutual references, so the loop ends with one
 // fallback round of nine tables (353 locks, measured). The branch is live, not
 // defensive — do not "simplify" it away on the assumption the leaf order always

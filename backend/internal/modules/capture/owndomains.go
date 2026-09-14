@@ -91,7 +91,7 @@ func ownableDomain(domain string) bool {
 //
 // An empty set makes NOTHING internal, so every message is captured. That is
 // the honest posture rather than a fallback guess: an installation that has
-// named no domain of its own is making no claim about what its people's mail
+// named no domain of its own is making no claim about what its contacts's mail
 // is, and inventing one from a connected mailbox would be right in some
 // workspaces and wrong in the rest.
 func (d InternalDomains) empty() bool { return len(d.domains) == 0 }
@@ -170,12 +170,12 @@ func (d InternalDomains) External(addresses []string) []string {
 
 // anchorDomains is what the installation's own company currently claims. It is
 // a READ of another module's table, which reads are free to be: the question is
-// "does a human say this domain is ours", and the anchor organization is the
+// "does a human say this domain is ours", and the anchor company is the
 // only place that answer lives.
 const anchorDomains = `
 	SELECT d.domain
-	  FROM organization_domain d
-	  JOIN organization o ON o.id = d.organization_id
+	  FROM company_domain d
+	  JOIN company o ON o.id = d.company_id
 	 WHERE o.is_anchor AND o.archived_at IS NULL AND d.archived_at IS NULL`
 
 // ownDomainsTx reads every domain that might be ours — the company's own, plus

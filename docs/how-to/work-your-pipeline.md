@@ -1,6 +1,6 @@
 # Work your pipeline
 
-This guide is for the person who sells — no code, no API. It covers where deals live, how to
+This guide is for the contact who sells — no code, no API. It covers where deals live, how to
 move one through the pipeline, how to close it, and how to read the numbers. Two things you
 cannot do from the UI today are covered honestly at the end, so you don't go looking for them.
 
@@ -55,7 +55,7 @@ deal's own page is the way to move it there.
 bar that appears. Only open stages are offered, and deals already in the target stage are
 skipped rather than recording a move that didn't happen.
 
-Whoever moves a deal, Margince records who did it and when. If two people move the same deal
+Whoever moves a deal, Margince records who did it and when. If two colleagues move the same deal
 at once, the second one is refused rather than silently overwriting the first.
 
 ## Close a deal
@@ -224,7 +224,7 @@ pipelines or their stages."*
 
 Stated plainly, so you don't hunt for them:
 
-- **Two deals cannot be merged.** The Duplicates queue covers people, companies and leads only.
+- **Two deals cannot be merged.** The Duplicates queue covers contacts, companies and leads only.
   If one opportunity was captured twice, keep the better record and archive the other — moving
   any offers or notes across by hand first, because archiving does not move them.
   ([#2033](https://github.com/margince/margince/issues/2033))
@@ -242,7 +242,7 @@ Stated plainly, so you don't hunt for them:
 ## Where deals meet the rest of Margince
 
 - **Companies** — a deal belongs to one company, and that company's page shows its deals,
-  its people, its contracts and its timeline. Contracts live under its **Documents** tab —
+  its contacts, its contracts and its timeline. Contracts live under its **Documents** tab —
   though one recorded there cannot yet be tied to a specific deal (see *Close a deal*).
 - **Leads** — qualifying a lead can open a deal in the same step, seating the contact on it.
   See [set-up-a-partner-program.md](set-up-a-partner-program.md) for the partner side of a

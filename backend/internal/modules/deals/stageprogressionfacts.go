@@ -44,7 +44,7 @@ type StageProgressionFacts struct {
 	// NeedsWinReason marks a move onto a WON stage with no signed agreement on
 	// the deal. Such a move is refused unless somebody says why there is no
 	// paper, and nothing the product read can answer that — so the card has to
-	// carry the question to the person deciding it. Without this the proposal
+	// carry the question to the contact deciding it. Without this the proposal
 	// stages a card that fails on every approval, forever.
 	NeedsWinReason bool
 }
@@ -308,7 +308,7 @@ func readProtection(
 		SELECT EXISTS (
 		    -- A HUMAN's own move, named positively. captured_by carries the
 		    -- principal's prefix, and "not system" would read an agent's move
-		    -- as a person's — the opposite of what protection is for, since an
+		    -- as a contact's — the opposite of what protection is for, since an
 		    -- agent moving a deal is precisely what a human has not done.
 		    --
 		    -- from_stage_id IS NOT NULL excludes the row a deal's CREATION

@@ -242,7 +242,7 @@ func (idx funcIndex) reachesAcquirer(dir, name string, seen map[string]bool) ([]
 // them false, in the tree as it stands.
 //
 // A gate that cries wolf seventeen times is worse than the hop it was closing,
-// because the next person to see it red deletes it. Resolving a receiver needs
+// because the next contact to see it red deletes it. Resolving a receiver needs
 // full type information, so the honest line is the one Go draws itself.
 func (b txBorrowing) calledNames() []string {
 	bound := locallyBound(b.params, b.body)

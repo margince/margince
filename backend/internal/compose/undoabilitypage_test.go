@@ -56,11 +56,11 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 	advisory := advisoryEvaluator(binding, shared, row, undone)
 
 	ctx := context.Background()
-	archived, err := advisory.Archived(ctx, nil, "person", row.ID)
+	archived, err := advisory.Archived(ctx, nil, "contact", row.ID)
 	if err != nil || !archived {
 		t.Errorf("Archived answered (%v, %v), want the page's own fact (true, nil)", archived, err)
 	}
-	if err := advisory.Writable(ctx, nil, "person", row.ID); !errors.Is(err, errRecordNotWritable) {
+	if err := advisory.Writable(ctx, nil, "contact", row.ID); !errors.Is(err, errRecordNotWritable) {
 		t.Errorf("Writable answered %v, want the page's own fact %v", err, errRecordNotWritable)
 	}
 	behind, err := advisory.BehindErasure(ctx, nil, row.AuditRow)

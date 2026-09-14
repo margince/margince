@@ -66,7 +66,7 @@ func TestANestedCommandMalformedRouteIDAnswersNotFound(t *testing.T) {
 }
 
 // A missing {lineItemId} answers 422 naming it, not a panic on an empty
-// UUID downstream — the same shape removeProjectStakeholder's person_id
+// UUID downstream — the same shape removeProjectStakeholder's contact_id
 // gets in task 5's own table.
 func TestAMissingLineItemIDAnswers422(t *testing.T) {
 	offerID := ids.NewV7().String()
@@ -96,8 +96,8 @@ func TestAMissingLineItemIDAnswers422(t *testing.T) {
 
 // A malformed (non-empty) lineItemId is also a 422, code "invalid" rather
 // than "missing" — the other half of the pathOperand + ids.Parse
-// composition, the same shape TestARemoveStakeholderMalformedPersonIDAnswers422
-// proves for person_id.
+// composition, the same shape TestARemoveStakeholderMalformedContactIDAnswers422
+// proves for contact_id.
 func TestAMalformedLineItemIDAnswers422(t *testing.T) {
 	req := operandRequest(http.MethodDelete, "/v1/offers", ids.NewV7().String(), "lineItemId", "not-a-uuid", nil)
 	_, err := removeOfferLineItemCommand(agentPolicy{Op: "removeOfferLineItem"}, restCommandDeps{records: seamRecord{}}, req, nil)

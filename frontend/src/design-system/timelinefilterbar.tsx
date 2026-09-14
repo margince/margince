@@ -45,9 +45,15 @@ function isActivityKind(value: string): value is ActivityKind {
  */
 export function TimelineFilterBar({
   value,
+  kinds = ACTIVITY_KINDS,
   onChange,
 }: Readonly<{
   value: TimelineFilters;
+  // Which kinds this surface can actually draw. Every kind, unless the cut
+  // under the bar is narrower than the list is: the Conversations cut keeps
+  // only mail and messages, and a dial that offered Meetings there would name
+  // a value whose only possible answer is an empty list.
+  kinds?: readonly ActivityKind[];
   onChange: (next: TimelineFilters) => void;
 }>) {
   const t = useT();
@@ -68,7 +74,7 @@ export function TimelineFilterBar({
   };
   const kindOptions = [
     { value: "", label: t("timeline.filters.kind.all") },
-    ...ACTIVITY_KINDS.map((kind) => ({
+    ...kinds.map((kind) => ({
       value: kind,
       label: t(KIND_LABEL[kind]),
     })),

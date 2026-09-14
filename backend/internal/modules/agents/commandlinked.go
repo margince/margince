@@ -107,7 +107,7 @@ type accountSendResolver struct {
 //
 // A LINK CANNOT BE THE TARGET here, the way a booking's first link is. The pin
 // is taken SERVER-SIDE from the target pair (approvals.resolveTargetVersion),
-// so an organization target pins a version that an enrichment run bumps while
+// so a company target pins a version that an enrichment run bumps while
 // an overnight proposal waits for someone's morning inbox — cancelling a send
 // the record's own content never invalidated. The waiver that declines a pin
 // is reserved for kinds whose effect approvals itself applies
@@ -143,7 +143,7 @@ func (r *accountSendResolver) Subject(ctx context.Context, cmd SendAccountEmailC
 //
 // What this does not pre-empt, so neither reads as covered: the consent gate's
 // per-purpose verdict, the workspace's mailbox send capability, and whether an
-// address belongs to a person on file. All are refusals a human's yes cannot
+// address belongs to a contact on file. All are refusals a human's yes cannot
 // fix, and all need reads staging does not have.
 func (r *accountSendResolver) Guards(ctx context.Context, cmd SendAccountEmailCommand) error {
 	if err := requireAddressee(cmd.To); err != nil {
@@ -171,7 +171,7 @@ func requireAccountSendLinks(links []RecordLink) error {
 	return &BadArgsError{
 		Cause: errors.New("`links` needs at least one entry: a message filed under no record " +
 			"is one nobody finds again, and the store refuses it"),
-		Guidance: "name the company, person or deal this conversation is about",
+		Guidance: "name the company, contact or deal this conversation is about",
 	}
 }
 
@@ -299,18 +299,12 @@ func requireBookingWindow(start, end time.Time) error {
 // authority object the approvals surface can scope to nobody in particular,
 // which is the defect this seam fixes rather than one it may reintroduce.
 //
-// It does NOT restate the contract, and the difference is worth being exact
-// about. `/bookings` declares `links` a required KEY with `maxItems: 25` and
-// no `minItems`, so `"links": []` is contract-legal, and neither the handler
-// nor activities.Store.BookMeeting refuses one. This rule is the gate's own,
-// and an agent doing what the schema permits now meets it where it previously
-// staged and executed. That disagreement is filed rather than settled here,
-// because closing it the right way is a contract change:
-// margince/margince#1065.
-//
-// requireAccountSendLinks' identical-looking claim IS backed —
-// SendAccountEmailRequest.links carries minItems: 1 — which is why that one
-// cites the contract and this one cannot.
+// It restates the contract rather than adding to it: `/bookings` declares
+// `links` with `minItems: 1`, on the reason the account send already gives —
+// a record belonging to nothing is one nobody will find again. That matters
+// because an agent and a human on this route must be refused the same request
+// for the same stated reason, and a rule only the gate held would give the two
+// credentials two answers. activities.Store.BookMeeting holds the other end.
 //
 // A function for the reason requireAccountSendLinks is one: this verb has two
 // doors past the rule, and the MCP surface does not validate arguments against
@@ -319,9 +313,17 @@ func requireBookingLinks(links []RecordLink) error {
 	if len(links) > 0 {
 		return nil
 	}
-	return &BadArgsError{Cause: errors.New(
-		"`links` needs at least one entry: a booking names who and what it is about, " +
-			"and one attached to nothing cannot be approved against a record")}
+	return &BadArgsError{
+		Cause: errors.New("`links` needs at least one entry: a booking names who and what it is " +
+			"about, and one attached to nothing cannot be approved against a record"),
+		// Named, and coded, so the 422 this becomes carries the same machine
+		// field AND the same code the store's own refusal does. A caller that
+		// branches on `details.errors` must not have to tell which door
+		// answered it.
+		Field:    "links",
+		Code:     "required",
+		Guidance: "name the contact, company, deal, lead or project the meeting is about",
+	}
 }
 
 // describeBooking is the one line the inbox shows.

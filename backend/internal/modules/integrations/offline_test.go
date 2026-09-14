@@ -17,10 +17,10 @@ func fixedClock() func() time.Time {
 	return func() time.Time { return at }
 }
 
-func person(last string) provider.Request {
+func contact(last string) provider.Request {
 	return provider.Request{
 		CorrelationID: "corr-" + last,
-		Identifiers:   provider.PersonIdentifiers{FirstName: "Anna", LastName: last, CompanyName: "Example GmbH"},
+		Identifiers:   provider.ContactIdentifiers{FirstName: "Anna", LastName: last, CompanyName: "Example GmbH"},
 		Categories:    []provider.Category{"professional_email", "mobile"},
 	}
 }
@@ -42,7 +42,7 @@ func TestOfflineProviderServesTheWholeFailureSet(t *testing.T) {
 		{"Providererror", provider.OutcomeProviderError},
 		{"Ambiguous", provider.OutcomeAmbiguous},
 	} {
-		got, err := p.Submit(ctx, provider.Credential("k"), person(tc.last))
+		got, err := p.Submit(ctx, provider.Credential("k"), contact(tc.last))
 		if err != nil {
 			t.Fatalf("%s: %v", tc.last, err)
 		}
@@ -56,7 +56,7 @@ func TestOfflineProviderServesTheWholeFailureSet(t *testing.T) {
 
 	// A success accepts and hands back a handle, because the transport is
 	// polled: the answer arrives later, by re-reading that handle.
-	ok, err := p.Submit(ctx, provider.Credential("k"), person("Muster"))
+	ok, err := p.Submit(ctx, provider.Credential("k"), contact("Muster"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestOfflineProviderCountsEveryOutboundAttempt(t *testing.T) {
 	if _, err := p.VerifyCredential(ctx, provider.Credential("k")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := p.Submit(ctx, provider.Credential("k"), person("Muster")); err != nil {
+	if _, err := p.Submit(ctx, provider.Credential("k"), contact("Muster")); err != nil {
 		t.Fatal(err)
 	}
 	if p.Calls() != 2 {
@@ -184,7 +184,7 @@ func TestOfflineNoMatchSurvivesSubmitThenPoll(t *testing.T) {
 	p := NewOfflineProvider(0, fixedClock())
 	ctx := context.Background()
 
-	sub, err := p.Submit(ctx, provider.Credential("k"), person("Nomatch"))
+	sub, err := p.Submit(ctx, provider.Credential("k"), contact("Nomatch"))
 	if err != nil {
 		t.Fatal(err)
 	}

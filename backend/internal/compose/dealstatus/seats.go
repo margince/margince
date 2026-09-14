@@ -10,13 +10,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Seat is one person on the deal, as the card needs them: who they are, what
+// Seat is one contact on the deal, as the card needs them: who they are, what
 // role they hold, and whether they have spoken with us both ways inside the
 // engagement window.
 //
-// Name is empty when the reader may not read that person. The seat still
-// counts — how many people carry a deal is not the secret, only who they are —
-// and the card names roles it cannot name people for.
+// Name is empty when the reader may not read that contact. The seat still
+// counts — how many contacts carry a deal is not the secret, only who they are —
+// and the card names roles it cannot name contacts for.
 type Seat struct {
 	Role    string
 	Name    string
@@ -38,7 +38,7 @@ type Seat struct {
 type SeatReader func(ctx context.Context, dealID ids.DealID, now time.Time) ([]Seat, error)
 
 // namedRole returns the first seat holding the role, preferring one this
-// reader may name: a role the card can attach a person to is worth more than
+// reader may name: a role the card can attach a contact to is worth more than
 // the same role as an anonymous count, and an unnamed seat still proves the
 // role is filled.
 func namedRole(seats []Seat, role string) (Seat, bool) {

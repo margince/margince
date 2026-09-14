@@ -46,7 +46,7 @@ import { useSendPermission } from "./usesendpermission";
 // It is the SENDER's own list, not the workspace's (ADR-0104/A155): an unsent
 // body and its blind-copy list are not workspace-readable the way a sent
 // activity is, and the server lists only what the caller scheduled. So there is
-// no owner column here and no sharing affordance — the page is one person's.
+// no owner column here and no sharing affordance — the page is one contact's.
 
 type ScheduledSend = components["schemas"]["ScheduledSend"];
 type Status = ScheduledSend["status"];
@@ -58,7 +58,7 @@ export const SCHEDULED_SCREEN = "scheduled" as const;
  * The three groups a rep reads this page in, which are NOT the five wire
  * statuses.
  *
- * `held` is first because it is the only group that is waiting on a person: a
+ * `held` is first because it is the only group that is waiting on a contact: a
  * gate refused at fire, or the moment passed while nothing was running, and the
  * message will not send itself. `waiting` is the queue proper. `closed` is
  * everything that is no longer going to change on its own — released, sent,

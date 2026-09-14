@@ -86,7 +86,7 @@ type WriteResult struct {
 // the mirror rather than lingering visible until disconnect.
 //
 // ObjectClass MUST be the CANONICAL Margince class (the adapter mapping's
-// Target — e.g. "person", "deal"), the same value the mirror row is keyed
+// Target — e.g. "contact", "deal"), the same value the mirror row is keyed
 // by, NOT the incumbent's own source name ("contacts", "deals"). An
 // adapter that returned the raw incumbent class here would make PurgeRecord
 // key a class no mirror row uses and silently purge nothing — the same
@@ -138,7 +138,7 @@ type Page struct {
 // pair is what mirror_user_map seeding matches against workspace app_user
 // emails (design.md §4.6: a MATCH against existing users, never an import
 // that creates them); Name carries no matching weight at all — it exists so
-// the admin mapping picker can show a person rather than an opaque id, and an
+// the admin mapping picker can show a contact rather than an opaque id, and an
 // incumbent that reports no name leaves it empty rather than echoing the
 // email back as one.
 type OwnerRef struct {

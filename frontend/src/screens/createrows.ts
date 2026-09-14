@@ -4,7 +4,7 @@
 import type { FormRow } from "./create";
 
 // A row's own kind for grouping primaries. An unanswered row resolves to
-// typeDefault rather than its own "" bucket — personformfields.ts passes
+// typeDefault rather than its own "" bucket — contactformfields.ts passes
 // the same default its asEmailType/asPhoneType request mapper falls back
 // to, so an unset row and an explicit default-kind row are one kind on
 // both sides of the wire, never two kinds that collide once submitted.
@@ -41,7 +41,7 @@ export function withRowUpdated(
 }
 
 // One row moved a single position up or down. Order is a real gesture on these
-// rows — a reader puts the number they hand out first — and personformfields.ts
+// rows — a reader puts the number they hand out first — and contactformfields.ts
 // maps the array index straight to each row's `position`, so the move rewrites
 // exactly what the save persists. A move off either end returns the SAME array,
 // not a fresh copy, so a disabled-edge press cannot re-render the list for nothing.

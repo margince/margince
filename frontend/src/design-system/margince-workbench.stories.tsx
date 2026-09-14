@@ -170,7 +170,7 @@ const BASE = {
 } satisfies Partial<ComponentProps<typeof MarginceWorkbench>>;
 
 /**
- * The rail variant, and the surface the person row belongs to.
+ * The rail variant, and the surface the contact row belongs to.
  *
  * The conversation narrows to a narrator column so the artifact can be the work
  * surface, and the rail then reads top-down: who is speaking, what the run
@@ -183,7 +183,7 @@ const BASE = {
  * another colour the moment they were renamed while the transcript's chip
  * stayed put.
  *
- * `personAction` is a slot, never a control the design system chose — onboarding
+ * `contactAction` is a slot, never a control the design system chose — onboarding
  * is railless and has no top bar, so the foot row is the one place surface-level
  * chrome can live. The caller supplies both the copy and the behaviour.
  */
@@ -194,12 +194,12 @@ export const Rail: Story = {
     variant: "rail",
     footerLabel: "Tokens this setup",
     stepLabel: "Step 2 of 5 · Confirm",
-    person: {
+    contact: {
       name: "Alex Rivera",
       detail: "alex@northwind.test",
       identity: "alex@northwind.test",
     },
-    personAction: (
+    contactAction: (
       <Button small iconOnly aria-label="Switch theme">
         <SunMoon size={15} aria-hidden />
       </Button>
@@ -208,21 +208,21 @@ export const Rail: Story = {
 };
 
 /**
- * The rail with the person unresolved, which is what a reader sees for the
+ * The rail with the contact unresolved, which is what a reader sees for the
  * first moments of every session.
  *
- * The row survives it: `personAction` alone still renders, so the one piece of
+ * The row survives it: `contactAction` alone still renders, so the one piece of
  * chrome on a railless surface does not appear only once the session has
  * loaded — and no chip is drawn for somebody the product cannot yet name.
  */
-export const RailWithoutPerson: Story = {
-  name: "Rail — person not resolved",
+export const RailWithoutContact: Story = {
+  name: "Rail — contact not resolved",
   args: {
     ...BASE,
     variant: "rail",
     footerLabel: "Tokens this setup",
     stepLabel: "Step 2 of 5 · Confirm",
-    personAction: (
+    contactAction: (
       <Button small iconOnly aria-label="Switch theme">
         <SunMoon size={15} aria-hidden />
       </Button>
@@ -238,7 +238,7 @@ export const RailWithoutPerson: Story = {
  * the brand line rather than as a progress bar under it, and the transparency
  * chip rides in the header instead of a footer bar.
  *
- * `person` is deliberately passed and deliberately not drawn — the foot row is
+ * `contact` is deliberately passed and deliberately not drawn — the foot row is
  * rail-only, and a story that omitted the prop here would leave that a claim in
  * the prop comment rather than something a reviewer can see.
  */
@@ -247,7 +247,7 @@ export const Split: Story = {
   args: {
     ...BASE,
     variant: "split",
-    person: {
+    contact: {
       name: "Alex Rivera",
       detail: "alex@northwind.test",
       identity: "alex@northwind.test",

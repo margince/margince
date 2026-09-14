@@ -33,7 +33,7 @@ const (
 	absoluteTTL = 30 * 24 * time.Hour
 )
 
-// Service owns identity: the singleton organization, users, opaque
+// Service owns identity: the singleton company, users, opaque
 // server-side sessions.
 type Service struct {
 	// db binds the installation's workspace, resolved through this service's
@@ -245,10 +245,10 @@ func mustRandomSecret() string {
 func (s *Service) Login(ctx context.Context, email, plaintext string) (Identity, string, error) {
 	rawWsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		// The middleware binds the singleton organization on every request
+		// The middleware binds the singleton company on every request
 		// (installation.go); an unbound context means the installation is
 		// not bootstrapped — and the answer must not disclose that:
-		// credentials against a not-yet-existing organization read exactly
+		// credentials against a not-yet-existing company read exactly
 		// like wrong credentials.
 		return Identity{}, "", ErrBadCredentials
 	}

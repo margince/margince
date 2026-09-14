@@ -106,19 +106,28 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 // delivery is the same message as the delivery machinery receives it.
 func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin SendOrigin) DeliveryRequest {
 	return DeliveryRequest{
-		ActivityID:      ids.From[ids.ActivityKind](activityID),
-		Provider:        m.provider,
-		MessageID:       m.messageID,
-		Recipients:      m.to,
-		Cc:              m.in.Cc,
-		Bcc:             m.in.Bcc,
-		Subject:         m.in.Subject,
-		Body:            m.body,
-		HTMLBody:        m.htmlBody,
-		FromName:        m.fromName,
-		Attachments:     m.files,
-		ConsentPurpose:  m.in.ConsentPurpose,
-		Authorization:   m.authorization(origin),
+		ActivityID:     ids.From[ids.ActivityKind](activityID),
+		Provider:       m.provider,
+		MessageID:      m.messageID,
+		Recipients:     m.to,
+		Cc:             m.in.Cc,
+		Bcc:            m.in.Bcc,
+		Subject:        m.in.Subject,
+		Body:           m.body,
+		HTMLBody:       m.htmlBody,
+		FromName:       m.fromName,
+		Attachments:    m.files,
+		ConsentPurpose: m.in.ConsentPurpose,
+		Authorization:  m.authorization(origin),
+		// Carried through rather than re-derived: only the caller that claimed
+		// the held row knows which one it claimed.
+		ResumingIntentID: m.in.ResumingIntentID,
+		// The author's own text, beside the rendered text above. See the
+		// fields on SendEmailInput for why a decision is compared against this
+		// one rather than against what goes on the wire.
+		AuthoredSubject: m.in.Subject,
+		AuthoredBody:    m.in.Body,
+		AuthoredHTML:    m.in.HTMLBody,
 		InReplyTo:       chain.inReplyTo,
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,

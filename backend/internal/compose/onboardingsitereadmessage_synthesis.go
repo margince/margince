@@ -3,25 +3,25 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/modules/people"
+import "github.com/margince/margince/backend/internal/modules/contacts"
 
 // Factual identity fields deliberately do not appear here: a legal name,
 // address, registration, VAT number, or display name must occur in its cited
 // evidence. Interpretive fields may combine only the dossier concepts mapped
 // to them below.
 var companySynthesisEvidence = map[string]map[string]struct{}{
-	fieldIndustry:         evidenceFields(fieldIndustry, people.FactServedIndustry, people.FactService, people.FactProduct, people.FactCapability),
-	fieldOfferSummary:     evidenceFields(fieldOfferSummary, people.FactService, people.FactProduct, people.FactCapability),
-	fieldICP:              evidenceFields(fieldICP, fieldOfferSummary, people.FactServedIndustry, people.FactCompanySize, people.FactGeography, people.FactNamedCustomer, people.FactService, people.FactProduct, people.FactCapability),
-	fieldValueProposition: evidenceFields(fieldValueProposition, fieldOfferSummary, fieldCustomerPains, fieldDesiredOutcomes, people.FactQuantifiedOutcome),
-	fieldUSP:              evidenceFields(fieldUSP, fieldValueProposition, people.FactCapability, people.FactTechnology, people.FactCertification, people.FactQuantifiedOutcome),
-	fieldCustomerPains:    evidenceFields(fieldCustomerPains, fieldOfferSummary, people.FactService, people.FactProduct, people.FactCapability),
-	fieldDesiredOutcomes:  evidenceFields(fieldDesiredOutcomes, fieldValueProposition, people.FactQuantifiedOutcome),
-	fieldBuyingCenter:     evidenceFields(fieldBuyingCenter, fieldICP, people.FactNamedCustomer),
-	fieldBuyingIntents:    evidenceFields(fieldBuyingIntents, fieldCustomerPains, fieldOfferSummary, people.FactService, people.FactProduct),
+	fieldIndustry:         evidenceFields(fieldIndustry, contacts.FactServedIndustry, contacts.FactService, contacts.FactProduct, contacts.FactCapability),
+	fieldOfferSummary:     evidenceFields(fieldOfferSummary, contacts.FactService, contacts.FactProduct, contacts.FactCapability),
+	fieldICP:              evidenceFields(fieldICP, fieldOfferSummary, contacts.FactServedIndustry, contacts.FactCompanySize, contacts.FactGeography, contacts.FactNamedCustomer, contacts.FactService, contacts.FactProduct, contacts.FactCapability),
+	fieldValueProposition: evidenceFields(fieldValueProposition, fieldOfferSummary, fieldCustomerPains, fieldDesiredOutcomes, contacts.FactQuantifiedOutcome),
+	fieldUSP:              evidenceFields(fieldUSP, fieldValueProposition, contacts.FactCapability, contacts.FactTechnology, contacts.FactCertification, contacts.FactQuantifiedOutcome),
+	fieldCustomerPains:    evidenceFields(fieldCustomerPains, fieldOfferSummary, contacts.FactService, contacts.FactProduct, contacts.FactCapability),
+	fieldDesiredOutcomes:  evidenceFields(fieldDesiredOutcomes, fieldValueProposition, contacts.FactQuantifiedOutcome),
+	fieldBuyingCenter:     evidenceFields(fieldBuyingCenter, fieldICP, contacts.FactNamedCustomer),
+	fieldBuyingIntents:    evidenceFields(fieldBuyingIntents, fieldCustomerPains, fieldOfferSummary, contacts.FactService, contacts.FactProduct),
 	fieldCommonObjections: evidenceFields(fieldCommonObjections, fieldCustomerPains),
-	fieldSalesMotion:      evidenceFields(fieldSalesMotion, fieldBuyingCenter, people.FactContactEmail),
-	fieldHistory:          evidenceFields(fieldHistory, people.FactFoundedYear, people.FactLocation),
+	fieldSalesMotion:      evidenceFields(fieldSalesMotion, fieldBuyingCenter, contacts.FactContactEmail),
+	fieldHistory:          evidenceFields(fieldHistory, contacts.FactFoundedYear, contacts.FactLocation),
 }
 
 func evidenceFields(fields ...string) map[string]struct{} {

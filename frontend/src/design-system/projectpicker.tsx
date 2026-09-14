@@ -11,16 +11,16 @@ import "./projectpicker.css";
 // The ONE way a surface is told which project it is about, and the ONE line
 // that says which project its output was narrowed to.
 //
-// Every AI surface that reads an account or a person — the composers, the
+// Every AI surface that reads an account or a contact — the composers, the
 // prepared questions, the account brief, the meeting brief — renders this
 // picker over the same `projects` section the two 360s carry, and prints the
 // same scope line under its output. One control, so "Scoped to ERP-27" reads
 // identically wherever a rep meets it.
 
-// One project as the picker shows it: the fields the Organization360 and
-// Person360 `projects` sections share.
+// One project as the picker shows it: the fields the Company360 and
+// Contact360 `projects` sections share.
 export type PickableProject = Pick<
-  components["schemas"]["Organization360Project"],
+  components["schemas"]["Company360Project"],
   "project_id" | "name" | "key" | "phase"
 >;
 
@@ -48,8 +48,9 @@ export function useSoleProjectDefault(
   projects: readonly PickableProject[],
   projectId: string,
   onChange: (next: string) => void,
+  scope = "",
 ) {
-  const defaultedFor = useRef("");
+  const defaultedFor = useRef(new Map<string, string>());
   const sole = projects.length === 1 ? projects[0].project_id : "";
   // A choice the list still offers stands, and counts as this sole project's
   // default having been settled. A choice it no longer offers is about to be
@@ -57,18 +58,18 @@ export function useSoleProjectDefault(
   // value that follows — so it is not settled here.
   const standing = projects.some((project) => project.project_id === projectId);
   useEffect(() => {
-    if (!sole || defaultedFor.current === sole) {
+    if (!sole || defaultedFor.current.get(scope) === sole) {
       return;
     }
     if (standing) {
-      defaultedFor.current = sole;
+      defaultedFor.current.set(scope, sole);
       return;
     }
     if (!projectId) {
-      defaultedFor.current = sole;
+      defaultedFor.current.set(scope, sole);
       onChange(sole);
     }
-  }, [sole, projectId, standing, onChange]);
+  }, [sole, projectId, standing, onChange, scope]);
 }
 
 // A chosen project that the list no longer offers — closed since, withheld

@@ -18,16 +18,16 @@ import (
 
 func project360Project(p crmcontracts.Project) Project360Project {
 	out := Project360Project{
-		ProjectID:      ids.UUID(p.Id),
-		Name:           p.Name,
-		Key:            orBlank(p.Key),
-		ClosedReason:   orBlank(p.ClosedReason),
-		Description:    orBlank(p.Description),
-		OrganizationID: (*ids.UUID)(p.OrganizationId),
-		OwnerID:        (*ids.UUID)(p.OwnerId),
-		StartedAt:      dateTime(p.StartedAt),
-		TargetEndDate:  dateTime(p.TargetEndDate),
-		EndedAt:        dateTime(p.EndedAt),
+		ProjectID:     ids.UUID(p.Id),
+		Name:          p.Name,
+		Key:           orBlank(p.Key),
+		ClosedReason:  orBlank(p.ClosedReason),
+		Description:   orBlank(p.Description),
+		CompanyID:     (*ids.UUID)(p.CompanyId),
+		OwnerID:       (*ids.UUID)(p.OwnerId),
+		StartedAt:     dateTime(p.StartedAt),
+		TargetEndDate: dateTime(p.TargetEndDate),
+		EndedAt:       dateTime(p.EndedAt),
 	}
 	if p.Phase != nil {
 		out.Phase = string(*p.Phase)
@@ -73,7 +73,7 @@ func project360Stakeholders(rows []crmcontracts.Project360Stakeholder) []Handoff
 	out := make([]HandoffStakeholder, 0, len(rows))
 	for _, s := range rows {
 		out = append(out, HandoffStakeholder{
-			PersonID: ids.UUID(s.PersonId), Name: orBlank(s.PersonName), Role: orBlank(s.Role),
+			ContactID: ids.UUID(s.ContactId), Name: orBlank(s.ContactName), Role: orBlank(s.Role),
 		})
 	}
 	return out

@@ -61,7 +61,7 @@ func TestCreate_ValidationRefusalListsEveryViolation(t *testing.T) {
 func TestCreate_StructuralLabelRefused(t *testing.T) {
 	svc := NewService(nil, nil)
 	spec := validSpec()
-	spec.Label = "Relationship to partner org"
+	spec.Label = "Relationship to partner company"
 	if _, err := svc.Create(ctxAs(fullGrant()), spec); !errors.Is(err, ErrStructural) {
 		t.Fatalf("structural label must be refused with ErrStructural, got %v", err)
 	}

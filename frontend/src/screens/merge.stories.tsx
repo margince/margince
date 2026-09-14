@@ -34,8 +34,8 @@ const SOURCE = {
   sourceName: "Anna Weber",
   searchTargets: () => Promise.resolve([{ id: "p-2", name: "Otto Fischer" }]),
   merge: (targetId: string) => Promise.resolve({ id: targetId }),
-  invalidate: "people",
-  recordKey: "person",
+  invalidate: "contacts",
+  recordKey: "contact",
   survivorRoute: (targetId: string) => ({
     screen: "contacts" as const,
     id: targetId,
@@ -47,7 +47,7 @@ export const TargetPicked: Story = {
   // has to be routed — an unrouted one fails every grant closed and renders a
   // branch this story is not named for.
   beforeEach: () => {
-    installFetchStub({ "GET /me": meRoute({ person: ["read", "update"] }) });
+    installFetchStub({ "GET /me": meRoute({ contact: ["read", "update"] }) });
   },
   args: SOURCE,
   play: async ({ canvasElement }) => {
@@ -68,7 +68,7 @@ export const TargetPicked: Story = {
 // is the half a `title` on a disabled button cannot do.
 export const RefusedByArchive: Story = {
   beforeEach: () => {
-    installFetchStub({ "GET /me": meRoute({ person: ["read", "update"] }) });
+    installFetchStub({ "GET /me": meRoute({ contact: ["read", "update"] }) });
   },
   args: { ...SOURCE, disabledReasonId: "merge-refusal" },
   render: (args) => (

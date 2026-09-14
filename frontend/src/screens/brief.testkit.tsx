@@ -58,7 +58,7 @@ export type Call = { method: string; path: string; body: unknown };
 
 export type Routes = Record<
   string,
-  (body: unknown) => Response | Promise<Response>
+  (body: unknown, query: URLSearchParams) => Response | Promise<Response>
 >;
 
 // Every read Brief fans out to, answered honestly by default so each case
@@ -78,6 +78,12 @@ const DEFAULTS: Routes = {
   // empty page carries no `readings` and no `counts`, and a screen reading a
   // required field off it fails in a way no server could produce.
   "GET /worklist": () => jsonResponse(readingsDay({}, [])),
+  "GET /worklist/handled": () =>
+    jsonResponse({
+      as_of: "2026-09-13T08:00:00Z",
+      receipts: [],
+      truncated: false,
+    }),
   // The plan panel reads `commitments` off this, which the contract marks
   // required. The generic empty page carries none, so an unrouted read would
   // fail the panel in a way no server could produce — the same reason
@@ -112,7 +118,15 @@ export function stubApi(routes: Routes): Call[] {
     calls.push(call);
     const route = `${call.method} ${call.path}`;
     const handler = routes[route] ?? DEFAULTS[route];
-    return handler ? handler(call.body) : jsonResponse(emptyPage);
+    return handler
+      ? handler(
+          call.body,
+          new URL(
+            input instanceof Request ? input.url : String(input),
+            "https://test.local",
+          ).searchParams,
+        )
+      : jsonResponse(emptyPage);
   });
   vi.stubGlobal("fetch", mock);
   return calls;
@@ -177,7 +191,7 @@ export function writeRoutes(calls: readonly Call[]): string[] {
 
 /** Brief's two work sections, in the order the document holds them. */
 export function workOrder(): string[] {
-  return [...document.querySelectorAll("#brief-decisions, #brief-feed")].map(
+  return [...document.querySelectorAll("#brief-decisions, #brief-today")].map(
     (section) => section.id,
   );
 }

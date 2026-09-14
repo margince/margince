@@ -55,20 +55,23 @@ func (p *ListPrelude) Arg(v any) int { return p.arg(v) }
 func BuildListPrelude(
 	ctx context.Context,
 	object string,
-	fields map[string]string,
+	fields map[string]SortField,
 	active []fieldcatalog.Column,
 	sort *string,
 	limit *int,
 	cursor *string,
 	customFilters map[string]string,
 ) (*ListPrelude, error) {
-	sorted, err := ParseListSort(sort, SortVocabulary(fields, active))
+	p := &ListPrelude{limit: ClampLimit(limit), where: []string{ListWhereSeed}}
+	p.arg = func(v any) int { p.args = append(p.args, v); return len(p.args) }
+
+	// The sort first, because a reference sort binds parameters of its own and
+	// every clause below binds through the same counter.
+	sorted, err := ParseListSort(ctx, sort, SortVocabulary(fields, active), p.arg)
 	if err != nil {
 		return nil, err
 	}
-
-	p := &ListPrelude{sorted: sorted, limit: ClampLimit(limit), where: []string{ListWhereSeed}}
-	p.arg = func(v any) int { p.args = append(p.args, v); return len(p.args) }
+	p.sorted = sorted
 
 	// A row-scoped record narrows to what this reader may see. The
 	// workspace-shared catalogues (products, offer templates) have no such

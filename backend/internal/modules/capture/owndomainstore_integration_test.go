@@ -33,7 +33,7 @@ func adminOwnDomainContext(ctx context.Context, ws ids.UUID) context.Context {
 			RoleKeys: []string{"admin"},
 			Objects: map[string]principal.ObjectGrant{
 				"capture_settings": {Read: true, Update: true},
-				"person":           {Read: true},
+				"contact":          {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -145,15 +145,15 @@ func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
 func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
-		orgID := ids.NewV7()
+		companyID := ids.NewV7()
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO organization (id, display_name, is_anchor, source, captured_by)
-			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, orgID); err != nil {
+			INSERT INTO company (id, display_name, is_anchor, source, captured_by)
+			VALUES ($1, 'Our Company', true, 'manual', 'human:test')`, companyID); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO organization_domain (organization_id, domain, is_primary, source, captured_by)
-			VALUES ($1, 'ourcompany.example', true, 'manual', 'human:test')`, orgID)
+			INSERT INTO company_domain (company_id, domain, is_primary, source, captured_by)
+			VALUES ($1, 'ourcompany.example', true, 'manual', 'human:test')`, companyID)
 		return err
 	}); err != nil {
 		t.Fatalf("seeding the anchor company: %v", err)
@@ -193,7 +193,7 @@ func TestAValueThatIsNotADomainIsRefused(t *testing.T) {
 			t.Errorf("Add(%q) was accepted, want a refusal naming the problem", bad)
 		}
 	}
-	// A leading @ is a shape people type, not an error.
+	// A leading @ is a shape contacts type, not an error.
 	if _, err := store.Add(ctx, "@acme.com"); err != nil {
 		t.Errorf("Add(\"@acme.com\"): %v", err)
 	}

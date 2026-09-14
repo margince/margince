@@ -8,7 +8,7 @@ package accountdraft
 // This prompt writes an outbound message to the customer, which makes it the
 // more consequential half of the account brief's defect (#591): the brief
 // misreads a number on our own screen, this one can put the misread number in
-// front of the person paying it.
+// front of the contact paying it.
 
 import (
 	"encoding/json"

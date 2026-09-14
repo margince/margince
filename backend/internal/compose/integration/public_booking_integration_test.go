@@ -150,7 +150,7 @@ func assertAnonymousAvailability(t *testing.T, e *apptest.AppEnv, base, window s
 
 // assertBookingRequiresValidConsent checks consent is validated before
 // any write: no consent and a bogus purpose are both 422s that leave
-// zero person rows behind.
+// zero contact rows behind.
 func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, purposeID string, monday time.Time) {
 	t.Helper()
 	// A booking without consent is refused before any write.
@@ -174,10 +174,10 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, pu
 		t.Fatalf("booking with unknown purpose → %d, want 422", status)
 	}
 	// A grant that cannot say what was shown is refused the same way, and for
-	// the same reason it is checked at this door: the person is created before
+	// the same reason it is checked at this door: the contact is created before
 	// the consent is recorded, so a refusal further in would leave the row
 	// behind. This endpoint is anonymous, which makes that a way to grow the
-	// person table one rejected request at a time.
+	// contact table one rejected request at a time.
 	// A REAL purpose, so the missing wording is the only thing wrong with this
 	// request. With the bogus id above it would be refused by the purpose check
 	// and pass whether or not the wording rule exists at all.
@@ -189,18 +189,18 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base, pu
 	if status := publicCall(t, e, "POST", base, noWording, nil, nil); status != 422 {
 		t.Fatalf("booking consent without wording → %d, want 422", status)
 	}
-	var persons int
-	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&persons); err != nil {
+	var contacts int
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM contact`).Scan(&contacts); err != nil {
 		t.Fatal(err)
 	}
-	if persons != 0 {
-		t.Fatalf("refused bookings left %d person rows, want 0", persons)
+	if contacts != 0 {
+		t.Fatalf("refused bookings left %d contact rows, want 0", contacts)
 	}
 }
 
 // bookHappyPathSlot books the first slot (201 with the slot and NOTHING
 // else disclosed) plus a second slot under a case-folded email,
-// asserting the booker lands as ONE person. Returns the first booking
+// asserting the booker lands as ONE contact. Returns the first booking
 // body so the taken slot can be re-posted.
 func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) AnyMap {
 	t.Helper()
@@ -216,7 +216,7 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 		t.Fatalf("booking → %d %v", status, confirmation)
 	}
 	// NAMED, not counted. The rule is that this anonymous answer discloses
-	// nothing ABOUT THE RECORD — no person id, no existing contact, no history
+	// nothing ABOUT THE RECORD — no contact id, no existing contact, no history
 	// — and a field count enforced that only by accident: it also refused
 	// facts about the caller's own request, which disclose nothing at all. The
 	// booking and marketing outcomes are two such facts, and the booker needs
@@ -233,7 +233,7 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 		t.Fatalf("confirmation does not name the slot it booked: %v", confirmation)
 	}
 
-	// The booker exists once; a second booking re-uses the person.
+	// The booker exists once; a second booking re-uses the contact.
 	second := AnyMap{
 		"start": monday.Add(3 * time.Hour), "end": monday.Add(3*time.Hour + 30*time.Minute),
 		"booker":  AnyMap{"name": "Anna Anonymous", "email": "ANNA@visitor.example"},
@@ -242,12 +242,12 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	if status := publicCall(t, e, "POST", base, second, nil, nil); status != http.StatusCreated {
 		t.Fatalf("second booking → %d", status)
 	}
-	var persons int
-	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM person`).Scan(&persons); err != nil {
+	var contacts int
+	if err := e.Owner.QueryRow(context.Background(), `SELECT count(*) FROM contact`).Scan(&contacts); err != nil {
 		t.Fatal(err)
 	}
-	if persons != 1 {
-		t.Fatalf("idempotent-on-email booker landed as %d persons, want 1", persons)
+	if contacts != 1 {
+		t.Fatalf("idempotent-on-email booker landed as %d contacts, want 1", contacts)
 	}
 	return booking
 }
@@ -289,10 +289,10 @@ func assertBookingProofAndProvenance(t *testing.T, e *apptest.AppEnv) {
 func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, purposeID string, consent AnyMap) {
 	t.Helper()
 	var annaID string
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM person`).Scan(&annaID); err != nil {
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM contact`).Scan(&annaID); err != nil {
 		t.Fatal(err)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+annaID+"/consent", AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts/"+annaID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
@@ -307,7 +307,7 @@ func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base 
 	}
 	var stateAfter string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT state FROM person_consent WHERE person_id = $1 AND purpose_id = $2`,
+		`SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
 		annaID, purposeID).Scan(&stateAfter); err != nil {
 		t.Fatal(err)
 	}

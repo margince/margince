@@ -34,7 +34,7 @@ const signatureEnrichMail = "Hi Alice,\n\n" +
 	"> On Tuesday, Alice Berger wrote:\n" +
 	"> Could you send the March numbers? Our CTO Dana Weiss asked for them.\n\n" +
 	"Best,\n" +
-	"Bob Person\n" +
+	"Bob Contact\n" +
 	"CTO, Acme Robotics GmbH\n" +
 	"+49 30 1234567\n"
 
@@ -70,7 +70,7 @@ func signatureEnrichClaimAt(field, value, evidence string, confidence float64) s
 func signatureEnrichFixtureJSON(t *testing.T, body string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(signatureEnrichFixture{
-		FullName: "Bob Person",
+		FullName: "Bob Contact",
 		Email:    "bob@acme-robotics.example",
 		Body:     body,
 	})
@@ -153,7 +153,7 @@ func TestSignatureEnrichCaseSeparatesTheFourThingsAReplyCanBe(t *testing.T) {
 		{
 			// Omission is what this prompt asks for when there is nothing to quote,
 			// so a reply that claims nothing is an abstention, never invalid — the
-			// pass agrees, applying nothing and picking the person up next cycle.
+			// pass agrees, applying nothing and picking the contact up next cycle.
 			name:       "a reply that claims nothing at all",
 			want:       signatureEnrichWantTitle,
 			reply:      signatureEnrichReply(),
@@ -215,7 +215,7 @@ func TestSignatureEnrichCaseGatesAgainstTheWindowTheModelWasShown(t *testing.T) 
 		for i := range signatureLineCount {
 			fmt.Fprintf(&body, "prose line %d\n", i)
 		}
-		body.WriteString("Bob Person\nCTO, Acme Robotics GmbH\n")
+		body.WriteString("Bob Contact\nCTO, Acme Robotics GmbH\n")
 
 		outcome, _ := runSignatureEnrichCase(t, body.String(), signatureEnrichWantTitle,
 			signatureEnrichReply(signatureEnrichClaim("title", "Head of Sales", "Head of Sales at Globex")))

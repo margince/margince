@@ -9,7 +9,7 @@ package licensecheck
 // 885471640ea89785c69942816984953257c83d62, and kept in step with it by hand. It
 // is a copy rather than an import because that package lives in a private
 // module: a public source installation could not resolve the import path, so
-// importing it would make this product unbuildable for exactly the people who
+// importing it would make this product unbuildable for exactly the contacts who
 // need to prove their entitlement.
 //
 // Deliberately a near-verbatim copy, down to MustInstantiate below, because
@@ -62,7 +62,7 @@ type Result struct {
 
 // License is the metadata of the license the module verified.
 //
-// Org, ContactName and ContactEmail are empty for a license issued before those
+// Company, ContactName and ContactEmail are empty for a license issued before those
 // claims existed. A zero IssuedAt or NotBefore means the token carried no such
 // claim. InGrace reports a license past its expiry that the grace period still
 // accepts: the check passes today and will stop passing.
@@ -76,7 +76,7 @@ type License struct {
 	Expiry       time.Time `json:"expiry"`
 	ID           string    `json:"id"`
 	Subject      string    `json:"subject"`
-	Org          string    `json:"org,omitempty"`
+	Company      string    `json:"company,omitempty"`
 	ContactName  string    `json:"name,omitempty"`
 	ContactEmail string    `json:"email,omitempty"`
 	KeyID        string    `json:"key_id"`

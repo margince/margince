@@ -18,11 +18,13 @@ import {
   PendingBody,
 } from "../design-system/atoms";
 import { DateInput, isISODate } from "../design-system/dateinput";
+import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import { formatDate, formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { EntityRef } from "./entityref";
+import "./taskactions.css";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -37,7 +39,7 @@ type TaskPatch = {
   id: string;
   // The version the press was decided against. Every verb on a task goes
   // through this one mutation, so pinning it here pins all four at once — and
-  // an unpinned tick is a task two people can complete, each told it worked.
+  // an unpinned tick is a task two contacts can complete, each told it worked.
   version: number | undefined;
   body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
 };
@@ -152,22 +154,7 @@ export function TaskCompleteCheck({
   );
 }
 
-/**
- * TaskQuickActions is the verbs a rep needs on a next-step row beyond the tick.
- *
- * Snooze, offered only for a DATED task, since one day after nothing is
- * nothing. And a date picker, offered always — an undated task is exactly the
- * one a rep wants to put a day on, and it is the one the snooze cannot serve.
- *
- * The two are not the same verb spelled twice. Snooze answers "not yet" in one
- * press and moves the task's own due date by a day; the picker answers
- * "Tuesday", which the snooze cannot reach in principle rather than merely in
- * clicks — a task three days overdue snoozes to two days overdue.
- *
- * Complete lives on `TaskCompleteCheck` instead — `showComplete` keeps it here
- * too for the one caller (the detail modal) that has no row-level checkbox of
- * its own to tick.
- */
+/** Complete, snooze a dated task, or explicitly choose its next due day. */
 export function TaskQuickActions({
   activityId,
   version,
@@ -330,10 +317,12 @@ export function TaskDetailModal({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const titleId = useId();
-  // The meeting the task came from, open in its own reader over this dialog.
+  // Keep the task open while reading its original evidence.
   const [openSource, setOpenSource] = useState<string | null>(null);
   const query = useQuery({
     queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
         params: { path: { id: activityId } },
@@ -346,75 +335,78 @@ export function TaskDetailModal({
   });
   const task: Activity | undefined = query.data;
   return (
-    <Modal open onClose={onClose} labelledBy={titleId}>
-      <h2 id={titleId} className="t-h2 modal-title">
-        {task?.subject ?? t("tasks.detail")}
-      </h2>
-      {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-      {query.isError && (
-        <p className="t-caption form-error">
-          {problemMessageOf(query.error, t)}
-        </p>
-      )}
-      {task && (
-        <div className="form-stack">
-          {task.body && <p className="t-body">{task.body}</p>}
-          {/* The record the promise was read out of. The body names it in
-              words — "committed to this in the meeting transcript (line 6)" —
-              and the sentence alone left the only route back through the
-              record's history and an exact-subject search. The reader below
-              asks the server for the meeting under this seat's own scope, so
-              somebody who may not open it is told so there rather than here. */}
-          {task.source_activity_id && (
-            <div>
-              <Button
-                variant="ghost"
-                onClick={() => setOpenSource(task.source_activity_id ?? null)}
-              >
-                {t("tasks.openSource")}
-              </Button>
-            </div>
-          )}
-          <p className="t-caption task-detail-meta">
-            {task.due_at ? (
-              <span>
-                {t("co.next.due", {
-                  // The record's own clock, like every other date on this
-                  // surface. A deadline is a fact colleagues read back, so the
-                  // day it names cannot depend on where the reader is sitting:
-                  // `dueInstant` mints the picked day's end in this same zone,
-                  // and reading it in the browser's instead is what made an
-                  // approved 9 September arrive as a task due the 10th.
-                  when: formatDate(task.due_at, locale, recordZone),
-                })}
-              </span>
-            ) : (
-              <span>{t("co.next.undated")}</span>
-            )}
-            <span>
-              {t("tasks.logged")}{" "}
-              {formatDateTime(task.occurred_at, locale, recordZone)}
-            </span>
-            {task.is_done && <Badge tone="success">{t("tasks.isDone")}</Badge>}
-            {task.assignee_id && (
-              <EntityRef kind="user" id={task.assignee_id} />
-            )}
+    <Modal open onClose={onClose} labelledBy={titleId} placement="right">
+      <div className="drawer-head task-detail-head">
+        <h2 id={titleId} className="t-h2">
+          {task?.subject ?? t("tasks.detail")}
+        </h2>
+        <Button variant="ghost" onClick={onClose}>
+          {t("common.close")}
+        </Button>
+      </div>
+      <div className="drawer-body">
+        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+        {query.isError && (
+          <p className="t-caption form-error">
+            {problemMessageOf(query.error, t)}
           </p>
-          {!task.is_done && !readOnly && (
-            <div className="form-actions">
-              <TaskQuickActions
-                activityId={task.id}
-                version={task.version}
-                dueAt={task.due_at}
-                update={update}
-                showDuePicker
-              />
+        )}
+        {task && (
+          <div className="form-stack">
+            {task.body && <p className="t-body">{task.body}</p>}
+            {task.source_activity_id && (
+              <div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setOpenSource(task.source_activity_id ?? null)}
+                >
+                  {t("tasks.openSource")}
+                </Button>
+              </div>
+            )}
+            <div className="t-caption task-detail-meta">
+              {task.due_at ? (
+                <span>
+                  {t("co.next.due", {
+                    // The record's own clock, like every other date on this
+                    // surface. A deadline is a fact colleagues read back, so the
+                    // day it names cannot depend on where the reader is sitting:
+                    // `dueInstant` mints the picked day's end in this same zone,
+                    // and reading it in the browser's instead is what made an
+                    // approved 9 September arrive as a task due the 10th.
+                    when: formatDate(task.due_at, locale, recordZone),
+                  })}
+                </span>
+              ) : (
+                <span>{t("co.next.undated")}</span>
+              )}
+              <span>
+                {t("tasks.logged")}{" "}
+                {formatDateTime(task.occurred_at, locale, recordZone)}
+              </span>
+              {task.is_done && (
+                <Badge tone="success">{t("tasks.isDone")}</Badge>
+              )}
+              {task.assignee_id && (
+                <EntityRef kind="user" id={task.assignee_id} />
+              )}
             </div>
-          )}
-        </div>
-      )}
+            {!task.is_done && !readOnly && (
+              <div className="form-actions task-detail-actions">
+                <TaskQuickActions
+                  activityId={task.id}
+                  version={task.version}
+                  dueAt={task.due_at}
+                  update={update}
+                  showDuePicker
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       {openSource && (
-        <SourceMeeting
+        <SourceActivity
           activityId={openSource}
           onClose={() => setOpenSource(null)}
         />
@@ -423,16 +415,8 @@ export function TaskDetailModal({
   );
 }
 
-/**
- * The meeting a task was read out of.
- *
- * It asks GET /activities/{id}, not the email presentation: that endpoint
- * refuses anything whose kind is not `email` — with a 404, so a reader clicking
- * through to a MEETING would have been told it does not exist. The plain
- * activity read serves every kind and carries the same row scope, so a reader
- * who may not see the meeting still gets the refusal that is theirs to get.
- */
-function SourceMeeting({
+/** Resolve the original kind before choosing its reader. */
+function SourceActivity({
   activityId,
   onClose,
 }: Readonly<{ activityId: string; onClose: () => void }>) {
@@ -442,6 +426,8 @@ function SourceMeeting({
   const titleId = useId();
   const query = useQuery({
     queryKey: ["activity", activityId],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data, error } = await api.GET("/activities/{id}", {
         params: { path: { id: activityId } },
@@ -453,6 +439,15 @@ function SourceMeeting({
     },
   });
   const meeting: Activity | undefined = query.data;
+  if (meeting?.kind === "email") {
+    return (
+      <OpenEmailDrawer
+        activityId={activityId}
+        zone={recordZone}
+        onClose={onClose}
+      />
+    );
+  }
   return (
     <Modal open onClose={onClose} labelledBy={titleId}>
       <h2 id={titleId} className="t-h2 modal-title">
@@ -609,9 +604,9 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
       for (const queryKey of invalidateKeys) {
         queryClient.invalidateQueries({ queryKey });
       }
-      // The person's own card lists the same open claims, so a drawer standing
+      // The contact's own card lists the same open claims, so a drawer standing
       // on them would keep showing a promise that has just been settled.
-      queryClient.invalidateQueries({ queryKey: ["person"] });
+      queryClient.invalidateQueries({ queryKey: ["contact"] });
     },
   });
 }

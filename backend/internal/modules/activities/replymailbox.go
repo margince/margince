@@ -8,7 +8,7 @@ package activities
 // A composer that offers to answer a thread cannot say whose conversation it
 // is. The send takes its sender from whoever clicks and there is no mailbox
 // field on the input, which is correct — covering for a colleague is a real
-// thing people do, and refusing the send would break it. What was missing is
+// thing contacts do, and refusing the send would break it. What was missing is
 // the sentence that says so before the reply goes out.
 
 import (

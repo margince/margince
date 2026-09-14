@@ -3,7 +3,7 @@
 `ci.yml` is the merge gate, and `_lane-integration.yml` / `_lane-frontend.yml` are
 part of it — called by it, never triggered on their own (see
 [Two lanes are called](../explanation/ci-pipeline.md#two-lanes-are-called-not-inlined)).
-Eight workflows sit beside the gate, deliberately outside it:
+Nine workflows sit beside the gate, deliberately outside it:
 
 - **`cache-warm.yml`** — the Go build cache's only writer, on `main` every three
   hours plus manual dispatch. **Gates nothing**: a red or cancelled run costs
@@ -67,6 +67,44 @@ Eight workflows sit beside the gate, deliberately outside it:
   which reads its evidence from the environment so every arm is drivable from a
   fixture (`make test-review-coverage`).
 
+- **`closing-declaration.yml`** — on `opened`, `reopened`, `edited`,
+  `synchronize` and `ready_for_review`. A pull request declares either an issue
+  it closes or that it closes none.
+
+  **The defect is not a missing reference, it is a reference nothing reads.** A
+  body said in as many words *"Closes the residual half of #548"* and its
+  metadata referenced nothing — GitHub parses a closing keyword only when the
+  issue number follows it directly — so the issue stayed open six days after its
+  fix merged and was re-queued as new work. The author did write it down; they
+  wrote it somewhere nothing reads.
+
+  So it reads `closingIssuesReferences`, the list that actually closes an issue
+  on merge, and never the prose. The `Closes: none` half is what makes it
+  enforceable: most pull requests close no issue and are right not to, and
+  without a way to say so this would either nag them for ever or guess.
+
+  It does **not** try to decide whether a pull request fixes an issue it did not
+  mention. That is the real defect and it is not machine-decidable; the
+  declaration is the affordance that makes a human answer it.
+
+  **Gates nothing**, for the reason `review-coverage.yml` gives: a job that
+  failed on a finding would be a gate whatever its name said. The mechanism is
+  not broken — the habit is patchy — so it warns where the omission happens, and
+  `edited` is a trigger so the comment is **deleted** the moment the author adds
+  the line. Deleted rather than rewritten into a success note: a finding that
+  resolves itself should leave nothing behind, and a permanent "this one
+  declares" line on every pull request that ever forgot one is a worse record
+  than the omission was.
+
+  **A failed metadata query is not an empty one.** Suppressing it would hand the
+  check an empty list and warn a pull request carrying perfectly good closing
+  metadata, which would make the check loudest exactly when it knows least — so
+  it says nothing and exits. Promote it to blocking only if the warning is measurably
+  ignored. Reported by
+  [`scripts/check-closing-declaration.sh`](../../scripts/check-closing-declaration.sh),
+  which reads its evidence from the environment so every arm is drivable from a
+  fixture (`make test-closing-declaration`).
+
 - **`main-health.yml`** — every two hours on `main`: the backend gate, the
   real-Postgres lane, the SPA lane (those two called, not copied — it `uses:`
   `_lane-integration.yml` and `_lane-frontend.yml`), the screen-acceptance UAT,
@@ -94,7 +132,7 @@ Eight workflows sit beside the gate, deliberately outside it:
   broken lane carrying the commits that landed since the health check was last
   green, with authors ([`scripts/main-health-range.sh`](../../scripts/main-health-range.sh)).
   That range is a deliberate over-approximation: naming a dozen candidates is
-  useful, guessing one sends the wrong person looking.
+  useful, guessing one sends the wrong contact looking.
 
   It is also the **only** publisher of `main`'s SonarCloud analysis. The
   push-to-`main` scan is gone and the `merge_group` scan that replaced it only
@@ -214,11 +252,12 @@ Eight workflows sit beside the gate, deliberately outside it:
   flow is a PoC, so these releases order below any real dated release; the
   build is the workflow run number) in the dist service of the constellation
   deployment at test.margince.com. A constellation release is a server
-  deployment, which GitHub does not host, so this is not a GitHub release —
-  with one exception, the desktop bundles, below.
+  deployment, which GitHub does not host, so this is not a GitHub release at
+  all: the GitHub release and the desktop bundles belong to `release-tag.yml`
+  below, and this lane surrendered its `github-release` job to it.
   It used to run on **every push to `main`**: about 400 runs a week, ~10
   runner-minutes each on arm64, three jobs apiece drawn from the same
-  20-concurrent org ceiling the PR gates queue in — a full-stack merge already
+  20-concurrent company ceiling the PR gates queue in — a full-stack merge already
   schedules 28 jobs against it. Releasing per commit spent that budget on
   versions nobody asked for, which the epoch-pinned `1970.*` scheme says out
   loud: the repository is under heavy development and has no real releases yet.
@@ -274,33 +313,36 @@ Eight workflows sit beside the gate, deliberately outside it:
   ([#1810](https://github.com/margince/margince/issues/1810)) — a
   sharper edge now that dispatching an arbitrary ref is the only way in.
   Not a gate — it never blocks a merge.
-
-  **When the `desktop` dispatch input is set** (a checkbox on the Run-workflow
-  form, default **off**), three further jobs attach the desktop bundles
-  to a **GitHub** release under the same `1970.<build>` version, which is the
-  page a person browses to download a build: `desktop-macos` and
-  `desktop-windows` are *called*, not copied — the same reusable workflows the
-  pull-request check runs, so a release bundle cannot differ from the bundle CI
-  blessed — and `github-release` re-names the two artifacts after the version,
-  re-zips the Windows tree that `download-artifact` expanded, and creates the
-  release as a **prerelease** (a `1970.*` build must not present itself as the
-  product's latest). It carries the only `contents: write` in the workflow. It
-  needs `draft` and the two build jobs but deliberately **not** `publish`: the
-  dist completeness gate is about the patch and the SBOMs, so a dist-side
-  failure must not withhold bundles that already built correctly.
-  The input exists because the trigger used to carry this distinction — a push
-  got the dist release, a dispatch also got the bundles — and with the push
-  trigger gone, `github.event_name == 'workflow_dispatch'` is true on every run,
-  so it would have made every release compile Postgres from source twice. Default
-  off keeps a dist-only release cheap; all three jobs share the one input so the
-  GitHub release appears exactly when the bundles it would hold do.
+- **`release-tag.yml`** — on a **`v*` tag push** and nothing else. The only lane
+  in this repository that creates a **GitHub** release, and the only one that
+  holds `contents: write` anywhere: `release.yml` gave up its `github-release`
+  job so that two lanes on two version schemes cannot both claim the one release
+  page. The tag IS the version — read and validated by
+  [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
+  (`make test-release-tag-version`), so a plain `v0.0.1` becomes the download the
+  page offers by default, a suffixed `v0.0.1-rc.1` a **pre-release**, and a tag
+  the grammar cannot read is refused in seconds — before either bundle compiles
+  PostgreSQL from source. Two more checks share that first job: the tag points at
+  a commit on `main`, and the commit carries no adverse `verdict` from
+  `merge-attest`. That last one is a **release selector, not a gate** — merging
+  past `ci` is a standing decision here, so an absent verdict passes, while a
+  verdict that exists and has not settled refuses rather than reading as absent.
+  `desktop-macos` and `desktop-windows` are then *called*, not copied — the same
+  reusable workflows the pull-request check runs, so a release bundle cannot
+  differ from the bundle CI blessed — and the release job re-names the macOS
+  tarball after the version, re-zips the Windows tree that `download-artifact`
+  expanded, and creates the release with both attached. It **serializes rather
+  than cancels**: by that job the lane is creating a release and uploading assets
+  to it, and a killed run leaves that half done. Not a gate — it runs on a tag,
+  after every merge decision has already been taken. Driving it is
+  [cut-a-release.md](../how-to/cut-a-release.md).
 - **`desktop-macos.yml` / `desktop-windows.yml`** — build the self-contained
   desktop folder for their own platform, which is the only platform it can be
   built on: pgvector has no build system but `nmake` against MSVC, the event bus
   needs MSYS2, and the macOS half rewrites every Mach-O load command to `@rpath`
   and re-signs each patched file. Path-scoped to `desktop/**` on pull requests
   so an ordinary change never pays for a Postgres compile, plus manual dispatch,
-  plus `workflow_call` from `release.yml`. Neither is a required check. The
+  plus `workflow_call` from `release-tag.yml`. Neither is a required check. The
   macOS lane uploads a **tarball** because `upload-artifact` does not preserve
   the executable bit, and a `margince` a tester cannot run is worse than no
   artifact; the Windows lane has no such bit and uploads the folder.

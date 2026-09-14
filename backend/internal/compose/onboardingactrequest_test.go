@@ -20,7 +20,7 @@ import (
 
 func actContextFixture(t *testing.T) json.RawMessage {
 	t.Helper()
-	block, err := onboardingActContext(string(crmcontracts.OnboardingActVoice),
+	block, err := onboardingActContext(string(crmcontracts.OnboardingActOnboardingActVoice),
 		onboardingVoiceContext{CorpusTotalWords: 1240, SourceCount: 3}, true, onboardingResearchState{}, nil)
 	if err != nil {
 		t.Fatalf("assembling the act context: %v", err)
@@ -35,7 +35,7 @@ func actContextFixture(t *testing.T) json.RawMessage {
 func TestOnboardingActRequestFencesTheContextUnderTheMarkerItDeclares(t *testing.T) {
 	block := actContextFixture(t)
 
-	req := onboardingActRequest(string(crmcontracts.OnboardingActVoice), "How is my corpus doing?", nil, block, "en")
+	req := onboardingActRequest(string(crmcontracts.OnboardingActOnboardingActVoice), "How is my corpus doing?", nil, block, "en")
 
 	marker, declared := promptfence.MarkerIn(req.System)
 	if !declared {
@@ -67,7 +67,7 @@ func TestOnboardingActRequestReplaysTheConversationInOrder(t *testing.T) {
 		{Role: "assistant", Content: "It reads nothing without a per-purpose grant."},
 	}
 
-	req := onboardingActRequest(string(crmcontracts.OnboardingActConnect), "And what does it not do?",
+	req := onboardingActRequest(string(crmcontracts.OnboardingActOnboardingActConnect), "And what does it not do?",
 		history, actContextFixture(t), "en")
 
 	if len(req.Messages) != len(history)+2 {
@@ -91,7 +91,7 @@ func TestOnboardingActRequestReplaysTheConversationInOrder(t *testing.T) {
 // thing they cannot forge.
 func TestOnboardingActRequestMintsAFreshMarkerPerCall(t *testing.T) {
 	block := actContextFixture(t)
-	act := string(crmcontracts.OnboardingActResults)
+	act := string(crmcontracts.OnboardingActOnboardingActResults)
 
 	first, declared := promptfence.MarkerIn(onboardingActRequest(act, "Where do I stand?", nil, block, "en").System)
 	if !declared {

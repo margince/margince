@@ -10,7 +10,7 @@
 //
 // Tables owned: erasure_suppression. Everything else this module
 // touches it deliberately does NOT own: erasure and retention write
-// person, lead, activity, deal, embedding, raw_capture, approval,
+// contact, lead, activity, deal, embedding, raw_capture, approval,
 // workflow_run and the Deal Room's participant, session and engagement
 // rows because
 // a data-subject obligation must reach every store that holds the

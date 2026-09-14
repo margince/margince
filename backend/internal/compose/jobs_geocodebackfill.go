@@ -15,7 +15,7 @@ package compose
 // set while looking exactly like a query that works.
 //
 // It NOMINATES, it does not decide. Each candidate goes to the same
-// geocode_organization job an address write queues, and that worker re-asks
+// geocode_company job an address write queues, and that worker re-asks
 // AddressForGeocode — so the retry ledger, the settled-address rule and the
 // attempt cap stay in one place rather than being restated here.
 
@@ -28,7 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -78,7 +78,7 @@ type geocodeBackfillWorker struct{ pool *pgxpool.Pool }
 //
 // One transaction for the whole batch, so a pass either queues its nominations
 // or queues none: a partial batch would be re-read identically on the next
-// tick anyway, and the deduplication on geocode_organization makes a repeat
+// tick anyway, and the deduplication on geocode_company makes a repeat
 // nomination harmless — but a half-committed pass that logged success would
 // misreport what it did.
 func (w *geocodeBackfillWorker) Work(ctx context.Context, _ *river.Job[GeocodeBackfillArgs]) error {
@@ -102,7 +102,7 @@ func (w *geocodeBackfillWorker) Work(ctx context.Context, _ *river.Job[GeocodeBa
 	// fifty is twelve minutes of work, and an operator watching for
 	// coordinates should know that is normal rather than stuck.
 	slog.InfoContext(ctx, "geocoding backfill queued a batch",
-		"companies", queued, "batch", people.GeocodeBackfillBatch)
+		"companies", queued, "batch", contacts.GeocodeBackfillBatch)
 	return nil
 }
 
@@ -134,15 +134,15 @@ func geocodeBackfillOpts() *river.InsertOpts {
 // is stamped with the tenant whose row it will read — the binding the pass
 // itself does not need and the lookup cannot do without.
 func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UUID) (int, error) {
-	// Reads under an actor of its own. Nothing queued this on a person's
+	// Reads under an actor of its own. Nothing queued this on a contact's
 	// behalf — it is the installation asking which of its own companies it
 	// never located — so it names itself rather than borrowing a principal,
-	// and organization:read is gated like any other read.
+	// and company:read is gated like any other read.
 	wsCtx := geocodeBackfillActor(principal.WithWorkspaceID(ctx, ws))
-	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
+	store := contacts.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
 		return ids.From[ids.WorkspaceKind](ws), nil
 	}))
-	due, err := store.ListGeocodeOrphans(wsCtx, people.GeocodeBackfillBatch)
+	due, err := store.ListGeocodeOrphans(wsCtx, contacts.GeocodeBackfillBatch)
 	if err != nil {
 		return 0, err
 	}
@@ -153,10 +153,10 @@ func (w *geocodeBackfillWorker) sweepOneWorkspace(ctx context.Context, ws ids.UU
 	if err != nil {
 		return 0, err
 	}
-	for _, orgID := range due {
-		if _, err := client.Insert(wsCtx, GeocodeOrganizationArgs{
-			Workspace:      ws,
-			OrganizationID: orgID.UUID,
+	for _, companyID := range due {
+		if _, err := client.Insert(wsCtx, GeocodeCompanyArgs{
+			Workspace: ws,
+			CompanyID: companyID.UUID,
 		}, geocodeBackfillOpts()); err != nil {
 			return 0, err
 		}

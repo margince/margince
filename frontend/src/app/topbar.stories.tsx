@@ -132,15 +132,15 @@ function SeedCache({
   const client = useQueryClient();
   if (client.getQueryData(["company"]) === undefined) {
     client.setQueryData(["company"], {
-      organization_id: "org-1",
+      company_id: "company-1",
       display_name: "Gradion GmbH",
     });
   }
   if (
     record &&
-    client.getQueryData(["person", "ref", record.id]) === undefined
+    client.getQueryData(["contact", "ref", record.id]) === undefined
   ) {
-    client.setQueryData(["person", "ref", record.id], record.name);
+    client.setQueryData(["contact", "ref", record.id], record.name);
   }
   return <>{children}</>;
 }

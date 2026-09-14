@@ -5,7 +5,7 @@
 
 package compose
 
-// The promise a person page leads with is the FIRST row of its next-steps
+// The promise a contact page leads with is the FIRST row of its next-steps
 // section, so which row that is has to be decided by the database rather than
 // by re-sorting what the section happened to carry. The section is capped at
 // 25 rows; a rung re-sorting them in memory cannot see the 26th, and the row
@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/compose/person360"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -26,26 +26,26 @@ import (
 
 func TestTheOldestPromiseLeadsEvenPastTheSectionCap(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedLinkedPerson(t, e, "vielbeschaeftigt@kunde.example")
-	personID := ids.From[ids.PersonKind](person)
+	contact := seedLinkedContact(t, e, "vielbeschaeftigt@kunde.example")
+	contactID := ids.From[ids.ContactKind](contact)
 	now := time.Now()
 
 	// Filed FIRST and due SOONEST, then buried under thirty newer tasks. In
 	// the timeline's order (newest first) this row sits past the section's
 	// 25-row cap, so a page that carried the newest 25 could not name it.
-	oldest := logTaskFor(t, e, person, "Send the signed contract", at(now.Add(24*time.Hour)))
+	oldest := logTaskFor(t, e, contact, "Send the signed contract", at(now.Add(24*time.Hour)))
 	for i := range 30 {
-		logTaskFor(t, e, person, "Later chore "+string(rune('a'+i%26)), at(now.Add(time.Duration(200+i)*time.Hour)))
+		logTaskFor(t, e, contact, "Later chore "+string(rune('a'+i%26)), at(now.Add(time.Duration(200+i)*time.Hour)))
 	}
 
-	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		consent.NewStore(InstallationDB(e.Pool)),
 		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
 		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
 
-	page, err := svc.Assemble(e.Admin(), personID)
+	page, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
-		t.Fatalf("assembling person360: %v", err)
+		t.Fatalf("assembling contact360: %v", err)
 	}
 	if page.NextSteps == nil || len(page.NextSteps.Data) == 0 {
 		t.Fatal("the next-steps section is empty; the ordering below would prove nothing")
@@ -77,20 +77,20 @@ func at(t time.Time) *time.Time { return &t }
 // unassigned and every reader was told they owed a colleague's work.
 func TestAnAssignedPromiseKeepsItsHolderThroughTheSection(t *testing.T) {
 	e := integration.Setup(t)
-	person := seedLinkedPerson(t, e, "zugewiesen@kunde.example")
-	personID := ids.From[ids.PersonKind](person)
+	contact := seedLinkedContact(t, e, "zugewiesen@kunde.example")
+	contactID := ids.From[ids.ContactKind](contact)
 
 	holder := ids.From[ids.UserKind](e.Rep1)
-	logAssignedTaskFor(t, e, person, "Send the signed contract", holder)
+	logAssignedTaskFor(t, e, contact, "Send the signed contract", holder)
 
-	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects,
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects,
 		consent.NewStore(InstallationDB(e.Pool)),
 		comms.NewStore(InstallationDB(e.Pool), time.Now, activities.NewStore(InstallationDB(e.Pool))),
 		ai.NewFeedbackStore(InstallationDB(e.Pool)), time.Now)
 
-	page, err := svc.Assemble(e.Admin(), personID)
+	page, err := svc.Assemble(e.Admin(), contactID)
 	if err != nil {
-		t.Fatalf("assembling person360: %v", err)
+		t.Fatalf("assembling contact360: %v", err)
 	}
 	if page.NextSteps == nil || len(page.NextSteps.Data) != 1 {
 		t.Fatalf("the section carries %v tasks, want the one just written", page.NextSteps)
@@ -106,24 +106,24 @@ func TestAnAssignedPromiseKeepsItsHolderThroughTheSection(t *testing.T) {
 
 // logAssignedTaskFor writes one open task somebody holds, through the real
 // activity writer.
-func logAssignedTaskFor(t *testing.T, e *integration.Env, person ids.UUID, subject string, assignee ids.UserID) {
+func logAssignedTaskFor(t *testing.T, e *integration.Env, contact ids.UUID, subject string, assignee ids.UserID) {
 	t.Helper()
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject, Source: "manual", AssigneeID: &assignee,
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	}); err != nil {
 		t.Fatalf("logging an assigned task: %v", err)
 	}
 }
 
-// logTaskFor writes one open task filed against a person, through the real
+// logTaskFor writes one open task filed against a contact, through the real
 // activity writer — a hand-inserted row would not exercise the links the
 // section reads through.
-func logTaskFor(t *testing.T, e *integration.Env, person ids.UUID, subject string, due *time.Time) ids.UUID {
+func logTaskFor(t *testing.T, e *integration.Env, contact ids.UUID, subject string, due *time.Time) ids.UUID {
 	t.Helper()
 	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject, DueAt: due, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: person}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("logging task %q: %v", subject, err)

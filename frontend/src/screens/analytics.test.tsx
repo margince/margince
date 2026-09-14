@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -258,7 +258,7 @@ describe("the my-outcomes section", () => {
         ),
       ).toBeTruthy();
       // And it fetched nothing: numbers under this heading would have
-      // measured the default population, not the person.
+      // measured the default population, not the contact.
       expect(bodies.some((sent) => sent.key === "activities-by-kind")).toBe(
         false,
       );
@@ -498,13 +498,13 @@ describe("AnalyticsScreen", () => {
     expect(screen.queryByText("€49.37")).toBeNull();
   });
 
-  it("switching to Open deals per company groups by organization_id and renders a table", async () => {
+  it("switching to Open deals per company groups by company_id and renders a table", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         companyRows: [
           {
-            organization_id: "o1",
+            company_id: "o1",
             raw_minor: 250000,
             deal_count: 4,
             currency: "EUR",
@@ -534,7 +534,7 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
@@ -545,7 +545,7 @@ describe("AnalyticsScreen", () => {
       render(<AnalyticsScreen />);
       await openPipelineTab();
       const door = await screen.findByRole("link", { name: "4" });
-      expect(door.getAttribute("href")).toContain("organization_id=o1");
+      expect(door.getAttribute("href")).toContain("company_id=o1");
       expect(door.getAttribute("href")).toContain("status=open");
     });
 
@@ -555,13 +555,13 @@ describe("AnalyticsScreen", () => {
         reportsStub({
           companyRows: [
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 250000,
               deal_count: 4,
               currency: "EUR",
             },
             {
-              organization_id: "o1",
+              company_id: "o1",
               raw_minor: 900000,
               deal_count: 3,
               currency: "VND",
@@ -737,7 +737,7 @@ describe("reports never sum money across currencies", () => {
   // and nothing on the server enforces that — a measure named `amount_cents`
   // would sum across currencies with this test still green. Two things would
   // have to happen for that: somebody adds a money measure AND spells it
-  // outside the convention. If you are that person, the fix is #4131's — the
+  // outside the convention. If you are that contact, the fix is #4131's — the
   // server refusing the combination — not a longer suffix list here.
   it("groups every native money plan by currency", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];

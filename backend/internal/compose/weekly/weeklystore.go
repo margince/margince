@@ -103,6 +103,8 @@ type PriorWeek struct {
 // is why they are stored rather than recomputed: a retrospective that changes
 // when you reopen it is not a retrospective.
 type Counts struct {
+	// Completed work includes undated and previously overdue tasks. Nil marks older reports.
+	TasksCompleted      *int
 	TasksDue            int
 	TasksDone           int
 	TasksCarriedOver    int

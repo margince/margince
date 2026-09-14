@@ -62,16 +62,16 @@ const (
 	munichLon  = 11.5820
 )
 
-// seedLocatedOrg inserts a company that has already been geocoded: an address,
+// seedLocatedCompany inserts a company that has already been geocoded: an address,
 // a point, and the 'ok' status saying the two agree.
 //
 // The owner is a parameter and not a default, because criteria 4 and 5 are
 // about the DIFFERENCE between an account the caller owns and a colleague's.
 // A fixture where everything belongs to one seat cannot fail those criteria and
 // therefore cannot pass them.
-func (s *scenario) seedLocatedOrg(t *testing.T, name, city string, lat, lon float64, owner ids.UUID) ids.UUID {
+func (s *scenario) seedLocatedCompany(t *testing.T, name, city string, lat, lon float64, owner ids.UUID) ids.UUID {
 	t.Helper()
-	return s.seedID(t, `INSERT INTO organization
+	return s.seedID(t, `INSERT INTO company
 		(id, owner_id, display_name, address_line1, address_city,
 		 geocode_lat, geocode_lon, geocode_status, geocode_provider, geocode_input_hash,
 		 source, captured_by)
@@ -104,11 +104,11 @@ func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *tes
 	got.JSON(t, &answer)
 
 	// The two words have to be RELATED, not merely both present. A whole-body
-	// substring search passes while organization radius search is broken, because
-	// the same document advertises an address radius for people — which is
+	// substring search passes while company radius search is broken, because
+	// the same document advertises an address radius for contacts — which is
 	// exactly the predicate this case's third test proves unanswerable.
-	if !advertisesOperator(t, answer.Vocabulary, "organization", "address", "within_radius") {
-		t.Fatalf("case 4 criterion 1: the vocabulary does not say that an ORGANIZATION's `address` "+
+	if !advertisesOperator(t, answer.Vocabulary, "company", "address", "within_radius") {
+		t.Fatalf("case 4 criterion 1: the vocabulary does not say that an COMPANY's `address` "+
 			"supports `within_radius`, so an assistant asked who is NEARBY has no way to learn a "+
 			"distance search over companies exists:\n%s", string(answer.Vocabulary))
 	}
@@ -119,7 +119,7 @@ func TestCase4TheAssistantCanDiscoverThatAddressesAreSearchableByDistance(t *tes
 //
 // Decoded into the document's real shape rather than searched as text. The two
 // words being present somewhere is not the claim: `address` supports
-// `within_radius` on PERSON too, and that predicate is the one the third test
+// `within_radius` on CONTACT too, and that predicate is the one the third test
 // proves unanswerable — so a substring search passes while company radius
 // search is broken.
 func advertisesOperator(t *testing.T, document json.RawMessage, target, field, operator string) bool {
@@ -165,13 +165,13 @@ func TestCase4NearbyCompaniesComeBackNearestFirstAndSayHowComplete(t *testing.T)
 	// Three inside the radius at DIFFERENT distances, plus Munich which must be
 	// absent. The spread matters: companies all at one point would make a
 	// constant-zero distance look correctly ordered.
-	near := s.seedLocatedOrg(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
-	mid := s.seedLocatedOrg(t, "Rheinufer AG", "Köln", cologneLat+0.11, cologneLon, s.Colleague)
-	far := s.seedLocatedOrg(t, "Vorort Systeme KG", "Köln", cologneLat+0.25, cologneLon, s.Colleague)
-	munich := s.seedLocatedOrg(t, "München Ferne GmbH", "München", munichLat, munichLon, s.Rep)
+	near := s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
+	mid := s.seedLocatedCompany(t, "Rheinufer AG", "Köln", cologneLat+0.11, cologneLon, s.Colleague)
+	far := s.seedLocatedCompany(t, "Vorort Systeme KG", "Köln", cologneLat+0.25, cologneLon, s.Colleague)
+	munich := s.seedLocatedCompany(t, "München Ferne GmbH", "München", munichLat, munichLon, s.Rep)
 
 	result := s.queryPlan(t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Köln", "radius_km": 50}}]}`)
 
@@ -256,15 +256,15 @@ func distanceOf(t *testing.T, rows map[ids.UUID]agents.QueryWorkspaceRow, id ids
 }
 
 // TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway pins criterion
-// 7. A person HAS an address, so both the field and the operator exist and the
-// plan looks answerable — but this product does not geocode where people live,
+// 7. A contact HAS an address, so both the field and the operator exist and the
+// plan looks answerable — but this product does not geocode where contacts live,
 // so there is nothing to measure from.
 func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T) {
 	s := boot(t, scopesRead)
-	s.seedLocatedOrg(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
+	s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
 
 	result := s.queryPlan(t, `{
-		"version": "v1", "target": "person",
+		"version": "v1", "target": "contact",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Köln", "radius_km": 50}}]}`)
 
@@ -283,17 +283,17 @@ func TestCase4ARadiusItCannotMeasureSaysSoInsteadOfAnsweringAnyway(t *testing.T)
 //
 // Run 1 of the real scenario returned seven correct companies and never said
 // Sofia Meier owned one of them, because the row carried owner_id as a bare
-// uuid — data present, correct, and useless to the person reading it. Two
+// uuid — data present, correct, and useless to the reader reading it. Two
 // thirds of the accounts in the demo CRM belong to somebody other than the
 // caller, so this is the common case rather than an edge.
 func TestCase4EveryCompanySaysWhoOwnsItByName(t *testing.T) {
 	s := boot(t, scopesRead)
 
-	mine := s.seedLocatedOrg(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
-	theirs := s.seedLocatedOrg(t, "Rheinufer AG", "Köln", cologneLat+0.11, cologneLon, s.Colleague)
+	mine := s.seedLocatedCompany(t, "Dom Digital GmbH", "Köln", cologneLat, cologneLon, s.Rep)
+	theirs := s.seedLocatedCompany(t, "Rheinufer AG", "Köln", cologneLat+0.11, cologneLon, s.Colleague)
 
 	result := s.queryPlan(t, `{
-		"version": "v1", "target": "organization",
+		"version": "v1", "target": "company",
 		"where": [{"field": "address", "op": "within_radius",
 		           "value": {"center": "Köln", "radius_km": 50}}]}`)
 

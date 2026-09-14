@@ -175,7 +175,7 @@ func stampTranscriptDue(ctx context.Context, tx pgx.Tx, in *activities.LogActivi
 // UNASSIGNED rather than guessing, because a promise given to the wrong
 // colleague is worse than one given to nobody — the wrong colleague does not do
 // it, and the right one never learns it was theirs. The body still names who
-// promised, so an unassigned task can be routed by the person reading it.
+// promised, so an unassigned task can be routed by the reader reading it.
 //
 // It never falls back to the approver. Approving a proposal is answering a
 // question about somebody else's commitment, not volunteering for it.

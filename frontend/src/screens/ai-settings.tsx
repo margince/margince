@@ -10,7 +10,7 @@ import { useLastCallAt } from "./aicalls";
 import { bandTone, currentMonth, useAiUsage } from "./aiusage";
 import "./ai-settings.css";
 
-// The organization's AI as ONE page with five bodies, read in the order the
+// The company's AI as ONE page with five bodies, read in the order the
 // questions arrive: WHERE the text goes, WHETHER we can call there, WHAT runs
 // unattended, what it spent, and — last, because it is a debugging instrument
 // rather than a setting — the per-call trace.

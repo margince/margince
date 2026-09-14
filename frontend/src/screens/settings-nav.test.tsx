@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RbacObject } from "../app/capability";
@@ -116,8 +116,8 @@ const EVERY_PAGE_GRANTED: GrantSpec = {
   // on through the rate table beside it, so a fixture meaning "every page" needs
   // both.
   ai_model_rate: ["read", "create", "update"],
-  person: ["read"],
-  // What opens Privacy & retention now that `person:read` does not.
+  contact: ["read"],
+  // What opens Privacy & retention now that `contact:read` does not.
   retention_policy: ["read", "create", "update"],
   audit_log: ["read"],
   job_health: ["read"],
@@ -144,10 +144,9 @@ const EVERY_PAGE = [
 // The five reads the old Data model entry unioned, now spread across five pages
 // of their own. Each still has to open its page ALONE: a page wired to one
 // object with four decorative terms passes any fixture that grants all five.
-// `custom_field` names TWO pages: the field editor and the lead vocabulary are
-// both stored as custom fields and the server gates both on that object, so one
-// revoked grant closes both — which a case naming only the editor would not
-// say. `pipeline` names the stage designer alone.
+// `custom_field` opens the field editor, lead and acquisition vocabularies,
+// outcome-review templates and responsibility roles. Revoking that read closes
+// all five; the template page needs no write because its content is read-only.
 //
 // A record rather than a tuple, so the object and the pages keep their own
 // types: a tuple with a variadic tail widens both halves to their union, and
@@ -156,7 +155,10 @@ const SALES_READS: readonly {
   readonly object: RbacObject;
   readonly opens: readonly SettingsPageId[];
 }[] = [
-  { object: "custom_field", opens: ["leads", "fields"] },
+  {
+    object: "custom_field",
+    opens: ["leads", "acquisition", "reviewtemplates", "recordroles", "fields"],
+  },
   { object: "pipeline", opens: ["pipelines", "stageautomation"] },
   { object: "product", opens: ["products"] },
   { object: "offer_template", opens: ["products"] },
@@ -172,23 +174,23 @@ const SALES_READS: readonly {
 // whether capture is working, what an automation ran.
 //
 // Privacy is a fourth page that moved but NOT to a write. It dropped its
-// `person:read` arm and kept two reads nobody below admin and ops holds at all,
-// plus a `person` AND `consent_config` pair for the management role, which is
+// `contact:read` arm and kept two reads nobody below admin and ops holds at all,
+// plus a `contact` AND `consent_config` pair for the management role, which is
 // seeded the consent vocabulary and nothing else on that page.
 const SEEDED_READS: GrantSpec = {
   automation: ["read"],
-  person: ["read"],
+  contact: ["read"],
   capture_settings: ["read"],
   custom_field: ["read"],
   installation_settings: ["read"],
   knowledge_corpus: ["read"],
   offer_template: ["read"],
   // The write, because the seeded roles really hold it: rep carries
-  // `organization` create+update and manager carries all four. It is what keeps
+  // `company` create+update and manager carries all four. It is what keeps
   // Company profile open for them — the company profile the AI reads is a thing
   // a rep legitimately edits, which is why that page did not follow the other
   // three out of her rail.
-  organization: ["read", "create", "update"],
+  company: ["read", "create", "update"],
   overlay_connection: ["read"],
   pipeline: ["read"],
   product: ["read"],
@@ -233,7 +235,7 @@ const SEEDED_READ_PAGES = pagesNamed(
   "agents",
   "connections",
   "capture-activity",
-  // `company` is NOT here: its requirement ANDs the organization write with the
+  // `company` is NOT here: its requirement ANDs the company write with the
   // `company_context` deployment flag, and this fixture leaves that flag off.
   // The page's own availability cases are the ones that turn it on.
   //
@@ -244,6 +246,9 @@ const SEEDED_READ_PAGES = pagesNamed(
   // a seat that may see the stages may see what their transitions have earned.
   "stageautomation",
   "leads",
+  "acquisition",
+  "reviewtemplates",
+  "recordroles",
   "fields",
   "products",
   "capture",
@@ -266,6 +271,9 @@ const SEEDED_OPS_PAGES = pagesNamed(
   // a seat that may see the stages may see what their transitions have earned.
   "stageautomation",
   "leads",
+  "acquisition",
+  "reviewtemplates",
+  "recordroles",
   "fields",
   "products",
   "capture",
@@ -401,7 +409,7 @@ describe("SettingsScreen page visibility", () => {
       const allow = readOn(object);
       vi.stubGlobal("fetch", settingsNavBackend({ roles: ["ops"], allow }));
       renderHome();
-      // `readOn` carries `person:read` with it as a floor, so a case about ONE
+      // `readOn` carries `contact:read` with it as a floor, so a case about ONE
       // object stays about one object. It no longer opens Privacy: that page
       // asks the two governance objects nobody below admin and ops holds.
       await waitFor(() => expect(offeredPages()).toEqual(floorPlus(...opens)));

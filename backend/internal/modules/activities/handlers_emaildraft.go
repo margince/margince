@@ -110,16 +110,29 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 }
 
 func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error) {
+	activity, err := h.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+	if err != nil {
+		return DraftResult{}, err
+	}
+	result, err := h.draftForActivity(ctx, anchor, activity, intent)
+	if err != nil {
+		return DraftResult{}, err
+	}
+	topic := ""
+	if activity.Subject != nil {
+		topic = *activity.Subject
+	}
+	result.Subject = ReplySubject(activity.Kind, topic, result.Subject)
+	return result, nil
+}
+
+func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activity crmcontracts.Activity, intent string) (DraftResult, error) {
 	if provenance, ok := h.emailDrafter.(ProvenanceEmailDrafter); ok {
 		return provenance.DraftEmailWithProvenance(ctx, anchor, intent)
 	}
 	if h.emailDrafter != nil {
 		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, intent)
 		return DraftResult{Subject: subject, Body: body}, err
-	}
-	activity, err := h.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
-	if err != nil {
-		return DraftResult{}, err
 	}
 	answering := DraftContext{
 		Band:      convstate.BandFresh,

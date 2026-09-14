@@ -3,17 +3,19 @@
   "criteria": [
     1,
     2,
+    3,
     5
   ],
-  "passed": 1,
+  "passed": 0,
   "runs": 3,
   "pass_at": 2,
   "usage": {
-    "input_tokens": 102,
-    "output_tokens": 5417,
-    "cache_creation_input_tokens": 22316,
-    "cache_read_input_tokens": 521793,
+    "input_tokens": 94,
+    "output_tokens": 5135,
+    "cache_creation_input_tokens": 32003,
+    "cache_read_input_tokens": 503667,
     "runs_measured": 3,
-    "cost_usd": 0.124
+    "runs_costed": 3,
+    "cost_usd": 0.1431
   }
 }

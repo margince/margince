@@ -50,7 +50,7 @@ func preflightJurisdictions(e extension.Extension, packCodes map[jurisdiction.Co
 // grammar and for a second rule set naming the same jurisdiction.
 //
 // A duplicate is refused rather than merged or last-one-wins, because two rule
-// sets for one country are two answers to "may we write to this person" — and
+// sets for one country are two answers to "may we write to this contact" — and
 // the failure would be silent: whichever set the engine happened to read would
 // look like the country's law.
 func preflightMessagingRules(e extension.Extension, messagingCodes map[jurisdiction.Code]extension.Name) error {
