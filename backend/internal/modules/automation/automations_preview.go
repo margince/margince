@@ -192,17 +192,22 @@ func dealPreviewDefs() map[string]previewDef {
 		},
 		stageChangeNotifyName: {
 			table:     "deal",
-			baseWhere: previewBaseWhereNotArchived,
+			baseWhere: previewBaseWhereNotArchived + " AND t.owner_id IS NOT NULL",
 			fields: map[string]storekit.Field{
-				// No "if" narrows this starter (it notifies on every move,
-				// won/lost included) — same always-true leaf as route_lead's.
+				// Both open and closed deals can receive a move by another actor.
 				"id": {Expr: "t.id", Type: storekit.FieldID},
 			},
 			match: storekit.Predicate{Field: "id", Op: storekit.OpExists, Value: true},
 			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
 				var n int
-				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM deal_stage_history WHERE changed_at >= $1`, since).Scan(&n)
+				// Preview applies the current recipient rule to recorded moves;
+				// creation establishes a stage but does not emit deal.stage_changed.
+				err := tx.QueryRow(ctx, `
+					SELECT count(*) FROM deal_stage_history h JOIN deal d ON d.id = h.deal_id
+					 WHERE h.changed_at >= @since AND h.from_stage_id IS NOT NULL
+					   AND d.owner_id IS NOT NULL
+					   AND lower(h.changed_by) NOT IN (d.owner_id::text, @human_prefix || d.owner_id::text)`,
+					pgx.NamedArgs{"since": since, "human_prefix": principal.HumanIDPrefix}).Scan(&n)
 				return n, err
 			},
 		},

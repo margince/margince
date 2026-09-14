@@ -16,10 +16,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/leadsource"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -234,10 +236,8 @@ var errDealHasNoOwner = declineFiring("the moved deal has no assigned owner to n
 // (automations_catalog.go's CatalogEntry doc).
 const stageChangeNotifyName = "stage_change_notify"
 
-// stageChangeNotify tells the deal's owner about every stage move,
-// including the closes (won/lost) that end stageChangeCreateTask's own
-// follow-up cadence — a rep especially wants to hear that their own deal
-// closed, not just that it is still open.
+// stageChangeNotify tells the owner about moves made by others.
+// Their own moves remain in deal history, without becoming inbox work.
 type stageChangeNotify struct {
 	ex Executors
 }
@@ -250,10 +250,8 @@ func (stageChangeNotify) Spec() workflow.Spec {
 	}
 }
 
-// Match fires unconditionally on every stage move: unlike
-// stageChangeCreateTask (which narrows to open moves — a closed deal
-// needs no next-step task), a notification's whole point is that the
-// owner hears about the move regardless of which way it went.
+// Both open and closed destinations can matter. Plan resolves the owner
+// before deciding whether the original actor has anything new to tell them.
 func (stageChangeNotify) Match(_ context.Context, _ workflow.Event) (bool, error) {
 	return true, nil
 }
@@ -269,6 +267,12 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	}
 	if deal.OwnerID == nil {
 		return workflow.Effect{}, errDealHasNoOwner
+	}
+	// Retries can carry older bare UUID actor IDs as well as canonical human IDs.
+	ownerID := deal.OwnerID.String()
+	if ev.Actor.Type == string(principal.PrincipalHuman) &&
+		(strings.EqualFold(ev.Actor.ID, ownerID) || strings.EqualFold(ev.Actor.ID, principal.HumanIDPrefix+ownerID)) {
+		return workflow.Effect{}, declineFiring("the owner made this stage change")
 	}
 	dealName := deal.Name
 	if dealName == "" {

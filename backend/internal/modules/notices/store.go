@@ -240,10 +240,19 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 	}
 	var unread []Notice
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Delivery declines owner-made stage changes in automation.stageChangeNotify.
+		// This SQL mirror also excludes old deliveries before LIMIT, without deleting
+		// their history or pretending the recipient acknowledged them.
 		rows, txErr := tx.Query(ctx, `
 			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
 			  FROM notice
 			 WHERE recipient_user_id = $1 AND read_at IS NULL
+			   AND NOT coalesce(
+			     kind = 'automation' AND target_type = 'deal'
+			     AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
+			     AND origin->>'actor_type' = 'human'
+			     AND lower(origin->>'actor_id') IN
+			       (recipient_user_id::text, 'human:' || recipient_user_id::text), false)
 			 ORDER BY created_at DESC, id DESC
 			 LIMIT $2`, actor.UserID, limit)
 		if txErr != nil {

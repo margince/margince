@@ -241,7 +241,7 @@ func seededCatalogEntries() []CatalogEntry {
 		{
 			Key:          stageChangeNotifyName,
 			Name:         "Stage-change notify",
-			Description:  "Notifies the deal's owner on every stage move, including the closes that end the follow-up cadence.",
+			Description:  "Notifies the deal's owner when someone else or an automation moves the deal, including closes. The owner's own moves stay in deal history.",
 			Trigger:      eventDealStageChanged,
 			Action:       string(ActionTypeNotify),
 			Tier:         tierAutoExecute,

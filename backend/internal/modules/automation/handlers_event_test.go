@@ -138,7 +138,7 @@ func TestStageChangeNotifyPlanEmitsOneNotifyToTheDealOwner(t *testing.T) {
 		Fields: fields,
 	}}
 	w := stageChangeNotify{ex: Executors{Provider: provider}}
-	ev := workflow.Event{ID: ids.NewV7(), Actor: events.Actor{Type: "human", ID: "human:" + owner.String()}, OccurredAt: time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC), Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
+	ev := workflow.Event{ID: ids.NewV7(), Actor: events.Actor{Type: "human", ID: "human:" + ids.NewV7().String()}, OccurredAt: time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC), Entity: datasource.EntityRef{Type: datasource.EntityDeal, ID: dealID}, Payload: json.RawMessage(`{"from_stage_name":"Discovery","to_stage_name":"Proposal"}`)}
 
 	eff, err := w.Plan(context.Background(), ev)
 	if err != nil {
