@@ -203,6 +203,59 @@ const company360 = {
   },
 };
 
+// Who the invoices are addressed to. Carried on the 360 the Contacts tab
+// already reads, so the billing panel stands beside the roster without a fetch
+// of its own.
+const billingContacts = [
+  {
+    relationship_id: "r-1",
+    contact_id: "p-1",
+    full_name: "Dana Buyer",
+    role: "recipient",
+    title: "Head of Fleet",
+    email: "dana@brandt.example",
+  },
+];
+
+// The Contacts tab's own list endpoint (CompanyContactsList) and its coverage
+// band, distinct from the 360's capped roster: the tab answers "who do I write
+// to next" over the whole account.
+const companyContacts = [
+  {
+    contact_id: "p-1",
+    full_name: "Dana Buyer",
+    title: "Head of Fleet",
+    engagement: "answered",
+    strength: {
+      score: 71,
+      bucket: "strong",
+      factors: {
+        recency: 0.9,
+        frequency: 0.6,
+        reciprocity: 0.8,
+        direction: 0.8,
+      },
+      last_interaction: "2026-07-10T09:00:00Z",
+    },
+    last_inbound_at: "2026-07-10T09:00:00Z",
+    last_outbound_at: "2026-07-08T09:00:00Z",
+  },
+];
+
+const coverage = {
+  as_of: "2026-07-13T09:00:00Z",
+  summary: {
+    contacts_total: 1,
+    waiting: 0,
+    answered: 1,
+    no_reply: 0,
+    untried: 0,
+    lapsed: 0,
+  },
+  deals: [],
+  completeness: { committee_read: true },
+};
+
 const rollup = {
   root_id: "o-1",
   scope: "tree",
@@ -340,6 +393,39 @@ export const CompanyDeals: Story = {
             },
           },
         }),
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+// The Contacts tab: the roster a rep works from, and beneath it the billing
+// panel. Who the invoices are addressed to is a fact about the account's
+// people, so it is nameable here as well as under Finance — the same panel, fed
+// from the 360 the tab already holds. The reader here holds the relationship
+// grant, so the panel draws its Name/Change/Remove verbs.
+//
+// The tab comes off the ADDRESS (useCompanyTab), so the story sets it the way a
+// reader arriving on a link would rather than by pressing the strip.
+export const CompanyContacts: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1/contacts";
+    installFetchStub({
+      "GET /me": meRoute({
+        company: ["read", "update"],
+        relationship: ["create"],
+      }),
+      ...overviewRoutes,
+      "GET /companies/o-1/360": () =>
+        jsonResponse({ ...company360, billing_contacts: billingContacts }),
+      "GET /companies/o-1/contacts": () =>
+        jsonResponse({ data: companyContacts, page: emptyPage }),
+      "GET /companies/o-1/coverage": () => jsonResponse(coverage),
       "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
       "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
     });
