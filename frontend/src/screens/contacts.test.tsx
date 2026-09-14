@@ -1356,8 +1356,7 @@ describe("ContactScreen — the buying role in the identity rail", () => {
     );
     render(<ContactScreen id="p-1" />);
 
-    // co.role.economic_buyer — the key the account page reads for the same role.
-    expect(await screen.findByText("economic buyer")).toBeTruthy();
+    expect(await screen.findByText("Economic buyer")).toBeTruthy();
     expect(screen.queryByText("economic_buyer")).toBeNull();
   });
 });

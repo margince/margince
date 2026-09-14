@@ -461,6 +461,7 @@ export const en = {
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalled": "stalled",
+  "deal.stalledBadge": "Stalled",
   "deal.singleThreaded": "Single-threaded",
   "deal.staged": "Staged",
   "deal.archived": "Archived",
@@ -1240,7 +1241,10 @@ export const en = {
   "co.routeIn.band.strong": "in regular contact",
   "co.routeIn.band.some": "some contact",
   "co.routeIn.band.faint": "barely in contact",
-  "co.routeIn.band.unknown": "contact on file, no pattern yet",
+  "co.routeIn.bandBadge.strong": "In regular contact",
+  "co.routeIn.bandBadge.some": "Some contact",
+  "co.routeIn.bandBadge.faint": "Barely in contact",
+  "co.routeIn.bandBadge.unknown": "Contact on file, no pattern yet",
   "record.profile": "Profile",
   "record.context": "Context",
   "record.restsOn": "What this rests on",
@@ -1314,6 +1318,7 @@ export const en = {
   "access.state.invited": "invited",
   "access.state.active": "signed in",
   "access.state.revoked": "revoked",
+  "access.state.revokedBadge": "Revoked",
   "access.lastSeen": "last seen {when}",
   "access.downloads": "Downloaded {count} document(s)",
   "access.linkRequested":
@@ -2101,6 +2106,11 @@ export const en = {
   "co.role.blocker": "blocker",
   "co.role.influencer": "influencer",
   "co.role.user": "end user",
+  "co.roleLabel.champion": "Champion",
+  "co.roleLabel.economic_buyer": "Economic buyer",
+  "co.roleLabel.blocker": "Blocker",
+  "co.roleLabel.influencer": "Influencer",
+  "co.roleLabel.user": "End user",
   "co.evidence.extractedUnconfirmed": "AI extracted · not yet confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -4515,8 +4525,8 @@ export const en = {
   "agents.disconnect": "Disconnect",
   "agents.disconnectOpen": "Disconnect",
   "agents.disconnectNamed": "Disconnect {client}",
-  "agents.disconnected": "disconnected",
-  "agents.lapsed": "credential expired",
+  "agents.disconnected": "Disconnected",
+  "agents.lapsed": "Credential expired",
   "agents.renewing": "Renewing",
   "agents.renewsBy": "credential renews by {date}",
   "agents.expiredOn": "credential expired {date}",
@@ -4690,9 +4700,9 @@ export const en = {
   "jobs.failuresSub":
     "Most recent first, capped at 50. A bounded list, not a log.",
   "jobs.failuresEmpty": "No failures recorded.",
-  "jobs.state.retryable": "retrying",
-  "jobs.state.discarded": "discarded",
-  "jobs.state.cancelled": "cancelled",
+  "jobs.state.retryable": "Retrying",
+  "jobs.state.discarded": "Discarded",
+  "jobs.state.cancelled": "Cancelled",
   "jobs.attempt": "attempt {attempt} of {max} · {when}",
   "jobs.remedy": "What to do: {remedy}",
   "jobs.jobId": "job {id}",
@@ -5932,11 +5942,13 @@ export const en = {
   "ob.conv.triage.stateEmpty": "empty",
   "ob.conv.triage.stateTyped": "typed by you",
   "ob.conv.triage.stateStored": "from your profile",
+  "ob.conv.triage.stateStoredBadge": "From your profile",
   // A value the entity census read off the legal notice — the one company the
   // site names, or the candidate the human picked from several. Nothing ever
   // scored it, so the word names WHERE it came from; "chosen by you" would be
   // false on the sole-candidate path, where nobody was asked anything.
   "ob.conv.triage.stateQuoted": "read from your legal notice",
+  "ob.conv.triage.stateQuotedBadge": "Read from your legal notice",
   // Where a value would stand on an empty row. It says only that the row is
   // empty: the same line serves the manual path, where nothing ever read the
   // site, and a read-backed board, where the wire says nothing about why any
@@ -7838,10 +7850,10 @@ export const en = {
     "Your own bill, made visible — per task and tier, token-denominated.",
   "aiusage.budget": "{spent} of {budget} tokens · {pct}%",
   "aiusage.budgetMeter": "Monthly token budget used",
-  "aiusage.band.normal": "normal",
-  "aiusage.band.degraded": "economy mode",
-  "aiusage.band.queued": "budget reached — background AI queued",
-  "aiusage.band.unknown": "unknown budget state",
+  "aiusage.band.normal": "Normal",
+  "aiusage.band.degraded": "Economy mode",
+  "aiusage.band.queued": "Budget reached — background AI queued",
+  "aiusage.band.unknown": "Unknown budget state",
   "aiusage.col.task": "Task",
   "aiusage.col.tier": "Tier",
   "aiusage.col.calls": "Calls",
@@ -8385,9 +8397,9 @@ export const en = {
   "embedreindex.estimateQualityHeuristic":
     "Heuristic estimate — a cold work-shape floor, not observed spend.",
   "embedreindex.utilizationTitle": "Budget impact",
-  "embedreindex.impact.normal": "normal",
-  "embedreindex.impact.degraded": "would enter economy mode",
-  "embedreindex.impact.queued": "would be queued",
+  "embedreindex.impact.normal": "Normal",
+  "embedreindex.impact.degraded": "Would enter economy mode",
+  "embedreindex.impact.queued": "Would be queued",
 
   "consent.title": "Authorize access",
   "consent.asks":
@@ -8652,6 +8664,10 @@ export const en = {
   "contact.band.weak": "weak",
   "contact.band.moderate": "moderate",
   "contact.band.strong": "strong",
+  "contact.bandBadge.none": "No contact",
+  "contact.bandBadge.weak": "Weak",
+  "contact.bandBadge.moderate": "Moderate",
+  "contact.bandBadge.strong": "Strong",
   "contact.pulse.title": "Relationship",
   "contact.pulse.warmestIs": "{name} has the warmest relationship here.",
   "contact.pulse.nobodyYet":
@@ -8822,6 +8838,7 @@ export const en = {
   "contact.loops.dueInDays": "in {count} days",
   "contact.loops.waiting": "Waiting",
   "contact.loops.open": "open",
+  "contact.loops.openBadge": "Open",
   "contact.loops.atLeast": "at least {count}",
 
   "contact.memory.title": "Conversation memory",

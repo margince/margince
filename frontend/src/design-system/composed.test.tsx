@@ -42,7 +42,7 @@ describe("DealCard + PipelineBoard", () => {
   it("renders value/age and the stalled aging flag (AC-pipeline-5)", () => {
     render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
     expect(screen.getByText("€48,000.00")).toBeTruthy();
-    expect(screen.getByText("stalled")).toBeTruthy();
+    expect(screen.getByText("Stalled")).toBeTruthy();
     expect(screen.getByRole("link").className).not.toContain("stalled");
   });
 

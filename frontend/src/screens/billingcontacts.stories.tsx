@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
-import { StoryProviders } from "./story-utils";
+import { installFetchStub, meRoute, StoryProviders } from "./story-utils";
 
 // The three states this panel has to keep apart. WITHHELD renders nothing,
 // EMPTY says nobody is named, and a populated list reads in invoice order.
@@ -18,6 +18,14 @@ export default meta;
 
 type Story = StoryObj;
 
+// A colleague who may name, move and remove billing contacts, so each state
+// draws the verbs a reader acts on rather than the read-only list.
+function routeSession() {
+  installFetchStub({
+    "GET /me": meRoute({ relationship: ["create", "update", "delete"] }),
+  });
+}
+
 const pat: BillingContact = {
   relationship_id: "r-1",
   contact_id: "c-1",
@@ -28,40 +36,46 @@ const pat: BillingContact = {
 };
 
 export const Populated: Story = {
-  render: () => (
-    <StoryProviders>
-      <BillingContactsPanel
-        companyId="o-1"
-        contacts={[
-          pat,
-          {
-            ...pat,
-            relationship_id: "r-2",
-            contact_id: "c-2",
-            full_name: "Sam Rivera",
-            role: "approver",
-            email: "sam@acme.test",
-          },
-          {
-            ...pat,
-            relationship_id: "r-3",
-            contact_id: "c-3",
-            full_name: "Accounts Payable",
-            role: "accounts_payable",
-            email: null,
-          },
-        ]}
-      />
-    </StoryProviders>
-  ),
+  render: () => {
+    routeSession();
+    return (
+      <StoryProviders>
+        <BillingContactsPanel
+          companyId="o-1"
+          contacts={[
+            pat,
+            {
+              ...pat,
+              relationship_id: "r-2",
+              contact_id: "c-2",
+              full_name: "Sam Rivera",
+              role: "approver",
+              email: "sam@acme.test",
+            },
+            {
+              ...pat,
+              relationship_id: "r-3",
+              contact_id: "c-3",
+              full_name: "Accounts Payable",
+              role: "accounts_payable",
+              email: null,
+            },
+          ]}
+        />
+      </StoryProviders>
+    );
+  },
 };
 
 // A paying customer with nobody named. A gap worth showing rather than a
 // blank panel, because somebody has to decide where the invoice goes.
 export const NobodyNamed: Story = {
-  render: () => (
-    <StoryProviders>
-      <BillingContactsPanel companyId="o-1" contacts={[]} />
-    </StoryProviders>
-  ),
+  render: () => {
+    routeSession();
+    return (
+      <StoryProviders>
+        <BillingContactsPanel companyId="o-1" contacts={[]} />
+      </StoryProviders>
+    );
+  },
 };

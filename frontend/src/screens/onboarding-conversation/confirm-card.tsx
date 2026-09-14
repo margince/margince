@@ -151,14 +151,17 @@ function OutstandingMark({
 }
 
 // isWork's complement, the settled half: `typed` already has a word
-// (ProvenanceTag's fixed human/agent/connector vocabulary covers it —
-// "typed by you"), but neither `stored` nor `chosen` has an entry in that
-// vocabulary at all. A row a human typed, a row still carrying an untouched
-// profile value, and a row quoted off the site's own legal notice are three
-// different truths; saying "typed by you" over the
-// last two would be wrong, not just imprecise, so each gets its own quiet
-// label instead, reusing the exact words the expanded row already says. The
-// default tone, not `ai`: none of the three is a machine's claim.
+// (ProvenanceTag's fixed human/agent/connector vocabulary covers it — "typed
+// by you"), but neither `stored` nor `chosen` has an entry in that vocabulary
+// at all. A row a human typed, a row still carrying an untouched profile
+// value, and a row quoted off the site's own legal notice are three different
+// truths; saying "typed by you" over the last two would be wrong, not just
+// imprecise, so each gets its own quiet label: the expanded row's words, in
+// sentence case. The default tone, not `ai`: none is a machine's claim.
+const PROVENANCE_WORD: Readonly<Record<"stored" | "quoted", MessageKey>> = {
+  stored: "ob.conv.triage.stateStoredBadge",
+  quoted: "ob.conv.triage.stateQuotedBadge",
+};
 function ProvenanceMark({
   state,
   t,
@@ -169,7 +172,7 @@ function ProvenanceMark({
   if (state === "typed") {
     return <ProvenanceTag provenance={{ kind: "human", self: true }} />;
   }
-  return <Badge>{t(STATE_WORD[state])}</Badge>;
+  return <Badge>{t(PROVENANCE_WORD[state])}</Badge>;
 }
 
 // A collapsed value reads one short line's worth in the row; the cut lands

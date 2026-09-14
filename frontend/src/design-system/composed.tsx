@@ -407,7 +407,7 @@ export function DealCard({
           {deal.singleThreaded && (
             <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
           )}
-          {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
+          {deal.stalled && <Badge tone="warn">{t("deal.stalledBadge")}</Badge>}
           {/* How long it has sat is the size of the stall, and only then: on a
               healthy card the number is a fact nobody acts on. */}
           {deal.stalled && (

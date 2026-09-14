@@ -56,8 +56,7 @@ async function openLeadActions(user: Pick<UserEvent, "click"> = userEvent) {
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 
-// The six shipped lead sources, as GET /lead-sources serves them on a fresh
-// installation.
+// The six shipped lead sources GET /lead-sources serves on a fresh install.
 const SHIPPED_LEAD_SOURCES = {
   data: [
     ["manual", "Created manually", "neutral"],

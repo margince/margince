@@ -351,7 +351,7 @@ describe("ConnectedAgentsCard", () => {
           document.querySelector('[data-testid="connection-pp-lapsed"]'),
         ).toBeTruthy(),
       );
-      expect(screen.getByText("credential expired")).toBeTruthy();
+      expect(screen.getByText("Credential expired")).toBeTruthy();
       expect(screen.getByText(/credential expired 30\/07\/2026/)).toBeTruthy();
       // No Disconnect: it would aim at a credential that is already gone. The
       // grant beneath it is still live, so the way to end that for good stays.

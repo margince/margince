@@ -654,7 +654,7 @@ function LoopStatus({ loop }: Readonly<{ loop: OpenLoop }>) {
   if (loop.theirs) {
     return <Badge tone="accent">{t("contact.loops.waiting")}</Badge>;
   }
-  return <Badge>{t("contact.loops.open")}</Badge>;
+  return <Badge>{t("contact.loops.openBadge")}</Badge>;
 }
 
 // When a promise that is not yet late falls due. The arguments are swapped on

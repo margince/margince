@@ -1484,7 +1484,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       display_name: "required, still empty",
       industry: "empty",
       legal_name: "typed by you",
-      registered_address: "from your profile",
+      registered_address: "From your profile",
       offer_summary: "high",
       icp: "medium",
       value_proposition: "low",

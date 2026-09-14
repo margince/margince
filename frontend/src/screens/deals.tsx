@@ -1610,7 +1610,9 @@ function dealColumns(
               ),
               locale,
             )}
-            {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
+            {deal.stalled && (
+              <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
+            )}
           </span>
         ) : (
           <span className="t-caption">{t("deals.lastSignalNone")}</span>

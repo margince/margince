@@ -313,7 +313,7 @@ describe("JobHealthCard", () => {
     expect(screen.getByText("3 dead").closest(".badge")).toHaveClass(
       "badge-danger",
     );
-    expect(screen.getByText("discarded").closest(".badge")).toHaveClass(
+    expect(screen.getByText("Discarded").closest(".badge")).toHaveClass(
       "badge-danger",
     );
   });
