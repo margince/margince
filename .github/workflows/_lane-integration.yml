@@ -98,13 +98,60 @@ jobs:
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           # The tests are DB-bound, not CPU-bound: on the 4-core runner the
           # nproc-derived default leaves the slice mostly waiting on Postgres.
-          INTEGRATION_JOBS: 16
-        run: make test-integration
+          # So this stays above `min(nproc, 8)` = 4 — the CPU reading behind it
+          # is right, and a slice that sits waiting on Postgres wants more than
+          # one package per core.
+          #
+          # It is EIGHT rather than the sixteen it was, because the CPU reading
+          # priced no memory and memory is what ran out. Sixteen concurrent
+          # packages are sixteen `go test` heaps plus sixteen Postgres backends
+          # with their own work_mem, on a 4-core/16GB runner that also carries
+          # the compose stack. The probe on the step below caught two shards
+          # going from 14.7GB available and zero reclaim stall to 4kB of swap
+          # free and 63% of wall time stalled, and then being signalled — while
+          # a third shard in the same run never left 14.7GB and passed (#5483).
+          #
+          # Keep the probe's PSI at 0.00 the test of this number. A slice that
+          # starts stalling on reclaim again is this value asking to come down
+          # further, and the log says so on every run without anyone bisecting.
+          INTEGRATION_JOBS: 8
+        # The probe runs BESIDE the shard rather than around it because the
+        # failure it exists to explain takes the runner with it: these shards are
+        # killed mid-run with `exit 143`, and the job then skips every remaining
+        # step, artifact upload included. There is no "after" to collect in, so
+        # the record has to already be in the log (#5483).
+        #
+        # It is killed on the way out rather than left to the runner, so a shard
+        # that ENDS does not keep a writer on a descriptor the step has finished
+        # with. The trap cannot change the exit status make reports: it runs
+        # after it, and `kill` failing on an already-dead probe is not a failure
+        # of the lane.
+        run: |
+          probe="$GITHUB_WORKSPACE/scripts/probe-runner-pressure.sh"
+          # Checked BEFORE it is backgrounded, and absolute because this lane
+          # runs from `backend/`. A `&` puts the startup failure in a subshell
+          # where `set -e` cannot see it, so a probe that cannot run would leave
+          # the shard green with no trace — which is the silent half of the
+          # problem it exists to solve, not a harmless no-op.
+          test -x "$probe"
+          "$probe" &
+          probe_pid=$!
+          trap 'kill "$probe_pid" 2>/dev/null || true' EXIT
+          make test-integration
       # `!cancelled()` and not the default success(): a RED shard is exactly when
       # somebody needs this artifact, and on failure the script writes the
       # failing packages' logs + a failure-summary.txt into the same directory.
       # Uploading only on green kept the evidence for the runs that did not need
       # it and destroyed it with the runner for the runs that did.
+      #
+      # It does NOT reach the shard kills of #5483, and the guard is not what to
+      # widen. Those mark the JOB cancelled, so this step is skipped along with
+      # both post-actions — verified on run 34797597596, shard 1/6. `always()`
+      # would fire here, but it would also fire on the cancellation `ci` issues
+      # itself on every push to an open pull request, where the directory is
+      # empty and `if-no-files-found: error` would turn a cancelled shard into a
+      # failed one. That is why the probe on the step above writes to stdout
+      # instead: those runs are read from the log, not from an artifact.
       - name: Upload the shard manifest + coverage pods
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
