@@ -18,7 +18,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // notYetBuiltReason floors a computed field with no backend data model
@@ -72,26 +71,6 @@ type openPipeline struct {
 	minorBase   *int64
 	dealCount   int
 	pricedCount int
-}
-
-// computedFieldsVisible answers the STATE-4 gate: does the acting
-// principal's merged role policy grant computed_field:read? poc-1
-// re-loaded role permissions from the database on every call
-// (RollupStore.ComputedFieldsVisible); poc-v1's principal already
-// carries its merged Permissions, resolved once at authentication
-// (B-EP03.1), so this is a pure in-memory check — no query. The system
-// principal (workspace provisioning, no role of its own) is trusted by
-// construction, mirroring auth.Require's own carve-out; a request with
-// no actor bound at all fails closed.
-func computedFieldsVisible(ctx context.Context) bool {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false
-	}
-	if actor.Type == principal.PrincipalSystem {
-		return true
-	}
-	return actor.Permissions.Allows("computed_field", principal.ActionRead)
 }
 
 // openPipelineRollup reads the company_open_pipeline_rollup view

@@ -283,6 +283,18 @@ func employerSubjects(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ac
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	activityPos := arg(activityID)
 	limitPos := arg(graphExpansionLimit)
+	// The subjects this returns ARE companies — id and display name — so the
+	// company object half bounds it, not only the edge that reaches them. The
+	// edge grant says the caller may learn who works with whom; it says nothing
+	// about whether they may read companies at all, and under row_scope=all
+	// nothing else would stop them here.
+	//
+	// Omitted rather than refused, matching the edge branch below it: these are
+	// one band of a record's context, and a caller who may not read companies
+	// still gets the rest of theirs.
+	if !auth.ReadGranted(ctx, "company") {
+		return nil, nil
+	}
 	edgeBound, err := auth.EdgeReadScope(ctx, "r", arg)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		return nil, nil

@@ -214,7 +214,7 @@ func readContactFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into ma
 func readCompanyFaces(ctx context.Context, tx pgx.Tx, rowIDs []ids.UUID, into map[ids.UUID]MergeFace) error {
 	args := []any{rowIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	countable := grantVisible(ctx, entityContact) && grantVisible(ctx, "relationship")
+	countable := auth.ReadGranted(ctx, entityContact) && auth.ReadGranted(ctx, "relationship")
 	contacts := "NULL::bigint"
 	if countable {
 		edgeBound, err := auth.RelationshipEndpointScope(ctx, "rel", arg)

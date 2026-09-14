@@ -139,20 +139,6 @@ var projectListFields = map[string]storekit.SortField{
 	projectCompanyColumn: {Kind: fieldcatalog.TypeText, Expr: orderByReadableCompany},
 }
 
-// companyGrantVisible answers whether this caller holds the OBJECT half of
-// company.read. A system principal holds every object grant by
-// construction; a seat holds what its role was given.
-func companyGrantVisible(ctx context.Context) bool {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false
-	}
-	if actor.Type == principal.PrincipalSystem {
-		return true
-	}
-	return actor.Permissions.Allows("company", principal.ActionRead)
-}
-
 // orderByPhase arranges projects the way the account page already arranges
 // them (phaseRank), rather than by the phase word.
 func orderByPhase(context.Context, func(any) int) (string, error) {
@@ -173,7 +159,7 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 // together saying nothing about which account they name — the same answer the
 // row gives when it withholds the reference.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
-	if !companyGrantVisible(ctx) {
+	if !auth.ReadGranted(ctx, "company") {
 		// Ordered by nothing: every row sits in the tail and the page falls
 		// back to its tie-breaker.
 		return "NULL::text", nil
