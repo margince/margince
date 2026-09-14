@@ -51,7 +51,6 @@
 1330 frontend/src/screens/listquery.test.tsx
 1402 frontend/src/screens/listquery.tsx
 1378 frontend/src/screens/offers.tsx
-850 frontend/src/screens/contactrail.tsx
 1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx

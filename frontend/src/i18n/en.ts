@@ -1017,8 +1017,13 @@ export const en = {
   "company.filterLifecycleAll": "Any stage",
   "company.filterRelTypeAll": "Any type",
   "company.filterSizeBandAll": "Any size",
+  "consent.confirmRecipient": "Send to {address}",
+  "consent.guardFailed": "Communication permissions could not be loaded.",
+  "consent.permissionScope":
+    "Permissions apply to the named purpose. Account and service notices do not authorize sales or marketing; each message is checked before sending.",
+  "consent.manage": "Manage consent & proof history",
   "contact.consent": "Consent",
-  "consent.grant": "Grant",
+  "consent.grant": "Record consent",
   // Submitted as the proof row's wording when an operator records a grant
   // here. It does NOT quote a screen the subject read — this door has none —
   // so it says what actually happened: a named operator attested to a consent
@@ -1028,7 +1033,7 @@ export const en = {
     "Recorded in the CRM by a member of staff, who attested that this contact gave their consent for {label} outside the product. No wording was shown to them here.",
   "consent.withdraw": "Withdraw",
   "consent.doiBySubject":
-    "This purpose is confirmed by the contact themselves, through a link mailed to their own address. Use “Ask them to confirm their details” below.",
+    "Only this contact can confirm this purpose through a link sent to their recorded address. Use “Ask them to confirm their details” in Communication permissions.",
   "consent.askToConfirm": "Ask them to confirm their details",
   "consent.askToConfirmWhat":
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
@@ -1039,7 +1044,7 @@ export const en = {
   "consent.noRecord": "no record",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
-    "Outbound is default-deny per purpose: a send is blocked unless an active, proven grant exists for that purpose. A grant for one purpose never authorizes another.",
+    "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
   "consent.basis": "Basis: {basis}",
   "consent.proofLog": "Proof log",
   "consent.proofEmpty":
@@ -8769,22 +8774,23 @@ export const en = {
   "contact.moment.rule.open_promise": "You owe them",
   "contact.moment.rule.public_signal": "Said in public",
   "contact.moment.rule.missing_next_step": "Nothing scheduled",
-  "contact.moment.rule.thin_relationship": "One thread only",
+  "contact.moment.rule.thin_relationship": "No interactions recorded",
   "contact.moment.rule.nothing_needed": "Nothing needed",
   "contact.moment.evidence.activity": "From an exchange",
   "contact.moment.evidence.task": "From a task",
   "contact.moment.evidence.relationship_change": "From a change on the record",
-  "contact.today.source_one": "{count} source",
-  "contact.today.source_other": "{count} sources",
-  "contact.today.updated": "Updated {when}",
-  "contact.today.freshToday": "today",
-  "contact.today.freshYesterday": "yesterday",
-  "contact.today.freshDaysAgo": "{count} days ago",
+
+  "contact.overview.detailsPermissions": "Details & permissions",
+  "contact.overview.partial":
+    "Some sections are not available to your role. This summary covers the records you can see.",
+  "contact.overview.coverage": "Based on the records available to you.",
+  "contact.overview.about": "About this contact",
+  "contact.overview.profileOnly":
+    "From the contact details on file. Add context when you learn more.",
+  "contact.overview.briefFailed": "The relationship brief could not be loaded.",
 
   "contact.brief.title": "Relationship brief",
   "contact.brief.reading": "Reading the relationship…",
-  "contact.brief.empty":
-    "Nothing has been captured yet that this brief could be written from.",
   "contact.brief.sourceActivity": "Conversation",
   "contact.brief.sourceDeal": "Deal notes",
 
@@ -8841,7 +8847,10 @@ export const en = {
   "contact.rail.explain": "Explain",
   "contact.rail.direction": "Direction",
   "contact.rail.twoWay": "Two-way",
-  "contact.rail.oneSided": "One-sided",
+  "contact.rail.noDirection": "No direction recorded",
+  "contact.overview.unavailable": "Not shown: {sections}.",
+  "contact.rail.inboundOnly": "Inbound only",
+  "contact.rail.outboundOnly": "Outbound only",
   "contact.rail.lastReply": "Last reply",
   "contact.rail.coverage": "Coverage",
   "contact.rail.colleagues_one": "{count} colleague",
@@ -8864,15 +8873,12 @@ export const en = {
   "contact.rail.repliedDaysAgo_other": "Replied {count} days ago",
   "contact.rail.singleThreaded": "Single-threaded on this deal",
   "contact.rail.noMeetingBooked": "No next meeting booked",
-  "contact.rail.consentTitle": "Consent & channels",
+  "contact.rail.consentTitle": "Communication permissions",
   "contact.rail.email": "Email",
   "contact.rail.phone": "Phone",
   "contact.rail.noEmailAddress": "No address on file",
   "contact.rail.noPhoneNumber": "No number on file",
   "contact.rail.channelNotDeliverable": "Not deliverable",
-  "contact.rail.recentActivity": "Recent activity",
-  "contact.rail.nothingCaptured": "Nothing captured yet.",
-  "contact.rail.viewAllActivity": "View all activity",
   "contact.drawer.close": "Close",
   "richtext.bold": "Bold",
   "richtext.italic": "Italic",

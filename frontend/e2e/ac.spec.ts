@@ -1489,12 +1489,16 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
     ).toBeVisible();
-    // The contact page V2 states a withheld section in its own vocabulary rather
-    // than the SoR-specific copy the other 360s use, so what is asserted here is
-    // what it actually promises today: the page renders, and no panel degrades
-    // into an error box. That it cannot yet say "HubSpot does not carry this" —
-    // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("contact-readings")).toBeVisible();
+    // Restricted context stays explicit even when the overview has no readings
+    // worth a separate panel.
+    const coverage = page.getByText(
+      "Einige Bereiche sind für Ihre Rolle nicht verfügbar.",
+      { exact: false },
+    );
+    await expect(coverage).toBeVisible();
+    await expect(coverage).toContainText("Gesprächsgedächtnis");
+    await expect(coverage).toContainText("Wo dieser Kontakt steht");
+    await expect(page.getByTestId("contact-readings")).toHaveCount(0);
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Deal 360: timeline, coverage, offers, the context panel, and the buying
