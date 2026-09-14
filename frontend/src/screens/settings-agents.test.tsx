@@ -137,9 +137,9 @@ describe("AgentToolsCard (IT-1)", () => {
     expect(sendRow).toBeTruthy();
     // The egress "reaches out" badge shows only on the tool that reaches
     // outside the workspace (send_email), never on the pure-read tool.
-    expect(sendRow && within(sendRow).getByText("reaches out")).toBeTruthy();
+    expect(sendRow && within(sendRow).getByText("Reaches out")).toBeTruthy();
     expect(
-      searchRow && within(searchRow).queryByText("reaches out"),
+      searchRow && within(searchRow).queryByText("Reaches out"),
     ).toBeNull();
   });
 
@@ -335,7 +335,7 @@ describe("AgentToolsCard passport scoping", () => {
     ).toBeNull();
     // And the answer column still carries the governance it is there for.
     expect(answer && within(answer).getByText("send")).toBeTruthy();
-    expect(answer && within(answer).getByText("reaches out")).toBeTruthy();
+    expect(answer && within(answer).getByText("Reaches out")).toBeTruthy();
   });
 
   // A human who only ever connected an agent through the OAuth consent screen

@@ -281,7 +281,7 @@ function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
             )}
           </span>
         )}
-        {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
+        {deal.stalled && <Badge tone="warn">{t("deal.stalledBadge")}</Badge>}
       </span>
     </PanelRow>
   );

@@ -145,9 +145,7 @@ function SourcedDeals({
             key: "status",
             header: t("partnerDeals.column.status"),
             render: (deal) => (
-              <Badge tone={dealStatusTone(deal.status)} quiet>
-                {deal.status}
-              </Badge>
+              <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
             ),
           },
         ]}

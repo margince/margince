@@ -108,16 +108,6 @@
   flex: none;
 }
 
-.share-expiry-badge {
-  font-size: var(--fs-eyebrow);
-  font-family: var(--f-mono);
-  color: var(--warnText);
-  background: var(--warnBg);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 2px 8px; /* ds:ignore the Badge atom's own box, which it stands beside */
-}
-
 /* A grant is a `PanelRow`, so the hairline between two of them and the panel's
    own gutters come from the pane rather than from this sheet. */
 .share-acl-row {

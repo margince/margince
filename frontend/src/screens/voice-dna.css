@@ -236,15 +236,6 @@
   overflow-wrap: anywhere;
 }
 
-.vdna-pill {
-  border: 1px solid currentColor;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 0 var(--space-2);
-  font-size: var(--fs-eyebrow);
-  white-space: nowrap;
-}
-
 .vdna-sample p {
   white-space: pre-wrap;
   line-height: 1.5;

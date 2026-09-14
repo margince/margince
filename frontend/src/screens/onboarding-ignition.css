@@ -37,17 +37,12 @@
   }
 }
 
-/* The key, gone. Green because this one IS recorded — the vault holds it, and
-   the sentence is about what happened rather than what an agent proposes. */
+/* The key, gone. Its badge is green because this one IS recorded — the vault
+   holds it, and the sentence is about what happened rather than what an agent
+   proposes. The paragraph only places it and times its beat. */
 .ob-ig-sealed {
   margin: 0;
   align-self: flex-start;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accentLight);
-  color: var(--accentText);
-  font-size: var(--fs-meta);
   animation: ob-ig-appear var(--ig-beat) var(--ease-out) 150ms both;
 }
 

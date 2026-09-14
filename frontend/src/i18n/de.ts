@@ -161,16 +161,16 @@ export const de = {
   "trust.edit": "Bearbeiten",
   "trust.dismiss": "Verwerfen",
   "trust.save": "Speichern",
-  "trust.typedByYou": "von dir eingetragen",
-  "trust.typedByHuman": "von einer Person eingetragen",
-  "trust.typedByBuyer": "von einem Käufer eingetragen",
-  "trust.typedByPrefix": "eingetragen von",
+  "trust.typedByYou": "Von dir eingetragen",
+  "trust.typedByHuman": "Von einer Person eingetragen",
+  "trust.typedByBuyer": "Von einem Käufer eingetragen",
+  "trust.typedByPrefix": "Eingetragen von",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
   "trust.agentUnnamed": "Automatisiert durch einen Agenten",
   "trust.systemTag": "Systemvorgang {job}",
   "trust.systemUnnamed": "Systemvorgang",
-  "trust.connectorTag": "über {connector}",
+  "trust.connectorTag": "Über {connector}",
   "trust.dismissed": "Vorschlag verworfen.",
   "trust.stagedProposal": "vorgemerkter Vorschlag",
   "trust.resolvedValue": "übernommener Wert",
@@ -402,8 +402,8 @@ export const de = {
   "search.filter.all": "Alles",
   "search.pending": "Wird gesucht…",
   "search.tag.carriedBy": "Auf {count} Datensätzen",
-  "search.tier.mirrored": "aus einem verbundenen System",
-  "search.tier.unverified": "nicht verifiziert",
+  "search.tier.mirrored": "Aus einem verbundenen System",
+  "search.tier.unverified": "Nicht verifiziert",
 
   "context.recentTouches": "Letzte Gespräche",
   "context.openTasks": "Offene Aufgaben",
@@ -445,9 +445,10 @@ export const de = {
   "dealfiles.hidden": "Von diesem Deal ausgeblendet",
   "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalled": "stockt",
-  "deal.archived": "archiviert",
-  "deal.singleThreaded": "nur ein Kontakt",
-  "deal.staged": "vorgemerkt",
+  "deal.stalledBadge": "Stockt",
+  "deal.archived": "Archiviert",
+  "deal.singleThreaded": "Nur ein Kontakt",
+  "deal.staged": "Vorgemerkt",
   "deal.closes": "Abschluss {date}",
   "deal.undated": "kein Abschlusstermin",
   "deal.lastMail": "Letzte E-Mail",
@@ -1203,7 +1204,10 @@ export const de = {
   "co.routeIn.band.strong": "regelmäßig in Kontakt",
   "co.routeIn.band.some": "etwas Kontakt",
   "co.routeIn.band.faint": "kaum in Kontakt",
-  "co.routeIn.band.unknown": "Kontakt vorhanden, noch kein Muster",
+  "co.routeIn.bandBadge.strong": "Regelmäßig in Kontakt",
+  "co.routeIn.bandBadge.some": "Etwas Kontakt",
+  "co.routeIn.bandBadge.faint": "Kaum in Kontakt",
+  "co.routeIn.bandBadge.unknown": "Kontakt vorhanden, noch kein Muster",
   "record.profile": "Profil",
   "record.context": "Kontext",
   "record.restsOn": "Worauf das beruht",
@@ -1273,6 +1277,7 @@ export const de = {
   "access.state.invited": "eingeladen",
   "access.state.active": "angemeldet",
   "access.state.revoked": "entzogen",
+  "access.state.revokedBadge": "Entzogen",
   "access.lastSeen": "zuletzt gesehen {when}",
   "access.downloads": "{count} Dokument(e) heruntergeladen",
   "access.linkRequested":
@@ -2057,6 +2062,11 @@ export const de = {
   "co.role.blocker": "Bremser",
   "co.role.influencer": "Einflussnehmer",
   "co.role.user": "Anwender",
+  "co.roleLabel.champion": "Champion",
+  "co.roleLabel.economic_buyer": "Wirtschaftlicher Entscheider",
+  "co.roleLabel.blocker": "Bremser",
+  "co.roleLabel.influencer": "Einflussnehmer",
+  "co.roleLabel.user": "Anwender",
   "co.evidence.extractedUnconfirmed": "KI-extrahiert · noch nicht bestätigt",
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
@@ -2309,7 +2319,7 @@ export const de = {
   "leadSources.intentHint":
     "Hoch gibt Punkte auf den Score, Gering zieht ab; eine Änderung greift bei der nächsten Neuberechnung jedes Leads.",
   "leadSources.leadCount": "{count} Leads",
-  "leadSources.builtIn": "vorgegeben",
+  "leadSources.builtIn": "Vorgegeben",
   "leadSources.builtInKept":
     "Vorgegebene Quellen lassen sich umbenennen und abschalten, nicht entfernen.",
   "leadSources.inUse":
@@ -4400,9 +4410,9 @@ export const de = {
   "agents.disconnect": "Trennen",
   "agents.disconnectOpen": "Trennen",
   "agents.disconnectNamed": "{client} trennen",
-  "agents.disconnected": "getrennt",
+  "agents.disconnected": "Getrennt",
   "agents.lapsed": "Credential abgelaufen",
-  "agents.renewing": "wird erneuert",
+  "agents.renewing": "Wird erneuert",
   "agents.renewsBy": "Credential erneuert bis {date}",
   "agents.expiredOn": "Credential abgelaufen {date}",
   "agents.revokeGrantOpen": "Verbindung beenden",
@@ -4429,13 +4439,13 @@ export const de = {
     "Anreicherung, eigene Felder, Webhooks, Tags zusammenführen — das wartet in deinem Eingang.",
   "settings.tierAdvance":
     "Deal-Phase weiterschieben — wartet nur, wenn der Schritt den Deal gewonnen oder verloren abschließt.",
-  "settings.locked": "gesperrt",
+  "settings.locked": "Gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
     "Wofür diese Installation Einwilligung einholt und auf welcher Rechtsgrundlage jeder Zweck steht.",
   "settings.created": "erstellt {date}",
   "settings.expires": "läuft ab {date}",
-  "settings.revoked": "widerrufen",
+  "settings.revoked": "Widerrufen",
   "settings.revoke": "Widerrufen",
   "settings.revokeConfirm":
     "Das Credential dieses Passports wird sofort ungültig — der Agent verliert beim nächsten Aufruf den Zugriff.",
@@ -4575,9 +4585,9 @@ export const de = {
   "jobs.failuresSub":
     "Neueste zuerst, maximal 50. Eine begrenzte Liste, kein Log.",
   "jobs.failuresEmpty": "Keine Fehler erfasst.",
-  "jobs.state.retryable": "wiederholt",
-  "jobs.state.discarded": "verworfen",
-  "jobs.state.cancelled": "abgebrochen",
+  "jobs.state.retryable": "Wiederholt",
+  "jobs.state.discarded": "Verworfen",
+  "jobs.state.cancelled": "Abgebrochen",
   "jobs.attempt": "Versuch {attempt} von {max} · {when}",
   "jobs.remedy": "Zu tun: {remedy}",
   "jobs.jobId": "Job {id}",
@@ -5831,7 +5841,9 @@ export const de = {
   "ob.conv.triage.stateEmpty": "leer",
   "ob.conv.triage.stateTyped": "von dir eingetragen",
   "ob.conv.triage.stateStored": "aus deinem Profil",
+  "ob.conv.triage.stateStoredBadge": "Aus deinem Profil",
   "ob.conv.triage.stateQuoted": "aus deinem Impressum gelesen",
+  "ob.conv.triage.stateQuotedBadge": "Aus deinem Impressum gelesen",
   "ob.conv.triage.emptyHint":
     "Hier steht noch nichts. Trag es ein, wenn es zählt.",
   "ob.conv.triage.legalNotPublished":
@@ -5873,7 +5885,7 @@ export const de = {
   "ob.conv.connect.networkTitle": "Dein Netzwerk",
   "ob.conv.connect.networkHint":
     "Hinterlege dein Profil, damit das Netzwerk, das du später importierst, dir zugeordnet wird. Der Import selbst liegt in den Einstellungen.",
-  "ob.conv.connect.recommended": "empfohlen",
+  "ob.conv.connect.recommended": "Empfohlen",
   "ob.conv.connect.gmailBrings": "Mail über Google gelesen und gesendet",
   "ob.conv.connect.microsoftBrings": "Mail über Microsoft gelesen und gesendet",
   "ob.conv.connect.imapBrings":
@@ -6390,7 +6402,7 @@ export const de = {
   "client.unknownDetail":
     "Dieser Absender passt zu keinem Kontakt, den du sehen kannst. Von woanders wurde nichts geholt.",
   "client.createLead": "Als Lead erfassen",
-  "client.isolation": "spricht nur mit DEINER Firma",
+  "client.isolation": "Spricht nur mit DEINER Firma",
   "client.attribution": "Jede Erfassung ist zugeordnet und prüfbar.",
 
   "book.title": "Termin buchen",
@@ -6566,7 +6578,7 @@ export const de = {
   "prefs.rateLimited":
     "Gerade zu viele Versuche von hier aus. Warte eine Minute und lade neu.",
   "prefs.subscribed": "An — du hast danach gefragt",
-  "prefs.alwaysOn": "immer an",
+  "prefs.alwaysOn": "Immer an",
   "confirm.title": "Ihre Daten",
   "confirm.intro":
     "Ich bin Margince, die KI hinter diesem CRM. Hier steht alles, was wir über Sie gespeichert haben. Sie können es ändern oder uns bitten, es zu löschen.",
@@ -6644,7 +6656,7 @@ export const de = {
   "prefs.undoExplicit":
     "Ein erneutes Abonnieren ist eine ausdrückliche Zustimmung — wir schalten es nicht stillschweigend wieder ein. Speichere unten, um deine Zustimmung festzuhalten, oder verwirf.",
 
-  "auto.tier.runs": "läuft",
+  "auto.tier.runs": "Läuft",
   "auto.tier.approval": "Freigabe",
   "auto.sub":
     'Eine Regel mit "läuft" handelt selbstständig. Eine mit "Freigabe" wandert in den Freigabe-Eingang.',
@@ -6659,8 +6671,8 @@ export const de = {
   "auto.createdPaused":
     "Pausiert angelegt — es läuft nichts, bis du aktivierst.",
   "auto.delete": "Löschen",
-  "auto.statusEnabled": "aktiv",
-  "auto.statusPaused": "pausiert",
+  "auto.statusEnabled": "Aktiv",
+  "auto.statusPaused": "Pausiert",
   "auto.dateField.placeholder": "Datumsfeld auswählen",
   "auto.dateField.needsObject":
     "Wähle zuerst ein Objekt aus, um dessen Datumsfelder anzuzeigen.",
@@ -6690,11 +6702,11 @@ export const de = {
   "auto.runs.target": "Ziel",
   "auto.runs.result": "Ergebnis",
   "auto.runs.reason": "Grund",
-  "auto.runs.outcomeFired": "ausgelöst",
-  "auto.runs.outcomeFailed": "fehlgeschlagen",
-  "auto.runs.outcomeBlocked": "blockiert",
-  "auto.runs.outcomeSkipped": "übersprungen",
-  "auto.runs.outcomeQueued": "eingereiht",
+  "auto.runs.outcomeFired": "Ausgelöst",
+  "auto.runs.outcomeFailed": "Fehlgeschlagen",
+  "auto.runs.outcomeBlocked": "Blockiert",
+  "auto.runs.outcomeSkipped": "Übersprungen",
+  "auto.runs.outcomeQueued": "Eingereiht",
 
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Probelauf – Reichweite",
@@ -6784,7 +6796,7 @@ export const de = {
   "cf.type.boolean": "Ja / Nein",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
   "cf.builder.open": "Feld hinzufügen",
-  "cf.builder.noCode": "ohne Code",
+  "cf.builder.noCode": "Ohne Code",
   "cf.builder.intro":
     "Ein neues Feld ist eine echte Spalte auf der bestehenden Tabelle — es filtert, erscheint in Berichten, Exporten und in der API wie jedes Kernfeld. Es ist kein neues Objekt.",
   "cf.label": "Bezeichnung",
@@ -7317,10 +7329,10 @@ export const de = {
     "F\u00fcge etwa {count} weitere W\u00f6rter hinzu, um das scharfe Band zu erreichen.",
   "voice.insights.next.atTarget":
     "Dein Korpus ist am Ziel; halte ihn mit gelegentlichen neuen Texten frisch.",
-  "voice.status.active": "aktiv",
-  "voice.status.candidate": "wartet auf Pr\u00fcfung",
-  "voice.status.superseded": "abgel\u00f6st",
-  "voice.status.rejected": "abgelehnt",
+  "voice.status.active": "Aktiv",
+  "voice.status.candidate": "Wartet auf Pr\u00fcfung",
+  "voice.status.superseded": "Abgel\u00f6st",
+  "voice.status.rejected": "Abgelehnt",
   "voice.classification.routine": "routinem\u00e4\u00dfige \u00c4nderung",
   "voice.classification.material": "wesentliche \u00c4nderung",
   "voice.outcome.autoActivated": "automatisch aktiviert",
@@ -7338,7 +7350,7 @@ export const de = {
   "voice.insights.movesLabel":
     "Deine Signature Moves \u2014 in deinen eigenen Worten",
   "voice.insights.samplesLabel": "Beispielentw\u00fcrfe in deiner Stimme",
-  "voice.insights.draftOnly": "nur Entwurf \u2014 wird nie gesendet",
+  "voice.insights.draftOnly": "Nur Entwurf \u2014 wird nie gesendet",
   "voice.insights.disclosure":
     "KI-gest\u00fctzte Entw\u00fcrfe; jeder Versand bleibt eine menschliche Entscheidung.",
   "voice.insights.nextBestLabel": "So wird sie besser:",
@@ -7722,7 +7734,7 @@ export const de = {
   "tools.title": "Agenten-Werkzeuge",
   "tools.sub":
     "Die geregelte Oberfläche, die ein Passport aufrufen kann — dieselbe Liste, die ein MCP-Client sieht.",
-  "tools.egress": "ruft nach außen",
+  "tools.egress": "Ruft nach außen",
   "tools.scopeAll": "Alle Passports",
   "tools.inventory": "Alle {count} Werkzeuge",
   "tools.scopeLabel": "Auf einen Passport eingrenzen",
@@ -7736,7 +7748,7 @@ export const de = {
     "Ihre eigene Rechnung sichtbar — nach Aufgabe und Stufe, in Tokens.",
   "aiusage.budget": "{spent} von {budget} Tokens · {pct}%",
   "aiusage.budgetMeter": "Verbrauchtes Monats-Tokenbudget",
-  "aiusage.band.normal": "normal",
+  "aiusage.band.normal": "Normal",
   "aiusage.band.degraded": "Sparmodus",
   "aiusage.band.queued": "Budget erreicht — Hintergrund-KI wartet",
   "aiusage.band.unknown": "Unbekannter Budgetstatus",
@@ -7779,7 +7791,7 @@ export const de = {
   "aicalls.col.latency": "Latenz",
   "aicalls.ms": "{value} ms",
   "aicalls.badge.cacheHit": "Cache-Treffer",
-  "aicalls.badge.degraded": "reduziert",
+  "aicalls.badge.degraded": "Reduziert",
   "aicalls.badge.retries": "Wiederholung ×{count}",
   "aicalls.callsLabel": "Letzte Aufrufe",
   "aicalls.filter.all": "Alle Aufgaben",
@@ -7992,22 +8004,22 @@ export const de = {
   "aiRouting.provider.label": "Anbieter",
   "aiRouting.change": "Ändern",
   "aiRouting.done": "Fertig",
-  "aiRouting.noKey": "kein Schlüssel",
-  "aiRouting.unpriced": "kein Preis",
+  "aiRouting.noKey": "Kein Schlüssel",
+  "aiRouting.unpriced": "Kein Preis",
   "aiRouting.effect":
     "Gespeicherte Bindungen erreichen jeden Prozess innerhalb einer Minute, ohne Neustart.",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",
-  "aiProviderKeys.keyless": "kein Schlüssel nötig",
+  "aiProviderKeys.keyless": "Kein Schlüssel nötig",
   "aiProviderKeys.field": "API-Schlüssel",
   "aiProviderKeys.save": "Schlüssel speichern",
   "aiProviderKeys.adminOnly":
     "Nur Admin oder Ops können Anbieter-Zugangsdaten ändern.",
   "aiProviderKeys.saveFailed":
     "Dieser Anbieter konnte nicht aktualisiert werden",
-  "aiProviderKeys.configured": "eingerichtet",
-  "aiProviderKeys.absent": "nicht gesetzt",
+  "aiProviderKeys.configured": "Eingerichtet",
+  "aiProviderKeys.absent": "Nicht gesetzt",
   "aiProviderKeys.configuredHint":
     "Im Schlüsseltresor versiegelt. Er kann nicht ausgelesen werden — füge einen neuen ein, um ihn zu ersetzen. Er kann auch über {envVar} ankommen.",
   "aiProviderKeys.absentHint":
@@ -8294,9 +8306,9 @@ export const de = {
   "embedreindex.estimateQualityHeuristic":
     "Heuristische Schätzung — eine kalte Arbeitsmengen-Untergrenze, kein beobachteter Verbrauch.",
   "embedreindex.utilizationTitle": "Budgetauswirkung",
-  "embedreindex.impact.normal": "normal",
-  "embedreindex.impact.degraded": "würde in den Sparmodus wechseln",
-  "embedreindex.impact.queued": "würde in die Warteschlange gestellt",
+  "embedreindex.impact.normal": "Normal",
+  "embedreindex.impact.degraded": "Würde in den Sparmodus wechseln",
+  "embedreindex.impact.queued": "Würde in die Warteschlange gestellt",
 
   "consent.title": "Zugriff autorisieren",
   "consent.asks":
@@ -8565,6 +8577,10 @@ export const de = {
   "contact.band.weak": "schwach",
   "contact.band.moderate": "mittel",
   "contact.band.strong": "stark",
+  "contact.bandBadge.none": "Kein Kontakt",
+  "contact.bandBadge.weak": "Schwach",
+  "contact.bandBadge.moderate": "Mittel",
+  "contact.bandBadge.strong": "Stark",
   "contact.pulse.title": "Beziehung",
   "contact.pulse.warmestIs": "{name} hat hier die engste Beziehung.",
   "contact.pulse.nobodyYet":
@@ -8718,8 +8734,8 @@ export const de = {
   "contact.loops.dueToday": "heute",
   "contact.loops.dueTomorrow": "morgen",
   "contact.loops.dueInDays": "in {count} Tagen",
-  "contact.loops.waiting": "wartet",
-  "contact.loops.open": "offen",
+  "contact.loops.waiting": "Wartet",
+  "contact.loops.openBadge": "Offen",
   "contact.loops.atLeast": "mindestens {count}",
 
   "contact.memory.title": "Gesprächsgedächtnis",
@@ -9028,7 +9044,7 @@ export const de = {
     "Noch keine Bedingungen \u2014 eine leere Gruppe trifft auf nichts zu, also f\u00fcgen Sie eine hinzu.",
   "filters.field": "Feld",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
-  "filters.customBadge": "eigenes Feld",
+  "filters.customBadge": "Eigenes Feld",
   "filters.operator": "Operator",
   "filters.value": "Wert",
   "filters.values": "Werte",
@@ -9283,7 +9299,7 @@ export const de = {
   "project.commitments.title": "Offene Zusagen",
   "project.commitments.empty":
     "Unter diesem Projekt ist keine offene Aufgabe abgelegt. Verknüpfte Aufgaben erscheinen hier, die nächste Fälligkeit zuerst.",
-  "project.commitments.overdue": "überfällig",
+  "project.commitments.overdue": "Überfällig",
   "project.timeline.empty":
     "Unter diesem Projekt ist noch nichts abgelegt. E-Mails mit dem Kürzel im Betreff und verknüpfte Aktivitäten erscheinen hier.",
   "project.advance.title": "Wechsel zu {phase}",
@@ -9848,7 +9864,7 @@ export const de = {
   "firstRun.ignite.title": "Es hat einen Puls.",
   "firstRun.ignite.sub":
     "Der Schlüssel ist versiegelt und das Modell hat geantwortet. Was sich damit ändert:",
-  "firstRun.ignite.sealed": "im Tresor versiegelt · {vendor}",
+  "firstRun.ignite.sealed": "Im Tresor versiegelt · {vendor}",
   "firstRun.ignite.reaching": "erreiche das Modell zum ersten Mal…",
   "firstRun.ignite.canNow": "kann jetzt",
   "firstRun.ignite.cannot": "kann nicht",

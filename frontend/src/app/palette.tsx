@@ -2,7 +2,12 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
-import { EmptyState, PendingBody, SearchField } from "../design-system/atoms";
+import {
+  Badge,
+  EmptyState,
+  PendingBody,
+  SearchField,
+} from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
 import { useLocale, useT } from "../i18n";
@@ -86,12 +91,8 @@ const SETTINGS_ALIASES: Readonly<
 export function useBuiltinCommands(): Command[] {
   const t = useT();
   const { locale } = useLocale();
-  // The same table the settings rail walks, not a second opinion about it.
-  //
-  // This read the retired register while the rail read the catalog, which is
-  // precisely the disagreement the catalog exists to prevent: the palette would
-  // offer a shortcut to a page the rail no longer lists, or miss one it does.
-  // Both resolve `visibleSettingsPages` now.
+  // The same table the settings rail walks, not a second opinion about it: a
+  // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
@@ -546,7 +547,7 @@ export function CommandPalette({
               {command.subtitle && (
                 <span className="sub t-caption">{command.subtitle}</span>
               )}
-              <span className="type">{t(TYPE_KEY[command.type])}</span>
+              <Badge>{t(TYPE_KEY[command.type])}</Badge>
             </button>
           ))}
         </div>

@@ -75,7 +75,7 @@ async function fetchProjectsPage(
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
   return (
-    <Badge tone={phase === "closed" ? undefined : "success"} quiet>
+    <Badge tone={phase === "closed" ? undefined : "success"}>
       {t(PHASE_LABEL[phase])}
     </Badge>
   );

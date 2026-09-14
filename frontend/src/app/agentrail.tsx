@@ -16,6 +16,7 @@ import {
 import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Badge } from "../design-system/atoms";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
@@ -493,9 +494,7 @@ function RuntimeRows({
     <div className="armeta">
       {/* The posture leads, because it decides whether anything below it means
           anything: a model name from last week is not a model bound today. */}
-      {ai === "unconfigured" && (
-        <span className="arwarn">{LABELS.noModel}</span>
-      )}
+      {ai === "unconfigured" && <Badge tone="warn">{LABELS.noModel}</Badge>}
       {ai === "development" && (
         <span>
           <b>{t("auth.coreDevelopment")}</b> {t("auth.coreModeDevelopment")}
@@ -524,11 +523,12 @@ function RuntimeRows({
           {LABELS.tools} <b>{formatNumber(tools, locale)}</b>
         </span>
       )}
-      {/* A link, not a label: the pill names a fault the reader can repair
-          only on the seats page, so the pill takes them there. */}
+      {/* The badge names a fault the reader can repair only on the seats
+          page, so a link around it takes them there: the badge stays the
+          label nobody presses, and the anchor carries the press. */}
       {(license === "none" || license === "refused") && (
         <a className="arwarn" href={LICENSE_SETTINGS_HREF}>
-          {licenseLine}
+          <Badge tone="warn">{licenseLine}</Badge>
         </a>
       )}
       {offline.map((source) => (

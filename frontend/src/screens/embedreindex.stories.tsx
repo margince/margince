@@ -152,7 +152,7 @@ export const PreviewDialogWithEstimate: Story = {
     // honest to the contract. It sits in the same portalled dialog the
     // estimate does, so it is the same `screen` lookup — reaching for the
     // canvas here rejected while the dialog above it was drawn correctly.
-    await screen.findByText("would enter economy mode");
+    await screen.findByText("Would enter economy mode");
   },
 };
 

@@ -66,7 +66,7 @@ export function LeadPanel({
       title={verdict(route, mine, t)}
       sub={t("contact.intro.leadEyebrow")}
       titleAction={
-        <Badge tone={blocked ? undefined : "success"} quiet={Boolean(blocked)}>
+        <Badge tone={blocked ? undefined : "success"}>
           {blocked ?? t("contact.intro.leadRouteBadge")}
         </Badge>
       }
@@ -103,11 +103,11 @@ export function LeadPanel({
 
           <div className="pn-facts">
             {route.evidence.two_way ? (
-              <Badge quiet>{t("contact.intro.factReciprocal")}</Badge>
+              <Badge>{t("contact.intro.factReciprocal")}</Badge>
             ) : (
               <Badge tone="warn">{t("contact.intro.factOneSided")}</Badge>
             )}
-            <Badge quiet>
+            <Badge>
               {route.through_display_name
                 ? t("contact.intro.factIndirect")
                 : t("contact.intro.factDirect")}

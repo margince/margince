@@ -432,19 +432,7 @@
   color: var(--textMeta);
 }
 
-/* A bundle's own two marks: what saying yes would decide, and the way into the
-   members. The count reads as a fact about the card rather than as a status, so
-   it takes the chip ground and not a tone. */
-.ddeck-bundle-count {
-  font-size: var(--fs-meta);
-  color: var(--textChip);
-  background: var(--bgChip);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 2px 8px;
-}
-
+/* The way into a bundle's members, under the count its meta line carries. */
 .ddeck-bundle-open {
   margin-top: var(--space-3);
   margin-bottom: 0;

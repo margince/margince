@@ -72,7 +72,11 @@ var ceilings = map[string]int{
 	// and a reader who does not know that paints the meaning onto a decoration.
 	// The reasoning lives in the design-system README; what is here is the twelve
 	// lines a caller has to obey.
-	"frontend/AGENTS.md": 172,
+	//
+	// +4 for the one-Badge rule: a second spelling of a pill is invisible to a
+	// reviewer who has not read that there is one, and the gate that refuses it
+	// names itself only here.
+	"frontend/AGENTS.md": 176,
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {

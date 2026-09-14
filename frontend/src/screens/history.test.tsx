@@ -149,7 +149,7 @@ describe("RecordHistory", () => {
     );
     render(<RecordHistory kind="deal" id="d1" />);
     expect(await screen.findByText("System task retention-sweep")).toBeTruthy();
-    expect(screen.getByText("via zalo-oa")).toBeTruthy();
+    expect(screen.getByText("Via zalo-oa")).toBeTruthy();
     // Only the row that IS an agent reads as one.
     expect(screen.getAllByText(/Automated by/)).toHaveLength(1);
     expect(screen.getByText("Automated by an agent")).toBeTruthy();
@@ -208,8 +208,8 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("typed by a buyer")).toBeTruthy();
-    expect(screen.queryByText("source not recorded")).toBeNull();
+    expect(await screen.findByText("Typed by a buyer")).toBeTruthy();
+    expect(screen.queryByText("Source not recorded")).toBeNull();
     // A participant uuid resolves to no name on this side, and no tag prints
     // an identifier a reader cannot look up.
     expect(screen.queryByText(new RegExp(OPAQUE))).toBeNull();

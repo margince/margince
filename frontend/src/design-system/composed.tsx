@@ -24,6 +24,7 @@ import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
 import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
+import { Eyebrow } from "./eyebrow";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { withWhom } from "./participants";
 import { useTruncationTooltip } from "./tooltip";
@@ -1218,7 +1219,7 @@ function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
     return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
   }
   if (direction === "outbound") {
-    return <Badge quiet>{t("convo.waitingOnThem")}</Badge>;
+    return <Badge>{t("convo.waitingOnThem")}</Badge>;
   }
   return null;
 }
@@ -1396,8 +1397,7 @@ function messageLead(
 //
 // Answers the state; the badge at the mount below draws it. Reading a
 // message's access word is not drawing the message, and keeping the two apart
-// is what lets that be seen rather than argued: there is no markup here to
-// check.
+// lets that be seen rather than argued: there is no markup here to check.
 function messageVisibilityState(entry: TimelineEntry): Visibility | null {
   if (entry.withheld) {
     return "withheld";
@@ -1577,7 +1577,7 @@ function ThreadRow({
       <div className="tl-body">
         <div className="tl-thread">
           <span className="tl-head">
-            <Badge>{t("timeline.group.kind")}</Badge>
+            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
             <span className="tl-group-count">
               {groupCountLabel(group, locale)}
             </span>
@@ -1863,12 +1863,12 @@ export function TimelineRow({
                 inside phrasing content. The row lays out identically, because
                 .tl-body is a flex column either way. */}
       <div className="tl-body">
-        {/* What KIND of thing this was, and which way it went — one line above
-            the headline, because both qualify it and set inline they read as
-            the first words of the subject. */}
+        {/* What KIND of thing this was, as a kicker and not a status, and
+            which way it went — one line above the headline, because both
+            qualify it and set inline they read as the subject's first words. */}
         <span className="tl-head">
-          <Badge>{t(TIMELINE_KIND_LABEL[entry.kind])}</Badge>
-          {/* What the record DID, for a row that is not an exchange: the badge
+          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
+          {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
           {entry.qualifier && (
             <span className="tl-direction">{entry.qualifier}</span>

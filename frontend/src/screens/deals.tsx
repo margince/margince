@@ -49,7 +49,11 @@ import {
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
 import type { ListChip } from "../design-system/listsurface";
-import type { ListColumn, ListSelection } from "../design-system/listtable";
+import {
+  CellStrip,
+  type ListColumn,
+  type ListSelection,
+} from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
@@ -1450,10 +1454,7 @@ function AmountCell({
 
 // The table-view column set. Module-level (not inlined in DealsScreen,
 // which is already at the cognitive-complexity ceiling) — stage_id → name
-// and amount/close formatting are the only per-row logic, everything else
-// is direct field access. Only amount_minor and expected_close_date are in
-// the deals list's sortable vocabulary (data-model.md DM-VOCAB-3); name,
-// stage and status carry no `sort` because the API has no column for them.
+// and amount/close formatting are the only per-row logic.
 function dealColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -1477,7 +1478,6 @@ function dealColumns(
       // reader may not read that company, and a blank cell cannot be told
       // apart from a deal nobody has linked.
       //
-      // No `sort`, for the reason the partner column below carries none: the
       // Ordered by the company's NAME, not by the id the field is called
       // after: the sort vocabulary names the reference and the server decides
       // what ordering it means. A company this reader may not open sorts last,
@@ -1492,7 +1492,6 @@ function dealColumns(
       // that runs no partner programme has an empty column, and hiding it
       // per-row is worse in a list than an empty cell — a column that comes
       // and goes cannot be scanned down.
-      //
       key: "partner",
       header: t("deal.partnerCompany"),
       sort: "partner_company_id",
@@ -1542,16 +1541,17 @@ function dealColumns(
       sort: "last_activity_at",
       cell: (deal) =>
         deal.last_activity_at ? (
-          <span className="deal-signal">
-            {formatDuration(
-              Math.max(
-                0,
-                Date.now() - new Date(deal.last_activity_at).getTime(),
-              ),
-              locale,
+          <CellStrip>
+            <span>
+              {formatDuration(
+                Math.max(0, Date.now() - Date.parse(deal.last_activity_at)),
+                locale,
+              )}
+            </span>
+            {deal.stalled && (
+              <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
             )}
-            {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
-          </span>
+          </CellStrip>
         ) : (
           <span className="t-caption">{t("deals.lastSignalNone")}</span>
         ),

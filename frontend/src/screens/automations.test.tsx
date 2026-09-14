@@ -388,7 +388,7 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     // No switch to flip, and the badge in its place so the state is still a
     // read this row answers.
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(screen.getByText("paused")).toBeTruthy();
+    expect(screen.getByText("Paused")).toBeTruthy();
     await openRowMenu();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();

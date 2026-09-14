@@ -5,96 +5,124 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  /* One line at its own width: a pill is a shrinkable flex item like anything
-     else, and beside a title that filled a panel's head band "AI-assisted"
-     came out as two lines. Three surfaces had already fixed this on their own
-     side of it. */
+  /* One line, never two: beside a title that filled a panel's head band
+     "AI-assisted" came out as two lines. A label longer than its container
+     truncates inside `.badge-label` instead of overflowing it.
+
+     No `flex` of its own. The initial `0 1 auto` is what lets a badge give way
+     in a row too narrow for it, and a container that must not squeeze its
+     badge says so itself — `.panel-head` does, at zero specificity, and a
+     declaration here would fight it on sheet order. The zero minimum is what
+     lets it shrink below its label at all. */
   white-space: nowrap;
-  flex: none;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  /* Type is stated, never inherited: a badge in an eyebrow heading or a mono
+     cell must read as the badge beside it everywhere else. */
+  font-family: var(--f-body);
   font-size: var(--fs-meta);
+  font-style: normal;
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */
   font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
+  /* 20px tall and the label centred in it: a 1px hairline top and bottom
+     leaves 18px, and a line box of exactly that height is centred by
+     construction. No line-height rung is a length, hence the px. */
+  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges */
   min-block-size: 20px;
   padding: 0 8px;
+  /* Every variant reserves the edge; soft draws it in its tone and primary
+     leaves it transparent, so a row of mixed variants shares one height. */
+  border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
   color: var(--textChip);
 }
-/* The tone tints are TRANSLUCENT by canon — --successBg, --warnBg and
-   --dangerBg all carry an alpha under a fifth — so a badge painted straight
-   onto its parent composites against whatever happens
-   to be behind it — and its contrast changes with the surface it lands on.
-   Measured: --success on --successBg reads 4.54:1 over a panel's --bgElevated
-   and 4.05:1 over the recessed --bgCard of a PanelPlate. Four hundredths of
-   headroom on one surface and a WCAG AA failure on the other, for the same
-   component with the same tokens.
-
-   So each tone lays its tint over an explicit --bgElevated of its own rather
-   than over its ancestor: the badge composites the same way everywhere and its
-   contrast stops being a property of where a caller put it. The canon values
-   are untouched — this is the same colour the design intends, made
-   independent of context. */
+.badge-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge > svg {
+  flex: none;
+}
+/* The status tints are TRANSLUCENT by canon, so a badge painted with one
+   takes its contrast from whatever it lands on: --success on --successBg read
+   4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's
+   --bgCard. So each status tone paints its *Surface token — the same tint
+   already laid over --bgElevated, as one opaque colour — and reads the same on
+   every surface. The ink is the Text token, never the base hue, which on its
+   own tint at 12px is nowhere near 4.5:1. */
 .badge-success {
-  background:
-    linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  /* The Text token, not the base: the base status hue is a fill, a bar, a
-     border and a 17px figure, and on its own tint at 12px it is nowhere near
-     4.5:1. Every one of the three tones takes its Text sibling here. */
+  background: var(--successSurface);
+  border-color: var(--successBorder);
   color: var(--successText);
 }
 .badge-warn {
-  background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
+  background: var(--warnSurface);
+  border-color: var(--warnBorder);
   color: var(--warnText);
 }
 .badge-danger {
-  background:
-    linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
+  background: var(--dangerSurface);
+  border-color: var(--dangerBorder);
   color: var(--dangerText);
 }
 .badge-ai {
   background: var(--aiLight);
+  border-color: var(--aiMed);
   color: var(--aiText);
 }
 .badge-accent {
   background: var(--accentLight);
+  border-color: var(--accentMed);
   color: var(--accentText);
 }
-/* The quiet spelling: one status per row down a column, where a stack of
- * filled pills reads as decoration. The tone survives as the dot's colour and
- * as the label's, so the status is still tellable at a glance; the fill and
- * the pill padding are what go. It overrides the tone tints above, which is
- * why it is declared after them and repeats `background` rather than relying
- * on the cascade of a class the caller may or may not have passed. It sets no
- * size of its own: a table cell reads the meta rung, and a rung of its own put
- * the one plain-text status in a row a step above every value beside it. */
-.badge-quiet {
-  background: none;
-  padding: 0;
-  font-weight: 400;
+
+/* The PRIMARY variant: the same tone as a solid fill, for the one status a
+ * surface must not let a reader miss. A filled status control's ground is the
+ * tone's Text token and never its base hue — no ink clears AA on the base —
+ * and its ink is the one that flips with the theme. The neutral fill is the
+ * page's own ink, lettered in the page's ground. Every pair is measured in
+ * tokens.test.ts, so each rule names its ink rather than inheriting one. */
+.badge-primary {
+  background: var(--textPrimary);
+  border-color: transparent;
+  color: var(--bgPage);
 }
-.badge-quiet::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: currentColor;
-  flex: none;
+.badge-primary.badge-success {
+  background: var(--successText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-warn {
+  background: var(--warnText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-danger {
+  background: var(--dangerText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-accent {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+}
+/* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
+ * shared by every fill that stays put: the dark --textOnAccentControl would
+ * read 3.26:1 on it. */
+.badge-primary.badge-ai {
+  background: var(--ai);
+  color: var(--textOnAccent);
 }
 
-/* The LIVE spelling: the same pill with a dot that breathes, for a status that
- * is true as the page is being read rather than one the record remembers. The
- * dot is `currentColor`, so it says what the label says — a toned pill marks in
- * its tone's ink and an untoned one in the pill's own — and it is the only
- * moving thing in this vocabulary.
- *
- * `quiet` already draws a still dot from ::before; with `live` the breathing
- * one is the mark, so the static one goes rather than the two doubling. */
-.badge-live::before {
-  content: none;
-}
+/* The LIVE mark: a dot that breathes, for a status true as the page is read
+ * rather than one the record remembers. `currentColor`, so it says what the
+ * label says, in either variant — and the only moving thing in this
+ * vocabulary. */
 .badge-live-dot {
   width: 6px;
   height: 6px;
@@ -2011,42 +2039,19 @@
   white-space: nowrap;
 }
 
-/* The receipt is a CHIP on the reading's name line, not a line of text: what
-   it offers is a door to the working rather than a fact to read, and the one
-   thing on this card meant to be read across a row is the figure. Outlined
-   rather than filled, and at the meta size the eyebrow beside it already uses,
-   so it is legible as pressable without becoming the first thing seen.
-
-   `align-self: center` because the row is baseline-aligned for the label's
-   own sake, and a bordered box hung from a text baseline sits low against the
-   word beside it. */
-/* `:not(.btn)` is how this beats `.popover-trigger:not(.btn)` (popover.css),
-   which strips a trigger's border and ground for the callers whose face is the
-   line they sit in. At equal specificity the winner was whichever sheet the
-   bundler happened to put last, so the chip kept its outline in the app and
-   lost it in the catalog — the surface built to show what the control looks
-   like. */
+/* The receipt is TEXT on the reading's name line, drawn as the evidence mark
+   (`.evmark-trigger`, evidencemark.css): a dotted underline on words that open
+   where a value came from. Not a bordered chip: a pressable box at the meta
+   size reads as one more badge on a card whose badges are statuses. The
+   face is the popover trigger's own — it inherits the line it sits in — so
+   this rule only places it. */
 .popover-trigger.stat-card-basis:not(.btn) {
-  /* ABOVE the door's overlay: the chip is the card's second control and the
+  /* ABOVE the door's overlay: the receipt is the card's second control and the
      only one the stretched target must not swallow, or asking what a figure
      rests on would leave the page instead. */
   position: relative;
   z-index: 1;
-  align-self: center;
   flex-shrink: 0;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-regular);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  color: var(--textChip);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: 1px var(--space-1);
-  background: var(--bgChip);
-}
-.popover-trigger.stat-card-basis:not(.btn):hover {
-  color: var(--textPrimary);
-  border-color: var(--borderStrong);
 }
 
 /* Inside the panel: the reading's own name over the working, then the door

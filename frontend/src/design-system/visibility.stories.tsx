@@ -57,7 +57,7 @@ export const WithAReason: Story = {
     <div style={{ maxWidth: 480 }}>
       <VisibilityLine
         state="participants"
-        marks={<Badge quiet>Marked confidential</Badge>}
+        marks={<Badge>Marked confidential</Badge>}
         action={<Button variant="link">Change visibility</Button>}
       />
     </div>

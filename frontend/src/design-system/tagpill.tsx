@@ -58,14 +58,14 @@ export function TagPill({
 }: Readonly<{
   name: string;
   tone?: string | null;
-  /** An archived tag stays ON the record it was applied to. It draws muted
-   * and says so, because a reader seeing it in a picker would look for a word
-   * that is no longer offered. */
+  /** An archived tag stays ON the record it was applied to. It drops its
+   * colour and says so, because a reader seeing it in a picker would look for
+   * a word that is no longer offered. */
   archived?: boolean;
 }>) {
   const t = useT();
   return (
-    <Badge quiet={archived}>
+    <Badge>
       {!archived && isTagTone(tone) && (
         <span className={`tagpill-dot tagpill-dot-${tone}`} aria-hidden />
       )}

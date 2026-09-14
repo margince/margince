@@ -1226,9 +1226,11 @@ test.describe("B-EP09.23: overlay mode", () => {
   test("AC-overlay-1: the mode chip marks an overlay installation (and is absent under the native seed)", async ({
     page,
   }) => {
-    // The native seed (this file's global beforeEach) never renders it.
+    // The native seed (this file's global beforeEach) never renders it. Scoped
+    // to the top bar's trail, where the chip lives: the rail's build stamp is
+    // an accent badge too, and it is drawn on every route.
     await page.goto("/#/home");
-    await expect(page.locator(".badge-accent")).toHaveCount(0);
+    await expect(page.locator(".topbar-trail .badge-accent")).toHaveCount(0);
 
     // Same route both times, so a plain goto would be a same-document hash
     // navigation the SPA never reloads for — reload forces the fresh /me
@@ -1400,10 +1402,10 @@ test.describe("B-EP09.23: overlay mode", () => {
   }) => {
     await mockApi(page, { sor: "overlay" });
     await page.goto("/#/settings/integrations");
-    // The chip is the only accent badge that is a link; the mapping card on
-    // this tab wears the same badge on the row for the signed-in user, so an
-    // unqualified `.badge-accent` would be counting two different things.
-    const chip = page.locator("a.badge-accent");
+    // The chip's link form is its own anchor around the badge; the mapping card
+    // on this tab wears the same accent badge on the row for the signed-in
+    // user, so an unqualified `.badge-accent` would be counting two things.
+    const chip = page.locator("a.sormode-link");
     await expect(chip).toBeVisible();
     await page.getByRole("button", { name: "Trennen" }).click();
     await expect(
