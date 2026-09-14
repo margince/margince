@@ -245,10 +245,8 @@ test.describe("the record's rhythm", () => {
 });
 
 test.describe("the record's details pane", () => {
-  // Beside the record above the fold, and under it below. 900px and 390px are
-  // both here because the rule that broke the phone was written for the
-  // tablet: a fix swept at only the failing width is a fix nobody can trust
-  // at the other one.
+  // Tablet panes stack below the record. Contacts use a phone drawer; other
+  // records retain the stacked pane. Both widths must remain usable.
   const BESIDE = 1440;
   const STACKED = [900, 390];
 
@@ -285,7 +283,11 @@ test.describe("the record's details pane", () => {
     });
 
     for (const width of STACKED) {
-      test(`stacks the pane under the work column on a ${record.name} at ${width}px`, async ({
+      const mobileDrawer = record.name === "contact" && width === 390;
+      const behavior = mobileDrawer
+        ? "opens Details in a drawer"
+        : "stacks the pane under the work column";
+      test(`${behavior} on a ${record.name} at ${width}px`, async ({
         page,
       }) => {
         await page.setViewportSize({ width, height: 844 });
@@ -294,6 +296,23 @@ test.describe("the record's details pane", () => {
         const pane = page.locator(".record-aside");
         await expect(pane, "the pane is open on arrival").toBeHidden();
         await detailsSwitch(page).click();
+        if (mobileDrawer) {
+          const dialog = page.getByRole("dialog", {
+            name: "Details & Berechtigungen",
+          });
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByTestId("contact-rail")).toBeVisible();
+          await expect(pane).toHaveCount(0);
+          const box = await dialog.boundingBox();
+          if (!box) throw new Error("the visible Details drawer has no box");
+          expect(box.x).toBeGreaterThanOrEqual(0);
+          expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+          expect(box.width).toBeGreaterThan(width * 0.9);
+          await page.keyboard.press("Escape");
+          await expect(dialog).toBeHidden();
+          await expect(detailsSwitch(page)).toBeFocused();
+          return;
+        }
         await expect(pane, "the switch did not open the pane").toBeVisible();
 
         const paneBox = await pane.boundingBox();

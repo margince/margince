@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
 import { ContactPageV2 } from "./contactpage";
@@ -91,6 +92,7 @@ export function mount(
   // stay here.
   extraRoutes: RouteMap = {},
   allow: Parameters<typeof meRoute>[0] = callerGrants,
+  wrap: (page: ReactNode) => ReactNode = (page) => page,
 ) {
   installFetchStub({
     "GET /me": meRoute(allow, { seat: "full" }),
@@ -126,7 +128,7 @@ export function mount(
   });
   render(
     <StoryProviders>
-      <ContactPageV2 id="p-1" tab={tab} />
+      {wrap(<ContactPageV2 id="p-1" tab={tab} />)}
     </StoryProviders>,
   );
 }

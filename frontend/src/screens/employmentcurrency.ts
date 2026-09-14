@@ -37,10 +37,19 @@ export function today(): string {
 // departure, matching `> current_date` on the server; only a future one is a
 // notice period, and somebody serving one still works there.
 export function stillHeld(employment: Employment): boolean {
+  if (
+    employment.employment_status === "former" ||
+    employment.employment_status === "unknown"
+  )
+    return false;
   if (!employment.ended_at) {
     return true;
   }
-  return employment.ended_at.slice(0, 10) > today();
+  const end = employment.ended_at.slice(0, 10);
+  if (employment.ended_precision === "month") {
+    return end.slice(0, 7) >= today().slice(0, 7);
+  }
+  return end > today();
 }
 
 // currentEmployer is the one employment that represents this contact right now —
@@ -54,12 +63,12 @@ export function currentEmployer(
   );
 }
 
-// formerEmployers is the complement, so the two together are every row exactly
-// once. A job whose last day has passed belongs here even while it still carries
-// the flag — that is precisely the row the server stopped counting.
+// Unknown dates/status and additional current jobs are not former employers.
 export function formerEmployers(
   employments: ReadonlyArray<Employment> | undefined,
 ): ReadonlyArray<Employment> {
-  const current = currentEmployer(employments);
-  return (employments ?? []).filter((employment) => employment !== current);
+  return (employments ?? []).filter(
+    (employment) =>
+      !stillHeld(employment) && employment.employment_status !== "unknown",
+  );
 }

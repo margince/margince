@@ -336,13 +336,13 @@ func refuseARedenominatedDraft(existing crmcontracts.Contract, in crmcontracts.U
 // figure — both restate what the agreement was worth without anybody
 // renegotiating it.
 //
-// Keyed on the STATUS, not on whether a rate exists: a contract that activated
-// with no currency froze nothing, and giving it one afterwards would make an
-// active foreign-currency contract with no rate — the state the freeze exists to
-// end, invisible to the base-currency guard. Only a draft, which has not been
-// through activation, is still the human's to re-price.
+// Keyed on the status AND on whether a rate is frozen, because neither answers
+// alone. A contract that activated with no currency froze nothing, and giving it
+// one afterwards would make an active foreign-currency contract with no rate —
+// the state the freeze exists to end. And a draft is the human's to re-price only
+// while it froze nothing: a rate on the row prices it, whatever the status says.
 func refuseRepricingAFrozenContract(existing crmcontracts.Contract, in crmcontracts.UpdateContractRequest) error {
-	if in.Currency == nil || statusOf(existing) == StatusDraft {
+	if in.Currency == nil || (statusOf(existing) == StatusDraft && existing.FxRateToBase == nil) {
 		return nil
 	}
 	if existing.Currency != nil && *existing.Currency == *in.Currency {

@@ -30,6 +30,8 @@ maps the codebase and links everything below.
 
 ## Map
 
+- [Import purchased employment history](how-to/import-employment-history.md) — contact channels, employer matching, installation and backfill.
+
 - [Editing records concurrently](how-to/concurrent-record-edits.md) — independent field changes and conflict recovery.
 
 ### Handbook — how to USE the product
@@ -181,7 +183,10 @@ budget rather than keeping its own list of which pages are generated.
 
 **The product surface**
 
+- [customer-requests.md](explanation/customer-requests.md) — recognition, acceptance and completion of customer requests across email, tasks, Home and closed deals; historical reconciliation and the shared obligation read.
+
 - [frontend-architecture.md](explanation/frontend-architecture.md) — the SPA's layers, the shell and its nav rules, the colour and theme contract, the evidence mark, and the gates that fail a frontend push.
+- [contact-record-page.md](explanation/contact-record-page.md) — sparse and active contact layouts, communication permissions, and Focus ranking.
 - [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the work-in-flight card, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
 
 **Modes and extension**

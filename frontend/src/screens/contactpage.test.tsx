@@ -790,17 +790,12 @@ describe("logging an activity", () => {
   it("carries neither an agent byline nor a readiness word", async () => {
     mount("overview", { ...view, moment: quietDayMoment });
 
-    const move = (await screen.findByText("Nothing needs you today")).closest(
-      ".co-move",
-    );
-    if (!(move instanceof HTMLElement)) {
-      throw new Error("the moment is not drawn as a move");
-    }
+    expect(await screen.findByText(quietDayMoment.why_now)).toBeTruthy();
+    expect(screen.queryByText("Margince suggests")).toBeNull();
+    expect(screen.queryByText("Ready")).toBeNull();
     expect(
-      within(move).getByRole("button", { name: "Log an interaction" }),
-    ).toBeTruthy();
-    expect(within(move).queryByText("Margince suggests")).toBeNull();
-    expect(within(move).queryByText("Ready")).toBeNull();
+      screen.queryByRole("button", { name: "Log an interaction" }),
+    ).toBeNull();
   });
 
   // The contrast that makes the rule above a rule rather than a blanket
@@ -818,7 +813,7 @@ describe("logging an activity", () => {
     expect(within(move).queryByText("Ready")).toBeNull();
   });
 
-  it("logs a meeting on this contact from the moment card's action", async () => {
+  it("logs a meeting on a quiet contact from the header", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
     mount("overview", { ...view, moment: quietDayMoment }, [], {
@@ -829,7 +824,9 @@ describe("logging an activity", () => {
     });
 
     await user.click(
-      await screen.findByRole("button", { name: "Log an interaction" }),
+      within(await recordHeader()).getByRole("button", {
+        name: /Log activity/,
+      }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Log activity" });
     await user.click(within(dialog).getByRole("combobox", { name: "Type" }));

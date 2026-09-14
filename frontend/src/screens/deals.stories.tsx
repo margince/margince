@@ -278,8 +278,21 @@ const boardStages = [
   },
 ];
 
+// Relative to the moment the story renders, so the mail chip says "10 d ago"
+// on every day the canvas is opened rather than counting up from a fixed date.
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 const boardDeals = [
-  { ...deal, id: "b1", name: "Fleet retrofit", company_id: "o1" },
+  {
+    ...deal,
+    id: "b1",
+    name: "Fleet retrofit",
+    company_id: "o1",
+    // The buyer wrote last, two days ago.
+    last_email: { occurred_at: daysAgo(2), direction: "inbound" },
+  },
   {
     ...deal,
     id: "b2",
@@ -288,6 +301,8 @@ const boardDeals = [
     amount_minor: 1_250_000,
     company_id: "o1",
     stalled: true,
+    // We wrote last, and nobody answered in ten days: the stall, on the chip.
+    last_email: { occurred_at: daysAgo(10), direction: "outbound" },
   },
   // The reader may not read this one's company: the wire sends no id and names
   // the field, so the card carries the mask rather than an empty slot.
@@ -373,6 +388,20 @@ function installBoardStub() {
 export const BoardInListSurface: Story = {
   render: () => {
     installBoardStub();
+    return (
+      <StoryProviders>
+        <DealsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// The same deals as rows: the mail chip is a column here, so a reader who
+// switches views reads the same fact off the same field.
+export const TableInListSurface: Story = {
+  render: () => {
+    installBoardStub();
+    window.location.hash = "#/deals?view=table";
     return (
       <StoryProviders>
         <DealsScreen />

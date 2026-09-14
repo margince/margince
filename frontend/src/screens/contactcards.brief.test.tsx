@@ -95,12 +95,14 @@ describe("the relationship brief discloses the machine that reads it", () => {
   });
 
   it("names no writer and stamps nothing when there is no brief", () => {
-    // An empty card has nothing to source. The badge stays, because the card
-    // is still the machine's reading — it simply has nothing to report.
+    // An empty brief falls back to the recorded profile, without AI provenance.
     const panel = card(undefined);
-    expect(panel.classList).toContain("panel-ai");
-    expect(within(panel).getByText("AI-assisted")).toBeInTheDocument();
+    expect(panel.classList).not.toContain("panel-ai");
+    expect(within(panel).queryByText("AI-assisted")).toBeNull();
     expect(within(panel).queryByText(/Margince|Assembled/)).toBeNull();
-    expect(screen.getByText(/Nothing has been captured/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "About this contact" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Dana Buyer")).toBeInTheDocument();
   });
 });

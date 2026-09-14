@@ -172,6 +172,24 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		patch.Set("fx_rate_to_base", existing.FxRateToBase, frozen.rate)
 		patch.Set("fx_rate_date", existing.FxRateDate, frozen.on)
 	}
+	// An agreement returned to draft sheds the conversion it froze, the mirror
+	// of freezing one on the way into active.
+	//
+	// Draft is the one state whose currency is still the human's to correct, so
+	// a draft carrying a rate frozen for the currency it is about to leave is a
+	// rate describing money the row will no longer hold — and the base-currency
+	// value every rollup reports is value × that rate. Clearing it here means
+	// the row never reaches that state; refuseRepricingAFrozenContract holds the
+	// same invariant from the other side, for rows that already have.
+	//
+	// Only when there is one to clear, and then both columns together: a patch
+	// records every assignment it is given, so an unconditional clear would name
+	// these two in the UPDATE and in the audit diff of every draft a contract
+	// was ever returned to, including the ones that froze nothing.
+	if to == StatusDraft && existing.FxRateToBase != nil {
+		patch.Set("fx_rate_to_base", existing.FxRateToBase, nil)
+		patch.Set("fx_rate_date", existing.FxRateDate, nil)
+	}
 	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
 			return crmcontracts.Contract{}, contractCheckError(constraint)

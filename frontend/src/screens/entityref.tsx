@@ -55,11 +55,8 @@ function unnamedOrThrow(error: unknown, response: Response): null {
   throwProblem(error);
 }
 
-// One reader per kind: each reads a different endpoint and a differently
-// named field, so the table is the honest shape — a generic lookup would have
-// to guess the field. A missing name coerces to null (never undefined):
-// react-query forbids an undefined resolve, and a record that answers without
-// its name field has answered.
+// Each entity endpoint names its display field differently. Missing names
+// resolve to null because React Query rejects undefined query results.
 const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
   {
     contact: async (id) => {
@@ -99,7 +96,10 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
     },
   };
 
-function fetchEntityName(kind: EntityKind, id: string): Promise<string | null> {
+export function fetchEntityName(
+  kind: EntityKind,
+  id: string,
+): Promise<string | null> {
   return NAME_READERS[kind](id);
 }
 

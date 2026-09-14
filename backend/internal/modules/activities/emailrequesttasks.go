@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -22,6 +21,8 @@ import (
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
 const EmailRequestTaskSource = provenance.EmailRequestSource
+
+const automaticRequestHorizonDays = 14
 
 // capture_import proves mailbox delivery, not who was addressed. Participant
 // user IDs are stamped by import too; only addresses or the mapper's To header
@@ -38,9 +39,10 @@ const emailRequestAssigneeSQL = `SELECT min(u.id::text)::uuid AS user_id FROM ca
 		   AND lower(split_part(a.body, E'\n', 2)) = 'to: ' || lower(u.email)))
       HAVING count(DISTINCT u.id) = 1`
 
-// CaptureEmailRequests turns confidently classified, unanswered requests into
-// undated tasks for their one directly addressed importing seat. It keeps the
-// source message as evidence instead of inventing a deadline or paraphrasing it.
+// CaptureEmailRequests reconciles recent confirmed requests into undated tasks
+// for their one directly addressed importing seat. Historical and ambiguously
+// addressed requests remain in review; this pass neither assigns them silently
+// nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalSystem {
@@ -58,8 +60,10 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		}
 		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL, auth.AssigneeEligibleSQL(actor, "u", arg))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
-		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, 14,
-			`a.owed_verdict = 'asks_us' AND a.capture_label = 'commitment'
+		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
+			outstandingRequestSQL+`
+     AND a.capture_label IS DISTINCT FROM 'noise'
+     AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
@@ -97,19 +101,6 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID, u
 	if err != nil {
 		return err
 	}
-	links := []ActivityLinkInput{}
-	if source.Links != nil {
-		for _, link := range *source.Links {
-			links = append(links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
-		}
-	}
-	sourceSystem, sourceID := EmailRequestTaskSource, messageID.String()
-	assignee := ids.From[ids.UserKind](userID)
-	_, _, err = s.LogActivityTx(ctx, tx, LogActivityInput{
-		audienceMembers: []AudienceMember{{SubjectType: string(crmcontracts.AudienceMemberSubjectTypeUser), SubjectID: userID}},
-		Kind:            "task", Subject: source.Subject, OccurredAt: &asOf, AssigneeID: &assignee,
-		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
-		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
-	})
+	_, _, err = s.LogActivityTx(ctx, tx, emailRequestTaskInput(source, userID, asOf))
 	return err
 }

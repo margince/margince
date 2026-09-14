@@ -79,8 +79,6 @@ export const de = {
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Brief konnte nicht aktualisiert werden. Die zuletzt geladene Arbeit wird weiterhin angezeigt.",
-  "brief.feed.routine":
-    "Datenschutz-Nacharbeit · {count} später fällige Einträge",
   "brief.team.saveResponse": "Antwort speichern",
   "brief.team.response": "Deine Antwort auf die Bitte um Hilfe",
   "brief.team.planFor": "Aktueller Plan · {name}",
@@ -452,6 +450,12 @@ export const de = {
   "deal.staged": "vorgemerkt",
   "deal.closes": "Abschluss {date}",
   "deal.undated": "kein Abschlusstermin",
+  "deal.lastMail": "Letzte E-Mail",
+  "deal.mail.title": "Bisherige E-Mails",
+  "deal.mail.sent": "Gesendet {ago}",
+  "deal.mail.received": "Erhalten {ago}",
+  "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
+  "deal.mail.viewAll": "Alle Aktivitäten ansehen",
   "deal.closesProvisional":
     "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",
@@ -978,13 +982,19 @@ export const de = {
   "company.filterLifecycleAll": "Alle Phasen",
   "company.filterRelTypeAll": "Alle Typen",
   "company.filterSizeBandAll": "Alle Größen",
+  "consent.confirmRecipient": "Senden an {address}",
+  "consent.guardFailed":
+    "Kommunikationsberechtigungen konnten nicht geladen werden.",
+  "consent.permissionScope":
+    "Berechtigungen gelten für den genannten Zweck. Konto- und Servicemitteilungen erlauben keine Verkaufs- oder Marketingnachrichten; jede Nachricht wird vor dem Versand geprüft.",
+  "consent.manage": "Einwilligung und Nachweise verwalten",
   "contact.consent": "Einwilligung",
-  "consent.grant": "Erteilen",
+  "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
     "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass dieser Kontakt seine Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihm wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
-    "Diesen Zweck bestätigt der Kontakt selbst – über einen Link an seine eigene Adresse. Nutzen Sie unten „Um Bestätigung der Daten bitten“.",
+    "Nur der Kontakt selbst kann diesen Zweck über einen Link an seine gespeicherte Adresse bestätigen. Nutzen Sie die Bestätigungsanfrage unter Kommunikationsberechtigungen.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
@@ -995,7 +1005,7 @@ export const de = {
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes": "Diese Firma erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
-    "Ausgehende Kommunikation ist pro Zweck standardmäßig gesperrt: ein Versand wird blockiert, sofern keine aktive, nachgewiesene Einwilligung für diesen Zweck vorliegt. Eine Einwilligung für einen Zweck berechtigt niemals einen anderen.",
+    "Dieser Verlauf dokumentiert Einwilligungen je Zweck. Andere dokumentierte Grundlagen können eine Kommunikation erlauben; jede Nachricht wird vor dem Versand erneut geprüft.",
   "consent.basis": "Grundlage: {basis}",
   "consent.proofLog": "Nachweisprotokoll",
   "consent.proofEmpty":
@@ -2603,6 +2613,7 @@ export const de = {
   "deals.amount": "Wert",
   "deals.lastSignal": "Letztes Signal",
   "deals.lastSignalNone": "noch kein Signal",
+  "deals.lastMailNone": "noch keine E-Mail",
   "deals.stage": "Phase",
   "deals.close": "Erwarteter Abschluss",
   "deals.confirmAdvance": "Nach {stage} verschieben?",
@@ -3468,7 +3479,7 @@ export const de = {
   "co.spine.earlier_one": "{count} früheres Gespräch",
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
-  "today.quiet": "Hier braucht Sie heute nichts.",
+  "today.quiet": "In dieser Ansicht wurde keine offene Arbeit gefunden.",
   "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",
@@ -8649,23 +8660,26 @@ export const de = {
   "contact.moment.rule.open_promise": "Offenes Versprechen",
   "contact.moment.rule.public_signal": "Öffentlich gesagt",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
-  "contact.moment.rule.thin_relationship": "Nur ein Draht",
+  "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
   "contact.moment.evidence.activity": "Aus einem Austausch",
   "contact.moment.evidence.task": "Aus einer Aufgabe",
   "contact.moment.evidence.relationship_change":
     "Aus einer Änderung am Datensatz",
-  "contact.today.source_one": "{count} Beleg",
-  "contact.today.source_other": "{count} Belege",
-  "contact.today.updated": "Aktualisiert {when}",
-  "contact.today.freshToday": "heute",
-  "contact.today.freshYesterday": "gestern",
-  "contact.today.freshDaysAgo": "vor {count} Tagen",
+
+  "contact.overview.detailsPermissions": "Details & Berechtigungen",
+  "contact.overview.partial":
+    "Einige Bereiche sind für Ihre Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für Sie sichtbaren Einträge.",
+  "contact.overview.coverage":
+    "Berücksichtigt werden die für Sie verfügbaren Einträge.",
+  "contact.overview.about": "Über diesen Kontakt",
+  "contact.overview.profileOnly":
+    "Aus den gespeicherten Kontaktdaten. Ergänzen Sie Kontext, sobald Sie mehr wissen.",
+  "contact.overview.briefFailed":
+    "Der Beziehungsüberblick konnte nicht geladen werden.",
 
   "contact.brief.title": "Beziehungs-Briefing",
   "contact.brief.reading": "Die Beziehung wird gelesen…",
-  "contact.brief.empty":
-    "Es wurde noch nichts erfasst, woraus dieses Briefing geschrieben werden könnte.",
   "contact.brief.sourceActivity": "Gespräch",
   "contact.brief.sourceDeal": "Deal-Notizen",
 
@@ -8722,7 +8736,10 @@ export const de = {
   "contact.rail.explain": "Erklären",
   "contact.rail.direction": "Richtung",
   "contact.rail.twoWay": "Beidseitig",
-  "contact.rail.oneSided": "Einseitig",
+  "contact.rail.noDirection": "Keine Richtung erfasst",
+  "contact.overview.unavailable": "Nicht angezeigt: {sections}.",
+  "contact.rail.inboundOnly": "Nur eingehend",
+  "contact.rail.outboundOnly": "Nur ausgehend",
   "contact.rail.lastReply": "Letzte Antwort",
   "contact.rail.coverage": "Abdeckung",
   "contact.rail.colleagues_one": "{count} Kollegin oder Kollege",
@@ -8745,15 +8762,12 @@ export const de = {
   "contact.rail.repliedDaysAgo_other": "Antwort vor {count} Tagen",
   "contact.rail.singleThreaded": "Nur ein Kontakt in diesem Deal",
   "contact.rail.noMeetingBooked": "Kein nächster Termin vereinbart",
-  "contact.rail.consentTitle": "Einwilligung & Kanäle",
+  "contact.rail.consentTitle": "Kommunikationsberechtigungen",
   "contact.rail.email": "E-Mail",
   "contact.rail.phone": "Telefon",
   "contact.rail.noEmailAddress": "Keine Adresse hinterlegt",
   "contact.rail.noPhoneNumber": "Keine Nummer hinterlegt",
   "contact.rail.channelNotDeliverable": "Nicht zustellbar",
-  "contact.rail.recentActivity": "Letzte Aktivität",
-  "contact.rail.nothingCaptured": "Noch nichts erfasst.",
-  "contact.rail.viewAllActivity": "Alle Aktivitäten ansehen",
   "contact.drawer.close": "Schließen",
   "richtext.bold": "Fett",
   "richtext.italic": "Kursiv",
@@ -9996,4 +10010,37 @@ export const de = {
   "stageAutomation.saveFailed": "Diese Änderung wurde nicht gespeichert",
   "stageAutomation.nothingReviewed":
     "Vorgeschlagen, aber noch nicht beantwortet.",
+  "employment.importLoading": "Gekaufte Berufshistorie wird gelesen…",
+  "employment.apply": "Importierte Unternehmen verknüpfen",
+  "employment.status.current": "Aktuell",
+  "employment.status.former": "Früher",
+  "employment.status.unknown": "Status unbekannt",
+  "employment.statusLabel": "Beschäftigungsstatus",
+  "employment.review": "Diese Tätigkeit vor dem Verknüpfen prüfen.",
+  "employment.matchNeeded": "Unternehmen muss zugeordnet werden.",
+  "employment.resolve": "Unternehmen zuordnen",
+  "employment.dismiss": "Diesen Nachweis verwerfen",
+  "employment.research": "Recherche",
+  "employment.researchDeferred":
+    "Wartet auf Rechercheeinstellungen und verfügbares Budget",
+  "employment.website": "Bestätigte Unternehmenswebsite",
+  "employment.websiteHint":
+    "Ein bestehendes Unternehmen auswählen oder dessen eigene Website bestätigen, um es anzulegen.",
+  "employment.saveMatch": "Unternehmensverknüpfung speichern",
+  "employment.researchNeedsWebsite": "Website erforderlich",
+  "employment.research.queued": "Eingereiht",
+  "employment.research.running": "Wird recherchiert",
+  "employment.research.done": "Abgeschlossen",
+  "employment.research.partial": "Teilweise abgeschlossen",
+  "employment.research.failed":
+    "Fehlgeschlagen — zum Wiederholen Unternehmen öffnen",
+  "employment.research.cancelled": "Abgebrochen",
+  "employment.researchQueued":
+    "Der Recherche-Status ist auf der Unternehmensseite verfügbar.",
+  "employment.edit": "Beschäftigung bearbeiten",
+  "employment.start": "Beginn",
+  "employment.end": "Ende",
+  "employment.dateHint":
+    "JJJJ-MM oder JJJJ-MM-TT. Leer lassen, wenn unbekannt.",
+  "employment.more": "Weitere Beschäftigungen anzeigen",
 } as const satisfies Record<MessageKey, string>;

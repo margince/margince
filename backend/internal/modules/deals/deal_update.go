@@ -133,7 +133,7 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 		// Nothing changed, but the echo is still a read: `current` came from
 		// the unmasked readDeal above, which the before-image needs and the
 		// caller must not have.
-		return maskDealForCaller(ctx, tx, current)
+		return finishDealForCaller(ctx, tx, current)
 	}
 
 	if err := s.applyMoneyInvariants(ctx, tx, current, in, p); err != nil {

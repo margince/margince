@@ -1,9 +1,7 @@
-import { ChevronRight } from "lucide-react";
 import type { components } from "../api/schema";
 import { useCanWriteRecord } from "../app/capability";
-import { navigate } from "../app/router";
 import { Avatar, Button } from "../design-system/atoms";
-import { EmailReference } from "../design-system/emailreference";
+
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   omitted,
@@ -26,7 +24,6 @@ import { ConsentAndChannels } from "./contactconsentpanel";
 import { ContactDetails } from "./contactdetails";
 import { Employers } from "./contactemployers";
 import { daysSinceInbound, isQuiet } from "./contactquiet";
-import { contactTabRoute } from "./contacttab";
 import { CounterpartyHoldRow } from "./counterparty-hold";
 import { TagsPanel } from "./tagspanel";
 
@@ -108,17 +105,19 @@ export function bodyState(withheld: boolean, count: number): SectionState {
 export function ContactRail({
   view,
   guard,
+  guardLoading = false,
+  guardFailed = false,
+  onRetryGuard,
   firstName,
   onExplain,
-  onOpenEmail,
 }: Readonly<{
   view: Contact360;
   guard: ContactConsentGuard | undefined;
+  guardLoading?: boolean;
+  guardFailed?: boolean;
+  onRetryGuard?: () => void;
   firstName: string;
   onExplain: () => void;
-  /** Opens one message in the record's drawer. The page owns the drawer, so
-   * the rail is handed the opener rather than mounting a second one. */
-  onOpenEmail?: (activityId: string) => void;
 }>) {
   // A plain div: RecordView's own <aside> is the landmark around this, and a
   // second labelled region inside it would give a reader two names for one
@@ -134,10 +133,15 @@ export function ContactRail({
       <RelationshipPulse view={view} onExplain={onExplain} />
       <WhoKnows view={view} firstName={firstName} />
       <SignalsAndRisks view={view} />
-      <ConsentAndChannels view={view} guard={guard} />
+      <ConsentAndChannels
+        view={view}
+        guard={guard}
+        loading={guardLoading}
+        failed={guardFailed}
+        onRetry={onRetryGuard}
+      />
       <ContactHoldSection view={view} />
       <ContactTagsSection view={view} />
-      <RecentActivity view={view} onOpenEmail={onOpenEmail} />
     </div>
   );
 }
@@ -225,6 +229,15 @@ function RelationshipPulse({
   const outbound = view.last_outbound_at;
   const twoWay = Boolean(inbound && outbound);
   const colleagues = view.network?.colleagues?.length ?? 0;
+  if (
+    !hidden.lastTouch &&
+    !hidden.network &&
+    !inbound &&
+    !outbound &&
+    !colleagues
+  ) {
+    return null;
+  }
   return (
     <Panel
       title={t("contact.rail.pulseTitle")}
@@ -241,7 +254,13 @@ function RelationshipPulse({
         <Row
           label={t("contact.rail.direction")}
           value={reading(
-            twoWay ? t("contact.rail.twoWay") : t("contact.rail.oneSided"),
+            twoWay
+              ? t("contact.rail.twoWay")
+              : inbound
+                ? t("contact.rail.inboundOnly")
+                : outbound
+                  ? t("contact.rail.outboundOnly")
+                  : t("contact.rail.noDirection"),
             hidden.lastTouch,
             t,
           )}
@@ -311,6 +330,9 @@ function WhoKnows({
   const t = useT();
   const { locale } = useLocale();
   const colleagues = view.network?.colleagues ?? [];
+  if (!colleagues.length && !withheldSections(view).network) {
+    return null;
+  }
   return (
     <Panel title={t("contact.rail.whoKnows", { name: firstName })}>
       <PanelBody>
@@ -355,6 +377,9 @@ function SignalsAndRisks({ view }: Readonly<{ view: Contact360 }>) {
     plural,
     locale,
   );
+  if (!signals.length && !skipped) {
+    return null;
+  }
   return (
     <Panel title={t("contact.rail.signals")}>
       <PanelBody>
@@ -440,74 +465,6 @@ function derivedSignals(
   }
   return { signals: out, skipped };
 }
-
-// --- Consent and channels --------------------------------------------------
-
-// --- Recent activity -------------------------------------------------------
-
-// Three condensed items. It never duplicates the raw timeline visible beside
-// it — this is the glance, the Activity tab is the ledger.
-function RecentActivity({
-  view,
-  onOpenEmail,
-}: Readonly<{ view: Contact360; onOpenEmail?: (activityId: string) => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // The section's own emptiness is decided BEFORE the rows are defaulted: an
-  // absent list and an empty one collapse into the same `[]` here, and that
-  // collapse is what turns "you may not read the timeline" into "nothing has
-  // ever happened with this contact".
-  const withheld = withheldSections(view).activities;
-  const rows = (view.activities?.data ?? []).slice(0, 3);
-  return (
-    <Panel
-      title={t("contact.rail.recentActivity")}
-      footer={
-        // The rail's own glance leaves the tab's ledger one click away.
-        <Button
-          small
-          variant="ghost"
-          onClick={() => navigate(contactTabRoute(view.contact.id, "timeline"))}
-        >
-          {t("contact.rail.viewAllActivity")}{" "}
-          <ChevronRight size={13} aria-hidden="true" />
-        </Button>
-      }
-    >
-      <PanelBody>
-        <SurfaceState
-          loadingLabel={t("contact.rail.recentActivity")}
-          state={bodyState(withheld, rows.length)}
-          emptyLabel={t("contact.rail.nothingCaptured")}
-        >
-          {rows.map((row) => (
-            <div className="pe-rail-row" key={row.id}>
-              {/* An email is CITED here rather than drawn: the rail is a
-                  glance at what happened lately, and a full row with its
-                  preview and access badge would make the aside compete with
-                  the timeline beside it. The citation opens the same drawer
-                  the timeline's row does, so both lead to one place. */}
-              {row.kind === "email" ? (
-                <EmailReference
-                  subject={row.subject}
-                  withheld={row.content_state === "withheld"}
-                  onOpen={onOpenEmail ? () => onOpenEmail(row.id) : undefined}
-                />
-              ) : (
-                <span className="pe-rail-label">{row.subject ?? row.kind}</span>
-              )}
-              <span className="pe-rail-value pe-rail-value-muted">
-                {sinceWords(row.occurred_at, t, locale)}
-              </span>
-            </div>
-          ))}
-        </SurfaceState>
-      </PanelBody>
-    </Panel>
-  );
-}
-
-// --- shared ----------------------------------------------------------------
 
 function Row({
   label,

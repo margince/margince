@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import currencyCases from "../../../backend/internal/shared/kernel/employment/testdata/currency.json";
 import type { components } from "../api/schema";
 import {
   currentEmployer,
@@ -150,4 +151,50 @@ describe("formerEmployers", () => {
   it("is empty when there are no employments", () => {
     expect(formerEmployers(undefined)).toEqual([]);
   });
+});
+
+it("keeps undated history out of current employment and respects month precision", () => {
+  expect(stillHeld(employment({ employment_status: "unknown" }))).toBe(false);
+  expect(stillHeld(employment({ employment_status: "former" }))).toBe(false);
+  expect(
+    stillHeld(
+      employment({
+        employment_status: "current",
+        ended_at: "2026-08-01",
+        ended_precision: "month",
+      }),
+    ),
+  ).toBe(true);
+  expect(
+    stillHeld(
+      employment({
+        employment_status: "current",
+        ended_at: "2026-07-01",
+        ended_precision: "month",
+      }),
+    ),
+  ).toBe(false);
+});
+
+it.each(currencyCases)("matches the shared server corpus: $name", (sample) => {
+  vi.setSystemTime(new Date(`${sample.today}T12:00:00`));
+  const status =
+    sample.status === "current" ||
+    sample.status === "former" ||
+    sample.status === "unknown"
+      ? sample.status
+      : undefined;
+  const precision =
+    sample.precision === "month" || sample.precision === "day"
+      ? sample.precision
+      : undefined;
+  expect(
+    stillHeld(
+      employment({
+        ended_at: sample.end,
+        employment_status: status,
+        ended_precision: precision,
+      }),
+    ),
+  ).toBe(sample.current);
 });

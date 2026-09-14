@@ -363,6 +363,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extensions_arch_test.go` | H2 | Extension-tier fitness functions (ADR-0120 §3): the compiler already walls extensions off from internal/\*\* (their module paths sit outside the backend module), these tests hold the rest of the import contract from the tree — every extension source dir (enabled or fixture) is enrolled the moment it exists. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `followablecitations_test.go` | H1 | A file this push touched does not send its reader to a document they cannot open. |
+| `forkheadcheckout_test.go` | H2 | Code from a pull request's own branch never runs with a token GitHub has not downgraded. |
 | `formulafieldscope_test.go` | H3 | The negative-scope half of the formula-field boundary proof (RD-AC-7): a formula field is a database-GENERATED artifact, never a runtime-authored one, so NO contract operation may accept a writable formula\_sql in its request body — ComputedField.formula\_sql (crm.yaml) is a response-only display field, never echoed back as an editable one. |
 | `fxconversioncallers_test.go` | H2 | Converting money to the base currency happens in ONE place, and this fails when a second appears. |
 | `googleconnectorregistration_test.go` | H2 | The Google connectors are built for the registry in ONE function, because putting one INTO the registry is a decision about REACHABILITY and that decision has been wrong once. |

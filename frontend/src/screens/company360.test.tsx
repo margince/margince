@@ -771,7 +771,7 @@ describe("company view — a section still loading is not one that failed", () =
     // the honest answer the brief gives once it has actually read the account,
     // never the failure text a still-loading read would be mistaken for.
     expect(
-      within(brief()).getByText("Nothing here needs you today."),
+      within(brief()).getByText("No outstanding work found in this view."),
     ).toBeTruthy();
     expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
   });
