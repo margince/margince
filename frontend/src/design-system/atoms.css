@@ -61,40 +61,45 @@
   background: var(--accentLight);
   color: var(--accentText);
 }
-/* The quiet spelling: one status per row down a column, where a stack of
- * filled pills reads as decoration. The tone survives as the dot's colour and
- * as the label's, so the status is still tellable at a glance; the fill and
- * the pill padding are what go. It overrides the tone tints above, which is
- * why it is declared after them and repeats `background` rather than relying
- * on the cascade of a class the caller may or may not have passed. It sets no
- * size of its own: a table cell reads the meta rung, and a rung of its own put
- * the one plain-text status in a row a step above every value beside it. */
-.badge-quiet {
-  background: none;
-  padding: 0;
-  font-weight: 400;
+
+/* The PRIMARY variant: the same tone as a solid fill, for the one status a
+ * surface must not let a reader miss. A filled status control's ground is the
+ * tone's Text token and never its base hue — no ink clears AA on the base —
+ * and its ink is the one that flips with the theme. The neutral fill is the
+ * page's own ink, lettered in the page's ground. Every pair is measured in
+ * tokens.test.ts, so each rule names its ink rather than inheriting one. */
+.badge-primary {
+  background: var(--textPrimary);
+  color: var(--bgPage);
 }
-.badge-quiet::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: currentColor;
-  flex: none;
+.badge-primary.badge-success {
+  background: var(--successText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-warn {
+  background: var(--warnText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-danger {
+  background: var(--dangerText);
+  color: var(--textOnStatusControl);
+}
+.badge-primary.badge-accent {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+}
+/* --ai does not lift in dark, so its ink is --textOnAccent, the light ink
+ * shared by every fill that stays put: the dark --textOnAccentControl would
+ * read 3.26:1 on it. */
+.badge-primary.badge-ai {
+  background: var(--ai);
+  color: var(--textOnAccent);
 }
 
-/* The LIVE spelling: the same pill with a dot that breathes, for a status that
- * is true as the page is being read rather than one the record remembers. The
- * dot is `currentColor`, so it says what the label says — a toned pill marks in
- * its tone's ink and an untoned one in the pill's own — and it is the only
- * moving thing in this vocabulary.
- *
- * `quiet` already draws a still dot from ::before; with `live` the breathing
- * one is the mark, so the static one goes rather than the two doubling. */
-.badge-live::before {
-  content: none;
-}
+/* The LIVE mark: a dot that breathes, for a status true as the page is read
+ * rather than one the record remembers. `currentColor`, so it says what the
+ * label says, in either variant — and the only moving thing in this
+ * vocabulary. */
 .badge-live-dot {
   width: 6px;
   height: 6px;

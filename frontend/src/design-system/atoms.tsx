@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   LoaderCircle,
+  type LucideIcon,
   MoreHorizontal,
   Search,
 } from "lucide-react";
@@ -366,43 +367,41 @@ function ButtonSentences({
   );
 }
 
+// The leading slot holds ONE mark: a glyph naming the kind of status, or the
+// breathing dot of `live`. Both at once would be two claims in one place, so
+// the type refuses the pair rather than a render quietly picking one.
+type BadgeMark =
+  | { icon?: LucideIcon; live?: never }
+  | { icon?: never; live?: boolean };
+
 export function Badge({
-  tone,
-  children,
-  quiet,
+  variant = "soft",
+  tone = "default",
+  icon: Icon,
   live,
-}: Readonly<{
-  tone?: "success" | "warn" | "danger" | "ai" | "accent";
-  children: ReactNode;
-  // The same status in a column of them. A pill states one status against
-  // surrounding prose; a table row states one per row, and a stack of filled
-  // pills reads as decoration a reader learns to skip. `quiet` keeps the tone
-  // and drops the fill: a dot in the tone's colour, and the label as plain
-  // text. Same vocabulary, so a status cannot be worded one way in a list and
-  // another on the record the list opens.
-  quiet?: boolean;
-  // A status that is true AT THIS MOMENT rather than one recorded earlier: a
-  // Deal Room an invited buyer can walk into as the page is read. It draws a
-  // breathing dot in the tone's own ink, which is the one place in this
-  // vocabulary where motion is a FACT — "this is happening now" — rather than
-  // decoration, so it belongs to a handful of states and not to a palette.
-  // Under `prefers-reduced-motion` the dot stays and stops moving: the mark is
-  // the claim, and removing it would take the claim with it.
-  live?: boolean;
-}>) {
-  const classes = ["badge"];
-  if (quiet) {
-    classes.push("badge-quiet");
-  }
-  if (tone) {
-    classes.push(`badge-${tone}`);
-  }
-  if (live) {
-    classes.push("badge-live");
-  }
+  children,
+}: Readonly<
+  {
+    // `soft` is the tint a status wears beside prose and down a column;
+    // `primary` is the solid fill for the one status a surface must not let
+    // a reader miss, and for a count.
+    variant?: "soft" | "primary";
+    tone?: "default" | "accent" | "success" | "warn" | "danger" | "ai";
+    children: ReactNode;
+  } & BadgeMark
+>) {
+  // `live` is a status true AS THE PAGE IS READ — a Deal Room a buyer can walk
+  // into this second — so its dot is the one place motion is a fact rather
+  // than decoration. Reduced motion keeps the dot still: the mark is the claim.
+  const classes = [
+    "badge",
+    variant === "primary" && "badge-primary",
+    tone !== "default" && `badge-${tone}`,
+  ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
       {live && <span className="badge-live-dot" aria-hidden />}
+      {Icon && <Icon size={12} aria-hidden="true" />}
       {children}
     </span>
   );

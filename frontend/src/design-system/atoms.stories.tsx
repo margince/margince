@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Lock, Mail, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Lock, Mail, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -34,10 +34,8 @@ import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
 
-// Stories are the render surface the change-scoped fe-uat capture gate drives
-// (frontend/scripts/fe-uat.mjs): a change to atoms.tsx re-renders these in a
-// headless browser and fails on an unclean render. One story file per
-// component module — fe-uat maps atoms.tsx → atoms.stories.tsx.
+// fe-uat (frontend/scripts/fe-uat.mjs) maps atoms.tsx → atoms.stories.tsx and
+// fails a change to atoms.tsx whose stories here do not render clean.
 const meta: Meta = {
   title: "Design System/Atoms",
   parameters: { layout: "padded" },
@@ -60,13 +58,10 @@ const stack: CSSProperties = {
   gap: "1rem",
 };
 
-// Every axis of the button on one screen, because each of the four defects this
-// story was rewritten to expose was invisible while the variants were reviewed
-// one at a time: a ghost 2px taller than the primary beside it, an icon at
-// lucide's 24px default next to a 13.5px label, a two-letter label shrunk to a
-// pill nobody reads as a button, and no focus ring at all. The rows below are
-// the comparisons that make each of those visible in one look — same-row height,
-// same-row icon size, same-row width floor.
+// Every axis of the button on one screen. A ghost taller than the primary, an
+// icon at lucide's 24px beside a 13.5px label, a two-letter label shrunk to a
+// pill and a missing focus ring each look fine one variant at a time; same-row
+// height, icon size and width floor show them in one look.
 export const Buttons: Story = {
   render: () => (
     <div style={stack}>
@@ -196,13 +191,10 @@ export const Buttons: Story = {
           </button>
         </div>
       </div>
-      {/* The row this story exists for. Working and refused are opposite
-          facts, and the product drew both as `disabled` — dimmed, barred,
-          focus dropped — so a reader could not tell a request in flight from
-          one their seat is not allowed to make. Side by side is the only way
-          to see that they now differ: full ink and a turning mark against a
-          dimmed pill. The label does not change, which is the other half; a
-          "Saving…" here would rename a control the reader is standing on. */}
+      {/* Working and refused are opposite facts: full ink and a turning mark
+          against a dimmed, barred pill, side by side so the difference shows.
+          The label does not change — a "Saving…" here would rename a control
+          the reader is standing on. */}
       <div style={stack}>
         <span className="t-label">
           Working — which must not read as refused
@@ -248,17 +240,11 @@ export const Buttons: Story = {
           </Button>
         </div>
       </div>
-      {/* The federated variant, in the column it is shaped for: full width is
-          the whole point of it, and a wrapping row of them would hide that. All
-          three states the sign-in surface draws, one under the other, because
-          the pair of dims is only legible as a comparison — a live door, one
-          dimmed while the password form beside it is writing and coming back,
-          and one the installation advertises with nothing behind it yet.
-
-          Each mark keeps its own company's colours. That is the one place in
-          this product where a colour is not a token, and it is also why neither
-          dim state grayscales anything: fading a control is ours to do,
-          recolouring somebody else's logo is not. */}
+      {/* The federated variant at the full width it is shaped for, in the
+          three states sign-in draws: live, dimmed while the password form
+          writes, and advertised with nothing behind it. Each mark keeps its
+          company's colours — the one non-token colour in the product — so no
+          dim state grayscales it: recolouring somebody's logo is not ours. */}
       <div style={stack}>
         <span className="t-label">
           Federated sign-in — offered, in flight, unavailable
@@ -282,41 +268,83 @@ export const Buttons: Story = {
   ),
 };
 
-export const Badges: Story = {
+const BADGE_VARIANTS = ["soft", "primary"] as const;
+const BADGE_TONES = ["accent", "success", "warn", "danger", "ai"] as const;
+const badgeDocs = (story: string) => ({ docs: { description: { story } } });
+
+export const BadgeVariants: Story = {
+  parameters: badgeDocs(`A badge states one status or label fact beside a name.
+- **Soft** is the default. **Primary** is for the one status on a surface a
+  reader must not miss, and for counts. One variant per context: never mix
+  them down a column.
+- An icon sits LEFT of the label, never right; a badge has no trailing slot.
+- Don't draw a border, uppercase or track the label, or hand-roll a pill class.
+- Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
+  \`FilterPills\`, a verb is \`Button\`.
+- No new colours. \`ai\` means an agent proposed it, and nothing else.`),
   render: () => (
-    <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-      <Badge tone="success">Active</Badge>
-      <Badge tone="warn">Pending</Badge>
-      <Badge tone="danger">Overdue</Badge>
-      <Badge tone="ai">AI</Badge>
-      <Badge tone="accent">Rep</Badge>
-      {/* The quiet spelling, for a column of statuses where filled pills read
-          as decoration. Same tone vocabulary, no fill. */}
-      <Badge quiet>Open</Badge>
-      <Badge tone="danger" quiet>
-        16 days overdue
-      </Badge>
-      <Badge tone="success" quiet>
-        Paid 22 days late
-      </Badge>
-      {/* The live spelling: a status that is true as the page is read, marked
-          by a dot that breathes. Filled and quiet both carry it. */}
+    <div style={stack}>
+      {BADGE_VARIANTS.map((variant) => (
+        <div key={variant} style={row}>
+          <Badge variant={variant}>default</Badge>
+          {BADGE_TONES.map((tone) => (
+            <Badge key={tone} variant={variant} tone={tone}>
+              {tone}
+            </Badge>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const BadgeWithIcon: Story = {
+  parameters: badgeDocs("The glyph names the kind of status, left only."),
+  render: () => (
+    <div style={stack}>
+      {BADGE_VARIANTS.map((variant) => (
+        <div key={variant} style={row}>
+          <Badge variant={variant} tone="success" icon={Mail}>
+            Replied
+          </Badge>
+          <Badge variant={variant} tone="danger" icon={Lock}>
+            Restricted
+          </Badge>
+          <Badge variant={variant} tone="ai" icon={Sparkles}>
+            Drafted
+          </Badge>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const BadgeLive: Story = {
+  parameters: badgeDocs("Happening now; the dot stops under reduced motion."),
+  render: () => (
+    <div style={row}>
       <Badge tone="success" live>
         Live
       </Badge>
-      <Badge tone="accent" quiet live>
+      <Badge variant="primary" tone="accent" live>
         Publishing
       </Badge>
     </div>
   ),
 };
 
+export const BadgeLongLabel: Story = {
+  parameters: badgeDocs("One line at its own width: the container clips it."),
+  render: () => (
+    <div style={{ ...row, inlineSize: "10rem", overflow: "hidden" }}>
+      <Badge tone="warn">Waiting on the buyer's legal review</Badge>
+    </div>
+  ),
+};
+
 // The chip is an IDENTIFIER, so the states that matter are the ones where two
-// chips have to be told apart or recognised as the same record. The old story
-// was three default-size untinted chips, which showed neither: it could not
-// have caught that four sizes existed for a two-value prop, that the tint was
-// opt-in so a company changed colour between its list row and its own page, or
-// that a name with no space in it produced a single letter.
+// chips must be told apart or recognised as one record: every size, the tint a
+// record keeps on every page, and a name with no space in it.
 export const Avatars: Story = {
   render: () => (
     <div style={stack}>
@@ -409,13 +437,9 @@ export const Avatars: Story = {
   ),
 };
 
-// The field controls in one column, which is the point of the story: a text
-// input, a dropdown and a textarea stacked the way a form stacks them is the
-// only way to see that their type size, padding, height and focus ring actually
-// agree. Reviewed one at a time they always look fine.
-//
-// The dropdown is the Select from select.tsx, and it is here for exactly that
-// comparison — its own states live in select.stories.tsx.
+// The field controls stacked the way a form stacks them, the only way to see
+// that type size, padding, height and focus ring agree. The dropdown is the
+// Select from select.tsx; its own states live in select.stories.tsx.
 export const Fields: Story = {
   render: () => <FieldsRow />,
 };
@@ -454,17 +478,10 @@ function FieldsRow() {
   );
 }
 
-// The three slots a field grew for the sign-in screens, which had forked their
-// own field component to get them. A leading glyph and a trailing control both
-// sit INSIDE one outline — that is the whole point, and the reason a second
-// component existed: `.input-icon` could carry a glyph on the left and nothing
-// on the right, so a reveal button had no way into the ring.
-//
-// The refusal is the other half. `error` is its own slot rather than a message
-// pushed through `hint`, because the two say different things and were being
-// spelled identically: a refused password rendered in the same meta-grey as the
-// rule it broke, and on the change-password card in the same grey as the
-// success line four elements above it.
+// A field's three slots: a leading glyph and a trailing control both sit INSIDE
+// one outline, so a reveal button is in the ring. `error` is its own slot
+// rather than a message through `hint`, because a refusal and the rule it broke
+// say different things and must not share one meta-grey.
 export const FieldStates: Story = {
   name: "Fields — affordances and refusal",
   render: () => <FieldStatesColumn />,
@@ -562,14 +579,9 @@ export const Toggles: Story = {
   ),
 };
 
-// The card surfaces plus the reading tile, together because the tile is
-// what a card usually holds first and because the three tones only read as a
-// system next to each other: the tile stays neutral and the VALUE takes the
-// tone, which is invisible when a tinted tile is shown on its own.
-//
-// The third card is the shape most screens want and the reason the header is
-// props rather than a hand-placed child: one title, one description under it,
-// and the section's actions beside them.
+// The card surfaces side by side. The third is the shape most screens want and
+// why the header is props rather than a hand-placed child: one title, one
+// description under it, and the section's actions beside them.
 export const Cards: Story = {
   render: () => (
     <div style={stack}>
@@ -966,20 +978,12 @@ export const OverflowClosed: Story = {
   ),
 };
 
-// The open panel, carrying every item shape one menu can hold at once, because
-// each of these was a separate defect and every one of them was invisible while
-// the panel was reviewed with three tidy verbs in it:
-//
-//   - a row whose label LEADS WITH A GLYPH, beside rows that do not — the words
-//     have to start on one x or the menu reads as two ragged columns;
-//   - a label longer than the panel's ceiling, which wraps rather than being
-//     clipped: an item a reader cannot finish reading is one they cannot choose;
-//   - a row that is SET rather than pressed — the one item a menu must not
-//     close under, since the control that drew a region open is the only one
-//     that closes it — drawn in the accent rather than the filled bar;
-//   - a refused row, which stays listed because the refusal is information;
-//   - the destructive verb, which keeps its red and loses its fill, and sits
-//     below the seam that separates it from the routine ones.
+// The open panel with every item shape one menu can hold, each invisible with
+// three tidy verbs in it: a label LEADING WITH A GLYPH (the words start on one
+// x); a label past the ceiling, which wraps, since an item nobody can finish
+// reading cannot be chosen; a SET row, drawn in the accent, that the menu does
+// not close under; a refused row, listed because the refusal is information;
+// and the destructive verb, red without its fill, below the seam.
 export const Overflow: Story = {
   render: () => (
     <OverflowMenuDemo openOnMount>
@@ -1004,10 +1008,9 @@ export const Overflow: Story = {
   ),
 };
 
-// placement="right" is the drawer form of the SAME Modal — full height on the
-// right edge, with the record behind it still legible. Catalogued because the
-// centred dialog above is what everyone pictures when they read "Modal", and
-// the two are one component with one prop between them.
+// placement="right" is the drawer form of the SAME Modal: full height on the
+// right edge, the record behind it still legible. One component, one prop
+// between it and the centred dialog everyone pictures when they read "Modal".
 function DrawerDemo() {
   const [open, setOpen] = useState(true);
   const titleId = useId();
@@ -1056,11 +1059,8 @@ export const Drawer: Story = {
   render: () => <DrawerDemo />,
 };
 
-// SearchField had no node of its own: it appeared only inside RecordPicker's
-// story, where it reads as part of that composite rather than as the one
-// spelling of a search input. Both states are here because the affordance is
-// the icon and the type="search" clear control, and a filled field is the only
-// way to see the second.
+// The one spelling of a search input, empty and filled: the affordance is the
+// icon and the type="search" clear control, and only a filled field shows it.
 export const Search: Story = {
   render: () => (
     <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: "22rem" }}>
