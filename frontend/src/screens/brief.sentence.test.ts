@@ -60,7 +60,15 @@ function day(queue: WorklistItem[]): Worklist {
     counts: [],
     reach: [],
     sources_unavailable: [],
-    summary: { total: queue.length, urgent: 0 },
+    summary: { total: queue.length, urgent: 0, due: 0, lower_priority: 0 },
+    readings: {
+      changed_since_brief: 0,
+      revenue_at_risk_minor: 0,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
   };
 }
 

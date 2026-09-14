@@ -119,7 +119,7 @@ describe("moveHref — the draft_reply move", () => {
   // A deal has no composer to open, so a link claiming to draft there would
   // promise what the click cannot do. It reaches the record and says so.
   it("reaches the record, and claims no draft, where there is no composer", () => {
-    for (const type of ["deal", "company"]) {
+    for (const type of ["deal", "company"] as const) {
       const item = replyRow({ type, id: "x-1" });
       expect(moveHref(item)).not.toContain("compose=");
       expect(moveHref(item)).toBeTruthy();
@@ -230,7 +230,7 @@ describe("the verbs the row can and cannot take a reader to", () => {
   // its own describe block below, including the case where the row names
   // nobody and correctly draws nothing.
   it("draws no link for a verb no address can perform", () => {
-    for (const action of ["create_task", "reconnect", "none"]) {
+    for (const action of ["create_task", "reconnect", "none"] as const) {
       const item = movingRow(action);
       expect(moveHref(item)).toBeUndefined();
       expect(moveOpensComposer(item)).toBe(false);
@@ -340,6 +340,9 @@ describe("itemTitle — an incident names what broke, never an internal id", () 
     category: "system",
     title: "",
     because: [],
+    // Required on the wire, and `none` is a real value: an incident row costs
+    // nothing to leave, which is not the same as costing nothing to have.
+    consequence: "none",
     actions: [],
     batch: { key: "system_incident", count: 8, ...batch },
   });
@@ -479,7 +482,7 @@ describe("the open_meeting_brief move", () => {
   });
 });
 
-function briefRow(withContact: string | undefined) {
+function briefRow(withContact: string | undefined): WorklistItem {
   return {
     id: "m1",
     source: "meeting",
@@ -487,6 +490,10 @@ function briefRow(withContact: string | undefined) {
     category: "meetings",
     title: "Fleet retrofit review",
     because: [],
+    // A meeting with a brief behind it costs nothing to leave; the lane says
+    // `meeting_unprepared` only where it could actually tell there is nothing
+    // written down (compose/attention/meeting.go).
+    consequence: "none",
     actions: [],
     dispositions: [],
     overdue: false,
@@ -500,12 +507,17 @@ describe("moveHref — the reconnect move", () => {
   // A lapsed relationship offers a draft with no thread behind it: nobody is
   // waiting on a reply, so the composer opens on the contact and starts one.
   it("opens the composer on the contact with no thread anchored", () => {
+    // Category, level and consequence as `classifyDecay` actually sets them: a
+    // lapsed relationship is filed under `system` at the routine level and says
+    // the RECORD drifts, not the deal. The cast this fixture used to carry was
+    // hiding all three — `relationship_cools` is not a consequence the contract
+    // has ever held.
     const row: WorklistItem = {
       id: "p-9",
       source: "relationship_decay",
-      category: "deals_at_risk",
-      level: 4,
-      consequence: "relationship_cools",
+      category: "system",
+      level: 6,
+      consequence: "data_drifts",
       title: "Marta Feld",
       because: [],
       actions: ["open", "dismiss"],

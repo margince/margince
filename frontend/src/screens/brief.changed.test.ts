@@ -17,7 +17,7 @@ import type { Worklist } from "./worklist.queries";
 // when there is nothing to say, and point at the same lane the figure was taken
 // over.
 
-function day(changed?: number): Worklist {
+function day(changed: number): Worklist {
   return {
     queue: [],
     as_of: "2026-09-03T06:42:00Z",
@@ -26,11 +26,26 @@ function day(changed?: number): Worklist {
     counts: [],
     reach: [],
     sources_unavailable: [],
-    summary: { total: 0, urgent: 0 },
-    readings:
-      changed === undefined ? undefined : { changed_since_brief: changed },
+    summary: { total: 0, urgent: 0, due: 0, lower_priority: 0 },
+    // A WHOLE reading. The strip's other figures are required beside this one,
+    // so a payload carrying `changed_since_brief` alone is not a shape the
+    // server can send.
+    readings: {
+      changed_since_brief: changed,
+      revenue_at_risk_minor: 0,
+      buyer_replies: 0,
+      prospecting: 0,
+      review: 0,
+      more_available: false,
+    },
   };
 }
+
+// Casts on purpose. `readings` is required on the wire and `{}` is not a
+// Worklist at all, so neither shape can be spelled with the type — and both are
+// what this function has to survive rather than throw on.
+const NO_READINGS = { ...day(0), readings: undefined } as unknown as Worklist;
+const NOT_A_PAGE = {} as unknown as Worklist;
 
 describe("changedSinceBrief", () => {
   it("reports the server's own count", () => {
@@ -55,11 +70,8 @@ describe("changedSinceBrief", () => {
   // same for no payload at all: a page that throws is a worse answer than one
   // that draws nothing.
   it("answers nothing rather than throwing on a payload it cannot read", () => {
-    expect(changedSinceBrief(day())).toBeUndefined();
-    // Cast on purpose: `{}` is not a Worklist and is not meant to be. The case
-    // is about a payload the function cannot read, which is the one shape a
-    // typed fixture cannot express.
-    expect(changedSinceBrief({} as unknown as Worklist)).toBeUndefined();
+    expect(changedSinceBrief(NO_READINGS)).toBeUndefined();
+    expect(changedSinceBrief(NOT_A_PAGE)).toBeUndefined();
     expect(changedSinceBrief(undefined)).toBeUndefined();
   });
 
