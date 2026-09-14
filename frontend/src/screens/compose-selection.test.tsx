@@ -92,6 +92,13 @@ function setup(
             });
       if (path.endsWith("/reply-recipient"))
         return json({ address: "ada@example.test", mailbox_user_ids: [] });
+      // That the full drawer OPENS is the claim a test here makes; what it
+      // draws is emaildetail's own contract, so its read fails on purpose.
+      if (path.endsWith("/email-presentation"))
+        return new Response(JSON.stringify({ code: "unavailable" }), {
+          status: 503,
+          headers: { "Content-Type": "application/problem+json" },
+        });
       if (path === "/activities/a1") return json(anchor);
       if (path === "/activities/a2") return json(second);
       if (path === "/activities")
@@ -220,6 +227,15 @@ it("opens another message's full text in place without changing the reply target
   expect(
     within(fold).getByText(/A second paragraph beyond the preview\./),
   ).toBeTruthy();
+  expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
+
+  // The envelope and the attachments are the full drawer's, opened from the
+  // foot of the text: a second dialog over the composer, whose draft stays.
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  fireEvent.click(
+    within(fold).getByRole("button", { name: "Read full email" }),
+  );
+  await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
   expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
 });
 
