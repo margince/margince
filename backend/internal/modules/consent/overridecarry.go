@@ -21,13 +21,17 @@ package consent
 // read in an export or after an un-merge, and a later erasure reaching the
 // predecessor must still find its own rows.
 //
-// NO SEPARATE LOCK METHOD. lockSubjectSuppressions (suppressionlock.go) — the
-// lock both Allow and RevokeOverride take — keys on the subject id alone,
-// naming no table, and StopCarrier.LockStopsTx already takes that same key on
-// both sides of the merge before CarryOverridesTx runs (mergeContactTx calls
-// LockStopsTx before it locks any contact row, then CarryStopsTx, then this).
-// A dedicated LockOverridesTx would serialise against nothing that lock does
-// not already cover.
+// NO SEPARATE LOCK METHOD on StopCarrier, but CarryOverridesTx still takes the
+// lock itself, exactly as CarryStopsTx does — every writer of this table's
+// sibling, communication_suppression, takes lockSubjectSuppressions's key
+// (suppressionlock.go's own header states the rule), and this is a writer of
+// communication_override under the same key, so it holds itself to it too.
+// pg_advisory_xact_lock is session-reentrant, so the call is free from
+// mergeContactTx, which already holds the key via LockStopsTx before either
+// carry runs; what it buys is that a caller reaching this exported method
+// WITHOUT that pre-lock — none exists today, but nothing stops one being
+// written tomorrow — cannot let a concurrent Allow interleave and drop a row
+// the same way suppressionlock.go's header describes losing a stop.
 
 import (
 	"context"
@@ -62,6 +66,15 @@ func (s *Store) CarryOverridesTx(ctx context.Context, tx pgx.Tx, from, to commsa
 	// only to keep a caller with NO merging grant at all from writing overrides
 	// through a seam meant for merges.
 	if err := admitAMergingCaller(ctx); err != nil {
+		return err
+	}
+	// LOCKED, on both sides, before the read below — the same call
+	// CarryStopsTx makes and for the same reason: this reads the retiring
+	// subject's live rows and writes the survivor's, and locking only one side
+	// leaves the read open to a concurrent Allow landing between the read and
+	// the write. See the file header for why this is free from mergeContactTx
+	// and load-bearing for any other caller.
+	if err := lockBothSidesOfACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
