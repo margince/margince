@@ -95,7 +95,7 @@ reader would call broken.
 | Primitive | Change |
 |---|---|
 | `Button` | Flat. Primary: `--accent` fill, `--textOnAccent`, 36px, 10px radius, weight 500. Ghost: `--pane` fill, `--line2` outline. Small: 32px. Icon-only: 36×36 square (the more button). The agent's fill for Accept on a staged row is the existing `variant="ai"`. No gradients, no 3D. |
-| `Badge` | `quiet` becomes the default: a 6px dot and a word. The pill (`--bg3`, 20px) only for standing badges beside a name and the one status that must not be missed. |
+| `Badge` | One component, one size, always a fill — no border, no uppercase, no dot by default. `soft` is the default: the tone's tint with its Text ink, for a status beside prose and down a column. `primary` is the solid fill, for a count and the one status that must not be missed. Six tones (`default`, `accent`, `success`, `warn`, `danger`, `ai`); an optional icon left of the label; `live` for a breathing dot in the same place. |
 | `Card` | Keep as is (`onecard.test.ts`); the pane is `Panel`, not `Card`. |
 | `StatCard` | The reading card: the eyebrow as its label, 26px mono figure (down to 20px where five share a narrow row), 12.5px basis, `--pane` ground, 18px radius, 138px min height. `numeric` for figures. |
 | `Skeleton`, `PendingBody`, `EmptyState` | Recolour to tokens; `EmptyState` left-aligned in its pane, one sentence and one verb. |
