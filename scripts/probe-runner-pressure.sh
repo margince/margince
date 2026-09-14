@@ -36,18 +36,30 @@ field() {
 }
 
 while :; do
-  # PSI's some/avg10 for memory is the direct reading of "is this host stalling
-  # on reclaim" — the hypothesis this probe exists to confirm or kill. It is the
-  # field to read first; MemAvailable only says how close the host is.
-  psi='?'
+  # PSI for memory is the direct reading of "is this host stalling on reclaim" —
+  # the hypothesis this probe exists to confirm or kill. MemAvailable only says
+  # how close the host is.
+  #
+  # BOTH fields, because they fail in opposite directions. `avg10` is readable at
+  # a glance — 62.97 against 0.00 is the whole finding in one column — but it is a
+  # decaying 10s window read every 15s, so a stall that begins and ends inside the
+  # uncovered 5s can be gone before the next sample looks. `total` is cumulative
+  # microseconds since boot: unreadable on its own, and exact, because the
+  # difference between two consecutive samples covers every microsecond between
+  # them with no window to fall through. A probe hunting a fast kill must not be
+  # able to under-report it.
+  psi_avg10='?'
+  psi_total='?'
   if [ -r /proc/pressure/memory ]; then
-    psi=$(awk '/^some/ { sub("avg10=", "", $2); print $2; exit }' /proc/pressure/memory)
+    psi_avg10=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^avg10=/) { sub("avg10=", "", $i); print $i; exit } }' /proc/pressure/memory)
+    psi_total=$(awk '/^some/ { for (i = 2; i <= NF; i++) if ($i ~ /^total=/) { sub("total=", "", $i); print $i; exit } }' /proc/pressure/memory)
   fi
-  printf 'runner-pressure %s mem_avail_kb=%s swap_free_kb=%s psi_mem_some_avg10=%s load=%s\n' \
+  printf 'runner-pressure %s mem_avail_kb=%s swap_free_kb=%s psi_mem_some_avg10=%s psi_mem_some_total_us=%s load=%s\n' \
     "$(date -u +%H:%M:%S)" \
     "$(field /proc/meminfo MemAvailable)" \
     "$(field /proc/meminfo SwapFree)" \
-    "$psi" \
+    "$psi_avg10" \
+    "$psi_total" \
     "$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null || printf '?')"
   sleep "$interval"
 done
