@@ -93,6 +93,22 @@
 .pn-counts {
   margin: var(--space-1) 0 0;
 }
+/* The one write the edge detail offers names the peer it records, and the
+ * detail rides a narrow panel slot, so a long name has to fit. It WRAPS inside
+ * the card rather than ending in an ellipsis: the name is the object of the
+ * write, and a verb that hid whom it records would ask for a click on trust.
+ * The button only stops at the card's edge; the wrap, and the leading two lines
+ * need, belong to the label's own element, since the button's type is set
+ * where the button is declared. */
+.pn-suggest > .btn {
+  max-inline-size: 100%;
+}
+.pn-suggest-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+  line-height: var(--lh-snug);
+}
 .pn-receipts {
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);

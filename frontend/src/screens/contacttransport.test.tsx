@@ -187,12 +187,13 @@ afterEach(() => {
 });
 
 // The transport cell of a timeline row or a brief chip — both draw the icon and
-// the name in the same slot, as the one badge that carries a glyph. Read by
-// shape rather than by text: the assertion is about what the cell SAYS, so a
+// the name in the same slot, as the one badge that carries a glyph other than
+// the agent's Sparkles, which every AI-tone badge draws whatever it says. Read
+// by shape rather than by text: the assertion is about what the cell SAYS, so a
 // query that had to know the answer first could only ever confirm itself.
 function transportCell(container: HTMLElement): HTMLElement {
   const cell = [...container.querySelectorAll<HTMLElement>(".badge")].find(
-    (badge) => badge.querySelector("svg") !== null,
+    (badge) => badge.querySelector("svg:not(.lucide-sparkles)") !== null,
   );
   if (!cell) {
     throw new Error("no transport cell rendered");

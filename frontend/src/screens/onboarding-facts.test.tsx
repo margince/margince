@@ -1483,7 +1483,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const signalByField: Record<string, string> = {
       display_name: "required, still empty",
       industry: "empty",
-      legal_name: "typed by you",
+      legal_name: "Typed by you",
       registered_address: "From your profile",
       offer_summary: "high",
       icp: "medium",

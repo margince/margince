@@ -49,7 +49,11 @@ import {
 } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
 import type { ListChip } from "../design-system/listsurface";
-import type { ListColumn, ListSelection } from "../design-system/listtable";
+import {
+  CellStrip,
+  type ListColumn,
+  type ListSelection,
+} from "../design-system/listtable";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
 import { FieldGuard } from "../design-system/rbac";
@@ -1602,18 +1606,20 @@ function dealColumns(
       sort: "last_activity_at",
       cell: (deal) =>
         deal.last_activity_at ? (
-          <span className="deal-signal">
-            {formatDuration(
-              Math.max(
-                0,
-                Date.now() - new Date(deal.last_activity_at).getTime(),
-              ),
-              locale,
-            )}
+          <CellStrip>
+            <span>
+              {formatDuration(
+                Math.max(
+                  0,
+                  Date.now() - new Date(deal.last_activity_at).getTime(),
+                ),
+                locale,
+              )}
+            </span>
             {deal.stalled && (
               <Badge tone="warn">{t("deal.stalledBadge")}</Badge>
             )}
-          </span>
+          </CellStrip>
         ) : (
           <span className="t-caption">{t("deals.lastSignalNone")}</span>
         ),

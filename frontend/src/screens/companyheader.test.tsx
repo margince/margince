@@ -186,7 +186,7 @@ function provenanceText(): string {
     throw new Error("the identity line rendered no provenance badge");
   }
   if (tag.classList.contains("badge-ai")) {
-    throw new Error("a record a person typed carries the agent tone");
+    throw new Error("a human-captured record carries the agent tone");
   }
   return tag.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }

@@ -1089,15 +1089,6 @@
   color: var(--textContent);
 }
 
-/* The deals table's signal cell: the age, and the flag when the server says the
- * deal has gone quiet, kept on one line so the column stays scannable. */
-.deal-signal {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
 /* A timeline list whose rows carry no date gutter or rail of their own —
    the change history and the consent log, whose date rides inline in each
    row's meta line. Without this the chronicle's four-column grid auto-places

@@ -148,7 +148,9 @@ function RecordWorksWith({
             }
           }}
         >
-          {t("contact.graph.recordWorksWith", { name: peer.label })}
+          <span className="pn-suggest-label">
+            {t("contact.graph.recordWorksWith", { name: peer.label })}
+          </span>
         </Button>
       )}
     </p>

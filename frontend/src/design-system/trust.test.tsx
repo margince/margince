@@ -157,8 +157,8 @@ describe("ProvenanceTag", () => {
     render(<ProvenanceTag provenance={{ kind: "unknown" }} />);
 
     expect(claimsAModel("Typed by a buyer")).toBe(false);
-    // Not the colleague arm either: a buyer holds no seat, and "Typed by a
-    // person" would send a reader looking for them in the member directory.
+    // Not the colleague arm either: a buyer holds no seat, and the colleague
+    // arm's "Typed by a person" would send a reader to the member directory.
     expect(screen.queryByText("Typed by a person")).toBeNull();
     expect(claimsAModel("Source not recorded")).toBe(false);
   });

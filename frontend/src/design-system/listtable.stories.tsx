@@ -407,12 +407,14 @@ export const InASettingsColumn: Story = {
   ),
 };
 
-// Several pills in ONE cell, and what happens when they do not fit. Both cells
-// are the ones `CellStrip` was taken from: a relationship column carrying three
-// badges at once, and a score badge with the reason beside it. Neither fits the
-// share its column gets at this width, and both CLIP at the column edge rather
-// than taking a second line — a cell that wrapped would push every row below it
-// down, so the reader's answer is to widen the column (drag a header's trailing
+// Several pills in ONE cell, and what happens when they do not fit. The cells
+// are the ones `CellStrip` serves: a relationship column carrying three badges
+// at once, a score badge with the reason beside it, and a deal's age with its
+// stalled flag. None fits the share its column gets at this width, and none
+// takes a second line — a cell that wrapped would push every row below it down.
+// The reason ends in an ellipsis while its badge stays whole, and the three
+// badges each ellipsise their own label; nothing is cut mid-word at the column
+// edge. The reader's answer is to widen the column (drag a header's trailing
 // edge) and nobody else's row moves.
 export const CellStrips: Story = {
   name: "Cell strips",
@@ -451,11 +453,24 @@ export const CellStrips: Story = {
                     {warm ? "Warm" : "Cooling"}
                   </Badge>
                   <span className="t-caption">
-                    {warm ? "Replied inside a day" : "Quiet for three weeks"}
+                    {warm
+                      ? "Replied inside a day to the renewal proposal"
+                      : "No qualifying signal for three weeks"}
                   </span>
                 </CellStrip>
               );
             },
+          },
+          {
+            key: "signal",
+            header: "Last signal",
+            numeric: true,
+            cell: (row: Company) => (
+              <CellStrip>
+                <span>{row.owner === "Lars" ? "2 days" : "3 weeks"}</span>
+                {row.owner !== "Lars" && <Badge tone="warn">Stalled</Badge>}
+              </CellStrip>
+            ),
           },
         ]}
       />
