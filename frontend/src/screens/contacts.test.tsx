@@ -736,7 +736,9 @@ describe("ContactScreen — correcting an address that refused a send", () => {
     // The row is taken OUT, which is the gesture the form offers for it —
     // emptying the box leaves a required field blank and the browser refuses
     // the submit, so a reader who wants no address presses Remove.
-    await userEvent.click(screen.getAllByRole("button", { name: "Remove" })[0]);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: /^Remove row/ })[0],
+    );
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(sent).toHaveLength(1));
