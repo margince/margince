@@ -38,7 +38,7 @@ describe("a live contact that is not the viewer's to change refuses its core wri
     // Refused, not withdrawn: the rows are there to be read and say why they
     // will not press.
     await openRecordMenu();
-    for (const testId of ["edit-record", "merge-record", "archive-record"]) {
+    for (const testId of ["merge-record", "archive-record"]) {
       const verb = await screen.findByTestId(testId);
       expect(verb.hasAttribute("disabled")).toBe(true);
       expect(
@@ -83,11 +83,12 @@ describe("the header's core record verbs — edit, merge, archive", () => {
 
     const subtitle = () => document.querySelector(".record-sub");
     await waitFor(() => expect(subtitle()?.textContent).toBe("Old title"));
-    await pressRecordVerb("edit-record");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Title" }),
+    );
     const title = await screen.findByLabelText("Title");
     await userEvent.clear(title);
-    await userEvent.type(title, "New title");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(title, "New title{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ title: "New title" });
@@ -157,7 +158,6 @@ describe("every secondary verb is a row of the header's one menu", () => {
   // In the order a reader meets them: the record's own writes, then the
   // quieter doors, then the destructive one last.
   const ROWS = [
-    en["record.edit"],
     en["merge.contact"],
     en["record.share"],
     en["record.fullHistory"],

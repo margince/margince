@@ -475,6 +475,23 @@ export const en = {
   // as two things.
   "record.timeline": "History",
   "record.edit": "Edit",
+
+  "record.fieldRequired": "This field is required.",
+  "record.registration": "Registration",
+  "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
+  "record.leadStatusAction":
+    "Use the lead status controls to change its status.",
+  "record.leadScoreAction":
+    "Use the score override to change the score with a reason.",
+  "record.openProfile": "Open profile",
+  "record.fieldsFailed": "Custom fields could not be loaded.",
+  "record.fieldsLoading": "Loading custom fields…",
+  "record.fieldsRetry": "Retry",
+
+  "record.visibilityOwner": "Owner only",
+  "record.companyRoutingKey": "Company routing key",
+  "record.finishFieldEdit":
+    "Save or cancel the current edit before closing Details.",
   "record.save": "Save",
   "record.saveDone": "“{name}” saved",
   "record.archiveDone": "“{name}” archived",
@@ -1085,7 +1102,7 @@ export const en = {
   "co.strip.noOpenDeals": "No open deals",
   "co.strip.pipeline": "Open pipeline",
   "co.description.label": "Description",
-  "co.description.placeholder": "Add description",
+
   "co.strip.netInvoiced": "Net invoiced · 12 mo",
   "co.strip.notAssessed": "Not assessed",
   "co.strip.lifetimeOf": "{amount} lifetime",
@@ -1808,7 +1825,7 @@ export const en = {
   "co.rail.contacts.empty": "No contacts yet. Nobody to write to.",
   "co.rail.contacts.add": "Add a contact",
   "co.rail.contacts.inTouch": "Already in touch with them",
-  "co.rail.details.all": "All fields",
+
   "co.commercial.title": "Commercial",
   "co.commercial.lostFigure": "Lost deals",
   "co.commercial.allDeals": "All deals",
@@ -2325,7 +2342,7 @@ export const en = {
   "lead.scoreNoSignals": "No qualifying signals",
   "lead.source": "Source",
   "lead.project": "Project",
-  "lead.openLinkedIn": "Open LinkedIn profile",
+
   "lead.filterSource": "Source",
   "lead.filterSourceAll": "All sources",
   "lead.source.manual": "Created manually",
@@ -2447,7 +2464,7 @@ export const en = {
     "These leads could not be read. The count above still stands.",
   "lead.boardTerminalOnly":
     "None of these leads are still open \u2014 they are counted under Qualified and Disqualified.",
-  "contact.fromLead": "From lead",
+
   "lead.mergedTitle": "Merged into another lead",
   "lead.mergedBody":
     "This lead turned out to be the same prospect as another one. Its timeline, its consent and its score moved there; this record stays as the trail.",
@@ -2669,7 +2686,7 @@ export const en = {
   "deals.cancel": "Cancel",
   "deals.advanced": "Moved to {stage}",
   "deal.pendingApprovals": "Awaiting your confirmation",
-  "deal.edit": "Edit deal",
+
   "deal.ownerKeep": "Keep current owner",
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
@@ -2762,17 +2779,7 @@ export const en = {
   "outcomeReview.noAnswer": "Not answered",
   "outcomeReview.notes": "Anything else",
   "deal.commercialContext": "Commercial context",
-  "deal.commercialEdit": "Edit",
-  "deal.commercialAdd": "Record the context",
-  "deal.commercialEditTitle": "Commercial context",
-  "deal.commercialSave": "Save context",
-  "deal.commercialEmpty": "Nothing recorded yet",
-  "deal.commercialEmptyDetail":
-    "Why this deal exists, how much it matters, where it came from, and what it is worth per year.",
-  "deal.arrHint": "The recurring value for a year, in {currency}.",
-  "deal.arrNeedsCurrency":
-    "Expected ARR needs a currency. Set the deal's value and currency in Edit deal first.",
-  "deal.arrClear": "Remove",
+
   "deal.arrFromOffer":
     "Expected ARR comes from the accepted offer and is not edited here.",
   "deal.brief": "Deal brief",
@@ -2781,12 +2788,11 @@ export const en = {
   "deal.briefLess": "Show less",
   "deal.briefEdit": "Edit",
   "deal.briefAdd": "Write the brief",
-  "deal.briefEditTitle": "The deal brief",
+
   "deal.briefEmpty": "No brief written yet",
   "deal.briefEmptyDetail":
     "Say what the customer needs and what winning looks like, so whoever picks this up does not have to reconstruct it.",
-  "deal.briefSave": "Save brief",
-  "deal.briefTooLong": "A brief runs to at most {max} characters.",
+
   "deal.motion": "Commercial motion",
   "deal.motionUnset": "Not set",
   "deal.motionNewBusiness": "New business",
@@ -2802,7 +2808,7 @@ export const en = {
   "deal.priorityLow": "Low",
   "deal.acquisitionSource": "Acquisition source",
   "deal.expectedArr": "Expected ARR",
-  "deal.monthlyEquivalent": "Monthly equivalent",
+
   "deal.monthlyApproximate": "approx.",
   "assignments.title": "Responsible",
   "assignments.noAccessNote":
@@ -3510,7 +3516,7 @@ export const en = {
   "create.industry": "Industry",
   "create.sizeBand": "Company size",
   "co.address.summary": "Address",
-  "co.address.add": "Add an address",
+
   "create.addressLine1": "Street and number",
   "create.addressLine2": "Address line 2",
   "create.city": "City",
@@ -3529,23 +3535,14 @@ export const en = {
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.addDomain": "Add domain",
-  "field.addLegalName": "Add legal name",
-  "field.addIndustry": "Add industry",
-  "field.addLinkedinUrl": "Add LinkedIn URL",
+
   "field.addRegisterVat": "Add VAT ID",
   "field.addRegisteredAddress": "Add registered address",
-  "field.addFullName": "Add name",
+
   "field.addTitle": "Add title",
-  "field.addAddressLine1": "Add street and number",
-  "field.addAddressLine2": "Add address line 2",
-  "field.addPostalCode": "Add postal code",
-  "field.addCity": "Add city",
-  "field.addRegion": "Add state / region",
-  "field.addCountry": "Add country code, e.g. DE",
-  "field.country": "Country",
+
   "field.domain": "Domain",
-  "field.domainRequired":
-    "A domain cannot be cleared here — use the full editor to remove one.",
+
   "field.emailType": "Type",
   "field.emailWork": "Work",
   "field.emailPersonal": "Personal",
@@ -8692,10 +8689,7 @@ export const en = {
   "contact.page.owner": "Owner",
   "contact.page.ownerUnassigned": "Unassigned",
   "contact.page.linkedin": "LinkedIn",
-  // Beside the editable address, not instead of it: the row holds a value to
-  // correct AND a place to go, and the verb names the second so neither reads
-  // as the other.
-  "contact.page.openProfile": "Open profile",
+
   // The rail's own details grid: the contact's own fields, at a glance above
   // the six relationship sections below it.
   "contact.rail.detailsTitle": "Details",

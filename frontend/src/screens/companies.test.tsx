@@ -426,11 +426,12 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Industry" }),
+    );
     const industry = await screen.findByLabelText("Industry");
     await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(industry, "Manufacturing{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchHeader).toBe("1");
@@ -467,14 +468,18 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Industry" }),
+    );
     const industry = await screen.findByLabelText("Industry");
     await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(industry, "Manufacturing{Enter}");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toEqual({ industry: "Manufacturing" });
+    expect(patchBody).toMatchObject({
+      industry: "Manufacturing",
+    });
+    expect(patchBody).not.toHaveProperty("relationship_types");
   });
 });
 
@@ -496,13 +501,12 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("edit-record"));
-    await screen.findByLabelText("Industry");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Domains" }),
+    );
     // The modal's own row-adder: the rail's details grid now offers an inline
     // "Add domain" to a seat holding the grant, and this is about the form.
-    await userEvent.click(
-      within(screen.getByRole("dialog")).getByText("Add domain"),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Add domain" }));
     await userEvent.type(screen.getByLabelText("Domain *"), "brandt.example");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
@@ -783,7 +787,7 @@ describe("CompanyScreen — overlay mode write affordances", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await openRecordMenu("edit-record");
+    await openRecordMenu("archive-record");
     expect(screen.getByTestId("archive-record")).toBeTruthy();
     // Anchor on something only overlay mode produces, so the absence below
     // is asserted AFTER /me landed. Waiting on the absence alone passes on
@@ -816,11 +820,12 @@ describe("CompanyScreen — overlay mode write affordances", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Industry" }),
+    );
     const industry = await screen.findByLabelText("Industry");
     await userEvent.clear(industry);
-    await userEvent.type(industry, "Manufacturing");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(industry, "Manufacturing{Enter}");
 
     expect(await screen.findByText("Manufacturing")).toBeTruthy();
   });
@@ -837,7 +842,9 @@ describe("CompanyScreen — overlay mode write affordances", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    await userEvent.click(await openRecordMenu("edit-record"));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Industry" }),
+    );
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();

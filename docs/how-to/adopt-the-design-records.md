@@ -19,8 +19,7 @@ and the tightest e2e. Every later page copies its decisions. Files:
 
 - Verbs, unchanged in substance: **Write email · Log activity · Add task ·
   more**, all outlined (`Button` ghost); the page's one primary is inside
-  What needs you. The `more` menu keeps its seven items in order (Edit,
-  Merge, Partner set-up, Share, Full history, Decisions, Archive) with the
+  What needs you. The `more` menu keeps its six items in order (Merge, Partner set-up, Share, Full history, Decisions, Archive) with the
   refusal caption first. The `PageAsideToggle` leaves `actions` for the tab
   strip's trailing slot.
 - Facts line: domain · industry · size · owner · **way in** (restore the
@@ -60,7 +59,7 @@ Partner, ⌘K, compose. **Not in the mock, must be built in this step:**
 evidence receipts (`EvidenceModal` with steps) behind every source chip; fact
 contradictions (`co.factSuspect`); the deep-read card and site-read panel;
 the full-history modal with restore; the decisions panel from the menu;
-counterparty hold row; VAT mark; custom fields on Edit; document extraction
+counterparty hold row; VAT mark; custom fields in their own Details section; document extraction
 staging on the Documents tab (three states); the meeting brief drawer;
 hierarchy rollup with the FX 422; provenance line (`captured_by`, "agent:
 deepread") restored under the facts; since-last-visit acknowledgement with
@@ -87,7 +86,7 @@ Files: `contactpage.tsx`, `contact360.tsx`, `contactrail.tsx`,
   (`writeRefusal`: reachability first, then consent; an unanswered guard
   refuses nothing) but its label is the base word unless the transport is
   the only one. Call and Meetings stay as icon verbs or move into `more`.
-  **Add to `more` what is missing today**: Edit (inline stays), Archive,
+  **Add to `more` what is missing today**: Archive,
   Share, Research, Full history. Facts: title · employer · email · phone ·
   the way in (from the network's lead route).
 - **Readings.** `ContactStrip`: whose move, open promises (`contact.loops`),
@@ -128,10 +127,10 @@ Files: `deals.tsx` (over the cap: the page moves to `screens/deal/`),
 `deal360/*`, `dealstatus.tsx`, `dealroom.tsx`, `dealfiles.tsx`.
 
 - **Head.** Verbs: **Write email (from `DealEmailAside`) · Log activity ·
-  Edit deal · more**, all outlined (Archive, Share, Reopen when won/lost). The
+  more**, all outlined (Archive, Share, Reopen when won/lost). The
   `controls` slot goes: worth, stage, owner, close, forecast, partner join the
   facts line, masked fields still **named** (`FieldGuard mode="masked"`).
-  `dealPulse` becomes the live dot ("Your move"). Edit keeps
+  `dealPulse` becomes the live dot ("Your move"). Details keeps
   `overlay.partialWriteBack`.
 - **Readings.** `DealStrip` (money with the newest offer, close with
   provisional/waiting, contacts with the withheld flag, momentum) plus stage
@@ -170,7 +169,7 @@ Files: `leads.tsx` (over the cap: the record moves to `screens/lead/`),
 `leads.stepper.tsx`, `leadsignals.tsx`, `leadvocab.tsx`.
 
 - **Head.** Verbs: **Qualify (primary, `lead.promote` with
-  `promoteIneligible` on the control) · Write email · Edit · Disqualify ·
+  `promoteIneligible` on the control) · Write email · Disqualify ·
   more (Share)**. The "Lead" marker stays on the name line. Facts: title ·
   company (text, no record) · email · source and date · owner.
 - **Readings.** `LeadStrip` keeps the product's five slots: score (with
@@ -226,3 +225,25 @@ Files: `project360.tsx`, `projectsections.tsx`, `projectreadings.tsx`,
   `sections_omitted`; the one read-only sentence minted by the band; page
   cap `project.deals.more`; unknown phase word.
 - **No tabs** today; none added.
+
+## Editing core records
+
+Company, contact, deal and lead fields are edited in the Details pane. There is
+no general Edit dialog. Unset fields remain visible. Custom fields form their
+own section, drawn from the active workspace catalog even when no values exist.
+
+Text and single-choice fields save inline; Escape cancels. Multiline text saves
+on Cmd/Ctrl+Enter or blur. Address parts, email/phone/domain lists, deal money,
+company/project assignment and partner attribution use local Save/Cancel so a
+related change travels together. Failed saves retain the draft. Writes carry
+the version read when editing began, and refresh the record and derived views.
+An open editor blocks folding Details away and warns on navigation.
+
+Qualifying leads, changing lifecycle, overriding scores, closing deals, merging,
+archiving and consent changes keep their domain controls and required evidence.
+Computed, masked, archived and unauthorized fields remain read-only. Header
+shortcuts use the same record writer as Details. New-record dialogs remain.
+
+`RecordFields` composes the design system's inline controls and `RecordFormBody`.
+Each object supplies its existing field definitions and a sparse request mapper;
+`RecordCustomFields` supplies the catalog-driven section for all four kinds.

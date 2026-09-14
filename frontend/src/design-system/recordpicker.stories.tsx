@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // Stories are the render surface the change-scoped fe-uat capture gate drives
@@ -47,4 +48,19 @@ function PickerDemo() {
 
 export const Default: Story = {
   render: () => <PickerDemo />,
+};
+
+export const LabelAndHelp: Story = {
+  render: () => (
+    <Field label="Parent company" hint="Choose an existing company.">
+      {(control) => (
+        <RecordPicker
+          {...control}
+          label="Search companies"
+          searchTargets={searchFixture}
+          onPick={() => undefined}
+        />
+      )}
+    </Field>
+  ),
 };

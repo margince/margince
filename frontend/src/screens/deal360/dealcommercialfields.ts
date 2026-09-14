@@ -35,6 +35,7 @@ export function dealCommercialFields(
   return [
     {
       key: "description",
+      maxLength: 20000,
       label: "deal.brief",
       type: "textarea",
       hint: "deal.briefHint",

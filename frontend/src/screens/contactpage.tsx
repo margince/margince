@@ -57,7 +57,6 @@ import {
 } from "./contacttabs";
 import { ContactToday } from "./contacttoday";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { useObjectCustomFields } from "./customfields.form";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
@@ -292,7 +291,6 @@ export function ContactPageV2({
   // Read at screen level and handed down, so the schema request runs BESIDE
   // the contact's rather than after it — an edit opened before this landed
   // would otherwise offer a form with no custom fields on it.
-  const cf = useObjectCustomFields("contact");
   const view = useQuery({
     queryKey: ["contact360", id],
     queryFn: async () => {
@@ -446,7 +444,6 @@ export function ContactPageV2({
             <ContactActions
               view={view.data}
               contactId={id}
-              cf={cf}
               overlay={overlay}
               onWrite={() => openComposer("")}
               onResearch={() => setDrawer("research")}

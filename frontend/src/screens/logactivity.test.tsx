@@ -23,11 +23,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
+import { useRecordTimeline } from "../design-system/recordtimeline";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { ContactScreen } from "./contacts";
 import { LogActivity } from "./logactivity";
 import { groupTask } from "./taskgroup";
 
@@ -253,7 +253,7 @@ describe("log activity from a 360", () => {
       },
       captured,
     );
-    render(<ContactScreen id="p1" />);
+    render(<ContactActivity />);
     await userEvent.type(
       await screen.findByLabelText("Subject *"),
       "Call recap",
@@ -979,3 +979,8 @@ describe("assigning a task at create time", () => {
     ).toBeNull();
   });
 });
+
+function ContactActivity() {
+  useRecordTimeline("contact", "p1");
+  return <LogActivity entityType="contact" entityId="p1" />;
+}

@@ -1,6 +1,6 @@
 # Editing records while other work is running
 
-The main **Edit** forms for companies, contacts, and deals allow
+The **Details** editors for companies, contacts, deals, and leads allow
 independent changes to the same record. For example, setting a company's
 Customer tier still saves if website research refreshes its logo in the meantime.
 No installation setting or database migration is required.
@@ -20,9 +20,8 @@ full name and name parts.
 ## Shared implementation
 
 [`saveIndependentEdit`](../../frontend/src/screens/independentedit.ts) compares
-three readings: the original record captured when Edit opened, the submitted
-changes, and the latest server record. The same function serves all three forms,
-including custom fields that arrive after the form opens.
+three readings: the original record captured when an inline editor opened, the submitted
+changes, and the latest server record. The same function serves all four record types, including their separate custom-field sections.
 
 The API retains its existing atomic `If-Match` check. A definite
 `409 version_skew` triggers a fresh read. Only when all edited fields and their
@@ -34,7 +33,7 @@ visible rather than retrying indefinitely.
 Timeouts, permission failures, duplicate-record conflicts, and other errors
 are never automatically retried. Fields that become masked are not rebased.
 Other API clients retain the existing whole-record version behavior; this is
-the main edit forms' shared recovery, not a change to the API's concurrency contract.
+the Details editors' shared recovery, not a change to the API's concurrency contract.
 
 The helper's race tests and actual company/contact/deal form tests run in the
 standard `make check` frontend suite. They cover separate fields, overlapping

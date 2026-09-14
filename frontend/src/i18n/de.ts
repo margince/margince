@@ -459,6 +459,25 @@ export const de = {
   "record.chronologyLoading": "Änderungsverlauf wird gelesen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
+
+  "record.fieldRequired": "Dieses Feld ist erforderlich.",
+  "record.registration": "Registrierung",
+  "record.leadProfileReadOnly":
+    "LinkedIn kann bei einem Lead nicht geändert werden.",
+  "record.leadStatusAction":
+    "Ändern Sie den Status mit den Lead-Statusaktionen.",
+  "record.leadScoreAction":
+    "Ändern Sie den Score über die begründete Score-Korrektur.",
+  "record.openProfile": "Profil öffnen",
+  "record.fieldsFailed":
+    "Benutzerdefinierte Felder konnten nicht geladen werden.",
+  "record.fieldsLoading": "Benutzerdefinierte Felder werden geladen…",
+  "record.fieldsRetry": "Erneut versuchen",
+
+  "record.visibilityOwner": "Nur Eigentümer",
+  "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
+  "record.finishFieldEdit":
+    "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
@@ -1038,7 +1057,7 @@ export const de = {
   "co.strip.noOpenDeals": "Keine offenen Deals",
   "co.strip.pipeline": "Offene Pipeline",
   "co.description.label": "Beschreibung",
-  "co.description.placeholder": "Beschreibung hinzufügen",
+
   "co.strip.netInvoiced": "Netto fakturiert · 12 Monate",
   "co.strip.notAssessed": "Nicht bewertet",
   "co.strip.lifetimeOf": "{amount} gesamt",
@@ -1737,7 +1756,7 @@ export const de = {
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
   "co.rail.contacts.inTouch": "Bereits mit ihnen in Kontakt",
-  "co.rail.details.all": "Alle Felder",
+
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
   "co.commercial.allDeals": "Alle Deals",
@@ -2251,7 +2270,7 @@ export const de = {
   "lead.scoreNoSignals": "Keine qualifizierenden Signale",
   "lead.source": "Quelle",
   "lead.project": "Projekt",
-  "lead.openLinkedIn": "LinkedIn-Profil öffnen",
+
   "lead.filterSource": "Quelle",
   "lead.filterSourceAll": "Alle Quellen",
   "lead.source.manual": "Manuell angelegt",
@@ -2377,7 +2396,7 @@ export const de = {
     "Diese Leads konnten nicht gelesen werden. Der Z\u00e4hler oben gilt weiterhin.",
   "lead.boardTerminalOnly":
     "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
-  "contact.fromLead": "Aus Lead übernommen",
+
   "lead.mergedTitle": "Mit einem anderen Lead zusammengeführt",
   "lead.mergedBody":
     "Dieser Lead war derselbe Interessent wie ein anderer. Verlauf, Einwilligung und Score liegen jetzt dort; dieser Datensatz bleibt als Nachweis.",
@@ -2605,7 +2624,7 @@ export const de = {
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
-  "deal.edit": "Deal bearbeiten",
+
   "deal.ownerKeep": "Aktuellen Inhaber behalten",
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
@@ -2698,17 +2717,7 @@ export const de = {
   "outcomeReview.noAnswer": "Nicht beantwortet",
   "outcomeReview.notes": "Sonstiges",
   "deal.commercialContext": "Kaufmännischer Kontext",
-  "deal.commercialEdit": "Bearbeiten",
-  "deal.commercialAdd": "Kontext festhalten",
-  "deal.commercialEditTitle": "Kommerzieller Kontext",
-  "deal.commercialSave": "Kontext speichern",
-  "deal.commercialEmpty": "Noch nichts festgehalten",
-  "deal.commercialEmptyDetail":
-    "Warum es diesen Deal gibt, wie wichtig er ist, woher er kam und was er pro Jahr wert ist.",
-  "deal.arrHint": "Der wiederkehrende Wert für ein Jahr, in {currency}.",
-  "deal.arrNeedsCurrency":
-    "Erwarteter ARR braucht eine Währung. Legen Sie Wert und Währung zuerst unter „Deal bearbeiten“ fest.",
-  "deal.arrClear": "Entfernen",
+
   "deal.arrFromOffer":
     "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Briefing",
@@ -2717,12 +2726,11 @@ export const de = {
   "deal.briefLess": "Weniger anzeigen",
   "deal.briefEdit": "Bearbeiten",
   "deal.briefAdd": "Briefing schreiben",
-  "deal.briefEditTitle": "Das Deal-Briefing",
+
   "deal.briefEmpty": "Noch kein Briefing geschrieben",
   "deal.briefEmptyDetail":
     "Halten Sie fest, was die Kundschaft braucht und wie ein Gewinn aussieht, damit der Nächste es nicht rekonstruieren muss.",
-  "deal.briefSave": "Briefing speichern",
-  "deal.briefTooLong": "Ein Briefing umfasst höchstens {max} Zeichen.",
+
   "deal.motion": "Geschäftsart",
   "deal.motionUnset": "Nicht gesetzt",
   "deal.motionNewBusiness": "Neugeschäft",
@@ -2738,7 +2746,7 @@ export const de = {
   "deal.priorityLow": "Niedrig",
   "deal.acquisitionSource": "Akquisequelle",
   "deal.expectedArr": "Erwarteter ARR",
-  "deal.monthlyEquivalent": "Monatlicher Gegenwert",
+
   "deal.monthlyApproximate": "ca.",
   "assignments.title": "Verantwortlich",
   "assignments.noAccessNote":
@@ -3387,7 +3395,7 @@ export const de = {
   "create.industry": "Branche",
   "create.sizeBand": "Unternehmensgröße",
   "co.address.summary": "Adresse",
-  "co.address.add": "Adresse hinzufügen",
+
   "create.addressLine1": "Straße und Hausnummer",
   "create.addressLine2": "Adresszusatz",
   "create.city": "Stadt",
@@ -3406,23 +3414,14 @@ export const de = {
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.addDomain": "Domain hinzufügen",
-  "field.addLegalName": "Rechtlichen Namen hinzufügen",
-  "field.addIndustry": "Branche hinzufügen",
-  "field.addLinkedinUrl": "LinkedIn-URL hinzufügen",
+
   "field.addRegisterVat": "USt-IdNr. hinzufügen",
   "field.addRegisteredAddress": "Registeranschrift hinzufügen",
-  "field.addFullName": "Namen hinzufügen",
+
   "field.addTitle": "Titel hinzufügen",
-  "field.addAddressLine1": "Straße und Hausnummer hinzufügen",
-  "field.addAddressLine2": "Adresszusatz hinzufügen",
-  "field.addPostalCode": "Postleitzahl hinzufügen",
-  "field.addCity": "Stadt hinzufügen",
-  "field.addRegion": "Bundesland / Region hinzufügen",
-  "field.addCountry": "Ländercode hinzufügen, z. B. DE",
-  "field.country": "Land",
+
   "field.domain": "Domain",
-  "field.domainRequired":
-    "Eine Domain kann hier nicht gelöscht werden — dafür den vollständigen Editor verwenden.",
+
   "field.emailType": "Typ",
   "field.emailWork": "Geschäftlich",
   "field.emailPersonal": "Privat",
@@ -8581,7 +8580,7 @@ export const de = {
   "contact.page.owner": "Zuständig",
   "contact.page.ownerUnassigned": "Nicht zugewiesen",
   "contact.page.linkedin": "LinkedIn",
-  "contact.page.openProfile": "Profil öffnen",
+
   "contact.rail.detailsTitle": "Details",
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert. Stelle ihn wieder her, um hier etwas zu ändern.",

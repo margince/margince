@@ -123,6 +123,7 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 		return crmcontracts.Deal{}, fmt.Errorf("read deal before update: %w", err)
 	}
 
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := s.dealUpdatePatch(ctx, tx, current, in)
 	if err != nil {
 		return crmcontracts.Deal{}, err
