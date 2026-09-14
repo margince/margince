@@ -56,13 +56,9 @@ Some of this is held deterministically — `make native-controls`,
 can tell that the component you just wrote already existed under another name. The
 catalog gate keeps it findable; the grep is still yours.
 
-**A label in a pill is a `Badge`, and there is one.** `soft` (the default) for
-a status beside prose and down a column, `primary` for a count and the one
-status a reader must not miss; six tones — `default`, `accent`, `success`,
-`warn`, `danger`, `ai`; an icon only LEFT of the label. Always a fill, never a
-border, never uppercase. A thing a reader can click is a control, not a badge.
-Never hand-roll a pill class or restyle `.badge` from a screen sheet —
-`badge-spelling.test.ts` refuses both.
+**A label in a pill is one `Badge`**: `soft` or `primary`, six tones, icon left.
+Always a fill, never a border or uppercase; a clickable thing is a control.
+`badge-spelling.test.ts` refuses a hand-rolled pill or a `.badge` restyle.
 
 ### Indigo is a claim about provenance
 

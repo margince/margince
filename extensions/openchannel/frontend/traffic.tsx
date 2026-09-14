@@ -126,7 +126,7 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                   key: "state",
                   header: t("extOpenchannel.inbound.state"),
                   render: (row) => (
-                    <Badge quiet tone={STATE_TONE[row.state]}>
+                    <Badge tone={STATE_TONE[row.state]}>
                       {t(
                         STATE_COPY[row.state] ?? "extOpenchannel.state.other",
                         { state: row.state },
@@ -216,7 +216,7 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                   key: "outcome",
                   header: t("extOpenchannel.outboundList.outcome"),
                   render: (row) => (
-                    <Badge quiet tone={OUTCOME_TONE[row.outcome]}>
+                    <Badge tone={OUTCOME_TONE[row.outcome]}>
                       {t(
                         OUTCOME_COPY[row.outcome] ??
                           "extOpenchannel.outcome.other",
