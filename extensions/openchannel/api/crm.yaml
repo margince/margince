@@ -58,15 +58,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_endpoint
         x-rbac-action: create
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_open
           version: 1.0.0
           title: Open an inbound endpoint
-          # 🟢 write: it writes one row of the unit's own table. It mints no
-          # credential and opens nothing a sender can yet use — an endpoint
-          # with no signing secret admits nothing at all.
-          tier: auto_execute
-          scope: write
           description: >-
             Open the calling contact's own inbound endpoint, so a remote system
             can be pointed at this CRM. It always opens the endpoint of whoever
@@ -163,15 +159,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_endpoint
         x-rbac-action: read
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_read_endpoint
           version: 1.0.0
           title: Read an inbound endpoint
-          # 🟢 read: it reads one row of the unit's own table and changes
-          # nothing. It returns no secret, because no operation but the minting
-          # one ever does.
-          tier: auto_execute
-          scope: read
           description: >-
             Report whether the calling contact has opened an inbound endpoint,
             and if so what address senders should be pointed at, whether it is
@@ -226,29 +218,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_endpoint
         x-rbac-action: update
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_mint_secret
           version: 1.0.0
           title: Mint a signing secret
-          # 🟡 write: this is the ONLY operation in the unit that hands back a
-          # durable credential, and the thing it returns is what admits a
-          # request to the anonymous edge — holding it is indistinguishable
-          # from being the sender. It does not expire with the passport that
-          # asked for it and it is not revoked by ending a seat, so an
-          # unattended call is a caller taking out-of-band, open-ended write
-          # access to this member's timeline and walking away with it. That a
-          # credential is sealed on OUR side says nothing about where the copy
-          # in the response goes.
-          tier: confirmation_required
-          scope: write
-          # A confirm-first call has to name a row to stage against — an
-          # approver reads the inbox and has to see WHICH endpoint is about to
-          # get a new credential before deciding. That is the only reason
-          # endpoint_id exists on this request: naming an endpoint that is not
-          # the caller's own is refused as not found (see the 404 below), same
-          # as every other operation here that only ever touches the caller's
-          # own row.
-          subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
             Mint the signing secret for the calling contact's own inbound
             endpoint and return it once. The same operation opens and rotates,
@@ -330,13 +304,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_endpoint
         x-rbac-action: update
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_set_enabled
           version: 1.0.0
           title: Pause or resume an inbound endpoint
-          # 🟢 write: one column of the unit's own row.
-          tier: auto_execute
-          scope: write
           description: >-
             Pause or resume the calling contact's own inbound endpoint. A paused
             endpoint refuses everything that arrives while keeping its owner and
@@ -392,25 +364,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_endpoint
         x-rbac-action: update
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_register_url
           version: 1.0.0
           title: Register an outward address
-          # 🟡 write: recording the address transmits nothing, and that is the
-          # wrong thing to weigh. Every LATER send reads this column and posts
-          # the rep's message body and the recipient it resolved to whatever
-          # host is in it, so changing it silently re-points the member's whole
-          # outbound channel — the same class of change as an email forwarding
-          # rule, and invisible afterwards to everyone but the new recipient.
-          # netguard does not help here: it refuses private and reserved
-          # addresses, and an exfiltration collector is an ordinary public host.
-          tier: confirmation_required
-          scope: write
-          # See the subject comment on openchannel_mint_secret — the same rule
-          # applies here: endpoint_id exists so an approver can see which
-          # endpoint is being re-pointed, and it is refused as not found unless
-          # it names the caller's own.
-          subject: { arg: endpoint_id, table: ext_openchannel_endpoint }
           description: >-
             Record the https address this connector should post to when it has
             something to send for the calling contact. It must be https and name
@@ -479,13 +437,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_inbound
         x-rbac-action: read
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_list_inbound
           version: 1.0.0
           title: List received requests
-          # 🟢 read: it reads the unit's own rows and changes nothing.
-          tier: auto_execute
-          scope: read
           description: >-
             List the most recent requests that arrived on the calling contact's
             own inbound endpoint, newest first, and what became of each: whether
@@ -560,15 +516,11 @@ actions:
         tags: [Extensions]
         x-rbac-object: ext_openchannel_outbound
         x-rbac-action: read
-        x-mcp-tool:
+        x-agent-access:
+          access: human-only
           verb: openchannel_list_outbound
           version: 1.0.0
           title: List sent messages
-          # 🟢 read: it reads the unit's own rows and changes nothing. It sends
-          # nothing and posts nowhere — this is the record of attempts that
-          # already happened.
-          tier: auto_execute
-          scope: read
           description: >-
             List the most recent messages this connector posted to the calling
             contact's own registered address, newest first, and what became of

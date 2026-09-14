@@ -6,6 +6,7 @@ package agents
 // Which tools a passport is offered, on the scope axis.
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -47,6 +48,44 @@ func TestAWriteOnlyPassportIsStillOfferedItsOwnIdentity(t *testing.T) {
 	readOnly := offered(principal.ScopeRead)
 	if slices.Contains(readOnly, "log_activity") {
 		t.Errorf("a read-only passport is offered %v — a write tool must not be among them", readOnly)
+	}
+}
+
+// TestInvocableByCallerExcludesHumanOnlyToolsForAnAgent: offering a HumanOnly
+// tool to an Agent would advertise a call RequireHuman refuses at Invoke —
+// exactly the lie this function exists to prevent.
+func TestInvocableByCallerExcludesHumanOnlyToolsForAnAgent(t *testing.T) {
+	spec := mcp.ToolSpec{Name: "human_only_op", HumanOnly: true, RequiredScope: principal.ScopeRead}
+	if invocableByCaller(agentHolding(principal.ScopeRead), spec) {
+		t.Fatal("a human-only tool must not be offered to an Agent principal")
+	}
+}
+
+// TestInvocableByCallerOffersHumanOnlyToolsToAHuman: a human principal does
+// not ride the scope model at all (its authority is RBAC, enforced at the
+// store), so a human-only tool is offered to it exactly as any other is.
+func TestInvocableByCallerOffersHumanOnlyToolsToAHuman(t *testing.T) {
+	spec := mcp.ToolSpec{Name: "human_only_op", HumanOnly: true}
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:test"})
+	if !invocableByCaller(ctx, spec) {
+		t.Fatal("a human principal's own listing must still include a human-only tool")
+	}
+}
+
+// TestInvocableByCallerExcludesEveryToolForABuyer: a Deal Room participant
+// holds no tool authority at all — auth.Gate.Admit refuses every tool for a
+// Buyer outright, not on the scope axis — so the listing must exclude the
+// whole surface for one, ordinary tools and HumanOnly alike, or it advertises
+// a catalog the gate then refuses in full.
+func TestInvocableByCallerExcludesEveryToolForABuyer(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:test"})
+	for _, spec := range []mcp.ToolSpec{
+		whoami{}.Spec(),
+		{Name: "human_only_op", HumanOnly: true},
+	} {
+		if invocableByCaller(ctx, spec) {
+			t.Fatalf("a Buyer principal must be offered no tool at all, got %q", spec.Name)
+		}
 	}
 }
 

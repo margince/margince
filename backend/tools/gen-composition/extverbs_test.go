@@ -147,6 +147,60 @@ func TestExtensionVerbsReadsAnOperationOutOfTheMergedContract(t *testing.T) {
 	}
 }
 
+// yogiHumanOnlyOperation is yogiOperation's x-agent-access counterpart: same
+// route/method/prose, no tier or scope, an RBAC object because it mutates.
+const yogiHumanOnlyOperation = `  /ext/u/quote:
+    post:
+      operationId: uQuote
+      x-rbac-object: ext_u_widget
+      x-rbac-action: update
+      x-agent-access:
+        access: human-only
+        verb: u_quote
+        version: 1.0.0
+        title: A quote
+        description: Return one quote and nothing else.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quote: {type: string}
+`
+
+// TestExtensionVerbsReadsAnAgentAccessHumanOnlyOperation: the same read path as
+// the x-mcp-tool happy path, but through x-agent-access — the parsed verb
+// carries HumanOnly and no Tier/RequestedScope.
+func TestExtensionVerbsReadsAnAgentAccessHumanOnlyOperation(t *testing.T) {
+	got, err := verbsInContract("crm.yaml", oneUnit(), contractWith(yogiHumanOnlyOperation))
+	if err != nil {
+		t.Fatalf("a well-formed x-agent-access operation must be accepted: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("read %d operations, want 1", len(got))
+	}
+	v := got[0].verb
+	if !v.HumanOnly {
+		t.Fatal("the parsed verb must carry HumanOnly")
+	}
+	if v.Tool != "u_quote" {
+		t.Fatalf("the verb name must come from x-agent-access.verb, got %q", v.Tool)
+	}
+	if v.Tier != "" || v.RequestedScope != "" {
+		t.Fatalf("a human-only verb must carry no Tier/RequestedScope, got %+v", v)
+	}
+	if v.RbacObject != "ext_u_widget" || v.RbacAction != extension.RbacUpdate {
+		t.Fatalf("rbac = object=%q action=%q", v.RbacObject, v.RbacAction)
+	}
+}
+
 // TestTheFragmentHashCoversWhatTheDescriptorDoesNot: the four governance fields
 // are in the descriptor; everything else about the declaration is in the hash.
 // A schema or a description change with no tier change must still move it, or
@@ -197,9 +251,14 @@ func TestExtensionVerbRefusals(t *testing.T) {
 		pathItem string
 		wantErr  string
 	}{
-		"an operation with no x-mcp-tool": {
+		"an operation with neither x-mcp-tool nor x-agent-access": {
 			pathItem: "  /ext/u/quote:\n    post:\n      operationId: uQuote\n",
-			wantErr:  "declares no x-mcp-tool",
+			wantErr:  "declares neither x-mcp-tool nor x-agent-access",
+		},
+		"an operation with both x-mcp-tool and x-agent-access": {
+			pathItem: strings.Replace(yogiOperation, "      operationId: uQuote",
+				"      operationId: uQuote\n      x-agent-access:\n        access: human-only\n        verb: u_quote\n        version: 1.0.0\n        title: t\n        description: d", 1),
+			wantErr: "declares both x-mcp-tool and x-agent-access",
 		},
 		"an unknown key in the annotation": {
 			pathItem: strings.Replace(yogiOperation, "        scope: read", "        scope: read\n        scopes: [read]", 1),
@@ -318,7 +377,7 @@ func TestExtensionVerbRefusals(t *testing.T) {
 			wantErr:  "which this generator does not read",
 		},
 		"an x- annotation this tier does not act on": {
-			pathItem: strings.Replace(yogiOperation, "      operationId: uQuote", "      operationId: uQuote\n      x-agent-access: human-only", 1),
+			pathItem: strings.Replace(yogiOperation, "      operationId: uQuote", "      operationId: uQuote\n      x-agent-egress: human-only", 1),
 			wantErr:  "which this generator does not read",
 		},
 		"an RBAC object outside the unit's namespace": {

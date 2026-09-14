@@ -178,9 +178,17 @@ func (r *unitReader) joinToolsToContract(tools []declaredTool, verbs []declaredV
 // risk-tier entries. A tool requires one scope; the descriptor carries it as
 // its (single-element) scope set, the general shape shared across governed
 // kinds.
+//
+// A HumanOnly verb (x-agent-access: human-only) is skipped: it requests no
+// agent authority, so there is nothing here for an operator to resolve —
+// symmetric with why a human-only core operation carries no tier for an
+// operator to approve either.
 func toolRequests(verbs []declaredVerb) ([]riskTierRequest, error) {
 	out := make([]riskTierRequest, 0, len(verbs))
 	for _, d := range verbs {
+		if d.verb.HumanOnly {
+			continue
+		}
 		c := riskTierRequest{
 			ID:           "tool/" + d.verb.Tool,
 			Unit:         string(d.verb.Unit),
