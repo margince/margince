@@ -414,8 +414,8 @@ func TestEachReadingCountsItsOwnCategory(t *testing.T) {
 
 // A decision this reader cannot settle is not counted as waiting on them.
 //
-// The headline says somebody is blocked until you answer. Counting a duplicate
-// pair whose two records the reader may not both write tells them a contact is
+// The headline says how much is waiting on this reader. Counting a duplicate
+// pair whose two records they may not both write tells them a contact is
 // waiting on an answer they are unable to give — the audited page read "10
 // decisions waiting" over two the rep could take and eight only an admin could,
 // each of which said in its own card that a lead or admin had to settle it.
