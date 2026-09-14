@@ -6478,6 +6478,11 @@ export const de = {
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
   "buyer.stewardUnknown": "Ihr Ansprechpartner",
   "buyer.signOut": "Abmelden",
+  "buyer.signedInAs": "Angemeldet als {name}.",
+  "buyer.contactEyebrow": "Ihre Ansprechperson",
+  "buyer.contactBody":
+    "Stellen Sie Ihre Frage unter dem Dokument, um das es geht; sie erreicht {steward} direkt.",
+  "buyer.closedOn": "Geschlossen am {date}",
   "room.docs.title": "Dokumente",
   "room.docs.sub":
     "Was der Käufer lesen kann, mit dem Gespräch zu jedem Dokument darunter.",
@@ -6510,6 +6515,10 @@ export const de = {
   "threads.aboutThis_other": "{count} Threads zu diesem Dokument",
   "threads.aboutThis_one": "{count} Thread zu diesem Dokument",
   "threads.askAbout": "Zu diesem Dokument fragen",
+  "threads.read": "Lesen",
+  "threads.readTitle": "{title} lesen",
+  "threads.unanswered_one": "{count} unbeantwortet",
+  "threads.unanswered_other": "{count} unbeantwortet",
   "threads.cancel": "Abbrechen",
   "threads.empty": "Noch nichts gesagt.",
   "threads.requiredChange": "Änderung nötig",

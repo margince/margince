@@ -385,6 +385,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "book.attendee",
     "book.tellThemYourself",
     "buyer.contact",
+    "buyer.contactEyebrow",
     "buyer.deadAskContact",
     "buyer.docs.downloadFailed",
     "buyer.previewBanner",

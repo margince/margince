@@ -57,6 +57,16 @@ export type PreviewFile = Readonly<{
    * would carry it into our own page with our own cookies.
    */
   mediaType: string;
+  /**
+   * The session token that admits the reader to these bytes, on the one
+   * surface with no cookie: a Deal Room's buyer, who holds no seat and is
+   * known to the server by a Bearer alone. Absent, the read rides the session
+   * cookie like every other file in the product.
+   *
+   * With a bearer there is no link the browser could follow on its own, so the
+   * saved copy is the drawn bytes, and Download waits with Print for them.
+   */
+  bearer?: string;
 }>;
 
 type FilePreview = Readonly<{ open: (file: PreviewFile) => void }>;
@@ -131,12 +141,14 @@ function FilePreviewDialog({
               {file.filename}
             </h2>
             <div className="file-preview-verbs">
-              <IconAction
-                small
-                label={t("filePreview.download")}
-                icon={<Download size={15} aria-hidden="true" />}
-                onClick={() => save(file)}
-              />
+              {(file.bearer === undefined || object.status === "ready") && (
+                <IconAction
+                  small
+                  label={t("filePreview.download")}
+                  icon={<Download size={15} aria-hidden="true" />}
+                  onClick={() => save(file, object)}
+                />
+              )}
               {/* Print stands beside the other two only once there IS a
                   document: until the bytes arrive, and after a read that
                   failed, there is nothing on the stage for it to put on paper.
@@ -246,10 +258,17 @@ function printing(frame: HTMLIFrameElement | null) {
  * is how a tree grows a second icon button. The act is still the anchor's —
  * `download` on the same href the chip carries — so the saved copy is the one
  * the server names, whether or not the preview above ever loaded.
+ *
+ * A file read on a bearer has no href a link could follow — the anchor would
+ * arrive without the token and be refused — so its saved copy is the object
+ * URL the stage is drawing, which is the same bytes under the same name.
  */
-function save(file: PreviewFile) {
+function save(file: PreviewFile, object: PreviewObject) {
   const link = document.createElement("a");
-  link.href = file.href;
+  link.href =
+    file.bearer !== undefined && object.status === "ready"
+      ? object.url
+      : file.href;
   link.download = file.filename;
   // In the document before the click: Safari ignores `download` on a node that
   // is not in one, and saves nothing at all.
@@ -279,7 +298,13 @@ function usePreviewObject(file: PreviewFile | null): PreviewObject {
     setObject({ status: "loading" });
     const abort = new AbortController();
     let url: string | null = null;
-    fetch(file.href, { credentials: "include", signal: abort.signal })
+    fetch(file.href, {
+      credentials: "include",
+      signal: abort.signal,
+      ...(file.bearer === undefined
+        ? {}
+        : { headers: { Authorization: `Bearer ${file.bearer}` } }),
+    })
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`preview read answered ${response.status}`);

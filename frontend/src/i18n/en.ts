@@ -6631,6 +6631,11 @@ export const en = {
   "buyer.closedNote": "This room is now read-only.",
   "buyer.stewardUnknown": "your contact",
   "buyer.signOut": "Sign out",
+  "buyer.signedInAs": "Signed in as {name}.",
+  "buyer.contactEyebrow": "Your contact",
+  "buyer.contactBody":
+    "Ask under the document your question is about; it reaches {steward} directly.",
+  "buyer.closedOn": "Closed on {date}",
   "room.docs.title": "Documents",
   "room.docs.sub":
     "What the buyer can read, with the conversation about each document under it.",
@@ -6663,6 +6668,10 @@ export const en = {
   "threads.aboutThis_other": "{count} threads about this document",
   "threads.aboutThis_one": "{count} thread about this document",
   "threads.askAbout": "Ask about this document",
+  "threads.read": "Read",
+  "threads.readTitle": "Read {title}",
+  "threads.unanswered_one": "{count} unanswered",
+  "threads.unanswered_other": "{count} unanswered",
   "threads.cancel": "Cancel",
   "threads.empty": "Nothing said yet.",
   "threads.requiredChange": "Change required",
