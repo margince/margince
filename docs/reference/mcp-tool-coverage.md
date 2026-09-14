@@ -74,20 +74,14 @@ against the same passport — and an empty one is a build error, because it woul
 
 ### What this page cannot see
 
-**The shipped units add 7 more tools to the same registry**, and this page cannot price them.
+**The shipped units add 0 more tools to the same registry**, and this page cannot price them.
 A unit is its own Go module and the architecture forbids the core importing one, so the composed catalog is unreachable
 from the package that generates this page. The names below come from what each unit published; the token cost is an
 installation's own arithmetic. No use case requires any of them.
 
 | Tool | Unit |
 |---|---|
-| `openchannel_list_inbound` | `openchannel` |
-| `openchannel_list_outbound` | `openchannel` |
-| `openchannel_mint_secret` | `openchannel` |
-| `openchannel_open` | `openchannel` |
-| `openchannel_read_endpoint` | `openchannel` |
-| `openchannel_register_url` | `openchannel` |
-| `openchannel_set_enabled` | `openchannel` |
+| _no unit ships a tool_ | — |
 
 **The listing is also scope-filtered per caller.** A tool on this page is offered to a caller whose passport carries its
 scope, and to no other — so a reader must not read a row here as "every assistant sees this". A case cannot drive a tool
