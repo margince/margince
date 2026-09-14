@@ -452,6 +452,12 @@ export const de = {
   "deal.staged": "vorgemerkt",
   "deal.closes": "Abschluss {date}",
   "deal.undated": "kein Abschlusstermin",
+  "deal.lastMail": "Letzte E-Mail",
+  "deal.mail.title": "Bisherige E-Mails",
+  "deal.mail.sent": "Gesendet {ago}",
+  "deal.mail.received": "Erhalten {ago}",
+  "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
+  "deal.mail.viewAll": "Alle Aktivitäten ansehen",
   "deal.closesProvisional":
     "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",

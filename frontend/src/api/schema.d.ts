@@ -22768,6 +22768,16 @@ export interface components {
             data: components["schemas"]["Relationship"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description The newest workspace-visible email on a deal, as `Deal.last_email` carries it. */
+        DealLastEmail: {
+            /** Format: date-time */
+            occurred_at: string;
+            /**
+             * @description Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+             * @enum {string|null}
+             */
+            direction: "inbound" | "outbound" | null;
+        };
         /** @description A deal. Mirrors the `deal` table. */
         Deal: {
             tags?: components["schemas"]["RowTag"][];
@@ -22883,6 +22893,8 @@ export interface components {
             last_activity_at?: string | null;
             /** @description Derived — no activity past the threshold (absolute duration). */
             readonly stalled?: boolean;
+            /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
+            readonly last_email?: components["schemas"]["DealLastEmail"] | null;
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;

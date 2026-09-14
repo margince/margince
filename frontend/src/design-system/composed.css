@@ -419,6 +419,41 @@
   flex: none;
   display: flex;
 }
+/* The mail line, after everything else: when mail last moved on this deal and
+   which way. Meta-sized like the close date — it is a fact to triage by, not
+   the figure — and ABOVE the stretched link like the company, which is the
+   only reason the flyout's hover and press reach it. It is a `Popover`
+   trigger whenever the caller gave the card an aside, so the reset the
+   popover applies to a text trigger already fits: no chrome, the line's own
+   type. */
+.deal-card .deal-foot {
+  display: flex;
+  margin-top: var(--space-1);
+}
+/* Three classes deep on purpose: the popover's own text-trigger reset sets
+   `color: inherit` at the same specificity as `.deal-card .deal-mail`, and
+   which of the two sheets the bundler emits later is not something either
+   file can promise. */
+.deal-card .deal-foot .deal-mail {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+.deal-card .deal-foot .deal-mail > svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+/* The trigger opens on a settled pointer, so its hover says so the way the
+   company's link does. */
+.deal-card .deal-foot button.deal-mail:hover {
+  color: var(--textPrimary);
+}
 
 /* `margin-bottom` owns the interval below the identity, one full step, on
    EVERY record: the head is a register of its own and what opens the record's

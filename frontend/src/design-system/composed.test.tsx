@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -136,6 +142,53 @@ describe("DealCard + PipelineBoard", () => {
     );
     expect(screen.queryByLabelText(MASK)).toBeNull();
     expect(container.querySelector(".deal-company")).toBeNull();
+  });
+
+  // The foot of the card is when mail last moved and which way. Spoken as
+  // "Last email" to a screen reader, drawn as a glyph to everyone else; absent
+  // altogether on a deal nobody has mailed about, because "no mail yet" on
+  // every fresh card is a row nobody triages by.
+  it("dates the last email on the card, and draws no mail line without one", () => {
+    const { unmount } = render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: { agoMs: 10 * 86_400_000, direction: "outbound" },
+        }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+      />,
+    );
+    expect(screen.getByText("10 d ago")).toBeTruthy();
+    expect(screen.getByText("Last email:")).toBeTruthy();
+    // No aside was given, so the line is text: nothing to press.
+    expect(screen.queryByRole("button")).toBeNull();
+    unmount();
+
+    render(<DealCard deal={deal} href="#/deals/d1" zone="Europe/Berlin" />);
+    expect(screen.queryByText("Last email:")).toBeNull();
+  });
+
+  // Given an aside, the line is a flyout's trigger: what the caller read from
+  // the timeline opens under a settled pointer and closes when it leaves. The
+  // content is the caller's — this tier fetches nothing.
+  it("opens the caller's mail aside when the pointer settles on the line", async () => {
+    render(
+      <DealCard
+        deal={{
+          ...deal,
+          lastEmail: { agoMs: 2 * 86_400_000, direction: "inbound" },
+        }}
+        href="#/deals/d1"
+        zone="Europe/Berlin"
+        mailAside={(d) => <p>Three mails on {d.name}</p>}
+      />,
+    );
+    expect(screen.queryByText("Three mails on Fleet retrofit")).toBeNull();
+    fireEvent.pointerEnter(screen.getByRole("button", { name: /Last email/ }));
+    await waitFor(() =>
+      expect(screen.getByText("Three mails on Fleet retrofit")).toBeTruthy(),
+    );
   });
 
   it("a staged deal renders visibly distinct from a real one", () => {
