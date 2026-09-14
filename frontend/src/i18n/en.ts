@@ -72,7 +72,6 @@ export const en = {
   "brief.week.lostLabel": "Lost",
   "brief.feed.refreshFailed":
     "The brief could not refresh. The last loaded work is still shown.",
-  "brief.feed.routine": "Privacy follow-up · {count} items due later",
   "brief.team.saveResponse": "Save response",
   "brief.team.response": "Your response to the help request",
   "brief.team.planFor": "Current plan · {name}",

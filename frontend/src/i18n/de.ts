@@ -79,8 +79,6 @@ export const de = {
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Brief konnte nicht aktualisiert werden. Die zuletzt geladene Arbeit wird weiterhin angezeigt.",
-  "brief.feed.routine":
-    "Datenschutz-Nacharbeit · {count} später fällige Einträge",
   "brief.team.saveResponse": "Antwort speichern",
   "brief.team.response": "Deine Antwort auf die Bitte um Hilfe",
   "brief.team.planFor": "Aktueller Plan · {name}",
