@@ -2,7 +2,7 @@ import { ArrowRight, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { usePlural, useT } from "../i18n";
 import { ActionRow } from "./actionrow";
-import { Button } from "./atoms";
+import { Badge, Button } from "./atoms";
 import { IconAction } from "./iconaction";
 import "./panel.css"; // StagingCard's box is drawn by the panel-ai family.
 import "./trust.css";
@@ -601,12 +601,12 @@ function DiffSide({
   );
 }
 
-// A governed agent's passport id, shown mono so it reads as an identifier.
+// A governed agent's passport id: an agent's identity, so the provenance tone.
 export function PassportChip({ id }: Readonly<{ id: string }>) {
   const t = useT();
   return (
-    <span className="passport-chip" title={t("history.passport")}>
-      {id}
+    <span title={t("history.passport")}>
+      <Badge tone="ai">{id}</Badge>
     </span>
   );
 }

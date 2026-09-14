@@ -75,13 +75,10 @@ export const Buttons: Story = {
           <Button variant="aiQuiet">Shorter</Button>
         </div>
       </div>
-      {/* The text affordance, beside a real Button so the thing it must not
-          out-shout is in the same picture. Applied as a CLASS to an `<a>` or a
-          plain `<button>`, and as `variant="link"` where the verb needs
-          Button's refusal and busy contracts too. Its focus ring is a SOLID outline,
-          not the low-alpha shadow the filled controls use: with no fill of its
-          own there is nothing for that ring to read against, and on an
-          elevated surface it disappears. Tab through this row to see it. */}
+      {/* The text affordance beside a real Button it must not out-shout: a
+          CLASS on an `<a>` or `<button>`, or `variant="link"` for Button's
+          refusal and busy contracts. Its focus ring is a SOLID outline — with
+          no fill, a low-alpha shadow has nothing to read against. Tab to it. */}
       <div style={stack}>
         <span className="t-label">The secondary text affordance</span>
         <div style={row}>
@@ -224,11 +221,8 @@ export const Buttons: Story = {
           </Button>
         </div>
       </div>
-      {/* Refusal outranks busy in both its spellings, and this row is here to
-          prove it visually: neither of these draws a mark. A control nobody
-          may press cannot also be mid-press, and an earlier cut of this
-          feature rendered a natively disabled button — focus already gone —
-          with a spinner turning inside it. */}
+      {/* Refusal outranks busy in both its spellings, so neither draws a
+          mark: a control nobody may press cannot also be mid-press. */}
       <div style={stack}>
         <span className="t-label">Refused wins over busy, both ways round</span>
         <div style={row}>
@@ -274,9 +268,8 @@ const badgeDocs = (story: string) => ({ docs: { description: { story } } });
 
 export const BadgeVariants: Story = {
   parameters: badgeDocs(`A badge states one status or label fact beside a name.
-- **Soft** is the default. **Primary** is for the one status on a surface a
-  reader must not miss, and for counts. One variant per context: never mix
-  them down a column.
+- **Soft** is the default. **Primary** is for the one status a reader must
+  not miss, and for counts. One variant per context, never mixed in a column.
 - An icon sits LEFT of the label, never right; a badge has no trailing slot.
 - Don't draw a border, uppercase or track the label, or hand-roll a pill class.
 - Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
@@ -334,10 +327,28 @@ export const BadgeLive: Story = {
 };
 
 export const BadgeLongLabel: Story = {
-  parameters: badgeDocs("One line at its own width: the container clips it."),
+  parameters: badgeDocs("At 200px, alone and beside a sibling: an ellipsis."),
   render: () => (
-    <div style={{ ...row, inlineSize: "10rem", overflow: "hidden" }}>
-      <Badge tone="warn">Waiting on the buyer's legal review</Badge>
+    <div style={{ ...stack, alignItems: "flex-start", inlineSize: 200 }}>
+      <Badge tone="warn">extensions/acme/routes/partner-portal/settings</Badge>
+      <div style={{ ...row, flexWrap: "nowrap", inlineSize: "100%" }}>
+        <span>Route</span>
+        <Badge icon={Lock}>extensions/acme/routes/partner-portal</Badge>
+      </div>
+    </div>
+  ),
+};
+
+export const BadgeInsideUppercaseParent: Story = {
+  parameters: badgeDocs("A parent's case, tracking and face stop at its edge."),
+  render: () => (
+    <div style={stack}>
+      <h3 className="t-eyebrow">
+        Pipeline <Badge tone="accent">Three open</Badge>
+      </h3>
+      <em className="t-mono">
+        run 4f2a <Badge tone="success">Passed</Badge>
+      </em>
     </div>
   ),
 };
@@ -610,10 +621,8 @@ export const Cards: Story = {
   ),
 };
 
-// Loading and empty in one story: they are the same moment of a screen's life
-// seen twice, and the pair is where the honest failure shows up — a skeleton
-// that outlives the request and an empty state that says nothing useful both
-// read as "broken" to the contact waiting.
+// Loading and empty, the same moment of a screen seen twice: a skeleton that
+// outlives the request and an empty state that says nothing both read broken.
 export const Placeholders: Story = {
   render: () => (
     <div style={stack}>
@@ -652,10 +661,8 @@ export const Placeholders: Story = {
   ),
 };
 
-// The section-level structure: a header that names a block, and a disclosure
-// that hides one until asked for. Both states of the disclosure are here
-// because the chevron is its only state indicator — a summary that looks the
-// same open and closed is the defect this catalog has to make visible.
+// A header that names a block, and a disclosure in both states, because the
+// chevron is its only state indicator.
 export const Sections: Story = {
   render: () => (
     <div style={stack}>
@@ -675,11 +682,8 @@ export const Sections: Story = {
         <SectionHeader title="Contacts" sub="Three contacts at this company" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
-      {/* level={3} is a section INSIDE a section — a group of fields under the
-          page's own h2. The type steps down with the outline: an inner heading
-          drawn at its parent's size tells the eye they are peers while the
-          document says they are not, and the eye is the one a reader
-          believes. */}
+      {/* level={3} is a section INSIDE a section, and the type steps down
+          with the outline: at its parent's size it would read as a peer. */}
       <Card>
         <SectionHeader title="Delivery" sub="Where webhooks are sent" />
         <SectionHeader title="Endpoints" level={3} />
@@ -797,10 +801,8 @@ function MarkedTabsDemo() {
   );
 }
 
-// A dot on an option says something waits behind it — a record tab whose
-// surface holds an action nobody has taken. It is `aria-hidden` and never the
-// only carrier of the fact: the surface it points at states it in words, or a
-// screen reader and a reader who cannot see the colour both learn nothing.
+// A dot on an option says something waits behind it. It is `aria-hidden` and
+// never the only carrier: the surface it points at states the fact in words.
 export const MarkedOption: Story = {
   render: () => <MarkedTabsDemo />,
 };
@@ -925,10 +927,8 @@ export const Dialog: Story = {
   render: () => <ModalDemo />,
 };
 
-// OverflowMenu owns its open state and mounts its items only after the first
-// open, so a story that merely renders it is a lone button in the canvas.
-// Pressing the trigger on mount is the only way to catalog the panel without
-// giving the component a prop it does not have.
+// OverflowMenu mounts its items only once opened, so the story presses the
+// trigger on mount rather than giving the component a prop it does not have.
 function OverflowMenuDemo({
   openOnMount,
   children,

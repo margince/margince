@@ -1801,9 +1801,11 @@ describe("LeadsScreen — archived marking (P-3)", () => {
     await waitFor(() =>
       expect(screen.getByText("Jonas Petersen")).toBeTruthy(),
     );
-    expect(
-      screen.getByText("Disqualified", { selector: "span.badge-warn" }),
-    ).toBeTruthy();
+    const warned = screen
+      .getAllByText("Disqualified", { selector: ".badge-label" })
+      .map((label) => label.closest(".badge"))
+      .filter((badge) => badge?.classList.contains("badge-warn"));
+    expect(warned).toHaveLength(1);
   });
 });
 

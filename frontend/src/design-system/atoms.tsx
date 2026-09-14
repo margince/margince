@@ -402,7 +402,7 @@ export function Badge({
     <span className={classes.join(" ")}>
       {live && <span className="badge-live-dot" aria-hidden />}
       {Icon && <Icon size={12} aria-hidden="true" />}
-      {children}
+      <span className="badge-label">{children}</span>
     </span>
   );
 }

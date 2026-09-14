@@ -443,7 +443,7 @@ function BriefItemEvidence({
   if (item.evidence_ids.length === 0) {
     return <Badge tone="warn">{labels.evidenceNone}</Badge>;
   }
-  return <Badge quiet>{labels.evidence}</Badge>;
+  return <Badge>{labels.evidence}</Badge>;
 }
 
 // The rep's own state, and WHEN it was set. `state_at` is half the fact: a

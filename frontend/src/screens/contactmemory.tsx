@@ -15,7 +15,7 @@ import {
 import { type Locale, useLocale, useT } from "../i18n";
 import { ChannelReplyAction } from "./compose";
 import { contactTabRoute } from "./contacttab";
-import { interactionIcon, useInteractionLabel } from "./interactionchrome";
+import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
 import { groupChronology } from "./timelinegroups";
 
 // Conversation memory (concept §5.10, ADR-0097 D3).
@@ -140,10 +140,7 @@ export function ContactMemory({
               message drawn from its provider key alone fell through to the
               envelope, which told a contact with no email address that they
               had been mailed. */}
-          <span className="pe-memory-channel t-caption">
-            {interactionIcon(row.kind)}
-            {row.channelLabel}
-          </span>
+          <Badge icon={interactionGlyph(row.kind)}>{row.channelLabel}</Badge>
           {/* A retained email is the canonical row, whatever surface it is on.
               The card keeps its own date, channel, badge and time columns —
               those place the message in this card's reading — and hands the

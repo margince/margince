@@ -221,7 +221,7 @@ function ProjectDealRow({
         {deal.name}
       </button>
       <span className="project-row-meta t-caption">
-        <Badge tone={deal.status === "won" ? "success" : undefined} quiet>
+        <Badge tone={deal.status === "won" ? "success" : undefined}>
           {deal.status}
         </Badge>
         <span className="t-mono">
@@ -311,7 +311,7 @@ function StakeholderRow({
     <PanelRow className="project-row">
       <EntityRef kind="contact" id={seat.contact_id} name={seat.contact_name} />
       <span className="project-row-meta t-caption">
-        {seat.role && <Badge quiet>{projectRoleLabel(seat.role, t)}</Badge>}
+        {seat.role && <Badge>{projectRoleLabel(seat.role, t)}</Badge>}
         {writable && (
           <RemoveProjectStakeholder
             projectId={projectId}

@@ -529,7 +529,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           content: (
             <>
               <span className="ext-method">{route.method}</span>
-              <span className="ext-route-path">{route.path}</span>
+              <span>{route.path}</span>
             </>
           ),
         }))}
@@ -570,8 +570,8 @@ function BringsRow({
         ) : (
           <ul className="ext-chips">
             {items.map((item) => (
-              <li key={item.id} className="ext-chip t-mono">
-                {item.content}
+              <li key={item.id}>
+                <Badge>{item.content}</Badge>
               </li>
             ))}
           </ul>

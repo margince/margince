@@ -101,7 +101,7 @@ export function TeamWeeklySection({
         <Disclosure summary={t("brief.week.supporting")}>
           <Panel
             title={t("teamweekly.title")}
-            titleAction={<Badge quiet>{t("teamweekly.frozen")}</Badge>}
+            titleAction={<Badge>{t("teamweekly.frozen")}</Badge>}
           >
             <PanelBody className="teamweekly-reading">
               <AgendaSummary review={review} />

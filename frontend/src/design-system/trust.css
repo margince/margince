@@ -305,18 +305,6 @@ button.evidence-chip:hover {
   color: var(--textTertiary);
 }
 
-.passport-chip {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--f-mono);
-  font-size: var(--fs-eyebrow);
-  color: var(--aiText);
-  background: var(--aiLight);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: 1px 8px;
-}
-
 /*
  * The ring, for the evidence surfaces. Every control here is the reader's way
  * INTO a provenance claim — what the agent read, what it proposes to change —

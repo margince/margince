@@ -378,21 +378,19 @@
 .pn-moment + .pn-moment {
   border-top: 1px solid var(--borderSubtle);
 }
+/* A row, so the flag on the head change keeps its distance from the sentence
+   and sits on its baseline, wrapping under it when the line is full. */
 .pn-moment p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
   margin: 0;
   color: var(--textContent);
 }
 .pn-moment:first-child p {
   color: var(--textPrimary);
   font-weight: var(--fw-medium);
-}
-.pn-moment p .badge {
-  /* ds:ignore a badge trailing a sentence is not a spacing role — it is the
-     gap between a word and the label after it, and none of gapActions,
-     gapCards or the pad roles describes that. Changing the primitive would
-     move every badge in the product, including the ones that sit alone. */
-  margin-left: var(--space-2);
-  vertical-align: 1px;
 }
 .pn-moment-when {
   font-family: var(--f-mono);

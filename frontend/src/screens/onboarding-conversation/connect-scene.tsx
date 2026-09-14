@@ -2,8 +2,9 @@ import { Check, Circle } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Disclosure } from "../../design-system/atoms";
+import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { ProviderMark } from "../../design-system/provider-mark";
+import { Row } from "../../design-system/stack";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useConnectors } from "../connectors";
@@ -298,12 +299,11 @@ export function ConnectScene({
       {!dialogShowsResult && returnPanel}
 
       <div className="ob-connect-section-head">
-        <h3>
-          {t("ob.conv.connect.networkTitle")}
-          <span className="ob-connect-pill ob-connect-pill-recommended">
-            {t("ob.conv.connect.recommended")}
-          </span>
-        </h3>
+        {/* The default tone: LinkedIn never gates the act. */}
+        <Row>
+          <h3>{t("ob.conv.connect.networkTitle")}</h3>
+          <Badge>{t("ob.conv.connect.recommended")}</Badge>
+        </Row>
         <p className="t-sub">{t("ob.conv.connect.networkHint")}</p>
       </div>
 

@@ -68,24 +68,6 @@
   line-height: var(--lh-relaxed);
   max-width: 520px;
 }
-.trustpill {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-meta);
-  color: var(--teal);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  padding: var(--space-2) var(--space-3);
-  margin-top: var(--space-3);
-  line-height: var(--lh-snug);
-}
-.trustpill svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
 
 .urlnote {
   display: flex;
@@ -950,12 +932,6 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-.mw-read-activity > div span {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgHover);
 }
 .mw-read-activity b {
   color: var(--textPrimary);

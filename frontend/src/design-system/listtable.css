@@ -590,12 +590,11 @@
 }
 
 /* The floor under a cell's strip. The `nowrap` above governs TEXT, not the
- * layout of a flex container inside the cell: `.badge` and `.chip` are nowrap
- * only by flexbox's own default, and a strip that took a second line here would
- * cost every row below it its place. Stated on the TABLE as well as on
- * `.rowtags` and `.lt-strip`, so an edit to one of those sheets cannot give it
- * up in a cell without saying so. */
-.lt-table td .badge,
+ * layout of a flex container inside the cell: `.chip` is nowrap only by
+ * flexbox's own default, and a strip that took a second line here would cost
+ * every row below it its place. Stated on the TABLE as well as on `.rowtags`
+ * and `.lt-strip`, so an edit to one of those sheets cannot give it up in a
+ * cell without saying so. `.badge` holds its own line in atoms.css. */
 .lt-table td .chip,
 .lt-table td .rowtags,
 .lt-table td .lt-strip {

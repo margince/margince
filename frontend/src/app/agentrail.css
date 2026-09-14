@@ -1045,19 +1045,8 @@
   font-size: var(--fs-eyebrow);
   color: var(--textMeta);
 }
-/* The licence, and any other standing fault, as a pill in the strip: it is the
-   one thing here somebody has to do something about. */
-.arwarn {
-  padding: 2px 7px; /* ds:ignore pill optics on a 10px label */
-  border-radius: var(--r-sm);
-  background: var(--warnBg);
-}
 .armeta b {
   color: var(--textPrimary);
-  font-weight: var(--fw-medium);
-}
-.arwarn {
-  color: var(--warnText);
   font-weight: var(--fw-medium);
 }
 .arconn {

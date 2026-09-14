@@ -310,8 +310,12 @@ describe("JobHealthCard", () => {
     // Nothing to say about a week that holds no more than the day does.
     expect(alert).not.toHaveTextContent(/7 days/i);
     // And the count itself carries the tone on the row it belongs to.
-    expect(screen.getByText("3 dead")).toHaveClass("badge-danger");
-    expect(screen.getByText("discarded")).toHaveClass("badge-danger");
+    expect(screen.getByText("3 dead").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
+    expect(screen.getByText("discarded").closest(".badge")).toHaveClass(
+      "badge-danger",
+    );
   });
 
   // The case the window exists for: a settled outage. The rows are still there

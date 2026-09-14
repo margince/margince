@@ -16,6 +16,7 @@ import {
 import { createPortal } from "react-dom";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Badge } from "../design-system/atoms";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
@@ -491,9 +492,7 @@ function RuntimeRows({
     <div className="armeta">
       {/* The posture leads, because it decides whether anything below it means
           anything: a model name from last week is not a model bound today. */}
-      {ai === "unconfigured" && (
-        <span className="arwarn">{LABELS.noModel}</span>
-      )}
+      {ai === "unconfigured" && <Badge tone="warn">{LABELS.noModel}</Badge>}
       {ai === "development" && (
         <span>
           <b>{t("auth.coreDevelopment")}</b> {t("auth.coreModeDevelopment")}
@@ -523,7 +522,7 @@ function RuntimeRows({
         </span>
       )}
       {(license === "none" || license === "refused") && (
-        <span className="arwarn">{licenseLine}</span>
+        <Badge tone="warn">{licenseLine}</Badge>
       )}
       {offline.map((source) => (
         <span className="arconn down" key={source}>

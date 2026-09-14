@@ -381,7 +381,7 @@ describe("ConnectedAgentsCard", () => {
           document.querySelector('[data-testid="connection-pp-renewing"]'),
         ).toBeTruthy(),
       );
-      expect(screen.getByText("renewing")).toBeTruthy();
+      expect(screen.getByText("Renewing")).toBeTruthy();
       // Regex, not an exact string: the phrase carries a formatted date, so an
       // exact-match query would miss "credential expired 30/07/2026" and pass
       // against the very contradiction this asserts is gone. A renewing row

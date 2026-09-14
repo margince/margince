@@ -408,8 +408,8 @@ export const vi = {
   "search.filter.all": "Tất cả",
   "search.pending": "Đang tìm…",
   "search.tag.carriedBy": "Trên {count} bản ghi",
-  "search.tier.mirrored": "từ hệ thống đã kết nối",
-  "search.tier.unverified": "chưa xác minh",
+  "search.tier.mirrored": "Từ hệ thống đã kết nối",
+  "search.tier.unverified": "Chưa xác minh",
 
   "context.recentTouches": "Trao đổi gần đây",
   "context.openTasks": "Công việc đang mở",
@@ -451,9 +451,9 @@ export const vi = {
   "dealfiles.hidden": "Đã ẩn khỏi deal này",
   "dealfiles.unhidden": "Đã hiện lại ở deal này",
   "deal.stalled": "đình trệ",
-  "deal.singleThreaded": "chỉ một đầu mối",
-  "deal.staged": "chờ duyệt",
-  "deal.archived": "đã lưu trữ",
+  "deal.singleThreaded": "Chỉ một đầu mối",
+  "deal.staged": "Chờ duyệt",
+  "deal.archived": "Đã lưu trữ",
   "deal.closes": "chốt {date}",
   "deal.undated": "chưa có ngày chốt",
   "deal.closesProvisional": "ngày chốt tạm tính, chưa được ai xác nhận",
@@ -2258,7 +2258,7 @@ export const vi = {
   "leadSources.intentHint":
     "Cao cộng điểm, Thấp trừ điểm; thay đổi áp dụng ở lần tính lại tiếp theo của mỗi khách hàng tiềm năng.",
   "leadSources.leadCount": "{count} khách hàng tiềm năng",
-  "leadSources.builtIn": "có sẵn",
+  "leadSources.builtIn": "Có sẵn",
   "leadSources.builtInKept":
     "Nguồn có sẵn có thể đổi tên và tắt, không xóa được.",
   "leadSources.inUse":
@@ -4324,7 +4324,7 @@ export const vi = {
   "agents.disconnectNamed": "Ngắt kết nối {client}",
   "agents.disconnected": "đã ngắt kết nối",
   "agents.lapsed": "thông tin xác thực đã hết hạn",
-  "agents.renewing": "đang gia hạn",
+  "agents.renewing": "Đang gia hạn",
   "agents.renewsBy": "thông tin xác thực gia hạn trước {date}",
   "agents.expiredOn": "thông tin xác thực hết hạn {date}",
   "agents.revokeGrantOpen": "Kết thúc kết nối",
@@ -4351,13 +4351,13 @@ export const vi = {
     "Làm giàu dữ liệu, trường tuỳ chỉnh, webhook, gộp thẻ — những việc này chờ trong hộp phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn của deal — chỉ chờ khi bước đó kết thúc deal là thắng hoặc thua.",
-  "settings.locked": "đã khoá",
+  "settings.locked": "Đã khoá",
   "settings.purposes": "Mục đích chấp thuận",
   "settings.purposesSub":
     "Bản cài đặt này xin chấp thuận cho những mục đích gì, và mỗi mục đích dựa trên cơ sở pháp lý nào.",
   "settings.created": "tạo {date}",
   "settings.expires": "hết hạn {date}",
-  "settings.revoked": "đã thu hồi",
+  "settings.revoked": "Đã thu hồi",
   "settings.revoke": "Thu hồi",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport này mất hiệu lực ngay — Agent sẽ mất quyền truy cập ở lần gọi kế tiếp.",
@@ -5783,7 +5783,7 @@ export const vi = {
   "ob.conv.connect.networkTitle": "Mạng lưới quan hệ của bạn",
   "ob.conv.connect.networkHint":
     "Lưu hồ sơ của bạn để mạng lưới bạn nhập sau này được ghi nhận cho bạn. Việc nhập nằm trong Cài đặt.",
-  "ob.conv.connect.recommended": "nên có",
+  "ob.conv.connect.recommended": "Nên có",
   "ob.conv.connect.gmailBrings": "Email được đọc và gửi qua Google",
   "ob.conv.connect.microsoftBrings": "Email được đọc và gửi qua Microsoft",
   "ob.conv.connect.imapBrings":
@@ -6302,7 +6302,7 @@ export const vi = {
   "client.unknownDetail":
     "Người gửi này không khớp liên hệ nào bạn xem được. Không có gì được lấy từ nơi khác.",
   "client.createLead": "Ghi nhận thành lead",
-  "client.isolation": "chỉ nói chuyện với tổ chức CỦA BẠN",
+  "client.isolation": "Chỉ nói chuyện với tổ chức CỦA BẠN",
   "client.attribution":
     "Mọi lượt ghi nhận đều được quy trách và kiểm toán được.",
 
@@ -6469,7 +6469,7 @@ export const vi = {
   "prefs.rateLimited":
     "Vừa có quá nhiều lần thử từ đây. Hãy đợi một phút rồi tải lại.",
   "prefs.subscribed": "Bật — bạn đã yêu cầu",
-  "prefs.alwaysOn": "luôn bật",
+  "prefs.alwaysOn": "Luôn bật",
   "confirm.title": "Thông tin của bạn",
   "confirm.intro":
     "Tôi là Margince, AI vận hành CRM này. Đây là toàn bộ những gì chúng tôi lưu về bạn. Bạn có thể sửa bất kỳ mục nào, hoặc yêu cầu chúng tôi xóa.",
@@ -6546,8 +6546,8 @@ export const vi = {
   "prefs.undoExplicit":
     "Đăng ký lại là một sự đồng ý rõ ràng — chúng tôi không âm thầm bật lại. Hãy lưu bên dưới để ghi nhận sự chấp thuận của bạn, hoặc bỏ thay đổi.",
 
-  "auto.tier.runs": "tự chạy",
-  "auto.tier.approval": "chờ duyệt",
+  "auto.tier.runs": "Tự chạy",
+  "auto.tier.approval": "Chờ duyệt",
   "auto.sub":
     'Quy tắc gắn "tự chạy" tự hành động. Quy tắc gắn "chờ duyệt" chuyển vào hộp chờ duyệt.',
   "auto.readOnly": "Chế độ chỉ đọc — bạn không có quyền thay đổi tự động hoá.",
@@ -6560,8 +6560,8 @@ export const vi = {
   "auto.createdPaused":
     "Đã tạo ở trạng thái tạm dừng — chưa gì chạy cho đến khi bạn bật lên.",
   "auto.delete": "Xoá",
-  "auto.statusEnabled": "đang bật",
-  "auto.statusPaused": "đang tạm dừng",
+  "auto.statusEnabled": "Đang bật",
+  "auto.statusPaused": "Đang tạm dừng",
   "auto.dateField.placeholder": "Chọn trường ngày",
   "auto.dateField.needsObject":
     "Chọn đối tượng trước để xem các trường ngày của nó.",
@@ -6592,11 +6592,11 @@ export const vi = {
   "auto.runs.target": "Bản ghi đích",
   "auto.runs.result": "Kết quả",
   "auto.runs.reason": "Lý do",
-  "auto.runs.outcomeFired": "đã kích hoạt",
-  "auto.runs.outcomeFailed": "thất bại",
-  "auto.runs.outcomeBlocked": "bị chặn",
-  "auto.runs.outcomeSkipped": "đã bỏ qua",
-  "auto.runs.outcomeQueued": "đã xếp hàng",
+  "auto.runs.outcomeFired": "Đã kích hoạt",
+  "auto.runs.outcomeFailed": "Thất bại",
+  "auto.runs.outcomeBlocked": "Bị chặn",
+  "auto.runs.outcomeSkipped": "Đã bỏ qua",
+  "auto.runs.outcomeQueued": "Đã xếp hàng",
 
   "auto.preview.open": "Xem thử",
   "auto.preview.title": "Phạm vi ảnh hưởng khi chạy thử",
@@ -6685,7 +6685,7 @@ export const vi = {
   "cf.type.boolean": "Có / Không",
   "cf.builder.addTo": "Thêm một trường vào {object}",
   "cf.builder.open": "Thêm một trường",
-  "cf.builder.noCode": "không cần viết mã",
+  "cf.builder.noCode": "Không cần viết mã",
   "cf.builder.intro":
     "Trường mới là một cột thật trên bảng sẵn có — lọc được, đưa vào báo cáo được, xuất ra được, và có trong API như mọi trường lõi. Đó không phải một đối tượng mới.",
   "cf.label": "Nhãn",
@@ -7212,10 +7212,10 @@ export const vi = {
     "Hãy thêm khoảng {count} từ nữa để đạt mức sắc nét.",
   "voice.insights.next.atTarget":
     "Kho văn bản của bạn đã đạt mức mong muốn; thỉnh thoảng thêm bài viết gần đây để giữ cho kho luôn tươi mới.",
-  "voice.status.active": "đang dùng",
-  "voice.status.candidate": "chờ rà soát",
-  "voice.status.superseded": "đã bị thay",
-  "voice.status.rejected": "đã từ chối",
+  "voice.status.active": "Đang dùng",
+  "voice.status.candidate": "Chờ rà soát",
+  "voice.status.superseded": "Đã bị thay",
+  "voice.status.rejected": "Đã từ chối",
   "voice.classification.routine": "thay đổi thường lệ",
   "voice.classification.material": "thay đổi đáng kể",
   "voice.outcome.autoActivated": "tự động kích hoạt",
@@ -7233,7 +7233,7 @@ export const vi = {
   "voice.insights.movesLabel":
     "Những nước đi đặc trưng của bạn — bằng chính lời bạn",
   "voice.insights.samplesLabel": "Bản nháp mẫu theo giọng của bạn",
-  "voice.insights.draftOnly": "chỉ là bản nháp — chưa từng gửi",
+  "voice.insights.draftOnly": "Chỉ là bản nháp — chưa từng gửi",
   "voice.insights.disclosure":
     "Bản nháp có AI hỗ trợ; mọi lượt gửi vẫn là quyết định của con người.",
   "voice.insights.nextBestLabel": "Để tốt hơn nữa:",
@@ -7607,7 +7607,7 @@ export const vi = {
   "tools.title": "Công cụ Agent",
   "tools.sub":
     "Bề mặt có kiểm soát mà một passport gọi được — đúng danh sách mà một client MCP thấy.",
-  "tools.egress": "có gọi ra ngoài",
+  "tools.egress": "Có gọi ra ngoài",
   "tools.scopeAll": "Mọi passport",
   "tools.inventory": "Tất cả {count} công cụ",
   "tools.scopeLabel": "Giới hạn theo passport",
@@ -7663,9 +7663,9 @@ export const vi = {
   "aicalls.col.tokens": "Token",
   "aicalls.col.latency": "Độ trễ",
   "aicalls.ms": "{value} ms",
-  "aicalls.badge.cacheHit": "trúng cache",
-  "aicalls.badge.degraded": "giảm cấp",
-  "aicalls.badge.retries": "thử lại ×{count}",
+  "aicalls.badge.cacheHit": "Trúng cache",
+  "aicalls.badge.degraded": "Giảm cấp",
+  "aicalls.badge.retries": "Thử lại ×{count}",
   "aicalls.callsLabel": "Các lệnh gọi gần đây",
   "aicalls.filter.all": "Mọi tác vụ",
   "aicalls.loadMore": "Tải thêm",
@@ -7872,21 +7872,21 @@ export const vi = {
   "aiRouting.provider.label": "Nhà cung cấp",
   "aiRouting.change": "Đổi",
   "aiRouting.done": "Xong",
-  "aiRouting.noKey": "chưa có khoá",
-  "aiRouting.unpriced": "chưa định giá",
+  "aiRouting.noKey": "Chưa có khoá",
+  "aiRouting.unpriced": "Chưa định giá",
   "aiRouting.effect":
     "Ràng buộc đã lưu sẽ đến mọi tiến trình trong vòng một phút, không cần khởi động lại.",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
   "aiProviderKeys.sub":
     "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",
-  "aiProviderKeys.keyless": "không cần khoá",
+  "aiProviderKeys.keyless": "Không cần khoá",
   "aiProviderKeys.field": "Khoá API",
   "aiProviderKeys.save": "Lưu khoá",
   "aiProviderKeys.adminOnly":
     "Chỉ quản trị viên hoặc ops mới đổi được thông tin xác thực nhà cung cấp.",
   "aiProviderKeys.saveFailed": "Không thể cập nhật nhà cung cấp này",
-  "aiProviderKeys.configured": "đã cấu hình",
-  "aiProviderKeys.absent": "chưa đặt",
+  "aiProviderKeys.configured": "Đã cấu hình",
+  "aiProviderKeys.absent": "Chưa đặt",
   "aiProviderKeys.configuredHint":
     "Đã niêm phong trong kho khóa. Không thể đọc lại — dán khóa mới để thay thế. Khóa cũng có thể đến qua {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8572,7 +8572,7 @@ export const vi = {
   "contact.loops.dueToday": "hôm nay",
   "contact.loops.dueTomorrow": "ngày mai",
   "contact.loops.dueInDays": "trong {count} ngày",
-  "contact.loops.waiting": "đang chờ",
+  "contact.loops.waiting": "Đang chờ",
   "contact.loops.open": "đang mở",
   "contact.loops.atLeast": "ít nhất {count}",
 
@@ -8875,7 +8875,7 @@ export const vi = {
     "Ch\u01b0a c\u00f3 \u0111i\u1ec1u ki\u1ec7n \u2014 nh\u00f3m tr\u1ed1ng kh\u00f4ng kh\u1edbp v\u1edbi g\u00ec, h\u00e3y th\u00eam m\u1ed9t \u0111i\u1ec1u ki\u1ec7n.",
   "filters.field": "Tr\u01b0\u1eddng",
   "filters.choosePlaceholder": "Ch\u1ecdn m\u1ed9t tr\u01b0\u1eddng",
-  "filters.customBadge": "tr\u01b0\u1eddng t\u00f9y ch\u1ec9nh",
+  "filters.customBadge": "Tr\u01b0\u1eddng t\u00f9y ch\u1ec9nh",
   "filters.operator": "To\u00e1n t\u1eed",
   "filters.value": "Gi\u00e1 tr\u1ecb",
   "filters.values": "C\u00e1c gi\u00e1 tr\u1ecb",
@@ -9138,7 +9138,7 @@ export const vi = {
   "project.commitments.title": "Cam kết đang mở",
   "project.commitments.empty":
     "Chưa có việc đang mở nào xếp dưới dự án này. Việc liên kết với dự án sẽ hiện ở đây, hạn gần nhất trước.",
-  "project.commitments.overdue": "quá hạn",
+  "project.commitments.overdue": "Quá hạn",
   "project.timeline.empty":
     "Chưa có gì xếp dưới dự án này. Email mang mã trong tiêu đề và hoạt động liên kết với dự án sẽ hiện ở đây.",
   "project.advance.title": "Chuyển sang {phase}",
@@ -9679,7 +9679,7 @@ export const vi = {
   "firstRun.ignite.title": "Nó đã có nhịp đập.",
   "firstRun.ignite.sub":
     "Khoá đã được niêm phong và mô hình đã trả lời. Điều đó thay đổi những gì:",
-  "firstRun.ignite.sealed": "đã niêm phong trong vault · {vendor}",
+  "firstRun.ignite.sealed": "Đã niêm phong trong vault · {vendor}",
   "firstRun.ignite.reaching": "đang gọi mô hình lần đầu…",
   "firstRun.ignite.canNow": "giờ có thể",
   "firstRun.ignite.cannot": "không thể",

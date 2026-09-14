@@ -26,6 +26,7 @@ import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
 import { EmailEntry, EmailWords } from "./emailentry";
+import { Eyebrow } from "./eyebrow";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { withWhom } from "./participants";
 import { FieldGuard } from "./rbac";
@@ -404,15 +405,9 @@ export function DealCard({
         <span className="deal-flags">
           {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
           {deal.singleThreaded && (
-            <Badge quiet tone="danger">
-              {t("deal.singleThreaded")}
-            </Badge>
+            <Badge tone="danger">{t("deal.singleThreaded")}</Badge>
           )}
-          {deal.stalled && (
-            <Badge quiet tone="warn">
-              {t("deal.stalled")}
-            </Badge>
-          )}
+          {deal.stalled && <Badge tone="warn">{t("deal.stalled")}</Badge>}
           {/* How long it has sat is the size of the stall, and only then: on a
               healthy card the number is a fact nobody acts on. */}
           {deal.stalled && (
@@ -420,7 +415,7 @@ export function DealCard({
               {formatDuration(deal.ageMs, locale)}
             </span>
           )}
-          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
+          {deal.archived && <Badge>{t("deal.archived")}</Badge>}
         </span>
       )}
       <span className="deal-head">
@@ -1469,7 +1464,7 @@ function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
     return <Badge tone="warn">{t("convo.yourMove")}</Badge>;
   }
   if (direction === "outbound") {
-    return <Badge quiet>{t("convo.waitingOnThem")}</Badge>;
+    return <Badge>{t("convo.waitingOnThem")}</Badge>;
   }
   return null;
 }
@@ -1828,7 +1823,7 @@ function ThreadRow({
       <div className="tl-body">
         <div className="tl-thread">
           <span className="tl-head">
-            <Badge>{t("timeline.group.kind")}</Badge>
+            <Eyebrow>{t("timeline.group.kind")}</Eyebrow>
             <span className="tl-group-count">
               {groupCountLabel(group, locale)}
             </span>
@@ -2118,8 +2113,10 @@ export function TimelineRow({
             the headline, because both qualify it and set inline they read as
             the first words of the subject. */}
         <span className="tl-head">
-          <Badge>{t(TIMELINE_KIND_LABEL[entry.kind])}</Badge>
-          {/* What the record DID, for a row that is not an exchange: the badge
+          {/* A kicker, not a status: a filled pill on every row would read as
+              a column of statuses down the chronology. */}
+          <Eyebrow>{t(TIMELINE_KIND_LABEL[entry.kind])}</Eyebrow>
+          {/* What the record DID, for a row that is not an exchange: the kind
               says this is a record entry, and this says what happened to it. */}
           {entry.qualifier && (
             <span className="tl-direction">{entry.qualifier}</span>

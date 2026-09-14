@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
-import { ContactBillingRoles } from "./contactbillingroles";
 import { StoryProviders } from "./story-utils";
 
 // The three states this panel has to keep apart. WITHHELD renders nothing,
@@ -63,30 +62,6 @@ export const NobodyNamed: Story = {
   render: () => (
     <StoryProviders>
       <BillingContactsPanel companyId="o-1" contacts={[]} />
-    </StoryProviders>
-  ),
-};
-
-// The contact's side, beside their employers rather than inside them.
-export const OnAContact: Story = {
-  render: () => (
-    <StoryProviders>
-      <ContactBillingRoles
-        companies={[
-          {
-            relationship_id: "r-9",
-            company_id: "o-1",
-            company_name: "Acme",
-            role: "approver",
-          },
-          {
-            relationship_id: "r-10",
-            company_id: "o-2",
-            company_name: "Globex",
-            role: "recipient",
-          },
-        ]}
-      />
     </StoryProviders>
   ),
 };

@@ -653,7 +653,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     const identityLink = within(nav).getByRole("button", {
       name: /Legal company/,
     });
-    expect(identityLink.querySelector('[data-blocking="true"]')).not.toBeNull();
+    expect(identityLink.querySelector(".badge-danger")).not.toBeNull();
 
     // None of buying_intents, common_objections or sales_motion is in
     // REQUIRED_FIELDS — sales can never present as blocking, however many
@@ -666,7 +666,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       name: /Positioning and sales/,
     });
     expect(salesLink.querySelector('[data-blocking="true"]')).toBeNull();
-    expect(salesLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(salesLink.querySelector(".badge-danger")).toBeNull();
     expect(salesLink.querySelector(".ob-triage-nav-advisory")).not.toBeNull();
     const salesItem = salesLink.parentElement as HTMLElement;
     const buyingIntents = within(salesItem).getByRole("button", {
@@ -1100,7 +1100,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     });
     expect(within(contactsLink).getByText("2")).toBeInTheDocument();
     // Never the blocking/advisory pill's own class — a find is not a gap.
-    expect(contactsLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(contactsLink.querySelector(".badge-danger")).toBeNull();
 
     const heading = screen.getByRole("heading", { name: "Contacts", level: 3 });
     const section = heading.closest("section");
@@ -1136,7 +1136,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
       name: /^Facts.*3 found/,
     });
     expect(within(factsLink).getByText("3")).toBeInTheDocument();
-    expect(factsLink.querySelector(".ob-triage-nav-badge")).toBeNull();
+    expect(factsLink.querySelector(".badge-danger")).toBeNull();
 
     // The nav's number is the same 3 the section itself renders — one
     // derivation, not a second tally kept in step by hand.

@@ -5,22 +5,46 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  /* One line at its own width: a pill is a shrinkable flex item like anything
-     else, and beside a title that filled a panel's head band "AI-assisted"
-     came out as two lines. Three surfaces had already fixed this on their own
-     side of it. */
+  /* One line, never two: beside a title that filled a panel's head band
+     "AI-assisted" came out as two lines. A label longer than its container
+     truncates inside `.badge-label` instead of overflowing it.
+
+     No `flex` of its own. The initial `0 1 auto` is what lets a badge give way
+     in a row too narrow for it, and a container that must not squeeze its
+     badge says so itself — `.panel-head` does, at zero specificity, and a
+     declaration here would fight it on sheet order. The zero minimum is what
+     lets it shrink below its label at all. */
   white-space: nowrap;
-  flex: none;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  /* Type is stated, never inherited: a badge in an eyebrow heading or a mono
+     cell must read as the badge beside it everywhere else. */
+  font-family: var(--f-body);
   font-size: var(--fs-meta);
+  font-style: normal;
   /* Medium at 20px: the pill states one standing fact beside a name and must
      not outweigh the name. Semibold at this size reads as a warning. */
   font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
+  /* Tight rather than 1, so a descender is not cut by the label's clip. */
+  line-height: var(--lh-tight);
   min-block-size: 20px;
   padding: 0 8px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
   color: var(--textChip);
+}
+.badge-label {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge > svg {
+  flex: none;
 }
 /* The tone tints are TRANSLUCENT by canon — --successBg, --warnBg and
    --dangerBg all carry an alpha under a fifth — so a badge painted straight

@@ -69,13 +69,21 @@ describe("Badge", () => {
       </Badge>,
     );
     const badge = badgeFor("Replied");
-    const glyph = badge.firstElementChild;
+    const [glyph, label] = [...badge.children];
     expect(glyph?.tagName.toLowerCase()).toBe("svg");
     expect(glyph).toHaveAttribute("aria-hidden", "true");
-    expect(badge).toHaveTextContent(/^Replied$/);
-    expect(badge.childNodes[badge.childNodes.length - 1]?.textContent).toBe(
-      "Replied",
+    expect(label).toHaveClass("badge-label");
+    expect(label).toHaveTextContent(/^Replied$/);
+    expect(badge.children).toHaveLength(2);
+  });
+
+  it("holds the whole label in the one span that truncates", () => {
+    render(<Badge>extensions/acme/routes/partner-portal/settings</Badge>);
+    const label = screen.getByText(
+      "extensions/acme/routes/partner-portal/settings",
     );
+    expect(label).toHaveClass("badge-label");
+    expect(label.parentElement).toHaveClass("badge");
   });
 
   it("marks a live status with a leading dot, and an ordinary one without", () => {
@@ -107,24 +115,92 @@ describe("Badge", () => {
     expect(badgeFor("Quiet")).not.toHaveClass("badge-quiet");
   });
 
-  // The variants are fills and nothing else: an edge on a pill reads as a
-  // control, and a tracked or uppercased label reads as a kicker.
-  it("never gives a badge a border, a shadow edge or a transformed label", () => {
+  // happy-dom applies no stylesheet, so the look is held where it is written.
+  // The variants are fills and nothing else — an edge on a pill reads as a
+  // control — and the type is stated rather than inherited, so an uppercase,
+  // tracked or mono parent cannot turn a badge into a kicker.
+  describe("its stylesheet", () => {
     const sheet = readFileSync(join(here, "atoms.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,
       "",
     );
-    const rules = [...sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)].filter(
-      ([, selector]) => /\.badge\b/.test(selector),
-    );
-    expect(rules.length).toBeGreaterThan(5);
-    const offenders = rules
-      .filter(([, , body]) =>
-        /(?:^|[;\s])(border(?!-radius)[\w-]*|outline[\w-]*|box-shadow|text-transform|letter-spacing)\s*:/.test(
-          body,
+    const rules = [...sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)]
+      .filter(([, selector]) => /\.badge\b/.test(selector))
+      .map(([, selector, body]) => ({
+        selector: selector.trim(),
+        declarations: new Map(
+          body
+            .split(";")
+            .map((line) => line.split(":").map((part) => part.trim()))
+            .filter((pair): pair is [string, string] => pair.length === 2),
         ),
-      )
-      .map(([, selector]) => selector.trim());
-    expect(offenders).toEqual([]);
+      }));
+
+    it("reads the badge rules it is pointed at", () => {
+      expect(rules.length).toBeGreaterThan(5);
+    });
+
+    it("never draws an edge on any variant", () => {
+      const edged = rules.flatMap(({ selector, declarations }) =>
+        [...declarations.keys()]
+          .filter((name) =>
+            /^(border(?!-radius)|outline|box-shadow)/.test(name),
+          )
+          .map((name) => `${selector} { ${name} }`),
+      );
+      expect(edged).toEqual([]);
+    });
+
+    it("sets its label in sentence case at normal tracking, and nowhere else", () => {
+      const resets: Record<string, string[]> = {
+        "text-transform": ["none"],
+        "letter-spacing": ["normal", "0", "var(--tracking-normal)"],
+      };
+      const shouted = rules.flatMap(({ selector, declarations }) =>
+        Object.entries(resets)
+          .filter(([name, allowed]) => {
+            const value = declarations.get(name);
+            return value !== undefined && !allowed.includes(value);
+          })
+          .map(
+            ([name]) => `${selector} { ${name}: ${declarations.get(name)} }`,
+          ),
+      );
+      expect(shouted).toEqual([]);
+    });
+
+    it("resets every type property a parent could hand down", () => {
+      const badge = rules.find(({ selector }) => selector === ".badge");
+      expect(
+        Object.fromEntries(
+          [
+            "font-family",
+            "font-style",
+            "letter-spacing",
+            "text-transform",
+            "line-height",
+          ].map((name) => [name, badge?.declarations.get(name)]),
+        ),
+      ).toEqual({
+        "font-family": "var(--f-body)",
+        "font-style": "normal",
+        "letter-spacing": "var(--tracking-normal)",
+        "text-transform": "none",
+        "line-height": "var(--lh-tight)",
+      });
+    });
+
+    // A container that must not squeeze its badge (a panel's head band) says
+    // so at zero specificity; a `flex` here would override it on sheet order.
+    it("caps itself at its container and leaves shrinking to the container", () => {
+      const badge = rules.find(({ selector }) => selector === ".badge");
+      const label = rules.find(({ selector }) => selector === ".badge-label");
+      expect(badge?.declarations.get("box-sizing")).toBe("border-box");
+      expect(badge?.declarations.get("max-inline-size")).toBe("100%");
+      expect(badge?.declarations.get("min-inline-size")).toBe("0");
+      expect([...(badge?.declarations.keys() ?? [])]).not.toContain("flex");
+      expect(label?.declarations.get("text-overflow")).toBe("ellipsis");
+      expect(label?.declarations.get("min-inline-size")).toBe("0");
+    });
   });
 });

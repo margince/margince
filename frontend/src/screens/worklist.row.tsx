@@ -258,14 +258,14 @@ export function WorklistRow({
             title line keeps the states that are about this row alone: overdue,
             unprepared.
 
-            `Badge quiet` because that is the catalog's answer for a column
-            carrying one per row: the tone survives as a dot and the label as
-            plain text, where a filled pill down a queue reads as decoration a
-            reader learns to skip. The span is PLACEMENT — the grid cell and the
+            A soft `Badge`, the variant a column carrying one per row wears:
+            the solid fill is kept for the one status a surface must not let a
+            reader miss, and a queue of those would teach the eye to skip them.
+            The span is PLACEMENT — the grid cell and the
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
         <span className={kindClass(named)} title={named ?? undefined}>
-          <Badge quiet tone={item.band === "now" ? "warn" : undefined}>
+          <Badge tone={item.band === "now" ? "warn" : undefined}>
             {named ?? t(eyebrowKeyFor(item))}
           </Badge>
         </span>

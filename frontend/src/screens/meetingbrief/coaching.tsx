@@ -28,7 +28,7 @@ export function CoachPanel({
       title={t("contact.meeting.coach.title")}
       titleLevel={3}
       tone={writtenByModel ? "ai" : "accent"}
-      titleAction={<Badge quiet>{t("contact.meeting.coach.eyebrow")}</Badge>}
+      titleAction={<Badge>{t("contact.meeting.coach.eyebrow")}</Badge>}
     >
       <PanelBody>
         <p className="mb-coach-lead">{coaching.focus}</p>
@@ -79,7 +79,7 @@ export function MeetingPaths({
       {coaching.paths.map((path) => (
         <PanelRow key={path.label}>
           <div className="mb-path-row">
-            <Badge quiet>{path.label}</Badge>
+            <Badge>{path.label}</Badge>
             <span>{path.play}</span>
           </div>
         </PanelRow>

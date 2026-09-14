@@ -418,8 +418,8 @@ export const en = {
   "search.filter.all": "Everything",
   "search.pending": "Searching…",
   "search.tag.carriedBy": "On {count} records",
-  "search.tier.mirrored": "from a connected system",
-  "search.tier.unverified": "unverified",
+  "search.tier.mirrored": "From a connected system",
+  "search.tier.unverified": "Unverified",
 
   "context.recentTouches": "Recent conversations",
   "context.openTasks": "Open tasks",
@@ -461,9 +461,9 @@ export const en = {
   "dealfiles.hidden": "Hidden from this deal",
   "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalled": "stalled",
-  "deal.singleThreaded": "single-threaded",
-  "deal.staged": "staged",
-  "deal.archived": "archived",
+  "deal.singleThreaded": "Single-threaded",
+  "deal.staged": "Staged",
+  "deal.archived": "Archived",
   "deal.closes": "closes {date}",
   "deal.undated": "no close date",
   "deal.closesProvisional": "provisional close date, not confirmed by a human",
@@ -2353,7 +2353,7 @@ export const en = {
   "leadSources.intentHint":
     "High adds points to the score, Low subtracts; a change applies on each lead's next rescore.",
   "leadSources.leadCount": "{count} leads",
-  "leadSources.builtIn": "built-in",
+  "leadSources.builtIn": "Built-in",
   "leadSources.builtInKept":
     "Built-in sources can be renamed and switched off, not removed.",
   "leadSources.inUse": "{count} leads use this source — switch it off instead.",
@@ -4517,7 +4517,7 @@ export const en = {
   "agents.disconnectNamed": "Disconnect {client}",
   "agents.disconnected": "disconnected",
   "agents.lapsed": "credential expired",
-  "agents.renewing": "renewing",
+  "agents.renewing": "Renewing",
   "agents.renewsBy": "credential renews by {date}",
   "agents.expiredOn": "credential expired {date}",
   "agents.revokeGrantOpen": "End connection",
@@ -4543,13 +4543,13 @@ export const en = {
     "Enrichment, custom fields, webhooks, merging tags — these wait in your inbox.",
   "settings.tierAdvance":
     "Advance a deal stage — waits only when the move closes the deal as won or lost.",
-  "settings.locked": "locked",
+  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which lawful basis each purpose stands on.",
   "settings.created": "created {date}",
   "settings.expires": "expires {date}",
-  "settings.revoked": "revoked",
+  "settings.revoked": "Revoked",
   "settings.revoke": "Revoke",
   "settings.revokeConfirm":
     "This passport's credential is invalidated immediately — the agent loses access on its next call.",
@@ -5989,7 +5989,7 @@ export const en = {
   "ob.conv.connect.networkTitle": "Your network",
   "ob.conv.connect.networkHint":
     "Save your profile so the network you import later is attributed to you. The import itself lives in Settings.",
-  "ob.conv.connect.recommended": "recommended",
+  "ob.conv.connect.recommended": "Recommended",
   // Neither grant carries calendar or contacts — those are their own,
   // separate consent (Settings → Calendar) — and neither carries sign-in:
   // both connect the SAME two things here, mail read and send, so the two
@@ -6538,7 +6538,7 @@ export const en = {
   "client.unknownDetail":
     "This sender matches no contact you can see. Nothing was fetched from anywhere else.",
   "client.createLead": "Capture as lead",
-  "client.isolation": "talks only to YOUR company",
+  "client.isolation": "Talks only to YOUR company",
   "client.attribution": "Every capture is attributed and auditable.",
 
   "book.title": "Book a meeting",
@@ -6701,7 +6701,7 @@ export const en = {
   "prefs.rateLimited":
     "Too many attempts from here just now. Wait a minute and reload.",
   "prefs.subscribed": "On — you asked for these",
-  "prefs.alwaysOn": "always on",
+  "prefs.alwaysOn": "Always on",
   // The public confirm-your-details page. Margince speaks in first contact here,
   // as it does in onboarding: short flat sentences, says what it will and will
   // not do, no em dashes.
@@ -6780,8 +6780,8 @@ export const en = {
   "prefs.undoExplicit":
     "Re-subscribing is an explicit opt-in — we won't silently turn it back on. Save below to record your consent, or discard.",
 
-  "auto.tier.runs": "runs",
-  "auto.tier.approval": "approval",
+  "auto.tier.runs": "Runs",
+  "auto.tier.approval": "Approval",
   "auto.sub":
     'A rule marked "runs" acts on its own. One marked "approval" stages into the approval inbox.',
   "auto.readOnly":
@@ -6794,8 +6794,8 @@ export const en = {
   "auto.create": "Create",
   "auto.createdPaused": "Created paused — nothing runs until you enable it.",
   "auto.delete": "Delete",
-  "auto.statusEnabled": "enabled",
-  "auto.statusPaused": "paused",
+  "auto.statusEnabled": "Enabled",
+  "auto.statusPaused": "Paused",
   "auto.dateField.placeholder": "Select date field",
   "auto.dateField.needsObject":
     "Choose an object first to list its date fields.",
@@ -6825,11 +6825,11 @@ export const en = {
   "auto.runs.target": "Target",
   "auto.runs.result": "Result",
   "auto.runs.reason": "Reason",
-  "auto.runs.outcomeFired": "fired",
-  "auto.runs.outcomeFailed": "failed",
-  "auto.runs.outcomeBlocked": "blocked",
-  "auto.runs.outcomeSkipped": "skipped",
-  "auto.runs.outcomeQueued": "queued",
+  "auto.runs.outcomeFired": "Fired",
+  "auto.runs.outcomeFailed": "Failed",
+  "auto.runs.outcomeBlocked": "Blocked",
+  "auto.runs.outcomeSkipped": "Skipped",
+  "auto.runs.outcomeQueued": "Queued",
 
   "auto.preview.open": "Preview",
   "auto.preview.title": "Dry-run blast radius",
@@ -6918,7 +6918,7 @@ export const en = {
   "cf.type.boolean": "Yes / No",
   "cf.builder.addTo": "Add a field to {object}",
   "cf.builder.open": "Add a field",
-  "cf.builder.noCode": "no code",
+  "cf.builder.noCode": "No code",
   "cf.builder.intro":
     "A new field is a real column on the existing table — it filters, reports, exports, and is in the API like any core field. It is not a new object.",
   "cf.label": "Label",
@@ -7433,10 +7433,10 @@ export const en = {
     "Add roughly {count} more words to reach the sharp band.",
   "voice.insights.next.atTarget":
     "Your corpus is at target; keep it fresh by adding recent writing occasionally.",
-  "voice.status.active": "active",
-  "voice.status.candidate": "awaiting review",
-  "voice.status.superseded": "superseded",
-  "voice.status.rejected": "rejected",
+  "voice.status.active": "Active",
+  "voice.status.candidate": "Awaiting review",
+  "voice.status.superseded": "Superseded",
+  "voice.status.rejected": "Rejected",
   "voice.classification.routine": "routine change",
   "voice.classification.material": "material change",
   "voice.outcome.autoActivated": "activated automatically",
@@ -7453,7 +7453,7 @@ export const en = {
   "voice.insights.thinkingLabel": "How you think",
   "voice.insights.movesLabel": "Your signature moves \u2014 in your own words",
   "voice.insights.samplesLabel": "Sample drafts in your voice",
-  "voice.insights.draftOnly": "draft only \u2014 never sent",
+  "voice.insights.draftOnly": "Draft only \u2014 never sent",
   "voice.insights.disclosure":
     "AI-assisted drafts; every send stays a human decision.",
   "voice.insights.nextBestLabel": "To make it better:",
@@ -7824,7 +7824,7 @@ export const en = {
   "tools.title": "Agent tools",
   "tools.sub":
     "The governed surface a passport can call — same inventory an MCP client sees.",
-  "tools.egress": "reaches out",
+  "tools.egress": "Reaches out",
   "tools.scopeAll": "All passports",
   "tools.inventory": "All {count} tools",
   "tools.scopeLabel": "Scope to a passport",
@@ -7880,9 +7880,9 @@ export const en = {
   "aicalls.col.tokens": "Tokens",
   "aicalls.col.latency": "Latency",
   "aicalls.ms": "{value} ms",
-  "aicalls.badge.cacheHit": "cache hit",
-  "aicalls.badge.degraded": "degraded",
-  "aicalls.badge.retries": "retry ×{count}",
+  "aicalls.badge.cacheHit": "Cache hit",
+  "aicalls.badge.degraded": "Degraded",
+  "aicalls.badge.retries": "Retry ×{count}",
   "aicalls.callsLabel": "Recent calls",
   "aicalls.filter.all": "All tasks",
   "aicalls.loadMore": "Load more",
@@ -8091,21 +8091,21 @@ export const en = {
   "aiRouting.provider.label": "Provider",
   "aiRouting.change": "Change",
   "aiRouting.done": "Done",
-  "aiRouting.noKey": "no key",
-  "aiRouting.unpriced": "unpriced",
+  "aiRouting.noKey": "No key",
+  "aiRouting.unpriced": "Unpriced",
   "aiRouting.effect":
     "Saved bindings reach every process within a minute, without a restart.",
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
-  "aiProviderKeys.keyless": "no key needed",
+  "aiProviderKeys.keyless": "No key needed",
   "aiProviderKeys.field": "API key",
   "aiProviderKeys.save": "Save key",
   "aiProviderKeys.adminOnly":
     "Only an admin or ops can change a provider credential.",
   "aiProviderKeys.saveFailed": "This provider could not be updated",
-  "aiProviderKeys.configured": "configured",
-  "aiProviderKeys.absent": "not set",
+  "aiProviderKeys.configured": "Configured",
+  "aiProviderKeys.absent": "Not set",
   "aiProviderKeys.configuredHint":
     "Sealed in the key vault. It cannot be read back — paste a new one to replace it. It may also arrive as {envVar}.",
   "aiProviderKeys.absentHint":
@@ -8820,7 +8820,7 @@ export const en = {
   "contact.loops.dueToday": "today",
   "contact.loops.dueTomorrow": "tomorrow",
   "contact.loops.dueInDays": "in {count} days",
-  "contact.loops.waiting": "waiting",
+  "contact.loops.waiting": "Waiting",
   "contact.loops.open": "open",
   "contact.loops.atLeast": "at least {count}",
 
@@ -9138,7 +9138,7 @@ export const en = {
     "No clauses yet \u2014 an empty group matches nothing, so add one.",
   "filters.field": "Field",
   "filters.choosePlaceholder": "Choose a field",
-  "filters.customBadge": "custom field",
+  "filters.customBadge": "Custom field",
   "filters.operator": "Operator",
   "filters.value": "Value",
   "filters.values": "Values",
@@ -9413,7 +9413,7 @@ export const en = {
   "project.commitments.title": "Open commitments",
   "project.commitments.empty":
     "No open task is filed under this project. Tasks linked to it land here, soonest due first.",
-  "project.commitments.overdue": "overdue",
+  "project.commitments.overdue": "Overdue",
   "project.timeline.empty":
     "Nothing is filed under this project yet. Mail carrying the key in its subject, and activities linked to it, land here.",
   "project.advance.title": "Move to {phase}",
@@ -10040,7 +10040,7 @@ export const en = {
   "firstRun.ignite.title": "It has a pulse.",
   "firstRun.ignite.sub":
     "The key is sealed and the model answered. Here is what that changes.",
-  "firstRun.ignite.sealed": "sealed in the vault · {vendor}",
+  "firstRun.ignite.sealed": "Sealed in the vault · {vendor}",
   "firstRun.ignite.reaching": "reaching the model for the first time…",
   "firstRun.ignite.canNow": "can now",
   "firstRun.ignite.cannot": "cannot",

@@ -147,10 +147,12 @@
 /* The agent's own verb. Filled indigo rather than outlined, because it is the
    move the card is recommending and an outlined control beside a bordered
    "not now" offers a reader two equal choices when only one advances the
-   account. */
+   account. --ai does not lift in dark, so the ink is --textOnAccent, the light
+   ink every fill that stays put takes: the dark --textOnAccentControl reads
+   3.26:1 on it. */
 .btn-ai {
   background: var(--ai);
-  color: var(--textOnAccentControl);
+  color: var(--textOnAccent);
 }
 .btn-ai:hover {
   filter: brightness(1.06);

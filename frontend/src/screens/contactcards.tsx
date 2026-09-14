@@ -16,7 +16,7 @@ import { daysPast } from "../format/lateness";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useViewerId } from "./common";
-import { interactionIcon, useInteractionLabel } from "./interactionchrome";
+import { interactionGlyph, useInteractionLabel } from "./interactionchrome";
 import { SentenceList, WrittenBy } from "./record360";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
@@ -243,21 +243,19 @@ function SourceChip({
       );
     }
     return (
-      <span className="pe-memory-channel t-caption">
-        {interactionIcon(activity?.kind)}
+      <Badge icon={interactionGlyph(activity?.kind)}>
         {activity
           ? interactionLabel(activity.kind, activity.channel_provider)
           : t("contact.brief.sourceActivity")}
-      </span>
+      </Badge>
     );
   }
   return (
-    <span className="pe-memory-channel t-caption">
-      <FileText size={13} aria-hidden="true" />
+    <Badge icon={FileText}>
       {cited.entity_type === "deal"
         ? t("contact.brief.sourceDeal")
         : cited.entity_type}
-    </span>
+    </Badge>
   );
 }
 
