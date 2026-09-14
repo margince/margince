@@ -763,6 +763,20 @@
   color: var(--textPrimary);
 }
 
+/* The mapping controls sit under the claim and its sources: the reader reads
+ * the prose and the evidence, then says which field it fills. A quiet stack so
+ * the claims stay the surface and the inputs read as the answer to one. */
+.pe-claim-map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pe-claim-incomplete {
+  color: var(--textMuted);
+}
+
 .pe-brief-section {
   margin-bottom: var(--space-5);
 }

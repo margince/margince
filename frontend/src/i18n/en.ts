@@ -8936,7 +8936,28 @@ export const en = {
   "contact.research.stats": "{sources} sources read · {claims} cited claims",
   "contact.research.dismiss": "Dismiss",
   "contact.research.discard": "Discard",
-  "contact.research.save": "Review & save {count} claims",
+  "contact.research.save_one": "Review & save {count} claim",
+  "contact.research.save_other": "Review & save {count} claims",
+  // A prose claim becomes a stored value only once a reader says which field it
+  // fills — the judgement the closed field enum exists to force. The value and
+  // its citation are prefilled from the run and stay editable.
+  "contact.research.mapField": "Profile field",
+  "contact.research.mapFieldPlaceholder": "Choose a field",
+  "contact.research.mapValue": "Value",
+  "contact.research.mapQuote": "Source quote",
+  "contact.research.mapUrl": "Source link",
+  "contact.research.mapUrlInvalid": "Enter an http or https link.",
+  "contact.research.mapIncomplete":
+    "Add a value, a quote and a link to save this claim.",
+  "contact.research.saved_one": "{count} claim added to the record",
+  "contact.research.saved_other": "{count} claims added to the record",
+  "contact.research.field.title": "Job title",
+  "contact.research.field.role": "Role",
+  "contact.research.field.company_name": "Company",
+  "contact.research.field.phone": "Phone",
+  "contact.research.field.linkedin": "LinkedIn",
+  "contact.research.field.address": "Address",
+  "contact.research.field.website": "Website",
   "contact.research.evidenceOrOmit":
     "AI-assisted · evidence-or-omit · public information only",
   "contact.meeting.title": "Meeting brief",
