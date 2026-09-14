@@ -13,7 +13,7 @@ import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
  *
  * What these stories are for: a row's label, its dimmed hint and the active
  * highlight have to read as one list whichever vocabulary fills it, and a
- * machine name reads in the body face beside a person's name — there is no
+ * machine name reads in the body face beside someone's name — there is no
  * face to pick. The host below is the thinnest text box that can drive the
  * hook; a real surface reaches for `ComboBox` or `TokenInput`, never this.
  */

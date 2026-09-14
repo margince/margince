@@ -9,7 +9,7 @@
 #   1. each refused shape is refused, and the finding names the planted file;
 #   2. the shapes the rule allows stay silent — code, pre, samp and .code-block
 #      in every spelling a stylesheet uses, and the --f-mono token in
-#      tokens.css. A gate that fires on correct code teaches people to stop
+#      tokens.css. A gate that fires on correct code teaches readers to stop
 #      reading it. (A grep reads comments as it reads code, so a comment naming
 #      the class is refused here too; design-system/mono.test.ts is the arm
 #      that reads past one.)

@@ -163,7 +163,7 @@
 
 /* A payload value, wrapped because a jsonb document has no length a card can
    rely on. In the body face whether the kind declared its fields or not: a raw
-   value is still a business fact a person is being asked to agree to, and the
+   value is still a business fact someone is being asked to agree to, and the
    code face would dress it as machine output. */
 .dcard-fact {
   font-size: var(--fs-sm);

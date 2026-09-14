@@ -608,7 +608,7 @@ a:not([class]):focus-visible {
 /* Mono is for code, and only for code: an element that IS code — `<code>`,
    `<pre>`, `<samp>` — or the `.code-block` below. Everything else, an id, a key
    or a figure included, reads in the body face; a figure aligns through `.t-num`
-   instead. `<kbd>` names a key a person presses rather than text a machine
+   instead. `<kbd>` names a key someone presses rather than text a machine
    reads, so it sits in the body face too — the browser's own sheet would set it
    in monospace, which is why this says so rather than leaving it to inherit.
    Held by mono.test.ts and check-font-lock.sh: a mono family on any other
