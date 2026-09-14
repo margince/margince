@@ -9,5 +9,14 @@
 -- needs no backfill. A non-null purpose_id narrows the row to that consent_purpose, and
 -- the send engine binds it only when the message resolves to the same purpose.
 SET LOCAL lock_timeout = '3s';   -- read on every send; do not queue behind a long txn
+ALTER TABLE communication_suppression ADD COLUMN purpose_id uuid;
+
+-- The FK goes on NOT VALID here and is validated in a LATER migration. One file
+-- is one transaction (dbmigrate.Up), so validating in this file would hold the
+-- ADD's lock through the whole validating scan of a table read on every send;
+-- the split across two transactions is the only form that lets writers through
+-- between the add and the scan. RESTRICT to match the five sibling FKs to
+-- consent_purpose — a purpose still named by a live stop may not be deleted.
 ALTER TABLE communication_suppression
-    ADD COLUMN purpose_id uuid REFERENCES consent_purpose(id) ON DELETE RESTRICT;
+    ADD CONSTRAINT communication_suppression_purpose_id_fkey
+    FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT NOT VALID;
