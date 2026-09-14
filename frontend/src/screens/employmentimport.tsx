@@ -11,7 +11,7 @@ import {
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
-import { searchCompanyCandidates } from "./contactemployers";
+import { searchCompanyCandidates } from "./employmentactions";
 import { invalidateRecord } from "./recordwritekeys";
 
 type Item = components["schemas"]["EmploymentImportItem"];

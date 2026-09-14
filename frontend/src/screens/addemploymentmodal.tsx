@@ -15,7 +15,7 @@ import { problemMessageOf } from "./common";
 import {
   type EmploymentActions,
   searchCompanyCandidates,
-} from "./contactemployers";
+} from "./employmentactions";
 
 // The "add a company" modal: pick the company (RecordPicker, the shared
 // debounced search-and-pick), optionally its role, and whether it is the
