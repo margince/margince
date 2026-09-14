@@ -22,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -188,9 +187,12 @@ func refuseGenericProjectCompany(kind string) error {
 }
 
 const relationshipColumns = `id, kind, contact_id, company_id, counterparty_company_id, counterparty_contact_id, deal_id, project_id,
-	role, is_current_primary, started_at, ended_at, source, captured_by, version, created_at, updated_at, archived_at`
+	role, is_current_primary, started_at, ended_at, employment_status, started_precision, ended_precision, source, captured_by, version, created_at, updated_at, archived_at`
 
 type relationshipRow struct {
+	EmploymentStatus      *string
+	StartedPrecision      *string
+	EndedPrecision        *string
 	ID                    ids.UUID // no RelationshipKind in the kernel vocabulary: edges stay untyped
 	Kind                  string
 	ContactID             *ids.ContactID
@@ -227,7 +229,7 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 	var out relationshipRow
 	targets := []any{
 		&out.ID, &out.Kind, &out.ContactID, &out.CompanyID, &out.CounterpartyCompanyID,
-		&out.CounterpartyContact, &out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt,
+		&out.CounterpartyContact, &out.DealID, &out.ProjectID, &out.Role, &out.IsCurrentPrimary, &out.StartedAt, &out.EndedAt, &out.EmploymentStatus, &out.StartedPrecision, &out.EndedPrecision,
 		&out.Source, &out.CapturedBy, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.ArchivedAt,
 	}
 	if prior != nil {
@@ -240,6 +242,11 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 }
 
 type UpdateRelationshipInput struct {
+	ClearStartedAt   bool
+	ClearEndedAt     bool
+	EmploymentStatus *string
+	StartedPrecision *string
+	EndedPrecision   *string
 	Role             *string
 	IsCurrentPrimary *bool
 	StartedAt        *time.Time
@@ -289,50 +296,10 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		if err := refusePatch(ctx, tx, current, in); err != nil {
 			return err
 		}
-		// The incumbent is demoted only when the patched row will actually HOLD
-		// the flag, so this statement asks the SAME question as the UPDATE below
-		// that grants it — one predicate, employment.IsCurrentSQL, read against the
-		// database's clock in both. Spell the rule a second time here (a Go-side
-		// `current.EndedAt == nil`, say) and the two answers part company over a
-		// notice period: this row keeps the flag, the incumbent keeps it too, and
-		// uq_rel_current_primary_employer 409s a patch the create path honours.
-		if in.IsCurrentPrimary != nil && *in.IsCurrentPrimary &&
-			current.Kind == employmentKind && current.ContactID != nil {
-			if _, err := tx.Exec(ctx, `
-				UPDATE relationship SET is_current_primary = false
-				WHERE contact_id = $1 AND id <> $2 AND `+employment.CurrentPrimarySlotSQL("")+`
-				  AND EXISTS (
-					SELECT 1 FROM relationship patched
-					 WHERE patched.id = $2
-					   AND `+employment.IsCurrentSQL("coalesce($3, patched.ended_at)")+`)`,
-				*current.ContactID, id, in.EndedAt); err != nil {
-				return err
-			}
+		if err := demoteForRelationshipPatch(ctx, tx, current, id, in); err != nil {
+			return err
 		}
-		row := tx.QueryRow(ctx, `
-			UPDATE relationship SET
-			  role = coalesce($2, role),
-			  -- The edit is the confirmation. A seat an agent proposed carries
-			  -- that agent as its captured_by, which is what marks it unconfirmed
-			  -- on the page; a contact changing the row has answered the question
-			  -- themselves, so the row becomes theirs. Left alone, a corrected
-			  -- seat went on claiming to be a machine's unreviewed reading
-			  -- forever.
-			  captured_by = coalesce($6, captured_by),
-			  -- An employment somebody has LEFT is not their CURRENT primary
-			  -- one, whichever half of the patch makes it so: ending the job
-			  -- clears the flag, and setting the flag on a job already over
-			  -- does not take. Written against the row rather than as a Go
-			  -- condition, so the two halves cannot drift apart. LEFT, not
-			  -- "has a date" — see employment.IsCurrentSQL.
-			  is_current_primary = coalesce($3, is_current_primary)
-			    AND (kind <> 'employment' OR `+employment.IsCurrentSQL("coalesce($5, ended_at)")+`),
-			  started_at = coalesce($4, started_at),
-			  ended_at = coalesce($5, ended_at)
-			WHERE id = $1
-			RETURNING `+relationshipColumns,
-			id, in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt, capturedBy)
-		if out, err = scanRelationship(row); err != nil {
+		if out, err = patchRelationshipRow(ctx, tx, id, in, capturedBy); err != nil {
 			// Through the SAME constraint mapping the insert uses. A patch can
 			// violate rel_dates exactly as a create can — moving ended_at behind
 			// started_at — and without this the two verbs answered one rule two
@@ -348,7 +315,7 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 		// Whether the end date has actually arrived is the statement's own
 		// question, asked once there: an employment ending next month keeps the
 		// flag, keeps the slot, and the promotion below finds nothing to do.
-		if out.Kind == employmentKind && out.ContactID != nil && in.EndedAt != nil {
+		if out.Kind == employmentKind && out.ContactID != nil && (in.EndedAt != nil || in.EmploymentStatus != nil) {
 			if err := promoteLoneSurvivingEmployment(ctx, tx, *out.ContactID); err != nil {
 				return err
 			}

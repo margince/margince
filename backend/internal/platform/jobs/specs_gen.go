@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "900ba0c8cb9a47f94298e47cb57e2761b2df628adc3a84cf22c8069b591f6e92"
+const JobContractHash = "17806bdbd07fc40960fd483cd85ef25ee68cbde58056cabb1295092ddb71cf9b"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -348,6 +348,16 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{OnDemand: true},
 		Registration: Registration{When: []string{"Embedder"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "Identity", Scalar: true, Reason: "the embed binding in force when the confirm claimed the run -- model, dimension and revision folded into one string. Carried so a mid-flight configuration change is detectable as drift (search.ErrIdentityDrift) instead of the fleet silently re- embedding under whatever it now reports; that comparison is against the value AT CLAIM TIME, which no row still holds by the time the job runs."}, {Name: "Run"}},
+	},
+	"employment_import_sweep": {
+		Kind:      "employment_import_sweep",
+		GoType:    "EmploymentImportSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 30 * time.Second},
 	},
 	"finance_sync_sweep": {
 		Kind:      "finance_sync_sweep",
