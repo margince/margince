@@ -530,10 +530,29 @@ func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
 	ctx := officerCtx(e)
 	seedNoticeCaseDue(t, e, time.Now().Add(time.Hour))
 
-	var malformed *storekit.MalformedCursorError
-	_, _, err := e.store.ListNoticeCases(ctx, nil, 0, "not-a-cursor")
-	if !errors.As(err, &malformed) {
-		t.Fatalf("a cursor this queue did not mint answered %v, want a malformed-cursor refusal", err)
+	// A created_at cursor from any other paged route. It decodes cleanly here
+	// — the envelope is shared and `id` is spelled the same — and names no
+	// deadline, so a queue that trusted the id alone would page from the year
+	// zero and serve the whole queue again as the officer's next page.
+	foreign, err := storekit.EncodeCursor(time.Now(), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting another route's cursor: %v", err)
+	}
+
+	for _, token := range []struct {
+		name  string
+		value string
+	}{
+		{"a token this installation never minted", "not-a-cursor"},
+		{"another route's cursor", foreign},
+	} {
+		t.Run(token.name, func(t *testing.T) {
+			var malformed *storekit.MalformedCursorError
+			_, _, err := e.store.ListNoticeCases(ctx, nil, 0, token.value)
+			if !errors.As(err, &malformed) {
+				t.Fatalf("%s answered %v, want a malformed-cursor refusal", token.name, err)
+			}
+		})
 	}
 }
 

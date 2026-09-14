@@ -169,7 +169,7 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 // happens to be smaller — silently, which is the shape of defect this queue
 // already had at a larger scale.
 type noticeCaseCursor struct {
-	DueAt time.Time `json:"d"`
+	DueAt time.Time `json:"due"`
 	ID    ids.UUID  `json:"id"`
 }
 
@@ -188,7 +188,13 @@ func noticeCaseListQuery(states []string, cursor string, limit int) (string, []a
 	sql := "SELECT" + noticeCaseColumns + storekit.SQLf(" FROM privacy_notice_case WHERE state = ANY($%d)", arg(states))
 	if cursor != "" {
 		after, err := storekit.DecodeOpaque[noticeCaseCursor](cursor)
-		if err != nil || after.ID == (ids.UUID{}) {
+		// BOTH halves, not the id alone. The envelope proves the token is one
+		// of ours, not that it names a position in THIS queue: a created_at
+		// cursor from any other route shares the `id` field and decodes
+		// cleanly here, leaving the deadline at its zero value — which pages
+		// from the year zero and hands the officer the whole queue again as
+		// though it were their next page.
+		if err != nil || after.DueAt.IsZero() || after.ID.IsZero() {
 			return "", nil, &storekit.MalformedCursorError{}
 		}
 		sql += storekit.SQLf(" AND (due_at, id) > ($%d, $%d)", arg(after.DueAt), arg(after.ID))
