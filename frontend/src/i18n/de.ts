@@ -5237,9 +5237,17 @@ export const de = {
   "backfill.intro":
     "Wähle, wie weit zurück importiert wird. Umfang und geschätzte Kosten siehst du vor dem Start — du kannst diesen Schritt auch überspringen.",
   "backfill.windowLabel": "Import-Zeitraum",
+  "backfill.window36m": "3 Jahre",
+  "backfill.window84m": "7 Jahre",
+  "backfill.window120m": "10 Jahre",
+  "backfill.since": "E-Mails seit dem {date} importieren.",
+  "backfill.extendNote":
+    "Du kannst den Zeitraum später erweitern. Bereits importierte E-Mails bleiben erhalten und werden nicht dupliziert.",
+  "backfill.costFloorNote":
+    "Diese Schätzung umfasst nur die bisher gezählten Nachrichten. Der vollständige Import kann mehr Nachrichten enthalten und mehr kosten.",
   "backfill.window3m": "3 Monate",
   "backfill.window6m": "6 Monate",
-  "backfill.window12m": "12 Monate",
+  "backfill.window12m": "1 Jahr",
   "backfill.window24m": "2 Jahre",
   "backfill.window60m": "5 Jahre",
   "backfill.previewLoading": "Postfach wird gezählt…",
@@ -6188,20 +6196,17 @@ export const de = {
   // Budget, um den Verlauf zu lesen. Es liest nur und schreibt nichts,
   // solange der Leser nicht zustimmt.
   "ob.backread.heading": "Wie weit soll ich zurücklesen?",
-  "ob.backread.window3m": "3 Monate — aktueller Kontext",
-  "ob.backread.window6m": "6 Monate — empfohlen",
-  "ob.backread.window12m": "12 Monate — ganzer Vertriebszyklus",
-  "ob.backread.window24m": "2 Jahre — die Beziehung, nicht nur der Deal",
-  "ob.backread.window60m": "5 Jahre — alles, was das Postfach noch hat",
   "ob.backread.estimating": "Nachrichten in diesem Zeitraum werden gezählt…",
   "ob.backread.estimate": "Etwa {messages} Nachrichten in diesem Zeitraum.",
+  "ob.backread.estimateAtLeast":
+    "Mindestens {messages} Nachrichten in diesem Zeitraum; die Zählung endete vorzeitig.",
   "ob.backread.estimateHeuristic":
     "Aus dem Postfach geschätzt, noch nicht gezählt.",
   "ob.backread.estimateCost": "Ungefähr {cost} an Modellaufrufen.",
   "ob.backread.estimateFailed":
     "Ich konnte diesen Zeitraum nicht schätzen: {detail} Du kannst trotzdem starten oder einen anderen wählen.",
   "ob.backread.note":
-    "Das Zurücklesen liest nur. Du siehst jeden Kontakt und jede Firma, bevor etwas geschrieben wird.",
+    "Dein Postfach bleibt unverändert. Importierte E-Mails und Kontakte erscheinen während des Imports in Margince.",
   "ob.backread.start": "Verbinden und lesen",
   "ob.backread.startFailed":
     "Ich konnte das Zurücklesen nicht starten: {detail} Versuch es erneut, oder mach weiter und starte es später in den Einstellungen.",

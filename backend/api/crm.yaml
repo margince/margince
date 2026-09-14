@@ -25217,13 +25217,13 @@ components:
       type: object
       required: [window]
       properties:
-        window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 60m], description: 'The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.' }
+        window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: 'Bounded mail-history window, up to ten years. The default UI selection is six months.' }
     BackfillPreview:
       type: object
       description: 'The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.'
       required: [window, estimated_messages, computed_at]
       properties:
-        window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 60m] }
+        window: { type: string, enum: [none, 3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m] }
         estimated_messages: { type: integer, description: 'Provider-side message count for the window. Read `estimate_is_floor` before presenting it: the two providers answer different KINDS of number.' }
         estimate_is_floor:
           type: boolean
@@ -25242,12 +25242,13 @@ components:
         estimated_cost_minor: { type: integer, description: 'USD minor units, estimated from observed ai_call history priced per served model at current ai_model_rate; absent when no rate applies (ADR-0068).' }
         estimate_quality: { type: string, enum: [observed, heuristic], description: 'observed = priced from this workspace''s ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.' }
         currency: { type: string, description: 'ISO-4217; "USD" in v1.' }
+        after_date: { type: string, format: date, description: 'Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.' }
         computed_at: { type: string, format: date-time }
     StartBackfillRequest:
       type: object
       required: [window]
       properties:
-        window: { type: string, enum: [3m, 6m, 12m, 24m, 60m], description: '`none` is expressed by never calling this op. Widen-only versus a prior run.' }
+        window: { type: string, enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m], description: '`none` is expressed by never calling this op. Widen-only versus a prior run.' }
     BackfillStatus:
       type: object
       description: 'The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).'
@@ -25255,7 +25256,7 @@ components:
       properties:
         state: { type: string, enum: [none, queued, running, done, error, cancelled] }
         backfill_id: { type: [string, 'null'], format: uuid }
-        window: { type: [string, 'null'], enum: [3m, 6m, 12m, 24m, 60m, null] }
+        window: { type: [string, 'null'], enum: [3m, 6m, 12m, 24m, 36m, 60m, 84m, 120m, null] }
         estimated_messages: { type: [integer, 'null'], description: 'The previewed count the user consented to — the progress fraction''s denominator.' }
         estimate_is_floor: { type: boolean, description: 'True when `estimated_messages` is a floor (see BackfillPreview): the denominator can be passed, so a client shows counts rather than a percentage instead of drawing a bar past its end. Persisted with the run, because the preview that produced the number is long gone by the time progress is read.' }
         counts:

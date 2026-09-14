@@ -22,7 +22,8 @@ After a mailbox connects, the user picks a window and sees this:
   Choose how far back to import. You'll see the scope and estimated cost
   before anything runs — and you can skip this entirely.
 
-    ( ) 3 months     (•) 6 months     ( ) 12 months
+    Import window: [ 6 months ▾ ]
+    Import emails since 14 March 2026.
 
     ┌──────────────────────────────────────────────────────────┐
     │ Messages in this window: ~3,436                          │
@@ -35,8 +36,12 @@ After a mailbox connects, the user picks a window and sees this:
   Skip the history import
 ```
 
-Three windows are offered and nothing else: **3, 6 or 12 months**. A fourth choice, *none*, is
+Setup and Settings share a dropdown offering **3 months, 6 months, 1 year, 2 years, 3 years, 5 years, 7 years and 10 years**. Six months is selected by default. The preview names the actual starting date. The choice *none* is
 expressed by not starting — it short-circuits to an honest zero with no provider call at all.
+
+The starting date names the day of the preview boundary; Microsoft also filters by the time within that day. Windows are measured back from today using calendar-month arithmetic. Starting later recalculates that rolling window. Extending history preserves existing emails; overlapping messages are scanned again and deduplicated.
+
+For a capped preview, both screens say the count is a lower bound and explain that the estimate covers only the counted messages: the full import may contain more and cost more.
 
 Every section below answers a question that screen raises.
 

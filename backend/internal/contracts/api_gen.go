@@ -2283,26 +2283,35 @@ func (e BackfillPreviewEstimateQuality) Valid() bool {
 
 // Defines values for BackfillPreviewWindow.
 const (
-	BackfillPreviewWindowN12m BackfillPreviewWindow = "12m"
-	BackfillPreviewWindowN24m BackfillPreviewWindow = "24m"
-	BackfillPreviewWindowN3m  BackfillPreviewWindow = "3m"
-	BackfillPreviewWindowN60m BackfillPreviewWindow = "60m"
-	BackfillPreviewWindowN6m  BackfillPreviewWindow = "6m"
-	BackfillPreviewWindowNone BackfillPreviewWindow = "none"
+	BackfillPreviewWindowN120m BackfillPreviewWindow = "120m"
+	BackfillPreviewWindowN12m  BackfillPreviewWindow = "12m"
+	BackfillPreviewWindowN24m  BackfillPreviewWindow = "24m"
+	BackfillPreviewWindowN36m  BackfillPreviewWindow = "36m"
+	BackfillPreviewWindowN3m   BackfillPreviewWindow = "3m"
+	BackfillPreviewWindowN60m  BackfillPreviewWindow = "60m"
+	BackfillPreviewWindowN6m   BackfillPreviewWindow = "6m"
+	BackfillPreviewWindowN84m  BackfillPreviewWindow = "84m"
+	BackfillPreviewWindowNone  BackfillPreviewWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewWindow enum.
 func (e BackfillPreviewWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewWindowN120m:
+		return true
 	case BackfillPreviewWindowN12m:
 		return true
 	case BackfillPreviewWindowN24m:
+		return true
+	case BackfillPreviewWindowN36m:
 		return true
 	case BackfillPreviewWindowN3m:
 		return true
 	case BackfillPreviewWindowN60m:
 		return true
 	case BackfillPreviewWindowN6m:
+		return true
+	case BackfillPreviewWindowN84m:
 		return true
 	case BackfillPreviewWindowNone:
 		return true
@@ -2313,26 +2322,35 @@ func (e BackfillPreviewWindow) Valid() bool {
 
 // Defines values for BackfillPreviewRequestWindow.
 const (
-	BackfillPreviewRequestWindowN12m BackfillPreviewRequestWindow = "12m"
-	BackfillPreviewRequestWindowN24m BackfillPreviewRequestWindow = "24m"
-	BackfillPreviewRequestWindowN3m  BackfillPreviewRequestWindow = "3m"
-	BackfillPreviewRequestWindowN60m BackfillPreviewRequestWindow = "60m"
-	BackfillPreviewRequestWindowN6m  BackfillPreviewRequestWindow = "6m"
-	BackfillPreviewRequestWindowNone BackfillPreviewRequestWindow = "none"
+	BackfillPreviewRequestWindowN120m BackfillPreviewRequestWindow = "120m"
+	BackfillPreviewRequestWindowN12m  BackfillPreviewRequestWindow = "12m"
+	BackfillPreviewRequestWindowN24m  BackfillPreviewRequestWindow = "24m"
+	BackfillPreviewRequestWindowN36m  BackfillPreviewRequestWindow = "36m"
+	BackfillPreviewRequestWindowN3m   BackfillPreviewRequestWindow = "3m"
+	BackfillPreviewRequestWindowN60m  BackfillPreviewRequestWindow = "60m"
+	BackfillPreviewRequestWindowN6m   BackfillPreviewRequestWindow = "6m"
+	BackfillPreviewRequestWindowN84m  BackfillPreviewRequestWindow = "84m"
+	BackfillPreviewRequestWindowNone  BackfillPreviewRequestWindow = "none"
 )
 
 // Valid indicates whether the value is a known member of the BackfillPreviewRequestWindow enum.
 func (e BackfillPreviewRequestWindow) Valid() bool {
 	switch e {
+	case BackfillPreviewRequestWindowN120m:
+		return true
 	case BackfillPreviewRequestWindowN12m:
 		return true
 	case BackfillPreviewRequestWindowN24m:
+		return true
+	case BackfillPreviewRequestWindowN36m:
 		return true
 	case BackfillPreviewRequestWindowN3m:
 		return true
 	case BackfillPreviewRequestWindowN60m:
 		return true
 	case BackfillPreviewRequestWindowN6m:
+		return true
+	case BackfillPreviewRequestWindowN84m:
 		return true
 	case BackfillPreviewRequestWindowNone:
 		return true
@@ -2373,25 +2391,34 @@ func (e BackfillStatusState) Valid() bool {
 
 // Defines values for BackfillStatusWindow.
 const (
-	BackfillStatusWindowN12m BackfillStatusWindow = "12m"
-	BackfillStatusWindowN24m BackfillStatusWindow = "24m"
-	BackfillStatusWindowN3m  BackfillStatusWindow = "3m"
-	BackfillStatusWindowN60m BackfillStatusWindow = "60m"
-	BackfillStatusWindowN6m  BackfillStatusWindow = "6m"
+	BackfillStatusWindowN120m BackfillStatusWindow = "120m"
+	BackfillStatusWindowN12m  BackfillStatusWindow = "12m"
+	BackfillStatusWindowN24m  BackfillStatusWindow = "24m"
+	BackfillStatusWindowN36m  BackfillStatusWindow = "36m"
+	BackfillStatusWindowN3m   BackfillStatusWindow = "3m"
+	BackfillStatusWindowN60m  BackfillStatusWindow = "60m"
+	BackfillStatusWindowN6m   BackfillStatusWindow = "6m"
+	BackfillStatusWindowN84m  BackfillStatusWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the BackfillStatusWindow enum.
 func (e BackfillStatusWindow) Valid() bool {
 	switch e {
+	case BackfillStatusWindowN120m:
+		return true
 	case BackfillStatusWindowN12m:
 		return true
 	case BackfillStatusWindowN24m:
+		return true
+	case BackfillStatusWindowN36m:
 		return true
 	case BackfillStatusWindowN3m:
 		return true
 	case BackfillStatusWindowN60m:
 		return true
 	case BackfillStatusWindowN6m:
+		return true
+	case BackfillStatusWindowN84m:
 		return true
 	default:
 		return false
@@ -13374,25 +13401,34 @@ func (e StageEvidenceSource) Valid() bool {
 
 // Defines values for StartBackfillRequestWindow.
 const (
-	StartBackfillRequestWindowN12m StartBackfillRequestWindow = "12m"
-	StartBackfillRequestWindowN24m StartBackfillRequestWindow = "24m"
-	StartBackfillRequestWindowN3m  StartBackfillRequestWindow = "3m"
-	StartBackfillRequestWindowN60m StartBackfillRequestWindow = "60m"
-	StartBackfillRequestWindowN6m  StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN120m StartBackfillRequestWindow = "120m"
+	StartBackfillRequestWindowN12m  StartBackfillRequestWindow = "12m"
+	StartBackfillRequestWindowN24m  StartBackfillRequestWindow = "24m"
+	StartBackfillRequestWindowN36m  StartBackfillRequestWindow = "36m"
+	StartBackfillRequestWindowN3m   StartBackfillRequestWindow = "3m"
+	StartBackfillRequestWindowN60m  StartBackfillRequestWindow = "60m"
+	StartBackfillRequestWindowN6m   StartBackfillRequestWindow = "6m"
+	StartBackfillRequestWindowN84m  StartBackfillRequestWindow = "84m"
 )
 
 // Valid indicates whether the value is a known member of the StartBackfillRequestWindow enum.
 func (e StartBackfillRequestWindow) Valid() bool {
 	switch e {
+	case StartBackfillRequestWindowN120m:
+		return true
 	case StartBackfillRequestWindowN12m:
 		return true
 	case StartBackfillRequestWindowN24m:
+		return true
+	case StartBackfillRequestWindowN36m:
 		return true
 	case StartBackfillRequestWindowN3m:
 		return true
 	case StartBackfillRequestWindowN60m:
 		return true
 	case StartBackfillRequestWindowN6m:
+		return true
+	case StartBackfillRequestWindowN84m:
 		return true
 	default:
 		return false
@@ -21216,7 +21252,9 @@ type AvailableModelListUnavailable string
 
 // BackfillPreview The scope before the spend (ADR-0063/ADR-0020): what starting this window would touch and roughly cost. An estimate, labeled as such — actual spend is metered per task.
 type BackfillPreview struct {
-	ComputedAt time.Time `json:"computed_at"`
+	// AfterDate Calendar day of the preview query boundary; time within that day remains provider-specific. Omitted for none. Starting later recalculates the rolling window.
+	AfterDate  *openapi_types.Date `json:"after_date,omitempty"`
+	ComputedAt time.Time           `json:"computed_at"`
 
 	// Currency ISO-4217; "USD" in v1.
 	Currency *string `json:"currency,omitempty"`
@@ -21246,11 +21284,11 @@ type BackfillPreviewWindow string
 
 // BackfillPreviewRequest defines model for BackfillPreviewRequest.
 type BackfillPreviewRequest struct {
-	// Window The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+	// Window Bounded mail-history window, up to ten years. The default UI selection is six months.
 	Window BackfillPreviewRequestWindow `json:"window"`
 }
 
-// BackfillPreviewRequestWindow The CAP-PARAM-4 window; default UI selection is 6m. 24m/60m added by ADR-0106 — the set stays closed, and the preview is what keeps a multi-year reach consented.
+// BackfillPreviewRequestWindow Bounded mail-history window, up to ten years. The default UI selection is six months.
 type BackfillPreviewRequestWindow string
 
 // BackfillStatus The CAP-DDL-4 single-row activation read: every count is a persisted-row count, never a fabricated counter (closes CAP-AC-OPEN-1).
