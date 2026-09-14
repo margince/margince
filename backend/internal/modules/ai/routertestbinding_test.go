@@ -12,6 +12,6 @@ package ai
 // a state the production code can no longer reach.
 func boundRouter(b binding) *Router {
 	r := &Router{}
-	r.bound.Store(&b)
+	r.install(b)
 	return r
 }

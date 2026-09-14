@@ -52,7 +52,11 @@ type Router struct {
 	// comment for why a second load mid-call is a correctness bug, not a
 	// performance one.
 	bound atomic.Pointer[binding]
-	meter usageStore
+	// generations mints the binding identity install stamps. Monotonic for
+	// the life of the Router, never reset — a reused generation would make a
+	// stale cached answer readable again.
+	generations atomic.Uint64
+	meter       usageStore
 	// agentSpend is the per-Passport share of the workspace budget
 	// (MCP-SESS-COST). Nil in every role that serves no inbound agent.
 	agentSpend      AgentTokenSpender
@@ -99,8 +103,7 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	}
 	meta := embedInclusiveMeta(cfg)
 	router := assembleRouter(clients, embedder, cfg.Profile, meter, budget, calls, meta, capturePayloads, log)
-	stamped := router.binding().withConfigSnapshot(cfg)
-	router.bound.Store(&stamped)
+	router.install(router.binding().withConfigSnapshot(cfg))
 	return router, nil
 }
 
@@ -124,7 +127,7 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		metrics: sharedCallMetrics,
 		now:     time.Now,
 	}
-	r.bound.Store(&binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
+	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
 }
 
@@ -233,7 +236,7 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// band may relax within its lifetime. A cache-off Router (§ cert lane,
 	// scripted repeat-call tests) never consults it: every call must reach
 	// the model.
-	if cached, tier, hit := r.cache.get(key, wsID); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
+	if cached, tier, hit := r.cache.get(key, wsID, b.generation); !r.cacheOff && hit && tierOnLadder(ladder, tier) {
 		return r.serveCacheHit(ctx, b, &trace, task, tier, cached, degraded)
 	}
 

@@ -158,7 +158,7 @@ func routerWithEmbedder(t *testing.T, embedder model.Client) *Router {
 	// rather than mutating one another goroutine may be reading.
 	bound := *router.binding()
 	bound.embedder = embedder
-	router.bound.Store(&bound)
+	router.install(bound)
 	return router
 }
 
