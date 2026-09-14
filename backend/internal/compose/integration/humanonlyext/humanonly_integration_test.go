@@ -78,8 +78,16 @@ func humanOnlyHandle(context.Context, extension.Runtime, json.RawMessage) (json.
 // registerDemoExtOnce guards compose.RegisterExtensions: jurisdiction.Register
 // beneath it refuses a second registration of the same pack outright, so every
 // test in this binary that needs the composed set shares one call rather than
-// each racing to be first.
-var registerDemoExtOnce sync.Once
+// each racing to be first. registerDemoExtErr is package-level alongside it,
+// not local to bootWithDemoExt — sync.Once.Do runs the closure at most once,
+// so a local `var registerErr error` would read as nil on every call after
+// the first REGARDLESS of whether that one call actually failed, silently
+// turning a real registration failure into every later test proceeding
+// against a half-registered surface.
+var (
+	registerDemoExtOnce sync.Once
+	registerDemoExtErr  error
+)
 
 // bootWithDemoExt registers the synthetic human-only extension into the core
 // registries before booting the app harness — this must run before
@@ -88,17 +96,16 @@ var registerDemoExtOnce sync.Once
 // boot, with the real composed set).
 func bootWithDemoExt(t *testing.T, opts ...compose.Option) *apptest.AppEnv {
 	t.Helper()
-	var registerErr error
 	registerDemoExtOnce.Do(func() {
-		registerErr = compose.RegisterExtensions([]extension.Extension{{
+		registerDemoExtErr = compose.RegisterExtensions([]extension.Extension{{
 			Name:        "demoext",
 			Version:     "1.0.0",
 			Description: "A synthetic unit, composed only for this suite's own test binary.",
 			Tools:       []extension.Tool{{Name: "demoext_open", Handle: humanOnlyHandle}},
 		}}, []extension.Verb{humanOnlyVerb}, nil)
 	})
-	if registerErr != nil {
-		t.Fatalf("registering the synthetic extension set: %v", registerErr)
+	if registerDemoExtErr != nil {
+		t.Fatalf("registering the synthetic extension set: %v", registerDemoExtErr)
 	}
 	e := apptest.SetupAppWithOptions(t, opts...)
 	// The per-call Runtime a served extension tool's Handle receives

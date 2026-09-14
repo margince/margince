@@ -50,6 +50,14 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if !ok {
 		return false
 	}
+	// A Deal Room participant holds no tool authority at all — auth.Gate.Admit
+	// refuses every tool for a Buyer outright, not on the scope axis but by
+	// kind (admit.go: "a Deal Room participant holds no tool authority").
+	// Checked before the "not an Agent" fast path below, or a Buyer would be
+	// offered the whole surface and refused every one of them.
+	if p.Type == principal.PrincipalBuyer {
+		return false
+	}
 	// Humans and the system principal do not ride the scope model — their
 	// authority is their RBAC, enforced at the store — so filtering them by a
 	// passport scope they never carry would hide the whole surface.

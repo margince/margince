@@ -72,6 +72,23 @@ func TestInvocableByCallerOffersHumanOnlyToolsToAHuman(t *testing.T) {
 	}
 }
 
+// TestInvocableByCallerExcludesEveryToolForABuyer: a Deal Room participant
+// holds no tool authority at all — auth.Gate.Admit refuses every tool for a
+// Buyer outright, not on the scope axis — so the listing must exclude the
+// whole surface for one, ordinary tools and HumanOnly alike, or it advertises
+// a catalog the gate then refuses in full.
+func TestInvocableByCallerExcludesEveryToolForABuyer(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:test"})
+	for _, spec := range []mcp.ToolSpec{
+		whoami{}.Spec(),
+		{Name: "human_only_op", HumanOnly: true},
+	} {
+		if invocableByCaller(ctx, spec) {
+			t.Fatalf("a Buyer principal must be offered no tool at all, got %q", spec.Name)
+		}
+	}
+}
+
 // TestTheLinksArgumentSaysWhatAMeetingIsAbout holds the fact that decides
 // whether a logged meeting lands on a timeline anybody reads.
 //

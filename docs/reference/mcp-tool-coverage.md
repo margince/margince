@@ -74,10 +74,14 @@ against the same passport — and an empty one is a build error, because it woul
 
 ### What this page cannot see
 
-**The shipped units add 0 more tools to the same registry**, and this page cannot price them.
+**The shipped units add 0 more MCP tools to the same registry**, and this page cannot price them.
 A unit is its own Go module and the architecture forbids the core importing one, so the composed catalog is unreachable
 from the package that generates this page. The names below come from what each unit published; the token cost is an
 installation's own arithmetic. No use case requires any of them.
+
+**Zero is not the same claim as "a unit ships no operations."** A unit operation declaring `x-agent-access: human-only`
+stays REST/UI-reachable but is never agent-reachable — it requests no MCP tool at all, so it carries no entry here to count
+or price, on a vanilla install or otherwise (`docs/how-to/add-an-extension.md`).
 
 | Tool | Unit |
 |---|---|
