@@ -47,6 +47,9 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 // recently filed; capping THIS order keeps the tasks nearest their deadline,
 // which is what a page capped at a dozen can actually afford to drop.
 func orderClause(in ListActivitiesInput) string {
+	if in.RequestReviewAsOf != nil {
+		return " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+	}
 	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 		return " ORDER BY a.due_at ASC, a.id ASC"
 	}
@@ -66,6 +69,8 @@ func orderClause(in ListActivitiesInput) string {
 // a due_at-aware cursor and remove the need for this guard entirely — left
 // for a follow-up rather than done here, since it touches the shared keyset
 // path every other ListActivities caller also runs through.
+var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot resume request priority order")
+
 var errOpenAndDueByWithCursor = errors.New(
 	"activities: a cursor built for the recency order cannot resume an open-and-due read")
 
@@ -145,7 +150,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.OpenAndDueBy == nil && in.OpenAndDueAfter == nil {
+		if in.OpenAndDueBy == nil && in.OpenAndDueAfter == nil && in.RequestReviewAsOf == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
 			if err != nil {

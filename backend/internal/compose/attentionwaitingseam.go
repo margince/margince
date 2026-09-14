@@ -118,43 +118,25 @@ func (w attentionWaiting) Unanswered(
 			// a ranking; unjudged and "asks us" both leave it alone, so the
 			// queue never needs the word.
 			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
-			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs && row.CaptureLabel == string(crmcontracts.ActivityCaptureLabelCommitment),
-			ActionUnconfirmed: row.OwedVerdict == "" || row.CaptureLabel != string(crmcontracts.ActivityCaptureLabelCommitment),
+			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
+			ActionUnconfirmed: row.OwedVerdict == "",
 			OwnerID:           row.OwnerID,
 		})
 	}
 	return out, cut, nil
 }
 
-// keepWaitingCustomers keeps the rows that are a CONTACT waiting on this reader.
-//
-// Two rules, both learned from the live page.
-//
-// A machine is not a customer. Judged by capture's own address rule rather than
-// a second one spelled here: an e-signature notification, a shared-folder
-// notice and a booking confirmation opened a rep's day, and a queue that asks
-// somebody to answer a no-reply address teaches them to stop reading it.
-//
-// One subject FROM ONE SENDER is one row. A notification service sends the same
-// request on several threads, and two rows reading identically are two
-// obligations to somebody scanning the page.
-//
-// Keyed on sender AND subject, never subject alone: two customers both writing
-// "Re: proposal" are two contacts waiting, and folding them would drop the second
-// one silently — the worst failure this queue has, because nothing on the page
-// would say a customer had been hidden.
-//
-// An UNTITLED message is never folded, because several untitled waits are
-// several customers and collapsing them would hide all but one behind an empty
-// string.
+// keepWaitingCustomers removes repetitive incidental mail. Confirmed requests
+// retain their source identities: matching subjects, including within a thread,
+// do not prove that two asks describe the same unfinished work.
 func keepWaitingCustomers(rows []activities.WaitingReply) []activities.WaitingReply {
 	kept := make([]activities.WaitingReply, 0, len(rows))
 	seen := make(map[string]bool, len(rows))
 	for _, row := range rows {
-		if capture.IsMachineAddress(row.Sender) {
+		if capture.IsMachineAddress(row.Sender) && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			continue
 		}
-		if row.Subject != "" {
+		if row.Subject != "" && row.OwedVerdict != activities.OwedVerdictAsksUs {
 			key := row.Sender + "\x00" + row.Subject
 			if seen[key] {
 				continue

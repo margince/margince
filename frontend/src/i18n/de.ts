@@ -450,6 +450,12 @@ export const de = {
   "deal.staged": "vorgemerkt",
   "deal.closes": "Abschluss {date}",
   "deal.undated": "kein Abschlusstermin",
+  "deal.lastMail": "Letzte E-Mail",
+  "deal.mail.title": "Bisherige E-Mails",
+  "deal.mail.sent": "Gesendet {ago}",
+  "deal.mail.received": "Erhalten {ago}",
+  "deal.mail.none": "Noch keine E-Mail zu diesem Deal",
+  "deal.mail.viewAll": "Alle Aktivitäten ansehen",
   "deal.closesProvisional":
     "vorläufiger Abschlusstermin, von niemandem bestätigt",
   "record.notShown": "Nicht angezeigt",
@@ -2607,6 +2613,7 @@ export const de = {
   "deals.amount": "Wert",
   "deals.lastSignal": "Letztes Signal",
   "deals.lastSignalNone": "noch kein Signal",
+  "deals.lastMailNone": "noch keine E-Mail",
   "deals.stage": "Phase",
   "deals.close": "Erwarteter Abschluss",
   "deals.confirmAdvance": "Nach {stage} verschieben?",
@@ -3472,7 +3479,7 @@ export const de = {
   "co.spine.earlier_one": "{count} früheres Gespräch",
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
-  "today.quiet": "Hier braucht Sie heute nichts.",
+  "today.quiet": "In dieser Ansicht wurde keine offene Arbeit gefunden.",
   "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",

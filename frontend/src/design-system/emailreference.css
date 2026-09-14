@@ -38,6 +38,29 @@
   font-size: var(--fs-meta);
 }
 
+/* The stacked shape: the glyph spans both lines, the subject takes the top and
+ * the date the bottom. The subject still truncates — a column narrow enough to
+ * want this shape is narrow enough to need it. */
+.emailref--stacked {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  align-items: start;
+}
+.emailref--stacked > svg {
+  grid-row: 1 / span 2;
+  margin-top: 2px;
+}
+.emailref--stacked .emailref__subject {
+  grid-column: 2;
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+}
+.emailref--stacked .emailref__when {
+  grid-column: 2;
+}
+
 /* The openable form. Bare like `.link-button` rather than filled: a citation
  * sits inside somebody else's layout, and a button drawn as a button there
  * would out-shout the sentence it belongs to. */

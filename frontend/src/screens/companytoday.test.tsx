@@ -68,7 +68,9 @@ describe("what needs a contact on this account today", () => {
     // the suggestion engine can name WHOM to contact, so only it may advise
     // booking one.
     show(BASE);
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
+    expect(
+      screen.getByText("No outstanding work found in this view."),
+    ).toBeTruthy();
     expect(screen.queryByText(/Hidden from you/)).toBeNull();
   });
 
@@ -141,7 +143,9 @@ describe("what needs a contact on this account today", () => {
     // "We could not assemble this" and "nothing needs you" are different
     // sentences, and only one of them is about the account.
     expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 
   // The account brief's own footer reports this with the baseline it counted
@@ -155,7 +159,9 @@ describe("what needs a contact on this account today", () => {
         baseline_at: "2026-08-01T09:00:00Z",
       },
     });
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
+    expect(
+      screen.getByText("No outstanding work found in this view."),
+    ).toBeTruthy();
   });
 
   it("reports the failure even when a view is in hand", () => {
@@ -165,7 +171,9 @@ describe("what needs a contact on this account today", () => {
     show(BASE, { failed: true });
 
     expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 });
 
@@ -408,7 +416,9 @@ describe("the day's call, and which record it is read from", () => {
     });
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 
   // Dropped only where it would contradict. On an account with nothing else in
