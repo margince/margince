@@ -338,6 +338,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture: the company timezone the contract form reads back.",
   },
   {
+    file: "screens/contractform.customseed.test.tsx",
+    why: "The same installation-settings fixture, behind the contract form's custom-field seeding cases.",
+  },
+  {
     file: "screens/dealbulk.stories.tsx",
     why: "Same `me` fixture behind the bulk-edit story: the reader's stored `timezone` is wire data the story has to supply.",
   },
