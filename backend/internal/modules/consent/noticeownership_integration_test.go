@@ -11,13 +11,17 @@ package consent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -530,5 +534,60 @@ func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
 	_, _, err := e.store.ListNoticeCases(ctx, nil, 0, "not-a-cursor")
 	if !errors.As(err, &malformed) {
 		t.Fatalf("a cursor this queue did not mint answered %v, want a malformed-cursor refusal", err)
+	}
+}
+
+// TestTheQueuesWireCarriesItsPage drives the HANDLER, not the store.
+//
+// The store can page correctly and the route still answer a body with no
+// continuation in it — the envelope is assembled here, and a client walks what
+// the wire says rather than what the store returned. So this asserts the shape
+// the contract declares: `data` and `page`, with a cursor that is accepted back
+// on the next request.
+func TestTheQueuesWireCarriesItsPage(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+	base := time.Now().Add(24 * time.Hour).Truncate(time.Second)
+	for i := range 3 {
+		seedNoticeCaseDue(t, e, base.Add(time.Duration(i)*time.Hour))
+	}
+	h := Handlers{store: e.store}
+
+	read := func(cursor *string) (data []crmcontracts.NoticeCase, page crmcontracts.PageInfo) {
+		t.Helper()
+		limit := 2
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/v1/privacy/notice-cases", nil).WithContext(ctx)
+		h.ListNoticeCases(rec, req, crmcontracts.ListNoticeCasesParams{Limit: &limit, Cursor: cursor})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		var body struct {
+			Data []crmcontracts.NoticeCase `json:"data"`
+			Page crmcontracts.PageInfo     `json:"page"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("decoding the queue's answer: %v", err)
+		}
+		return body.Data, body.Page
+	}
+
+	first, page := read(nil)
+	if len(first) != 2 || !page.HasMore {
+		t.Fatalf("first page carried %d duties and has_more %v, want 2 and true", len(first), page.HasMore)
+	}
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("the wire says there is another page and hands back no cursor to fetch it with")
+	}
+
+	second, page := read(page.NextCursor)
+	if len(second) != 1 || page.HasMore {
+		t.Fatalf("second page carried %d duties and has_more %v, want 1 and false", len(second), page.HasMore)
+	}
+	if page.NextCursor != nil {
+		t.Errorf("the last page handed back cursor %q — a client walking until has_more is false is fine, but one walking until the cursor is null would loop", *page.NextCursor)
+	}
+	if second[0].Id == first[0].Id || second[0].Id == first[1].Id {
+		t.Error("the second page repeated a duty from the first")
 	}
 }
