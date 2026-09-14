@@ -59,7 +59,13 @@ run() {
 [ "$probe" = "fail" ] && { echo "stub: probe failed" >&2; exit 1; }
 echo "$probe"
 STUB
-    printf '#!/bin/sh\necho "stub: api started"\n' >"$work/bin/margince-api"
+    cat >"$work/bin/margince-api" <<'STUB'
+#!/bin/sh
+[ "${MARGINCE_SCHEMA_DSN:-}" = "${EXPECTED_SCHEMA_DSN:-$MARGINCE_OWNER_DSN}" ] || exit 91
+[ "$MARGINCE_DSN" != "$MARGINCE_SCHEMA_DSN" ] || exit 92
+echo "stub: schema pool configured; ordinary connection stays app"
+echo "stub: api started"
+STUB
     chmod +x "$work/bin/margince-migrate" "$work/bin/margince-api"
 
     # An EMPTY pre-existing file is a real state — a spent credential truncated
@@ -74,6 +80,10 @@ STUB
     chmod +x "$work/entrypoint.sh"
 
     local status=0
+    unset MARGINCE_SCHEMA_DSN EXPECTED_SCHEMA_DSN
+    if [[ -n "${schema_override:-}" ]]; then
+        export MARGINCE_SCHEMA_DSN="$schema_override" EXPECTED_SCHEMA_DSN="$schema_override"
+    fi
     if [[ "$have_password" -eq 1 ]]; then
         out="$(
             PATH="$work/bin:$PATH" \
@@ -115,6 +125,8 @@ echo "api-entrypoint: the credential is written only onto an unprovisioned insta
 # writing nothing is exactly what a process that never got there does.
 served() { # status description
     verdict 0 "$1" "$2: the entrypoint ran to completion"
+    verdict yes "$(grep -q "stub: schema pool configured" <<<"$out" && echo yes || echo no)" \
+        "$2: schema pool reaches the API while the app connection stays restricted"
     verdict yes "$(grep -q "stub: api started" <<<"$out" && echo yes || echo no)" \
         "$2: and exec'd the api"
 }
@@ -167,6 +179,13 @@ run false || status=$?
 served "$status" "unprovisioned with no variable"
 verdict absent "$([[ -e "$pwfile" ]] && echo present || echo absent)" \
     "no variable, no file"
+
+# An operator may use a separately provisioned owner credential for runtime DDL.
+schema_override='postgres://schema-owner@localhost/x'
+status=0
+run true || status=$?
+served "$status" "explicit schema connection"
+unset schema_override
 
 # --- the probe cannot answer -------------------------------------------------
 # The sharpest case. A failed probe is not "unprovisioned": treating it as one

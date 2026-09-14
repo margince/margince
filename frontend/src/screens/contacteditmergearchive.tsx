@@ -13,6 +13,7 @@ import { throwProblem } from "./common";
 import { contactEditFields, mapContactUpdate } from "./contactformfields";
 import type { ObjectCustomFields } from "./customfields.form";
 import { EditAction } from "./edit";
+import { saveIndependentEdit } from "./independentedit";
 import { MergeAction } from "./merge";
 import { invalidateRecord } from "./recordwritekeys";
 
@@ -45,6 +46,26 @@ async function searchContactsTargets(
     id: candidate.id,
     name: candidate.full_name,
   }));
+}
+
+// Compare replace-sets in their request shape; row ids and server metadata
+// are not editable values. Position comes from the displayed row order.
+function contactEditComparison(record: Contact) {
+  return {
+    ...record,
+    emails: (record.emails ?? []).map((row, position) => ({
+      email: row.email,
+      email_type: row.email_type ?? "work",
+      is_primary: row.is_primary,
+      position,
+    })),
+    phones: (record.phones ?? []).map((row, position) => ({
+      phone: row.phone,
+      phone_type: row.phone_type ?? "work",
+      is_primary: row.is_primary,
+      position,
+    })),
+  };
 }
 
 function stringField(value: unknown): string {
@@ -110,6 +131,7 @@ export function ContactEditMergeArchive({
         fields={[...contactEditFields(t), ...cf.formFields]}
         record={{
           id: contact.id,
+          original: contact,
           version: contact.version,
           full_name: contact.full_name,
           first_name: contact.first_name ?? "",
@@ -124,12 +146,9 @@ export function ContactEditMergeArchive({
           ...cf.recordSlice(contact),
         }}
         update={async (values, rows, opened) => {
-          const { data, error } = await api.PATCH("/contacts/{id}", {
-            params: {
-              path: { id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: {
+          const saved = await saveIndependentEdit({
+            opened,
+            patch: {
               ...mapContactUpdate(values, rows),
               // A diff against what the form prefilled from: a
               // snapshot sends `null` for every empty custom field,
@@ -137,12 +156,26 @@ export function ContactEditMergeArchive({
               // touched.
               ...cf.toPatch(values, opened ?? {}),
             },
+            project: contactEditComparison,
+            groups: [["full_name", "first_name", "last_name"]],
+            read: async () => {
+              const { data, error } = await api.GET("/contacts/{id}", {
+                params: { path: { id } },
+              });
+              if (error) throwProblem(error);
+              return data;
+            },
+            write: async (body, version) => {
+              const { data, error } = await api.PATCH("/contacts/{id}", {
+                params: { path: { id }, ...ifMatch(version) },
+                body,
+              });
+              if (error) throwProblem(error);
+              return data;
+            },
           });
-          if (error) {
-            throwProblem(error);
-          }
           await invalidateRecord(queryClient, "contact", id);
-          return data;
+          return saved;
         }}
         invalidate="contacts"
         recordKey="contact"

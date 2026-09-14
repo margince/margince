@@ -358,3 +358,15 @@ export async function createCompany(
   }
   return data;
 }
+
+// The editable domain shape excludes row ids and other server metadata.
+export function companyEditComparison(record: Company) {
+  return {
+    ...record,
+    domains: (record.domains ?? []).map(({ domain, is_primary }) => ({
+      domain,
+      is_primary,
+    })),
+    relationship_types: record.relationship_types ?? [],
+  };
+}

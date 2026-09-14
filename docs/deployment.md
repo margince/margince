@@ -193,6 +193,19 @@ One host, not two, because three things cross the split:
 
 Point liveness at `/healthz` and readiness at `/readyz`.
 
+Custom-field creation also needs the API's owner-role schema pool. The image
+entrypoint supplies it automatically from `MARGINCE_OWNER_DSN`; `make dev`
+supplies the selected stack's owner connection. For a direct binary launch,
+set `MARGINCE_SCHEMA_DSN` explicitly. Keep it on the same database as the app
+connection, and keep `MARGINCE_DSN` on the restricted app role.
+
+During installation acceptance, confirm the startup log says
+`api custom-field schema changes enabled (schema pool configured)`, then check
+readiness and exercise a custom-field create/value/readback on rehearsal data.
+A missing optional pool does not fail readiness, so a 200 alone cannot prove
+field creation works. Configuration and the 501 troubleshooting procedure are
+in [Custom-field schema pool](reference/configuration.md#custom-field-schema-pool-api--runtime-ddl).
+
 ## Deploy all three roles at ONE release (the guard that enforces it)
 
 Every release image carries the release it was built from, in three places

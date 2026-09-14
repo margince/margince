@@ -1803,6 +1803,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
     render(<DealScreen id="x" />);
     await openEditForm();
+    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(patches.length).toBe(1));
     expect(patches[0].ifMatch).toBe("4");
@@ -1839,14 +1840,8 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     expect(screen.getByText("via")).toBeTruthy();
   });
 
-  // A form offers nothing the record already carries as a blank. The partner
-  // picker offers one capped page of partners, so a deal's own partner can be
-  // missing from it — and a select whose stored value is not an option shows
-  // blank, which the patch then reads as the contact having chosen "Unset" and
-  // sends as a real null, clearing the partner and its commission attribution.
-  //
-  // The save says nothing about the partner at all, which is what makes it
-  // safe: omitted means unchanged.
+  // A stored partner outside the picker's page must still appear selected.
+  // Otherwise an unrelated save can clear its commission attribution.
   it("keeps a partner the picker cannot reach, rather than clearing it on save", async () => {
     const user = userEvent.setup();
     const patches: { body: unknown }[] = [];
@@ -1867,6 +1862,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await openEditForm(user);
+    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));
@@ -1901,6 +1897,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
 
     render(<DealScreen id="x" />);
     await openEditForm(user);
+    await userEvent.type(screen.getByLabelText("Deal name *"), " edited");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patches.length).toBe(1));

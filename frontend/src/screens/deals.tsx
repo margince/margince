@@ -153,6 +153,7 @@ import {
   useRoster,
 } from "./entityref";
 import { RecordHistoryTab } from "./history";
+import { saveIndependentEdit } from "./independentedit";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
@@ -647,28 +648,9 @@ export function toBoardDeal(
 type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 type CreateDealRequest = components["schemas"]["CreateDealRequest"];
 
-// One deal as the edit form's initial values. Extracted from the badge row
-// that renders the form: mapping a record onto form fields is its own job, and
-// keeping it inline made a component that already draws badges, an edit dialog
-// and an archive verb carry a twentieth concern.
-//
-// It is also the patch's BASELINE (mapDealUpdate), so a field this function
-// misreads becomes a field every save reports as changed.
-//
-// Every absent value becomes "" rather than a default. A currency the FORM
-// chose is a currency the SAVE writes, so seeding one made an unpriced deal
-// acquire it the moment a reader edited its name — and since amount and
-// currency are paired by CHECK, that turned an innocent rename into a refusal.
-// One money figure as the form's own string, or empty.
-//
-// The currency's own scale, not a hundred. A row that WITHHELD the currency
-// for row scope while sending the figure would be scaled at the two-digit
-// default and shown wrong, so there being no honest reading without its unit,
-// the field stays empty rather than guessing one.
-//
-// Both of a deal's figures go through here, because they are scaled by one
-// rule and withheld by one mask — two copies of it would eventually disagree
-// about which.
+// Deal edit baselines use the form's own spelling. Missing money stays blank;
+// a present figure uses its currency's minor-unit scale, never a default unit.
+// The same projection seeds the controls and mapDealUpdate's comparison.
 function moneyFieldValue(
   minor: number | null | undefined,
   currency?: string | null,
@@ -3114,7 +3096,11 @@ function DealActions({
   // the form seeds its controls from it, and the patch is a diff against it.
   // Two spellings of "the record as the form read it" would drift, and the one
   // that drifts decides whether an untouched field is sent as a change.
-  const seeded = { ...dealEditRecord(deal), ...cf.recordSlice(deal) };
+  const seeded = {
+    ...dealEditRecord(deal),
+    ...cf.recordSlice(deal),
+    original: deal,
+  };
   return (
     <>
       <DealEmailVerb
@@ -3171,31 +3157,39 @@ function DealActions({
               submitted.company_id?.trim() || null,
               t,
             );
-            const { data, error } = await api.PATCH("/deals/{id}", {
-              params: {
-                path: { id: deal.id },
-                ...ifMatch(requireVersion(opened?.version)),
-              },
-              body: {
+            const saved = await saveIndependentEdit({
+              opened,
+              patch: {
                 ...mapDealUpdate(
                   { ...values, project_id: projectId ?? "" },
-                  // The reading the form opened on, not the live one: `seeded`
-                  // is rebuilt on every render, so a refetch mid-edit would make
-                  // somebody else's change read as this contact's.
                   opened ?? seeded,
                   masked,
                 ),
-                // The other half of the same body, diffed the same way and
-                // against the same baseline. A snapshot here reproduced the
-                // reported defect exactly: `cf_*` columns are clearable through
-                // no path, so one empty custom field refused every save.
+                // Custom fields share the opening baseline.
                 ...cf.toPatch(values, opened ?? {}),
               },
+              groups: [
+                ["currency", "amount_minor", "expected_arr_minor"],
+                ["partner_company_id", "partner_attribution"],
+                ["company_id", "project_id"],
+              ],
+              read: async () => {
+                const { data, error } = await api.GET("/deals/{id}", {
+                  params: { path: { id: deal.id } },
+                });
+                if (error) throwProblem(error);
+                return data;
+              },
+              write: async (body, version) => {
+                const { data, error } = await api.PATCH("/deals/{id}", {
+                  params: { path: { id: deal.id }, ...ifMatch(version) },
+                  body,
+                });
+                if (error) throwProblem(error);
+                return data;
+              },
             });
-            if (error) {
-              throwProblem(error);
-            }
-            return data;
+            return saved;
           }}
           invalidate="deals"
           recordKey="deal"

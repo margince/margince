@@ -654,13 +654,10 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 
 # The owner DSN reaches cmd/migrate through the environment rather than argv (it
 # carries a password, and argv is world-readable), but it is assigned PER COMMAND
-# below — never exported here. An export would hand the superuser credential to
-# every child this script starts, and the api and worker have no use for it: the
-# api connects as margince_app precisely because it is UNPRIVILEGED: it owns no
-# table, cannot alter the schema, and cannot bypass a grant, none of which is
-# true of the superuser margince_owner is in the compose stack. Core carries no
-# row-level security, so the role separation is the boundary rather than a
-# backstop behind one.
+# below — never exported here. Only migrations and the api's separate
+# custom-field schema pool need it; the worker and frontend do not. The api's
+# ordinary pool still connects as margince_app: runtime DDL belongs to the
+# governed custom-field engine, not to ordinary record writes.
 
 # psql is NOT a host requirement (hosts need Go + Docker only): every ad-hoc
 # SQL statement runs inside the compose postgres container, the same way
@@ -1288,6 +1285,7 @@ up)
   # outbox rows are claimed FOR UPDATE SKIP LOCKED, so two relays never
   # double-ship.
   MARGINCE_ENV=dev \
+    MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \

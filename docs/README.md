@@ -30,6 +30,8 @@ maps the codebase and links everything below.
 
 ## Map
 
+- [Editing records concurrently](how-to/concurrent-record-edits.md) — independent field changes and conflict recovery.
+
 ### Handbook — how to USE the product
 
 The only tree here written for the contact using Margince rather than building it:

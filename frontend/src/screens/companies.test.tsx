@@ -474,10 +474,7 @@ describe("CompanyScreen — edit with If-Match (P-1)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchBody).toBeTruthy());
-    expect(patchBody).toMatchObject({
-      industry: "Manufacturing",
-      relationship_types: ["partner", "supplier"],
-    });
+    expect(patchBody).toEqual({ industry: "Manufacturing" });
   });
 });
 
