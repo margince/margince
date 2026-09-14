@@ -49,9 +49,6 @@ func focusOf(rows, considered []ranked, asOf time.Time, reader ids.UUID) crmcont
 }
 
 func focusEligible(row ranked, asOf time.Time) bool {
-	if row.pinned {
-		return true
-	}
 	// An agreed future date is not a request to act today. Legal preparation and
 	// deal close windows already have their own semantic classifier horizons.
 	switch row.item.Source {

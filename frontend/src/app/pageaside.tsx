@@ -180,8 +180,10 @@ export function usePageAside(available = true): { open: boolean } {
  * supplies a pane.
  */
 export function PageAsideToggle({
+  label,
   controlled,
 }: Readonly<{
+  label?: string;
   controlled?: { open: boolean; label: string; onToggle: () => void };
 }> = {}) {
   const t = useT();
@@ -199,7 +201,7 @@ export function PageAsideToggle({
     <Button
       className="record-details-toggle"
       reason={
-        !controlled && !collapsed && dirty
+        (controlled?.open ?? !collapsed) && dirty
           ? t("record.finishFieldEdit")
           : undefined
       }
@@ -207,7 +209,7 @@ export function PageAsideToggle({
       onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {controlled?.label ?? t("record.panel.details")}
+      {controlled?.label ?? label ?? t("record.panel.details")}
     </Button>
   );
 }

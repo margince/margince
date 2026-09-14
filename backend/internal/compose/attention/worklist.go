@@ -242,14 +242,6 @@ func (s *Service) worklistFrom(
 	// deal's figures and reasons but not the brief's id. So this runs against
 	// whatever actually survives.
 	rows = foldBriefIntoRisk(rows)
-	// The reader's own override, raised AFTER the dedupe passes and before the
-	// ranking. After, because a pin on a row those passes remove is a pin on a
-	// row that is not on the page — the day decides what it holds, and the pin
-	// only says which of what it holds leads. Before the ranking, because a pin
-	// is a level: the ordering, the band heading and the "why here" line all
-	// read it, so moving rows after the sort would leave those three saying
-	// something the page contradicts.
-	rows = applyPins(rows, s.pinned)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
@@ -294,6 +286,12 @@ func (s *Service) worklistFrom(
 	// the count disagreeing — the defect these two filter values exist to fix. It
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
+	// Focus is independent of queue filters and pins, so it always folds routine work.
+	focusRows := foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
+	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
+	// eligibility, including when this reader has saved pins on the queue.
+	rows = applyPins(rows, s.pinned)
 	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
 	// own rule, and the reason it is conditional at all.
 	//
@@ -309,10 +307,8 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
-	focusRows := s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
-	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
 	if !opensTheDeck(filter) {
-		rows = focusRows
+		rows = s.foldAndRepin(rows, len(day.NeedsYou) >= batchScanDepth)
 	}
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
 	if narrowed {

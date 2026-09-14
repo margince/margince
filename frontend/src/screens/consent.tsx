@@ -250,9 +250,14 @@ function ConsentRow({
     // consent_event — so the proof log can only pick up the transition just
     // made by refetching, not by patching the cache from this response.
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["contact-consent", contactId],
-      });
+      for (const key of [
+        "contact-consent",
+        "contactConsentGuard",
+        "contact360",
+      ]) {
+        queryClient.invalidateQueries({ queryKey: [key, contactId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["communication-review"] });
     },
   });
 
@@ -306,7 +311,14 @@ function ConsentRow({
 export function ConsentSection({
   contactId,
   contact,
-}: Readonly<{ contactId: string; contact?: { readonly writable?: boolean } }>) {
+  showConfirm = true,
+  titleLevel = 2,
+}: Readonly<{
+  contactId: string;
+  contact?: { readonly writable?: boolean };
+  showConfirm?: boolean;
+  titleLevel?: 2 | 3;
+}>) {
   // Every verb in this section writes to the CONTACT, so they share one
   // decision: the role's grant and this row's own `writable`. Absent fails
   // closed, which is what a section rendered before its record has loaded
@@ -380,42 +392,27 @@ export function ConsentSection({
   }
 
   return (
-    <Panel title={t("contact.consent")}>
-      {/* The default-deny rule is two sentences, and the head band holds one
-          line: truncating the half that says a grant is per purpose would
-          leave the rule saying the opposite of what it means. */}
+    <Panel title={t("contact.consent")} titleLevel={titleLevel}>
       <PanelBody>
         <p className="t-sub">{t("consent.defaultDeny")}</p>
       </PanelBody>
       {body}
-      {/* Per CONTACT rather than per purpose, so it sits under the rows instead
-          of inside one: the link opens everything held about them and asks the
-          marketing question once, which is not a fact about any single
-          purpose. */}
       {/* Keyed on the contact: a mutation result is about the record it was
           asked for, and React would otherwise reuse this component across a
           navigation between two cached contacts and leave the previous
           contact's address sitting under the new record. */}
-      <ConfirmDetailsAction
-        key={contactId}
-        contactId={contactId}
-        mayWrite={mayWrite}
-      />
+      {showConfirm && (
+        <ConfirmDetailsAction
+          key={contactId}
+          contactId={contactId}
+          mayWrite={mayWrite}
+        />
+      )}
     </Panel>
   );
 }
 
-/** What to say about a link that was just issued.
- *
- * TWO outcomes, where there used to be three. The message is staged in the same
- * transaction that mints the link, so "the link exists but the send failed"
- * cannot happen any more — either both committed or neither did. What is left
- * is: it is on its way, or this installation cannot send at all.
- *
- * And it says "on its way", not "sent". The message is queued here and
- * transmitted later by the dispatcher, which retries and can park, so claiming
- * delivery on this screen would tell a rep somebody was asked when the message
- * may still be waiting. */
+// Issuing the link queues a message; it does not prove delivery.
 function sentenceFor(
   issued: components["schemas"]["ConfirmRequestIssued"],
   t: ReturnType<typeof useT>,
@@ -435,10 +432,17 @@ function sentenceFor(
  * its own: the answer came from the subject's mailbox. So this surface offers
  * the act and reports where it went, and cannot aim it anywhere.
  */
-function ConfirmDetailsAction({
+export function ConfirmDetailsAction({
   contactId,
   mayWrite,
-}: Readonly<{ contactId: string; mayWrite: boolean }>) {
+  recipient,
+  unavailableReason,
+}: Readonly<{
+  contactId: string;
+  mayWrite: boolean;
+  recipient?: string | null;
+  unavailableReason?: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
@@ -469,19 +473,21 @@ function ConfirmDetailsAction({
       <Button
         small
         disabled={ask.isPending}
+        reason={unavailableReason}
         data-testid="confirm-details-ask"
         onClick={() => ask.mutate(contactId)}
       >
         {t("consent.askToConfirm")}
       </Button>
+      {recipient && (
+        <p className="t-caption">
+          {t("consent.confirmRecipient", { address: recipient })}
+        </p>
+      )}
       <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
       {ask.isError && <MutationError error={ask.error} />}
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">
-          {/* Three outcomes: it went, this installation cannot send at all,
-              or the send was tried and failed. The middle and the last ask
-              different things of the reader — configure a relay, or press
-              again — so they cannot share a sentence. */}
           {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
           {formatDateTime(ask.data.expires_at, locale, zone)}
         </p>
