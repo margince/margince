@@ -63,6 +63,10 @@ const (
 	ReasonFrequencyCapReached = "frequency_cap_reached"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
+	// ReasonAllowedByOverride marks a send allowed because a seat outranked the
+	// machine's no-evidence refusal. It is an allow, so it is never absolute and
+	// never itself overrulable (CanBeOverruled short-circuits on VerdictAllow).
+	ReasonAllowedByOverride = "allowed_by_override"
 )
 
 // absoluteDenials are the refusals no rollout mode may soften.
