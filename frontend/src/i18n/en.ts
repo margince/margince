@@ -3424,6 +3424,7 @@ export const en = {
   // page limit, and saying so would be wrong about which budget ran out.
   "deepread.statusPageCapped": "Read up to the page limit",
   "deepread.statusByteCapped": "Read up to the size limit",
+  "deepread.statusTimeCapped": "Read up to the time limit",
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Cancelled",
   "deepread.resumesAt": "Resumes automatically {when}.",
@@ -3436,7 +3437,6 @@ export const en = {
   "deepread.step.running": "under way",
   "deepread.step.queued": "waiting",
   "deepread.stopBudget": "model budget",
-  "deepread.stopDeadline": "deadline",
   "deepread.factCount_one": "{count} evidenced fact staged",
   "deepread.factCount_other": "{count} evidenced facts staged",
   "deepread.proposals_other": "{count} proposals waiting for your review",

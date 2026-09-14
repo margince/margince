@@ -137,7 +137,27 @@ describe("CoverageCard", () => {
     ).toBeTruthy();
   });
 
+  it("says the same of a time limit, which the rail already calls a clean read", async () => {
+    // The one the two surfaces used to disagree about: the activity rail said
+    // "I've read the company website" while this card warned about the same
+    // read. A wall-clock deadline is configured exactly as the page and byte
+    // caps are, so it answers the same way — held in both directions by
+    // backend/gates/sitereadstops_test.go.
+    render(
+      <CoverageCard pages={pages} warnings={[]} stoppedReason="deadline" />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Review/ }));
+
+    expect(screen.getByText("Read up to its limit")).toBeTruthy();
+    expect(screen.queryByText("Stopped early")).toBeNull();
+    expect(
+      document.querySelector('.ob-live-coverage[data-kind="note"]'),
+    ).toBeTruthy();
+  });
+
   it("keeps the warning for a stop a later read could get past", async () => {
+    // `budget` alone: the workspace ran out of AI credit, which somebody
+    // repairs rather than a bound the crawl was built to fill.
     render(<CoverageCard pages={pages} warnings={[]} stoppedReason="budget" />);
     await userEvent.click(screen.getByRole("button", { name: /Review/ }));
 

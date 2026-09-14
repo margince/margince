@@ -136,11 +136,30 @@ func (sr SiteRead) stoppedAtOwnCeiling() bool {
 // siteReadOwnCeiling is the half of the stop vocabulary that names a bound
 // this product chose. `budget` is deliberately absent: the workspace running
 // out of AI credit is a condition an operator repairs, not a ceiling the crawl
-// was built to fill.
+// was built to fill. A page cap, a byte cap and a wall-clock deadline are all
+// configured the same way and all mean the crawl stopped where it was told to.
+//
+// The browser decides the SAME question, to pick the tone the company panel
+// and the onboarding card show, and a stop counted here and not there is a read
+// the rail calls finished while the panel flags it — two answers to one
+// question, in front of one reader. So the TypeScript list is a declared mirror
+// rather than a second judgement, and backend/gates/sitereadstops_test.go fails
+// in both directions.
 var siteReadOwnCeiling = map[string]bool{
 	siteReadStopPageCap:  true,
 	siteReadStopByteCap:  true,
 	siteReadStopDeadline: true,
+}
+
+// SiteReadOwnCeilings names the stop reasons this product counts as a bound it
+// chose, for the gate that holds the browser's copy of the same list.
+func SiteReadOwnCeilings() []string {
+	reasons := make([]string, 0, len(siteReadOwnCeiling))
+	for reason := range siteReadOwnCeiling {
+		reasons = append(reasons, reason)
+	}
+	slices.Sort(reasons)
+	return reasons
 }
 
 // The stop reasons as prose. Server-authored and closed — never a provider's
