@@ -118,10 +118,10 @@ function kindFacts(
     // rather than joined on a separator, because neither identifier's grammar
     // rules one out and a delimiter that can appear in a part is a key collision.
     key: JSON.stringify([kind.queue, kind.kind]),
-    // The stable identifier River persists in river_job.kind, verbatim and
-    // mono: it is what the operator greps the worker log for, so humanizing
-    // the underscores away would cost them the string they actually need.
-    term: <span className="t-mono">{kind.kind}</span>,
+    // The stable identifier River persists in river_job.kind, verbatim: it is
+    // what the operator greps the worker log for, so humanizing the underscores
+    // away would cost them the string they actually need.
+    term: <span>{kind.kind}</span>,
     value: <KindCounts kind={kind} />,
     note: (
       <>
@@ -201,12 +201,12 @@ function failureNote(
           and this row already carries the one status it has, so a second pill
           beside it reads as a second state; and the class vocabulary grows with
           every unit that declares one, so no closed tone could be honest about
-          a token this build has never seen. Mono, like the kind above it,
+          a token this build has never seen. Verbatim, like the kind above it,
           because both are strings the operator greps the worker log with and
           keys an alert on, and dressing either up costs them the exact text. */}
       {failureClass !== null && failureClass !== undefined && (
         <>
-          <span className="t-mono">{failureClass}</span>
+          <span>{failureClass}</span>
           {" · "}
         </>
       )}
@@ -253,7 +253,7 @@ function failureFacts(
       key: JSON.stringify([index, failure.kind]),
       term: (
         <>
-          <span className="t-mono">{failure.kind}</span>{" "}
+          <span>{failure.kind}</span>{" "}
           <Badge tone={state.tone}>{t(state.label)}</Badge>
         </>
       ),

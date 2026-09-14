@@ -5,7 +5,7 @@
  *  - the scope region and the progress line hold their own height, so an
  *    arriving estimate or an incremented count never moves the button someone
  *    is about to press;
- *  - every number is mono and tabular, so a tally counting upward changes its
+ *  - every number sets tabular figures, so a tally counting upward changes its
  *    digits without changing its width.
  *
  * Copy never lives here (conformance gate) and no colour is a literal: literals

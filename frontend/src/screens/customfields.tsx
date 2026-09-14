@@ -155,7 +155,6 @@ export function FieldBuilder({
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={apiKey(object, label)}
               disabled
               readOnly
@@ -190,7 +189,6 @@ export function FieldBuilder({
           {(control) => (
             <TextInput
               {...control}
-              className="t-mono"
               value={currency}
               maxLength={3}
               onChange={(event) =>
@@ -368,7 +366,7 @@ export function FieldTable({
                   <Badge tone="warn">{t("cf.retired")}</Badge>
                 )}
               </span>
-              <span className="cf-key t-mono">
+              <span className="cf-key">
                 {`${field.object}.${field.column_name}`}
               </span>
             </div>

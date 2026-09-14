@@ -36,7 +36,7 @@
   align-items: center;
 }
 .pn-route-rank {
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--fs-meta);
   color: var(--textTertiary);
   min-width: 1.5em;
@@ -337,7 +337,7 @@
   place-items: center;
   border: 2px solid var(--borderStrong);
   background: var(--bgElevated);
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
 }
 .pn-relay-done .pn-relay-num {
   background: var(--accent);
@@ -362,7 +362,7 @@
 }
 .pn-relay-due {
   margin-left: auto;
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 /* The chip's own ink, because the date lands ON the fill above. `.t-caption`
@@ -409,7 +409,7 @@
   font-weight: var(--fw-medium);
 }
 .pn-moment-when {
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

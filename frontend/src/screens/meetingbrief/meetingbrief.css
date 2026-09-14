@@ -123,7 +123,7 @@
 }
 
 .mb-arc-row time {
-  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .mb-arc-row strong {

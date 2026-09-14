@@ -84,7 +84,7 @@
 }
 
 /* The body face, both values: an address is words a contact reads and a member
-   count is a sentence, and the mono face is for a machine name. */
+   count is a sentence, and the mono face is for code alone. */
 .share-subject-note {
   font-size: var(--fs-meta);
   color: var(--textTertiary);

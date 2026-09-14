@@ -38,12 +38,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* A model id is a machine name and reads as one — the same face the routing
-   document spells it in, so the list and the field agree. An address and a
-   contact's name are words and take the body face. */
-.suggest-option-value.is-mono {
-  font-family: var(--f-mono);
-}
 .suggest-option-hint {
   flex: none;
   color: var(--textMeta);

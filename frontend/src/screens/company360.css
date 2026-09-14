@@ -1112,15 +1112,6 @@
   padding: var(--padPanel);
 }
 
-/* Figures read in the body face with tabular figures. The mono face was doing
-   two jobs, aligning columns and shouting; only the first is wanted, and
-   tabular-nums delivers it without the typewriter voice. */
-.co-card .t-mono,
-.co-rail .t-mono {
-  font-family: var(--f-body);
-  font-variant-numeric: tabular-nums;
-}
-
 /* The rail's own anatomy: one continuous panel, its groups told apart by a
    hairline rather than by a gap between cards (a disclosure's default inset
    border in atoms.css would leave a margin either side of that line, which
@@ -1813,7 +1804,7 @@
   gap: var(--space-2);
 }
 
-/* The date at the row's far end, in the mono face where digits share a width —
+/* The date at the row's far end, in tabular figures so digits share a width —
    a column of dates lines up instead of shifting row to row. */
 .co-recent-when {
   flex: none;

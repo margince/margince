@@ -1347,8 +1347,8 @@ export function SectionHeader({
  * The figure beside an option's name, in a strip that counts what is behind
  * each one.
  *
- * One component because the count is four decisions, not a number: the mono
- * face so a column of them lines up, the reader's own number format, the host's
+ * One component because the count is four decisions, not a number: tabular
+ * figures so a column of them lines up, the reader's own number format, the host's
  * class, and the SEPARATOR — which is the one that was missing. Both strips
  * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
  * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
@@ -1366,7 +1366,7 @@ export function OptionCount({
   return (
     <>
       <span className="sr-only">, </span>
-      <span className={`${className} t-mono`}>
+      <span className={`${className} t-num`}>
         {formatNumber(count, locale)}
       </span>
     </>

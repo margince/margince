@@ -76,9 +76,7 @@ export function CallDetailPanel({
           <ol>
             {query.data.attempts.map((attempt) => (
               <li key={attempt.attempt}>
-                <span className="t-mono">
-                  #{ordinalNumber(attempt.attempt)}
-                </span>{" "}
+                <span className="t-num">#{ordinalNumber(attempt.attempt)}</span>{" "}
                 {attempt.attempt_reason || "—"} ·{" "}
                 {t("aicalls.ms", {
                   value: formatNumber(attempt.latency_ms, locale),

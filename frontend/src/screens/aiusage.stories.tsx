@@ -7,14 +7,14 @@ import { type GrantSpec, meFixture } from "../app/mefixture";
 import { AiUsageCard } from "./aiusage";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The card gates itself on automation:update — the server treats the AI
-// runtime's spend as operator information — so /me is not optional furniture
-// here: it decides which of the card's two whole branches renders. A story
-// that leaves /me to the stub's list-shaped fallback gets a body with no
-// `user`, which useMe rejects as malformed, which fails every grant closed.
+// The card gates itself on ai_diagnostics:read — the grant `GET /ai/usage`
+// asks for — so /me is not optional furniture here: it decides which of the
+// card's two whole branches renders. A story that leaves /me to the stub's
+// list-shaped fallback gets a body with no `user`, which useMe rejects as
+// malformed, which fails every grant closed.
 // The five band/state stories below were all drawing that one probe-error
 // branch, under five names that each promised something else.
-const OPERATOR: GrantSpec = { automation: ["read", "update"] };
+const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 function story(
   band: string,
@@ -66,7 +66,7 @@ export const WithCost: Story = {
 };
 export const Empty: Story = { render: story("normal", []) };
 
-// A seat holding no automation grant. The card keeps its place and says the
+// A seat holding no ai_diagnostics grant. The card keeps its place and says the
 // figures are withheld — an absent spend card would read as "this
 // installation meters nothing", a claim about the data rather than about who
 // may read it.

@@ -528,7 +528,7 @@ a:not([class]):focus-visible {
 }
 
 /* Conservative type-scale realizing the hierarchy already implied by usage
- * across the app (record headings, field labels, captions, mono figures) —
+ * across the app (record headings, field labels, captions, figures) —
  * no new sizes invented, just named. */
 .t-display {
   font-family: var(--f-display);
@@ -577,8 +577,13 @@ a:not([class]):focus-visible {
   font-size: var(--fs-body);
   color: var(--textContent);
 }
-.t-mono {
-  font-family: var(--f-mono);
+/* A figure that is read down a column — an amount, a count, a percentage, a
+   duration, a date in a table — in the face around it, with every digit one
+   width so the column lines up. The family is never changed for alignment:
+   mono is for code, and a figure is not code. No size either, so it rides on
+   whichever size class or context the figure already sits in. */
+.t-num {
+  font-variant-numeric: tabular-nums;
 }
 /* The eyebrow: the micro-label above the thing it names. THE one spelling of
    uppercase micro-type — five sheets used to carry their own copy of it, at
@@ -598,6 +603,23 @@ a:not([class]):focus-visible {
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--textMeta);
+}
+
+/* Mono is for code, and only for code: an element that IS code — `<code>`,
+   `<pre>`, `<samp>` — or the `.code-block` below. Everything else, an id, a key
+   or a figure included, reads in the body face; a figure aligns through `.t-num`
+   instead. `<kbd>` names a key someone presses rather than text a machine
+   reads, so it sits in the body face too — the browser's own sheet would set it
+   in monospace, which is why this says so rather than leaving it to inherit.
+   Held by mono.test.ts and check-font-lock.sh: a mono family on any other
+   selector fails. */
+code,
+pre,
+samp {
+  font-family: var(--f-mono);
+}
+kbd {
+  font-family: var(--f-body);
 }
 
 /* Code / payload preview surface (AI observability: the call-trace panel and

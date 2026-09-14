@@ -55,7 +55,7 @@ const passports = () =>
 // personal "Your agents" entry, which no grant gates.
 //
 // `title` and `description` are REQUIRED on AgentTool and the row draws both, so
-// a fixture without them captured a console the product cannot serve: one mono
+// a fixture without them captured a console the product cannot serve: one tool
 // name per row and nothing else, which is precisely the half that made the
 // layout look settled while the real rows carry three lines of prose. The
 // governance clause is part of the served description — the server appends it —
@@ -551,7 +551,7 @@ export const PipelinesAdminPhone: Story = {
 
 // And the dark render of the same ladder, which is the densest real content the
 // data model page has: three stage names, the Open/Won semantic badges beside the
-// pipeline's own Default badge, three `.t-mono` win probabilities, the row verbs,
+// pipeline's own Default badge, three `.t-num` win probabilities, the row verbs,
 // and no hairline between rows at all. What it watches is whether Open and Won
 // stay distinguishable from each other and from the row behind them once the
 // ground goes dark — a badge is tinted text on a tinted surface, and both move.

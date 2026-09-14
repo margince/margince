@@ -18,8 +18,8 @@
   box-sizing: border-box;
   min-inline-size: 0;
   max-inline-size: 100%;
-  /* Type is stated, never inherited: a badge in an eyebrow heading or a mono
-     cell must read as the badge beside it everywhere else. */
+  /* Type is stated, never inherited: a badge in an eyebrow heading or inside a
+     code sample must read as the badge beside it everywhere else. */
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-style: normal;
@@ -912,7 +912,6 @@
 }
 
 .kbd {
-  font-family: var(--f-mono);
   font-size: var(--fs-eyebrow);
   color: var(--textChip);
   background: var(--bgChip);
@@ -1909,7 +1908,7 @@
 /* The figure: the one thing on the card a reader compares across the row, and
    comparing means finding it in the same place, at the same size, in the same
    face every time. ONE face for every reading — the display face — and no
-   variant: a figure in the mono face beside a verdict in the display face made
+   variant: a figure in a second face beside a verdict in the display face made
    two readings of one record look like two products, and which face a reading
    drew in was a flag a caller could forget. Digits still line up, through
    `tabular-nums` rather than through a second family.

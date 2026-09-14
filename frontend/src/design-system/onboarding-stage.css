@@ -281,12 +281,11 @@
   width: 36px;
 }
 
-/* The Core's state in words. Mono because it names a machine state rather than
-   speaking to the reader, and indigo because the thing it describes is the
-   agent. Not a live region: see the component. */
+/* The Core's state in words, indigo because the thing it describes is the
+   agent. Body face: a machine state is still a word a reader reads, not code.
+   Not a live region: see the component. */
 .ob-stage-corestate {
   margin: 0;
-  font-family: var(--f-mono);
   font-size: var(--fs-eyebrow);
   color: var(--aiText);
   white-space: nowrap;

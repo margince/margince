@@ -194,7 +194,7 @@ export function RedirectUris({
             <SettingRow
               key={uri.purpose}
               label={purpose}
-              value={<code className="t-mono">{uri.url}</code>}
+              value={<code>{uri.url}</code>}
               control={
                 <Button
                   small

@@ -135,9 +135,9 @@
    Amber, not indigo. The waiting is a warning about the account, not a thing
    Margince authored, and indigo means authorship everywhere else here. */
 .co-spine-gap .co-spine-when {
-  /* The one count outside the mono face: it is read as a word ("12 days")
-     and compared with nothing, so it takes the display face at the size the
-     reading's own figures use. */
+  /* The one count in the display face: it is read as a word ("12 days")
+     and compared with nothing, so it takes the size the reading's own
+     figures use rather than the body's tabular figures. */
   font-family: var(--f-display);
   font-size: var(--fs-h1);
   font-weight: var(--fw-semibold);

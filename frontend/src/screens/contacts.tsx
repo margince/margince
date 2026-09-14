@@ -243,9 +243,8 @@ export function ContactsScreen() {
             // by it and each surface that needed the address answered again.
             //
             // An address is words a reader reads, so it takes the body face
-            // like every other value in the row. The mono face is for a
-            // machine name — a name and a domain set in it read as an
-            // identifier rather than as somebody a reader could write to.
+            // like every other value in the row — somebody a reader could
+            // write to, not an identifier.
             cell: (contact: Contact) => contact.primary_email ?? "",
             sort: "primary_email",
           },

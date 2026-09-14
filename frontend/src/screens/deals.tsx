@@ -1446,7 +1446,7 @@ function AmountCell({
     return null;
   }
   return (
-    <span className="t-mono">
+    <span className="t-num">
       {formatMoney(deal.amount_minor, deal.currency, locale)}
     </span>
   );
@@ -3355,7 +3355,7 @@ export function OffersPanel({
                   key: "gross",
                   header: t("deals.amount"),
                   render: (offer: Offer) => (
-                    <span className="t-mono">
+                    <span className="t-num">
                       {formatMoney(offer.gross_minor, offer.currency, locale)}
                     </span>
                   ),

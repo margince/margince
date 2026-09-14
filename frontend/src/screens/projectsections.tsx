@@ -134,7 +134,7 @@ export function PhaseHistoryCard({
             {history.phase_durations.map((duration) => (
               <li key={duration.phase}>
                 <span>{phaseWord(duration.phase, t)}</span>
-                <span className="t-mono">
+                <span className="t-num">
                   {formatDuration(duration.seconds * 1000, locale)}
                   {duration.current && ` · ${t("project.history.current")}`}
                 </span>
@@ -224,7 +224,7 @@ function ProjectDealRow({
         <Badge tone={deal.status === "won" ? "success" : undefined}>
           {deal.status}
         </Badge>
-        <span className="t-mono">
+        <span className="t-num">
           {formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
         </span>
       </span>
@@ -402,7 +402,7 @@ function DocumentRow({
       </a>
       <span className="project-row-meta t-caption">
         {doc.byte_size != null && (
-          <span className="t-mono">{formatBytes(doc.byte_size, locale)}</span>
+          <span className="t-num">{formatBytes(doc.byte_size, locale)}</span>
         )}
         <span>{formatDateAbbrev(doc.created_at, locale, recordZone)}</span>
       </span>

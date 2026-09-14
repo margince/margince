@@ -42,7 +42,7 @@
   flex-direction: column;
 }
 
-/* The summary toggle carries a kind badge, a mono subject reference, a status
+/* The summary toggle carries a kind badge, a subject reference, a status
  * badge, a due date and (sometimes) an overdue badge — five nowrap children in
  * one flex line. Without wrapping, that line has no width it can shrink to: it
  * pushed the card's own scroll width past the viewport on a phone, so the whole

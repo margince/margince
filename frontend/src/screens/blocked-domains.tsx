@@ -302,7 +302,7 @@ function decisionColumns({
       header: t("blockedDomains.col.domain"),
       render: (row: BlockedDomain) => (
         <>
-          <span className="t-mono">{row.domain}</span>
+          <span>{row.domain}</span>
           {/* The company an admitted domain produced, when there is one. A
               link rather than the id it is built from: the payload carries no
               name, and printing a UUID at an operator is not a fact they can
