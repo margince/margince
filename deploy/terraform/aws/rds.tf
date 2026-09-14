@@ -24,14 +24,19 @@ resource "random_password" "margince_app" {
 
 # A fixed final_snapshot_identifier collides on a second deletion: RDS keeps
 # the snapshot the first delete created, and DBSnapshotAlreadyExists refuses
-# the next one that reuses the name. This suffix is created once and stays
-# in state for the life of the instance, so it does not solve every case —
-# an instance destroyed and recreated in the SAME state carries the SAME
-# suffix, and a snapshot surviving from its first deletion still collides.
-# It does solve the ordinary case (a fresh working directory / a fresh
-# state), which a bare name solves none of.
+# the next one that reuses the name. keepers ties the suffix to
+# var.db_final_snapshot_generation instead of to aws_db_instance.this
+# directly — deriving it from the instance would make the instance depend on
+# its own final_snapshot_identifier, a cycle Terraform refuses to plan. Bump
+# db_final_snapshot_generation before any deliberate destroy/recreate of the
+# instance; a replacement Terraform triggers itself (a ForceNew attribute
+# change) does not need a manual bump since that recreates this resource too.
 resource "random_id" "final_snapshot" {
   byte_length = 4
+
+  keepers = {
+    generation = var.db_final_snapshot_generation
+  }
 }
 
 # storage_encrypted below protects the disk; it says nothing about the wire.

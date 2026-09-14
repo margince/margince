@@ -69,35 +69,47 @@ GRANT margince_owner TO CURRENT_USER;
 -- `db_name = "margince"`), the database already exists — created by RDS
 -- itself, owned by the master user — before this script ever runs, so the
 -- WHERE NOT EXISTS guard skips this line and margince_owner never owns
--- anything on that (the overwhelmingly common) path. The ALTER DATABASE
--- below is unconditional and idempotent — a no-op when this script did just
--- create it, the actual fix when RDS did.
+-- anything on that (the overwhelmingly common) path.
 SELECT 'CREATE DATABASE margince OWNER margince_owner'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'margince')
 \gexec
+
+-- Extensions the migrations expect must be installed from here on, so switch
+-- connections to margince now — before either ALTER below, not after. On
+-- PostgreSQL 15+ `public` is owned by pg_database_owner, which resolves to
+-- whoever CURRENT_USER's database-owner check names, not to any role
+-- CURRENT_USER merely inherits from. While margince still has its original
+-- owner (the RDS master user / whoever ran CREATE DATABASE above), that
+-- owner is CURRENT_USER, so the ALTER SCHEMA below succeeds. Doing the
+-- ALTER DATABASE first would hand database ownership to margince_owner
+-- first, CURRENT_USER's inherited membership in margince_owner would NOT
+-- carry the implicit pg_database_owner membership with it, and the ALTER
+-- SCHEMA would then fail — which, under \set ON_ERROR_STOP, would silently
+-- skip the extension installs and the REVOKE at the end of this script.
+\connect margince
+
+-- `public` is created by initdb, not by this script, so a fresh Postgres
+-- ≥15 (RDS 16 included — see rds.tf) has already revoked CREATE on it from
+-- everyone but its owner before this script runs. Migration 0001_baseline's
+-- very first statement (CREATE SCHEMA ext) and its CREATE EXTENSION calls
+-- both need margince_owner to hold that privilege, which owning the schema
+-- outright guarantees without a separate GRANT to maintain in step.
+ALTER SCHEMA public OWNER TO margince_owner;
+
+-- Now safe to hand the database itself to margince_owner too — the schema
+-- transfer above no longer depends on who owns it. Unconditional and
+-- idempotent: a no-op when CREATE DATABASE above already set this owner,
+-- the actual fix when RDS created margince instead.
 ALTER DATABASE margince OWNER TO margince_owner;
 
 -- The app role must be able to reach the database; object-level grants come from
 -- migration 0015 (run by the api entrypoint as margince_owner).
 GRANT CONNECT ON DATABASE margince TO margince_app;
 
--- Extensions the migrations expect. `vector` (pgvector) is NOT a trusted
--- extension, so it cannot be installed by the non-superuser owner from a
--- migration — pre-install it (and the trusted ones too, so every migration's
--- `CREATE EXTENSION IF NOT EXISTS` is a guaranteed no-op) here as superuser.
-\connect margince
-
--- Same reasoning as the database ALTER above: `public` is created by
--- initdb, not by this script, so a fresh Postgres ≥15 (RDS 16 included —
--- see rds.tf) has already revoked CREATE on it from everyone but its owner
--- before this script runs. Migration 0001_baseline's very first statement
--- (CREATE SCHEMA ext) and its CREATE EXTENSION calls both need margince_owner
--- to hold that privilege, which owning the schema outright guarantees
--- without a separate GRANT to maintain in step. Covered by the same
--- membership grant taken out above — this is a second object, not a second
--- permission requirement.
-ALTER SCHEMA public OWNER TO margince_owner;
-
+-- `vector` (pgvector) is NOT a trusted extension, so it cannot be installed
+-- by the non-superuser owner from a migration — pre-install it (and the
+-- trusted ones too, so every migration's `CREATE EXTENSION IF NOT EXISTS`
+-- is a guaranteed no-op) here as superuser.
 CREATE EXTENSION IF NOT EXISTS vector;      -- 0022_embeddings (pgvector; untrusted)
 CREATE EXTENSION IF NOT EXISTS unaccent;    -- 0052_fts_linguistics
 CREATE EXTENSION IF NOT EXISTS pg_trgm;     -- 0052_fts_linguistics

@@ -10,12 +10,17 @@ resource "random_password" "redis_auth" {
   special = false
 }
 
-# Same reasoning as rds.tf's random_id.final_snapshot: a fixed
-# final_snapshot_identifier collides on a second delete (ElastiCache keeps the
-# first delete's snapshot under that name), so this is created once and
-# reused for the life of the replication group rather than a bare name.
+# Same reasoning as rds.tf's random_id.final_snapshot, keepers included: a
+# fixed final_snapshot_identifier collides on a second delete (ElastiCache
+# keeps the first delete's snapshot under that name), and deriving the suffix
+# from the replication group itself would cycle. Bump
+# db_final_snapshot_generation before a deliberate destroy/recreate.
 resource "random_id" "redis_final_snapshot" {
   byte_length = 4
+
+  keepers = {
+    generation = var.db_final_snapshot_generation
+  }
 }
 
 # The default eviction policy (allkeys-lru/volatile-lru) silently drops keys

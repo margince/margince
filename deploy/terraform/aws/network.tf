@@ -53,9 +53,19 @@ resource "aws_iam_role" "vpc_flow_logs" {
 }
 
 data "aws_iam_policy_document" "vpc_flow_logs_delivery" {
+  # logs:DescribeLogGroups is account-level in the CloudWatch Logs API — it has
+  # no per-resource ARN to scope to, so AWS requires Resource "*" here. Scoping
+  # it to the log group ARN (as the write actions below are) makes AWS reject
+  # the call with AccessDenied, and flow log delivery stops silently.
+  statement {
+    sid       = "DescribeLogGroups"
+    actions   = ["logs:DescribeLogGroups"]
+    resources = ["*"]
+  }
+
   statement {
     sid     = "WriteFlowLogs"
-    actions = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogGroups", "logs:DescribeLogStreams"]
+    actions = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
     resources = [
       aws_cloudwatch_log_group.vpc_flow_logs.arn,
       "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*",

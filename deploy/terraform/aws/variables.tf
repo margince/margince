@@ -196,6 +196,23 @@ variable "db_backup_retention_days" {
   default = 7
 }
 
+variable "db_final_snapshot_generation" {
+  description = <<-EOT
+    Feeds rds.tf's random_id.final_snapshot and elasticache.tf's
+    random_id.redis_final_snapshot as a keepers value, so each gets a fresh
+    final-snapshot suffix without deriving it from the resource being
+    deleted (which would cycle). Bump this before deliberately destroying
+    and recreating the RDS instance or the Redis replication group in the
+    SAME state — otherwise the reused suffix collides with a snapshot an
+    earlier deletion already left behind, and RDS/ElastiCache reject the
+    delete with a snapshot-already-exists error. A replacement Terraform
+    triggers on its own (e.g. a ForceNew attribute change) does not need
+    this bumped, since that recreates the random_id resource too.
+  EOT
+  type        = number
+  default     = 1
+}
+
 # ---- Redis ------------------------------------------------------------------
 
 variable "redis_node_type" {
