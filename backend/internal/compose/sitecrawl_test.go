@@ -185,6 +185,9 @@ func seedOnly(linkPaths ...string) map[string]fakeSitePage {
 
 func TestCrawlCapsZeroValueTakesTheDefaultsAndExplicitCapsHold(t *testing.T) {
 	defaulted := newSiteCrawler(&fakeSite{}, CrawlCaps{})
+	if defaulted.maxPages != 60 {
+		t.Fatalf("default page cap = %d, want 60", defaulted.maxPages)
+	}
 	if defaulted.maxPages != defaultCrawlMaxPages || defaulted.maxBytes != defaultCrawlMaxBytes || defaulted.wall != defaultCrawlWall {
 		t.Fatalf("zero caps gave %d pages / %d bytes / %s, want the defaults %d / %d / %s",
 			defaulted.maxPages, defaulted.maxBytes, defaulted.wall,
