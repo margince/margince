@@ -132,7 +132,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (148)
+## Census (149)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -175,6 +175,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
