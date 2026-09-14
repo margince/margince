@@ -60,17 +60,18 @@ var privilegedTriggers = []string{
 }
 
 // sameRepoGuard is the comparison confining a job to branches of this
-// repository. Spelled once, because it is both what the gate looks for and what
-// its failure tells an author to write.
+// repository. The scan looks for this text, and the failure below quotes it
+// back as what an author should add.
 const sameRepoGuard = "github.event.pull_request.head.repo.full_name == github.repository"
 
 // triggeredWorkflow is the workflow decoded to the fields THIS gate reads and
 // no further, as every workflow-reading gate here decodes its own shape.
 //
 // `on` is a YAML 1.1 boolean, which is why some parsers file the key under
-// `true`; yaml.v3 keeps it a string.
+// `true`; yaml.v3 keeps it a string. It is kept as a raw node because GitHub
+// accepts three shapes for it and triggerNames reads all of them.
 type triggeredWorkflow struct {
-	On   map[string]yaml.Node `yaml:"on"`
+	On   yaml.Node `yaml:"on"`
 	Jobs map[string]struct {
 		If    string `yaml:"if"`
 		Steps []struct {
@@ -97,12 +98,47 @@ func namesAHeadRef(ref string) bool {
 	return strings.Contains(ref, ".head")
 }
 
+// triggerNames reads the event names out of `on:`.
+//
+// GitHub accepts three shapes there — a bare scalar (`on: push`), a sequence
+// (`on: [push, pull_request_review]`), and the mapping every workflow in this
+// tree happens to use — and a decoder that knows only the mapping does not
+// merely miss the other two: yaml answers a *yaml.TypeError, the read fails the
+// test, and the walk stops on that file having judged none of the ones after
+// it. A gate that cannot read a legal workflow is a gate that quietly stopped
+// covering the tree, so all three are read here.
+func triggerNames(on *yaml.Node) []string {
+	switch on.Kind {
+	case yaml.ScalarNode:
+		return []string{on.Value}
+	case yaml.SequenceNode, yaml.MappingNode:
+		// A mapping alternates key, value; a sequence holds only values. Step
+		// by two for the first and by one for the second, so each shape yields
+		// the event NAMES and never a trigger's configuration block.
+		step := 1
+		if on.Kind == yaml.MappingNode {
+			step = 2
+		}
+		names := make([]string, 0, len(on.Content)/step)
+		for i := 0; i < len(on.Content); i += step {
+			names = append(names, on.Content[i].Value)
+		}
+		return names
+	default:
+		return nil
+	}
+}
+
 // privilegedTriggersOf is the events in this workflow that carry an
 // undowngraded token, named so a failure can say which one it is about.
 func privilegedTriggersOf(wf triggeredWorkflow) []string {
+	declared := map[string]bool{}
+	for _, name := range triggerNames(&wf.On) {
+		declared[name] = true
+	}
 	var found []string
 	for _, trigger := range privilegedTriggers {
-		if _, declared := wf.On[trigger]; declared {
+		if declared[trigger] {
 			found = append(found, trigger)
 		}
 	}
@@ -198,5 +234,58 @@ func TestTheHeadRefScanMatchesTheContributorsTipAndNotItsNeighbours(t *testing.T
 		if got := namesAHeadRef(tc.ref); got != tc.fromHead {
 			t.Errorf("%q: matched=%v, want %v", tc.ref, got, tc.fromHead)
 		}
+	}
+}
+
+// The three spellings GitHub accepts for `on:`, planted because the failure
+// they cause is not a missed trigger but an unread FILE: a decoder that knows
+// only the mapping answers a *yaml.TypeError on the other two, which fails the
+// read and stops the walk before the workflows after it are judged.
+func TestEveryLegalSpellingOfOnIsRead(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		doc  string
+		want []string
+	}{
+		"a bare scalar": {"on: pull_request_review\njobs: {}\n", []string{"pull_request_review"}},
+		"a sequence":    {"on: [push, pull_request_review]\njobs: {}\n", []string{"push", "pull_request_review"}},
+		"the mapping every workflow here uses": {
+			"on:\n  pull_request:\n    types: [opened]\n  pull_request_review:\n    types: [submitted]\njobs: {}\n",
+			[]string{"pull_request", "pull_request_review"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var wf triggeredWorkflow
+			if err := yaml.Unmarshal([]byte(tc.doc), &wf); err != nil {
+				t.Fatalf("decoding %s: %v — this shape is legal, and a gate that cannot read it judges nothing after it", name, err)
+			}
+			if got := triggerNames(&wf.On); !slices.Equal(got, tc.want) {
+				t.Errorf("triggerNames = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// And the shape has to reach the JUDGEMENT, not merely the decoder: a
+// privileged trigger spelled as a scalar or a sequence entry is the same
+// exposure as one spelled as a mapping key.
+func TestAPrivilegedTriggerIsFoundInEveryShape(t *testing.T) {
+	t.Parallel()
+
+	for name, doc := range map[string]string{
+		"a bare scalar": "on: pull_request_review\njobs: {}\n",
+		"a sequence":    "on: [push, pull_request_review]\njobs: {}\n",
+		"a mapping":     "on:\n  pull_request_review:\n    types: [submitted]\njobs: {}\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			var wf triggeredWorkflow
+			if err := yaml.Unmarshal([]byte(doc), &wf); err != nil {
+				t.Fatalf("decoding %s: %v", name, err)
+			}
+			if got := privilegedTriggersOf(wf); !slices.Contains(got, "pull_request_review") {
+				t.Errorf("privilegedTriggersOf = %v, want it to name pull_request_review", got)
+			}
+		})
 	}
 }
