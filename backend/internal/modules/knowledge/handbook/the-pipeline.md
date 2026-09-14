@@ -191,6 +191,17 @@ On single-threaded: seats on a deal are not evidence of contact. A deal can carr
 five stakeholders and still be single-threaded, because only actual exchanged
 messages count as knowing someone.
 
+## The mail line on a deal card
+
+Under the deal's name a card says when mail last moved on the deal and which way
+— an envelope for a message they sent, an arrow for one you sent. Rest the
+pointer on it to see the last few subjects without opening the deal; **View all
+activity** opens the deal's own timeline.
+
+It counts the mail everybody in the workspace can read, the same way the stalled
+badge does. A message shared only with its participants does not move the line,
+so two colleagues always read the same date off the same card.
+
 ## Archiving a deal
 
 Archiving is not closing. A closed deal is a finished piece of business; an

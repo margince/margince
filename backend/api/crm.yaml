@@ -32092,6 +32092,19 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Deal ----
+    DealLastEmail:
+      type: object
+      description: The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+      required: [occurred_at, direction]
+      properties:
+        occurred_at: { type: string, format: date-time }
+        direction:
+          type: [string, 'null']
+          enum: [inbound, outbound, null]
+          description: >-
+            Which way the mail went. Null on a logged email that named no direction,
+            which is a fact about how it was captured rather than about the exchange.
+
     Deal:
       type: object
       description: A deal. Mirrors the `deal` table.
@@ -32206,6 +32219,19 @@ components:
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.' }
         stalled: { type: boolean, readOnly: true, description: Derived — no activity past the threshold (absolute duration). }
+        last_email:
+          allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
+          nullable: true
+          readOnly: true
+          description: >-
+            The newest email on this deal that the whole workspace may see — what a board
+            card states as "last mail, N days ago" beside the deal, so a rep reads the
+            silence without opening every card. Null on a deal nobody has mailed about.
+            Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows
+            only, and never the product's own system writing — a message limited to its
+            participants must not move a date every colleague reads, and a mail the
+            installation sent itself is not the buyer engaging. The rows a reader may
+            discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         raw: { type: [object, 'null'], additionalProperties: true }

@@ -419,6 +419,32 @@
   flex: none;
   display: flex;
 }
+/* The mail line, after everything else: when mail last moved on this deal and
+   which way, as a dense `Chip` — the pill every other fact about a record is
+   drawn in. It sits ABOVE the stretched link like the company, which is the
+   only reason the flyout's hover and its press reach it. The chip owns its own
+   face; what this sheet owns is where it sits and that it is a trigger. */
+.deal-card .deal-foot {
+  display: flex;
+  margin-top: var(--space-1);
+}
+.deal-card .deal-foot .deal-mail {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+}
+/* The chip lights the way `.chip-link` does (readings.css) when the pointer
+   settles on it. Restated here rather than borrowed, because the link is the
+   popover trigger AROUND the chip — a chip that is not itself an anchor — and
+   `.chip-link` is written for the chip that is. */
+.deal-card .deal-foot button.deal-mail:hover .chip {
+  border-color: var(--accent);
+  color: var(--accentText);
+}
+.deal-card .deal-foot button.deal-mail:hover .chip svg {
+  color: var(--accentText);
+}
 
 /* `margin-bottom` owns the interval below the identity, one full step, on
    EVERY record: the head is a register of its own and what opens the record's

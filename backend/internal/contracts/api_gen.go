@@ -7528,6 +7528,24 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealLastEmailDirection.
+const (
+	DealLastEmailDirectionInbound  DealLastEmailDirection = "inbound"
+	DealLastEmailDirectionOutbound DealLastEmailDirection = "outbound"
+)
+
+// Valid indicates whether the value is a known member of the DealLastEmailDirection enum.
+func (e DealLastEmailDirection) Valid() bool {
+	switch e {
+	case DealLastEmailDirectionInbound:
+		return true
+	case DealLastEmailDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealRoomDeliveryState.
 const (
 	DealRoomDeliveryStateConsumed   DealRoomDeliveryState = "consumed"
@@ -27525,6 +27543,9 @@ type Deal struct {
 	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
+	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	LastEmail *DealLastEmail `json:"last_email,omitempty"`
+
 	// LostReason Required when status=lost.
 	LostReason *string `json:"lost_reason,omitempty"`
 
@@ -27685,6 +27706,16 @@ type DealDocumentOrigin struct {
 	OccurredAt time.Time `json:"occurred_at"`
 	Subject    *string   `json:"subject,omitempty"`
 }
+
+// DealLastEmail The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
+type DealLastEmail struct {
+	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+	Direction  *DealLastEmailDirection `json:"direction"`
+	OccurredAt time.Time               `json:"occurred_at"`
+}
+
+// DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
+type DealLastEmailDirection string
 
 // DealListResponse defines model for DealListResponse.
 type DealListResponse struct {
@@ -50393,6 +50424,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "last_activity_at")
 	}
 
+	if raw, found := object["last_email"]; found {
+		err = json.Unmarshal(raw, &a.LastEmail)
+		if err != nil {
+			return fmt.Errorf("error reading 'last_email': %w", err)
+		}
+		delete(object, "last_email")
+	}
+
 	if raw, found := object["lost_reason"]; found {
 		err = json.Unmarshal(raw, &a.LostReason)
 		if err != nil {
@@ -50711,6 +50750,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["last_activity_at"], err = json.Marshal(a.LastActivityAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_activity_at': %w", err)
+		}
+	}
+
+	if a.LastEmail != nil {
+		object["last_email"], err = json.Marshal(a.LastEmail)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'last_email': %w", err)
 		}
 	}
 

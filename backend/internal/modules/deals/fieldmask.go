@@ -86,10 +86,24 @@ func (w withheldFields) applyTo(d *crmcontracts.Deal) {
 	}
 }
 
-// maskDealForCaller applies the read masks to ONE row about to leave the store.
-func maskDealForCaller(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (crmcontracts.Deal, error) {
+// finishDealPage is what every page of deals goes through before it leaves the
+// store, the one-row page of a single read included: the read masks, and the
+// newest email each card dates. One spelling, because the list, the
+// transaction-scoped list and the single read each used to compose the passes
+// by hand, and a pass added to one of them was a fact the other two stopped
+// stating.
+func finishDealPage(ctx context.Context, tx pgx.Tx, page []crmcontracts.Deal) error {
+	if err := maskDeals(ctx, tx, page); err != nil {
+		return err
+	}
+	return attachLastEmail(ctx, tx, page)
+}
+
+// finishDealForCaller is finishDealPage over ONE row about to leave the store
+// — a single read, or the echo of a write, which is a read too.
+func finishDealForCaller(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (crmcontracts.Deal, error) {
 	one := []crmcontracts.Deal{d}
-	if err := maskDeals(ctx, tx, one); err != nil {
+	if err := finishDealPage(ctx, tx, one); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	return one[0], nil
