@@ -87,9 +87,14 @@ it("does not claim an empty agenda when a source failed", () => {
   day.sources_unavailable = [
     { source: "task", reason: "failed", category: "tasks" },
   ];
-  render(<BriefFeed day={day} state="ready" />);
+  const { container } = render(<BriefFeed day={day} state="ready" />);
   expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
-  expect(screen.getByText(en["brief.feed.incomplete"])).toBeTruthy();
+  // The sentence pays the pane's inset, and no empty grid stands under it: a
+  // list of nothing was only its own padding, a blank band under the caption.
+  expect(
+    screen.getByText(en["brief.feed.incomplete"]).closest(".panel-body"),
+  ).not.toBeNull();
+  expect(container.querySelector(".brief-feed-list")).toBeNull();
 });
 
 it("keeps approvals in the agenda and offers their review action", () => {
@@ -106,3 +111,28 @@ it("keeps approvals in the agenda and offers their review action", () => {
     screen.getByRole("button", { name: en["worklist.verb.decide"] }),
   ).toBeTruthy();
 });
+
+it.each([false, true])(
+  "Focus omits personal pin controls (previously pinned: %s)",
+  (pinned) => {
+    stubApi({});
+    const row: ReturnType<typeof taskRow> = {
+      ...taskRow("task", "Call the buyer"),
+      because: pinned ? [{ kind: "pinned" }] : [],
+      above_next: pinned ? { comparator: "pin" } : undefined,
+    };
+    render(<BriefFeed day={readingsDay({}, [row])} state="ready" />);
+    expect(
+      screen.queryByRole("button", {
+        name: en["worklist.verb.pin"],
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: en["worklist.verb.unpin"],
+      }),
+    ).toBeNull();
+    expect(screen.getByText("Call the buyer")).toBeTruthy();
+    expect(screen.queryByText(/you pinned/i)).toBeNull();
+  },
+);

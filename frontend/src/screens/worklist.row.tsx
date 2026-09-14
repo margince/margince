@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Split from the screen because they answer different questions. The screen
-// decides WHAT the page shows — whose day, which cut, which headings. A row
-// decides how one piece of work reads, and that is the half a reader of either
-// question does not need the other for. The line of verbs under it is one more
-// step down, in worklist.rowverbs.tsx.
-
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useRecordZone } from "../app/recordzone";
@@ -64,19 +58,7 @@ import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
 import "./worklist.row.css";
 
-/**
- * A grouped row's named members, each ONCE.
- *
- * The contract asks for "a few members, named, so the group can be checked
- * before it is answered", and a group of eight failures of one automation sends
- * that automation's name eight times: the Worklist's top row read
- * "Post-meeting recap draft · Post-meeting recap draft · Post-meeting recap
- * draft", which tells a reader nothing about the group except that the list
- * repeats.
- *
- * Order is kept — first appearance wins — because the server sends them in the
- * order it thinks matters.
- */
+// Preserve server order while naming each group member once.
 function namedMembers(item: WorklistItem): string[] {
   return [...new Set(item.batch?.sample ?? [])];
 }
@@ -112,6 +94,7 @@ export function WorklistRow({
   position,
   density,
   owner,
+  allowPin = true,
   selected,
   onSelect,
   onReview,
@@ -123,6 +106,8 @@ export function WorklistRow({
   // queue is the reader — ReassignControl resolves that rather than this
   // prop carrying it, so an empty value is a real state and not a missing one.
   owner: string;
+  /** Personal ordering is available on the queue, not the Focus projection. */
+  allowPin?: boolean;
   // Whether the pane beside the queue is about this row.
   //
   // BOTH CALLBACKS ARE OPTIONAL, because one surface has no pane. The Brief
@@ -175,6 +160,7 @@ export function WorklistRow({
   // hour a rep is racing, and "due today" underneath it is that clock said
   // again in a coarser register.
   const reasons = phrasedReasons(item, when !== null)
+    .filter((reason) => allowPin || reason.kind !== "pinned")
     .map((reason) => reasonText(reason, t, locale, zone))
     .filter((phrase): phrase is string => phrase !== null);
   // WHERE THE FOLD FALLS, decided once for both densities. Sliced here rather
@@ -183,7 +169,10 @@ export function WorklistRow({
   // ceiling moves.
   const said = reasons.slice(0, REASONS_BEFORE_THE_FOLD);
   const folded = reasons.slice(REASONS_BEFORE_THE_FOLD);
-  const above = comparisonText(item.above_next, t, locale, zone);
+  const above =
+    !allowPin && item.above_next?.comparator === "pin"
+      ? null
+      : comparisonText(item.above_next, t, locale, zone);
   const consequence = consequenceText(item, t);
   // How this row NAMES ITSELF: the canonical email row when there is a message
   // AND somewhere to open it, the title line otherwise. Held as the opener
@@ -299,6 +288,7 @@ export function WorklistRow({
             keeps one x down the whole queue. worklist.rowverbs.tsx states why
             it is the tail of the line rather than its head. */}
         <RowActs
+          allowPin={allowPin}
           onOpenEmail={onOpenEmail}
           item={item}
           href={href}

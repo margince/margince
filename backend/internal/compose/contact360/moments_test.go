@@ -325,6 +325,25 @@ func TestAWithheldSectionDoesNotProduceAThinRelationshipClaim(t *testing.T) {
 	}
 }
 
+func TestAnEmptyRelationshipDoesNotInventEvidence(t *testing.T) {
+	page := &crmcontracts.Contact360{
+		Activities: timelineOf(),
+		Network: &struct {
+			Colleagues []crmcontracts.ContactNetworkColleague `json:"colleagues"`
+		}{Colleagues: []crmcontracts.ContactNetworkColleague{}},
+	}
+	got := deriveMoment(readerCtx(), now, page)
+	if got.Rule != crmcontracts.ContactMomentRuleThinRelationship || got.Headline != "No interactions recorded" {
+		t.Fatalf("empty relationship: %+v", got)
+	}
+	if len(got.Evidence) != 0 {
+		t.Fatalf("an empty read manufactured a source: %+v", got.Evidence)
+	}
+	if got.WhyNow != "No interactions or colleague connections were found in the records available to you." {
+		t.Fatalf("absence claim lost its scope: %s", got.WhyNow)
+	}
+}
+
 // The dismissal is held against the evidence, so it lifts when the evidence
 // moves. A fingerprint that ignored the evidence would silence the page about
 // the very thing that just changed.

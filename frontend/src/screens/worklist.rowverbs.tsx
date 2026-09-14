@@ -51,6 +51,7 @@ export function RowActs({
   href,
   density,
   owner,
+  allowPin = true,
   primary,
   equals,
   onReview,
@@ -67,6 +68,7 @@ export function RowActs({
   density?: "compact";
   /** Whose queue this row is on — `ReassignControl` resolves an empty one. */
   owner: string;
+  allowPin?: boolean;
   /** The lane's one call to action, drawn last and nearest the reader's thumb. */
   primary?: ReactNode;
   /**
@@ -96,7 +98,7 @@ export function RowActs({
       {/* The reader's own override, on every row that can carry one. It is not
           a disposition — those put a row DOWN and this lifts one up — so it
           stands before them rather than among them. */}
-      <PinVerb item={item} />
+      {allowPin && <PinVerb item={item} />}
       {/* Only a task carries an assignee, so only a task can be handed on. A
           group row stands for a pile and names no single activity to move.
 

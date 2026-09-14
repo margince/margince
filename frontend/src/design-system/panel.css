@@ -214,6 +214,34 @@
   padding: var(--padPanel);
 }
 
+/* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
+ * summary is one line among `PanelRow`s and pays the row's own interval and the
+ * pane's gutter, and its body is whatever rows or bodies the caller put there,
+ * each already paying its own. The atom ships free-standing — a hairline over
+ * itself, its own top interval, air under it for whatever follows — because
+ * that is what a fold in a column of prose needs, and in a panel every one of
+ * those is paid twice: under the head, the hairline doubled the band's own
+ * rule and the caret sat hard against the card's edge, a gutter left of the
+ * text it opens. Three rails had each written this correction in their own
+ * sheet; it is the panel's to make once. `:where` on the summary keeps a rail
+ * that shapes its own (a heading, a badge pushed to the far end) ahead of this
+ * by specificity rather than by sheet order; the body's rule is spelt plainly
+ * because `disclosure-inset.test.ts` reads the combinator, and every rail's
+ * own body rule agrees with it. */
+.panel > .disclosure {
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.panel-head + .disclosure {
+  border-top: 0;
+}
+.panel > .disclosure > :where(.disclosure-summary) {
+  padding: var(--space-3) var(--padPanel);
+}
+.panel > .disclosure > .disclosure-body {
+  margin-top: 0;
+}
+
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
  * followed by a level-3 heading measured 45px from line to text on the

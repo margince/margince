@@ -327,7 +327,10 @@ func monthOrDate(value string) string {
 	}
 	for _, layout := range []string{"2006-01", time.RFC3339, "2006-01-02"} {
 		if parsed, err := time.Parse(layout, value); err == nil {
-			return parsed.Format("2006-01")
+			if layout == "2006-01" {
+				return parsed.Format("2006-01")
+			}
+			return parsed.Format(time.DateOnly)
 		}
 	}
 	return ""

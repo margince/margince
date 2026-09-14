@@ -205,7 +205,10 @@ function mount(view: Contact360) {
       if (method === "GET" && url.pathname.endsWith("/relationships")) {
         return json({
           data: (view.employments?.data ?? []).map((employment) => ({
+            ...employment,
             id: employment.relationship_id,
+            started_at: employment.started_at?.slice(0, 10),
+            ended_at: employment.ended_at?.slice(0, 10),
             version: 3,
           })),
           page,
@@ -331,16 +334,26 @@ describe("the relationship pulse", () => {
     expect(railReading("Coverage")).toBe("1 colleague");
   });
 
-  it("states the negative verdicts for a contact who genuinely never wrote", () => {
-    mount(emptyButGranted);
+  it("does not turn absent directional timestamps into a claim that colleagues never exchanged messages", () => {
+    mount({ ...emptyButGranted, network: granted.network });
+    expect(railReading("Direction")).toBe("No direction recorded");
+    expect(railReading("Coverage")).toBe("1 colleague");
+  });
 
-    // These four words are the ones the withheld case must NOT borrow. They
-    // are true here and only here: the sections came back, and they are empty.
-    expect(railReading("Direction")).toBe("One-sided");
-    expect(railReading("Last reply")).toBe("Never");
-    expect(railReading("Trend")).toBe("No inbound");
-    expect(railReading("Overall")).toBe("Thin");
-    expect(railReading("Coverage")).toBe("0 colleagues");
+  it("does not infer a relationship pulse from zero exchanges", () => {
+    mount(emptyButGranted);
+    expect(
+      screen.queryByRole("heading", { name: "Relationship pulse" }),
+    ).toBeNull();
+    expect(screen.queryByText("One-sided")).toBeNull();
+  });
+
+  it.each([
+    [{ last_inbound_at: daysAgo(3) }, "Inbound only"],
+    [{ last_outbound_at: daysAgo(3) }, "Outbound only"],
+  ])("names the recorded direction separately", (touch, label) => {
+    mount({ ...emptyButGranted, ...touch });
+    expect(railReading("Direction")).toBe(label);
   });
 
   // One case per reading rather than four assertions in one test: each is a
@@ -381,14 +394,11 @@ describe("the relationship pulse", () => {
 });
 
 describe("signals and risks", () => {
-  it("says nothing stands out only when every rule could run", () => {
+  it("omits an empty signals panel", () => {
     mount(emptyButGranted);
-
     expect(
-      within(section("Signals & risks")).getByText(
-        "Nothing stands out on this relationship.",
-      ),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { name: "Signals & risks" }),
+    ).toBeNull();
   });
 
   it("says the signals are withheld rather than that nothing stands out", () => {
@@ -480,70 +490,16 @@ describe("signals and risks", () => {
   });
 });
 
-describe("recent activity", () => {
-  it("says nothing was captured when the timeline came back empty", () => {
-    mount(emptyButGranted);
-
-    expect(
-      within(section("Recent activity")).getByText("Nothing captured yet."),
-    ).toBeTruthy();
-  });
-
-  // A withheld email in the rail is CITED, and the citation says nothing. The
-  // rail draws its own rows rather than going through the timeline, so it owns
-  // this promise separately — and the section-level withholding test below
-  // covers a different case: the whole list refused, not one row in it.
-  it("cites a withheld email without naming it, and does not open it", () => {
-    mount({
-      ...emptyButGranted,
-      activities: {
-        data: [
-          {
-            id: "a-withheld",
-            kind: "email",
-            subject: "Angebot Q4",
-            occurred_at: "2026-08-30T09:12:00Z",
-            content_state: "withheld",
-            source: "capture",
-            captured_by: "connector:gmail:u1",
-            created_at: "2026-08-30T09:12:00Z",
-            updated_at: "2026-08-30T09:12:00Z",
-            is_done: false,
-          },
-        ],
-        page,
-      },
-    } as Contact360);
-
-    const recent = section("Recent activity");
-    expect(within(recent).queryByText("Angebot Q4")).toBeNull();
-    expect(within(recent).getByText("Not shared with you")).toBeTruthy();
-    // Nothing to open ON THE CITATION: a control that leads to a message the
-    // reader may not read teaches them the product does not work. The panel's
-    // own "View all activity" is a different affordance and stays.
-    expect(
-      within(recent).queryByRole("button", { name: /Not shared with you/ }),
-    ).toBeNull();
-  });
-
-  it("says the timeline is withheld rather than empty", () => {
-    mount(withheld);
-
-    // `view.activities?.data ?? []` is the shape this pins: the default
-    // silently converts "you may not see this" into "there is none", and the
-    // two are the same empty section on screen.
-    const activity = section("Recent activity");
-    expect(within(activity).getByText(WITHHELD_SENTENCE)).toBeTruthy();
-    expect(within(activity).queryByText("Nothing captured yet.")).toBeNull();
-  });
-
-  it("still lists the rows a reader may see", () => {
-    mount(granted);
-
-    const activity = section("Recent activity");
-    expect(within(activity).getByText("Re: retrofit timeline")).toBeTruthy();
-    expect(within(activity).queryByText(WITHHELD_SENTENCE)).toBeNull();
-  });
+describe("the rail leaves conversation history in the overview and Timeline", () => {
+  it.each([emptyButGranted, withheld, granted])(
+    "does not duplicate recent activity",
+    (view) => {
+      mount(view);
+      expect(
+        screen.queryByRole("heading", { name: "Recent activity" }),
+      ).toBeNull();
+    },
+  );
 });
 
 describe("the sibling sections governed by their own grants", () => {
@@ -557,14 +513,11 @@ describe("the sibling sections governed by their own grants", () => {
     ).toBeNull();
   });
 
-  it("says nobody has corresponded when the network came back empty", () => {
+  it("omits an empty colleague panel", () => {
     mount(emptyButGranted);
-
     expect(
-      within(section("Who knows Dana")).getByText(
-        "Nobody here has corresponded with them yet.",
-      ),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { name: "Who knows Dana" }),
+    ).toBeNull();
   });
 
   it("says the employments are withheld rather than that there are none", () => {
