@@ -297,6 +297,25 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 		return commsauthz.Decision{}, err
 	}
 	d = applySuppression(d, kinds)
+	// A STANDING OVERRIDE OUTRANKS ONLY A MACHINE, NEVER A SUBJECT.
+	//
+	// Reached AFTER applySuppression and AFTER the absolute early-exit above, and
+	// that ordering is the whole correctness argument: a hard bounce or an
+	// unresolvable recipient returned at the early exit and never reaches this
+	// line, and a subject's own act (an objection, a restriction, a withdrawal, a
+	// request to stop) either took the early exit or was just applied by
+	// applySuppression and so already carries a reason CanBeOverruled refuses.
+	// Only a bare machine reading — no evidence, no purpose, an unknown key —
+	// can still be sitting in d here.
+	if d.CanBeOverruled() {
+		id, ok, err := liveOverride(ctx, tx, contactID, d.Resolved)
+		if err != nil {
+			return d, err
+		}
+		if ok {
+			d = d.AllowedByOverride(id)
+		}
+	}
 	return d, nil
 }
 
