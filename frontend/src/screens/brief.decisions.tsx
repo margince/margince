@@ -138,7 +138,7 @@ function deckLabels(
 
 // How many decisions the line-per-row list draws before it hands over to the
 // approvals lane. Three is what fits above the day's own work without becoming
-// the page: this is the block that says what is blocked ON somebody, and the
+// the page: this is the block that says what is WAITING on somebody, and the
 // morning underneath it is what they can get on with.
 const LISTED = 3;
 

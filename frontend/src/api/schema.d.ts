@@ -35004,7 +35004,7 @@ export interface components {
              *
              *     Only rows carrying a verb the reader may press. A duplicate pair whose two
              *     records the reader cannot both write is somebody else's decision, and
-             *     counting it here tells them a contact is blocked on an answer they are not
+             *     counting it here tells them a contact is waiting on an answer they are not
              *     able to give.
              */
             review: number;
