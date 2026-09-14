@@ -47,7 +47,7 @@ const anna: components["schemas"]["Contact"] = {
   created_at: "2026-06-01T00:00:00Z",
   updated_at: "2026-06-01T00:00:00Z",
 };
-function PersonEditor() {
+function ContactEditor() {
   const cf = useObjectCustomFields("contact");
   return <ContactEditMergeArchive contact={anna} cf={cf} overlay={false} />;
 }
@@ -169,7 +169,7 @@ it("saves Customer tier when a background logo update changed the company versio
   });
 });
 
-it("saves a person's title across an unrelated update without resending their email list", async () => {
+it("saves a contact's title across an unrelated update without resending their email list", async () => {
   let current = anna;
   const patches: { body: unknown; version: string | null }[] = [];
   stubFetch(async (url, method, request) => {
@@ -185,7 +185,7 @@ it("saves a person's title across an unrelated update without resending their em
     if (url.includes("/activities")) return jsonResponse({ data: [] });
     return jsonResponse(current);
   });
-  render(<PersonEditor />);
+  render(<ContactEditor />);
   fireEvent.click(screen.getByTestId("edit-record"));
   fireEvent.change(await screen.findByLabelText("Title"), {
     target: { value: "New title" },

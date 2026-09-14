@@ -1,6 +1,6 @@
 # Editing records while other work is running
 
-The main **Edit** forms for companies, people (contacts), and deals allow
+The main **Edit** forms for companies, contacts, and deals allow
 independent changes to the same record. For example, setting a company's
 Customer tier still saves if website research refreshes its logo in the meantime.
 No installation setting or database migration is required.
@@ -14,7 +14,7 @@ Email, phone, domain, and relationship-type lists are each treated as one
 field because their endpoints replace the complete list. Address and social
 object members are compared separately, with untouched members preserved.
 Values that depend on each other are checked together: a deal's currency and
-money figures, partner and attribution, and company and project; a person's
+money figures, partner and attribution, and company and project; a contact's
 full name and name parts.
 
 ## Shared implementation
@@ -36,7 +36,7 @@ are never automatically retried. Fields that become masked are not rebased.
 Other API clients retain the existing whole-record version behavior; this is
 the main edit forms' shared recovery, not a change to the API's concurrency contract.
 
-The helper's race tests and actual company/person/deal form tests run in the
+The helper's race tests and actual company/contact/deal form tests run in the
 standard `make check` frontend suite. They cover separate fields, overlapping
 edits, clears, nested objects, replace-sets, monetary dependencies, and another
 writer arriving during recovery.
