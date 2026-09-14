@@ -27,6 +27,10 @@ func (h Handlers) ListUserSessions(w http.ResponseWriter, r *http.Request, id cr
 		httperr.Write(w, r, err)
 		return
 	}
+	// Identity-specific device metadata at a stable GET URL: the global
+	// no-store middleware covers only credential paths, so this list opts out
+	// of shared caches itself.
+	w.Header().Set("Cache-Control", "private, no-store")
 	httperr.WriteJSON(w, http.StatusOK, userSessionList(sessions))
 }
 

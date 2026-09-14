@@ -6,7 +6,7 @@ package identity
 // Enforced-SSO mode: an installation may switch the password path off so its
 // members sign in only through their corporate directory. Admins keep the
 // password path — the break-glass that stops a broken IdP from locking out the
-// people who fix it. The policy is read at login; the gate lives in Login,
+// admins who fix it. The policy is read at login; the gate lives in Login,
 // after the credential check, so enforcement never answers a wrong password
 // differently and becomes a password oracle.
 

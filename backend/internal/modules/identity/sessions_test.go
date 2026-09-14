@@ -19,7 +19,7 @@ func TestReadSeatMayEndItsOwnSession(t *testing.T) {
 	}
 
 	// The exemption is for the item revoke, not a licence to write elsewhere.
-	business := httptest.NewRequest(http.MethodDelete, "/v1/people/8d1b3a3e-0000-7000-8000-000000000000", nil)
+	business := httptest.NewRequest(http.MethodDelete, "/v1/contacts/8d1b3a3e-0000-7000-8000-000000000000", nil)
 	if readSeatMayMutate(business) {
 		t.Error("the read-seat exemption admits a business delete — it is wider than session self-management")
 	}

@@ -21,7 +21,7 @@ func TestMFAEnrolRoutesAreTheOnlyEscapeFromConfinement(t *testing.T) {
 		// inside the confinement.
 		{http.MethodDelete, "/v1/me/mfa", false},
 		// A business route stays confined.
-		{http.MethodGet, "/v1/people", false},
+		{http.MethodGet, "/v1/contacts", false},
 	}
 	for _, c := range cases {
 		got := isMFAEnrolRequest(httptest.NewRequest(c.method, c.path, nil))

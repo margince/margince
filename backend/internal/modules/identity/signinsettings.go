@@ -11,6 +11,7 @@ package identity
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
@@ -63,7 +64,9 @@ var EnabledOidcProviders = settings.Define[[]string](
 			return fmt.Errorf("at most %d providers may be listed, not %d", maxEnabledOidcProviders, len(keys))
 		}
 		for _, key := range keys {
-			if len(key) > maxProviderKeyLen {
+			// Runes, not bytes: the contract's maxLength counts characters, and
+			// the two limits must refuse the same values.
+			if utf8.RuneCountInString(key) > maxProviderKeyLen {
 				return fmt.Errorf("a provider key is at most %d characters", maxProviderKeyLen)
 			}
 			if strings.TrimSpace(key) == "" {
@@ -84,7 +87,7 @@ var EnabledOidcProviders = settings.Define[[]string](
 
 // RequireSSO closes the password path: when true, an ordinary member may sign
 // in only through a configured provider, and only an admin keeps the password
-// form — the break-glass that stops a broken IdP from locking out the people
+// form — the break-glass that stops a broken IdP from locking out the admins
 // who fix it (ssoenforcement.go holds the enforcement).
 //
 // Defined on installation_settings/update like EnabledOidcProviders, and read

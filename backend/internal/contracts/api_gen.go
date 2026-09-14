@@ -21003,7 +21003,7 @@ type AuthenticationPolicy struct {
 
 	// RequireSso When true, this installation has closed the password path: an ordinary member
 	// may sign in only through a configured provider. Admins keep the password form
-	// regardless — the break-glass that stops a broken IdP from locking out the people
+	// regardless — the break-glass that stops a broken IdP from locking out the admins
 	// who fix it. Password is still never removed as a mechanism; this decides who may
 	// use it, not whether it exists.
 	RequireSso bool `json:"require_sso"`

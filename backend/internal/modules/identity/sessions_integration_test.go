@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -43,19 +44,26 @@ func (e *revocationEnv) signIn(t *testing.T, userAgent string) string {
 }
 
 // asMember and asAdmin present the context admission would build for that human:
-// the installation's workspace bound, and that person as the acting principal —
+// the installation's workspace bound, and that member as the acting principal —
 // which is where the self-scoped session calls read the caller from.
 func (e *revocationEnv) asMember() context.Context {
 	return withHumanPrincipal(e.wsOnlyCtx(), e.member)
 }
 func (e *revocationEnv) asAdmin() context.Context { return withHumanPrincipal(e.wsOnlyCtx(), e.admin) }
 
-func TestListSessionsReturnsLiveSessionsMarkingTheCurrentOne(t *testing.T) {
+func TestListSessionsReturnsNewestActivityFirstMarkingTheCurrentOne(t *testing.T) {
 	e := setupRevocationEnv(t, "sessions-list")
 	ctx := e.asMember()
 
 	current := e.signIn(t, "Mozilla/5.0 (current device)")
-	e.signIn(t, "Mozilla/5.0 (other device)")
+	other := e.signIn(t, "Mozilla/5.0 (other device)")
+
+	// The list promises newest ACTIVITY first, not newest sign-in: the session
+	// opened first is pinned as the more recently active, so a list that in
+	// fact ordered by creation could not pass by coincidence.
+	base := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	e.setLastSeen(t, current, base.Add(time.Minute))
+	e.setLastSeen(t, other, base)
 
 	sessions, err := e.svc.ListSessions(ctx, hashToken(current))
 	if err != nil {
@@ -65,24 +73,41 @@ func TestListSessionsReturnsLiveSessionsMarkingTheCurrentOne(t *testing.T) {
 		t.Fatalf("session count = %d, want 2", len(sessions))
 	}
 
-	var currentCount int
-	for _, s := range sessions {
-		if s.SignedInAt.IsZero() || s.LastActiveAt.IsZero() {
-			t.Errorf("session %s: timestamps must be populated, got signed_in=%v last_active=%v",
-				s.ID, s.SignedInAt, s.LastActiveAt)
-		}
-		if s.UserAgent == nil {
-			t.Errorf("session %s: user-agent captured at login must be reported", s.ID)
-		}
-		if s.Current {
-			currentCount++
-			if s.UserAgent == nil || *s.UserAgent != "Mozilla/5.0 (current device)" {
-				t.Errorf("current session carries the wrong device: %v", s.UserAgent)
-			}
-		}
+	// The complete sequence, by position: most recently active first.
+	first, second := sessions[0], sessions[1]
+	if first.ID == second.ID {
+		t.Fatalf("the two logins must be distinct sessions, both %s", first.ID)
 	}
-	if currentCount != 1 {
-		t.Errorf("exactly one session must be marked current, got %d", currentCount)
+	if first.UserAgent == nil || *first.UserAgent != "Mozilla/5.0 (current device)" {
+		t.Errorf("sessions[0] must be the most recently active (current device), got %v", first.UserAgent)
+	}
+	if second.UserAgent == nil || *second.UserAgent != "Mozilla/5.0 (other device)" {
+		t.Errorf("sessions[1] must be the least recently active (other device), got %v", second.UserAgent)
+	}
+	if !first.LastActiveAt.Equal(base.Add(time.Minute)) || !second.LastActiveAt.Equal(base) {
+		t.Errorf("last_active_at must report the pinned instants, got %v and %v",
+			first.LastActiveAt, second.LastActiveAt)
+	}
+	if first.SignedInAt.IsZero() || second.SignedInAt.IsZero() {
+		t.Errorf("signed_in_at must be populated, got %v and %v", first.SignedInAt, second.SignedInAt)
+	}
+	if !first.Current || second.Current {
+		t.Errorf("only the request's own session is current, got %v and %v", first.Current, second.Current)
+	}
+}
+
+// setLastSeen pins a session's activity instant directly on its row, named by
+// the token it was opened with, so an ordering assertion rests on values the
+// test chose rather than on how quickly two logins ran.
+func (e *revocationEnv) setLastSeen(t *testing.T, token string, at time.Time) {
+	t.Helper()
+	tag, err := e.owner.Exec(context.Background(),
+		`UPDATE session SET last_seen_at = $1 WHERE token_hash = $2`, at, hashToken(token))
+	if err != nil {
+		t.Fatalf("pin last_seen_at: %v", err)
+	}
+	if tag.RowsAffected() != 1 {
+		t.Fatalf("pin last_seen_at: %d rows updated, want 1", tag.RowsAffected())
 	}
 }
 
@@ -269,9 +294,10 @@ func TestChangePasswordSessionRecordsItsDevice(t *testing.T) {
 	}
 }
 
-// idOf finds the session opened under the given user-agent. A test that wants to
-// act on a specific session names it by the device it recorded, rather than
-// assuming an order the query never promised.
+// idOf finds the session opened under the given user-agent. The list does
+// promise newest-activity-first, but two back-to-back logins can share an
+// activity instant — so a test that has not pinned last_seen_at names a
+// session by its device rather than by position.
 func idOf(t *testing.T, sessions []MySession, userAgent string) ids.UUID {
 	t.Helper()
 	for _, s := range sessions {

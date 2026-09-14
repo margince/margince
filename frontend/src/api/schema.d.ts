@@ -11266,7 +11266,7 @@ export interface paths {
         /**
          * End one of a member's sessions. Admin-only, human-only.
          * @description For a `user_admin` holder: ends one session open under another member's account — the
-         *     administrative counterpart to a person signing their own device out. A session id the
+         *     administrative counterpart to a member signing their own device out. A session id the
          *     member does not hold is answered 404, never 403, so an admin cannot probe ids by whose
          *     revoke lands; a delegated admin may not end a full admin's session (403); an unknown
          *     member is 404. Ending an already-ended session is a no-op. The action is audited naming
@@ -14514,7 +14514,7 @@ export interface paths {
         /**
          * The sessions open under your account.
          * @description Always the CALLER's own. Each entry names the device the session was
-         *     opened from and when, and marks the one making this request, so a person
+         *     opened from and when, and marks the one making this request, so a member
          *     can recognise a session they do not know and end it. The opaque token is
          *     never returned — a session is named here by its own id, which is the
          *     handle `DELETE` takes. The address a session was opened from is
@@ -14545,7 +14545,7 @@ export interface paths {
         /**
          * End one of your sessions.
          * @description Ends the caller's own session named by its id — including the session
-         *     making the request, which is how a person signs THIS device out by
+         *     making the request, which is how a member signs THIS device out by
          *     choosing it from the list. A session id that is not the caller's is
          *     answered 404, never 403: whose revoke succeeds must not disclose whether
          *     a session exists. Ending an already-ended session is a no-op, not an
@@ -16710,7 +16710,7 @@ export interface components {
             /**
              * @description When true, this installation has closed the password path: an ordinary member
              *     may sign in only through a configured provider. Admins keep the password form
-             *     regardless — the break-glass that stops a broken IdP from locking out the people
+             *     regardless — the break-glass that stops a broken IdP from locking out the admins
              *     who fix it. Password is still never removed as a mechanism; this decides who may
              *     use it, not whether it exists.
              */
@@ -58318,6 +58318,7 @@ export interface operations {
             /** @description The pending enrolment's secret and provisioning URI. Returned once. */
             200: {
                 headers: {
+                    "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -58352,6 +58353,7 @@ export interface operations {
             /** @description The factor is active; the one-time recovery codes, shown once. */
             200: {
                 headers: {
+                    "Cache-Control"?: "no-store";
                     [name: string]: unknown;
                 };
                 content: {

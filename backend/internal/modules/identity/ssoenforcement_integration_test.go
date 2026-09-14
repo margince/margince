@@ -7,7 +7,7 @@ package identity
 
 // Enforced-SSO mode: when an installation requires single sign-on, the password
 // path is closed to ordinary members but stays open to admins — the break-glass
-// that keeps a broken IdP from locking out the people who fix it. A wrong
+// that keeps a broken IdP from locking out the admins who fix it. A wrong
 // password is still refused first and neutrally, so enforcement never becomes a
 // password oracle.
 

@@ -28,6 +28,8 @@ var tableOwners = map[string]string{
 	"role":               "internal/modules/identity",
 	"role_assignment":    "internal/modules/identity",
 	"federated_identity": "internal/modules/identity",
+	"user_mfa":           "internal/modules/identity",
+	"mfa_recovery_code":  "internal/modules/identity",
 	// The columns a role reads as withheld; written by administration, read
 	// by the grant loader into the principal.
 	"field_mask":               "internal/modules/identity",
