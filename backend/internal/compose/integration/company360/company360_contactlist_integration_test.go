@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The whole account pages, and the ranking survives the page boundary.
@@ -296,5 +297,91 @@ func TestContactPageSortsEachColumnBothWays(t *testing.T) {
 	if len(ascending.Data) != len(descending.Data) {
 		t.Fatalf("the two directions returned %d and %d contacts",
 			len(ascending.Data), len(descending.Data))
+	}
+}
+
+// The intro draft names the contact it is written about — that is the whole
+// point of the letter — and it asked only that the caller be human.
+//
+// It was the one of the six identity surfaces with no contact grant anywhere on
+// its path. The roster, the coverage read and the role proposals all reach
+// contacts.StrengthForCompanyContacts, which asks the grant; the assembled 360
+// section asks auth.Require directly. This one asked neither, and it is the
+// surface that spends the workspace's model budget writing prose about whoever
+// it names.
+//
+// The seat below holds every OTHER grant the path needs — company for the
+// account read, activity for the route ranking, custom_field for the catalog —
+// so what it is missing is the contact grant and nothing else. Getting that
+// fixture wrong is how this test first passed for the wrong reason: with the
+// activity grant absent, introRoute refused first and the assertion never
+// reached the identity read.
+//
+// The lane is nil deliberately: the refusal has to come before a model is
+// called, so a nil Completer here is an assertion rather than an omission — if
+// the gate moved below the draft, this panics instead of passing.
+func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	contact := e.SeedContact(t, "Ana Roth", nil)
+	employ(t, e, contact, company, "Fleet")
+
+	noContacts := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"company": {Read: true}, "relationship": {Read: true},
+			"custom_field": {Read: true}, "computed_field": {Read: true},
+			"activity": {Read: true}, "installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	_, err := svc.IntroRequestDraft(noContacts, nil, ids.CompanyID{UUID: company},
+		company360svc.IntroRequest{
+			ContactID: ids.From[ids.ContactKind](contact),
+			ViaUserID: ids.From[ids.UserKind](e.Rep2),
+		})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("the intro draft answered %v for a seat with no contact grant, want "+
+			"ErrPermissionDenied — without the gate this reaches contactIdentity and the "+
+			"draft is written from the contact's name, title and email", err)
+	}
+}
+
+// The positive control: a seat that HOLDS the contact grant gets past the
+// identity read, and fails later and differently — on the route, because this
+// fixture's colleague has never corresponded with the contact.
+//
+// Asserting the error is not-found rather than asserting a draft comes back:
+// the draft needs a model lane, and what this has to hold is that the gate
+// above admits a granted caller rather than refusing everyone.
+func TestTheIntroDraftAdmitsASeatHoldingTheContactGrant(t *testing.T) {
+	e := integration.Setup(t)
+	svc := company360Service(e)
+	company := e.SeedCompany(t, "Brandt GmbH", nil)
+	contact := e.SeedContact(t, "Ana Roth", nil)
+	employ(t, e, contact, company, "Fleet")
+
+	granted := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"company": {Read: true}, "contact": {Read: true},
+			"relationship": {Read: true}, "activity": {Read: true},
+			"custom_field": {Read: true}, "computed_field": {Read: true},
+			"installation_settings": {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	_, err := svc.IntroRequestDraft(granted, nil, ids.CompanyID{UUID: company},
+		company360svc.IntroRequest{
+			ContactID: ids.From[ids.ContactKind](contact),
+			ViaUserID: ids.From[ids.UserKind](e.Rep2),
+		})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a seat holding the contact grant was refused: %v", err)
+	}
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("intro draft = %v, want not-found from the route lookup — if this is nil the "+
+			"fixture grew a route and the assertion should become a draft", err)
 	}
 }
