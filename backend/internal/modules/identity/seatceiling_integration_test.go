@@ -42,7 +42,7 @@ func licenseFor(t *testing.T, e *revocationEnv, ceiling SeatCeiling) {
 // agree with a predicate the product does not have.
 //
 // The workspace predicate is the test's own, and the product needs none: an
-// installation serves exactly one organization, so every full seat in the
+// installation serves exactly one company, so every full seat in the
 // database is one of its seats. This suite seeds a workspace per environment
 // into a database that holds every other suite's, which is the one place that
 // assumption does not hold.
@@ -207,6 +207,40 @@ func TestSeatCeilingDoesNotHoldAReadSeatToTheFullSeatGrant(t *testing.T) {
 
 	if err := e.svc.ReactivateUser(e.wsCtx(e.admin), e.admin, e.member.UserID); err != nil {
 		t.Errorf("reactivating a read seat against a full full-seat grant: %v", err)
+	}
+}
+
+// An agent identity is not a Seat, so it is neither metered nor allowed to spend
+// somebody's licensed seat.
+//
+// LICENSE is the authority: a Seat is "a single, identified natural contact", and
+// an automated agent acting under the authority of a counted Seat explicitly is
+// not one. A meter that counted them would cap an installation for something its
+// licence gives away — and the way a customer meets that is not the number on
+// the entitlement screen, it is being refused the last contact they are entitled
+// to, which is what the second half asserts.
+func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
+	e := setupRevocationEnv(t, "seat-ceiling-agent")
+	before := seatsInUse(t, e)
+
+	seedAgentIdentity(t, e.owner, "runner-"+e.slug+"@seatceiling.test")
+
+	if got := seatsInUse(t, e); got != before {
+		t.Fatalf("seats in use went %d → %d when an agent identity landed; want it unchanged — "+
+			"LICENSE says an agent is not a Seat, and this meter is what that document is read against",
+			before, got)
+	}
+	// The agent row is really there, so the assertion above is about the
+	// predicate rather than about an insert that silently did nothing.
+	if agents := readAgentSeats(t, e.owner); len(agents) != 1 {
+		t.Fatalf("found %d agent identities, want the 1 just seeded — the count above proved nothing", len(agents))
+	}
+
+	// And the seat it does not take is still there to give away. This is the
+	// harm: an installation licensed for its contacts gets refused one of them.
+	licenseFor(t, e, licensedSeats(before+1))
+	if err := inviteOneMore(t, e, "the-contact-the-agent-displaced"); err != nil {
+		t.Errorf("inviting into a licensed seat alongside an agent: %v — the agent spent a seat the licence did not sell", err)
 	}
 }
 

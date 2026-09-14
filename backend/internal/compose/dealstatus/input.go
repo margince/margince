@@ -27,7 +27,7 @@ import (
 // are rendered into, which is Go code and so the half a digest cannot reach. It
 // rides the fingerprint so a card built from the old shape is rewritten rather
 // than served forever.
-const projectionVersion = "deal-status-projection-4"
+const projectionVersion = "deal-status-projection-6"
 
 // promptVersion is DERIVED from the prompt as it is SENT — boundary rule
 // included — so rewording it rewrites the cards whether or not anybody
@@ -74,6 +74,16 @@ func project(f facts, move crmcontracts.DealStatusCardMove) StatusInput {
 	in.Room = roomIn(f)
 	if inbound, ok := unansweredInbound(f); ok {
 		in.ReplyTo = inbound.Id.String()
+		found := false
+		for _, row := range in.Timeline {
+			found = found || row.ID == in.ReplyTo
+		}
+		if !found {
+			if len(in.Timeline) >= maxTimelineRows {
+				in.Timeline = in.Timeline[:maxTimelineRows-1]
+			}
+			in.Timeline = append(in.Timeline, actIn(inbound, f.now))
+		}
 	}
 	return in
 }

@@ -70,7 +70,7 @@
 .surfacestate-stale {
   margin-bottom: var(--space-2);
   font-size: var(--fs-sm);
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* A surface holding two independently-governed parts labels each one, so a

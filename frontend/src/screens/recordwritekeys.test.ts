@@ -20,10 +20,10 @@ describe("recordWriteKeys", () => {
   it("names every sibling read of a contact, not one of the three", () => {
     // The three are siblings under no common prefix, so invalidating one
     // leaves the other two painting the state the reader just changed.
-    expect(recordWriteKeys("person", "p-1")).toEqual([
-      ["person", "p-1"],
-      ["person360", "p-1"],
-      ["personBrief", "p-1"],
+    expect(recordWriteKeys("contact", "p-1")).toEqual([
+      ["contact", "p-1"],
+      ["contact360", "p-1"],
+      ["contactBrief", "p-1"],
     ]);
   });
 

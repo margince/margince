@@ -6,10 +6,10 @@
 package gates
 
 // The Art. 7(1) demonstrability invariant as a fitness function: every
-// write that sets a person_consent STATE appends a consent_event proof
+// write that sets a contact_consent STATE appends a consent_event proof
 // row in the same function (data-model §3.4 — the current state is
 // always backed by an append-only event saying when, how, and by whom).
-// Subject repoints (SET person_id, the merge/promotion carry-through)
+// Subject repoints (SET contact_id, the merge/promotion carry-through)
 // and row deletions are not state changes and are out of scope by
 // construction. A state write without proof silently voids the
 // workspace's ability to demonstrate consent; this gate keeps any
@@ -32,10 +32,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// consentStateWrite matches an INSERT into person_consent (every insert
+// consentStateWrite matches an INSERT into contact_consent (every insert
 // carries a state, explicit or defaulted) or an UPDATE that sets its
 // state column, inside one SQL string literal.
-var consentStateWrite = regexp.MustCompile(`(?is)(?:INSERT\s+INTO\s+person_consent\b|UPDATE\s+person_consent\b.*\bSET\b[^;]*\bstate\s*=)`)
+var consentStateWrite = regexp.MustCompile(`(?is)(?:INSERT\s+INTO\s+contact_consent\b|UPDATE\s+contact_consent\b.*\bSET\b[^;]*\bstate\s*=)`)
 
 // consentProofInsert witnesses the paired append-only proof row.
 var consentProofInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+consent_event\b`)
@@ -87,7 +87,7 @@ func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
 					if unprovenConsentWrites.Waived(t, key) {
 						continue
 					}
-					t.Errorf("%s: %s writes a person_consent state without appending a consent_event — every state change carries its Art. 7(1) proof (data-model §3.4), or the exception is ratified in unprovenConsentWrites",
+					t.Errorf("%s: %s writes a contact_consent state without appending a consent_event — every state change carries its Art. 7(1) proof (data-model §3.4), or the exception is ratified in unprovenConsentWrites",
 						path, fn.Name.Name)
 				}
 			}

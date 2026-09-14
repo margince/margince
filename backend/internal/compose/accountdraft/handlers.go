@@ -32,7 +32,7 @@ func NewHandlers(svc *Service, overlay OverlayMode) Handlers {
 	return Handlers{svc: svc, overlay: overlay}
 }
 
-// DraftAccountEmail implements POST /organizations/{id}/draft-email.
+// DraftAccountEmail implements POST /companies/{id}/draft-email.
 func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	overlay, err := h.overlay(r.Context())
 	if err != nil {
@@ -57,7 +57,7 @@ func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	draft, err := h.svc.Draft(r.Context(),
-		ids.From[ids.OrganizationKind](ids.UUID(id)), req)
+		ids.From[ids.CompanyKind](ids.UUID(id)), req)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -65,17 +65,17 @@ func (h Handlers) DraftAccountEmail(w http.ResponseWriter, r *http.Request, id c
 	httperr.WriteJSON(w, http.StatusOK, draft)
 }
 
-// requestFrom maps the wire body, refusing an omitted person_id before it can
+// requestFrom maps the wire body, refusing an omitted contact_id before it can
 // become a lookup.
 //
 // An absent key decodes to the zero UUID with no error, so without this the
 // caller would be told that a record they never named is not a contact on this
 // account — a refusal about a record they cannot connect to anything they did.
 func requestFrom(body crmcontracts.DraftAccountEmailJSONRequestBody) (Request, error) {
-	if err := httperr.RequireBodyID("person_id", ids.UUID(body.PersonId)); err != nil {
+	if err := httperr.RequireBodyID("contact_id", ids.UUID(body.ContactId)); err != nil {
 		return Request{}, err
 	}
-	req := Request{PersonID: body.PersonId.String()}
+	req := Request{ContactID: body.ContactId.String()}
 	if body.DealId != nil {
 		// A null deal_id is "the account in general", which is an ordinary
 		// case. A present-but-zero one is a client bug, and answering "that

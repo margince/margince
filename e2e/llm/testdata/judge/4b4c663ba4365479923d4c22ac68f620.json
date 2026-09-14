@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer explicitly states 'The fold is staged and waiting on somebody to release it — nothing has moved yet,' directly confirming the fold is pending with records unmoved and approval still needed.",
-  "model": "claude-haiku-4-5-20251001",
-  "criterion": "Criterion 2. The answer reports that the fold has not happened yet: it is staged, queued, waiting, pending, held for approval, or needs a person to release it, and nothing has moved on the records so far. Stating it without any verb of waiting — 'the fold is staged, not finished' — is the same finding: answer yes. Answer no if the answer describes the vocabulary as already back to one word, or reports the records as already moved, with nothing said about a decision anybody still has to take.",
-  "answer": "The tag list holds both, and their own reads carry the counts: Strategic Account 41 accounts, Strategic Accts 3.\n\nStrategic Accts is the one that goes, and its 3 records move onto Strategic Account. The fold is staged and waiting on somebody to release it — nothing has moved yet.\n\nThat leaves you with one word for this again."
-}

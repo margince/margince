@@ -26,12 +26,10 @@ import {
   SectionHeader,
   SegmentedControl,
   Skeleton,
-  StatCard,
   Textarea,
   TextInput,
 } from "./atoms";
 import { AvatarStack } from "./avatarstack";
-import { FactList } from "./factlist";
 import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
@@ -134,7 +132,7 @@ export const Buttons: Story = {
         <div style={row}>
           <Button variant="primary">
             <Plus aria-hidden />
-            Add person
+            Add contact
           </Button>
           <Button variant="ghost">
             <RefreshCw aria-hidden />
@@ -151,7 +149,7 @@ export const Buttons: Story = {
           Icon only — square, and named for a reader
         </span>
         <div style={row}>
-          <Button variant="primary" iconOnly aria-label="Add person">
+          <Button variant="primary" iconOnly aria-label="Add contact">
             <Plus aria-hidden />
           </Button>
           <Button variant="ghost" iconOnly aria-label="Reconnect">
@@ -362,8 +360,8 @@ export const Avatars: Story = {
           it
         </span>
         <div style={row}>
-          <Avatar identity="org_7f3" name="Voltaq Systems" />
-          <Avatar identity="org_7f3" name="Voltaq Systems GmbH" size="md" />
+          <Avatar identity="company_7f3" name="Voltaq Systems" />
+          <Avatar identity="company_7f3" name="Voltaq Systems GmbH" size="md" />
         </div>
       </div>
       <div style={stack}>
@@ -395,7 +393,7 @@ export const Avatars: Story = {
         </span>
         <div style={row}>
           <AvatarStack
-            people={[
+            contacts={[
               { name: "Alice Müller" },
               { name: "Bob Schmidt" },
               { name: "Carol Wagner" },
@@ -596,138 +594,6 @@ export const Cards: Story = {
           width, actions beside the pair.
         </p>
       </Card>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-          gap: "0.75rem",
-        }}
-      >
-        <StatCard
-          label="Account"
-          value="Customer"
-          detail="Renewal · Reseller"
-        />
-        <StatCard
-          label="Engagement"
-          value="Cooling"
-          tone="warn"
-          detail="Last inbound 12 Jun · last outbound 3 Jul"
-        />
-        <StatCard
-          label="Commercial"
-          value="4 open deals"
-          tone="danger"
-          detail="2 stalled for over 30 days"
-        />
-        <StatCard label="Owner" value="Carol Wagner" />
-        {/* `numeric`: a money reading draws in the mono face, so the digits
-            share one width and a column of figures lines up. The flag lives
-            here rather than a wrapped node in the value, which would make the
-            screen the author of type this tier owns. */}
-        <StatCard
-          label="Won lifetime"
-          value="€1,284,500.00"
-          numeric
-          detail="Across 14 closed deals"
-        />
-        {/* `basis`: the rows the reading was computed from, folded away until
-            asked for. A native details, so it opens to a click and to Enter —
-            a reading a keyboard cannot reach is a reading half the readers do
-            not have. The detail line still carries the one-line basis, so a
-            reader who never opens this does not meet a bare number. */}
-        <StatCard
-          label="Health"
-          value="At risk"
-          tone="warn"
-          dot
-          detail="1 of 3 at risk"
-          basis={
-            <FactList
-              facts={[
-                {
-                  key: "relationship",
-                  term: "Relationship",
-                  value: "Good",
-                  note: "Two people here have replied this month.",
-                },
-                {
-                  key: "commercial",
-                  term: "Commercial",
-                  value: "Strong",
-                  note: "Three deals open, none stalled.",
-                },
-                {
-                  key: "payment",
-                  term: "Payment",
-                  value: "At risk",
-                  note: "Three invoices past due, oldest by 18 days.",
-                },
-              ]}
-            />
-          }
-        />
-      </div>
-    </div>
-  ),
-};
-
-// The reading that OPENS something, beside the one that does not. The three
-// tiles are the whole of the door's contract and only read as one system side
-// by side: with a door the entire tile is the press target, so the pointer has
-// to underline the foot's words from anywhere on the card and a keyboard Tab
-// has to ring the CARD rather than the two words at the bottom of it; without
-// one the tile is inert and must show neither.
-//
-// The first tile is the case the layering exists for. Its receipt chip sits
-// over the door's stretched target: pressing the chip has to open the working
-// and leave the page where it is, and only a card carrying both can show that.
-export const ReadingsWithADoor: Story = {
-  name: "Readings — with a door and without",
-  render: () => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(13rem, 1fr))",
-        gap: "0.75rem",
-      }}
-    >
-      <StatCard
-        label="The people"
-        value="1 of 3 engaged"
-        detail="a champion is named"
-        meter={{ filled: 1, total: 3 }}
-        openLabel="Open people"
-        onOpen={() => {}}
-        basis={
-          <FactList
-            facts={[
-              {
-                key: "champion",
-                term: "Champion",
-                value: "Carol Wagner",
-                note: "Replied twice this month.",
-              },
-              {
-                key: "silent",
-                term: "Unengaged",
-                value: "Two of three",
-                note: "Neither has answered since April.",
-              },
-            ]}
-          />
-        }
-      />
-      <StatCard
-        label="Urgent"
-        value="7"
-        numeric
-        tone="warn"
-        detail="across every lane this morning"
-        openLabel="Open these"
-        onOpen={() => {}}
-      />
-      <StatCard label="Owner" value="Carol Wagner" detail="since 14 March" />
     </div>
   ),
 };
@@ -735,7 +601,7 @@ export const ReadingsWithADoor: Story = {
 // Loading and empty in one story: they are the same moment of a screen's life
 // seen twice, and the pair is where the honest failure shows up — a skeleton
 // that outlives the request and an empty state that says nothing useful both
-// read as "broken" to the person waiting.
+// read as "broken" to the contact waiting.
 export const Placeholders: Story = {
   render: () => (
     <div style={stack}>
@@ -794,7 +660,7 @@ export const Sections: Story = {
       <Card>
         {/* As the card's first child, which is the pairing atoms.css styles.
             Equivalent to passing title/sub to Card — that is what it renders. */}
-        <SectionHeader title="Contacts" sub="Three people at this company" />
+        <SectionHeader title="Contacts" sub="Three contacts at this company" />
         <p className="t-caption">Carol Wagner · Bob Schmidt · Alice Müller</p>
       </Card>
       {/* level={3} is a section INSIDE a section — a group of fields under the
@@ -1030,7 +896,7 @@ function ModalDemo() {
         </h2>
         <p className="t-caption">
           Globex GmbH keeps its record; the duplicate's activities, deals and
-          people move onto it. This cannot be undone.
+          contacts move onto it. This cannot be undone.
         </p>
         <div className="actions">
           <Button onClick={() => setOpen(false)}>Cancel</Button>

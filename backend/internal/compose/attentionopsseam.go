@@ -9,6 +9,7 @@ package compose
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
@@ -17,9 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionDSRs binds the compliance lane to the consent module's own thin
@@ -52,10 +56,10 @@ func (n attentionNoticeCases) OpenDueSoonest(ctx context.Context, limit int) ([]
 	out := make([]attention.NoticeCase, 0, len(owed))
 	for _, duty := range owed {
 		// duty.Blocked is deliberately dropped: a blocked case reaches the lane
-		// like any other, and the obstacle is read on the person's own screen.
+		// like any other, and the obstacle is read on the contact's own screen.
 		out = append(out, attention.NoticeCase{
 			ID: duty.ID, Rule: string(duty.Rule),
-			PersonID: duty.PersonID.UUID, DueAt: duty.DueAt,
+			ContactID: duty.ContactID.UUID, DueAt: duty.DueAt,
 		})
 	}
 	return out, nil
@@ -100,13 +104,14 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			Kind:         concern.Kind,
 			Provider:     concern.Provider,
 			AccountLabel: concern.AccountLabel,
+			FailingSince: concern.FailingSince,
 		})
 	}
 	return out, nil
 }
 
 // attentionAIWork binds the AI-work-health lane to the same projection the
-// activity rail reads; the person-only refusal lives in the store's read.
+// activity rail reads; the contact-only refusal lives in the store's read.
 type attentionAIWork struct{ store *aiactivity.Store }
 
 func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit int) ([]attention.TroubledRun, error) {
@@ -134,7 +139,7 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 }
 
 // attentionBounces binds the bounce lane to the comms store's own per-user
-// read of the stamp RecordBounce leaves; the person-only refusal lives there.
+// read of the stamp RecordBounce leaves; the contact-only refusal lives there.
 type attentionBounces struct{ store *comms.Store }
 
 func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limit int) ([]attention.BouncedSend, error) {
@@ -149,7 +154,7 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 			Subject:   send.Subject,
 			Reason:    send.Reason,
 			BouncedAt: send.BouncedAt,
-			PersonID:  send.PersonID,
+			ContactID: send.ContactID,
 			Recipient: send.Recipient,
 		})
 	}
@@ -157,7 +162,7 @@ func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limi
 }
 
 // attentionUndelivered binds the undelivered lane to the comms store's own
-// per-user read of the stamp the dispatcher's park leaves; the person-only
+// per-user read of the stamp the dispatcher's park leaves; the contact-only
 // refusal lives there.
 type attentionUndelivered struct{ store *comms.Store }
 
@@ -169,11 +174,11 @@ func (u attentionUndelivered) ParkedSends(ctx context.Context, since time.Time, 
 	out := make([]attention.ParkedSend, 0, len(parked))
 	for _, send := range parked {
 		out = append(out, attention.ParkedSend{
-			ID:       send.ID,
-			Subject:  send.Subject,
-			Reason:   send.Reason,
-			ParkedAt: send.ParkedAt,
-			PersonID: send.PersonID,
+			ID:        send.ID,
+			Subject:   send.Subject,
+			Reason:    send.Reason,
+			ParkedAt:  send.ParkedAt,
+			ContactID: send.ContactID,
 		})
 	}
 	return out, nil
@@ -206,17 +211,48 @@ func (a attentionAutomations) TroubledRuns(ctx context.Context, since time.Time,
 }
 
 // attentionNotices binds the notices lane to the store's own per-user read.
-type attentionNotices struct{ store *notices.Store }
+type attentionNotices struct {
+	store *notices.Store
+	users *identity.Service
+}
 
 func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
 	unread, err := a.store.UnreadFor(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
+	seats := []ids.UserID{}
+	for _, notice := range unread {
+		if notice.Origin != nil && notice.Origin.OnBehalfOf != nil {
+			seats = append(seats, ids.From[ids.UserKind](ids.UUID(*notice.Origin.OnBehalfOf)))
+		}
+		if notice.Origin != nil && notice.Origin.ActorType == string(principal.PrincipalHuman) {
+			if id, parseErr := ids.Parse(strings.TrimPrefix(notice.Origin.ActorId, "human:")); parseErr == nil {
+				seats = append(seats, ids.From[ids.UserKind](id))
+			}
+		}
+	}
+	names, err := a.users.SeatNames(ctx, seats)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]attention.UnreadNotice, 0, len(unread))
 	for _, notice := range unread {
+		if notice.Origin != nil && notice.Origin.ActorType == string(principal.PrincipalHuman) {
+			if id, parseErr := ids.Parse(strings.TrimPrefix(notice.Origin.ActorId, "human:")); parseErr == nil {
+				if name := names[id]; name != "" {
+					notice.Origin.ActorName = &name
+				}
+			}
+		}
+		if notice.Origin != nil && notice.Origin.OnBehalfOf != nil {
+			if name := names[ids.UUID(*notice.Origin.OnBehalfOf)]; name != "" {
+				notice.Origin.OnBehalfOfName = &name
+			}
+		}
 		out = append(out, attention.UnreadNotice{
 			ID:         notice.ID,
+			Origin:     notice.Origin,
 			Kind:       notice.Kind,
 			Subject:    notice.Subject,
 			Body:       notice.Body,
@@ -247,8 +283,8 @@ func (a attentionIntroductions) Pending(
 	out := make([]attention.PendingIntroduction, 0, len(asks))
 	for _, ask := range asks {
 		out = append(out, attention.PendingIntroduction{
-			ID:       ask.ID,
-			PersonID: ask.PersonID,
+			ID:        ask.ID,
+			ContactID: ask.ContactID,
 			// The requester's own words, carried rather than summarised: the
 			// colleague is deciding whether to spend their relationship, and a
 			// paraphrase is not what they would be agreeing to.

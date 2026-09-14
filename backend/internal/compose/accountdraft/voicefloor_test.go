@@ -167,7 +167,7 @@ func TestARetryThatFixesTheVoiceIsServed(t *testing.T) {
 	if lane.calls != 2 {
 		t.Fatalf("the floor made %d model calls; a violation earns exactly one retry", lane.calls)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Errorf("generated_by = %v, want the model: the floor degraded a served draft", by)
 	}
 	if !strings.Contains(draft.Body, "Phase 2 of the rollout is ready") {

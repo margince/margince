@@ -98,7 +98,7 @@ func (s *Service) nameTheStanding(
 		if finding := findings[id]; finding != "" {
 			queue[i].Verdict = &crmcontracts.WorklistDealVerdict{
 				Line:   finding,
-				Source: crmcontracts.WorklistInsightSourceBriefFinding,
+				Source: crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceBriefFinding,
 			}
 		}
 	}
@@ -125,7 +125,8 @@ func dealsWantingAStanding(queue []crmcontracts.WorklistItem) []ids.UUID {
 // Unlike needsDealMove this does not skip a row that already carries a verdict:
 // nothing else writes this field, so there is never one to preserve.
 func needsDealStanding(item crmcontracts.WorklistItem) (ids.UUID, bool) {
-	if item.Subject == nil || item.Subject.Type != subjectDeal {
+	// A task has its own completion state; the linked deal's health is not a verdict on that obligation.
+	if item.Source == crmcontracts.WorklistItemSourceTask || item.Subject == nil || item.Subject.Type != subjectDeal {
 		return ids.UUID{}, false
 	}
 	return ids.UUID(item.Subject.Id), true
@@ -146,7 +147,7 @@ func verdictOf(standing DealStanding) *crmcontracts.WorklistDealVerdict {
 	return &crmcontracts.WorklistDealVerdict{
 		Standing: &word,
 		Line:     standing.DecisiveLine,
-		Source:   crmcontracts.WorklistInsightSourceDealStatus,
+		Source:   crmcontracts.WorklistDealVerdictSourceWorklistInsightSourceDealStatus,
 		AsOf:     standing.AsOf,
 	}
 }
@@ -163,14 +164,14 @@ func verdictOf(standing DealStanding) *crmcontracts.WorklistDealVerdict {
 // spellings it holds together.
 func knownStanding(word string) (crmcontracts.WorklistDealVerdictStanding, bool) {
 	switch crmcontracts.WorklistDealVerdictStanding(word) {
-	case crmcontracts.WorklistStandingLive:
-		return crmcontracts.WorklistStandingLive, true
-	case crmcontracts.WorklistStandingDrifting:
-		return crmcontracts.WorklistStandingDrifting, true
-	case crmcontracts.WorklistStandingBlocked:
-		return crmcontracts.WorklistStandingBlocked, true
-	case crmcontracts.WorklistStandingCold:
-		return crmcontracts.WorklistStandingCold, true
+	case crmcontracts.WorklistDealVerdictStandingWorklistStandingLive:
+		return crmcontracts.WorklistDealVerdictStandingWorklistStandingLive, true
+	case crmcontracts.WorklistDealVerdictStandingWorklistStandingDrifting:
+		return crmcontracts.WorklistDealVerdictStandingWorklistStandingDrifting, true
+	case crmcontracts.WorklistDealVerdictStandingWorklistStandingBlocked:
+		return crmcontracts.WorklistDealVerdictStandingWorklistStandingBlocked, true
+	case crmcontracts.WorklistDealVerdictStandingWorklistStandingCold:
+		return crmcontracts.WorklistDealVerdictStandingWorklistStandingCold, true
 	default:
 		return "", false
 	}

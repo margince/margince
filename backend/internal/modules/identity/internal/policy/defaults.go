@@ -35,7 +35,7 @@ import (
 // rather than by hand.
 //
 // integrations (ADR-0101/A152) — a rep reads whether a provider is connected,
-// so a dated value on a person record has an explanation; connecting one spends
+// so a dated value on a contact record has an explanation; connecting one spends
 // money and is admin/ops.
 //
 // offer_template follows product and offer rather than the pipeline-config
@@ -95,19 +95,20 @@ var managerObjects = grid(crud, map[string]grant{
 	// administration object is spelled out rather than left to the crud base,
 	// because the base is what a NEW object inherits, and a settings surface
 	// added later must not arrive already granted to every team lead.
-	objUserAdmin:            none,
-	objRoleAdmin:            none,
-	objTeamAdmin:            none,
-	objPrivacyRequest:       none,
-	objAuditLog:             none,
-	objJobHealth:            none,
-	objExtensionAccess:      none,
-	objSystemReset:          none,
-	objAiDiagnostics:        none,
-	objConsentConfig:        none,
-	objAuthenticationPolicy: none,
-	objOauthApplication:     none,
-	objSeatUsage:            none,
+	objUserAdmin:              none,
+	objRoleAdmin:              none,
+	objTeamAdmin:              none,
+	objPrivacyRequest:         none,
+	objAuditLog:               none,
+	objJobHealth:              none,
+	objExtensionAccess:        none,
+	objSystemReset:            none,
+	objAiDiagnostics:          none,
+	objConsentConfig:          none,
+	objCommunicationException: none,
+	objAuthenticationPolicy:   none,
+	objOauthApplication:       none,
+	objSeatUsage:              none,
 })
 
 // managementObjects is managerObjects with the five administration reads a
@@ -118,7 +119,7 @@ var managerObjects = grid(crud, map[string]grant{
 //
 // Derived from managerObjects by copy rather than by aliasing it: the two grids
 // now differ, and one variable serving both is how a later edit to a team lead's
-// records posture would silently widen the organization-scoped seat too.
+// records posture would silently widen the company-scoped seat too.
 var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
 	for _, object := range []string{
@@ -171,7 +172,7 @@ var defaults = map[string]Document{
 		RowScope: principal.RowScopeAll,
 	},
 	// management is the sales leader's seat (ADR-0110): the manager grid over
-	// EVERY row in the organization, plus the five administration READS a sales
+	// EVERY row in the company, plus the five administration READS a sales
 	// leader answers for, and no administration write at all. Inviting users,
 	// changing roles, editing role policy, binding another user's passport and
 	// issuing password links are objUserAdmin and objRoleAdmin, which this seat
@@ -186,7 +187,7 @@ var defaults = map[string]Document{
 		// Team scope: a Team Lead manages their team, so they read and work the
 		// records of everyone sharing a live team with them without a share
 		// being arranged first. This is the manager grid above, bounded to the
-		// team rather than the organization — `management` is the same grid
+		// team rather than the company — `management` is the same grid
 		// unbounded.
 		//
 		// Membership resolves through team_membership and live teams only, so a
@@ -245,8 +246,8 @@ var defaults = map[string]Document{
 			"list":              writeNoDelete,
 			"offer":             writeNoDelete,
 			"offer_template":    writeNoDelete,
-			"organization":      writeNoDelete,
-			"person":            writeNoDelete,
+			"company":           writeNoDelete,
+			"contact":           writeNoDelete,
 			"product":           writeNoDelete,
 			"project":           writeNoDelete,
 			"relationship":      writeNoDelete,
@@ -260,19 +261,20 @@ var defaults = map[string]Document{
 			// must be named: leaving them to the base would let a rep read the
 			// audit trail and the roster's privileged view on the day the object
 			// was added, which is the opposite of what adding it was for.
-			objUserAdmin:            none,
-			objRoleAdmin:            none,
-			objTeamAdmin:            none,
-			objPrivacyRequest:       none,
-			objAuditLog:             none,
-			objJobHealth:            none,
-			objExtensionAccess:      none,
-			objSystemReset:          none,
-			objAiDiagnostics:        none,
-			objConsentConfig:        none,
-			objAuthenticationPolicy: none,
-			objOauthApplication:     none,
-			objSeatUsage:            none,
+			objUserAdmin:              none,
+			objRoleAdmin:              none,
+			objTeamAdmin:              none,
+			objPrivacyRequest:         none,
+			objAuditLog:               none,
+			objJobHealth:              none,
+			objExtensionAccess:        none,
+			objSystemReset:            none,
+			objAiDiagnostics:          none,
+			objConsentConfig:          none,
+			objCommunicationException: none,
+			objAuthenticationPolicy:   none,
+			objOauthApplication:       none,
+			objSeatUsage:              none,
 		}),
 		RowScope: principal.RowScopeOwn,
 	},
@@ -298,19 +300,20 @@ var defaults = map[string]Document{
 			// must be named: leaving them to the base would let a rep read the
 			// audit trail and the roster's privileged view on the day the object
 			// was added, which is the opposite of what adding it was for.
-			objUserAdmin:            none,
-			objRoleAdmin:            none,
-			objTeamAdmin:            none,
-			objPrivacyRequest:       none,
-			objAuditLog:             none,
-			objJobHealth:            none,
-			objExtensionAccess:      none,
-			objSystemReset:          none,
-			objAiDiagnostics:        none,
-			objConsentConfig:        none,
-			objAuthenticationPolicy: none,
-			objOauthApplication:     none,
-			objSeatUsage:            none,
+			objUserAdmin:              none,
+			objRoleAdmin:              none,
+			objTeamAdmin:              none,
+			objPrivacyRequest:         none,
+			objAuditLog:               none,
+			objJobHealth:              none,
+			objExtensionAccess:        none,
+			objSystemReset:            none,
+			objAiDiagnostics:          none,
+			objConsentConfig:          none,
+			objCommunicationException: none,
+			objAuthenticationPolicy:   none,
+			objOauthApplication:       none,
+			objSeatUsage:              none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -336,10 +339,10 @@ var defaults = map[string]Document{
 			// The administration objects, and the sharpest place admin and ops
 			// differ. Ops administers the installation's WIRING: the consent
 			// vocabulary, the OAuth applications, the queues, the composed units.
-			// It does not administer PEOPLE — no user_admin, no team_admin — and it
+			// It does not administer CONTACTS — no user_admin, no team_admin — and it
 			// does not read the audit trail or hold the reset, because an operator
 			// is not the party those two exist to hold to account. role_admin is
-			// read: answering "why can this person not see that" needs the policy
+			// read: answering "why can this contact not see that" needs the policy
 			// in front of you, and changing it does not.
 			objUserAdmin:            none,
 			objRoleAdmin:            readOnly,
@@ -352,6 +355,12 @@ var defaults = map[string]Document{
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
 			objSeatUsage:            readOnly,
+			// Ops configures the rules and does not send under them. Directing
+			// a message past the engine's answer about a contact is a decision
+			// somebody takes about their own correspondence, and this seat has
+			// none — it holds consent_config precisely because that is the
+			// other authority.
+			objCommunicationException: none,
 		}),
 		RowScope: principal.RowScopeAll,
 	},

@@ -70,8 +70,8 @@ const RUNNING: BackfillStatus = {
   estimated_messages: 400,
   counts: {
     captured: 128,
-    people_created: 47,
-    organizations_created: 12,
+    contacts_created: 47,
+    companies_created: 12,
     messages_scanned: 150,
   },
   updated_at: new Date().toISOString(),
@@ -81,8 +81,8 @@ const DONE: BackfillStatus = {
   state: "done",
   counts: {
     captured: 512,
-    people_created: 90,
-    organizations_created: 20,
+    contacts_created: 90,
+    companies_created: 20,
     messages_scanned: 600,
   },
 };
@@ -123,7 +123,7 @@ export const RunningPhone: Story = {
 export const ErrorState: Story = {
   render: panelStory("gmail", {
     state: "error",
-    counts: { captured: 40, people_created: 9 },
+    counts: { captured: 40, contacts_created: 9 },
     last_error_class: "auth",
   }),
 };

@@ -16,7 +16,7 @@ export function groupTask(task: Activity, now: Date, zone: string): TaskGroup {
   }
   const due = new Date(task.due_at);
   // Lateness is decided in format/lateness, the one place that answers it for
-  // every screen — the bucket boundary and the person card's overdue label are
+  // every screen — the bucket boundary and the contact card's overdue label are
   // the same question, and they were two spellings that disagreed for a whole
   // day after a task fell due.
   if (daysPast(due.getTime(), now.getTime()).late) {

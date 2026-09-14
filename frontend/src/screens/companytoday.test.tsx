@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,14 +13,14 @@ import { TodayOnThisAccount } from "./companytoday";
 
 afterEach(cleanup);
 
-type Organization360 = components["schemas"]["Organization360"];
+type Company360 = components["schemas"]["Company360"];
 
-// A COMPLETE Organization360, not a cast one. A fixture asserted into the
+// A COMPLETE Company360, not a cast one. A fixture asserted into the
 // contract type can drop a required field or carry an invalid value and still
 // compile, so the test would go on passing after the wire shape moved under it.
-const BASE: Organization360 = {
+const BASE: Company360 = {
   as_of: "2026-08-07T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Acme",
     source: "manual",
@@ -32,11 +32,11 @@ const BASE: Organization360 = {
 };
 
 function show(
-  view?: Organization360,
+  view?: Company360,
   opts: {
     loading?: boolean;
     failed?: boolean;
-    onDraftTo?: (personId: string) => void;
+    onDraftTo?: (contactId: string) => void;
     onPrepareMeeting?: (activityId: string) => void;
     scan?: AccountScan;
   } = {},
@@ -48,7 +48,7 @@ function show(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <TodayOnThisAccount
-          orgId="o-1"
+          companyId="o-1"
           view={view}
           loading={opts.loading ?? false}
           failed={opts.failed ?? false}
@@ -61,14 +61,16 @@ function show(
   );
 }
 
-describe("what needs a person on this account today", () => {
+describe("what needs a contact on this account today", () => {
   it("says nothing about a meeting when none is booked", () => {
     // Absent AND not named in sections_omitted means "none scheduled". Writing
     // a line about it would be missing data dressed as a recommendation — only
     // the suggestion engine can name WHOM to contact, so only it may advise
     // booking one.
     show(BASE);
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
+    expect(
+      screen.getByText("No outstanding work found in this view."),
+    ).toBeTruthy();
     expect(screen.queryByText(/Hidden from you/)).toBeNull();
   });
 
@@ -125,14 +127,14 @@ describe("what needs a person on this account today", () => {
     );
   });
 
-  // The best-route tile reads `people`. A caller scoped away from the
+  // The best-route tile reads `contacts`. A caller scoped away from the
   // roster must be told the reading is missing, not shown a brief that
   // silently never names a way in.
   it("names the contacts when the reader may not see who is here", () => {
-    show({ ...BASE, sections_omitted: ["people"] });
+    show({ ...BASE, sections_omitted: ["contacts"] });
 
     expect(screen.getByText(/Hidden from you/).textContent).toContain(
-      en["today.source.people"],
+      en["today.source.contacts"],
     );
   });
 
@@ -141,7 +143,9 @@ describe("what needs a person on this account today", () => {
     // "We could not assemble this" and "nothing needs you" are different
     // sentences, and only one of them is about the account.
     expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 
   // The account brief's own footer reports this with the baseline it counted
@@ -155,7 +159,9 @@ describe("what needs a person on this account today", () => {
         baseline_at: "2026-08-01T09:00:00Z",
       },
     });
-    expect(screen.getByText("Nothing here needs you today.")).toBeTruthy();
+    expect(
+      screen.getByText("No outstanding work found in this view."),
+    ).toBeTruthy();
   });
 
   it("reports the failure even when a view is in hand", () => {
@@ -165,7 +171,9 @@ describe("what needs a person on this account today", () => {
     show(BASE, { failed: true });
 
     expect(screen.getByText(/could not be assembled/)).toBeTruthy();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 });
 
@@ -179,7 +187,7 @@ describe("the day's call, and which record it is read from", () => {
   // the wire sends.
   const FACTORS = { recency: 0, frequency: 0, reciprocity: 0, direction: 0 };
   const CONTACT = {
-    person_id: "p-1",
+    contact_id: "p-1",
     full_name: "Sarah Cole",
     strength: { score: 40, bucket: "moderate" as const, factors: FACTORS },
     deal_roles: [],
@@ -226,7 +234,7 @@ describe("the day's call, and which record it is read from", () => {
   // The route rule: strongest CONTACT, then that contact's strongest ROUTE.
 
   // The largest-open-deal reading moved to the Commercial panel
-  // (organizations.tsx) alongside the full open-deals list, so this file no
+  // (companies.tsx) alongside the full open-deals list, so this file no
   // longer picks or ranks a deal of its own.
 
   // Whose move it is used to be the strip's own tile ("Whose move"); it moved
@@ -271,7 +279,7 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.queryByText(/no answer in/)).toBeNull();
   });
 
-  // The button names the recipient it will write to, and hands that person to
+  // The button names the recipient it will write to, and hands that contact to
   // the composer: an account-started message has no thread to anchor on, so
   // the recipient is what grounds it.
   it("hands the named recipient to the composer", () => {
@@ -279,7 +287,7 @@ describe("the day's call, and which record it is read from", () => {
     show(
       {
         ...BASE,
-        people: {
+        contacts: {
           data: [
             {
               ...CONTACT,
@@ -302,7 +310,7 @@ describe("the day's call, and which record it is read from", () => {
       { onDraftTo: drafted },
     );
     fireEvent.click(screen.getByRole("button", { name: "Draft" }));
-    expect(drafted).toHaveBeenCalledWith(CONTACT.person_id);
+    expect(drafted).toHaveBeenCalledWith(CONTACT.contact_id);
   });
 
   // The MOVES half of the merged brief: a booked meeting's own verb renders
@@ -317,7 +325,7 @@ describe("the day's call, and which record it is read from", () => {
           activity_id: "a-1",
           starts_at: "2026-08-12T09:00:00Z",
           subject: "Renewal review",
-          participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
+          participants: [{ contact_id: "p-1", display_name: "Dana Buyer" }],
         },
       },
       { onPrepareMeeting: prepared },
@@ -408,7 +416,9 @@ describe("the day's call, and which record it is read from", () => {
     });
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
-    expect(screen.queryByText("Nothing here needs you today.")).toBeNull();
+    expect(
+      screen.queryByText("No outstanding work found in this view."),
+    ).toBeNull();
   });
 
   // Dropped only where it would contradict. On an account with nothing else in
@@ -424,7 +434,7 @@ describe("the day's call, and which record it is read from", () => {
 });
 
 // The card the server sends for an account owing nothing.
-const QUIET_MOMENT: NonNullable<Organization360["moment"]> = {
+const QUIET_MOMENT: NonNullable<Company360["moment"]> = {
   claim_key: "moment:nothing_needed",
   evidence_fingerprint: "quiet",
   rule: "nothing_needed",
@@ -496,7 +506,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "running",
           findings: [ruleRow],
           findings_dropped: 0,
@@ -516,7 +526,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -544,7 +554,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "queued",
           resumes_at: "2026-08-07T09:30:00Z",
           findings: [ruleRow],
@@ -562,7 +572,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "done",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "model",
@@ -580,7 +590,7 @@ describe("the account scan on the needs list", () => {
       { ...BASE, suggestions: [ruleRow] },
       {
         scan: {
-          organization_id: "o-1",
+          company_id: "o-1",
           state: "degraded",
           generated_at: "2026-08-07T08:58:00Z",
           generated_by: "deterministic",
@@ -599,12 +609,12 @@ describe("the account scan on the needs list", () => {
 // The account offers ONE way to write to somebody, not two that disagree.
 //
 // The generic row picks the account's strongest contact; a `draft_reply`
-// suggestion names the person actually waiting on an answer. On the demo
-// account those are two different people, so drawing both told a rep to write
+// suggestion names the contact actually waiting on an answer. On the demo
+// account those are two different contacts, so drawing both told a rep to write
 // to Sarah while the advice above said to answer Frédéric.
 describe("the generic draft row", () => {
   const RECIPIENT = {
-    person_id: "p-strongest",
+    contact_id: "p-strongest",
     full_name: "Sarah Cole",
     strength: {
       score: 40,
@@ -616,11 +626,11 @@ describe("the generic draft row", () => {
   };
   const withRecipient = {
     ...BASE,
-    people: {
+    contacts: {
       data: [RECIPIENT],
       page: { has_more: false, next_cursor: null },
     },
-  } satisfies Organization360;
+  } satisfies Company360;
 
   it("stands on its own when no advice names a message to answer", () => {
     show(withRecipient, { onDraftTo: vi.fn() });

@@ -7,15 +7,15 @@ package consent
 
 // Which address the preference page names.
 //
-// The token used to carry only person_id, so the page masked whichever address
-// the record calls primary. For a person holding more than one — a personal
+// The token used to carry only contact_id, so the page masked whichever address
+// the record calls primary. For a contact holding more than one — a personal
 // address and a shared team one, say — a link delivered to the second opened a
 // page showing the first character and the full domain of the first. The
 // holder of that link was never written at that address, and the link stays
 // valid for thirty days.
 //
 // The mint knows the address: it resolved the recipient FROM it. So the token
-// records which one, keyed on the pair rather than on the person, and the page
+// records which one, keyed on the pair rather than on the contact, and the page
 // reads it back.
 
 import (
@@ -26,16 +26,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// address gives the env's person a live address. The shared harness seeds a
-// Telegram-only subject with no person_email row at all, which is the right
+// address gives the env's contact a live address. The shared harness seeds a
+// Telegram-only subject with no contact_email row at all, which is the right
 // default for the suites around this one and no use here: the disclosure this
-// file is about needs a person who holds MORE THAN ONE address.
+// file is about needs a contact who holds MORE THAN ONE address.
 func address(t *testing.T, e *channelConsentEnv, email string, primary bool) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO person_email (id, person_id, email, is_primary, source, captured_by)
+		`INSERT INTO contact_email (id, contact_id, email, is_primary, source, captured_by)
 		 VALUES ($1, $2, lower($3), $4, 'manual', 'system:test')`,
-		ids.NewV7(), e.person, email, primary); err != nil {
+		ids.NewV7(), e.contact, email, primary); err != nil {
 		t.Fatalf("seeding %s: %v", email, err)
 	}
 }
@@ -59,7 +59,7 @@ func TestThePreferencePageNamesTheAddressTheLinkWentTo(t *testing.T) {
 		t.Fatalf("minting the token: %v", err)
 	}
 	if !found {
-		t.Fatal("no token for a live address the person carries")
+		t.Fatal("no token for a live address the contact carries")
 	}
 
 	ref, err := e.store.ResolvePreferenceToken(ctx, token)
@@ -112,8 +112,8 @@ func TestAPreferenceTokenWithNoAddressStillOpensThePage(t *testing.T) {
 	}
 }
 
-// Two addresses on one person are two credentials, not one reused. A single
-// live token per PERSON would hand the second send the first send's token, and
+// Two addresses on one contact are two credentials, not one reused. A single
+// live token per CONTACT would hand the second send the first send's token, and
 // the page would name the first address again — the defect one level down from
 // the column.
 func TestEachAddressGetsItsOwnPreferenceToken(t *testing.T) {
@@ -140,7 +140,7 @@ func TestEachAddressGetsItsOwnPreferenceToken(t *testing.T) {
 	// Both have to have been MINTED, or the inequality below is two empty
 	// strings failing to differ and the case proves nothing.
 	if !foundFirst || !foundSecond {
-		t.Fatalf("minted %t and %t: an address the person carries must yield a token",
+		t.Fatalf("minted %t and %t: an address the contact carries must yield a token",
 			foundFirst, foundSecond)
 	}
 	if first == second {

@@ -3,7 +3,7 @@
 
 package freemail
 
-// Turning a mail domain into a name a person would recognise.
+// Turning a mail domain into a name a contact would recognise.
 //
 // It lives beside the consumer-provider question because the two are asked
 // TOGETHER, always and by everybody: a caller deriving a company from an
@@ -19,7 +19,7 @@ import (
 	"golang.org/x/net/publicsuffix"
 )
 
-// DisplayName turns a mail domain into a readable organization name by
+// DisplayName turns a mail domain into a readable company name by
 // title-casing its registrable label: "gitex.com" → "Gitex",
 // "acme-corp.co.uk" → "Acme Corp", "eu.docusign.net" → "Docusign".
 //
@@ -31,7 +31,7 @@ import (
 // Falls back to the normalized domain when no registrable label can be found —
 // a bare public suffix, an intranet label — an honest last resort rather than a
 // fabrication. Callers that persist the result stamp it as provisional
-// (organization.name_source='domain'); a lead's own company_name column has no
+// (company.name_source='domain'); a lead's own company_name column has no
 // such marker, and needs none, because it is free text a human is expected to
 // correct.
 func DisplayName(domain string) string {
@@ -79,7 +79,7 @@ func DisplayName(domain string) string {
 // "docusign"; "acme.co.uk" → "acme".
 //
 // Exported because the label is read for its OWN sake as well as for a name:
-// people's domain triage asks whether a label looks like a person rather than
+// contacts's domain triage asks whether a label looks like a contact rather than
 // a business, and it has to ask about the same label this derives a name from
 // or the two answers are about different strings.
 func RegistrableLabel(domain string) string {

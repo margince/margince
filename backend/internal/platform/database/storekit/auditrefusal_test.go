@@ -24,7 +24,7 @@ func TestAnUpdateWithNoBeforeImageIsRefusedBeforeItReachesTheDatabase(t *testing
 	// AFTER the insert would still return an error, and would still have written
 	// the row this rule exists to keep out of the table.
 	tx := &fakeTx{}
-	_, err := Audit(auditingContext(), tx, "update", "person", ids.NewV7(), nil,
+	_, err := Audit(auditingContext(), tx, "update", "contact", ids.NewV7(), nil,
 		map[string]any{"full_name": "Greta Machine"})
 	if err == nil {
 		t.Fatal("an update with no before-image was accepted")
@@ -44,7 +44,7 @@ func TestAnUpdateWithNoBeforeImageIsRefusedBeforeItReachesTheDatabase(t *testing
 func TestAnUpdateWithATypedNilBeforeImageIsRefusedToo(t *testing.T) {
 	var image map[string]any
 	tx := &fakeTx{}
-	_, err := Audit(auditingContext(), tx, "update", "person", ids.NewV7(), image,
+	_, err := Audit(auditingContext(), tx, "update", "contact", ids.NewV7(), image,
 		map[string]any{"full_name": "Greta Machine"})
 	if err == nil {
 		t.Fatal("a typed nil before-image was accepted; the column would have stored SQL NULL")
@@ -59,7 +59,7 @@ func TestAnUpdateWithATypedNilBeforeImageIsRefusedToo(t *testing.T) {
 // unsayable.
 func TestAnUpdateWithAnEmptyBeforeImageIsAccepted(t *testing.T) {
 	tx := &fakeTx{}
-	if _, err := Audit(auditingContext(), tx, "update", "person", ids.NewV7(),
+	if _, err := Audit(auditingContext(), tx, "update", "contact", ids.NewV7(),
 		map[string]any{}, map[string]any{"full_name": "Greta"}); err != nil {
 		t.Fatalf("an empty before-image was refused: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestAVerbOtherThanUpdateMayCarryNoBeforeImage(t *testing.T) {
 	for _, action := range []string{"create", "archive", "erase", "restrict", "promote"} {
 		t.Run(action, func(t *testing.T) {
 			tx := &fakeTx{}
-			if _, err := Audit(auditingContext(), tx, action, "person", ids.NewV7(), nil,
+			if _, err := Audit(auditingContext(), tx, action, "contact", ids.NewV7(), nil,
 				map[string]any{"full_name": "Greta"}); err != nil {
 				t.Errorf("%s was refused for carrying no before-image: %v", action, err)
 			}
@@ -94,7 +94,7 @@ func TestAVerbOtherThanUpdateMayCarryNoBeforeImage(t *testing.T) {
 // could get past the rule by having something to say about the operation.
 func TestTheEvidenceDoorRefusesOnTheSameTerms(t *testing.T) {
 	tx := &fakeTx{}
-	_, err := AuditWithEvidence(auditingContext(), tx, "update", "person", ids.NewV7(),
+	_, err := AuditWithEvidence(auditingContext(), tx, "update", "contact", ids.NewV7(),
 		nil, map[string]any{"full_name": "Greta"}, map[string]any{"source": "site_read"})
 	if err == nil {
 		t.Fatal("an update with evidence and no before-image was accepted")
@@ -109,7 +109,7 @@ func TestTheEvidenceDoorRefusesOnTheSameTerms(t *testing.T) {
 // the one way to write a field change that cannot say what it changed from.
 func TestARestoreWithNoBeforeImageIsRefusedToo(t *testing.T) {
 	tx := &fakeTx{}
-	_, err := Audit(auditingContext(), tx, string(VerbRestore), "person", ids.NewV7(), nil,
+	_, err := Audit(auditingContext(), tx, string(VerbRestore), "contact", ids.NewV7(), nil,
 		map[string]any{"full_name": "Greta Machine"})
 	if err == nil {
 		t.Fatal("a restore with no before-image was accepted")

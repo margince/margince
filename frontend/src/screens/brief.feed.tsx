@@ -1,157 +1,229 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Badge } from "../design-system/atoms";
+import { navigate } from "../app/router";
+import { Badge, Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
-import { waitingRows } from "./brief.sentence";
+import { useLocale, usePlural, useT } from "../i18n";
+import { isBriefUpdate, waitingRows } from "./brief.sentence";
 import { worklistLaneHref } from "./worklist.header";
-import type { Worklist, WorklistItem } from "./worklist.queries";
+import { hasPane } from "./worklist.pane";
+import {
+  type Worklist,
+  type WorklistItem,
+  worklistKey,
+} from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
-// The ROW's own sheet, because this draws the row. A surface rendering
-// WorklistRow without it draws an unstyled row.
 import "./worklist.css";
 import "./brief.feed.css";
 
-// The morning, as ONE ordered feed.
-//
-// What this replaces is the defect the whole redesign starts from: Brief drew
-// "Do next" (the head of the ranked worklist) and "Focus" (the overnight
-// opportunity queue) as two panels, one above the other, each with its own
-// ordering. Two ranking systems gave two answers to "what first", and the rep
-// had to reconcile them. The server now ranks everything once — the night's
-// composite is a tie-break inside a level rather than a queue of its own — so
-// the page draws that one order and nothing else.
-//
-// THE SERVER'S ORDER, EXACTLY. This takes a prefix and never sorts, filters or
-// groups. The tie-breaks depend on a base-currency conversion and a materiality
-// threshold the browser does not hold, and the contract says in as many words
-// that a client renders the order it is given.
-//
-// THE SECTION LABEL IS A LABEL. Every row carries `brief_section`, and a badge
-// is drawn when it CHANGES from the row above. That is a run-length label on an
-// order somebody else decided, and it is the only thing a client may do with the
-// field: partitioning the page into sections and concatenating them would be a
-// second ranking, and it would disagree with the first the moment a "respond
-// now" row ranked below a "move revenue" one — which is ordinary and correct,
-// because a customer waiting an hour does not outrank a deal closing today.
-
-/** At most this many cards. A morning a person can finish, not a list. */
-const FEED = 8;
-
-/**
- * The morning's work, in the order the server ranked it.
- */
 export function BriefFeed({
   day,
   state,
-}: Readonly<{ day: Worklist | undefined; state: SectionState }>) {
+  changed,
+  refreshFailed = false,
+  onRetry,
+  onContext,
+}: Readonly<{
+  day: Worklist | undefined;
+  state: SectionState;
+  changed?: Readonly<{ count: number; href: string }>;
+  refreshFailed?: boolean;
+  onRetry?: () => void;
+  onContext?: (item: WorklistItem) => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [openEmail, setOpenEmail] = useState<string | null>(null);
-  const all = waitingRows(day);
-  const drawn = all.slice(0, FEED);
-  const rest = all.length - drawn.length;
+  const client = useQueryClient();
+  const rows = waitingRows(day);
+  const partial = Boolean(
+    !day?.focus ||
+      day?.readings?.more_available ||
+      day?.sources_unavailable?.length,
+  );
   return (
-    <section id="brief-feed" aria-label={t("brief.feed.title")}>
+    <section id="brief-today">
       <Panel
-        title={t("brief.feed.title")}
-        sub={t("brief.feed.sub")}
-        footer={
-          // The way to the rest. A page showing eight of nineteen rows that did
-          // not say where the other eleven are has hidden them.
-          day && rest > 0 ? (
-            // The SAME cut this footer counted. `rest` comes off waitingRows,
-            // which drops the approvals the Decisions deck above already draws,
-            // so a bare `#/worklist` sent a rep told "11 more" to a list of 14.
-            <a
-              className="entity-link"
-              href={worklistLaneHref("except_decisions")}
-            >
-              {t("brief.feed.rest", { count: formatNumber(rest, locale) })}
+        title={t(
+          day?.scope === "team" ? "brief.feed.teamTitle" : "brief.feed.title",
+        )}
+        sub={
+          day?.summary
+            ? plural("brief.feed.visible", rows.length, {
+                count: formatNumber(rows.length, locale),
+              })
+            : undefined
+        }
+        titleAction={
+          changed ? (
+            <a className="entity-link" href={changed.href}>
+              <Badge>
+                {plural("brief.feed.changedBadge", changed.count, {
+                  count: formatNumber(changed.count, locale),
+                })}
+              </Badge>
             </a>
           ) : undefined
         }
+        footer={day ? <AgendaFoot day={day} /> : undefined}
       >
+        {/* Prose standing where the cards will stand pays the pane's inset
+            itself: the grid under it carries its own, and a sentence set
+            straight into the panel printed against the card's edge. */}
+        {refreshFailed && (
+          <PanelBody>
+            <p role="alert">
+              {t("brief.feed.refreshFailed")}{" "}
+              <Button variant="ghost" onClick={onRetry}>
+                {t("brief.coverage.retry")}
+              </Button>
+            </p>
+          </PanelBody>
+        )}
         <SurfaceState
-          // A READ THAT LANDED ON NOTHING is `empty`; a read that has not
-          // landed is not. Saying "nothing is waiting" over a read that failed
-          // would send a rep away believing their morning was clear.
-          state={state === "ready" && drawn.length === 0 ? "empty" : state}
+          state={
+            state !== "ready"
+              ? state
+              : rows.length > 0 || partial
+                ? "ready"
+                : "empty"
+          }
           emptyLabel={t("brief.feed.clear")}
           loadingLabel={t("brief.feed.loading")}
         >
-          {day && drawn.length > 0 && (
-            // An ordered list, because the order IS the claim. A screen reader
-            // gets it from the element; everybody else gets it from the rank
-            // the row prints.
-            <ol className="brief-feed-list">
-              {drawn.map((item, index) => (
-                <li key={item.id}>
-                  <SectionLabel item={item} above={drawn[index - 1]} />
-                  <WorklistRow
-                    item={item}
-                    position={index + 1}
-                    // The reader's OWN day. A row is handed to somebody else
-                    // only from a page that is already about somebody else,
-                    // and this page is about the person reading it.
-                    owner=""
-                    onOpenEmail={setOpenEmail}
-                  />
-                </li>
-              ))}
-            </ol>
+          {rows.length === 0 && partial && (
+            <PanelBody>
+              <p className="t-caption">{t("brief.feed.incomplete")}</p>
+            </PanelBody>
           )}
+          <AgendaRows
+            rows={rows}
+            onOpenEmail={setOpenEmail}
+            onContext={onContext}
+            focus
+          />
         </SurfaceState>
       </Panel>
-      {/* The feed's own reader. A waiting row draws the whole message — sender,
-          subject, preview, access badge — and a row that shows a reader the
-          message and refuses to open it is the defect this mount removes. One
-          drawer for the feed, at its level rather than inside a row, so two
-          rows can never mount two dialogs.
-
-          CARRIED ACROSS FROM "Do next", which this feed replaces. Without it
-          the morning silently loses the ability to open a message it draws in
-          full: worklist.row.tsx offers the opener only when the caller passes
-          onOpenEmail. */}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={viewerZone()}
         onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void client.invalidateQueries({ queryKey: worklistKey })
+        }
       />
     </section>
   );
 }
 
-/**
- * The heading a row sits under, drawn only where it changes.
- *
- * A RUN-LENGTH LABEL on the server's order, never a grouping. The rows arrive
- * ranked; this says what part of the morning the reader has reached, and the
- * next row saying the same thing says nothing again.
- *
- * Absent where the server sent no section, which is a real state rather than a
- * gap: a category this build does not place carries none, and a heading invented
- * for it would put the row under a part of the morning nobody chose.
- */
-function SectionLabel({
-  item,
-  above,
-}: Readonly<{ item: WorklistItem; above: WorklistItem | undefined }>) {
+function AgendaFoot({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
-  const section = item.brief_section;
-  if (!section || (above && above.brief_section === section)) {
-    return null;
-  }
+  const { locale } = useLocale();
+  const plural = usePlural();
+  const hidden = day.focus?.urgent_remaining ?? 0;
   return (
-    <p className="brief-feed-section t-caption">
-      <Badge>{t(`brief.feed.section.${section}` as const)}</Badge>
-    </p>
+    <>
+      <a className="entity-link" href={worklistLaneHref("all", day.scope)}>
+        {t("brief.feed.fullWorklist")}
+      </a>
+      {hidden > 0 && (
+        <a className="entity-link" href={worklistLaneHref("urgent", day.scope)}>
+          {plural("brief.focus.urgentRemaining", hidden, {
+            count: formatNumber(hidden, locale),
+          })}
+        </a>
+      )}
+      {day.focus && day.focus.total > day.focus.items.length && (
+        <span className="t-caption">
+          {t("brief.focus.remaining", {
+            count: formatNumber(
+              day.focus.total - day.focus.items.length,
+              locale,
+            ),
+          })}
+        </span>
+      )}
+    </>
+  );
+}
+
+function AgendaRows({
+  rows,
+  onOpenEmail,
+  focus = false,
+  onContext,
+}: Readonly<{
+  rows: readonly WorklistItem[];
+  onOpenEmail: (id: string) => void;
+  focus?: boolean;
+  onContext?: (item: WorklistItem) => void;
+}>) {
+  const t = useT();
+  // A list of nothing is only its own padding: under the sentence saying the
+  // read was incomplete it stood as a blank band the height of two gutters.
+  if (rows.length === 0) return null;
+  const draw = (item: WorklistItem) => (
+    <li key={`${item.source}-${item.id}`}>
+      <Panel
+        footer={
+          focus && onContext && (hasPane(item) || item.source === "task") ? (
+            <Button small variant="ghost" onClick={() => onContext(item)}>
+              {t("brief.focus.context")}
+            </Button>
+          ) : undefined
+        }
+      >
+        <WorklistRow
+          allowPin={!focus}
+          item={item}
+          density="compact"
+          owner=""
+          onOpenEmail={onOpenEmail}
+          onReview={() =>
+            navigate(
+              { screen: "worklist" },
+              new Map([["filter", item.category]]),
+            )
+          }
+        />
+      </Panel>
+    </li>
+  );
+  return (
+    <ol
+      className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
+    >
+      {rows.map(draw)}
+    </ol>
+  );
+}
+
+export function BriefUpdates({ day }: Readonly<{ day: Worklist | undefined }>) {
+  const t = useT();
+  const rows = (day?.queue ?? []).filter(isBriefUpdate);
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const client = useQueryClient();
+  if (rows.length === 0) return null;
+  return (
+    <Panel title={t("brief.updates.title")}>
+      <AgendaRows rows={rows} onOpenEmail={setOpenEmail} />
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={viewerZone()}
+        onClose={() => setOpenEmail(null)}
+        onReplySent={() =>
+          void client.invalidateQueries({ queryKey: worklistKey })
+        }
+      />
+    </Panel>
   );
 }

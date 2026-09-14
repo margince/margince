@@ -3,20 +3,28 @@
 
 import { useState } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, StatCard } from "../design-system/atoms";
+import { useUrlParams } from "../app/urlstate";
+import { Badge, Disclosure, StatCard } from "../design-system/atoms";
+import { DateInput, isISODate } from "../design-system/dateinput";
+import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
-import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDate, formatMoney, formatNumber } from "../format/format";
+import { calendarDay, middayInstant } from "../format/calendarday";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+} from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import { openAnalyticsSection } from "./analytics.address";
+import { BriefTeamSelect } from "./brief.teamselect";
 import { AgendaPanel, AgendaSummary } from "./brief.teamweeklyagenda";
 import { OutlookPanel } from "./brief.waterfall";
 import {
   type TeamWeeklyReview,
-  useTeams,
   useTeamWeeklyReview,
 } from "./teamweekly.queries";
 
@@ -26,93 +34,6 @@ import "./brief.teamweekly.css";
 // this says what last week WAS, so two weeks compare and neither moves under
 // the comparison.
 
-/**
- * The bars the reader is told they were measured against.
- *
- * Declared constants rather than numbers buried in a condition, because the
- * headline states a verdict and a verdict has to name its bar — "answered in
- * time on 9 of 10 leads" is a reading, "first response is healthy" is a claim,
- * and the second one is only honest if the reader can see where the line was
- * drawn.
- */
-const HEALTHY_RATE = 0.9;
-const WEAK_RATE = 0.7;
-
-/** A rate, or null when nothing was due — zero of zero is not zero per cent. */
-function rate(part: number, whole: number): number | null {
-  return whole === 0 ? null : part / whole;
-}
-
-/** One reading, with what it was measured against carried beside it. */
-type Reading = Readonly<{
-  key: MessageKey;
-  value: number;
-  verdict: "healthy" | "weak" | "middling";
-}>;
-
-function readingOf(key: MessageKey, value: number | null): Reading | null {
-  if (value === null) {
-    return null;
-  }
-  const verdict =
-    value >= HEALTHY_RATE
-      ? "healthy"
-      : value <= WEAK_RATE
-        ? "weak"
-        : "middling";
-  return { key, value, verdict };
-}
-
-/**
- * The two clauses of the headline: the healthiest reading and the weakest.
- *
- * Both come from the stored snapshot, so the sentence cannot disagree with the
- * figures under it. When no reading is decided either way the caller says the
- * plainest true thing instead — a verdict the data does not support is worse
- * than no verdict.
- */
-export function headlineReadings(
-  review: TeamWeeklyReview,
-): Readonly<{ best: Reading | null; worst: Reading | null }> {
-  const counts = review.counts;
-  const readings = [
-    readingOf(
-      "teamweekly.reading.firstResponse",
-      rate(counts.leads_answered_in_target, counts.leads_routed),
-    ),
-    readingOf(
-      "teamweekly.reading.nextStep",
-      rate(counts.meetings_with_next_step, counts.meetings_held),
-    ),
-    readingOf(
-      "teamweekly.reading.commitments",
-      rate(counts.commitments_kept, counts.commitments_due),
-    ),
-  ].filter((reading): reading is Reading => reading !== null);
-
-  return {
-    best: pick(readings, "healthy", (a, b) => a.value > b.value),
-    worst: pick(readings, "weak", (a, b) => a.value < b.value),
-  };
-}
-
-/** The one reading of a verdict that `beats` every other of the same verdict. */
-function pick(
-  readings: readonly Reading[],
-  verdict: Reading["verdict"],
-  beats: (a: Reading, b: Reading) => boolean,
-): Reading | null {
-  return readings.reduce<Reading | null>(
-    (best, reading) =>
-      reading.verdict !== verdict
-        ? best
-        : best === null || beats(reading, best)
-          ? reading
-          : best,
-    null,
-  );
-}
-
 export function TeamWeeklySection({
   teamId,
   week,
@@ -121,64 +42,78 @@ export function TeamWeeklySection({
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const answer = useTeamWeeklyReview(teamId, week);
-
-  const state = answer.isPending
-    ? "loading"
-    : answer.isError
-      ? "unavailable"
-      : "ready";
   const review = answer.data?.kind === "review" ? answer.data.review : null;
-
-  return (
-    <section id="brief-team-weekly" aria-label={t("teamweekly.title")}>
-      <Panel
-        title={t("teamweekly.title")}
-        sub={
-          review
-            ? t("teamweekly.weekOf", {
-                team: review.team_name,
-                day: formatDate(review.local_week_start, locale, recordZone),
-              })
-            : undefined
-        }
-        titleAction={
-          review ? <Badge quiet>{t("teamweekly.frozen")}</Badge> : undefined
-        }
-      >
-        <SurfaceState
-          state={state}
-          emptyLabel={t("teamweekly.empty")}
-          loadingLabel={t("teamweekly.loading")}
-          detail={{ onRetry: () => void answer.refetch() }}
-        >
-          {answer.data?.kind === "absent" && (
+  if (!review)
+    return (
+      <>
+        <WeekPicker week={week} />
+        <Panel title={t("teamweekly.title")}>
+          <SurfaceState
+            state={
+              answer.isPending
+                ? "loading"
+                : answer.isError
+                  ? "unavailable"
+                  : "ready"
+            }
+            loadingLabel={t("teamweekly.loading")}
+            emptyLabel={t("teamweekly.empty")}
+            detail={{ onRetry: () => void answer.refetch() }}
+          >
             <PanelBody>
-              <p>
-                {answer.data.why === "forbidden"
-                  ? t("teamweekly.forbidden")
-                  : t("teamweekly.noSnapshot")}
-              </p>
+              {t(
+                answer.data?.kind === "absent" &&
+                  answer.data.why === "forbidden"
+                  ? "teamweekly.forbidden"
+                  : "teamweekly.noSnapshot",
+              )}
             </PanelBody>
-          )}
-          {review && (
-            <>
-              <PanelBody>
-                <Headline review={review} />
-                <AgendaSummary review={review} />
-                <Coverage review={review} />
-              </PanelBody>
+          </SurfaceState>
+        </Panel>
+      </>
+    );
+  const measured = review.counts.reps_counted > 0;
+  return (
+    <section id="brief-team-weekly">
+      <WeekPicker week={week ?? review.local_week_start} />
+      <p>
+        {t("teamweekly.weekOf", {
+          team: review.team_name,
+          day: formatDate(
+            middayInstant(review.local_week_start, recordZone),
+            locale,
+            recordZone,
+          ),
+        })}
+      </p>
+      <p className="t-sub">{t("teamweekly.basis")}</p>
+      {measured && (
+        <p className="t-caption">
+          {t("brief.weekly.written", {
+            at: formatDateTime(review.generated_at, locale, recordZone),
+          })}
+        </p>
+      )}
+      <Coverage review={review} />
+      <Headline review={review} />
+      {measured && <AgendaPanel review={review} />}
+      {measured && (
+        <Disclosure summary={t("brief.week.supporting")}>
+          <Panel
+            title={t("teamweekly.title")}
+            titleAction={<Badge quiet>{t("teamweekly.frozen")}</Badge>}
+          >
+            <PanelBody className="teamweekly-reading">
+              <AgendaSummary review={review} />
+            </PanelBody>
+            <PanelBody>
               <Scorecard review={review} />
-              <Movement review={review} />
-            </>
-          )}
-        </SurfaceState>
-      </Panel>
-      {/* Where the team's week was landing, before the agenda: a lead reads
-          the outcome first and the conversation it implies second. The SAME
-          panel the rep's retrospective draws — a second one would be two
-          answers to "what does a landing look like". */}
-      {review && <TeamOutlook review={review} />}
-      {review && <AgendaPanel review={review} />}
+            </PanelBody>
+            <Movement review={review} />
+          </Panel>
+          <TeamOutlook review={review} />
+        </Disclosure>
+      )}
     </section>
   );
 }
@@ -186,7 +121,7 @@ export function TeamWeeklySection({
 // The team's landing, drawn through the rep panel's own component.
 //
 // Its own horizon state, held here rather than lifted: the team page and the
-// rep page are different surfaces a person reads at different moments, and a
+// rep page are different surfaces a reader reads at different moments, and a
 // shared dial would move one when they turned the other.
 function TeamOutlook({
   review,
@@ -199,6 +134,7 @@ function TeamOutlook({
       locale={locale}
       horizon={horizon}
       onHorizon={setHorizon}
+      onOpenForecast={() => openAnalyticsSection("forecast")}
     />
   );
 }
@@ -207,26 +143,49 @@ function TeamOutlook({
 function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { best, worst } = headlineReadings(review);
-
-  if (!best && !worst) {
+  const counts = review.counts;
+  if (counts.reps_counted === 0 || (review.reps_unread ?? 0) > 0)
+    return (
+      <h3 className="teamweekly-headline">
+        {t(
+          counts.reps_counted === 0
+            ? "teamweekly.headline.unmeasured"
+            : "teamweekly.headline.partial",
+        )}
+      </h3>
+    );
+  const n = (value: number) => formatNumber(value, locale);
+  if (
+    counts.deals_won ||
+    counts.deals_lost ||
+    counts.deals_moved ||
+    counts.leads_routed
+  )
+    return (
+      <h3 className="teamweekly-headline">
+        {t("brief.team.outcomes", {
+          won: n(counts.deals_won),
+          lost: n(counts.deals_lost),
+          moved: n(counts.deals_moved),
+          leads: n(counts.leads_routed),
+        })}
+      </h3>
+    );
+  if (counts.meetings_held === 0 && counts.commitments_due === 0)
     return (
       <h3 className="teamweekly-headline">{t("teamweekly.headline.plain")}</h3>
     );
-  }
   return (
     <h3 className="teamweekly-headline">
-      {best &&
-        t("teamweekly.headline.healthy", {
-          reading: t(best.key),
-          pct: formatNumber(Math.round(best.value * 100), locale),
-          bar: formatNumber(Math.round(HEALTHY_RATE * 100), locale),
+      {counts.meetings_held > 0 &&
+        t("brief.team.meetingRate", {
+          done: n(counts.meetings_with_next_step),
+          total: n(counts.meetings_held),
         })}{" "}
-      {worst &&
-        t("teamweekly.headline.weak", {
-          reading: t(worst.key),
-          pct: formatNumber(Math.round(worst.value * 100), locale),
-          bar: formatNumber(Math.round(WEAK_RATE * 100), locale),
+      {counts.commitments_due > 0 &&
+        t("brief.team.commitmentRate", {
+          done: n(counts.commitments_kept),
+          total: n(counts.commitments_due),
         })}
     </h3>
   );
@@ -237,7 +196,7 @@ function Headline({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  *
  * `reps_unread` is drawn whenever it is non-zero, never behind a disclosure: a
  * snapshot silently covering four of six reps reads exactly like a team of
- * four, and every figure above is short by the same two people.
+ * four, and every figure above is short by the same two contacts.
  */
 function Coverage({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
@@ -292,6 +251,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   return (
     <StatStrip testId="teamweekly-strip">
       <StatCard
+        narrow="row"
         label={t("teamweekly.card.firstResponse")}
         value={ofTotal(counts.leads_answered_in_target, counts.leads_routed)}
         detail={t("teamweekly.card.firstResponseBasis", {
@@ -299,16 +259,19 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         })}
       />
       <StatCard
+        narrow="row"
         label={t("teamweekly.card.meetings")}
         value={ofTotal(counts.meetings_with_next_step, counts.meetings_held)}
         detail={t("teamweekly.card.meetingsBasis")}
       />
       <StatCard
+        narrow="row"
         label={t("teamweekly.card.commitments")}
         value={ofTotal(counts.commitments_kept, counts.commitments_due)}
         detail={t("teamweekly.card.commitmentsBasis")}
       />
       <StatCard
+        narrow="row"
         label={t("teamweekly.card.won")}
         value={n(counts.deals_won)}
         // What the wins were WORTH, beside how many were lost. The count alone
@@ -329,6 +292,7 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
         }
       />
       <StatCard
+        narrow="row"
         label={t("teamweekly.card.reps")}
         value={n(counts.reps_counted)}
         detail={t("teamweekly.card.repsBasis")}
@@ -343,9 +307,21 @@ function Scorecard({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * Length follows magnitude and the figure carries the reading — a bar whose
  * length alone said "good" or "bad" would be making a claim the snapshot does
  * not, since a team that lost four deals and won four drew two equal bars.
+ *
+ * ONE ROW PER DIMENSION, and the row carries the words: the name leading, the
+ * bar taking the room between, the count trailing. `Meter` draws the bar and
+ * nothing else — its `label` is an `aria-label` — so five bars under one
+ * heading were five unlabelled tracks to everybody who could see them, which
+ * on a quiet week is a single grey band with a heading over it.
+ *
+ * A WEEK IN WHICH NOTHING HAPPENED DRAWS NO BARS. With every count at zero
+ * there is no baseline to draw against: the bars are empty tracks, and a row of
+ * empty tracks reads as a reading that failed to load rather than as a week
+ * that was quiet. The strip above already reports the zeros as figures.
  */
 function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   const t = useT();
+  const { locale } = useLocale();
   const counts = review.counts;
   const rows = [
     { key: "teamweekly.movement.won" as const, value: counts.deals_won },
@@ -364,20 +340,22 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
   ];
   // One baseline for every bar. A per-row max would draw four full bars and say
   // nothing about which number is the big one.
-  const max = Math.max(...rows.map((row) => row.value), 1);
+  const max = Math.max(...rows.map((row) => row.value));
+  if (max === 0) {
+    return null;
+  }
 
   return (
-    <PanelBody>
-      <h3 className="teamweekly-subhead">{t("teamweekly.movement.title")}</h3>
+    <PanelBody className="teamweekly-movement">
+      <Eyebrow as="h3">{t("teamweekly.movement.title")}</Eyebrow>
       {rows.map((row) => (
-        <Meter
-          key={row.key}
-          label={t(row.key)}
-          value={row.value}
-          max={max}
-          dense
-          flat
-        />
+        <div className="teamweekly-movement-row" key={row.key}>
+          <span className="teamweekly-movement-name">{t(row.key)}</span>
+          <Meter label={t(row.key)} value={row.value} max={max} dense flat />
+          <span className="teamweekly-movement-count">
+            {formatNumber(row.value, locale)}
+          </span>
+        </div>
       ))}
     </PanelBody>
   );
@@ -391,31 +369,31 @@ function Movement({ review }: Readonly<{ review: TeamWeeklyReview }>) {
  * be refused every team is a control that exists to fail.
  */
 export function TeamWeeklyPanel({ offered }: Readonly<{ offered: boolean }>) {
-  const t = useT();
-  const teams = useTeams();
-  const [teamId, setTeamId] = useState("");
-  if (!offered) {
-    return null;
-  }
-  const options = (teams.data ?? []).map((team) => ({
-    value: team.id,
-    label: team.name,
-  }));
-  // One team is not a choice. Reading it straight skips a control whose only
-  // option is the one already showing.
-  const chosen = teamId || (options.length === 1 ? options[0].value : "");
+  const [params] = useUrlParams();
+  if (!offered) return null;
   return (
-    <>
-      {options.length > 1 && (
-        <Select
-          options={options}
-          value={chosen}
-          onChange={setTeamId}
-          placeholder={t("teamweekly.pickTeam")}
-          aria-label={t("teamweekly.pickTeam")}
-        />
-      )}
-      {chosen !== "" && <TeamWeeklySection teamId={chosen} />}
-    </>
+    <BriefTeamSelect>
+      {(team) => <TeamWeeklySection teamId={team} week={params.get("week")} />}
+    </BriefTeamSelect>
+  );
+}
+
+function WeekPicker({ week }: Readonly<{ week?: string }>) {
+  const [params, setParams] = useUrlParams();
+  const t = useT();
+  return (
+    <DateInput
+      aria-label={t("brief.team.week")}
+      value={week && isISODate(week) ? week : ""}
+      onChange={(event) => {
+        const next = new Map(params);
+        if (isISODate(event.target.value)) {
+          const day = new Date(`${event.target.value}T12:00:00Z`);
+          day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
+          next.set("week", calendarDay(day, "UTC"));
+        } else next.delete("week");
+        setParams(next);
+      }}
+    />
   );
 }

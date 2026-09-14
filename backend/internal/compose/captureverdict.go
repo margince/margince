@@ -36,7 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -67,12 +67,12 @@ const (
 type CounterpartyVerdictEngine struct {
 	pool       *pgxpool.Pool
 	pending    *capture.PendingStore
-	people     *people.Store
+	contacts   *contacts.Store
 	activities *activities.Store
 	approvals  *approvals.Service
 	brain      completer
 	// triage queues the read that decides whether a domain a verdict just
-	// admitted deserves a company. A `real` answer creates the PERSON; whether
+	// admitted deserves a company. A `real` answer creates the CONTACT; whether
 	// they have an employer is a separate question this engine does not answer.
 	triage *domainTriageTrigger
 	// tagFiler files a created contact under the word its connector was set to.
@@ -81,14 +81,14 @@ type CounterpartyVerdictEngine struct {
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
-// model lane. It reaches people through the module's own store — the ONE dedupe
-// chokepoint every other creation path uses, so a verdict-created person is
+// model lane. It reaches contacts through the module's own store — the ONE dedupe
+// chokepoint every other creation path uses, so a verdict-created contact is
 // indistinguishable from one capture created directly.
 func NewCounterpartyVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CounterpartyVerdictEngine {
 	return &CounterpartyVerdictEngine{
 		pool:       pool,
 		pending:    capture.NewPendingStore(InstallationDB(pool)),
-		people:     newCounterpartyStore(pool),
+		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		approvals:  approvals.NewService(InstallationDB(pool)),
 		brain:      brain,
@@ -235,7 +235,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	ctx context.Context, row capture.PendingCounterparty, budget *reAskBudget,
 ) (int, error) {
 	// The OWNER's own decision first, and no model call at all when there is
-	// one. A person who told this product what a sender is has answered the
+	// one. A contact who told this product what a sender is has answered the
 	// question; asking anyway would spend a call to be told something we then
 	// have to discard, and a machine that could overturn them would make every
 	// correction temporary.
@@ -294,7 +294,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// rather than by having quietly run out of attempts.
 	// The LAST answer travels with the retirement. A sender lands here because
 	// the model had an opinion it could not hold confidently enough — "it said
-	// person at 0.78 twice" is why a human is now being asked, and dropping it
+	// contact at 0.78 twice" is why a human is now being asked, and dropping it
 	// would hand them the question with none of the evidence.
 	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
 		lastMeasurement(retry, retryModel, answers, servedModel)); err != nil {
@@ -324,9 +324,9 @@ func (e *CounterpartyVerdictEngine) apply(
 		// The owner's decision, re-read HERE rather than trusted from judgeOne.
 		//
 		// judgeOne reads it in a transaction of its own and then spends one or
-		// two model calls before this one opens. A person who answers during
+		// two model calls before this one opens. A contact who answers during
 		// that gap was answered by a stale read: the contact half already
-		// re-checks under the person row lock, but the mail hide and the domain
+		// re-checks under the contact row lock, but the mail hide and the domain
 		// suppression ran on what was true before they spoke — so a seat who
 		// said "this is business" still had the sender's domain suppressed for
 		// the whole workspace.
@@ -346,7 +346,7 @@ func (e *CounterpartyVerdictEngine) apply(
 			}
 			// The measurement described the MODEL's answer, and this is no
 			// longer the model's answer. Recording it against a decision a
-			// person made would put a confidence score on a human.
+			// contact made would put a confidence score on a human.
 			measured = capture.VerdictMeasurement{}
 		}
 		// An override that AGREES still makes this the owner's act rather than
@@ -364,17 +364,10 @@ func (e *CounterpartyVerdictEngine) apply(
 		// checking. A `default` that fell through to hideNoise is how a new kind
 		// would silently start hiding real mail, so there is none.
 		switch kind {
-		case capture.KindPerson:
-			if triageDomain, err = e.createCounterparty(ctx, tx, row); err != nil {
-				return err
-			}
-			// The mail a `classified` mailbox held while it waited for this
-			// answer. Bounded, and not drained here: this transaction already
-			// carries the ledger resolution and a person record, and a sender
-			// with a thousand held messages would hold it open for all of them.
-			// The reconciling pass finishes what this leaves.
-			return e.widenClearedSender(ctx, tx, row.Email)
-		case capture.KindRoleMailbox, capture.KindOrganizationSender:
+		case capture.KindContact:
+			triageDomain, err = e.createContactForVerdict(ctx, tx, row)
+			return err
+		case capture.KindRoleMailbox, capture.KindCompanySender:
 			// Real correspondence with no human to name. The message stays
 			// visible; no contact is invented for a mailbox nobody owns.
 			return nil
@@ -382,10 +375,10 @@ func (e *CounterpartyVerdictEngine) apply(
 			// A seat's own `keep out` does NOT suppress the domain. The two
 			// statements are different sizes: the classifier calling a sender
 			// noise is a judgement about the sender, and suppressing their
-			// domain workspace-wide follows from it; a person saying "keep this
+			// domain workspace-wide follows from it; a contact saying "keep this
 			// out of my mail" is a statement about their own mailbox, and one
 			// rep who once received mail from a partner could otherwise refuse
-			// that company to every colleague — with a per-record person grant
+			// that company to every colleague — with a per-record contact grant
 			// and no capture-settings grant at all.
 			//
 			// The mail hide still runs: it is what "keep out" means, and the
@@ -409,7 +402,13 @@ func (e *CounterpartyVerdictEngine) apply(
 			if corresponds {
 				return nil
 			}
-			return e.retractSendersContacts(ctx, tx, row, ownerSaidSo)
+			// An owner's own keep_out claims only their record; a machine's
+			// noise answer is about the address and reaches every seat's.
+			ownersOnly := retractEveryOwners
+			if ownerSaidSo {
+				ownersOnly = retractOwnersOnly
+			}
+			return e.retractSendersContacts(ctx, tx, row, ownersOnly)
 		case capture.KindAdvisor:
 			// A genuine contact who is the OWNER's. The record is made — a
 			// founder's lawyer is somebody they correspond with — and stays
@@ -418,16 +417,24 @@ func (e *CounterpartyVerdictEngine) apply(
 			triageDomain, err = e.createOwnerScopedCounterparty(ctx, tx, row)
 			return err
 		case capture.KindPersonal:
-			// No record at all: a family member is not a counterparty of the
-			// business. The mail itself is not destroyed here — the purge that
-			// does that is its own change, with an undo window in front of it —
-			// so this withholds the record and leaves the thread to the
+			// No record, and none kept: a family member is not a counterparty
+			// of the business, and one minted before this answer arrived is
+			// withdrawn now. The mail itself is not destroyed here — the purge
+			// that does that is its own change, with an undo window in front of
+			// it — so this withdraws the record and leaves the thread to the
 			// mailbox owner.
+			//
+			// UNBOUNDED BY CORRESPONDENCE, unlike the noise arm above. That
+			// bound protects a business counterparty from one misclassified
+			// message; here the owner writing back is what a private
+			// correspondence LOOKS like, so reading it as evidence of business
+			// kept every record this kind is about — a founder's clinic among
+			// them.
 			//
 			// hideNoise is deliberately NOT called. Its scope excludes every
 			// address the workspace has written to, which is every address this
 			// kind is ever about, so it would be a no-op that read like a hide.
-			return nil
+			return e.retractSendersContacts(ctx, tx, row, retractOwnersOnly)
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})

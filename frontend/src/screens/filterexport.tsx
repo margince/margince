@@ -41,12 +41,22 @@ const LABEL: Record<Format, MessageKey> = {
 };
 
 /**
- * "Export" beside the builder, one item per format.
+ * Whether this filter can be exported at all — the ONE reading of that.
  *
  * Gated on `isComplete` for the same reason Save is: an incomplete tree is one
  * the engine refuses, and an export button that answers 422 has told the reader
  * nothing they could not have been spared.
+ *
+ * It is exported because a caller has to know BEFORE it renders: a surface that
+ * gives this menu a slot of its own draws that slot for any element handed to
+ * it, so a refusal spelled as `null` arrives as an empty band. Two places
+ * deciding the same thing would drift the first time the condition moves.
  */
+export function canExportFilter(tree: Node): boolean {
+  return isComplete(tree);
+}
+
+/** "Export" beside the builder, one item per format. */
 export function ExportFilterMenu({
   resource,
   tree,
@@ -80,7 +90,7 @@ export function ExportFilterMenu({
     },
   });
 
-  if (!isComplete(tree)) {
+  if (!canExportFilter(tree)) {
     return null;
   }
 

@@ -127,7 +127,7 @@ func FitPNG(img image.Image, maxEdge int) ([]byte, error) {
 // exists for logos stored before FitPNG preserved their natural aspect: those
 // objects carry a wide wordmark centred in a square transparent canvas. A
 // painted square logo is returned byte-for-byte, while an old letterboxed
-// wordmark becomes the wide image the person originally supplied.
+// wordmark becomes the wide image the contact originally supplied.
 func TrimTransparentPNG(src []byte) ([]byte, error) {
 	img, err := Decode(src)
 	if err != nil {

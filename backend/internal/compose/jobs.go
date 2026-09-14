@@ -199,7 +199,7 @@ type JobRunnerConfig struct {
 	// pass existed.
 	OwedBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
-	// by omission and connector-created people keep their empty fields.
+	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer
 	// VerdictBrain is the ADR-0072 counterparty-verdict lane. Nil = no AI
 	// configured, and the consequence is deliberate: deferred senders stay
@@ -434,10 +434,12 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
+		addCapturePartSlimJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
 		addGeocodeBackfillJobs(reg, pool, cfg),
 		addTechnicalEnrichJobs(reg, pool, cfg),
 		addProviderRunJobs(reg, pool, cfg),
+		addEmploymentImportJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addFinanceJobs(reg, pool, cfg, log),
@@ -470,7 +472,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, CounterpartyVerdictArgs{}),
 		periodicFor(cfg, ConfidentialityVerdictArgs{}),
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
-		periodicFor(cfg, OrgNamePromotionArgs{}),
+		periodicFor(cfg, CompanyNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),

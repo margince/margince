@@ -142,8 +142,8 @@ func TestBackfillCursorPersistsAcrossRestartInPostgres(t *testing.T) {
 	for i := 0; i < n; i++ {
 		records[i] = Record{
 			ExternalID:  fmt.Sprint(i),
-			ObjectClass: "organization",
-			Fields:      map[string]any{"display_name": fmt.Sprintf("Org %d", i)},
+			ObjectClass: "company",
+			Fields:      map[string]any{"display_name": fmt.Sprintf("Company %d", i)},
 			ModifiedAt:  time.Now(),
 		}
 	}
@@ -159,7 +159,7 @@ func TestBackfillCursorPersistsAcrossRestartInPostgres(t *testing.T) {
 		t.Fatal("want an error from the forced mid-backfill failure, got nil")
 	}
 
-	count, err := countMirrorRows(ctx, pool, "organization")
+	count, err := countMirrorRows(ctx, pool, "company")
 	if err != nil {
 		t.Fatalf("counting mirror rows after the crash: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestBackfillCursorPersistsAcrossRestartInPostgres(t *testing.T) {
 		t.Fatalf("the resumed Backfill returned an error: %v", err)
 	}
 
-	count, err = countMirrorRows(ctx, pool, "organization")
+	count, err = countMirrorRows(ctx, pool, "company")
 	if err != nil {
 		t.Fatalf("counting mirror rows after resuming: %v", err)
 	}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   apiKey,
+  CF_OBJECTS,
   columnName,
   ddlPreview,
   looksStructural,
@@ -8,6 +9,24 @@ import {
 } from "./customfields.logic";
 
 describe("custom-fields logic", () => {
+  // The picker's set IS the contract's, in both directions. A one-way check
+  // would pass while the screen quietly lagged the engine, which is exactly
+  // what happened: project and contract were accepted by the backend and
+  // unnameable here, so the only way to define a field on either was the API.
+  // CfObject is the generated type, so a narrowed list fails to compile and a
+  // widened contract fails here.
+  it("offers every object the custom-field contract admits", () => {
+    const admitted = [
+      "contact",
+      "company",
+      "deal",
+      "lead",
+      "project",
+      "contract",
+    ] as const;
+    expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
+  });
+
   it("slugs a label to a snake_case identifier", () => {
     expect(slug("Contract end date")).toBe("contract_end_date");
     expect(slug("  Budget  ceiling! ")).toBe("budget_ceiling");
@@ -17,14 +36,14 @@ describe("custom-fields logic", () => {
   it("derives the immutable cf_-prefixed column and api key", () => {
     expect(columnName("Contract end date")).toBe("cf_contract_end_date");
     expect(columnName("")).toBe("cf_…");
-    expect(apiKey("organization", "Contract end date")).toBe(
-      "organization.cf_contract_end_date",
+    expect(apiKey("company", "Contract end date")).toBe(
+      "company.cf_contract_end_date",
     );
   });
 
   it("renders the pending DDL per object and type", () => {
-    expect(ddlPreview("organization", "Contract end date", "date", "EUR")).toBe(
-      "ALTER organization ADD COLUMN cf_contract_end_date (date) · backfilled NULL · reversible",
+    expect(ddlPreview("company", "Contract end date", "date", "EUR")).toBe(
+      "ALTER company ADD COLUMN cf_contract_end_date (date) · backfilled NULL · reversible",
     );
     expect(ddlPreview("deal", "Budget ceiling", "currency", "EUR")).toBe(
       "ALTER deal ADD COLUMN cf_budget_ceiling (numeric · cents · EUR) · backfilled NULL · reversible",

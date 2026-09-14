@@ -163,7 +163,7 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 // document's, which is the behaviour a reader of a German handbook asking in
 // German needs.
 //
-// The voice rule is composed for the sentences, which a person reads as prose.
+// The voice rule is composed for the sentences, which a reader reads as prose.
 //
 // And the FENCE RULE, which is the one that matters most here and was missing.
 // Minting a fence and wrapping the passages in it does nothing on its own: the
@@ -239,15 +239,15 @@ func AnswerCorpus(
 		Outcome:     state.Outcome,
 		Corpus:      state.Corpus,
 		Coverage:    state.Coverage,
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 	}
-	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		return answer
 	}
 	claims := passageClaims(passages)
 	answer.Claims = &claims
 	if lane == nil {
-		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeUnreviewed
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed
 		return answer
 	}
 
@@ -260,7 +260,7 @@ func AnswerCorpus(
 		// party's document.
 		log.WarnContext(ctx, "corpus ask fell back to the retrieved passages",
 			"corpus_id", state.Corpus.Id.String(), "reason", err)
-		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeUnreviewed
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeUnreviewed
 		return answer
 	}
 	if len(written) == 0 {
@@ -268,12 +268,12 @@ func AnswerCorpus(
 		// the question — or wrote only claims the quote check dropped. Either
 		// way this is not_covered, and it is the honest answer: an answer that
 		// cites nothing is an ungrounded one, not a short grounded one.
-		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeNotCovered
 		answer.Claims = nil
 		return answer
 	}
 	answer.Claims = &written
-	answer.GeneratedBy = crmcontracts.Model
+	answer.GeneratedBy = crmcontracts.WrittenByModel
 	return answer
 }
 

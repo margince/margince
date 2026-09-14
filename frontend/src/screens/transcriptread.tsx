@@ -124,7 +124,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   // it promised. Counting it as done would tell a rep the work exists when it
   // does not — the one reading of this card that costs them a commitment.
   const effectFailed = known.filter((one) => one?.effect_failed_at).length;
-  // Only what a PERSON actually decided. An approval that lapsed was reviewed
+  // Only what a CONTACT actually decided. An approval that lapsed was reviewed
   // by nobody, and one whose status could not be read is unknown rather than
   // settled — counting either as reviewed makes the card claim an answer that
   // was never given, next to a line saying the opposite.
@@ -239,7 +239,7 @@ function TranscriptReadPanel({
   }
   if (reportQuery.isError) {
     return (
-      <p className="t-caption" style={{ color: "var(--danger)" }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)" }}>
         {problemMessageOf(reportQuery.error, t)}
       </p>
     );
@@ -363,12 +363,12 @@ export function TranscriptReadCard({
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
       {latest.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(latest.error, t)}
         </p>
       )}
       {start.isError && (
-        <p className="t-caption" style={{ color: "var(--danger)" }}>
+        <p className="t-caption" style={{ color: "var(--dangerText)" }}>
           {problemMessageOf(start.error, t)}
         </p>
       )}

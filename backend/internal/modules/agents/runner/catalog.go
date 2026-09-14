@@ -64,8 +64,8 @@ func Catalog() []AgentSpec {
 	return []AgentSpec{
 		{
 			Name: "morning_brief",
-			Goal: "Prepare the acting person's existing Morning Brief. First call read_brief. " +
-				"Its items are the queue already ranked for this person; do not assemble a workspace-wide list. " +
+			Goal: "Prepare the acting contact's existing Morning Brief. First call read_brief. " +
+				"Its items are the queue already ranked for this contact; do not assemble a workspace-wide list. " +
 				"Read the evidence for those items, then call annotate_brief with one concise narrative " +
 				"and grounded findings: why each item matters, what changed and the next move. " +
 				"An item with a previous_rank was already on this queue on the run's previous_local_day: " +
@@ -90,7 +90,7 @@ func Catalog() []AgentSpec {
 // TriggerRef names one occurrence of a scheduled spec FOR ONE SEAT; the
 // runner's idempotency (one run per trigger occurrence) hangs off this string.
 //
-// The seat belongs in the identity because the agent acts for a person. Both
+// The seat belongs in the identity because the agent acts for a colleague. Both
 // uniqueness rules that stop a double run are keyed on this ref —
 // agent_run_trigger_unique on the ref alone, runner_job_trigger_unique on
 // (agent_spec, ref) — so a ref naming only the spec and the day makes the

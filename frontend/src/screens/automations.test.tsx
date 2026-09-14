@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -631,9 +631,9 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
 // automation:update grant as pause and edit; the panels mount lazily and
 // independently (opening one never closes the other).
 describe("AutomationRow — Runs/Preview toggles", () => {
-  // A benign stub for the lazily-mounted panels' first fetch: the toggle
-  // tests care about mount/independence, not panel contents, so runs answer
-  // an empty page and preview a zero-radius result.
+  const previewTitle = "Dry-run blast radius";
+  // A benign stub for the lazily-mounted panels' first fetch: these tests are
+  // about mount and independence, so runs answer empty and preview zero.
   function panelBackend() {
     return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : null;
@@ -719,11 +719,11 @@ describe("AutomationRow — Runs/Preview toggles", () => {
         />
       </ul>,
     );
-    expect(screen.queryByTestId("automation-runs")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Run history" })).toBeNull();
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
-    expect(screen.getByTestId("automation-runs")).toBeTruthy();
-    expect(screen.queryByTestId("automation-preview")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: previewTitle })).toBeNull();
   });
 
   it("keeps both panels open independently", async () => {
@@ -742,8 +742,8 @@ describe("AutomationRow — Runs/Preview toggles", () => {
     await openRowMenu();
     await userEvent.click(screen.getByRole("button", { name: "Runs" }));
     await userEvent.click(screen.getByRole("button", { name: "Preview" }));
-    expect(screen.getByTestId("automation-runs")).toBeTruthy();
-    expect(screen.getByTestId("automation-preview")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Run history" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: previewTitle })).toBeTruthy();
   });
 });
 
@@ -771,7 +771,7 @@ const renewalReminderSchema = {
     },
     object: {
       type: "string",
-      enum: ["person", "organization", "deal", "lead", "project"],
+      enum: ["contact", "company", "deal", "lead", "project"],
       description: "Which record type owns the watched date field.",
     },
     recurs_yearly: {
@@ -794,7 +794,7 @@ const renewalCatalogEntry: CatalogEntry = {
 function customField(overrides: Partial<CustomField>): CustomField {
   return {
     id: "cf-1",
-    object: "person",
+    object: "contact",
     label: "Field",
     slug: "field",
     type: "text",
@@ -807,10 +807,10 @@ function customField(overrides: Partial<CustomField>): CustomField {
   };
 }
 
-const PERSON_DATE_FIELDS: CustomField[] = [
+const CONTACT_DATE_FIELDS: CustomField[] = [
   customField({
     id: "cf-birthday",
-    object: "person",
+    object: "contact",
     label: "Birthday",
     slug: "birthday",
     type: "date",
@@ -820,7 +820,7 @@ const PERSON_DATE_FIELDS: CustomField[] = [
   // proving the picker's client-side filter reads both, not just one.
   customField({
     id: "cf-old",
-    object: "person",
+    object: "contact",
     label: "Old renewal date",
     slug: "old-renewal-date",
     type: "date",
@@ -829,7 +829,7 @@ const PERSON_DATE_FIELDS: CustomField[] = [
   }),
   customField({
     id: "cf-name",
-    object: "person",
+    object: "contact",
     label: "Nickname",
     slug: "nickname",
     type: "text",
@@ -851,7 +851,7 @@ function renewalBackend(calls: Recorded[]) {
     if (url.includes("/custom-fields")) {
       const object = new URL(url).searchParams.get("object");
       return jsonResponse({
-        data: PERSON_DATE_FIELDS.filter((field) => field.object === object),
+        data: CONTACT_DATE_FIELDS.filter((field) => field.object === object),
         page: { next_cursor: null },
       });
     }
@@ -884,7 +884,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
         key: "object",
         kind: "enum",
         initial: "",
-        options: ["person", "organization", "deal", "lead", "project"],
+        options: ["contact", "company", "deal", "lead", "project"],
       },
       { key: "recurs_yearly", kind: "boolean", initial: "false" },
     ]);
@@ -932,7 +932,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "date_field" });
@@ -984,7 +984,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "date_field" });
@@ -1006,7 +1006,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "object" }),
-      "person",
+      "contact",
     );
     await waitFor(() =>
       expect(
@@ -1027,7 +1027,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     expect(calls[0].body).toMatchObject({
       key: "renewal_reminder",
       params: {
-        object: "person",
+        object: "contact",
         date_field: "cf_birthday",
         recurs_yearly: true,
         days_before: 30,

@@ -31,10 +31,10 @@ const claimAttemptCap = 5
 
 // ClaimWrite is one completed run's values, handed to the owning domain.
 type ClaimWrite struct {
-	RunID    string
-	PersonID string
-	Provider string
-	Claims   []provider.Claim
+	RunID     string
+	ContactID string
+	Provider  string
+	Claims    []provider.Claim
 	// RetrievedAt is when the provider answered — the run's completed_at, not
 	// the moment of this write. A recovery hand-off runs minutes later and
 	// must not restamp the values as fresher than they are.
@@ -54,7 +54,7 @@ func (s *Store) retrievedAt(ctx context.Context, tx pgx.Tx, runID string) (time.
 		// The terminal write sets completed_at in the same statement as the
 		// state, so a completed run always has one. A row that somehow does
 		// not gets the clock rather than a zero time, which would render as
-		// 1 January year 1 on the person page.
+		// 1 January year 1 on the contact page.
 		return s.now(), nil
 	}
 	return *at, nil
@@ -82,7 +82,7 @@ type WriteClaimsFunc func(ctx context.Context, tx pgx.Tx, w ClaimWrite) error
 // applied stamps a purchase that has not reached the record. The stamp is what a
 // waiting client reads, so the false one stops it one step before the values
 // exist and nothing comes back to say they arrived.
-type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, personID, runID string) (applied bool, err error)
+type ApplyStoredClaimsFunc func(ctx context.Context, tx pgx.Tx, contactID, runID string) (applied bool, err error)
 
 // WithStoredClaimApplier binds it. Without it the sweep applies nothing and
 // says so by leaving applied_at NULL, which is the honest record for a build
@@ -102,16 +102,16 @@ func (s *Store) WithClaimWriter(fn WriteClaimsFunc) *Store {
 
 // handoffClaims writes one run's claims in its own transaction: re-fence,
 // write, clear the marker. An error leaves the marker standing for the sweep.
-func (s *Store) handoffClaims(ctx context.Context, runID, personID, name string, claims []provider.Claim) error {
+func (s *Store) handoffClaims(ctx context.Context, runID, contactID, name string, claims []provider.Claim) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return s.writeClaimsInline(ctx, tx, runID, personID, name, claims)
+		return s.writeClaimsInline(ctx, tx, runID, contactID, name, claims)
 	})
 }
 
 // writeClaimsInline is the hand-off itself, inside a transaction the caller
 // already holds — the polled path opens one for it, the synchronous path
 // reuses its own terminal transaction because it has no handle to recover by.
-func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personID, name string, claims []provider.Claim) error {
+func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, contactID, name string, claims []provider.Claim) error {
 	if s.writeClaims == nil || s.holdSubject == nil {
 		return errors.New("integrations: no claim writer is bound, so the hand-off must wait for the sweep")
 	}
@@ -123,7 +123,7 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 	//
 	// It is also the FIRST row this transaction locks, which is the ordering
 	// the eraser requires — nothing above may take another subject's lock.
-	verdict, err := s.holdSubject(ctx, tx, personID)
+	verdict, err := s.holdSubject(ctx, tx, contactID)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (s *Store) writeClaimsInline(ctx context.Context, tx pgx.Tx, runID, personI
 		return err
 	}
 	if err := s.writeClaims(ctx, tx, ClaimWrite{
-		RunID: runID, PersonID: personID, Provider: name, Claims: claims, RetrievedAt: at,
+		RunID: runID, ContactID: contactID, Provider: name, Claims: claims, RetrievedAt: at,
 	}); err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (s *Store) recoverClaims(ctx context.Context, runID string) error {
 	if status.Outcome != provider.OutcomeCompleted || status.Result == nil {
 		return fmt.Errorf("integrations: the provider no longer serves run %s's completed result (%s)", runID, status.Outcome)
 	}
-	return s.handoffClaims(ctx, runID, lease.person, name, status.Result.Claims)
+	return s.handoffClaims(ctx, runID, lease.contact, name, status.Result.Claims)
 }
 
 // bumpClaimAttempt advances the ladder, exhausting it at the cap. Reports
@@ -259,7 +259,7 @@ func claimBackoff(attempt int) time.Duration {
 
 // holdSubjectForSettlement takes the subject's row before a settlement that may
 // go on to write about them, so this transaction's lock order matches the
-// eraser's: person first, then the run.
+// eraser's: contact first, then the run.
 //
 // It asks the domain to LOCK, not to judge. The verdict is discarded here on
 // purpose — whether the subject may still receive values is writeClaimsInline's
@@ -270,11 +270,11 @@ func claimBackoff(attempt int) time.Duration {
 // A subject that has vanished under the run is not an error to fail the
 // settlement with: the run's own outcome still has to be recorded, and the
 // hand-off below will decline the values on its own terms.
-func (s *Store) holdSubjectForSettlement(ctx context.Context, tx pgx.Tx, personID string) error {
-	if s.holdSubject == nil || personID == "" {
+func (s *Store) holdSubjectForSettlement(ctx context.Context, tx pgx.Tx, contactID string) error {
+	if s.holdSubject == nil || contactID == "" {
 		return nil
 	}
-	if _, err := s.holdSubject(ctx, tx, personID); err != nil {
+	if _, err := s.holdSubject(ctx, tx, contactID); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil
 		}

@@ -10,6 +10,7 @@ import {
   EmptyState,
   Skeleton,
 } from "../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -20,23 +21,23 @@ import "./consent.css";
 import { stable } from "../format/collate";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
-// Person 360. GET /people/{id}/consent already returns {state, events}; this
+// Contact 360. GET /contacts/{id}/consent already returns {state, events}; this
 // is the only surface that reads events — the 360 previously rendered state
 // alone and silently dropped the append-only trail. requires_double_opt_in
-// lives on ConsentPurpose, not on the person's per-purpose state, so this
+// lives on ConsentPurpose, not on the contact's per-purpose state, so this
 // section also reads GET /consent-purposes and joins on purpose_id to know
 // which rows can only be confirmed by the subject through a mailed link.
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
-type PersonConsentState = components["schemas"]["PersonConsentState"];
+type ContactConsentState = components["schemas"]["ContactConsentState"];
 type ConsentEvent = components["schemas"]["ConsentEvent"];
 
-function usePersonConsent(personId: string) {
+function useContactConsent(contactId: string) {
   return useQuery({
-    queryKey: ["person-consent", personId],
+    queryKey: ["contact-consent", contactId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/people/{id}/consent", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.GET("/contacts/{id}/consent", {
+        params: { path: { id: contactId } },
       });
       if (error) {
         throwProblem(error);
@@ -166,7 +167,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
 // Keying on the union keeps a state added upstream a compile error here rather
 // than a silently untoned badge.
 const STATE_TONE: Record<
-  PersonConsentState["state"],
+  ContactConsentState["state"],
   "success" | "warn" | undefined
 > = {
   granted: "success",
@@ -183,15 +184,15 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
     return null;
   }
   return (
-    <p className="t-caption" style={{ color: "var(--danger)" }}>
+    <p className="t-caption" style={{ color: "var(--dangerText)" }}>
       {problemMessageOf(error, t)}
     </p>
   );
 }
 
-// One consent-purpose row on the Person 360 (P-8/P-9): the state badge, a
+// One consent-purpose row on the Contact 360 (P-8/P-9): the state badge, a
 // Grant/Withdraw toggle that writes an append-only consent_event through
-// POST /people/{id}/consent, and a toggleable proof log. A purpose needing
+// POST /contacts/{id}/consent, and a toggleable proof log. A purpose needing
 // double opt-in says so and offers no control: only the subject can confirm
 // one, from a link mailed to their own address. lawful_basis is
 // intentionally omitted from the toggle body — it's optional in
@@ -205,14 +206,14 @@ function MutationError({ error }: Readonly<{ error: unknown }>) {
 // naming that, rather than quoting a sentence nobody was shown.
 function ConsentRow({
   mayWrite,
-  personId,
+  contactId,
   entry,
   purpose,
   events,
 }: Readonly<{
   mayWrite: boolean;
-  personId: string;
-  entry: PersonConsentState;
+  contactId: string;
+  entry: ContactConsentState;
   purpose: ConsentPurpose | undefined;
   events: ConsentEvent[];
 }>) {
@@ -224,8 +225,8 @@ function ConsentRow({
 
   const setState = useMutation({
     mutationFn: async (newState: "granted" | "withdrawn") => {
-      const { data, error } = await api.POST("/people/{id}/consent", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.POST("/contacts/{id}/consent", {
+        params: { path: { id: contactId } },
         body: {
           purpose_id: entry.purpose_id,
           new_state: newState,
@@ -249,14 +250,19 @@ function ConsentRow({
     // consent_event — so the proof log can only pick up the transition just
     // made by refetching, not by patching the cache from this response.
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["person-consent", personId],
-      });
+      for (const key of [
+        "contact-consent",
+        "contactConsentGuard",
+        "contact360",
+      ]) {
+        queryClient.invalidateQueries({ queryKey: [key, contactId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["communication-review"] });
     },
   });
 
   return (
-    <div className="consent-row">
+    <PanelRow className="consent-row">
       <div className="consent-row-head">
         <strong>
           {purpose?.label ?? entry.purpose_key ?? entry.purpose_id}
@@ -277,7 +283,7 @@ function ConsentRow({
         )}
       </div>
       <div className="consent-row-actions">
-        {/* Withdraw stays on every row: a person may always take consent back,
+        {/* Withdraw stays on every row: a contact may always take consent back,
             and a double-opt-in purpose is no exception. Granting one from here
             is what disappears — the server refuses it, because only the subject
             can confirm a purpose that requires the round trip, so offering the
@@ -298,21 +304,28 @@ function ConsentRow({
       {requiresDoi && <p className="t-caption">{t("consent.doiBySubject")}</p>}
       {setState.isError && <MutationError error={setState.error} />}
       {showLog && <ConsentProofLog events={events} />}
-    </div>
+    </PanelRow>
   );
 }
 
 export function ConsentSection({
-  personId,
-  person,
-}: Readonly<{ personId: string; person?: { readonly writable?: boolean } }>) {
-  // Every verb in this section writes to the PERSON, so they share one
+  contactId,
+  contact,
+  showConfirm = true,
+  titleLevel = 2,
+}: Readonly<{
+  contactId: string;
+  contact?: { readonly writable?: boolean };
+  showConfirm?: boolean;
+  titleLevel?: 2 | 3;
+}>) {
+  // Every verb in this section writes to the CONTACT, so they share one
   // decision: the role's grant and this row's own `writable`. Absent fails
   // closed, which is what a section rendered before its record has loaded
   // should do — an editor drawn on a maybe is a control the save refuses.
-  const mayWrite = useCanWriteRecord("person", person);
+  const mayWrite = useCanWriteRecord("contact", contact);
   const t = useT();
-  const consentQuery = usePersonConsent(personId);
+  const consentQuery = useContactConsent(contactId);
   const purposesQuery = useConsentPurposes();
   const purposes = purposesQuery.data?.data ?? [];
   // Only trust "no purposes" once the purposes fetch itself has actually
@@ -328,81 +341,78 @@ export function ConsentSection({
   // legal control. share.tsx's RosterPicker gates its two roster fetches the
   // same explicit way, for the same reason: a collapsed-to-empty failure
   // must never be mistaken for a real empty list.
-  let body: ReactNode = null;
+  // Until the consent read settles the panel shows that read's own state, and
+  // every state but the settled one is prose that wants the body's margin. The
+  // purposes themselves are rows of a list and run to the panel's edges.
+  let body: ReactNode = (
+    <PanelBody>
+      <QueryStates query={consentQuery} pendingLabel={t("contact.consent")}>
+        {null}
+      </QueryStates>
+    </PanelBody>
+  );
   if (consent) {
     if (purposesQuery.isPending) {
-      body = <Skeleton width="60%" />;
+      body = (
+        <PanelBody>
+          <Skeleton width="60%" />
+        </PanelBody>
+      );
     } else if (purposesQuery.isError) {
       body = (
-        <EmptyState>
-          <p>{t("consent.purposesUnavailable")}</p>
-          <Button small onClick={() => purposesQuery.refetch()}>
-            {t("common.retry")}
-          </Button>
-        </EmptyState>
+        <PanelBody>
+          <EmptyState>
+            <p>{t("consent.purposesUnavailable")}</p>
+            <Button small onClick={() => purposesQuery.refetch()}>
+              {t("common.retry")}
+            </Button>
+          </EmptyState>
+        </PanelBody>
       );
     } else if (noPurposes) {
-      body = <EmptyState>{t("consent.noPurposes")}</EmptyState>;
-    } else {
       body = (
-        <div>
-          {consent.state.map((entry) => (
-            <ConsentRow
-              mayWrite={mayWrite}
-              key={entry.purpose_id}
-              personId={personId}
-              entry={entry}
-              purpose={purposes.find(
-                (purpose) => purpose.id === entry.purpose_id,
-              )}
-              events={consent.events.filter(
-                (event) => event.purpose_id === entry.purpose_id,
-              )}
-            />
-          ))}
-        </div>
+        <PanelBody>
+          <EmptyState>{t("consent.noPurposes")}</EmptyState>
+        </PanelBody>
       );
+    } else {
+      body = consent.state.map((entry) => (
+        <ConsentRow
+          mayWrite={mayWrite}
+          key={entry.purpose_id}
+          contactId={contactId}
+          entry={entry}
+          purpose={purposes.find((purpose) => purpose.id === entry.purpose_id)}
+          events={consent.events.filter(
+            (event) => event.purpose_id === entry.purpose_id,
+          )}
+        />
+      ));
     }
   }
 
   return (
-    <Card
-      style={{ marginBottom: "var(--space-4)" }}
-      ariaLabel={t("person.consent")}
-      title={t("person.consent")}
-      sub={t("consent.defaultDeny")}
-    >
-      <QueryStates query={consentQuery} pendingLabel={t("person.consent")}>
-        {body}
-      </QueryStates>
-      {/* Per PERSON rather than per purpose, so it sits under the rows instead
-          of inside one: the link opens everything held about them and asks the
-          marketing question once, which is not a fact about any single
-          purpose. */}
-      {/* Keyed on the person: a mutation result is about the record it was
+    <Panel title={t("contact.consent")} titleLevel={titleLevel}>
+      <PanelBody>
+        <p className="t-sub">{t("consent.defaultDeny")}</p>
+      </PanelBody>
+      {body}
+      {/* Keyed on the contact: a mutation result is about the record it was
           asked for, and React would otherwise reuse this component across a
           navigation between two cached contacts and leave the previous
           contact's address sitting under the new record. */}
-      <ConfirmDetailsAction
-        key={personId}
-        personId={personId}
-        mayWrite={mayWrite}
-      />
-    </Card>
+      {showConfirm && (
+        <ConfirmDetailsAction
+          key={contactId}
+          contactId={contactId}
+          mayWrite={mayWrite}
+        />
+      )}
+    </Panel>
   );
 }
 
-/** What to say about a link that was just issued.
- *
- * TWO outcomes, where there used to be three. The message is staged in the same
- * transaction that mints the link, so "the link exists but the send failed"
- * cannot happen any more — either both committed or neither did. What is left
- * is: it is on its way, or this installation cannot send at all.
- *
- * And it says "on its way", not "sent". The message is queued here and
- * transmitted later by the dispatcher, which retries and can park, so claiming
- * delivery on this screen would tell a rep somebody was asked when the message
- * may still be waiting. */
+// Issuing the link queues a message; it does not prove delivery.
 function sentenceFor(
   issued: components["schemas"]["ConfirmRequestIssued"],
   t: ReturnType<typeof useT>,
@@ -417,28 +427,35 @@ function sentenceFor(
  * ConfirmDetailsAction mails the contact a link to see what is held about them,
  * correct it, and answer on marketing.
  *
- * The address is never chosen here. The server derives it from the person's own
+ * The address is never chosen here. The server derives it from the contact's own
  * live primary email, which is what lets a grant made through the link stand on
  * its own: the answer came from the subject's mailbox. So this surface offers
  * the act and reports where it went, and cannot aim it anywhere.
  */
-function ConfirmDetailsAction({
-  personId,
+export function ConfirmDetailsAction({
+  contactId,
   mayWrite,
-}: Readonly<{ personId: string; mayWrite: boolean }>) {
+  recipient,
+  unavailableReason,
+}: Readonly<{
+  contactId: string;
+  mayWrite: boolean;
+  recipient?: string | null;
+  unavailableReason?: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   const ask = useMutation({
-    // Keyed on the person, so a result belongs to the record it was asked
+    // Keyed on the contact, so a result belongs to the record it was asked
     // about. React reuses this component across a navigation between two
     // cached contacts, and without the key the previous contact's address sat
     // under the new record's rows — naming somebody else's mailbox as the one
     // this contact's link went to.
-    mutationKey: ["confirm-request", personId],
+    mutationKey: ["confirm-request", contactId],
     mutationFn: async (id: string) => {
       const { data, error } = await api.POST(
-        "/people/{id}/consent/confirm-request",
+        "/contacts/{id}/consent/confirm-request",
         { params: { path: { id } } },
       );
       if (error) {
@@ -452,27 +469,29 @@ function ConfirmDetailsAction({
     return null;
   }
   return (
-    <div className="consent-confirm-ask">
+    <PanelBody className="consent-confirm-ask">
       <Button
         small
         disabled={ask.isPending}
+        reason={unavailableReason}
         data-testid="confirm-details-ask"
-        onClick={() => ask.mutate(personId)}
+        onClick={() => ask.mutate(contactId)}
       >
         {t("consent.askToConfirm")}
       </Button>
+      {recipient && (
+        <p className="t-caption">
+          {t("consent.confirmRecipient", { address: recipient })}
+        </p>
+      )}
       <p className="t-caption">{t("consent.askToConfirmWhat")}</p>
       {ask.isError && <MutationError error={ask.error} />}
       {ask.data && (
         <p className="t-caption" data-testid="confirm-details-sent">
-          {/* Three outcomes: it went, this installation cannot send at all,
-              or the send was tried and failed. The middle and the last ask
-              different things of the reader — configure a relay, or press
-              again — so they cannot share a sentence. */}
           {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
           {formatDateTime(ask.data.expires_at, locale, zone)}
         </p>
       )}
-    </div>
+    </PanelBody>
   );
 }

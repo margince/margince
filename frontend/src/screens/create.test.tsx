@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -118,7 +118,7 @@ describe("contact create flow", () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "POST /people": (body) =>
+        "POST /contacts": (body) =>
           jsonResponse(
             {
               id: "p-new",
@@ -140,7 +140,7 @@ describe("contact create flow", () => {
     await userEvent.click(screen.getByRole("radio", { name: "Primary" }));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
-    const post = captured.find((entry) => entry.key === "POST /people");
+    const post = captured.find((entry) => entry.key === "POST /contacts");
     expect(post?.body).toMatchObject({
       full_name: "Peter Neu",
       source: "manual",
@@ -150,9 +150,135 @@ describe("contact create flow", () => {
     });
   });
 
+  // A WORK primary and a PERSONAL primary are independent, matching what the
+  // server itself enforces (contactformfields.ts's contactEditFields: only a
+  // SAME-type primary swap is refused).
+  it("keeps a WORK primary and a PERSONAL primary independent", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "POST /contacts": (body) =>
+          jsonResponse(
+            {
+              id: "p-new",
+              full_name: (body as { full_name: string }).full_name,
+              captured_by: "human:u1",
+              source: "manual",
+              version: 1,
+            },
+            201,
+          ),
+      },
+      captured,
+    );
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.work@neu.example");
+    await user.type(emailInputs[1], "peter.personal@neu.example");
+
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[0], "Work");
+    await pickOption(user, types[1], "Personal");
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+
+    // Marking the PERSONAL row primary must not have cleared the WORK row's
+    // own primary — the DOM's own radio-group exclusivity, and the state
+    // update, are both scoped by type.
+    expect(primaries[0].checked).toBe(true);
+    expect(primaries[1].checked).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts/p-new"));
+    const post = captured.find((entry) => entry.key === "POST /contacts");
+    expect(post?.body).toMatchObject({
+      emails: [
+        {
+          email: "peter.work@neu.example",
+          email_type: "work",
+          is_primary: true,
+        },
+        {
+          email: "peter.personal@neu.example",
+          email_type: "personal",
+          is_primary: true,
+        },
+      ],
+    });
+  });
+
+  // The request mapper's own fallback (asEmailType) resolves an unset type
+  // to "work" — the form has to group rows the same way, or an unset row
+  // and an explicit Work row read as two kinds here and collide once both
+  // reach the server as two primary work emails.
+  it("groups an unset type with the field's own default kind", async () => {
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.unset@neu.example");
+    await user.type(emailInputs[1], "peter.work@neu.example");
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[1], "Work");
+    // types[0] stays unset on purpose.
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+
+    expect(primaries[0].checked).toBe(false);
+    expect(primaries[1].checked).toBe(true);
+  });
+
+  it("clears a row's own primary when its kind changes, rather than colliding with the new kind's primary", async () => {
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(screen.getByLabelText("Full name *"), "Peter Neu");
+
+    await user.click(screen.getByText("Add email"));
+    await user.click(screen.getByText("Add email"));
+    const emailInputs = screen.getAllByLabelText("Email *");
+    await user.type(emailInputs[0], "peter.personal@neu.example");
+    await user.type(emailInputs[1], "peter.work@neu.example");
+    const types = screen.getAllByRole("combobox", { name: "Type" });
+    await pickOption(user, types[0], "Personal");
+    await pickOption(user, types[1], "Work");
+
+    const primaries = screen.getAllByRole("radio", {
+      name: "Primary",
+    }) as HTMLInputElement[];
+    await user.click(primaries[0]);
+    await user.click(primaries[1]);
+    expect(primaries[0].checked).toBe(true);
+    expect(primaries[1].checked).toBe(true);
+
+    // Retype the PERSONAL row as Work — the second row's own kind.
+    await pickOption(user, types[0], "Work");
+
+    expect(primaries[0].checked).toBe(false);
+    expect(primaries[1].checked).toBe(true);
+  });
+
   it("renders the server's 422 detail verbatim and stays open", async () => {
     stubApi({
-      "POST /people": () =>
+      "POST /contacts": () =>
         jsonResponse(
           { title: "Unprocessable", detail: "full_name must not be blank" },
           422,
@@ -191,7 +317,7 @@ describe("multiselect CreateField", () => {
       options: [
         { value: "deal.created", label: "Deal created" },
         { value: "deal.won", label: "Deal won" },
-        { value: "person.created", label: "Person created" },
+        { value: "contact.created", label: "Contact created" },
       ],
     },
   ];
@@ -230,7 +356,7 @@ describe("multiselect CreateField", () => {
     );
     await userEvent.type(screen.getByLabelText("Name *"), "Peter");
     await userEvent.click(screen.getByLabelText("Deal created"));
-    await userEvent.click(screen.getByLabelText("Person created"));
+    await userEvent.click(screen.getByLabelText("Contact created"));
     // toggling back off removes it from the collected selection
     await userEvent.click(screen.getByLabelText("Deal created"));
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -239,7 +365,7 @@ describe("multiselect CreateField", () => {
     const [values] = onSubmit.mock.calls[0] as [Record<string, string>];
     expect(values.name).toBe("Peter");
     expect(splitMultiselectValue(values.event_types)).toEqual([
-      "person.created",
+      "contact.created",
     ]);
   });
 });
@@ -404,22 +530,25 @@ describe("deal create flow", () => {
 describe("a field that depends on another", () => {
   const fields: CreateField[] = [
     { key: "name", label: "create.dealName", required: true },
-    { key: "partner_org_id", label: "deal.partnerOrg", type: "select" },
+    { key: "partner_company_id", label: "deal.partnerCompany", type: "select" },
     {
       key: "partner_attribution",
       label: "deal.partnerAttribution",
       type: "select",
-      showWhen: (values) => Boolean(values.partner_org_id),
+      showWhen: (values) => Boolean(values.partner_company_id),
     },
   ];
 
   it("stays hidden until the field it depends on is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "" });
-    expect(shown.map((f) => f.key)).toEqual(["name", "partner_org_id"]);
+    const shown = visibleFields(fields, { name: "x", partner_company_id: "" });
+    expect(shown.map((f) => f.key)).toEqual(["name", "partner_company_id"]);
   });
 
   it("appears once that field is answered", () => {
-    const shown = visibleFields(fields, { name: "x", partner_org_id: "p-1" });
+    const shown = visibleFields(fields, {
+      name: "x",
+      partner_company_id: "p-1",
+    });
     expect(shown.map((f) => f.key)).toContain("partner_attribution");
   });
 
@@ -429,7 +558,7 @@ describe("a field that depends on another", () => {
   it("does not submit a value whose field went away", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("");
@@ -439,7 +568,7 @@ describe("a field that depends on another", () => {
   it("submits the value while its field is showing", () => {
     const sent = submittedValues(fields, {
       name: "x",
-      partner_org_id: "p-1",
+      partner_company_id: "p-1",
       partner_attribution: "influenced",
     });
     expect(sent.partner_attribution).toBe("influenced");
@@ -460,7 +589,7 @@ describe("a field that depends on another", () => {
     // The state the form holds the moment A is cleared.
     const cleared = submittedValues(fields, {
       name: "x",
-      partner_org_id: "",
+      partner_company_id: "",
       partner_attribution: "influenced",
     });
     expect(cleared.partner_attribution).toBe("");
@@ -468,7 +597,7 @@ describe("a field that depends on another", () => {
     // Naming B from that state starts the claim over rather than inheriting.
     const withB = submittedValues(fields, {
       ...cleared,
-      partner_org_id: "p-b",
+      partner_company_id: "p-b",
     });
     expect(withB.partner_attribution).toBe("");
   });
@@ -482,14 +611,14 @@ describe("the deal form's partner fields", () => {
   const partnerRoutes = {
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
-    "GET /organizations": () =>
+    "GET /companies": () =>
       jsonResponse({
         data: [{ id: "o-1", display_name: "VietnamPartner JSC" }],
         page: { next_cursor: null },
       }),
     "GET /partners": () =>
       jsonResponse({
-        data: [{ organization_id: "o-1", margin_tier: "tier2_20" }],
+        data: [{ company_id: "o-1", margin_tier: "tier2_20" }],
         page: { next_cursor: null },
       }),
   };
@@ -523,12 +652,12 @@ describe("the deal form's partner fields", () => {
     expect(await screen.findByLabelText("What the partner did")).toBeTruthy();
   });
 
-  // Only actual partners: the picker once listed every organization, which let
+  // Only actual partners: the picker once listed every company, which let
   // a deal be attributed to an ordinary customer and silently never pay.
   it("offers only companies that are partners", async () => {
     stubApi({
       ...partnerRoutes,
-      "GET /organizations": () =>
+      "GET /companies": () =>
         jsonResponse({
           data: [
             { id: "o-1", display_name: "VietnamPartner JSC" },

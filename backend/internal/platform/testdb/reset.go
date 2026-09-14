@@ -11,7 +11,7 @@
 // test-binary process and records the empty schema's physical size; every later
 // test in that process rides the already-migrated schema and only resets the
 // data. Correctness holds because no migration seeds reference data a test
-// depends on — the only data-touching migration (person_social backfill) is a
+// depends on — the only data-touching migration (contact_social backfill) is a
 // no-op on an empty database.
 //
 // Once per process is still not the same as once per RUN, and most of the time
@@ -126,7 +126,8 @@ const resetTables = `
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', 'overlay_mode', ` +
-	`'currency_minor_digits')`
+	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
+	`'activity_review_template')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -372,7 +373,7 @@ func restartSequences(ctx context.Context, tx execQuerier) error {
 }
 
 // dropCustomFieldColumns reverts the runtime DDL the customfields engine adds —
-// the cf_<slug> columns it appends to record tables (people, deals, …) as the
+// the cf_<slug> columns it appends to record tables (contacts, deals, …) as the
 // system's single sanctioned ALTER-TABLE chokepoint. Emptying rows leaves the
 // columns, so without this a cf_ column created by one test leaks into the next
 // and is rejected as "taken platform-wide". No migrated baseline table carries a

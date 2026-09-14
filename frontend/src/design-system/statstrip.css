@@ -63,7 +63,12 @@
  * reader is choosing between the same readings they are comparing — so the
  * press target is the slot itself rather than something inside it. The button
  * brings no chrome of its own: the card inside it is the whole of what a
- * reader sees, and the state lands on that card. */
+ * reader sees, and the state lands on that card.
+ *
+ * A reading that OPENS something is NOT this: its door is a word in the card's
+ * own foot (`StatCard onOpen`), which is one spelling for every reading in the
+ * product and stretches its own press target over the tile. A slot wrapped in
+ * an anchor was tried on the Brief and taken out. */
 .stat-strip > button {
   font: inherit;
   color: inherit;
@@ -74,7 +79,11 @@
   border-radius: var(--r-lg);
   cursor: pointer;
 }
-.stat-strip > button > .stat-card {
+/* The slot stretches to the row's height, so a card inside a WRAPPER has to
+   stretch with it — a filter's button, and equally a plain span a screen puts
+   round a tile to hang a tooltip on. `> *` rather than `> button`, because the
+   property belongs to being a wrapper and not to being pressable. */
+.stat-strip > * > .stat-card {
   block-size: 100%;
 }
 
@@ -90,20 +99,89 @@
   outline-offset: 2px;
 }
 
-/* ONE size for every slot in the row, and a step under the free-standing
-   card's: a slot is a fifth of the page and some readings are a short
-   sentence rather than a figure, so the figure sits where the sentence still
-   holds one line in the narrowest slot. */
-.stat-strip .stat-card-value {
-  font-size: clamp(var(--fs-h3), 1.5vw, var(--fs-h2));
-  line-height: 1.2;
-}
+/* NOTHING here says how a reading is TYPESET. The tile owns its type, its tone
+   and its intervals (atoms.css) and every stat card in the product reads the
+   same, whichever row shape holds it — this sheet had carried a figure size of
+   its own for a slot and the Brief a third for a hero, which is one card in
+   three spellings. That is the line, and it is about the SCALE: the strip owns
+   the row's geometry, which includes the slot's box at the width where a row of
+   boxes stops being a row (below). Nothing here sets a family, a size or a
+   weight, and nothing here may. */
 
-/* A slot's label wraps rather than colliding with the source badge beside it:
-   a slot is narrower than a free-standing card. */
-.stat-strip .stat-card-label {
-  flex-wrap: wrap;
-  justify-content: flex-start;
+/* Readings that declared `narrow="row"` become rows when two cards no longer
+   fit. Labels remain complete, and explanations and actions have separate
+   lines so neither can squeeze the other out of a phone or side rail. */
+@container (max-width: 26rem) {
+  .stat-strip:has(.stat-card-narrow-row) {
+    grid-template-columns: 1fr;
+    /* The hairline IS the divider now, so the air between slots would be a
+       second one. Each row carries its own padding instead. */
+    gap: 0;
+    /* ONE column means no tail to stretch. `tailSpan` computes this against the
+       column count the sheet's own 2-up fold reserves, and five slots over two
+       columns answers `2` — which in a one-column grid conjures an implicit
+       second column and puts the last reading half off the screen. */
+    --stat-strip-tail: 1;
+  }
+  /* No boxes: a column of five bordered panes reads as five cards to swipe
+     rather than one list to scan. The plate draws the single rule between
+     rows, which is the seam rule every other row shape here follows. */
+  .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    padding: var(--space-3) 0;
+    min-block-size: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    /* The action has its own line so a long verb cannot squeeze the label
+       or its explanation out of a narrow rail. */
+    grid-template-areas:
+      "label figure"
+      "basis basis"
+      "foot foot";
+    align-items: center;
+    column-gap: var(--space-4);
+    row-gap: 0;
+  }
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-label {
+    grid-area: label;
+  }
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-value {
+    grid-area: figure;
+    /* Trailing edge, so a column of figures lines up whatever the label beside
+       it runs to. `tabular-nums` is the tile's own and does the rest. */
+    text-align: right;
+  }
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-foot {
+    grid-area: foot;
+    justify-self: start;
+  }
+  .stat-strip:has(.stat-card-narrow-row)
+    .stat-card-narrow-row
+    > .stat-card-detail {
+    grid-area: basis;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  .stat-strip:has(.stat-card-narrow-row) .stat-card-label-text {
+    display: block;
+    overflow: visible;
+  }
+  .stat-strip:has(.stat-card-narrow-row) > * + * {
+    border-block-start: 1px solid var(--paneEdge);
+  }
+  /* A wrapper's own corner goes with its box: a radius on a full-bleed row
+     clips the hairline it sits against. */
+  .stat-strip:has(.stat-card-narrow-row) > button {
+    border-radius: 0;
+  }
 }
 
 /* A strip of figures where one is selectable: the selected slot arrived with
@@ -116,34 +194,4 @@
 .stat-strip > button:active:not(:disabled) > .stat-card {
   background-color: var(--bgCard);
   transition-duration: var(--dur-tap);
-}
-
-/* THE HERO ROW: the strip at the size of a page it opens. The figure takes
-   the display rung and the tile grows to hold it with the display's own air;
-   the label and the basis keep the type every strip shares, so the row still
-   reads as one comparison, only at the scale of a page whose first answer it
-   is. Stated here rather than by the screen: a primitive carries its own
-   type and interval, and a screen re-sizing it is a second spelling of the
-   tile that drifts from the first. */
-.stat-strip-hero > .stat-card {
-  min-block-size: 150px;
-  padding: var(--space-5);
-  gap: var(--space-2);
-}
-.stat-strip-hero .stat-card-value {
-  font-size: var(--fs-display-fluid);
-  line-height: 1.05;
-}
-/* A hero tile answers the pointer: the ground brightens to the elevated
-   surface and the edge firms, at the state duration. It is the one strip whose
-   tiles are the page's own reading, and a reading that answers a hover reads
-   as one a reader can open — which, through its door, it is. */
-.stat-strip-hero > .stat-card {
-  transition:
-    background-color var(--dur-state) var(--ease-out),
-    border-color var(--dur-state) var(--ease-out);
-}
-.stat-strip-hero > .stat-card:hover {
-  background: var(--bgElevated);
-  border-color: var(--borderStrong);
 }

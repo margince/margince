@@ -1,6 +1,6 @@
 name: brief_names_the_stalled_deal_and_the_last_touch
 task: summarize
-site: org_brief
+site: company_brief
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:

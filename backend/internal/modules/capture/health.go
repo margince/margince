@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -50,6 +51,14 @@ type Concern struct {
 	// AccountLabel is the display-only mailbox address when the connector
 	// reported one; empty otherwise. Display, never routing.
 	AccountLabel string
+
+	// FailingSince is when this concern's failure streak began, nil for a
+	// concern that is not a streak — a parked connection is a state, not a
+	// duration. It is what separates "is anything wrong" from "has anything
+	// been wrong for a while": a sync that postpones itself is never late by
+	// any age reading, so a fleet screen reading only the condition cannot tell
+	// an hour-old outage from a connection idling between ticks.
+	FailingSince *time.Time
 }
 
 // HealthConcerns answers the CALLING human's unhealthy connections, in the
@@ -81,6 +90,7 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 		if view.AccountLabel != nil {
 			concern.AccountLabel = *view.AccountLabel
 		}
+		concern.FailingSince = view.FailingSince
 		concerns = append(concerns, concern)
 	}
 	return concerns, nil

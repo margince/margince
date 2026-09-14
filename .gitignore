@@ -90,7 +90,7 @@ coverage-extensions.out
 
 # Per-engineer dev deployment config — `make dev` seeds config/margince.yaml
 # from config/margince.example.yaml on first run and then leaves it (edit it to
-# change org/admin or AI posture). The admin password file it references is
+# change company/admin or AI posture). The admin password file it references is
 # seeded alongside. Anchored so the committed .example template is never matched.
 /config/margince.yaml
 /config/margince-admin-password
@@ -172,6 +172,10 @@ workspace/
 /backend/tools/gen-perfdoc/gen-perfdoc.exe
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
+# Same debris, one tree up: gitleakspolicy is its own module at the repository
+# root rather than under backend/, so the prefix above does not reach it.
+/tools/gitleakspolicy/gitleakspolicy
+/tools/gitleakspolicy/gitleakspolicy.exe
 
 # e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
 # each) plus a small verdict file. The TRANSCRIPTS are evidence for the run that
@@ -217,6 +221,7 @@ dump.rdb
 /backend/tools/gen-recordfields/gen-recordfields
 /backend/tools/gen-stubs/gen-stubs
 /backend/tools/gen-workflow/gen-workflow
+/tools/gitleakspolicy/gitleakspolicy
 # Python bytecode. e2e/llm/check.py is imported by its own test harness, which
 # leaves a __pycache__ beside it — build residue, never product.
 __pycache__/

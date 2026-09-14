@@ -1,10 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { useUrlParams } from "../app/urlstate";
-import { Button } from "../design-system/atoms";
+import { Button, Disclosure } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { Eyebrow } from "../design-system/eyebrow";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { PageZones } from "../design-system/pagezones";
 import { Panel } from "../design-system/panel";
@@ -14,6 +11,7 @@ import { viewerZone } from "../format/timezone";
 import { type Translator, useLocale, useT } from "../i18n";
 import { rosterOwnerNaming, useRoster } from "./entityref";
 import { useOpenEmail } from "./openemail";
+import { useWorklistAddress } from "./worklist.address";
 import {
   bandSections,
   canReportEmptyBands,
@@ -28,17 +26,12 @@ import {
 } from "./worklist.destinations";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
-import {
-  WORKLIST_FILTER_PARAM,
-  WorklistHeader,
-  worklistFilterFrom,
-} from "./worklist.header";
+import { WORKLIST_FILTER_PARAM, WorklistHeader } from "./worklist.header";
 import { HiddenBacklogPanel } from "./worklist.hidden";
 import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
 import {
   loadedQueue,
-  UNASSIGNED,
   useRefreshWalk,
   useWorklist,
   type Worklist,
@@ -48,6 +41,7 @@ import {
   type WorklistWalk,
   worklistKey,
 } from "./worklist.queries";
+import { QueueBand } from "./worklist.queuebands";
 import { WorklistReadings } from "./worklist.readings";
 import { WorklistRow } from "./worklist.row";
 import { WalkNotice } from "./worklist.walknotice";
@@ -103,7 +97,7 @@ function rowIdentity(item: WorklistItem): string {
  * An identity no row can carry: `rowIdentity` joins a source and an id, and no
  * source is empty.
  */
-const NOTHING_IN_HAND = "\u0000none";
+const NOTHING_IN_HAND = "none";
 
 /**
  * The row the pane is about.
@@ -140,7 +134,7 @@ function rowInHand(
   // highlight that means nothing and never clears.
   //
   // The FIRST such row rather than the first row: a day led by a deal still has
-  // a person further down whose context is worth standing open, and skipping to
+  // a contact further down whose context is worth standing open, and skipping to
   // it keeps the pane useful without moving the queue's own order.
   return queue.find(hasPane);
 }
@@ -257,6 +251,7 @@ function clearSentence(
 }
 
 function WorklistBody({
+  embedded = false,
   day,
   walk,
   onRefresh,
@@ -275,6 +270,7 @@ function WorklistBody({
   moreFailed,
   onMore,
 }: Readonly<{
+  embedded?: boolean;
   day: Worklist;
   queue: readonly WorklistItem[];
   scope: WorklistScope;
@@ -306,11 +302,12 @@ function WorklistBody({
   // this roster cannot name, which is the one answer this sentence needs: it
   // has a wording that names no one.
   const colleague = rosterOwnerNaming(useRoster("user", owner !== ""))(owner);
-  // The pane belongs to the DAY, so only a row in the day can fill it. A review
-  // row selected here would draw its context beside the Today panel while the
-  // highlighted row sat in the panel below — the two halves of one answer, a
-  // screen apart, with nothing joining them.
-  const selected = rowInHand(sellerWork(queue), selectedId);
+  // Default context follows seller work. An explicit choice may also name a
+  // review row, whose record context must remain reachable from the queue.
+  const selected = rowInHand(
+    selectedId === "" ? sellerWork(queue) : queue,
+    selectedId,
+  );
   // The day cut into the two jobs it holds. `destination` says which, and the
   // server decides it — the counts above the queue are computed from the same
   // field, so a split derived here from `source` or `category` would drift
@@ -368,7 +365,13 @@ function WorklistBody({
           and had to scroll before they could do anything. The stylesheet moves
           this below the queue under 720px, in PAINT only — worklist.layout.ts
           holds why the document order does not follow it. */}
-      <WorklistReadings day={day} onLane={onFilter} />
+      {embedded ? (
+        <Disclosure summary={t("brief.readings.summary")}>
+          <WorklistReadings day={day} onLane={onFilter} />
+        </Disclosure>
+      ) : (
+        <WorklistReadings day={day} onLane={onFilter} />
+      )}
       {/* THE REASON A LEAD OPENED SOMEBODY ELSE'S DAY, at the head of that day
           in every state — below it the block moved as its own form opened, and
           a lead read three panels of somebody else's morning before the way to
@@ -422,6 +425,8 @@ function WorklistBody({
         // null is still an element, and an element still gets the aside column
         // and its landmark. The rule lives beside the component that obeys it.
         <PageZonesWhenPaned
+          active={selectedId !== ""}
+          onClose={() => onSelect(NOTHING_IN_HAND)}
           pane={
             selected && hasPane(selected) ? (
               <WorklistPane item={selected} />
@@ -435,29 +440,15 @@ function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-              {bandSections(day, today).map((section) =>
-                section.items.length === 0 ? (
-                  canReportEmptyBands(hasMore) && (
-                    <div key={section.band} className="worklist-queue-band">
-                      <Eyebrow as="h3" className="worklist-band">
-                        {t(`worklist.band.${section.band}` as const)}
-                      </Eyebrow>
-                      {/* Said, not left blank. A heading with nothing under it
-                          reads as a page that failed to draw. */}
-                      <p className="t-body worklist-band-clear">
-                        {t(`worklist.bandClear.${section.band}` as const)}
-                      </p>
-                    </div>
-                  )
-                ) : (
-                  <div key={section.band} className="worklist-queue-band">
-                    <Eyebrow as="h3" className="worklist-band">
-                      {t(`worklist.band.${section.band}` as const)}
-                    </Eyebrow>
-                    <QueueRows items={section.items} {...rowProps} />
-                  </div>
-                ),
-              )}
+              {bandSections(day, today).map((section) => (
+                <QueueBand
+                  key={section.band}
+                  section={section}
+                  canReportEmpty={canReportEmptyBands(hasMore)}
+                  rows={QueueRows}
+                  rowProps={rowProps}
+                />
+              ))}
               {/* Rows an older server sent with no band. Real work, drawn under
                   no heading rather than dropped to keep the sections tidy. */}
               {unbandedRows(today).length > 0 && (
@@ -496,56 +487,27 @@ function WorklistBody({
           Below, and never hidden — this work is somebody's, and a screen that
           swallowed it would be the reason it went undone. */}
       <ReviewPanel items={review} shortfall={reviewMissing} rows={rowProps} />
-      {/* A LEAD'S READ OF THE TEAM, below the reader's own day.
-
-          Who opens this page decides the order. A rep opens it for their own
-          morning, and every seat on the page is a rep first — a lead reading
-          their team is also somebody with customers waiting on them. So the
-          day comes first for everybody, and the team follows it for the few
-          who can see it. These panels led the page once, which put three
-          panels a rep is refused above the queue they came for and pushed the
-          first row's verb off the fold.
-
-          Within the group: WHAT is going wrong, then WHO is carrying what. A
-          lead reads the exceptions to decide where to intervene; the board
-          answers the second question, and answering it first asks them to
-          infer the trouble from three counts per teammate. Same tier and same
-          condition, read off `scope_options` so the control and the refusal
-          cannot disagree — a rep is refused both. */}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamExceptionsPanel
-          enabled={day.scope_options.includes("team")}
-          onOwner={onOwner}
-        />
-      )}
-      {owner === "" && day.scope_options.includes("team") && (
-        <TeamBoard
-          onOwner={onOwner}
-          onUnassigned={() => onScope("unassigned")}
-        />
-      )}
-      {/* What the queue is NOT showing. Beside the team board because it is the
-          same reader's question — a lead asking whether the day their team sees
-          is the day their team has — and on the same tier for the same reason.
-
-          On the reader's OWN day only. The endpoint takes no owner and no
-          scope: it derives its subject from the authenticated principal, so
-          wherever the queue beside it is about somebody else, this panel is
-          still answering about the reader. "412 hidden from you" stood on a
-          page headed with a colleague's name and read as THEIR backlog — on
-          the one surface whose whole job is to say what a queue is hiding.
-
-          BOTH ways of leaving your own day are guarded, because there are two
-          and they are reached by different controls. `owner` is the drill-down
-          into a named colleague; `scope` is the picker beside it, and the team
-          board's own "show me the unowned pile" moves the scope while leaving
-          the owner empty. Guarding the drill-down alone left the same wrong
-          figure standing under the unassigned and team queues.
-
-          Answering it FOR a colleague is a different feature needing a
-          different endpoint. Until that exists, saying nothing beats saying the
-          wrong person's number under their name. */}
-      {owner === "" && scope === "mine" && (
+      {/* Team oversight belongs to the explicitly selected wider scope. */}
+      {owner === "" &&
+        scope !== "mine" &&
+        scope !== "unassigned" &&
+        day.scope_options.includes("team") && (
+          <TeamExceptionsPanel
+            enabled={day.scope_options.includes("team")}
+            onOwner={onOwner}
+          />
+        )}
+      {owner === "" &&
+        scope !== "mine" &&
+        scope !== "unassigned" &&
+        day.scope_options.includes("team") && (
+          <TeamBoard
+            onOwner={onOwner}
+            onUnassigned={() => onScope("unassigned")}
+          />
+        )}
+      {/* This diagnostic counts all readable history, not personal obligations. */}
+      {owner === "" && scope === "all" && (
         <HiddenBacklogPanel enabled={day.scope_options.includes("team")} />
       )}
       {/* LAST, and open. A reader opens this page to find what to do next;
@@ -617,15 +579,32 @@ function PageZonesWhenPaned({
   queue,
   pane,
   label,
-}: Readonly<{ queue: ReactNode; pane: ReactNode; label: string }>) {
+  active,
+  onClose,
+}: Readonly<{
+  queue: ReactNode;
+  pane: ReactNode;
+  label: string;
+  active: boolean;
+  onClose: () => void;
+}>) {
+  const t = useT();
   if (!pane) {
     return <>{queue}</>;
   }
   return (
     <PageZones
       shape="aside"
+      className={active ? "worklist-context-open" : "worklist-context-idle"}
       mainClassName="worklist-main"
-      aside={pane}
+      aside={
+        <>
+          <Button className="worklist-context-back" onClick={onClose}>
+            {t("brief.queue.back")}
+          </Button>
+          {pane}
+        </>
+      }
       asideLabel={label}
       main={queue}
     />
@@ -635,69 +614,30 @@ function PageZonesWhenPaned({
 // The Worklist screen.
 export function WorklistScreen({
   opensOn,
+  embedded = false,
 }: Readonly<{
   // What the address asked for, from `#/worklist/<segment>`: a user id opens
-  // that person's queue, and the literal "unassigned" opens the unowned pile.
+  // that contact's queue, and the literal "unassigned" opens the unowned pile.
   // Both are doors a team board row needs — a row that could only reach this
   // page would ask the reader to pick the same thing a second time.
   //
-  // It SEEDS the dials and nothing more. They stay state afterwards and the
-  // address does not follow them, for the reason the dials give below: an
-  // address carrying one of four would describe a fraction of what is on screen.
+  // An unassigned path supplies the default scope; an explicit scope query
+  // overrides it so the scope dial remains usable after following that link.
   opensOn?: string;
+  embedded?: boolean;
 }> = {}) {
   const t = useT();
-  // The dials are state rather than a stored preference: a scope is a question
-  // about right now, and a remembered one would answer a different question
-  // than the reader asked on their next visit.
-  const [scope, setScope] = useState<WorklistScope>(
-    opensOn === UNASSIGNED ? UNASSIGNED : "mine",
-  );
-  // The one dial of the four that lives in the ADDRESS, and the reason is a
-  // figure on another screen: Brief's readings each count one of these lanes,
-  // and a reading that names a set is the way into it — which it cannot be
-  // unless the lane is nameable. `?filter=` is the query half, which
-  // `routeIdentity` ignores by design, so this does not disturb the
-  // `#/worklist/<owner>` remount that applies `opensOn`. It also makes a
-  // narrowed queue a link somebody can paste, which is what the address is for.
-  //
-  // Scope, owner and the selected row stay state. Moving all four is still its
-  // own change; this moves the one that another surface has to be able to say.
-  const [params, setParams] = useUrlParams();
-  const filter = worklistFilterFrom(params);
-  const setFilter = (next: WorklistFilter) => {
-    const query = new Map(params);
-    // "all" is the default, so it is spelled by the parameter's ABSENCE — an
-    // address carrying `?filter=all` describes the same view as one carrying
-    // nothing and would be a second spelling of it.
-    if (next === "all") {
-      query.delete(WORKLIST_FILTER_PARAM);
-    } else {
-      query.set(WORKLIST_FILTER_PARAM, next);
-    }
-    setParams(query);
-  };
-  // Whose queue, when it is not the reader's own. Empty means their own day,
-  // which is what every seat sees and the only thing most seats may ask for.
-  const [owner, setOwner] = useState(
-    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
-  );
-  // Which row the context pane is about. Local state, not the address: the
-  // page's other dials are state too, and putting one of the four in the URL
-  // would make the address describe a fraction of what the reader is looking
-  // at. Moving them all there is its own change.
-  const [selectedId, setSelectedId] = useState("");
+  const {
+    scope,
+    filter,
+    owner,
+    selectedId,
+    setScope,
+    setFilter,
+    setOwner,
+    setSelectedId,
+  } = useWorklistAddress(opensOn, embedded);
   const [openEmail, setOpenEmail] = useOpenEmail();
-  // Changing a dial drops the selection. A row chosen under one question is
-  // not a row the reader chose under the next one, and keeping the id means a
-  // row that comes back — a filter switched away and back, a snooze that lifts
-  // — re-opens its pane with nobody having asked it to.
-  const answerWith =
-    <T,>(set: (next: T) => void) =>
-    (next: T) => {
-      setSelectedId("");
-      set(next);
-    };
   const day = useWorklist(scope, filter, owner === "" ? undefined : owner);
   const refreshWalk = useRefreshWalk();
   const queryClient = useQueryClient();
@@ -744,6 +684,7 @@ export function WorklistScreen({
       >
         {first && (
           <WorklistBody
+            embedded={embedded}
             day={first}
             walk={walk}
             // Refreshing starts a NEW walk, which is what brings in the work
@@ -756,9 +697,9 @@ export function WorklistScreen({
             filter={filter}
             owner={owner}
             selectedId={selectedId}
-            onScope={answerWith(setScope)}
-            onFilter={answerWith(setFilter)}
-            onOwner={answerWith(setOwner)}
+            onScope={setScope}
+            onFilter={setFilter}
+            onOwner={setOwner}
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
             hasMore={day.hasNextPage}

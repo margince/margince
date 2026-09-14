@@ -60,7 +60,7 @@ func (e *ingressEnv) ingest(t *testing.T, rec extension.Record) error {
 // same unit, resolved by the ladder's personal-domain tier — rather than
 // inserted by the test, so what this proves is what production does.
 //
-// The count is the assertion that matters. One person, holding both keys: the
+// The count is the assertion that matters. One contact, holding both keys: the
 // address they were already known by, and the account they can be answered at.
 // Without the address the ladder cannot see the incumbent and mints a twin,
 // which nobody notices until a human opens the Duplicates surface.
@@ -73,14 +73,14 @@ func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 	// DEFERS the sender to the ledger, and a verdict admits them. No tier mints
 	// a contact from a first inbound message any more — the ladder's job is to
 	// capture the mail and leave who it is with to the verdict — so a fixture
-	// that expected the ingest alone to leave a person would be describing a
+	// that expected the ingest alone to leave a contact would be describing a
 	// pipeline this one does not have.
 	if err := e.ingest(t, aProviderRecord("ws-7:2001", sender)); err != nil {
 		t.Fatalf("landing the mail record that defers the sender: %v", err)
 	}
 	admitPendingSender(t, e, sender)
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1 AND archived_at IS NULL`, sender); got != 1 {
+		`SELECT count(*) FROM contact_email WHERE email = $1 AND archived_at IS NULL`, sender); got != 1 {
 		t.Fatalf("the admitted sender left %d records carrying %s; this test needs exactly the one incumbent", got, sender)
 	}
 
@@ -89,12 +89,12 @@ func TestADirectMessageFindsTheHumanAlreadyCapturedFromMail(t *testing.T) {
 	}
 
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM person_email WHERE email = $1 AND archived_at IS NULL`, sender); got != 1 {
+		`SELECT count(*) FROM contact_email WHERE email = $1 AND archived_at IS NULL`, sender); got != 1 {
 		t.Fatalf("%d live records carry %s, want 1 — the direct message minted a twin of a human already captured from mail", got, sender)
 	}
 	if got := e.countAsWorkspace(t, `
-		SELECT count(*) FROM person_channel_identity pci
-		  JOIN person_email pe ON pe.person_id = pci.person_id
+		SELECT count(*) FROM contact_channel_identity pci
+		  JOIN contact_email pe ON pe.contact_id = pci.contact_id
 		 WHERE pe.email = $1 AND pci.channel_user_id = $2
 		   AND pci.archived_at IS NULL AND pe.archived_at IS NULL`,
 		sender, "U-2002"); got != 1 {
@@ -126,7 +126,7 @@ func TestAnUndeclaredSourceCannotCorroborateByAddress(t *testing.T) {
 // left, so the incumbent this test needs is written by the code that writes one
 // in production rather than inserted by the test.
 //
-// A `person` answer is the ordinary admission: the sender turned out to be a
+// A `contact` answer is the ordinary admission: the sender turned out to be a
 // human this business deals with, and that is the moment a contact exists.
 func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
 	t.Helper()
@@ -137,7 +137,7 @@ func admitPendingSender(t *testing.T, e *ingressEnv, email string) {
 			 WHERE email = $1 AND status = 'pending'`, email).Scan(&dispositionID)
 	})
 
-	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindPerson}}
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{dispositionID.String(): capture.KindContact}}
 	engine := NewCounterpartyVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("admitting %s by verdict: %v", email, err)

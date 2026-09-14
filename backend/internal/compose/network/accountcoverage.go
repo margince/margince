@@ -10,7 +10,7 @@ package network
 // the question a manager reviewing a book of business actually has.
 //
 // WHY A HIDDEN CONTACT IS NOT AN ABSENT ONE. A stakeholder can be a
-// capture-private person — one a connector minted from somebody's mailbox and
+// capture-private contact — one a connector minted from somebody's mailbox and
 // no human has promoted. The deal-grain reader makes those seats ABSENT, and
 // that is right for a list: an invisible seat reads as an empty one, exactly as
 // every other row-scoped list answers. It is wrong for a COUNT. An account with
@@ -46,7 +46,7 @@ const (
 	// stakeholder this account has, and there are too few.
 	ThreadingSingle ThreadingVerdict = "single_threaded"
 	// ThreadingUnknown is too few visible AND something withheld. The account
-	// may be well covered by people this reader cannot open, and saying
+	// may be well covered by contacts this reader cannot open, and saying
 	// "single-threaded" would report a permission as a business fact.
 	ThreadingUnknown ThreadingVerdict = "unknown"
 	// ThreadingNoContacts is the honest empty: nothing withheld, and no
@@ -57,9 +57,9 @@ const (
 
 // AccountCoverage is one company's relationship breadth.
 type AccountCoverage struct {
-	OrganizationID ids.UUID
+	CompanyID ids.UUID
 	// Stakeholders the reader may open, deduplicated across every deal and
-	// project of this account. A person on three deals is one relationship.
+	// project of this account. A contact on three deals is one relationship.
 	VisibleStakeholders []ids.UUID
 	// CoverageIncomplete says some stakeholder of this account is one this
 	// reader cannot open. A BOOLEAN and never a count: the verdict below only
@@ -85,11 +85,11 @@ type AccountCoverage struct {
 // than an empty answer — the same shape CoverageFor uses, and for the same
 // reason: every stakeholder is an edge, so a caller without the grant would
 // otherwise be served zero contacts and told the account is uncovered.
-func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (AccountCoverage, error) {
-	out := AccountCoverage{OrganizationID: orgID}
+func AccountCoverageFor(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (AccountCoverage, error) {
+	out := AccountCoverage{CompanyID: companyID}
 	// The ACCOUNT first, before anything is read about it.
 	//
-	// Without this the function answers about any organization id a caller can
+	// Without this the function answers about any company id a caller can
 	// name, whether or not they may open it — and the incompleteness flag then
 	// tells them something about a company they were never admitted to. The
 	// edge admission below does not cover it: relationship.read says a caller
@@ -97,10 +97,10 @@ func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (Account
 	//
 	// EnsureVisibleLive rather than Require alone, so an archived or
 	// out-of-scope account is not-found rather than answered.
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return out, err
 	}
-	if err := auth.EnsureVisibleLive(ctx, tx, "organization", orgID); err != nil {
+	if err := auth.EnsureVisibleLive(ctx, tx, "company", companyID); err != nil {
 		return out, err
 	}
 	if err := auth.EdgeReadAdmitted(ctx); err != nil {
@@ -112,11 +112,11 @@ func AccountCoverageFor(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (Account
 		return out, err
 	}
 
-	visible, roles, err := visibleAccountStakeholders(ctx, tx, orgID)
+	visible, roles, err := visibleAccountStakeholders(ctx, tx, companyID)
 	if err != nil {
 		return out, err
 	}
-	total, err := countAccountStakeholders(ctx, tx, orgID)
+	total, err := countAccountStakeholders(ctx, tx, companyID)
 	if err != nil {
 		return out, err
 	}
@@ -152,17 +152,17 @@ func threadingVerdict(visible int, incomplete bool) ThreadingVerdict {
 	return ThreadingSingle
 }
 
-// visibleAccountStakeholders reads the people this caller may open who are
+// visibleAccountStakeholders reads the contacts this caller may open who are
 // stakeholders on any deal or project of this account, plus their roles.
 //
 // Deduplicated across edges: somebody on three deals of one account is one
 // relationship, and counting them three times would clear the threading floor
 // on a single contact.
-func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) ([]ids.UUID, []string, error) {
+func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]ids.UUID, []string, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
-	edge, err := accountStakeholderEdge(ctx, orgPos, arg)
+	companyPos := arg(companyID)
+	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -173,10 +173,10 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) 
 	if bound == "" {
 		bound = scopeAll
 	}
-	// The PERSON row scope, beside the edge grant. They answer different
+	// The CONTACT row scope, beside the edge grant. They answer different
 	// questions — may this caller read seats at all, and which of them — and a
 	// caller holding both record grants and neither of these is served nothing.
-	scope, err := auth.ScopeClauseFor(ctx, "person", "p", arg)
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -186,7 +186,7 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) 
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT p.id, coalesce(r.role, '')
 		  FROM relationship r
-		  JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 		 WHERE r.archived_at IS NULL
 		   AND %s
 		   AND (%s)
@@ -196,33 +196,33 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) 
 		return nil, nil, fmt.Errorf("network: reading an account's stakeholders: %w", err)
 	}
 	defer rows.Close()
-	var people []ids.UUID
+	var contacts []ids.UUID
 	seenRole := map[string]bool{}
 	var roles []string
 	for rows.Next() {
-		var person ids.UUID
+		var contact ids.UUID
 		var role string
-		if err := rows.Scan(&person, &role); err != nil {
+		if err := rows.Scan(&contact, &role); err != nil {
 			return nil, nil, fmt.Errorf("network: reading an account's stakeholders: %w", err)
 		}
-		// DISTINCT is over the (person, role) pair, so one person holding two
+		// DISTINCT is over the (contact, role) pair, so one contact holding two
 		// roles arrives twice and is one relationship.
-		if len(people) == 0 || people[len(people)-1] != person {
-			people = append(people, person)
+		if len(contacts) == 0 || contacts[len(contacts)-1] != contact {
+			contacts = append(contacts, contact)
 		}
 		if role != "" && !seenRole[role] {
 			seenRole[role] = true
 			roles = append(roles, role)
 		}
 	}
-	return people, roles, rows.Err()
+	return contacts, roles, rows.Err()
 }
 
-// countAccountStakeholders counts every distinct person seated on this account,
-// WITHOUT the person row scope.
+// countAccountStakeholders counts every distinct contact seated on this account,
+// WITHOUT the contact row scope.
 //
 // It is the one read here that omits it, and that omission is the whole point.
-// EdgeReadScope narrows an edge by EVERY endpoint it carries, the person
+// EdgeReadScope narrows an edge by EVERY endpoint it carries, the contact
 // included — so a count taken under it drops exactly the capture-private
 // contacts whose absence this number exists to report, and answers zero every
 // time. An account would then read as single-threaded because its contacts
@@ -230,23 +230,23 @@ func visibleAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) 
 //
 // The reader is still gated: AccountCoverageFor takes the edge admission before
 // this runs, and the account is named by a deal or project the caller reached
-// through their own read. What is deliberately not applied is the person
+// through their own read. What is deliberately not applied is the contact
 // predicate, and the answer is a COUNT — no id, no name, no role. What a caller
 // learns is that their own view is incomplete, which is what stops the verdict
 // being wrong about the customer.
-func countAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (int, error) {
+func countAccountStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID) (int, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orgPos := arg(orgID)
-	edge, err := accountStakeholderEdge(ctx, orgPos, arg)
+	companyPos := arg(companyID)
+	edge, err := accountStakeholderEdge(ctx, companyPos, arg)
 	if err != nil {
 		return 0, err
 	}
 	var total int
 	if err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT count(DISTINCT r.person_id)
+		SELECT count(DISTINCT r.contact_id)
 		  FROM relationship r
-		  JOIN person p ON p.id = r.person_id AND p.archived_at IS NULL
+		  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
 		 WHERE r.archived_at IS NULL
 		   AND %s`, edge), args...).Scan(&total); err != nil {
 		return 0, fmt.Errorf("network: counting an account's stakeholders: %w", err)
@@ -259,11 +259,11 @@ func countAccountStakeholders(ctx context.Context, tx pgx.Tx, orgID ids.UUID) (i
 //
 // Both statements above render this same predicate, because the visible set and
 // the total have to cover the SAME population: any difference between them
-// lands in the withheld count and reads as hidden people who are not there.
-func accountStakeholderEdge(ctx context.Context, orgPos int, arg func(any) int) (string, error) {
+// lands in the withheld count and reads as hidden contacts who are not there.
+func accountStakeholderEdge(ctx context.Context, companyPos int, arg func(any) int) (string, error) {
 	// The deal and project the seat hangs off, under the caller's own scope for
 	// each. Both statements carry this, so the ONLY difference between the
-	// visible set and the total is the person — which is what makes their
+	// visible set and the total is the contact — which is what makes their
 	// difference mean "hidden contact" rather than "deal I cannot reach".
 	//
 	// Without it the total counted seats on deals outside the caller's scope,
@@ -286,12 +286,12 @@ func accountStakeholderEdge(ctx context.Context, orgPos int, arg func(any) int) 
 	return fmt.Sprintf(`(
 		   (r.kind = 'deal_stakeholder' AND EXISTS (
 		      SELECT 1 FROM deal d WHERE d.id = r.deal_id
-		        AND d.organization_id = $%[1]d AND d.archived_at IS NULL
+		        AND d.company_id = $%[1]d AND d.archived_at IS NULL
 		        AND (%[2]s)))
 		OR (r.kind = 'project_stakeholder' AND EXISTS (
 		      SELECT 1 FROM relationship pc
 		        JOIN project pr ON pr.id = pc.project_id AND pr.archived_at IS NULL
 		       WHERE pc.kind = 'project_company' AND pc.project_id = r.project_id
-		         AND pc.organization_id = $%[1]d AND pc.archived_at IS NULL
-		         AND (%[3]s))))`, orgPos, dealScope, projectScope), nil
+		         AND pc.company_id = $%[1]d AND pc.archived_at IS NULL
+		         AND (%[3]s))))`, companyPos, dealScope, projectScope), nil
 }

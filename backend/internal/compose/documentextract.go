@@ -138,6 +138,18 @@ type documentSource struct {
 	// Filename is provenance a reader of the prompt can see. It is untrusted
 	// like every other byte of the document, and is fenced accordingly.
 	Filename string
+	// ExtractedFrom names the media type this text was READ OUT OF, when it did
+	// not arrive as text. Empty for a file whose bytes are its own text.
+	//
+	// It is not decoration. On the ordinary text lane a quote checked against
+	// Text is a quote checked against the document itself, which is what
+	// RD-AC-N-4 promises. Text this product derived is a second reading with its
+	// own failure mode — a page whose columns interleave yields characters in an
+	// order the page never showed anyone — so a quote that agrees with it has
+	// agreed with the derivation, not with the document. Saying which happened
+	// is the difference between a citation and a claim, and the model is told so
+	// it does not report a layout it was never shown.
+	ExtractedFrom string
 }
 
 // onTextLane reports which of the two lanes this source takes. It reads off
@@ -201,6 +213,17 @@ func documentExtractRequest(src documentSource) model.Request {
 		prompt.WriteString(fence.WrapAttr("document", "filename", src.Filename) + "\n")
 	}
 	if src.onTextLane() {
+		if src.ExtractedFrom != "" {
+			// Said in the INSTRUCTION voice and unfenced, unlike the filename and
+			// the media type below: this sentence is this product describing what
+			// it did, not a span copied out of a counterparty's file. The value
+			// interpolated is a constant this package owns, never a header a
+			// sender chose.
+			fmt.Fprintf(&prompt,
+				"The text below was extracted by this system from the document (%s), so it carries the document's "+
+					"words and not its layout. Quote only what appears in the text below. Do not report a table, a "+
+					"column or a position you cannot see in it.\n", src.ExtractedFrom)
+		}
 		prompt.WriteString(fence.WrapAttr("document", "text", src.Text) + "\n")
 	} else {
 		// FENCED like the filename above it, and for the same reason: the media

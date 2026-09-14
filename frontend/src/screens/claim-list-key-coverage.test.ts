@@ -11,8 +11,8 @@ import { describe, expect, it } from "vitest";
 // `useClaimRecord` invalidates the list its record is filed under. It used to
 // derive that key as `${recordType}s`, which is right for three of the four
 // claimable kinds and wrong for the one whose plural is not its singular plus
-// an s: contacts are filed under "people", so claiming a person asked React
-// Query to invalidate "persons".
+// an s: contacts are filed under "contacts", so claiming a contact asked React
+// Query to invalidate "contacts".
 //
 // Nothing failed. `invalidateQueries` matching no cache is not an error — it
 // finds nothing and returns. So the claim was written, the control settled,

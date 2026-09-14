@@ -2392,7 +2392,7 @@ frappina.tk
 frappina99.tk
 free-email.cf
 free-email.ga
-free-org.com
+free-company.com
 free.com.pe
 free.fr
 freeaccess.nl
@@ -6193,7 +6193,7 @@ orangotango.tk
 orbitel.bg
 ordinaryamerican.net
 oreidresume.com
-org.ua
+company.ua
 orgmail.net
 orgmbx.cc
 oroki.de
@@ -6323,8 +6323,8 @@ pencalc.xyz
 penis.computer
 penisgoes.in
 penpen.com
-peoplepc.com
-peopleweb.com
+contactspc.com
+contactsweb.com
 pepbot.com
 peppe.usa.cc
 pepsi.coms.hk
@@ -6479,7 +6479,7 @@ predatorrat.gq
 predatorrat.ml
 predatorrat.tk
 premium-mail.fr
-premiumperson.website
+premiumcontact.website
 premiumservice.com
 presidency.com
 press.co.jp

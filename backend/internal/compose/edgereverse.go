@@ -11,7 +11,7 @@ package compose
 // `{audit_id}` is the entry — so what changes is that the entry's own entity_type
 // decides the mechanism.
 //
-// No SQL here, and none is coming. `relationship` is the people module's table
+// No SQL here, and none is coming. `relationship` is the contacts module's table
 // and that module already owns every semantic an edge write has, so this file
 // decides WHICH inverse and the seam there performs it.
 
@@ -24,7 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -47,11 +47,11 @@ func reversibleEdgeAction(action string) bool {
 	return action == "create" || action == "update"
 }
 
-// EdgeReverser is the people-module seam that performs an edge's inverse. It is a
+// EdgeReverser is the contacts-module seam that performs an edge's inverse. It is a
 // port because `relationship` is that module's table: a write of it from here
 // would be a second, thinner copy of the rules its own store holds.
 type EdgeReverser interface {
-	ReverseEdge(ctx context.Context, in people.ReverseEdgeInput) error
+	ReverseEdge(ctx context.Context, in contacts.ReverseEdgeInput) error
 }
 
 // reverseEdge puts one audited edge change back and answers with the line that
@@ -62,12 +62,12 @@ type EdgeReverser interface {
 // The record's If-Match says "the history screen I decided from was current",
 // which is what the route requires it for, and it is verified against the PATH
 // record — the record whose history was open. An edge row sits on both records it
-// joins, so reversing from the person's page checks the person's version and from
+// joins, so reversing from the contact's page checks the contact's version and from
 // the company's page the company's.
 //
 // It cannot be the write's guard as well: an edge write does not touch either
 // record it joins, so neither record's version moves and neither would notice a
-// second person reversing the same link from the other end. The EDGE's own
+// second contact reversing the same link from the other end. The EDGE's own
 // version, read by the binding evaluation immediately before the write, is what
 // serialises those two.
 func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (privacy.RecordHistoryEntry, error) {
@@ -90,7 +90,7 @@ func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.
 	if s.afterEdgeDecision != nil {
 		s.afterEdgeDecision()
 	}
-	if err := s.edges.ReverseEdge(ctx, people.ReverseEdgeInput{
+	if err := s.edges.ReverseEdge(ctx, contacts.ReverseEdgeInput{
 		EdgeID:    row.EntityID,
 		Action:    row.Action,
 		Before:    before,
@@ -104,7 +104,7 @@ func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.
 
 // edgeWriteRefusal renders the one outcome the decision could not have seen.
 //
-// Two people reversing ONE link from opposite ends are serialised by the edge's
+// Two contacts reversing ONE link from opposite ends are serialised by the edge's
 // own version: the loser either finds the version moved, which is a version skew,
 // or finds the link already gone, which every write path here answers as an
 // absent row. Returned unchanged, that second answer tells the caller the ENTRY
@@ -127,19 +127,19 @@ func edgeWriteRefusal(err error) error {
 //
 // The path record's If-Match is verified in this SAME transaction as the
 // decision, so the two are one answer about one moment rather than two readings
-// a client cannot tell apart. The write is the people store's own transaction
+// a client cannot tell apart. The write is the contacts store's own transaction
 // and cannot be joined to this one without that module restating a guard it does
 // not own; what a caller decided on the screen is therefore bound here and what
 // happens to the LINK between here and the write is bound by the edge version
 // this returns. The record's version cannot move in that interval on an edge
 // write at all — TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion is
 // what keeps that true.
-func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (people.EdgeFacts, Undoability, error) {
+func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (contacts.EdgeFacts, Undoability, error) {
 	if s.evaluator.EdgeFacts == nil {
-		return people.EdgeFacts{}, Undoability{},
+		return contacts.EdgeFacts{}, Undoability{},
 			fmt.Errorf("compose: no edge reader is wired, so entry %s cannot be judged", row.ID)
 	}
-	var facts people.EdgeFacts
+	var facts contacts.EdgeFacts
 	var answer Undoability
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := recordVersionUnmoved(ctx, tx, entityType, id, ifVersion); err != nil {
@@ -158,7 +158,7 @@ func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.U
 		// Two statements in one READ COMMITTED transaction see two snapshots, so
 		// a version read separately from the decision pins a state nobody judged.
 		pinned := s.evaluator
-		pinned.EdgeFacts = func(context.Context, pgx.Tx, ids.UUID) (people.EdgeFacts, error) {
+		pinned.EdgeFacts = func(context.Context, pgx.Tx, ids.UUID) (contacts.EdgeFacts, error) {
 			return facts, nil
 		}
 		answer, err = pinned.Evaluate(ctx, tx, row, Binding)
@@ -168,16 +168,16 @@ func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.U
 		// Unwrapped: the sentinel's own sentence is what the 409 carries, and a
 		// caller reading `code: version_skew` is told to re-read and decide again
 		// rather than shown this path's internal narration.
-		return people.EdgeFacts{}, Undoability{}, err
+		return contacts.EdgeFacts{}, Undoability{}, err
 	}
 	if err != nil {
-		return people.EdgeFacts{}, Undoability{},
+		return contacts.EdgeFacts{}, Undoability{},
 			fmt.Errorf("compose: decide whether the link can be put back: %w", err)
 	}
 	return facts, answer, nil
 }
 
-// edgeImage decodes an audited edge image. The keys are the people module's, and
+// edgeImage decodes an audited edge image. The keys are the contacts module's, and
 // so is the decode of each value: what travels from here is the image, unread.
 func edgeImage(raw json.RawMessage) (map[string]any, error) {
 	if len(raw) == 0 {
@@ -194,7 +194,7 @@ func edgeImage(raw json.RawMessage) (map[string]any, error) {
 // NULL, which an edge patch cannot do: every field on the request is an optional
 // pointer coalesced against the column, so a null reads as "not supplied". The
 // write would report success and leave the field standing, which is worse than a
-// refusal — the person reads the confirmation and stops looking.
+// refusal — the reader reads the confirmation and stops looking.
 //
 // Judged from the audited PAIR rather than from the live row: the pair is already
 // narrowed to what moved, so a key stated on both sides with a null before and a

@@ -24,7 +24,7 @@ import (
 // type-blind rendering of a value observable too.
 func baseMapping() overlay.ObjectMapping {
 	return overlay.ObjectMapping{
-		Source: "contacts", Target: "person",
+		Source: "contacts", Target: "contact",
 		ExternalKey: "hs_object_id", Baseline: "lastmodifieddate",
 		UnmappedPolicy: "flag",
 		Const: map[string]any{
@@ -33,7 +33,7 @@ func baseMapping() overlay.ObjectMapping {
 		Fields: []overlay.FieldMapping{
 			{From: []string{"firstname"}, To: "first_name", Kind: overlay.TargetColumn},
 			{
-				From: []string{"email"}, To: "person_email.email", Kind: overlay.TargetChild,
+				From: []string{"email"}, To: "contact_email.email", Kind: overlay.TargetChild,
 				Transform: "lowercase",
 				Child: &overlay.ChildRow{
 					Attrs: map[string]any{
@@ -57,7 +57,7 @@ func TestFingerprintChangesWithEveryDeclarationDetail(t *testing.T) {
 		mutate func(*overlay.ObjectMapping)
 	}{
 		{"source", func(m *overlay.ObjectMapping) { m.Source = "companies" }},
-		{"target", func(m *overlay.ObjectMapping) { m.Target = "organization" }},
+		{"target", func(m *overlay.ObjectMapping) { m.Target = "company" }},
 		{"external key", func(m *overlay.ObjectMapping) { m.ExternalKey = "id" }},
 		{"baseline", func(m *overlay.ObjectMapping) { m.Baseline = "hs_lastmodifieddate" }},
 		{"unmapped policy", func(m *overlay.ObjectMapping) { m.UnmappedPolicy = "drop" }},

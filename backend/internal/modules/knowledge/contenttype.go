@@ -18,10 +18,18 @@ import (
 // decision that changes on its own schedule — a new reader lands here and
 // nowhere else — while the upload around it is a write shape that does not.
 
-// acceptedContentTypes is the whole list, and it is short for one reason: this
-// product has no document parser. A type is here only when the file's bytes ARE
-// its text, so accepting a PDF would mean ingesting its binary envelope as
-// prose — a corpus that answers nothing while reporting a successful upload.
+// acceptedContentTypes is the whole list, and every type on it is one whose
+// bytes ARE its text. Nothing here parses a file: accepting a PDF on these terms
+// would ingest its binary envelope as prose — a corpus that answers nothing
+// while reporting a successful upload.
+//
+// A PDF text reader DOES exist in this tree now (platform/pdftext), and this
+// route deliberately does not use it. The document lane reads ONE file a human
+// is about to check field by field, so a thin or mis-ordered extraction is
+// visible and correctable; a corpus is retrieved from silently for months, and
+// an answer grounded in a bad extraction cites a passage the source does not
+// contain. Adopting it here is a product decision about retrieval quality, not
+// the missing-parser problem it used to be.
 //
 // The refusal names this list, because "unsupported" alone leaves the uploader
 // with nothing to do.

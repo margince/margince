@@ -19,7 +19,7 @@ import (
 // nameActivities turns a derived number's id array into named references.
 //
 // It lives in compose because the two producers cannot reach it themselves: a
-// relationship strength and a lead score are both computed inside `people`,
+// relationship strength and a lead score are both computed inside `contacts`,
 // which may not import `activities`. Making them able to would put the activity
 // gates inside a module that has no business holding them.
 //

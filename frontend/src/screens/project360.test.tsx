@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -93,7 +93,7 @@ describe("ProjectScreen", () => {
     // and they were the first thing a reader met under the title.
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The sections: a linked deal row, a seated person with their role, the
+    // The sections: a linked deal row, a seated contact with their role, the
     // phase history with its duration, and honest empty states elsewhere.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
@@ -114,6 +114,32 @@ describe("ProjectScreen", () => {
     expect(
       screen.getByText(/Nothing is filed under this project yet/),
     ).toBeTruthy();
+  });
+
+  // The activity readings' way out. Both are counted from the record's own
+  // chronology, which is already on the page one screen down, so the door is a
+  // scroll rather than a route — and the id it aims at is the timeline
+  // SECTION's own, handed to `RecordView`, so the two cannot drift apart.
+  it("reveals the chronology from the activity readings", async () => {
+    projectsBackend({ view: project360() });
+    render(<ProjectScreen id="pr-1" />);
+    const story = await screen.findByRole("region", {
+      name: en["record.timeline"],
+    });
+    expect(story.id).toBe("project-activity");
+    // jsdom implements no scrolling at all, so the page's own element is what
+    // records the call.
+    const scrolled = vi.fn();
+    story.scrollIntoView = scrolled;
+
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: en["stat.open"],
+        description: en["project.rollups.lastActivity"],
+      }),
+    );
+
+    expect(scrolled).toHaveBeenCalledTimes(1);
   });
 
   it("offers Relink and Reply on a timeline row", async () => {
@@ -153,13 +179,13 @@ describe("ProjectScreen", () => {
           "contracts",
           "rollups",
           "coverage",
-          "organization",
+          "company",
           "activities",
         ],
         contracts: undefined,
         rollups: undefined,
         coverage: undefined,
-        organization: undefined,
+        company: undefined,
         activities: undefined,
       }),
     });
@@ -275,29 +301,28 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    // Edit is refused in place, and the id it describes itself by must resolve
-    // to the sentence in the band from the FIRST render — a reason minted
-    // inside a menu would name no element until the menu was opened.
-    const edit = screen.getByRole("button", { name: "Edit project" });
-    expect(edit.hasAttribute("disabled")).toBe(true);
-    const reasonId = edit.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(reasonId)?.textContent).toMatch(
-      /You cannot change this project/,
-    );
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
-    // a pressable one: clicking it opens the flow and the save 403s.
+    // a pressable one: clicking it opens the flow and the save 403s. Edit is
+    // in here with them, and the id each describes itself by must resolve to
+    // the band's sentence — which is why that sentence is minted OUTSIDE the
+    // panel: one minted inside would name no element until the menu opened.
     await user.click(screen.getByRole("button", { name: "More actions" }));
     // Barred is the NATIVE disabled attribute — the design system reserves
     // aria-disabled for "busy" — and each carries aria-describedby pointing at
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
-    for (const label of [/^Archive/, /^Assign/, /^Share/]) {
-      for (const verb of screen.queryAllByRole("button", { name: label })) {
+    for (const label of [/^Edit project/, /^Archive/, /^Assign/, /^Share/]) {
+      const verbs = screen.queryAllByRole("button", { name: label });
+      expect(verbs.length).toBeGreaterThan(0);
+      for (const verb of verbs) {
         expect(
           `${verb.textContent} disabled=${verb.hasAttribute("disabled")}`,
         ).toBe(`${verb.textContent} disabled=true`);
-        expect(verb.getAttribute("aria-describedby")).toBeTruthy();
+        expect(
+          document.getElementById(verb.getAttribute("aria-describedby") ?? "")
+            ?.textContent,
+        ).toMatch(/You cannot change this project/);
       }
     }
 

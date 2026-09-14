@@ -52,7 +52,7 @@ const (
 	// Permitting the marker without counting it would let it spread quietly and
 	// reopen the class these rules close; pinned, every new one moves a number a
 	// reviewer sees.
-	wantFixtureAnnotations = 49
+	wantFixtureAnnotations = 55
 )
 
 // censusDecl is one package-level declaration this census governs — a map from
@@ -489,7 +489,7 @@ func importPath(t *testing.T, file string, imported *ast.ImportSpec) string {
 // directives. Go treats any comment matching //<word>:<word> as a directive and
 // CommentGroup.Text() drops directives, so a marker read through Text() is
 // invisible to the census that requires it — the space after the slashes keeps
-// the marker readable to a person, not findable to this walk.
+// the marker readable to a contact, not findable to this walk.
 func fixtureMarkers(pf parsedFile, fset *token.FileSet) (markers map[int]string, commented map[int]bool) {
 	markers = map[int]string{}
 	commented = map[int]bool{}

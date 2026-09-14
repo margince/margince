@@ -5,11 +5,7 @@ import {
 } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useState } from "react";
 import { api } from "../api/client";
-import {
-  approvalDotTier,
-  KIND_TO_VERB,
-  useAgentTierMap,
-} from "../app/autonomy";
+import { approvalDotTier, useAgentTierMap } from "../app/autonomy";
 import { ENTITY, isEntityKind } from "../app/entity";
 import { navigate, type Route } from "../app/router";
 import { Button, Card } from "../design-system/atoms";
@@ -18,10 +14,9 @@ import {
   type DecisionCardLabels,
   DecisionStatusChip,
   type DecisionStatusLabels,
-  DecisionToolChip,
 } from "../design-system/decisioncard";
 import { useToast } from "../design-system/toast";
-import { AutonomyDot, confidenceLevel } from "../design-system/trust";
+import { AutonomyDot } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
@@ -96,7 +91,7 @@ export function useDecisionSink(): {
         alignItems: "center",
       }}
     >
-      <p className="t-caption" style={{ color: "var(--danger)", flex: 1 }}>
+      <p className="t-caption" style={{ color: "var(--dangerText)", flex: 1 }}>
         {t("decision.alreadyDecided")}
       </p>
       <Button small onClick={() => setAlreadyDecided(false)}>
@@ -306,7 +301,6 @@ export function ApprovalRow({
     t,
     stagedDayFormatter(locale, viewerZone()),
   );
-  const level = confidenceLevel(approval.confidence);
 
   const problem =
     decide.error instanceof ProblemError ? decide.error.problem : null;
@@ -351,11 +345,19 @@ export function ApprovalRow({
       className="approval-row"
       display={display}
       now={now}
-      labels={rowLabels(t)}
+      labels={{
+        ...rowLabels(t),
+        accept: t(
+          approval.kind === "send_email" ||
+            approval.kind === "held_draft" ||
+            approval.kind === "scheduled_send_held"
+            ? "brief.approval.email"
+            : "brief.approval.approve",
+        ),
+      }}
       decided={decided}
       pending={decide.isPending}
       provenance={provenanceOf(approval.proposed_by, viewerId)}
-      confidence={level ?? undefined}
       meta={
         <>
           {!decided && (
@@ -365,10 +367,6 @@ export function ApprovalRow({
           <span className="t-caption">
             {approvalKindLabel(approval.kind, t)}
           </span>
-          <DecisionToolChip
-            verb={KIND_TO_VERB[approval.kind]}
-            label={(verb) => t("decision.viaTool", { verb })}
-          />
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}
@@ -416,10 +414,11 @@ export function ApprovalRow({
         <>
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
-              person, recorded against their own name. */}
+              contact, recorded against their own name. */}
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}
+              asking={permission.asking}
               unanswered={permission.unanswered}
             />
           )}

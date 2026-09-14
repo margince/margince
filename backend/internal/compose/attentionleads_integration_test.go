@@ -55,7 +55,7 @@ var leadRepPerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"lead":     {Create: true, Read: true, Update: true},
-		"person":   {Create: true, Read: true, Update: true},
+		"contact":  {Create: true, Read: true, Update: true},
 		"deal":     {Create: true, Read: true, Update: true},
 		"activity": {Create: true, Read: true, Update: true},
 		// A read resolves the basis it reports money in; every seeded role holds it.
@@ -84,8 +84,8 @@ func measureFirstResponse(t *testing.T, e *integration.Env) {
 	// The floor the setting allows, so every seeded wait below is comfortably
 	// past it and no case turns on minutes.
 	e.WsExec(t, `INSERT INTO setting (key, value) VALUES
-		('people.first_response_enabled', 'true'::jsonb),
-		('people.first_response_target_minutes', to_jsonb(15::int))
+		('contacts.first_response_enabled', 'true'::jsonb),
+		('contacts.first_response_target_minutes', to_jsonb(15::int))
 	 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
 }
 
@@ -175,6 +175,9 @@ func TestWithTheTargetOffALeadIsOwedButCarriesNoDeadline(t *testing.T) {
 	// Silent about WHEN, which is the half the policy owns. A deadline here
 	// would be one this installation never stated.
 	for _, item := range page.Queue {
+		if string(item.Source) == "lead_response" && (item.Lead == nil || item.Lead.ResponseTargetTracked == nil || *item.Lead.ResponseTargetTracked) {
+			t.Error("an unmeasured lead must carry honest response-target context")
+		}
 		if string(item.Source) == "lead_response" && item.DueAt != nil {
 			t.Errorf("the row carries a deadline of %v where no policy states one", *item.DueAt)
 		}

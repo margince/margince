@@ -89,7 +89,7 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 ) TraceEntry {
 	actor, owner := capturePrincipal(ctx)
 	// Read from the KEY, because the question is about the key: does SourceID
-	// embed a person's provider account id, and so have to be hashed before the
+	// embed a contact's provider account id, and so have to be hashed before the
 	// trace stores it.
 	//
 	// It used to be read off the counterparty, which asks how the record names
@@ -98,15 +98,15 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 	// others by an address while keying every record the same way. Only the
 	// producer of a key knows what is in it, so the producer now says.
 	return TraceEntry{
-		Stage:                stage,
-		UserID:               owner,
-		Connector:            traceConnector(rec, actor),
-		SourceSystem:         rec.NaturalKey.SourceSystem,
-		SourceID:             rec.NaturalKey.SourceID,
-		Outcome:              outcome,
-		Reason:               reason,
-		SourceIDNamesAPerson: rec.NaturalKey.SourceIDNamesAPerson,
-		Counterparty:         rec.Counterparty.Email,
+		Stage:                 stage,
+		UserID:                owner,
+		Connector:             traceConnector(rec, actor),
+		SourceSystem:          rec.NaturalKey.SourceSystem,
+		SourceID:              rec.NaturalKey.SourceID,
+		Outcome:               outcome,
+		Reason:                reason,
+		SourceIDNamesAContact: rec.NaturalKey.SourceIDNamesAContact,
+		Counterparty:          rec.Counterparty.Email,
 		// Carried so the trace can name a counterparty that has no address —
 		// which is every counterparty, for a connector whose provider gives it
 		// none. tracePayload decides which of the two it may write, and against

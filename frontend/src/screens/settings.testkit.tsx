@@ -111,14 +111,14 @@ const ADMIN_GRANTS: GrantSpec = {
   // absent while nothing asked — Writing voice opened for everybody — and its
   // absence made this fixture describe an account the product never issues.
   voice_profile: ["read", "create", "update", "delete"],
-  // The consent registry's own gate (consent/store.go demands person:read),
+  // The consent registry's own gate (consent/store.go demands contact:read),
   // which every seeded role holds. It is the floor a fixture standing in for a
   // real principal carries — but it no longer OPENS Privacy: that page asks
   // `retention_policy` or `privacy_request`, neither of which anybody below
   // admin and ops holds.
-  person: ["read"],
+  contact: ["read"],
   // What actually opens Privacy & retention for this admin fixture. Named here
-  // rather than left to `person`, because the page moved off the read every
+  // rather than left to `contact`, because the page moved off the read every
   // seat holds and a fixture that did not follow would quietly stop rendering
   // the page its cases are about.
   retention_policy: ["read", "create", "update"],
@@ -136,7 +136,7 @@ const ADMIN_GRANTS: GrantSpec = {
 // not satisfy GrantSpec, and only fails in `tsc -b`, where test files are
 // typechecked, rather than under the app project alone.
 export function readOn(object: RbacObject): GrantSpec {
-  // `person:read` rides along because every seeded role holds it and the consent
+  // `contact:read` rides along because every seeded role holds it and the consent
   // registry's own endpoint demands it — so a case about ONE object's entry is
   // not also a case about losing that read. Isolating the object under test
   // means holding the floor steady, not stripping it.
@@ -144,7 +144,7 @@ export function readOn(object: RbacObject): GrantSpec {
   // The floor no longer reaches a PAGE. Privacy used to open on it, which made
   // every `readOn` case also a case about Privacy; the page asks the two
   // governance objects now, and the expectations lost their trailing "privacy".
-  const spec: GrantSpec = { person: ["read"] };
+  const spec: GrantSpec = { contact: ["read"] };
   spec[object] = ["read"];
   return spec;
 }
@@ -251,7 +251,7 @@ export const auditEntry = {
   passport_id: "pp-9",
   on_behalf_of: "u-1",
   action: "update",
-  entity_type: "person",
+  entity_type: "contact",
   entity_id: "p-1",
   before: { stage: "new" },
   after: { stage: "qualified" },
@@ -376,10 +376,10 @@ export const pagesNamed = (...ids: readonly SettingsPageId[]) => [
 ];
 
 // What every reader gets: the personal pages, which carry no requirement at
-// all, and the two People pages that ask for none.
+// all, and the two Contacts pages that ask for none.
 //
 // `agents` and `connections` are personal because what they carry is the
-// PERSON's: gating `agents` would regress passport minting for every seat that
+// CONTACT's: gating `agents` would regress passport minting for every seat that
 // is not an admin, and a mailbox and a LinkedIn network nobody else can see are
 // not the installation's configuration.
 // The pages that ask for nothing: a reader's own five, and nothing else.

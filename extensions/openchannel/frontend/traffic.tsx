@@ -23,7 +23,7 @@ import {
 
 // What arrived, and what left. Two listings rather than one, because who has
 // been messaging a member and who that member has been messaging are two
-// questions an operator answers for two different sets of people — which is
+// questions an operator answers for two different sets of contacts — which is
 // why they are two RBAC objects, and why each list is asked for only by a seat
 // that holds its own.
 //

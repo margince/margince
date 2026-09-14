@@ -1,6 +1,10 @@
+import { sourceName } from "./worklist.sources";
+
+export { sourceName } from "./worklist.sources";
+
 import { ENTITY, isEntityKind } from "../app/entity";
 import { routeHash } from "../app/router";
-import { calendarDay } from "../format/calendarday";
+import { calendarDay, middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
@@ -10,7 +14,12 @@ import {
 } from "../format/format";
 import type { Locale, useT } from "../i18n";
 import { translatePlural } from "../i18n";
-import { BRIEF_PARAM, COMPOSE_PARAM, THREAD_PARAM } from "./personpage.address";
+import {
+  BRIEF_PARAM,
+  COMPOSE_PARAM,
+  THREAD_PARAM,
+} from "./contactpage.address";
+import { caseHref } from "./privacy.caselink";
 import { settingsHref } from "./settingsrouting";
 import { countsUnder } from "./worklist.narrowing";
 import type {
@@ -21,6 +30,7 @@ import type {
   WorklistReason,
   WorklistValue,
 } from "./worklist.queries";
+import { known } from "./worklist.reasoncensus";
 
 type T = ReturnType<typeof useT>;
 
@@ -35,7 +45,7 @@ type T = ReturnType<typeof useT>;
 // Which record an item points at, as an address the router understands.
 //
 // Through the entity registry, never a switch written here: the record types
-// have route names of their own (`contacts`, not `people`), and a second
+// have route names of their own (`contacts`, not `contacts`), and a second
 // spelling of them sends a reader to a page that does not exist. An activity
 // resolves to nothing on purpose — it is a timeline entry rather than a record
 // with a page, so naming it on the row is honest and linking it is not.
@@ -47,20 +57,7 @@ export function subjectHref(item: WorklistItem): string | undefined {
   return routeHash(ENTITY[subject.type].route(subject.id));
 }
 
-// Where a row goes when it names no record of its own.
-//
-// Most rows point at a record and reach it through the entity registry. A few
-// name a QUEUE instead — a data-subject request is worked on the privacy
-// screen and nowhere else — and without a destination those rows are a
-// sentence a reader cannot follow, on the one lane whose whole argument is a
-// legal clock somebody has to answer.
-//
-// A destination is not a verb: these rows still offer no action, because the
-// queue cannot perform one. It is the difference between telling somebody
-// where a room is and claiming to have opened the door.
-// Through settingsAddress, not a path spelled here: the settings registry
-// decides whether a tab sits under the admin segment, and a second spelling of
-// that decision would keep pointing at the old address the day it moves.
+// Sources without record pages link to their existing work surface.
 const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
   dsr: routeHash(settingsHref("privacy")),
   // A rule that failed, and the page that lists the rules.
@@ -93,7 +90,28 @@ const SOURCE_QUEUE: Partial<Record<WorklistItem["source"], string>> = {
 // neither — a system condition fixed on a settings screen the card does not
 // pretend to know.
 export function rowHref(item: WorklistItem): string | undefined {
-  return askHref(item) ?? subjectHref(item) ?? SOURCE_QUEUE[item.source];
+  return (
+    askHref(item) ??
+    caseQueueHref(item) ??
+    subjectHref(item) ??
+    SOURCE_QUEUE[item.source]
+  );
+}
+
+// A subject request goes to the case, not merely to the queue that holds it.
+//
+// The row already carried the queue's address, and it was one step short: the
+// officer arrived at twenty rows with nothing saying which one they had been
+// sent to read, and the case they wanted was as likely to be below the fold as
+// on screen. The row's `id` IS the case id, so the address can name it
+// (privacy.caselink.ts opens it on arrival).
+//
+// Still no verb. The queue answers these and this page cannot, so the row says
+// where the case is and stops there — the difference between telling somebody
+// where a room is and claiming to have opened the door, which is the rule the
+// table below already follows.
+export function caseQueueHref(item: WorklistItem): string | undefined {
+  return item.source === "dsr" ? caseHref(item.id) : undefined;
 }
 
 // An introduction ask goes to the contact's NETWORK tab, not the contact.
@@ -105,7 +123,7 @@ export function rowHref(item: WorklistItem): string | undefined {
 export function askHref(item: WorklistItem): string | undefined {
   if (
     item.source !== "introduction_request" ||
-    item.subject?.type !== "person"
+    item.subject?.type !== "contact"
   ) {
     return undefined;
   }
@@ -114,7 +132,7 @@ export function askHref(item: WorklistItem): string | undefined {
 
 // One comparator value, in the reader's notation.
 //
-// A magnitude written in the wrong notation is a different number to the person
+// A magnitude written in the wrong notation is a different number to the contact
 // reading it: a German reader reads "1.234", and the coerced form says
 // something else.
 function valueText(
@@ -178,47 +196,6 @@ function daysValued(
   kind: WorklistReason["kind"],
 ): kind is keyof typeof DAYS_VALUED_REASONS {
   return kind in DAYS_VALUED_REASONS;
-}
-
-// Every reason this client has a sentence for.
-//
-// A newer server sending a reason this build does not know must not print
-// `worklist.because.customer_escalated` at a reader — a missing translation
-// returns its own key, so an unrecognised value has to be caught here rather
-// than discovered on screen.
-const KNOWN_REASONS = {
-  pinned: true,
-  buyer_wrote_last: true,
-  waiting_days: true,
-  overdue: true,
-  due_today: true,
-  closing_soon: true,
-  expected_revenue: true,
-  material: true,
-  below_material: true,
-  quiet_days: true,
-  no_champion: true,
-  promised: true,
-  approved_and_failed: true,
-  blocks_customer_work: true,
-  routine: true,
-  repeated_failure: true,
-  legal_deadline: true,
-  meeting_soon: true,
-  meeting_unprepared: true,
-  response_overdue: true,
-  response_due_soon: true,
-  unassigned: true,
-  stale: true,
-  no_reply_history: true,
-  asks_nothing: true,
-  outcome_unrecorded: true,
-} as const;
-
-type KnownReason = keyof typeof KNOWN_REASONS;
-
-function known(kind: WorklistReason["kind"]): kind is KnownReason {
-  return kind in KNOWN_REASONS;
 }
 
 // The comparators this build can name, for the same reason.
@@ -355,7 +332,7 @@ function paired(
 //
 // The comparator that DECIDED, with both sides' values — so a reader can check
 // the order rather than trust it. `order` means every comparator tied and the
-// ids broke it, which is not a reason a person needs to read, so it draws
+// ids broke it, which is not a reason a contact needs to read, so it draws
 // nothing at all.
 export function comparisonText(
   comparison: WorklistComparison | undefined,
@@ -409,24 +386,27 @@ export function dealFactsText(
   }
   if (deal.expected_close_date) {
     parts.push(
-      t("worklist.deal.closes", {
-        date: formatDate(deal.expected_close_date, locale, zone),
-      }),
+      t(
+        deal.close_date_provisional
+          ? "worklist.deal.provisional"
+          : "worklist.deal.closes",
+        {
+          date: formatDate(
+            middayInstant(deal.expected_close_date, zone),
+            locale,
+            zone,
+          ),
+        },
+      ),
     );
   }
+  if (deal.forecast_category === "omitted")
+    parts.push(t("worklist.deal.omitted"));
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
-// The MOMENT a dated row is racing: when a meeting starts, when a task is due.
-//
-// `due_at` reached the client on both and nothing read it. A meeting said
-// "starting shortly" — the same three words whether it began in four minutes or
-// in fifty — so the one row a rep has to open BEFORE a wall-clock time was the
-// row that would not say the time. A task said "Overdue" and left the reader to
-// go and find out by how long.
-//
-// The two are one function because they are one question to the reader: what
-// clock am I against. What differs is only which side of now the answer is on.
+// Notices retain the original change date even when delivery happens later.
+// Meetings use the reader's clock; tasks use the agreed deadline's record zone.
 //
 // Today's meeting shows the CLOCK TIME and nothing else — a rep reads this at
 // their desk on the morning it matters, and "today" is the frame they are
@@ -446,9 +426,15 @@ export function whenText(
   record: string,
   now: Date,
 ): string | null {
+  if (item.source === "notice" && item.notice_origin)
+    return formatDateTime(item.notice_origin.occurred_at, locale, viewer);
   if (!item.due_at) {
-    return null;
+    return item.source === "task" ? t("brief.task.undated") : null;
   }
+  if (item.source === "weekly_commitment")
+    return t("worklist.when.due", {
+      when: formatDate(item.due_at, locale, record),
+    });
   const key = whenKeyFor(item);
   if (key === null) {
     return null;
@@ -471,7 +457,15 @@ function whenKeyFor(
   if (item.source === "meeting") {
     return "worklist.when.starts";
   }
-  if (item.source === "task") {
+  if (
+    [
+      "task",
+      "conversation_claim",
+      "weekly_commitment",
+      "dsr",
+      "notice_case",
+    ].includes(item.source)
+  ) {
     return "worklist.when.due";
   }
   return null;
@@ -498,7 +492,7 @@ function momentText(
 //
 // Compared in the VIEWER's zone rather than the runner's, because the whole row
 // is drawn in that zone: a meeting at 23:30 in Berlin, read on a machine set to
-// UTC, is still tonight's meeting to the person reading it.
+// UTC, is still tonight's meeting to the reader reading it.
 function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
   return calendarDay(new Date(utcIso), zone) === calendarDay(now, zone);
 }
@@ -509,13 +503,13 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // entry with no page of its own — `app/entity.ts` says so in as many words —
 // so `#/activities/<id>` would be a control that goes nowhere.
 //
-// A `draft_reply` row whose subject is a PERSON opens the composer, through
-// `?compose=reply` on their record (personpage.tsx COMPOSE_PARAM). Everything
+// A `draft_reply` row whose subject is a CONTACT opens the composer, through
+// `?compose=reply` on their record (contactpage.tsx COMPOSE_PARAM). Everything
 // else lands on the record itself, and its verb says so.
 //
-// WHY ONLY A PERSON. The composer lives on the person page and drafts to the
-// person, choosing its transport from their own reachability. A deal or an
-// organization has no composer to open, so a link claiming to draft there would
+// WHY ONLY A CONTACT. The composer lives on the contact page and drafts to the
+// contact, choosing its transport from their own reachability. A deal or an
+// company has no composer to open, so a link claiming to draft there would
 // promise what the click cannot do — the defect this function's own comment
 // warned about before the route existed.
 //
@@ -530,13 +524,13 @@ function sameDayInZone(utcIso: string, now: Date, zone: string): boolean {
 // answering.
 // The verbs this row can take a reader to.
 //
-// Both end at a person's composer, and which of the two the server chose
+// Both end at a contact's composer, and which of the two the server chose
 // reaches the address as well as the label: `draft_reply` names the message it
 // answers, `draft_email` names none because it is opening a conversation.
 //
 // `open_meeting_brief` is the third, and it lands somewhere else entirely: the
-// brief is read as `?prep=<activity>` on the PERSON's record, so the address
-// needs an id the subject does not carry. The server sends it as `with_person`,
+// brief is read as `?prep=<activity>` on the CONTACT's record, so the address
+// needs an id the subject does not carry. The server sends it as `with_contact`,
 // and only where the meeting names somebody this reader may see.
 //
 // It used to be described here as PERFORMED rather than navigated — "opens a
@@ -563,9 +557,6 @@ const NAVIGABLE_MOVES = new Set([
  * control only where the operand its verb needs is present. One carrying no
  * `activity_id` names nothing to answer — schema-valid, since the field is
  * optional for the verbs that take no record, and undrawable all the same.
- *
- * `draft_email` needs none: an opening outreach is a first message to a person,
- * and there is no earlier record for it to name.
  */
 function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
   return (
@@ -578,20 +569,23 @@ function moveIsComplete(move: NonNullable<WorklistItem["move"]>): boolean {
  * The brief's address: which meeting, on whose page.
  *
  * BOTH ids, because neither names it. The activity says which meeting to brief
- * and the person says whose record it opens on — the brief is not a page of its
+ * and the contact says whose record it opens on — the brief is not a page of its
  * own. A row missing either names nothing openable and draws no control, which
  * is the same promise every other verb here makes about its own operand.
  */
 function briefHref(item: WorklistItem): string | undefined {
   const meeting = item.move?.activity_id;
-  if (!meeting || !item.with_person) {
+  if (!meeting || !item.with_contact) {
     return undefined;
   }
-  const person = routeHash(ENTITY.person.route(item.with_person));
-  return `${person}?${BRIEF_PARAM}=${meeting}`;
+  const contact = routeHash(ENTITY.contact.route(item.with_contact));
+  return `${contact}?${BRIEF_PARAM}=${meeting}`;
 }
 
 export function moveHref(item: WorklistItem): string | undefined {
+  // Older servers attached a deal move to its task too. Keep the task action
+  // consistent while client and server versions can differ.
+  if (item.source === "task") return undefined;
   const move = item.move;
   if (!move || !NAVIGABLE_MOVES.has(move.action) || !moveIsComplete(move)) {
     return undefined;
@@ -601,7 +595,7 @@ export function moveHref(item: WorklistItem): string | undefined {
   }
   const record = subjectHref(item);
   if (move.action === "open_task") return record;
-  if (!record || item.subject?.type !== "person") {
+  if (!record || item.subject?.type !== "contact") {
     return record;
   }
   // The message the row is about travels with the ask. Without it the composer
@@ -628,7 +622,7 @@ export function moveOpensComposer(item: WorklistItem): boolean {
     move !== undefined &&
     NAVIGABLE_MOVES.has(move.action) &&
     moveIsComplete(move) &&
-    item.subject?.type === "person"
+    item.subject?.type === "contact"
   );
 }
 
@@ -665,6 +659,9 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   // A group names itself by what it holds and how much: "43 likely automated
   // senders" is the whole row, and a reader decides whether to open it from
   // that sentence alone.
+  if (item.source === "brief_item" && !item.title && item.subject?.label) {
+    return item.subject.label;
+  }
   if (item.batch) {
     // "200+" where the read stopped at its own bound. A floor printed as a
     // total is a wrong number rather than a bounded one, and the reader has no
@@ -700,7 +697,8 @@ export function itemTitle(item: WorklistItem, t: T, locale: Locale): string {
   if (!knownSource(item.source)) {
     return t("worklist.untitled.generic");
   }
-  return t(`worklist.untitled.${item.source}` as const);
+  const title = t(`worklist.untitled.${item.source}` as const);
+  return item.subject?.label ? `${title} · ${item.subject.label}` : title;
 }
 
 // Which source could not be read, and why, in words.
@@ -730,12 +728,6 @@ export function sourceUnavailableText(
 // Through the same known-source check the titles use, so a source this build
 // has never heard of is described generically rather than printed as its own
 // identifier — a reader must never be shown `ai_work_health` as a noun.
-export function sourceName(source: string, t: T): string {
-  return knownSource(source as WorklistItem["source"])
-    ? t(`worklist.untitled.${source as keyof typeof KNOWN_SOURCES}`)
-    : t("worklist.untitled.generic");
-}
-
 // The sources this build can name without its own sentence.
 //
 // Exported so a gate over these sentences derives its corpus from here rather
@@ -747,6 +739,7 @@ export const KNOWN_SOURCES = {
   approval: true,
   dedupe_candidate: true,
   task: true,
+  weekly_commitment: true,
   brief_item: true,
   conversation_claim: true,
   customer_waiting: true,

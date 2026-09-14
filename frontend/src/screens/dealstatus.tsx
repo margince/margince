@@ -44,7 +44,7 @@ type DealStatusCard = components["schemas"]["DealStatusCard"];
 type DealStatusCardMove = components["schemas"]["DealStatusCardMove"];
 type DealStatusCardSection = components["schemas"]["DealStatusCardSection"];
 
-// The verdict words the server may send, and how each reads to a person. A
+// The verdict words the server may send, and how each reads to a contact. A
 // word this build does not know renders as itself rather than as nothing:
 // the reader has learned four, and a fifth arriving from a newer server is
 // still a call the card must show.
@@ -85,7 +85,7 @@ export function useDealStatusCard(dealId: string) {
     queryKey: ["deal-status", dealId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId } },
+        params: { path: { id: dealId }, query: { facts_only: true } },
       });
       if (error) {
         throwProblem(error, t);
@@ -208,7 +208,7 @@ function Briefing({
   const open = (entityType: string, entityId: string) => {
     if (entityType === "deal") {
       navigate({ screen: "deals", id: entityId });
-    } else if (entityType === "person") {
+    } else if (entityType === "contact") {
       navigate({ screen: "contacts", id: entityId });
     }
   };

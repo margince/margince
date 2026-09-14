@@ -1,0 +1,10 @@
+[
+ {"name":"legacy undated","today":"2026-08-19","end":null,"status":null,"precision":null,"current":true},
+ {"name":"current undated","today":"2026-08-19","end":null,"status":"current","precision":null,"current":true},
+ {"name":"former undated","today":"2026-08-19","end":null,"status":"former","precision":null,"current":false},
+ {"name":"unknown undated","today":"2026-08-19","end":null,"status":"unknown","precision":null,"current":false},
+ {"name":"departing today","today":"2026-08-19","end":"2026-08-19","status":"current","precision":"day","current":false},
+ {"name":"notice period","today":"2026-08-19","end":"2026-08-20","status":"current","precision":"day","current":true},
+ {"name":"departure month still open","today":"2026-08-19","end":"2026-08-01","status":"current","precision":"month","current":true},
+ {"name":"departure month complete","today":"2026-09-01","end":"2026-08-01","status":"current","precision":"month","current":false}
+]

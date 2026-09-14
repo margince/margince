@@ -39,10 +39,10 @@ func TestValidate_pipelineEventAllowsEmptyEntity(t *testing.T) {
 // Every non-pipeline event still names a subject: a consumer reads it back
 // under its own RLS and routes on the entity type. Empty entity must fail.
 func TestValidate_nonPipelineEventRequiresEntity(t *testing.T) {
-	env := validEnvelope(t, "person.created")
+	env := validEnvelope(t, "contact.created")
 	env.Entity = EntityRef{}
 	if err := env.Validate(); err == nil {
-		t.Fatal("person.created with empty entity must be rejected")
+		t.Fatal("contact.created with empty entity must be rejected")
 	}
 }
 

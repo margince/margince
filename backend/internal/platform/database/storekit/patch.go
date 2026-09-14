@@ -33,7 +33,7 @@ const (
 	IncludeArchived
 	// NoArchiveColumn is for a table that has no archived_at at all — a
 	// dependent row deleted with its parent rather than retired on its own,
-	// such as the organization evidence sidecars. It renders the same empty
+	// such as the company evidence sidecars. It renders the same empty
 	// predicate as IncludeArchived and is a separate value on purpose: at a
 	// call site, IncludeArchived reads as "this write deliberately reaches
 	// archived rows", which for such a table is a claim about rows that cannot
@@ -194,7 +194,7 @@ func (p *Patch) After() map[string]any  { return p.after }
 // display name is edited, and once a name reads as human-authored no automated
 // source may correct it — so an agent round-tripping a record it had just read,
 // or a form resaving an untouched field, froze a provisional derived name for
-// good, with nothing in the record saying a person had never chosen it.
+// good, with nothing in the record saying a contact had never chosen it.
 //
 // A value whose before and after are different TYPES counts as moved. That is
 // the safe direction: it is what the presence test already did, so a caller

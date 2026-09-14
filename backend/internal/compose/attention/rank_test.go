@@ -698,8 +698,8 @@ func TestABandDifferenceOnTheSameLevelNamesNoLevelValues(t *testing.T) {
 
 	got := rankAll([]ranked{plain, lead})
 
-	if got[0].Id != "lead-task" {
-		t.Fatalf("the lead follow-up did not lead: %v", idsOf(got))
+	if got[0].Id != "plain-task" {
+		t.Fatalf("existing obligations must precede routine lead follow-up: %v", idsOf(got))
 	}
 	if got[0].AboveNext == nil {
 		t.Fatal("the leading row explains nothing")

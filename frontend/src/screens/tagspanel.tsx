@@ -18,7 +18,7 @@ import { useRecordTags, useRemoveTag } from "./tags.queries";
 import "./tagspanel.css";
 
 /**
- * The tags on one record — the same component on a person, a company and a
+ * The tags on one record — the same component on a contact, a company and a
  * deal, because a tag reads the same on all three and three panels would drift.
  *
  * Four visible, then "+N more". A record with twenty tags would otherwise push
@@ -145,7 +145,7 @@ export function TagsPanel({
 /**
  * The frame around the tags: a rail card, the same as every card beside it.
  *
- * The person rail once drew these as a bare headed section instead. It sat
+ * The contact rail once drew these as a bare headed section instead. It sat
  * between two cards — the correspondence control above, recent activity below —
  * so the one section in the column read as unstyled rather than as a deliberate
  * second shape.

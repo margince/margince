@@ -10,12 +10,12 @@
 // The two purposes are NOT interchangeable, and each has its own way of being
 // wrong:
 //
-//   useRecordZone() — the organization's own clock, as the installation
+//   useRecordZone() — the company's own clock, as the installation
 //   configured it (`installation.timezone`, served by app/recordzone.tsx). Its
 //   dates belong to the record, not to whoever is looking at it. Following the
 //   reader here MISSTATES the record: a close date, a renewal, an invoice's
 //   issue day and a timeline's day headings have to read the same for every
-//   colleague, or two people quoting the same page quote different days. It is
+//   colleague, or two contacts quoting the same page quote different days. It is
 //   also the only correct answer for a date-only wire value (OpenAPI
 //   `format: date`): there is no instant in `2026-08-21` to localize, and
 //   reading it in a zone behind UTC prints the day before.

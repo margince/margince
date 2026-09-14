@@ -11,7 +11,7 @@ package meetingbrief
 // question is how we close one.
 //
 // THE RULE THAT MATTERS HERE. A question must name something only this account
-// would produce — a person, a promise, a subject somebody actually wrote. A
+// would produce — a contact, a promise, a subject somebody actually wrote. A
 // question that would read identically on any other prospect is not a prepared
 // question, it is a questionnaire, and printing five of them is how a
 // preparation surface teaches a rep it has nothing to say. So a template that
@@ -42,32 +42,32 @@ func unknownsFor(in Input, typ MeetingType, arc []ArcMoment) []Unknown {
 	add := func(kind crmcontracts.MeetingPlanUnknownKind, question string) {
 		out = append(out, Unknown{Kind: kind, Question: question})
 	}
-	if typ.Value == crmcontracts.MeetingPlanTypeUnknown {
-		add(crmcontracts.MeetingPlanUnknownIntentNotCaptured,
+	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown {
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured,
 			"What would make this hour worth your time?")
 	}
 	if in.Deal == nil {
-		add(crmcontracts.MeetingPlanUnknownNoOpenDeal,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal,
 			"Is there a piece of work here you are trying to get funded, or is this still exploratory?")
 	}
 	if !hasClaimKind(in, kindDecisionProcess) {
-		add(crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured,
 			"Who else has to agree before this can go ahead?")
 	}
 	if len(in.PriorMeetings) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoPriorMeeting,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoPriorMeeting,
 			"Have you spoken to anyone else on our side before today?")
 	}
 	if len(in.Commitments) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoCommitmentsCaptured,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoCommitmentsCaptured,
 			"Is anything outstanding from either side that I should pick up?")
 	}
 	if len(arc) == 0 {
-		add(crmcontracts.MeetingPlanUnknownNoHistory,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoHistory,
 			"How much of the background do you already have from your side?")
 	}
 	if len(in.Attendees) == 0 {
-		add(crmcontracts.MeetingPlanUnknownAttendeesNotVisible,
+		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownAttendeesNotVisible,
 			"Who else is joining, and what do they need from this?")
 	}
 	return out
@@ -129,21 +129,21 @@ func askLines(claim ClaimIn) (string, string) {
 
 func askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf("We promised %s this and it is still open.", claim.PersonName)
+		return fmt.Sprintf("We promised %s this and it is still open.", claim.ContactName)
 	}
-	return fmt.Sprintf("%s raised this and it has not been closed out.", claim.PersonName)
+	return fmt.Sprintf("%s raised this and it has not been closed out.", claim.ContactName)
 }
 
 func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
 	if claim.Status == statusOpen {
-		return crmcontracts.MeetingPlanTierHigh
+		return crmcontracts.MeetingPlanTierMeetingPlanTierHigh
 	}
-	return crmcontracts.MeetingPlanTierMedium
+	return crmcontracts.MeetingPlanTierMeetingPlanTierMedium
 }
 
 // questionsFor is what to ask THEM.
 //
-// Claims first: a question built on something a named person actually said is
+// Claims first: a question built on something a named contact actually said is
 // specific by construction. Then the unknowns, but ONLY those whose question
 // can name a real fact from this account — see the rule at the top of this
 // file. An unknown with nothing to anchor on stays in `unknowns`, where it
@@ -158,7 +158,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 			Ask: fmt.Sprintf("You said %q — what has changed about that since?", claim.Body),
 			Why: fmt.Sprintf(
 				"It is the thing %s named, and the plan should be built on it rather than on what we assume.",
-				claim.PersonName),
+				claim.ContactName),
 			ListenFor: "Whether it still matters, who owns it now, and what it is costing them.",
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
@@ -186,7 +186,7 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 }
 
 // accountAnchor is the one thing this plan can name that no other account
-// would produce: the company, or failing that the person in the room.
+// would produce: the company, or failing that the contact in the room.
 func accountAnchor(in Input) string {
 	if in.Company != "" {
 		return in.Company
@@ -199,11 +199,11 @@ func accountAnchor(in Input) string {
 
 func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string {
 	switch kind {
-	case crmcontracts.MeetingPlanUnknownIntentNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
 		return fmt.Sprintf("Nothing in the record says what %s wants from this meeting.", anchor)
-	case crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
 		return fmt.Sprintf("The record does not name who decides at %s.", anchor)
-	case crmcontracts.MeetingPlanUnknownNoOpenDeal:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal:
 		return fmt.Sprintf("There is no open deal with %s, so what this is for is unstated.", anchor)
 	default:
 		// The rest are gaps worth stating and not worth spending one of five
@@ -215,11 +215,11 @@ func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string 
 
 func unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
 	switch kind {
-	case crmcontracts.MeetingPlanUnknownIntentNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
 		return "The word they use for the problem, and whether a date is attached to it."
-	case crmcontracts.MeetingPlanUnknownDecisionRouteNotCaptured:
+	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
 		return "Names and roles: who approves, who pays, who can veto."
 	default:
-		return "Whether the answer names a person, a date, or neither."
+		return "Whether the answer names a contact, a date, or neither."
 	}
 }

@@ -40,7 +40,6 @@ export const FourReadings: Story = {
         label="The money"
         value="€185,000"
         detail="Offer 1042 · sent"
-        numeric
         basis={basis}
       />
       <StatCard
@@ -54,7 +53,6 @@ export const FourReadings: Story = {
         value="1 of 3 engaged"
         detail="a champion is named"
         meter={{ filled: 1, total: 3 }}
-        openLabel="Open people"
         onOpen={() => {}}
       />
       <StatCard
@@ -73,14 +71,9 @@ export const InANarrowColumn: Story = {
   render: () => (
     <div style={{ maxWidth: 480 }}>
       <ReadingsGrid label="Where this contact stands">
-        <StatCard label="Whose move" value="Yours" tone="warn" dot />
-        <StatCard
-          label="Open promises"
-          value="1"
-          numeric
-          detail="19 days late"
-        />
-        <StatCard label="Deals they decide" value="€227k" numeric />
+        <StatCard label="Whose move" value="Yours" tone="warn" />
+        <StatCard label="Open promises" value="1" detail="19 days late" />
+        <StatCard label="Deals they decide" value="€227k" />
         <StatCard label="Next meeting" value="None" />
       </ReadingsGrid>
     </div>
@@ -97,10 +90,10 @@ export const WithAFloor: Story = {
       label="What today is worth"
       floor="Read to the page limit, so these are floors, not totals."
     >
-      <StatCard label="Revenue at risk" value="€384.5k" numeric tone="warn" />
-      <StatCard label="Buyer replies" value="14" numeric />
-      <StatCard label="Prospecting" value="3" numeric />
-      <StatCard label="Review" value="27" numeric />
+      <StatCard label="Revenue at risk" value="€384.5k" tone="warn" />
+      <StatCard label="Buyer replies" value="14" />
+      <StatCard label="Prospecting" value="3" />
+      <StatCard label="Review" value="27" />
     </ReadingsGrid>
   ),
 };

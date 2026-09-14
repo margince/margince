@@ -288,10 +288,18 @@
    this: a tab that draws two panels draws them edge to edge. A record's own
    step is the wider one its bodies take from `.record-stack` (composed.css) —
    this is the floor under a body that has not, not a second answer to how a
-   record reads. */
+   record reads.
+
+   `.stat-strip-wrap` is a readings ROW standing in the same stack, and it
+   belongs on both sides of the pair for the same reason the panel does: the
+   strip draws no box of its own, so a panel landing under one sat on it with
+   nothing between — the forecast's call editor against the readings it argues
+   with. The interval is the page's, not the strip's, which is why it is stated
+   here rather than as a margin the strip carries into every layout it is used
+   in. */
 :is(.wrap, .surfacestate-part, .page-zones-main)
-  > :is(.card, .panel)
-  + :is(.card, .panel) {
+  > :is(.card, .panel, .stat-strip-wrap)
+  + :is(.card, .panel, .stat-strip-wrap) {
   margin-top: var(--gapCards);
 }
 
@@ -592,7 +600,7 @@
    It is a SIBLING of the brand anchor and not a child of it: the marker is a
    fact about the build, and a fact inside a link is a fact a press carries you
    away from. */
-.rail .ws-org {
+.rail .ws-company {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -603,7 +611,7 @@
    of unbounded length in a narrow column, and a row that clipped itself would
    take the marker with it — the one thing on this line that must always be
    legible. */
-.rail .ws-org-text {
+.rail .ws-company-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -628,7 +636,7 @@
    stays — it is the whole reason this line survives the collapse — shortened to
    one letter by release.ts and centred under the mark by the head's own
    `align-items`. */
-.rail.collapsed .ws-org-text {
+.rail.collapsed .ws-company-text {
   display: none;
 }
 
@@ -1576,7 +1584,7 @@
   }
   /* And the attribution beside the marker: the sheet is 600px wide, so the row
      the 56px rail reduces to one badge is spelled out in full here. */
-  .rail.sheetopen .ws-org-text {
+  .rail.sheetopen .ws-company-text {
     display: block;
   }
   /* The close control keeps its glyph and drops its word: pinned in the corner

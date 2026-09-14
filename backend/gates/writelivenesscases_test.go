@@ -26,7 +26,7 @@ import (
 // retirableForCases is the table set the cases are judged against, written out
 // rather than derived: a case that shared the census's own derivation would pass
 // whenever that derivation broke.
-var retirableForCases = map[string]bool{"organization": true, "activity": true}
+var retirableForCases = map[string]bool{"company": true, "activity": true}
 
 // livenessCase is one synthetic function and the two verdicts it is owed.
 type livenessCase struct {
@@ -59,26 +59,26 @@ var livenessCases = []livenessCase{
 	{
 		name: "a by-id update of a retirable table, answering nothing",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `) }`,
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `) }`,
 		subject: true,
 	}, {
 		name: "the same write, refusing an archived row in its own predicate",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `) }`,
-		subject: true, stated: true, answers: map[string]bool{"organization": true},
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `) }`,
+		subject: true, stated: true, answers: map[string]bool{"company": true},
 	}, {
 		// The restore arm's predicate is the OPPOSITE claim, and crediting it
 		// would hand every un-archive path a free pass.
 		name: "archived_at IS NOT NULL, which is a reach for a retired row rather than a refusal",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET archived_at = NULL WHERE id = $1 AND archived_at IS NOT NULL`" + `) }`,
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE company SET archived_at = NULL WHERE id = $1 AND archived_at IS NOT NULL`" + `) }`,
 		subject: true,
 	}, {
 		name: "refused through the live probe",
 		source: `package p
 func write(tx T) {
-	auth.EnsureWritableLive(ctx, tx, "organization", id)
-	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `)
+	auth.EnsureWritableLive(ctx, tx, "company", id)
+	tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `)
 }`,
 		subject: true, stated: true,
 	}, {
@@ -88,16 +88,16 @@ func write(tx T) {
 		name: "declared as a retraction",
 		source: `package p
 func write(tx T) {
-	auth.EnsureRetractable(ctx, tx, "organization", id)
-	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `)
+	auth.EnsureRetractable(ctx, tx, "company", id)
+	tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `)
 }`,
 		subject: true, stated: true,
 	}, {
 		name: "declared through the lock filter",
 		source: `package p
 func write(tx T) {
-	storekit.LockRow(ctx, tx, "organization", id, storekit.IncludeArchived)
-	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `)
+	storekit.LockRow(ctx, tx, "company", id, storekit.IncludeArchived)
+	tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `)
 }`,
 		subject: true, stated: true,
 	}, {
@@ -114,7 +114,7 @@ func write(tx T) { tx.Exec(ctx, ` + "`UPDATE activity SET body = NULL WHERE id =
 		// chose them, and pulling it in would waive most of the privacy module.
 		name: "a set-based write, which is not a by-id write",
 		source: `package p
-func write(tx T) { tx.Exec(ctx, ` + "`UPDATE activity SET archived_at = now() WHERE organization_id = $1`" + `) }`,
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE activity SET archived_at = now() WHERE company_id = $1`" + `) }`,
 	}, {
 		name: "an insert, which creates a row rather than reaching a standing one",
 		source: `package p
@@ -136,12 +136,12 @@ func write(tx T) { tx.Exec(ctx, ` + "`UPDATE activity a SET subject = $2 WHERE a
 		source: `package p
 func write(tx T) { tx.Exec(ctx, ` + "`UPDATE audit_log SET action = $2 WHERE id = $1`" + `) }`,
 	}, {
-		// The shape the tree already writes: the organization column writers
+		// The shape the tree already writes: the company column writers
 		// hold their statements in package-level tables, so a reader of body
 		// literals alone judged none of them.
 		name: "held in a package-level table the function indexes",
 		source: `package p
-var held = map[string]string{"legal_name": ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `}
+var held = map[string]string{"legal_name": ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `}
 func write(tx T, column string) { tx.Exec(ctx, held[column]) }`,
 		subject: true,
 	}, {
@@ -152,11 +152,11 @@ func write(tx T, column string) { tx.Exec(ctx, held[column]) }`,
 		name: "one write guarded and its sibling in the same function bare",
 		source: `package p
 func write(tx T) {
-	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `)
+	tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1 AND archived_at IS NULL`" + `)
 	tx.Exec(ctx, ` + "`UPDATE activity SET subject = $2 WHERE id = $1`" + `)
 }`,
 		subject: true,
-		answers: map[string]bool{"organization": true, "activity": false},
+		answers: map[string]bool{"company": true, "activity": false},
 	}, {
 		// The marker must be a call site, not prose. A gate that read comments
 		// would let a sentence about liveness stand in for one.
@@ -164,7 +164,7 @@ func write(tx T) {
 		source: `package p
 func write(tx T) {
 	// EnsureWritableLive is what this ought to take.
-	tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1`" + `)
+	tx.Exec(ctx, ` + "`UPDATE company SET legal_name = $2 WHERE id = $1`" + `)
 }`,
 		subject: true,
 	},

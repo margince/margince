@@ -120,7 +120,7 @@ export const ErrorState: Story = {
   render: () => (
     <Harness
       fetchPage={async () => {
-        throw new Error("missing scope people:read");
+        throw new Error("missing scope contacts:read");
       }}
     />
   ),

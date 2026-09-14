@@ -495,7 +495,7 @@ func TestATypedQueryRefusesAPopulationTheAskerCannotMeasure(t *testing.T) {
 
 // Naming a colleague explicitly is a different ask than measuring your own
 // default population, and an unowned row must not count toward it: this is a
-// standing forecast asking what a NAMED person specifically committed to,
+// standing forecast asking what a NAMED contact specifically committed to,
 // and an unclaimed deal is nobody's commitment. Only the caller's own
 // default (self, or a team manager's own managed-teams default) admits an
 // unowned row — never an explicitly named owner or team.

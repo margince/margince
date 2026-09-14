@@ -48,7 +48,7 @@ const hiddenHorizonDays = 365
 // Every figure is counted under the CALLER's own visibility, like the team
 // board's are: a count summing rows the reader may not open would publish work
 // they have no access to. So this reports what is hidden FROM THEM, which is the
-// only honest answer available without handing one person a licence to read
+// only honest answer available without handing one colleague a licence to read
 // another's records.
 type HiddenBacklog struct {
 	// Truncated says a read hit WaitingScanCap, which makes every figure below
@@ -126,7 +126,7 @@ func (h HiddenBacklog) Clear() bool {
 // Five reads of ONE query rather than five queries. `waitingRepliesSQL` carries
 // every eligibility rule the Worklist trusts — the anti-joins, the machine-sender
 // exclusion, the live-record predicates, the visibility gates — and a second
-// statement restating them would be a second answer to "is this person waiting",
+// statement restating them would be a second answer to "is this contact waiting",
 // wrong the first time either is edited. What varies between the reads is only
 // which hiding rule is switched off, through holes the constant already has.
 //
@@ -273,6 +273,10 @@ func (s *Store) countWaiting(
 	if err != nil {
 		return 0, err
 	}
+	readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+	if err != nil {
+		return 0, err
+	}
 	inner := fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 		horizon,
 		liveRecord(openDealPredicate, "d"),
@@ -283,7 +287,9 @@ func (s *Store) countWaiting(
 		scopeUnbounded,
 		notSales, unlinked,
 		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
-		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent))
+		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+		fmt.Sprintf("$%d", arg(readerAddresses)),
+		unansweredConversationSQL(fmt.Sprintf("$%d", instant)))
 	var count int
 	// Counted around the whole statement rather than by replacing its SELECT
 	// list: the query GROUPs and LIMITs, so the row count IS the answer and a

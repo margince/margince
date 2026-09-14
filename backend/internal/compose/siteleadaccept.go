@@ -4,9 +4,9 @@
 package compose
 
 // The site_lead ACCEPT executor (R5): a human approval of one staged
-// published person captures them as a LEAD through the one capture Sink —
-// never directly a person (ADR-0008: leads graduate; the Sink's own
-// cross-source email dedupe stages the 🟡 merge when the person later
+// published contact captures them as a LEAD through the one capture Sink —
+// never directly a contact (ADR-0008: leads graduate; the Sink's own
+// cross-source email dedupe stages the 🟡 merge when the contact later
 // emails in, and that staged merge is the promotion trigger, not this
 // effect). Redeem-then-execute like every 🟡 executor: the single-use
 // redemption is the exactly-once claim, and the Sink's natural key makes
@@ -45,12 +45,12 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		}
 		// A proposal staged before the payload carried its natural key still
 		// has to land on the right lead — and an empty key would collide every
-		// such person onto ONE row. It is derivable from what those payloads do
+		// such contact onto ONE row. It is derivable from what those payloads do
 		// carry, so derive it rather than refusing a decision a human already
 		// made.
 		if proposal.NaturalKey == "" {
 			proposal.NaturalKey = siteLeadSourceID(
-				proposal.OrganizationID, proposal.Name, proposal.PublishedEmail)
+				proposal.CompanyID, proposal.Name, proposal.PublishedEmail)
 		}
 		// The capture executes as the siteread executor on behalf of the
 		// human whose approval released it. The Sink admits connector
@@ -75,7 +75,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		// lead (the column goes NULL and the email dedupe is skipped); the
 		// natural key alone keeps the capture idempotent. The staged
 		// proposal itself is the raw original: it carries the role, the
-		// evidence snippet, the source URL, and the org the read targeted.
+		// evidence snippet, the source URL, and the company the read targeted.
 		_, err := sink.Upsert(execCtx, connector.NormalizedRecord{
 			EntityType: datasource.EntityLead,
 			NaturalKey: connector.NaturalKey{
@@ -90,6 +90,15 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 				FullName: proposal.Name,
 				Email:    proposal.PublishedEmail,
 				Title:    proposal.Role,
+				// Accepting a name read off a company's website records that
+				// the contact exists. It is not a statement that the accepter
+				// has taken them on, and owning it would say so: the lead would
+				// enter their "owes a reply" lane and start its first-response
+				// clock against somebody who has never written to anyone.
+				//
+				// Nobody owns it until a human picks it up in Leads, and there
+				// is no connector replay here to need write authority back.
+				Unowned: true,
 			},
 			Source:     "siteread",
 			CapturedBy: siteLeadCapturedBy,

@@ -64,7 +64,7 @@ contact is the whole workspace's or the importing seat's alone.
 
 *Is this thread ordinary business?* — asked once per **thread per seat**, on the first message. The
 answer decides who may **read** the message, never whether it is kept. A thread it clears is
-readable by colleagues; anything else stays with the people who were on it, with the kind it
+readable by colleagues; anything else stays with the contacts who were on it, with the kind it
 concluded as the reason.
 
 Both run on a local rung by default and neither sends message text off the machine unless an admin
@@ -73,12 +73,12 @@ binds a cloud one. The generated egress table
 
 **Neither model can widen anything by being unavailable.** With no model configured, capture works
 normally: records stay owner-scoped, threads stay held, and nothing is purged. An outage and a
-careful classifier look the same from the outside — mail stays with the people who were on it —
+careful classifier look the same from the outside — mail stays with the contacts who were on it —
 which is the direction an outage has to fail in.
 
 A sender does not simply stay unjudged, though. The answers that come from the address and the
 ledger alone — the owner's own decision, a role mailbox — still land, and a sender that genuinely
-needs a model is put in front of a person instead. Leaving the row open looked safe and was not:
+needs a model is put in front of a contact instead. Leaving the row open looked safe and was not:
 nothing else advances it, so the question would stay open forever, and a pending row nobody will
 ever judge is indistinguishable from one whose turn has not come.
 
@@ -95,7 +95,7 @@ Checks run cheapest-first:
 |---|---|---|---|
 | 1 | Is this source declared in the unit's manifest? | `ErrIngressNotDeclared` | A typo should be rejected, not create a new source name nobody knows about |
 | 2 | Does the source vouch for the identity keys this record carries? | `ErrInvalid` | An address offered as matching evidence is a claim about who somebody is. Only a source that declared the `email` merge key may make it |
-| 3 | Is this a background job, not a user request? | `ErrAttendedIngest` | A user request would mix two people's permissions |
+| 3 | Is this a background job, not a user request? | `ErrAttendedIngest` | A user request would mix two contacts's permissions |
 | 4 | Is the caller already inside its own transaction? | `ErrNestedIngest` | Capture opens its own. Two connections from a small pool does not error — it hangs |
 | 5 | Is the record within size limits? | `ErrInvalid` | Limits what a remote provider can make us store |
 | 6 | Does the kind match the transport? | `ErrInvalid` | A message must name a channel the unit declared. No other kind may name one, because the reply path would answer on it |
@@ -163,7 +163,7 @@ Steps, in order:
 > chatter gets stored. `Counterparty.Domain` behaves the same way: if it is missing, the suppression
 > rules below read the message as "keep".
 >
-> The list names people, not things. A booked meeting room or device on a calendar event
+> The list names contacts, not things. A booked meeting room or device on a calendar event
 > (`…@resource.calendar.google.com`, or an attendee Google flags as a resource) is left out by the
 > calendar connector: it is on nobody's own domain, so counting it would turn every colleagues-only
 > meeting held in a room into a customer touch.
@@ -176,11 +176,11 @@ should be asked later. Channel records skip it — see the end of this section.
 
 | Tier | Question | Result |
 |---|---|---|
-| **T0** | Is the sender a colleague? | Judge the external person on the message instead. If everyone is internal, create nothing |
+| **T0** | Is the sender a colleague? | Judge the external contact on the message instead. If everyone is internal, create nothing |
 | **T1** | Have we and this address actually exchanged mail? | **Create the contact.** Beats every rule below |
 | **T2** | Is this mail infrastructure (DocuSign, SendGrid…)? | Keep the message, create no contact and no company |
 | **T2.5** | Did we already decide about this address? | Reuse that decision. No new question, no model call |
-| **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the person, but no company |
+| **T3** | Is it a personal mail domain (`gmail.com`…)? | Create the contact, but no company |
 | **T4** | Nobody knows who this is | Create nothing yet. Write a row for the verdict engine |
 
 Notes on the tricky ones:
@@ -192,7 +192,7 @@ Notes on the tricky ones:
   outbound message whose text is a refusal ("not interested", "unsubscribe", "kein Interesse") is
   not evidence of intent at all.
 - **T1 needs an exchange, not a send.** Writing to somebody is intent, and intent is often
-  unreturned — a founder mails forty people about a conference and hears from six. So a contact is
+  unreturned — a founder mails forty contacts about a conference and hears from six. So a contact is
   created on sight only when they wrote back on a thread we wrote on, or we wrote to them on two
   separate threads, which nobody does by accident. A single send is not refused: it falls to T4 and
   the verdict engine reads the message and answers on its merits.
@@ -201,15 +201,15 @@ Notes on the tricky ones:
 - **T1 also beats an old negative verdict**, so replying to a sender we once marked as noise brings
   them back properly.
 - **T2.5 avoids paying twice.** Without it, every new message from a settled sender asks the model
-  again and re-offers a decision a human already made. A live person holding the address counts as a
-  settled `real`, except an address a channel connector vouched for: that identifies a person, but it
+  again and re-offers a decision a human already made. A live contact holding the address counts as a
+  settled `real`, except an address a channel connector vouched for: that identifies a contact, but it
   is not mail correspondence.
 
-**After the transaction commits,** the person is created through the people module. This happens
+**After the transaction commits,** the contact is created through the contacts module. This happens
 outside the transaction, so a failure there cannot lose the message. Failures are logged for the
 nightly repair job.
 
-Creating a person does **not** create their company. That is a separate question, answered by reading
+Creating a contact does **not** create their company. That is a separate question, answered by reading
 the domain's website (AI task `site_triage`).
 
 ### Channel records don't climb the ladder
@@ -221,20 +221,20 @@ empty.
 
 There is also nothing to defer. Someone who opens a conversation with the workspace's own bot is
 already the intent T1 looks for evidence of: nobody messages a company's bot by accident, and a bot
-cannot be cold-mailed. So the person is created at once — **person only, never a company**, and
+cannot be cold-mailed. So the contact is created at once — **contact only, never a company**, and
 **ownerless**, because a workspace bot has no granting human to own the record.
 
-The account is then bound to that person. That binding is what a reply is routed on; a record with no
+The account is then bound to that contact. That binding is what a reply is routed on; a record with no
 identity lands a message nobody can answer.
 
 **If the record carries an address too** — allowed only for a source that declared the `email` merge
 key — the identity still names the human, and the address only corroborates. The resolution ladder
-matches on the address and **adopts** the person already captured from mail: the account is bound onto
+matches on the address and **adopts** the contact already captured from mail: the account is bound onto
 their existing record, under the same lock a merge or an erasure takes. Without this, that colleague
 quietly becomes a second contact.
 
-A vouched address is stored as *not* correspondence (`person_email.from_correspondence = false`). It
-identifies the person, but proves nothing about mail. Otherwise one direct message from a stranger
+A vouched address is stored as *not* correspondence (`contact_email.from_correspondence = false`). It
+identifies the contact, but proves nothing about mail. Otherwise one direct message from a stranger
 would mark their address a known counterparty for good: every later bulk mail from it auto-created,
 and the noise sweep switched off for it permanently.
 
@@ -256,16 +256,73 @@ and display name are trimmed in SQL first (300 / 1200 / 300 characters) and wrap
 fence. The reply must be valid JSON with the exact requested ID, a kind from a fixed list, and a
 confidence score. Anything else is rejected.
 
-The model returns one of six kinds:
+The model returns one of eight kinds:
 
 | Kind | What happens |
 |---|---|
-| `person` | Create the contact. Queue the domain for `site_triage` |
-| `role_mailbox` (e.g. `support@`) | Keep the mail visible. Create no contact — there is no person to record |
-| `organization_sender` | Same as above |
+| `contact` | Create the contact. Queue the domain for `site_triage` |
+| `role_mailbox` (e.g. `support@`, `cs6@`) | Keep the mail visible. Create no contact — there is no contact to record |
+| `company_sender` | Same as above |
 | `newsletter` | Hide the mail, and mark the domain as "not a company" |
 | `transactional` | Same as above |
 | `spam` | Same as above |
+| `advisor` | Create the contact, visible to the mailbox owner alone |
+| `personal` | Create no contact, and withdraw one already made. The mail stays the owner's |
+
+A service desk is a `role_mailbox` whether or not it is numbered, and whether or
+not an agent signs with a first name: the next reply is written by somebody else.
+The same kind of desk handling the owner's OWN private affair — their landlord,
+their clinic, their bank — is `personal` instead. Whose matter it is decides,
+not what sort of company it is.
+
+### A private correspondence leaves no contact behind
+
+The verdict almost always arrives AFTER the contact: capture creates a record on
+commit, and classification reads the conversation minutes or hours later. So
+refusing to create one is only half an answer — in one real mailbox every contact
+on a personal thread predated the verdict about it. Both verdicts therefore
+WITHDRAW the record as well as refusing a new one.
+
+Two answers reach a contact, and they ask different questions:
+
+- The **sender** verdict answers about an address. `personal` withdraws the
+  records that address holds in the deciding seat's own mailbox.
+- The **thread** verdict answers about one conversation. `personal` withdraws the
+  counterparty's record when no OTHER conversation with that seat is business.
+
+Correspondence does not save a record from either. That bound exists to stop one
+misclassified newsletter from costing a real counterparty their record, and it is
+wrong here: the owner writing back is what a private correspondence looks like.
+Applied to `personal`, it kept every record the kind is about — a founder's own
+clinic among them, with its test results, in a CRM the whole company reads.
+
+What still protects a record, in every case:
+
+- **A human published or edited it.** A machine promotion does not: the sender
+  classifier publishes a contact it judges a counterparty with nobody behind it,
+  so treating `workspace` visibility as protection let the earlier of two machine
+  answers outrank the later one.
+- **The owner marked the address `business`.** A standing human decision outranks
+  every classifier.
+- **Another conversation with that seat is business.** Evidence, not silence: a
+  thread that has been judged and is not personal, or mail already open to the
+  whole workspace. A thread nobody has judged is unknown, and a question still in
+  flight is a reason to wait — when it resolves personal, the withdrawal runs
+  again.
+
+A withdrawal is an archive like any other, on the record's own audit trail, and a
+record that was workspace-visible is narrowed to its owner first — an archived
+contact is still listable by anyone who asks to see archived ones.
+
+A `contact` verdict does not always publish the contact. Two cases keep the record
+visible to the mailbox owner alone:
+
+- **The owner wrote first and the address has never answered.** Writing to
+  somebody is an intention rather than a relationship, and publishing it tells
+  every colleague who this rep is prospecting. The record widens on its own the
+  first time that address replies.
+- **The thread is under a confidentiality hold.** A workspace-visible contact
+  minted off held mail announces the counterparty the hold exists to keep quiet.
 
 Marking the domain matters separately from hiding the mail. A newsletter company has a real website,
 so without the mark, company triage would create it anyway the next time a named employee writes from
@@ -283,7 +340,7 @@ anything.
 
 **Noise is hidden first, deleted later.** The mail is hidden immediately, and its content is redacted
 after the undo window. The scope is narrow: only inbound, unlinked mail from an address we have never
-written to, and that no live person holds as correspondence. An address a channel connector merely
+written to, and that no live contact holds as correspondence. An address a channel connector merely
 vouched for does not protect it.
 
 **What runs each hour, in order:**
@@ -297,6 +354,38 @@ vouched for does not protect it.
 
 Steps 2–6 run even with AI switched off. Turning off AI does not mean keeping the content of messages
 the workspace already decided were noise.
+
+### Mail that arrived at an address before we knew it was yours
+
+A message is imported for a seat when one of that seat's OWN addresses is on it.
+Most addresses are known from the start: declared, reported by the connection, or
+signed in with. A forwarding alias is not — a previous employer's address, a role
+address that redirects, a personal domain pointed at a work mailbox. None of those
+is ever the From of anything the mailbox sends, so the only way to learn one is
+from the mail arriving at it, and two separate messages must agree before it is
+believed.
+
+Which means there is always mail older than the claim, and for that mail the seat
+was nobody. It got no import row, so no confidentiality question was opened, so
+under a classified mailbox it stayed held with nothing scheduled ever to judge it.
+Held is indistinguishable from broken.
+
+An address becoming a seat's own — discovered or declared — now adopts that mail:
+it writes the import row the message should have had, and opens the question its
+thread was owed. A settled thread's answer is inherited rather than re-asked. A
+`shared` mailbox gets the row and no question, which matters more than it sounds:
+a question written but never asked reads as HELD, so the naive version of this
+would have held a shared mailbox's mail forever.
+
+The nightly reconcile does the same for mail stranded before this existed. It
+derives its work from the state — an address the seat owns, a message their own
+connector captured, no import row — rather than from a list, so it also catches
+mail stranded by any other route to the same condition.
+
+The delivery evidence is unchanged: an exact address the receiving server
+attested, never a domain, and never a `Delivered-To` a sender wrote themselves.
+A forged header claims no mail, because it never becomes an address in the first
+place.
 
 ## 5. What a dropped message stores
 
@@ -323,9 +412,9 @@ path that later deletes content, and only after the undo window.
 | Setting | Where | Controls |
 |---|---|---|
 | Own mail domains | Capture settings (admins write, everyone reads) | Which messages count as internal, and are therefore dropped |
-| Personal-mail domains | `POST /v1/capture/consumer-mail-domains` — additions and exceptions on top of a built-in list of ~8,700 domains | T3: create a person but no company |
+| Personal-mail domains | `POST /v1/capture/consumer-mail-domains` — additions and exceptions on top of a built-in list of ~8,700 domains | T3: create a contact but no company |
 | `auto_enrich` | `PATCH /v1/capture/settings` | Whether new companies are enriched automatically |
-| Approved sender domains | People settings | Lets an admin allow a domain a verdict blocked |
+| Approved sender domains | Contacts settings | Lets an admin allow a domain a verdict blocked |
 
 **Changeable in `margince.yaml`. Requires a restart:**
 
@@ -418,17 +507,17 @@ Assume `acme.com` is a registered own domain, and the client is `dana@client.io`
 | A colleague emails the client and copies you | **Kept.** T0 switches to `dana@client.io` and judges the client |
 | The client replies, and we have emailed them before | **T1** — contact created immediately |
 | A stranger writes for the first time | Message kept, **T4** — no contact until the verdict engine answers |
-| …verdict `person` | Contact created, owned by the member whose connection captured it. Domain queued for `site_triage` |
+| …verdict `contact` | Contact created, owned by the member whose connection captured it. Domain queued for `site_triage` |
 | …verdict `spam` | Mail hidden now, domain marked not-a-company, content redacted after 7 days |
 | …confidence below 0.7 twice | `unsure` — a proposal goes to the review queue. Rejecting it changes nothing |
 | A DocuSign envelope arrives | Message kept, **T2** — no contact, and `eu.docusign.net` never becomes a company |
 | A newsletter from someone you have emailed | **T1 keeps them.** A known contact is not infrastructure |
-| A first-time sender at `gmail.com` | **T3** — person created, no company |
+| A first-time sender at `gmail.com` | **T3** — contact created, no company |
 | Someone mails you from 60 fresh addresses on one domain | The first 50 get queued. The rest arrive unjudged, with a `capture_deferral_capped` log row |
 | The same message is polled twice | Nothing happens the second time |
 | A member's permissions were reduced after connecting | Their next poll runs with the reduced permissions |
-| A stranger sends a direct message on a messaging channel | Message kept, **no tier runs**. An ownerless person is created at once and the account bound, so the message can be replied to |
-| …and the connector also knows their address, and its source declared the `email` merge key | The person already captured from that address is **adopted**. The account is bound onto them, not onto a second contact |
+| A stranger sends a direct message on a messaging channel | Message kept, **no tier runs**. An ownerless contact is created at once and the account bound, so the message can be replied to |
+| …and the connector also knows their address, and its source declared the `email` merge key | The contact already captured from that address is **adopted**. The account is bound onto them, not onto a second contact |
 | …but the source declared no merge key | Refused at the gate, naming the missing declaration. The address is not silently dropped |
 | A DM from someone whose mail verdict is still pending | The trace shows the DM's own outcome, never the pending mail verdict |
 
@@ -466,8 +555,8 @@ was entitled to.
 | Auto-capture and the internal-only check | `backend/internal/modules/capture/sink.go`, `sinkmailgates.go` |
 | The tier ladder | `backend/internal/modules/capture/sinkensure.go` |
 | The channel path: shape, admission, erasure lock | `backend/internal/modules/capture/sinkchannel.go` |
-| Minting or adopting the human behind a channel account | `backend/internal/modules/people/ensurechannel.go`, `ensurechanneladopt.go` |
-| Address-as-identity vs. address-as-correspondence | `backend/migrations/core/0269_person_email_correspondence_evidence.up.sql` |
+| Minting or adopting the human behind a channel account | `backend/internal/modules/contacts/ensurechannel.go`, `ensurechanneladopt.go` |
+| Address-as-identity vs. address-as-correspondence | `backend/migrations/core/0269_contact_email_correspondence_evidence.up.sql` |
 | The decision ledger and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
 | Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal-mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |

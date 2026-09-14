@@ -29,7 +29,7 @@ func TestAnOmittedRelinkTargetIsNamed(t *testing.T) {
 	// record; with no entity_id there is nowhere to move it, and the zero UUID
 	// reached the link-target gate instead.
 	_, err := NewStore(nil).RelinkActivity(context.Background(), ids.New[ids.ActivityKind](), RelinkActivityInput{
-		EntityType: "person",
+		EntityType: "contact",
 	})
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 }
@@ -38,7 +38,7 @@ func TestAnOmittedRelinkTargetIsNamed(t *testing.T) {
 // destination is named the same way on each — proven per door, because a
 // shared helper is a claim and a probe is the proof.
 func TestAnOmittedBatchRelinkTargetIsNamed(t *testing.T) {
-	in := RelinkActivityInput{EntityType: "person"}
+	in := RelinkActivityInput{EntityType: "contact"}
 	_, err := NewStore(nil).RelinkThread(context.Background(), "thread:x", in)
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 	_, err = NewStore(nil).RelinkActivities(context.Background(), []ids.UUID{ids.NewV7()}, in)

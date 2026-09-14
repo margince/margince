@@ -15,7 +15,7 @@ package consent
 // substitute.
 //
 // consent.changed is the FIRST dynamic-entity type migrated (contract
-// x-entity-type: dynamic): its subject is a person XOR a lead, a runtime
+// x-entity-type: dynamic): its subject is a contact XOR a lead, a runtime
 // choice consentSubject already resolves (subject_test.go proves that
 // resolution). What this file additionally proves is the seam ON TOP of
 // that resolution — that Record stages the event via
@@ -158,7 +158,7 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 }
 
 // TestConsentChangedEmitUsesRuntimeEntityType is the dynamic-entity twist
-// this task's contract requires: consent.changed's subject is a person XOR
+// this task's contract requires: consent.changed's subject is a contact XOR
 // a lead (data-model §7), a runtime choice consentSubject resolves — so
 // Record must stage the event via storekit.EmitEventForEntity(entityType)
 // rather than storekit.EmitEvent (which would derive the always-"dynamic"
@@ -173,7 +173,7 @@ func TestConsentChangedEmitUsesRuntimeEntityType(t *testing.T) {
 		name       string
 		entityType string
 	}{
-		{name: "person subject", entityType: "person"},
+		{name: "contact subject", entityType: "contact"},
 		{name: "lead subject", entityType: "lead"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

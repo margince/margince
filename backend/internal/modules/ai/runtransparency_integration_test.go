@@ -41,7 +41,7 @@ func TestRunTransparencyReadsAndPricesOneCorrelatedProductRun(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll,
-			Objects: map[string]principal.ObjectGrant{"organization": {Read: true}},
+			Objects: map[string]principal.ObjectGrant{"company": {Read: true}},
 		},
 	})
 	summary, err := NewRunTransparency(env.dbFor(workspaceID)).Get(readCtx, correlationID)
@@ -62,7 +62,7 @@ func TestRunTransparencyReadsAndPricesOneCorrelatedProductRun(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"installer"}, RowScope: principal.RowScopeAll,
-			Objects: map[string]principal.ObjectGrant{"organization": {Create: true}},
+			Objects: map[string]principal.ObjectGrant{"company": {Create: true}},
 		},
 	})
 	if _, err := NewRunTransparency(env.dbFor(workspaceID)).Get(createCtx, correlationID); err != nil {

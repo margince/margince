@@ -243,7 +243,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
   //
   // `undefined` until the app has loaded, which is what separates "not typed in
   // yet" from "deliberately cleared": rotating a pinned app with this blank
-  // would send no tenant and silently widen it to every organization, which is
+  // would send no tenant and silently widen it to every company, which is
   // the one change on this card nobody would see happen.
   const [tenant, setTenant] = useState<string | undefined>(undefined);
   const [confirming, setConfirming] = useState(false);
@@ -343,7 +343,7 @@ export function OAuthAppCard({ provider }: Readonly<{ provider: Vendor }>) {
                       // The stored directory until somebody edits it, so a
                       // rotation carries the pinning forward. Emptying the
                       // field is then a deliberate act, which is what widening
-                      // an app to every organization ought to be.
+                      // an app to every company ought to be.
                       value={tenant ?? status.tenant ?? ""}
                       autoComplete="off"
                       disabled={!canManage || busy}

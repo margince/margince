@@ -3,7 +3,7 @@
 
 package storekit
 
-// The pure SQL-fragment/value mechanics a record store (people, deals, …)
+// The pure SQL-fragment/value mechanics a record store (contacts, deals, …)
 // drives its cf_* columns with, ported from poc-1's
 // platform/customfields/{columns.go,active.go}. These functions own no
 // domain and touch no database: they take the caller's already-fetched
@@ -49,7 +49,7 @@ func quoteColumnIdentifier(name string) string {
 // SelectSuffix returns the comma-prefixed, quoted custom-column list to
 // append to a fixed SELECT column list (empty when there are no active
 // columns), so a read path fetches its cf_* values in the same round
-// trip as its fixed columns. Shared by person/organization/deal Get/List
+// trip as its fixed columns. Shared by contact/company/deal Get/List
 // queries: the column-list-building mechanics are identical across
 // resources even though the surrounding SELECT/Scan shape (and the
 // domain struct it feeds) stays per-resource.
@@ -72,7 +72,7 @@ func SelectSuffix(active []fieldcatalog.Column) string {
 // shape does not match the column type, is silently dropped (see the
 // package doc's drop-on-mismatch note). Empty strings when nothing
 // matches, so the caller splices unconditionally. Shared by
-// person/organization/lead/deal/project Create.
+// contact/company/lead/deal/project Create.
 //
 // It takes the statement's FIXED args rather than the index to number
 // from, and hands back the whole list, because the index is derivable
@@ -122,6 +122,13 @@ func SetCustomFieldPatch(p *Patch, active []fieldcatalog.Column, updates, curren
 	for _, c := range active {
 		v, present := updates[c.Name]
 		if !present {
+			continue
+		}
+		if v == nil {
+			if current[c.Name] == nil {
+				continue
+			}
+			p.setQuoted(c.Name, current[c.Name], nil)
 			continue
 		}
 		sv, ok := SQLValue(c, v)

@@ -38,7 +38,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-/** Waiting on a person: nothing is running, and the Core does not pretend to
+/** Waiting on a contact: nothing is running, and the Core does not pretend to
  *  be listening for them. */
 export const Idle: Story = { args: { phase: "idle" } };
 

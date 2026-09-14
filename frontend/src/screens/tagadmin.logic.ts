@@ -58,7 +58,7 @@ function containsWhole(haystack: string, needle: string): boolean {
 /**
  * A name reduced to what a reader would call "the same word".
  *
- * Case, surrounding space, inner runs of space, and the separators a person
+ * Case, surrounding space, inner runs of space, and the separators a contact
  * reaches for when a space feels wrong — a hyphen and an underscore. Not
  * punctuation in general: "K5" and "K5!" are the same word, but stripping
  * everything would make "C++" and "C" one, which is a distinction somebody

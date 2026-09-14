@@ -8,12 +8,11 @@ package compose
 // What the gone-quiet review actually asks.
 //
 // The reason and the proposed date are both composed from the database, so a
-// unit test over the sentence proves nothing about the card a person sees.
+// unit test over the sentence proves nothing about the card a contact sees.
 // These read the staged approval the sweep produced.
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -23,20 +22,26 @@ import (
 )
 
 // stagedCorrection is the proposal as the card will read it.
-func (e *closeDateEnv) stagedCorrection(t *testing.T, dealID ids.UUID) deals.CloseDateCorrection {
+// appliedCorrection reads the reason the sweep recorded for one deal.
+//
+// Off the AUDIT ROW rather than off a staged card: the correction is applied
+// when it is made, and the evidence the receipt renders travels on the audit
+// entry the change wrote. There is no proposal to decode any more.
+func (e *closeDateEnv) appliedCorrection(t *testing.T, dealID ids.UUID) deals.CloseDateCorrection {
 	t.Helper()
-	var raw json.RawMessage
+	var basis string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT proposed_change FROM approval
-		  WHERE kind = 'close_date_correction' AND target_entity_id = $1 AND status = 'pending'`,
-		dealID).Scan(&raw); err != nil {
-		t.Fatalf("no staged correction on deal %s: %v", dealID, err)
+		`SELECT CASE WHEN nullif(a.evidence->>'basis_owner', '') IS NOT DISTINCT FROM d.owner_id::text
+		             THEN coalesce(a.evidence->>'basis', '')
+		             ELSE '' END
+		   FROM deal_correction c
+		   JOIN deal d ON d.id = c.deal_id
+		   JOIN audit_log a ON a.id = c.audit_log_id
+		  WHERE c.deal_id = $1
+		  ORDER BY c.applied_at DESC LIMIT 1`, dealID).Scan(&basis); err != nil {
+		t.Fatalf("no applied correction on deal %s: %v", dealID, err)
 	}
-	correction, err := deals.UnmarshalCloseDateCorrection(raw)
-	if err != nil {
-		t.Fatalf("staged payload does not decode: %v", err)
-	}
-	return correction
+	return deals.CloseDateCorrection{Basis: basis}
 }
 
 // grantOwnerRealPermissions gives the deal owner an ACTUAL role row.
@@ -48,18 +53,18 @@ func (e *closeDateEnv) stagedCorrection(t *testing.T, dealID ids.UUID) deals.Clo
 // test that wants a named reason has to grant the owner the objects for real.
 func (e *closeDateEnv) grantOwnerRealPermissions(t *testing.T, userID ids.UUID) {
 	t.Helper()
-	e.grantOwnerRole(t, userID, `{"objects":{"person":{"read":true},
+	e.grantOwnerRole(t, userID, `{"objects":{"contact":{"read":true},
 		   "deal":{"read":true,"update":true},"activity":{"read":true},
-		   "organization":{"read":true}},"row_scope":"all"}`)
+		   "company":{"read":true}},"row_scope":"all"}`)
 }
 
-// grantOwnerWithoutPeople is the same owner minus person:read — the reader the
+// grantOwnerWithoutContacts is the same owner minus contact:read — the reader the
 // name gate is supposed to refuse. Everything else is identical, so a test
 // using it isolates exactly the one grant.
-func (e *closeDateEnv) grantOwnerWithoutPeople(t *testing.T, userID ids.UUID) {
+func (e *closeDateEnv) grantOwnerWithoutContacts(t *testing.T, userID ids.UUID) {
 	t.Helper()
 	e.grantOwnerRole(t, userID, `{"objects":{"deal":{"read":true,"update":true},
-		   "activity":{"read":true},"organization":{"read":true}},
+		   "activity":{"read":true},"company":{"read":true}},
 		  "row_scope":"all"}`)
 }
 
@@ -81,21 +86,21 @@ func (e *closeDateEnv) grantOwnerRole(t *testing.T, userID ids.UUID, document st
 }
 
 // seedDealEmail links one message to the deal, in a direction, from or to a
-// named person — the correspondence the review reads to say what happened.
+// named contact — the correspondence the review reads to say what happened.
 //
 // Every message a test seeds must be OLDER than StalledThresholdDays. Linking
 // an activity fires activity_link_last_activity, which pushes the deal's
 // last_activity_at forward to the message's date; a recent message therefore
 // makes the deal active, the 🔻 tier never fires, and the test fails looking
 // for a card the sweep correctly declined to stage.
-func (e *closeDateEnv) seedDealEmail(t *testing.T, dealID ids.UUID, direction, personName string, daysAgo int) {
+func (e *closeDateEnv) seedDealEmail(t *testing.T, dealID ids.UUID, direction, contactName string, daysAgo int) {
 	t.Helper()
 	ctx := context.Background()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by)
-		 VALUES ($1, $2, 'manual', 'human:x')`, personID, personName); err != nil {
-		t.Fatalf("seeding person %q: %v", personName, err)
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, $2, 'manual', 'human:x')`, contactID, contactName); err != nil {
+		t.Fatalf("seeding contact %q: %v", contactName, err)
 	}
 	activityID := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
@@ -116,22 +121,22 @@ func (e *closeDateEnv) seedDealEmail(t *testing.T, dealID ids.UUID, direction, p
 		role = "from"
 	}
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity_participant (id, activity_id, person_id, role)
-		 VALUES ($1, $2, $3, $4)`, ids.NewV7(), activityID, personID, role); err != nil {
+		`INSERT INTO activity_participant (id, activity_id, contact_id, role)
+		 VALUES ($1, $2, $3, $4)`, ids.NewV7(), activityID, contactID, role); err != nil {
 		t.Fatalf("seeding participant: %v", err)
 	}
 }
 
-// addParticipant puts a SECOND person in the same role on the deal's newest
+// addParticipant puts a SECOND contact in the same role on the deal's newest
 // message, turning a one-to-one exchange into group correspondence.
-func (e *closeDateEnv) addParticipant(t *testing.T, dealID ids.UUID, personName, role string) {
+func (e *closeDateEnv) addParticipant(t *testing.T, dealID ids.UUID, contactName, role string) {
 	t.Helper()
 	ctx := context.Background()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO person (id, full_name, source, captured_by)
-		 VALUES ($1, $2, 'manual', 'human:x')`, personID, personName); err != nil {
-		t.Fatalf("seeding person %q: %v", personName, err)
+		`INSERT INTO contact (id, full_name, source, captured_by)
+		 VALUES ($1, $2, 'manual', 'human:x')`, contactID, contactName); err != nil {
+		t.Fatalf("seeding contact %q: %v", contactName, err)
 	}
 	var activityID ids.UUID
 	if err := e.owner.QueryRow(ctx,
@@ -141,15 +146,15 @@ func (e *closeDateEnv) addParticipant(t *testing.T, dealID ids.UUID, personName,
 		t.Fatalf("finding the deal's newest activity: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO activity_participant (id, activity_id, person_id, role)
-		 VALUES ($1, $2, $3, $4)`, ids.NewV7(), activityID, personID, role); err != nil {
+		`INSERT INTO activity_participant (id, activity_id, contact_id, role)
+		 VALUES ($1, $2, $3, $4)`, ids.NewV7(), activityID, contactID, role); err != nil {
 		t.Fatalf("seeding the second participant: %v", err)
 	}
 }
 
 // addAddressParticipant puts an ADDRESS-ONLY participant on the deal's newest
 // message — a real and common shape, since an address that matched nobody still
-// gets a row, and privacy erasure nulls person_id on rows that once matched.
+// gets a row, and privacy erasure nulls contact_id on rows that once matched.
 func (e *closeDateEnv) addAddressParticipant(t *testing.T, dealID ids.UUID, address, role string) {
 	t.Helper()
 	ctx := context.Background()
@@ -177,7 +182,7 @@ func TestQuietReviewNamesTheContactWhoIsWaitingForAReply(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q, want it to name Anna Weber — she wrote last", basis)
 	}
@@ -202,7 +207,7 @@ func TestQuietReviewSaysWeGotNoReplyWhenWeWroteLast(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "We wrote to Anna Weber") {
 		t.Errorf("basis = %q, want it to say we wrote and got nothing back", basis)
 	}
@@ -222,7 +227,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if !strings.Contains(basis, "no correspondence") {
 		t.Errorf("basis = %q, want it to say there is nothing to judge the deal by", basis)
 	}
@@ -232,7 +237,7 @@ func TestQuietReviewSaysSoWhenThereIsNoCorrespondence(t *testing.T) {
 // no owner has no authority to read under. It is still reviewed — the date
 // hygiene does not depend on who owns it — but it is reviewed unnamed rather
 // than under the sweep's own unbounded system principal, which would resolve
-// any name in the workspace into a payload other people later read.
+// any name in the workspace into a payload other contacts later read.
 func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Orphaned", e.late, stringp("commit"), intp(30), 90)
@@ -246,7 +251,7 @@ func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q — an unowned deal has no authority to read names under", basis)
 	}
@@ -255,7 +260,7 @@ func TestQuietReviewOnAnUnownedDealNamesNobody(t *testing.T) {
 	}
 }
 
-// A message to four people has no single person the silence belongs to.
+// A message to four contacts has no single contact the silence belongs to.
 // Picking one — by id order or any other arbitrary rule — prints a name the
 // reader can check against the thread and find misleading, so group
 // correspondence reports its dates with no name attached.
@@ -270,7 +275,7 @@ func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	for _, name := range []string{"Anna Weber", "Boris Klein"} {
 		if strings.Contains(basis, name) {
 			t.Errorf("basis = %q — two senders means no single one to name", basis)
@@ -281,9 +286,9 @@ func TestQuietReviewNamesNobodyOnGroupCorrespondence(t *testing.T) {
 	}
 }
 
-// An address that never resolved to a person is still somebody on the thread.
+// An address that never resolved to a contact is still somebody on the thread.
 // Counting only the MATCHED participants would read "Anna plus two unknown
-// addresses" as a private exchange and name her for a silence three people
+// addresses" as a private exchange and name her for a silence three contacts
 // share — the same misnaming the group rule exists to prevent, reached by the
 // half of the data that is easy to forget.
 func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
@@ -297,7 +302,7 @@ func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
 		t.Errorf("basis = %q — an unmatched address is still a second participant", basis)
 	}
@@ -307,16 +312,16 @@ func TestQuietReviewCountsUnmatchedAddressesAsParticipants(t *testing.T) {
 //
 // The sweep runs as a system principal, which passes auth.Require
 // unconditionally and which no row scope bounds. If the review resolved names
-// under THAT, an owner who may not read people would still get the name written
+// under THAT, an owner who may not read contacts would still get the name written
 // into their card — a disclosure frozen into a stored record, which no
 // read-side gate can undo. Reading as the owner is what makes the refusal land.
 //
 // The dates survive the refusal: when the silence started is on the deal's own
-// correspondence, who it was with belongs to the person record, and losing the
+// correspondence, who it was with belongs to the contact record, and losing the
 // second is no reason to throw away the first.
-func TestQuietReviewWithoutPersonReadGivesDatesButNoName(t *testing.T) {
+func TestQuietReviewWithoutContactReadGivesDatesButNoName(t *testing.T) {
 	e := setupCloseDate(t)
-	e.grantOwnerWithoutPeople(t, e.Rep1)
+	e.grantOwnerWithoutContacts(t, e.Rep1)
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
@@ -324,9 +329,9 @@ func TestQuietReviewWithoutPersonReadGivesDatesButNoName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") {
-		t.Errorf("basis = %q — the owner holds no person:read, so the card must not name her", basis)
+		t.Errorf("basis = %q — the owner holds no contact:read, so the card must not name her", basis)
 	}
 	if !strings.Contains(basis, "The contact wrote") {
 		t.Errorf("basis = %q, want the unnamed reading with the dates still in it", basis)
@@ -340,7 +345,7 @@ func TestQuietReviewWithoutPersonReadGivesDatesButNoName(t *testing.T) {
 func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 	e := setupCloseDate(t)
 	e.grantOwnerRole(t, e.Rep1, `{"objects":{"deal":{"read":true,"update":true},
-		   "person":{"read":true},"organization":{"read":true}},"row_scope":"all"}`)
+		   "contact":{"read":true},"company":{"read":true}},"row_scope":"all"}`)
 	id := e.seedSweepDeal(t, "No activity grant", e.late, stringp("commit"), intp(30), 90)
 	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
 
@@ -348,54 +353,85 @@ func TestQuietReviewWithoutActivityReadReadsNoCorrespondence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	basis := e.stagedCorrection(t, id).Basis
+	basis := e.appliedCorrection(t, id).Basis
 	if strings.Contains(basis, "Anna Weber") || strings.Contains(basis, "5 August") {
 		t.Errorf("basis = %q — an owner without activity:read gets no correspondence facts", basis)
 	}
 }
 
-// The card asks a human to confirm a date, so it must PROPOSE one. It used to
-// carry the deal's current date in both fields, which asked for agreement to a
-// change that was not one.
-func TestQuietReviewProposesADateThatDiffersFromTheCurrentOne(t *testing.T) {
+// The quiet tier repairs an overdue date to a future estimate. A valid future
+// date is retained; only a replacement should be marked provisional.
+func TestQuietReviewRedatesAwayFromTheDateTheDealCarried(t *testing.T) {
 	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
-
-	if err := e.sweep(); err != nil {
-		t.Fatal(err)
-	}
-
-	correction := e.stagedCorrection(t, id)
-	if correction.PreviousCloseDate == nil {
-		t.Fatal("the card must say what date the deal carries now")
-	}
-	if correction.ExpectedCloseDate == *correction.PreviousCloseDate {
-		t.Errorf("proposed %s and current %s are the same date — the card asks for nothing",
-			correction.ExpectedCloseDate, *correction.PreviousCloseDate)
-	}
-	proposed, err := time.Parse(time.DateOnly, correction.ExpectedCloseDate)
-	if err != nil {
-		t.Fatalf("proposed date does not parse: %v", err)
-	}
-	if proposed.Before(today()) {
-		t.Errorf("proposed %s is in the past — the invariant forbids it", correction.ExpectedCloseDate)
-	}
-}
-
-// Proposing a date on the card is not the same as writing one to the deal. The
-// zombie guard still holds: only a human confirming lifts it.
-func TestQuietReviewLeavesTheDealsOwnDateAlone(t *testing.T) {
-	e := setupCloseDate(t)
-	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(30), 90)
-	originalDate := today().AddDate(0, 0, 30)
+	originalDate := today().AddDate(0, 0, -30)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
-		t.Errorf("date = %v, want the original %s — proposing is not writing",
-			swept.expectedClose, originalDate.Format(time.DateOnly))
+	if swept.expectedClose == nil {
+		t.Fatal("the quiet tier cleared the date instead of re-dating the deal")
+	}
+	if swept.expectedClose.Equal(originalDate) {
+		t.Errorf("date is still the original %s — the quiet tier did not re-date it",
+			originalDate.Format(time.DateOnly))
+	}
+	if swept.expectedClose.Before(today()) {
+		t.Errorf("date = %s is in the past — the invariant forbids it",
+			swept.expectedClose.Format(time.DateOnly))
+	}
+}
+
+// Every date the sweep writes is the machine's estimate, so the deal must say
+// so. The provisional mark is what keeps an unconfirmed date out of the
+// forecast and what tells the reader the number came from a sweep rather than
+// from them.
+func TestAQuietRedateIsMarkedProvisional(t *testing.T) {
+	e := setupCloseDate(t)
+	id := e.seedSweepDeal(t, "Gone quiet", e.late, stringp("commit"), intp(-30), 90)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+
+	if swept := e.readSwept(t, id); !swept.provisional {
+		t.Error("the deal is not marked provisional — an unconfirmed machine date must say it is one")
+	}
+}
+
+// A deal that changes hands shows the new owner WHAT moved, never WHY.
+//
+// The basis sentence can name the contact who wrote last and the day they did
+// it, and it was composed under the previous owner's own grants — their
+// contact:read and activity:read, on the night the sweep ran. It is stored text
+// by the time anybody reads it back, so nothing re-checks those grants. A rep
+// who inherits the deal would otherwise be handed a name they were never
+// entitled to see, by a panel that exists to be trusted.
+func TestAReceiptOnAnInheritedDealWithholdsTheReasonItWasComposedFor(t *testing.T) {
+	e := setupCloseDate(t)
+	e.grantOwnerRealPermissions(t, e.Rep1)
+	id := e.seedSweepDeal(t, "Handed over", e.late, stringp("commit"), intp(30), 90)
+	e.seedDealEmail(t, id, "inbound", "Anna Weber", 90)
+
+	if err := e.sweep(); err != nil {
+		t.Fatal(err)
+	}
+	// The reason names the contact while the deal is still Rep1's, which is the
+	// positive control: without it this test would pass over a basis that was
+	// empty all along.
+	if basis := e.appliedCorrection(t, id).Basis; !strings.Contains(basis, "Anna Weber") {
+		t.Fatalf("basis = %q, want it to name Anna Weber before the hand-over", basis)
+	}
+
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE deal SET owner_id = $1 WHERE id = $2`, e.Rep2, id); err != nil {
+		t.Fatalf("handing the deal to another rep: %v", err)
+	}
+
+	if basis := e.appliedCorrection(t, id).Basis; basis != "" {
+		t.Errorf("basis = %q for a rep who inherited the deal — the sentence was composed "+
+			"under the previous owner's grants and must not follow the record", basis)
 	}
 }

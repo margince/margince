@@ -323,7 +323,7 @@ type Authorizer interface {
 }
 
 // OAuth is the full handshake surface: an Authorizer that can also send a
-// person to the provider's consent screen. The transport holds this; a
+// contact to the provider's consent screen. The transport holds this; a
 // connector holds the narrower half.
 type OAuth interface {
 	Authorizer

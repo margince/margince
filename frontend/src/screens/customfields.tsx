@@ -33,6 +33,7 @@ import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AuditEntryLine } from "./audit";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
+import { objectLabels, typeLabels } from "./customfields.labels";
 import {
   apiKey,
   CF_OBJECTS,
@@ -287,26 +288,6 @@ export function FieldBuilder({
 // every key is checked against the catalog at compile time — a mapped
 // `Object.fromEntries` would need a cast to get back to Record<Option, string>,
 // and a cast is exactly what stops a missing translation being a build error.
-function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
-  return {
-    text: t("cf.type.text"),
-    number: t("cf.type.number"),
-    date: t("cf.type.date"),
-    currency: t("cf.type.currency"),
-    picklist: t("cf.type.picklist"),
-    boolean: t("cf.type.boolean"),
-  };
-}
-
-function objectLabels(t: ReturnType<typeof useT>): Record<CfObject, string> {
-  return {
-    deal: t("cf.obj.deal"),
-    organization: t("cf.obj.organization"),
-    person: t("cf.obj.person"),
-    lead: t("cf.obj.lead"),
-  };
-}
-
 type CustomField = components["schemas"]["CustomField"];
 type CustomFieldList = components["schemas"]["CustomFieldListResponse"];
 type AuditLogEntry = components["schemas"]["AuditLogEntry"];
@@ -525,7 +506,7 @@ function auditState(
 }
 
 // The add-field create body (CUSTOM-FIELDS-WIRE-2): a plain manual field carries
-// `source:"manual"` (the FE convention across deals/leads/organizations), and the
+// `source:"manual"` (the FE convention across deals/leads/companies), and the
 // two conditional shapes ride only on their own type — currency on a currency
 // field, options on a picklist — never on the others.
 function createBody(
@@ -598,7 +579,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
 // as the section name and again as the card title. The object is now named by
 // the segmented control alone, and the two surfaces most visits do not want —
 // the builder and the change trail — are Disclosures. What is left open is the
-// answer to the question people actually arrive with: which fields exist.
+// answer to the question contacts actually arrive with: which fields exist.
 export function CustomFieldsAdmin() {
   const t = useT();
   const queryClient = useQueryClient();
@@ -867,7 +848,7 @@ export function CustomFieldsAdmin() {
 
           `wide` is the variant's stated case: the builder carries the pending
           DDL, and a 440px dialog wraps
-          `ALTER organization ADD COLUMN cf_contract_end_date (date)` into an
+          `ALTER company ADD COLUMN cf_contract_end_date (date)` into an
           unreadable stack — the one line a reader is meant to check before
           confirming a live schema change. It also keeps the label and the API
           key derived from it side by side. */}

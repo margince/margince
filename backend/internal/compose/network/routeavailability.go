@@ -20,7 +20,7 @@ package network
 //
 // One value the enum carries is NOT set here. `unavailable` means the seat can
 // no longer carry the ask, and a colleague in that state never reaches this
-// code: EdgesForPerson joins app_user on the live-member predicate, so a
+// code: EdgesForContact joins app_user on the live-member predicate, so a
 // deactivated colleague is not a graph node and so not a candidate. Writing a
 // branch for it would be writing a branch that cannot run.
 
@@ -44,7 +44,7 @@ import (
 // date — so a rep learns a door is taken without learning who took it.
 type AskedRoutes interface {
 	RouteStates(
-		ctx context.Context, personID ids.PersonID,
+		ctx context.Context, contactID ids.ContactID,
 	) (map[introductions.RouteKey]introductions.RouteState, error)
 }
 
@@ -61,21 +61,21 @@ func (h Reads) WithAskedRoutes(asked AskedRoutes) Reads {
 // out the same colleague's indirect route — the index would have accepted that
 // one, and greying it out would refuse an ask the server does not.
 func stampAvailability(
-	routes []crmcontracts.PersonGraphRouteCandidate,
+	routes []crmcontracts.ContactGraphRouteCandidate,
 	asked map[introductions.RouteKey]introductions.RouteState,
 ) {
 	for i := range routes {
 		key := introductions.RouteKey{
 			Introducer: ids.From[ids.UserKind](ids.UUID(routes[i].ViaUserId)),
 		}
-		if through := routes[i].ThroughPersonId; through != nil {
-			key.Through = ids.From[ids.PersonKind](ids.UUID(*through))
+		if through := routes[i].ThroughContactId; through != nil {
+			key.Through = ids.From[ids.ContactKind](ids.UUID(*through))
 		}
 		switch asked[key] {
 		case introductions.RouteOpen:
-			routes[i].Availability = crmcontracts.PersonGraphRouteAvailabilityAlreadyRequested
+			routes[i].Availability = crmcontracts.ContactGraphRouteAvailabilityAlreadyRequested
 		case introductions.RouteRefused:
-			routes[i].Availability = crmcontracts.PersonGraphRouteAvailabilityDeclined
+			routes[i].Availability = crmcontracts.ContactGraphRouteAvailabilityDeclined
 		}
 	}
 }

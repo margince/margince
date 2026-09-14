@@ -49,7 +49,7 @@
   margin: 0 0 var(--space-2);
 }
 .backfill-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 .backfill-skipped {
   margin-top: var(--space-3);

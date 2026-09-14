@@ -47,7 +47,10 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 // recently filed; capping THIS order keeps the tasks nearest their deadline,
 // which is what a page capped at a dozen can actually afford to drop.
 func orderClause(in ListActivitiesInput) string {
-	if in.OpenAndDueBy != nil {
+	if in.RequestReviewAsOf != nil {
+		return " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+	}
+	if in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil {
 		return " ORDER BY a.due_at ASC, a.id ASC"
 	}
 	return " ORDER BY a.occurred_at DESC, a.id DESC"
@@ -66,6 +69,8 @@ func orderClause(in ListActivitiesInput) string {
 // a due_at-aware cursor and remove the need for this guard entirely — left
 // for a follow-up rather than done here, since it touches the shared keyset
 // path every other ListActivities caller also runs through.
+var errRequestReviewWithCursor = errors.New("activities: a recency cursor cannot resume request priority order")
+
 var errOpenAndDueByWithCursor = errors.New(
 	"activities: a cursor built for the recency order cannot resume an open-and-due read")
 
@@ -80,6 +85,9 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 		// for a caller that already holds a transaction, so it has no seam to
 		// ask — and a composite record read that carries none simply excludes
 		// no sender, which is the same open default WithOwnDomains documents.
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}
@@ -107,7 +115,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	// The record the timeline was narrowed TO is gated before it is filtered
 	// on. The scope below is an ANY-LINK rule, so an activity linked to both a
-	// visible person and a lead the caller may not read passes it — and
+	// visible contact and a lead the caller may not read passes it — and
 	// filtering on that lead's id would then answer "this lead exists, and here
 	// is what happened on it" to someone with no right to either fact.
 	if err := ensureNarrowingTargetVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -142,7 +150,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	var page storekit.Page
 	if len(activities) > limit {
 		activities = activities[:limit]
-		if in.OpenAndDueBy == nil {
+		if in.OpenAndDueBy == nil && in.OpenAndDueAfter == nil && in.RequestReviewAsOf == nil {
 			last := activities[len(activities)-1]
 			next, err := storekit.EncodeCursor(last.OccurredAt, ids.UUID(last.Id))
 			if err != nil {
@@ -158,7 +166,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	// What came with each message, on the same transaction and in one
 	// statement — the batching rule attachLinks above already follows.
-	if err := WithAttachmentCounts(ctx, tx, activities); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	if err := attachLinks(ctx, tx, activities); err != nil {
@@ -228,7 +236,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 		return crmcontracts.Activity{}, err
 	}
 	one := []crmcontracts.Activity{a}
-	if err := WithAttachmentCounts(ctx, tx, one); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, one); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if err := attachLinks(ctx, tx, one); err != nil {
@@ -238,12 +246,12 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 }
 
 // attachLinks fills the contract's links[] on a page of activities in ONE
-// query — the column the timeline's "via" chips and the per-person filter
+// query — the column the timeline's "via" chips and the per-contact filter
 // read. Batched rather than per-row because the timeline reads a page at a
 // time.
 //
 // Each link row carries its OWN row-scope check, which the activity's does
-// not subsume. Activity visibility is an ANY-link rule: one visible person
+// not subsume. Activity visibility is an ANY-link rule: one visible contact
 // makes the whole activity readable. Projecting every link row back would
 // then disclose the ids of the other records it touches — a colleague's
 // deal on the same thread — to a caller who cannot read them. A link whose
@@ -339,6 +347,9 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 			return err
 		}
 		var err error
+		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
+			return err
+		}
 		if in.ownDomains, err = s.ownDomainList(ctx, tx); err != nil {
 			return err
 		}

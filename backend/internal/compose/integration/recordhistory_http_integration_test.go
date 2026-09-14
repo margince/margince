@@ -53,18 +53,18 @@ type recordHistoryListWire struct {
 }
 
 // recordHistoryHTTPFixture is the seeded shape the happy-path subtest reads
-// back: a person created through the real HTTP write path (its own
+// back: a contact created through the real HTTP write path (its own
 // create-audit row resolves the admin's display name — genuine genesis
 // history, not a fixture), a human-actor phone diff, and — dated newest so
 // it lands last in the chronological order — an agent-actor diff acting
 // under Ada Authority's delegated authority.
 type recordHistoryHTTPFixture struct {
-	personID ids.UUID
-	adaID    ids.UUID
+	contactID ids.UUID
+	adaID     ids.UUID
 }
 
 // recordHistoryFixtureRows is how many audit rows seedRecordHistoryHTTPFixture
-// leaves on the person: the create genesis, a human row whose actor_id no
+// leaves on the contact: the create genesis, a human row whose actor_id no
 // app_user matches, an agent row with a granting human, and a human row spelled
 // the way the real writer spells it. Named once so the page-walk bound and the
 // single-page count cannot drift apart from the fixture.
@@ -72,16 +72,16 @@ const recordHistoryFixtureRows = 4
 
 func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) recordHistoryHTTPFixture {
 	t.Helper()
-	var person AnyMap
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
 		"full_name": "Record History Subject",
 		"source":    "ui",
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
-	personID, err := ids.Parse(person["id"].(string))
+	contactID, err := ids.Parse(contact["id"].(string))
 	if err != nil {
-		t.Fatalf("parsing person id %q: %v", person["id"], err)
+		t.Fatalf("parsing contact id %q: %v", contact["id"], err)
 	}
 
 	// ONE clock reading, with every seeded row offset from it. Dated forward
@@ -92,11 +92,11 @@ func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) r
 	base := time.Now().UTC().Truncate(time.Microsecond)
 	humanAt := base.Add(1 * time.Hour)
 	agentAt := base.Add(2 * time.Hour)
-	seedAuditDiffRow(t, dbEnv, "person", personID, "human",
+	seedAuditDiffRow(t, dbEnv, "contact", contactID, "human",
 		map[string]any{"phone": "555-0100"}, map[string]any{"phone": "555-0199"}, humanAt)
 
 	adaID := seedWorkspaceUser(t, dbEnv, "Ada Authority")
-	seedRecordAuditRow(t, dbEnv, "update", personID, "agent", "agent:enrich", &adaID,
+	seedRecordAuditRow(t, dbEnv, "update", contactID, "agent", "agent:enrich", &adaID,
 		map[string]any{"title": "VP"}, map[string]any{"title": "CTO"}, agentAt)
 
 	// A human actor spelled the way the real writer spells it — storekit
@@ -106,10 +106,10 @@ func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) r
 	umaID := seedWorkspaceUser(t, dbEnv, "Uma Underwriter")
 	// Offset from the same reading the two rows above use, so the fixture's own
 	// order decides the sequence rather than the moment each call ran.
-	seedRecordAuditRow(t, dbEnv, "update", personID, "human", "human:"+umaID.String(), nil,
+	seedRecordAuditRow(t, dbEnv, "update", contactID, "human", "human:"+umaID.String(), nil,
 		nil, map[string]any{"title": "SVP"}, base.Add(3*time.Hour))
 
-	return recordHistoryHTTPFixture{personID: personID, adaID: adaID}
+	return recordHistoryHTTPFixture{contactID: contactID, adaID: adaID}
 }
 
 // assertRecordHistoryHappyPath drives the GET and checks the wire shape:
@@ -119,7 +119,7 @@ func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) r
 func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHistoryHTTPFixture) {
 	t.Helper()
 	var page recordHistoryListWire
-	status := e.Call(t, "GET", "/v1/records/person/"+fx.personID.String()+"/history", nil, nil, &page)
+	status := e.Call(t, "GET", "/v1/records/contact/"+fx.contactID.String()+"/history", nil, nil, &page)
 	if status != http.StatusOK {
 		t.Fatalf("record-history status = %d, want 200: %+v", status, page)
 	}
@@ -157,7 +157,7 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 		t.Fatalf("human entry = %+v, want the seeded update diff", human)
 	}
 	// No phantom keys: the seeded map is the whole of before/after, since
-	// defaultFieldMasks is empty for person in this repo.
+	// defaultFieldMasks is empty for contact in this repo.
 	if len(human.Before) != 1 || human.Before["phone"] != "555-0100" {
 		t.Errorf("human before = %v, want exactly {phone: 555-0100}", human.Before)
 	}
@@ -190,13 +190,13 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 	}
 
 	// The resolved name reaches the WIRE, not just the store read: a client
-	// renders the person from this field rather than parsing `summary`.
+	// renders the contact from this field rather than parsing `summary`.
 	named := inStoryOrder(3)
 	if named.ActorName == nil || *named.ActorName != "Uma Underwriter" {
 		t.Errorf("named human actor_name = %v, want Uma Underwriter", named.ActorName)
 	}
 	if named.Summary != "Uma Underwriter updated the record" {
-		t.Errorf("named human summary = %q, want the person as the subject", named.Summary)
+		t.Errorf("named human summary = %q, want the contact as the subject", named.Summary)
 	}
 
 	// page.has_more is a required (non-pointer) field on the wire — its
@@ -228,7 +228,7 @@ func TestRecordHistoryHTTP(t *testing.T) {
 	t.Run("422 malformed cursor", func(t *testing.T) {
 		var problem fieldHistoryProblem
 		status := e.Call(t, "GET",
-			"/v1/records/person/"+fx.personID.String()+"/history?cursor=!!!notatoken", nil, nil, &problem)
+			"/v1/records/contact/"+fx.contactID.String()+"/history?cursor=!!!notatoken", nil, nil, &problem)
 		assertFieldHistoryValidation422(t, status, problem, "cursor", "malformed_cursor")
 	})
 
@@ -238,7 +238,7 @@ func TestRecordHistoryHTTP(t *testing.T) {
 		// instead of turning "has_more lied" into a fixture-arithmetic failure.
 		walked := map[string]bool{}
 		var cursor string
-		url := "/v1/records/person/" + fx.personID.String() + "/history?limit=1"
+		url := "/v1/records/contact/" + fx.contactID.String() + "/history?limit=1"
 		for page := 1; page <= recordHistoryFixtureRows; page++ {
 			var got recordHistoryListWire
 			reqURL := url

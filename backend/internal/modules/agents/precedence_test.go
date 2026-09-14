@@ -40,7 +40,7 @@ func TestSplitHumanOwnedPartitionsThePatch(t *testing.T) {
 	id := ids.NewV7()
 	patch := json.RawMessage(`{"title":"CTO","full_name":"Greta Machine","email":"g@example.com"}`)
 
-	split, err := SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"full_name"}}, "person", id, patch)
+	split, err := SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"full_name"}}, "contact", id, patch)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,30 +68,30 @@ func TestSplitHumanOwnedEdges(t *testing.T) {
 	patch := json.RawMessage(`{"full_name":"Greta Machine"}`)
 
 	// No conflicts: the whole patch is auto-execute, nothing staged.
-	split, err := SplitHumanOwned(ctx, fixedOwnership{}, "person", id, patch)
+	split, err := SplitHumanOwned(ctx, fixedOwnership{}, "contact", id, patch)
 	if err != nil || split.Staged != nil || string(split.AutoExecute) != string(patch) {
 		t.Fatalf("conflict-free split = %+v (err %v), want the untouched patch auto-execute", split, err)
 	}
 
 	// Every field human-owned: no auto-execute remainder.
-	split, err = SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"full_name"}}, "person", id, patch)
+	split, err = SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"full_name"}}, "contact", id, patch)
 	if err != nil || split.AutoExecute != nil {
 		t.Fatalf("all-conflict split = %+v (err %v), want no auto-execute remainder", split, err)
 	}
 
 	// A nil resolver cannot answer the precedence question — fail closed.
-	if _, err := SplitHumanOwned(ctx, nil, "person", id, patch); err == nil {
+	if _, err := SplitHumanOwned(ctx, nil, "contact", id, patch); err == nil {
 		t.Fatal("nil ownership resolver must refuse, not admit the overwrite")
 	}
 
 	// A conflict outside the patch is a resolver defect, not a split.
-	if _, err := SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"phantom"}}, "person", id, patch); err == nil {
+	if _, err := SplitHumanOwned(ctx, fixedOwnership{conflicts: []string{"phantom"}}, "contact", id, patch); err == nil {
 		t.Fatal("a conflict the patch does not carry must be refused")
 	}
 
 	// A probe failure propagates — never degraded into "no conflicts".
 	probeErr := errors.New("audit trail unreachable")
-	if _, err := SplitHumanOwned(ctx, fixedOwnership{err: probeErr}, "person", id, patch); !errors.Is(err, probeErr) {
+	if _, err := SplitHumanOwned(ctx, fixedOwnership{err: probeErr}, "contact", id, patch); !errors.Is(err, probeErr) {
 		t.Fatalf("probe failure → %v, want it propagated", err)
 	}
 }
@@ -189,7 +189,7 @@ func agentCtx() context.Context {
 	})
 }
 
-// splitRegistry wires update_record over fakes: a person whose full_name
+// splitRegistry wires update_record over fakes: a contact whose full_name
 // is human-owned, an approvals recorder, and an auto-execute admission gate.
 func splitRegistry(conflicts []string, approvals *recordingApprovals, provider *fixedProvider) *Registry {
 	r := NewRegistry(approvals, auth.NewGate(fullSeatAuthority{}))
@@ -233,14 +233,14 @@ func assertRedeemedHash(t *testing.T, approvals *recordingApprovals, diffHash st
 func TestUpdateRecordMixedPatchSplitsAndBindsTheSubPatch(t *testing.T) {
 	target := ids.NewV7()
 	provider := &fixedProvider{record: nativeRecord(datasource.Record{
-		Ref:     datasource.EntityRef{Type: datasource.EntityPerson, ID: target},
+		Ref:     datasource.EntityRef{Type: datasource.EntityContact, ID: target},
 		Fields:  json.RawMessage(`{"full_name":"Greta Human","title":"CTO"}`),
 		Version: 7,
 	})}
 	approvals := &recordingApprovals{}
 	r := splitRegistry([]string{"full_name"}, approvals, provider)
 
-	call := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"Greta Machine","title":"CTO"}}`, target)
+	call := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine","title":"CTO"}}`, target)
 	out, err := r.Invoke(agentCtx(), "update_record", json.RawMessage(call))
 	if err != nil {
 		t.Fatalf("mixed patch must succeed for its auto-execute half: %v", err)
@@ -264,9 +264,9 @@ func TestUpdateRecordMixedPatchSplitsAndBindsTheSubPatch(t *testing.T) {
 		t.Fatalf("staged = %d, want exactly one approval", len(approvals.staged))
 	}
 	staged := approvals.staged[0]
-	if staged.Tool != "update_record" || staged.TargetType != "person" || staged.TargetID != target ||
+	if staged.Tool != "update_record" || staged.TargetType != "contact" || staged.TargetID != target ||
 		staged.TargetVersion == nil || *staged.TargetVersion != 7 {
-		t.Fatalf("staged binding = %+v, want update_record on the person pinned to the post-write version 7", staged)
+		t.Fatalf("staged binding = %+v, want update_record on the contact pinned to the post-write version 7", staged)
 	}
 
 	// The result names the split: the record, the withheld fields, the
@@ -310,14 +310,14 @@ func TestUpdateRecordMixedPatchSplitsAndBindsTheSubPatch(t *testing.T) {
 func TestUpdateRecordAllHumanOwnedStagesTheWholeCall(t *testing.T) {
 	target := ids.NewV7()
 	provider := &fixedProvider{record: nativeRecord(datasource.Record{
-		Ref:     datasource.EntityRef{Type: datasource.EntityPerson, ID: target},
+		Ref:     datasource.EntityRef{Type: datasource.EntityContact, ID: target},
 		Fields:  json.RawMessage(`{"full_name":"Greta Human"}`),
 		Version: 3,
 	})}
 	approvals := &recordingApprovals{}
 	r := splitRegistry([]string{"full_name"}, approvals, provider)
 
-	call := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"Greta Machine"}}`, target)
+	call := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine"}}`, target)
 	_, err := r.Invoke(agentCtx(), "update_record", json.RawMessage(call))
 	var stagedErr *workflow.StagedApprovalError
 	if !errors.As(err, &stagedErr) || !errors.Is(err, apperrors.ErrRequiresApproval) {
@@ -331,7 +331,7 @@ func TestUpdateRecordAllHumanOwnedStagesTheWholeCall(t *testing.T) {
 	}
 
 	// The approved retry is the IDENTICAL call plus approval_id.
-	retry := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"full_name":"Greta Machine"},"approval_id":%q}`, target, stagedErr.ApprovalID)
+	retry := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine"},"approval_id":%q}`, target, stagedErr.ApprovalID)
 	if _, err := r.Invoke(agentCtx(), "update_record", json.RawMessage(retry)); err != nil {
 		t.Fatalf("identical retry with approval_id → %v", err)
 	}
@@ -344,12 +344,12 @@ func TestUpdateRecordAllHumanOwnedStagesTheWholeCall(t *testing.T) {
 func TestAutoExecuteCallWithApprovalIDValidatesInsteadOfIgnoring(t *testing.T) {
 	target := ids.NewV7()
 	provider := &fixedProvider{record: nativeRecord(datasource.Record{
-		Ref: datasource.EntityRef{Type: datasource.EntityPerson, ID: target},
+		Ref: datasource.EntityRef{Type: datasource.EntityContact, ID: target},
 	})}
 	approvals := &recordingApprovals{redeemErr: fmt.Errorf("already redeemed: %w", apperrors.ErrApprovalTokenInvalid)}
 	r := splitRegistry(nil, approvals, provider)
 
-	call := fmt.Sprintf(`{"record_type":"person","id":%q,"fields":{"title":"CTO"},"approval_id":%q}`, target, ids.NewV7())
+	call := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"title":"CTO"},"approval_id":%q}`, target, ids.NewV7())
 	if _, err := r.Invoke(agentCtx(), "update_record", json.RawMessage(call)); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 		t.Fatalf("asserted-but-invalid approval_id → %v, want the redemption failure, not a silent auto-execute run", err)
 	}

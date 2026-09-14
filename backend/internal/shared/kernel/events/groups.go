@@ -38,12 +38,12 @@ func Groups() []Group {
 		return keys
 	}
 	return []Group{
-		{Name: "cg:context-graph", Streams: forEntities(personStreamEntity, organizationStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
+		{Name: "cg:context-graph", Streams: forEntities(contactStreamEntity, companyStreamEntity, dealStreamEntity, activityStreamEntity, leadStreamEntity)},
 		// The interaction-edge projection (CG-DDL-1 / ADR-0078). Its OWN group
 		// rather than a second handler on cg:context-graph: a projection
 		// rebuild must not be able to stall embedding freshness, and the two
 		// have unrelated failure modes.
-		{Name: "cg:graph-edge", Streams: forEntities(activityStreamEntity, personStreamEntity)},
+		{Name: "cg:graph-edge", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// The audience-change corrector: when a human LIMITS a message after
 		// the derived models were built, the derived signals citing it narrow
 		// and the thread's scan watermark drops so the next extraction pass
@@ -54,18 +54,18 @@ func Groups() []Group {
 		{Name: "cg:audience-rescope", Streams: forEntities(activityStreamEntity)},
 		// The LinkedIn ghost matcher (ADR-0078 §8b). Its own group rather than
 		// a second handler on cg:graph-edge: that consumer lives in the search
-		// module and this call belongs to people, and a module never reaches
-		// into a sibling. It listens on the person and organization streams —
+		// module and this call belongs to contacts, and a module never reaches
+		// into a sibling. It listens on the contact and company streams —
 		// a contact appearing is a chance to attach a ghost, and so is an
 		// account appearing, because employer resolution is what most ghosts
 		// are waiting on.
-		{Name: "cg:linkedin-match", Streams: forEntities(personStreamEntity, organizationStreamEntity)},
+		{Name: "cg:linkedin-match", Streams: forEntities(contactStreamEntity, companyStreamEntity)},
 
-		// Its own group rather than a second handler on cg:person-auto-enrich:
+		// Its own group rather than a second handler on cg:contact-auto-enrich:
 		// this repair attaches mail the workspace already holds to a record it
 		// already has, and must keep flowing when an enrichment that calls out
 		// to a model is slow or wedged.
-		{Name: "cg:cohort-promote", Streams: forEntities(personStreamEntity)},
+		{Name: "cg:cohort-promote", Streams: forEntities(contactStreamEntity)},
 		// Turning a won deal into what its partner earned. Its own group
 		// because accrual is money: a projection rebuild or an embedding
 		// backlog must never be able to stall it, and a failure to accrue must
@@ -100,18 +100,18 @@ func Groups() []Group {
 		// enrichment backlog leaves every introduction reading as unanswered,
 		// which is what a refusal looks like to the rep who asked.
 		//
-		// BOTH streams. activity.captured is the reply arriving; the person
+		// BOTH streams. activity.captured is the reply arriving; the contact
 		// stream is the repair, because capture promotes an address to a
 		// contact in a transaction AFTER the one that wrote the message. A
-		// message captured before its sender was a person names nobody the
-		// activity arm can act on, and without the person event that reply
+		// message captured before its sender was a contact names nobody the
+		// activity arm can act on, and without the contact event that reply
 		// would be lost permanently while the ask read unanswered.
-		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, personStreamEntity)},
+		{Name: "cg:intro-advance", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// What the installation owes a contact it obtained without asking them.
-		// Person stream only: the duty is decided from how the contact was
+		// Contact stream only: the duty is decided from how the contact was
 		// acquired, and the acquisition row is written in the same transaction
-		// as the person and the event that announces it.
-		{Name: "cg:notice-case-open", Streams: forEntities(personStreamEntity)},
+		// as the contact and the event that announces it.
+		{Name: "cg:notice-case-open", Streams: forEntities(contactStreamEntity)},
 		// What happened in a Deal Room, written onto the deal's timeline. Its own
 		// group because a room's traffic is live and conversational while the
 		// projections above are batchy: a backlog of embeddings must not delay the
@@ -126,24 +126,24 @@ func Groups() []Group {
 		{Name: "cg:ai-activity", Streams: forEntities(aiTaskStreamEntity)},
 		// Filling a contact from what their employer's site already published
 		// (ADR-0072 arc). Its own group for the same reason as the matcher
-		// above: the deep read fills a published person DURING the crawl, so
+		// above: the deep read fills a published contact DURING the crawl, so
 		// a contact who arrives afterwards is never matched against what that
-		// site said. It listens on the person stream alone — the fill is
+		// site said. It listens on the contact stream alone — the fill is
 		// keyed on the contact, and an account appearing enriches nobody
-		// until a person is filed against it, which is itself a person event.
-		{Name: "cg:person-auto-enrich", Streams: forEntities(personStreamEntity)},
-		// The prompt half of captured-organization auto-enrich (ADR-0072
-		// arc): an organization appearing or changing queues the workspace's
+		// until a contact is filed against it, which is itself a contact event.
+		{Name: "cg:contact-auto-enrich", Streams: forEntities(contactStreamEntity)},
+		// The prompt half of captured-company auto-enrich (ADR-0072
+		// arc): a company appearing or changing queues the workspace's
 		// enrich pass NOW instead of leaving a company created between two
 		// daily sweeps without a dossier for up to a day. Its own group
 		// rather than a second handler on cg:linkedin-match for the standing
 		// reason: that consumer belongs to search-adjacent matching, this one
 		// to capture enrichment, and the two must not share a cursor. It
-		// listens on the organization stream alone — the pass it queues
-		// re-derives which organizations are due from the database, so no
+		// listens on the company stream alone — the pass it queues
+		// re-derives which companies are due from the database, so no
 		// other entity's event can make one due that this stream's events do
 		// not already announce.
-		{Name: "cg:org-auto-enrich", Streams: forEntities(organizationStreamEntity)},
+		{Name: "cg:company-auto-enrich", Streams: forEntities(companyStreamEntity)},
 		// Mail landing queues the signature-enrich pass, so a contact who wrote
 		// this morning is read now rather than tonight. Its own group rather
 		// than a second handler on an existing activity consumer: this one
@@ -151,13 +151,13 @@ func Groups() []Group {
 		// customer's token budget must not share a cursor with a projection
 		// that is cheap to replay.
 		//
-		// The PERSON stream too, because the pass selects a contact joined to
+		// The CONTACT stream too, because the pass selects a contact joined to
 		// their own open mail and either half can be what was missing. A sender
 		// nobody had classified has no contact while their mail lands; the
-		// counterparty verdict mints them minutes later, and person.created is
+		// counterparty verdict mints them minutes later, and contact.created is
 		// the only notice that their first mail — the one carrying the signature
 		// block — has become readable.
-		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity, personStreamEntity)},
+		{Name: "cg:capture-enrich", Streams: forEntities(activityStreamEntity, contactStreamEntity)},
 		// A card attached to captured mail imports itself. Its own group beside
 		// the one above rather than a second handler on it, because the two do
 		// not fail alike: that one queues a MODEL-backed pass and this one
@@ -171,11 +171,11 @@ func Groups() []Group {
 		// page the workspace already crawled, this one SPENDS the customer's
 		// credits, and a consumer whose retries buy data must not share a
 		// cursor with one whose retries are free.
-		{Name: "cg:person-data", Streams: forEntities(personStreamEntity)},
+		{Name: "cg:contact-data", Streams: forEntities(contactStreamEntity)},
 		{Name: "cg:overnight-agent", Streams: forEntities(activityStreamEntity, dealStreamEntity, leadStreamEntity, approvalStreamEntity)},
 		{Name: "cg:workflows", Streams: all},
 		{Name: "cg:capture", Streams: forEntities(captureStreamEntity)},
-		{Name: "cg:flow-bridge", Streams: forEntities(personStreamEntity, dealStreamEntity, activityStreamEntity)},
+		{Name: "cg:flow-bridge", Streams: forEntities(contactStreamEntity, dealStreamEntity, activityStreamEntity)},
 		{Name: "cg:read-model", Streams: all},
 		{Name: "cg:audit-stream", Streams: all},
 		// The outbound-webhook fan-out (E10/S-E10.6): a subscription may

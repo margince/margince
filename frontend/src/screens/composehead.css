@@ -64,6 +64,6 @@
    bundler put the base sheet last. The pairing states the override rather than
    depending on file order. */
 .t-caption.compose-need {
-  color: var(--danger);
+  color: var(--dangerText);
   margin-top: var(--space-1);
 }

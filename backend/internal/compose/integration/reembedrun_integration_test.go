@@ -161,8 +161,8 @@ func TestAHealthyRunIsNotStealableHoweverLongItTakes(t *testing.T) {
 	}
 
 	for i := range 4 {
-		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
-			fmt.Sprintf("Slow Corpus Person %d", i))
+		e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+			fmt.Sprintf("Slow Corpus Contact %d", i))
 	}
 
 	// The run has been going long enough to look abandoned, and its one
@@ -235,8 +235,8 @@ func TestReembedReportsProgressBeforeItsScanAndItsFirstEmbed(t *testing.T) {
 		t.Fatalf("claiming the run: %v", err)
 	}
 	for i := range 2 {
-		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
-			fmt.Sprintf("Slow First Entity Person %d", i))
+		e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+			fmt.Sprintf("Slow First Entity Contact %d", i))
 	}
 	ageMarkerPastTheStealWindow(t, e)
 

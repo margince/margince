@@ -51,7 +51,7 @@ func CraftCursor(t *testing.T, c storekit.Cursor) string {
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
-// CustomFieldAdminPerms is full custom_field config authority plus the person
+// CustomFieldAdminPerms is full custom_field config authority plus the contact
 // grants the value-preservation assertions need.
 //
 // It is not AdminPerms narrowed — AdminPerms carries no custom_field grant at all,
@@ -65,7 +65,7 @@ var CustomFieldAdminPerms = principal.Permissions{
 	RoleKeys: []string{"admin"},
 	Objects: map[string]principal.ObjectGrant{
 		"custom_field": {Create: true, Read: true, Update: true, Delete: true},
-		"person":       {Create: true, Read: true, Update: true, Delete: true},
+		"contact":      {Create: true, Read: true, Update: true, Delete: true},
 	},
 	RowScope: principal.RowScopeAll,
 }
@@ -167,7 +167,7 @@ func SeedRetentionPolicies(t *testing.T, e *Env) {
 			  ('lead', 'unconverted', 365, 'anonymize'),
 			  ('activity', NULL, 1095, 'archive'),
 			  ('activity', 'transcript', 365, 'erase'),
-			  ('person', 'no_consent_no_deal', 730, 'anonymize'),
+			  ('contact', 'no_consent_no_deal', 730, 'anonymize'),
 			  ('deal', 'lost', 1825, 'archive')
 			) AS v(o, c, d, a)`)
 		return err

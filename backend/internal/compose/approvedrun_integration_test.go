@@ -48,13 +48,13 @@ func parkedRun(t *testing.T, e *integration.Env, svc *approvals.Service, kind st
 	// Staged the way a firing stages: the system actor acting on behalf of the
 	// automation's owner, and the owner is the human decider() releases as. A
 	// kind narrowed to its own rep needs that — a held draft sends from the
-	// approver's own mailbox, so only the person it goes out as may release it.
+	// approver's own mailbox, so only the contact it goes out as may release it.
 	id, err := svc.Stage(e.AutomationCtx(e.Rep1), approvals.StageInput{
 		Kind:           kind,
 		ProposedChange: json.RawMessage(patch),
 		DiffHash:       "approvedrun-" + ids.NewV7().String(),
 		Summary:        "automation wants to " + kind,
-		TargetType:     "person",
+		TargetType:     "contact",
 		TargetID:       targetID,
 	})
 	if err != nil {
@@ -84,11 +84,11 @@ func runStatus(t *testing.T, e *integration.Env, handler string) string {
 func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
-	person := e.SeedPerson(t, "Reassignment Target", nil)
+	contact := e.SeedContact(t, "Reassignment Target", nil)
 
 	for _, kind := range automation.StageableKinds() {
 		t.Run(kind, func(t *testing.T) {
-			id, _ := parkedRun(t, e, svc, kind, person, `{"owner_id":null}`)
+			id, _ := parkedRun(t, e, svc, kind, contact, `{"owner_id":null}`)
 			if _, err := svc.Get(decider(e), id); err != nil {
 				t.Fatalf("an admin cannot even read the staging: %v — it is hidden from the inbox and nobody can decide it", err)
 			}
@@ -101,9 +101,9 @@ func TestAnAutomationStagedActionIsVisibleAndDecidable(t *testing.T) {
 func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
-	person := e.SeedPerson(t, "Asked About", nil)
+	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
-	id, handler := parkedRun(t, e, svc, kind, person, `{"note":"needs a human"}`)
+	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
 
 	if _, err := svc.Decide(decider(e), id, true, nil); err != nil {
 		t.Fatalf("Decide(approve) → %v", err)
@@ -123,9 +123,9 @@ func TestApprovingAnAskingOnlyStagingCompletesItsRun(t *testing.T) {
 func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
-	person := e.SeedPerson(t, "Asked About", nil)
+	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
-	id, handler := parkedRun(t, e, svc, kind, person, `{"note":"needs a human"}`)
+	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
 
 	if _, err := svc.Decide(decider(e), id, false, nil); err != nil {
 		t.Fatalf("Decide(reject) → %v", err)
@@ -153,9 +153,9 @@ func TestRefusingAnAskingOnlyStagingStillBlocksItsRun(t *testing.T) {
 func TestACompletionDoesNotReviveABlockedRun(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
-	person := e.SeedPerson(t, "Asked About", nil)
+	contact := e.SeedContact(t, "Asked About", nil)
 	kind := string(workflow.ActionEmitFlowEvent)
-	id, handler := parkedRun(t, e, svc, kind, person, `{"note":"needs a human"}`)
+	id, handler := parkedRun(t, e, svc, kind, contact, `{"note":"needs a human"}`)
 	engine := NewWorkflowEngine(e.DB())
 
 	if err := engine.HandleApprovalDecided(context.Background(), decidedEnvelope(t, id, "rejected", kind)); err != nil {
@@ -196,21 +196,21 @@ func decidedEnvelope(t *testing.T, id ids.ApprovalID, verdict, kind string) keve
 // move the owner, spend the card, and finish the run.
 //
 // Before this the effect did not exist. The decision committed, the inbox
-// emptied, and the person kept the owner they had — a human's authorization
+// emptied, and the contact kept the owner they had — a human's authorization
 // spent on nothing, with the run still reading as waiting for it.
 func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
 	newOwner := e.Rep1
-	person := e.SeedPerson(t, "Reassigned At Scale", nil)
-	id, handler := parkedRun(t, e, svc, string(workflow.ActionAssignOwner), person,
+	contact := e.SeedContact(t, "Reassigned At Scale", nil)
+	id, handler := parkedRun(t, e, svc, string(workflow.ActionAssignOwner), contact,
 		`{"owner_id":"`+newOwner.String()+`"}`)
 
 	if _, err := svc.Decide(decider(e), id, true, nil); err != nil {
 		t.Fatalf("Decide(approve) → %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person WHERE id = $1 AND owner_id = $2`, person, newOwner); n != 1 {
-		t.Error("the person still has their old owner — the approved reassignment ran nothing")
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND owner_id = $2`, contact, newOwner); n != 1 {
+		t.Error("the contact still has their old owner — the approved reassignment ran nothing")
 	}
 	if got := runStatus(t, e, handler); got != "applied" {
 		t.Errorf("run is %q after the reassignment it staged was approved and performed, want applied", got)
@@ -234,13 +234,13 @@ func TestApprovingAReassignmentMovesTheOwnerAndCompletesItsRun(t *testing.T) {
 func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 	e := integration.Setup(t)
 	svc := approvalsServiceWithEffects(e.Pool)
-	person := e.SeedPerson(t, "Reassignment Fails", nil)
+	contact := e.SeedContact(t, "Reassignment Fails", nil)
 	// The create stamps the seeding seat as owner; the test wants an unowned
 	// record so the failed write's footprint is unmistakable.
-	e.WsExec(t, `UPDATE person SET owner_id = NULL WHERE id = $1`, person)
+	e.WsExec(t, `UPDATE contact SET owner_id = NULL WHERE id = $1`, contact)
 	// An owner that does not exist: the store's foreign key refuses it, which is
 	// an ordinary failure of the write rather than a fault injected around it.
-	id, handler := parkedRun(t, e, svc, string(workflow.ActionAssignOwner), person,
+	id, handler := parkedRun(t, e, svc, string(workflow.ActionAssignOwner), contact,
 		`{"owner_id":"`+ids.NewV7().String()+`"}`)
 
 	if _, err := svc.Decide(decider(e), id, true, nil); err == nil {
@@ -249,7 +249,7 @@ func TestAFailedReassignmentDoesNotMarkItsRunApplied(t *testing.T) {
 	if got := runStatus(t, e, handler); got != "requires_approval" {
 		t.Errorf("run is %q after its write failed, want requires_approval — a firing whose work never happened reads as finished", got)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person WHERE id = $1 AND owner_id IS NOT NULL`, person); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND owner_id IS NOT NULL`, contact); n != 0 {
 		t.Error("the failed reassignment left an owner on the record")
 	}
 }
@@ -284,8 +284,8 @@ func TestApprovingAnyStageableKindLeavesItsRunTerminal(t *testing.T) {
 			continue
 		}
 		t.Run(kind, func(t *testing.T) {
-			person := e.SeedPerson(t, "Terminal Run "+kind, nil)
-			id, handler := parkedRun(t, e, svc, kind, person,
+			contact := e.SeedContact(t, "Terminal Run "+kind, nil)
+			id, handler := parkedRun(t, e, svc, kind, contact,
 				`{"owner_id":"`+e.Rep1.String()+`"}`)
 
 			if _, err := svc.Decide(decider(e), id, true, nil); err != nil {

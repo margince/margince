@@ -28,13 +28,13 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// seedPeopleWithTier creates people carrying a picklist custom field, returning
+// seedContactsWithTier creates contacts carrying a picklist custom field, returning
 // the column name so a filter can name it.
-func seedPeopleWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) string {
+func seedContactsWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) string {
 	t.Helper()
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "person", "label": "Preview Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Preview Tier", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
@@ -47,11 +47,11 @@ func seedPeopleWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) string
 		if i >= gold {
 			tier = "silver"
 		}
-		var person integration.AnyMap
-		if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+		var contact integration.AnyMap
+		if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 			"full_name": "Preview Subject", "source": "ui", column: tier,
-		}, nil, &person); status != http.StatusCreated {
-			t.Fatalf("create person %d: status=%d body=%v", i, status, person)
+		}, nil, &contact); status != http.StatusCreated {
+			t.Fatalf("create contact %d: status=%d body=%v", i, status, contact)
 		}
 	}
 	return column
@@ -95,12 +95,12 @@ type previewBody struct {
 func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
-	column := seedPeopleWithTier(t, e, 12, 4)
+	column := seedContactsWithTier(t, e, 12, 4)
 
 	limit := 3
 	var got previewBody
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person",
+		"resource": "contact",
 		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 		"limit":    limit,
 	}, nil, &got); status != http.StatusOK {
@@ -115,7 +115,7 @@ func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
 	if !got.Truncated {
 		t.Error("truncated = false while the count exceeds the page — a caller cannot say 'showing 3 of 12'")
 	}
-	if got.Resource != "person" {
+	if got.Resource != "contact" {
 		t.Errorf("resource = %q, want the one asked for", got.Resource)
 	}
 	// columns is a required field the row comparison never touches, so an empty or
@@ -133,11 +133,11 @@ func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
 func TestAFilterPreviewThatFitsIsNotTruncated(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
-	column := seedPeopleWithTier(t, e, 2, 1)
+	column := seedContactsWithTier(t, e, 2, 1)
 
 	var got previewBody
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person",
+		"resource": "contact",
 		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &got); status != http.StatusOK {
 		t.Fatalf("preview: status=%d body=%+v", status, got)
@@ -156,12 +156,12 @@ func TestAFilterPreviewThatFitsIsNotTruncated(t *testing.T) {
 func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
-	column := seedPeopleWithTier(t, e, 3, 2)
+	column := seedContactsWithTier(t, e, 3, 2)
 	filter := integration.AnyMap{"field": column, "op": "eq", "value": "gold"}
 
 	var preview previewBody
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person", "filter": filter, "limit": 100,
+		"resource": "contact", "filter": filter, "limit": 100,
 	}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview: status=%d body=%+v", status, preview)
 	}
@@ -173,7 +173,7 @@ func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 		RowCount int                  `json:"row_count"`
 	}
 	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
-		"object": "person", "filter": filter, "format": "json",
+		"object": "contact", "filter": filter, "format": "json",
 	}, nil, &exported); status != http.StatusOK {
 		t.Fatalf("export: status=%d", status)
 	}
@@ -218,14 +218,14 @@ func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
-	column := seedPeopleWithTier(t, e, 2, 0)
+	column := seedContactsWithTier(t, e, 2, 0)
 	filter := integration.AnyMap{"field": column, "op": "eq", "value": "gold"}
 
 	before := ledgers(t, e)
 	for range 3 {
 		var got previewBody
 		if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-			"resource": "person", "filter": filter,
+			"resource": "contact", "filter": filter,
 		}, nil, &got); status != http.StatusOK {
 			t.Fatalf("preview: status=%d", status)
 		}
@@ -236,7 +236,7 @@ func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
 
 	var exported integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
-		"object": "person", "filter": filter, "format": "json",
+		"object": "contact", "filter": filter, "format": "json",
 	}, nil, &exported); status != http.StatusOK {
 		t.Fatalf("export: status=%d", status)
 	}
@@ -267,10 +267,10 @@ func TestAFilterPreviewRefusalNamesTheOffendingInput(t *testing.T) {
 		field string
 	}{
 		{"a field the vocabulary does not admit", integration.AnyMap{
-			"resource": "person",
+			"resource": "contact",
 			"filter":   integration.AnyMap{"field": "not_a_column", "op": "eq", "value": "x"},
 		}, "not_a_column"},
-		{"no filter at all", integration.AnyMap{"resource": "person"}, "filter"},
+		{"no filter at all", integration.AnyMap{"resource": "contact"}, "filter"},
 		{"a resource with no engine", integration.AnyMap{
 			"resource": "activity",
 			"filter":   integration.AnyMap{"field": "kind", "op": "eq", "value": "call"},
@@ -278,7 +278,7 @@ func TestAFilterPreviewRefusalNamesTheOffendingInput(t *testing.T) {
 		// The contract publishes 1..100; a value outside it is refused rather than
 		// quietly rewritten, so a caller learns their request was not honoured.
 		{"a limit past the published ceiling", integration.AnyMap{
-			"resource": "person",
+			"resource": "contact",
 			"filter":   integration.AnyMap{"field": "full_name", "op": "contains", "value": "a"},
 			"limit":    limitTooLarge,
 		}, "limit"},

@@ -8,7 +8,7 @@ package search
 // E1 derived the vocabulary from the CONTRACT. Execution happens against the
 // DATABASE, and the two do not agree. `strength.score` is a view assembled from
 // activity rows, `partner.margin_tier` belongs to another table, `deal.stalled`
-// is computed in a mapper, and `organization.logo_url` is minted from an object
+// is computed in a mapper, and `company.logo_url` is minted from an object
 // key at read time. Roughly forty published fields have no column on the
 // record's own table.
 //

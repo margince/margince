@@ -29,9 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// freezeTwoTeams seeds one priced deal per team and freezes the pair, through
-// the REAL writer and the real deal read, so what the recompute later re-sums
-// is what production would have written.
+// freezeTwoTeams seeds one priced deal per team and freezes them.
 func (e *forecastEnv) freezeTwoTeams(t *testing.T, mine, theirs int64) ids.UUID {
 	t.Helper()
 	// Inside the period on purpose. seedOpenDeal dates a deal 30 days out,
@@ -40,7 +38,14 @@ func (e *forecastEnv) freezeTwoTeams(t *testing.T, mine, theirs int64) ids.UUID 
 	// pass or fail by the calendar rather than by the recompute.
 	e.seedDealClosingWithin(t, "Mine", &e.Rep1, mine)
 	e.seedDealClosingWithin(t, "Theirs", &e.Rep3, theirs)
+	return e.freezeWorkspace(t)
+}
 
+// freezeWorkspace freezes whatever deals are already seeded, through the REAL
+// writer and the real deal read, so what the recompute later re-sums is what
+// production would have written.
+func (e *forecastEnv) freezeWorkspace(t *testing.T) ids.UUID {
+	t.Helper()
 	store := forecasting.NewStore(InstallationDB(e.Pool))
 	admin := snapshotWriterCtx(e.WS)
 	var id ids.UUID
@@ -65,7 +70,7 @@ func (e *forecastEnv) freezeTwoTeams(t *testing.T, mine, theirs int64) ids.UUID 
 		})
 		return err
 	}); err != nil {
-		t.Fatalf("freezing the pair: %v", err)
+		t.Fatalf("freezing the seeded deals: %v", err)
 	}
 	return id
 }
@@ -74,10 +79,20 @@ func (e *forecastEnv) freezeTwoTeams(t *testing.T, mine, theirs int64) ids.UUID 
 // so it falls in the current quarter whatever day the suite runs on.
 func (e *forecastEnv) seedDealClosingWithin(t *testing.T, name string, owner *ids.UUID, amountMinor int64) {
 	t.Helper()
+	e.seedDealPricedIn(t, name, owner, amountMinor, "EUR")
+}
+
+// seedDealPricedIn is the same plant in a named currency. This environment
+// populates no rate sheet at all, so anything but the installation's own base
+// currency produces a deal that CARRIES an amount and has no base — priced and
+// unconvertible, the one population `priced_count` and `fx_missing_count`
+// disagree about.
+func (e *forecastEnv) seedDealPricedIn(t *testing.T, name string, owner *ids.UUID, amountMinor int64, currency string) {
+	t.Helper()
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, owner_id, amount_minor, currency,
 			expected_close_date, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, 'EUR', (now() + interval '2 days')::date, 'manual', 'human:x')`,
-		name, e.pipeline, e.stages[20], owner, amountMinor)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, (now() + interval '2 days')::date, 'manual', 'human:x')`,
+		name, e.pipeline, e.stages[20], owner, amountMinor, currency)
 }
 
 // writerUser is the seat snapshotWriterCtx acts as.
@@ -697,4 +712,74 @@ func (e *forecastEnv) writableScope(
 			return scopeErr
 		})
 	return out, err
+}
+
+// PRICED is amount_minor; CONVERTED is base_minor, and the priced-but-
+// unconvertible deal is the one population the two answers differ on.
+//
+// The share recompute and forecasting.Compute are two writers of these counts
+// and cannot be one helper — Compute decides in Go over rows it holds, this is
+// an aggregate under a per-recipient FILTER that never loads them. So the two
+// are asserted EQUAL here, which fails whichever of them drifts, rather than
+// pinning constants that would stay green while they parted company.
+func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
+	const priced = 100_000
+	e := setupForecast(t)
+	e.seedDealClosingWithin(t, "Convertible", &e.Rep1, priced)
+	e.seedDealPricedIn(t, "Priced in francs", &e.Rep1, priced, "CHF")
+	// A third deal on the OTHER team, so the narrowed read below counts fewer
+	// rows than the whole state and the count is shown to ride the same
+	// visibility clause as its siblings rather than to be taken over the table.
+	e.seedDealClosingWithin(t, "Another team's", &e.Rep3, priced)
+
+	id := e.freezeWorkspace(t)
+	whole := e.readShared(snapshotWriterCtx(e.WS), t, id).Readings
+
+	if whole.EligibleCount != 3 {
+		t.Fatalf("the frozen state holds %d eligible deals, want the 3 seeded", whole.EligibleCount)
+	}
+	if whole.FxMissingCount != 1 {
+		t.Fatalf("%d deals are unconvertible, want the 1 priced in francs", whole.FxMissingCount)
+	}
+	if whole.PricedCount != 3 {
+		t.Errorf("priced_count = %d, want 3 — ALL THREE carry an amount, and the unconvertible "+
+			"one is already reported by fx_missing_count; counting conversion here tells a "+
+			"recipient the total misses two deals when it misses one", whole.PricedCount)
+	}
+
+	// The declared mirror: what the recipient is re-summed equals what the
+	// writer froze. Read off the stored row rather than restated, so a change
+	// to either side reds this.
+	var stored forecasting.Readings
+	if err := forecasting.NewStore(InstallationDB(e.Pool)).InTx(snapshotWriterCtx(e.WS),
+		func(ctx context.Context, tx pgx.Tx) error {
+			return tx.QueryRow(ctx,
+				`SELECT eligible_count, priced_count, fx_missing_count
+				 FROM forecast_snapshot WHERE id = $1`, id).
+				Scan(&stored.EligibleCount, &stored.PricedCount, &stored.FxMissingCount)
+		}); err != nil {
+		t.Fatalf("reading the frozen row: %v", err)
+	}
+	if whole.PricedCount != stored.PricedCount || whole.EligibleCount != stored.EligibleCount ||
+		whole.FxMissingCount != stored.FxMissingCount {
+		t.Errorf("the recompute answers eligible=%d priced=%d fx_missing=%d and the row "+
+			"forecasting.Compute froze says %d/%d/%d — the two writers of these counts have "+
+			"come to mean different things",
+			whole.EligibleCount, whole.PricedCount, whole.FxMissingCount,
+			stored.EligibleCount, stored.PricedCount, stored.FxMissingCount)
+	}
+
+	// AND UNDER NARROWING, because a count is a disclosure. The predicate that
+	// changed sits inside the same visibility clause as every sibling
+	// aggregate, and a count taken over the table instead would tell a
+	// team-scoped recipient how many deals exist outside their population.
+	narrow := e.readShared(e.forecastReader(
+		e.dealReadCtx(e.Rep1, []ids.UUID{e.Team1}, principal.RowScopeTeam)), t, id).Readings
+	if narrow.PricedCount != 2 {
+		t.Errorf("a team-scoped recipient counted %d priced deals, want their own team's 2 — "+
+			"the count must narrow with the rows it counts", narrow.PricedCount)
+	}
+	if narrow.EligibleCount != 2 {
+		t.Errorf("a team-scoped recipient counted %d eligible deals, want 2", narrow.EligibleCount)
+	}
 }

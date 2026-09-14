@@ -74,7 +74,7 @@ func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
 
 	erased := make(chan error, 1)
 	go func() {
-		erased <- privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test")
+		erased <- privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test")
 	}()
 
 	// Wait until the erasure is genuinely PARKED behind the stamp, asked of

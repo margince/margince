@@ -11,7 +11,7 @@ package integration
 // gate rather than a code review: it passes on the day it is written, keeps
 // passing for weeks, and then fails on a date nobody can connect to a change.
 //
-// The worked example. `person_relationship_room_integration_test.go` drove its
+// The worked example. `contact_relationship_room_integration_test.go` drove its
 // services from a frozen `roomFixedNow` of 2026-08-04 and seeded an activity at
 // the DATABASE's `now() - interval '20 days'`. Those are two clocks. Every real
 // day that passed moved the seeded row a day closer to the frozen now, so the

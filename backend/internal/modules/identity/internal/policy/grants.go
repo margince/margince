@@ -134,7 +134,7 @@ const (
 	objAiModelRate = "ai_model_rate"
 	// Which vendor this installation's text is sent to (ai-operational-spec
 	// §1.4). Deliberately NOT folded into installation_settings: whoever may
-	// rename the organization has no business re-pointing where its people's
+	// rename the company has no business re-pointing where its contacts's
 	// correspondence is processed, and those become one grant the moment the
 	// two share an object.
 	//
@@ -192,7 +192,7 @@ const (
 	// is no per-rep read surface — the mode-flip and migrate-in screens are
 	// admin surfaces.
 	objImportRun = "import_run"
-	// The organization's own identity and reporting calendar (ADR-0090/A135).
+	// The company's own identity and reporting calendar (ADR-0090).
 	// Read is broad — the base currency and the business timezone shape what
 	// every seat sees — and only admin/ops change it.
 	objInstallationSettings = "installation_settings"
@@ -231,7 +231,7 @@ const (
 	// installation makes deliberately by editing a custom role.
 	objUserAdmin = "user_admin"
 	// The role directory and the role editor. Ops READS it — an operator
-	// answering "why can this person not see that" needs the policy in front of
+	// answering "why can this contact not see that" needs the policy in front of
 	// them — while changing a role stays with admin, because a holder of the
 	// editor can grant themselves anything the editor can express.
 	objRoleAdmin = "role_admin"
@@ -266,6 +266,14 @@ const (
 	// judged against. Ops holds it in full because the purposes are wiring, and
 	// Management reads what its team is bound by.
 	objConsentConfig = "consent_config"
+	// objCommunicationException is who may direct a send the engine refused.
+	//
+	// Its own object rather than a corner of consent_config, because the two are
+	// different authorities: consent_config is who may change the RULES, and
+	// this is who may act against the answer those rules produced about one
+	// contact. An installation that delegates the first has not thereby
+	// delegated the second.
+	objCommunicationException = "communication_exception"
 	// The sign-in policy: which providers are offered and whether a password is
 	// one of them. Management and Ops read the posture; changing who may enter
 	// the installation is admin.

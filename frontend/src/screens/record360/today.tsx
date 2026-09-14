@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// WHAT NEEDS A PERSON TODAY — the one part of a record page that answers
+// WHAT NEEDS A CONTACT TODAY — the one part of a record page that answers
 // "what do I do now", and the rows it is made of.
 //
 // Two kinds of row, at two weights, and the difference is who is asking. A
@@ -45,6 +45,7 @@ import "../company360.css";
 export function TodayPanel({
   state = "ready",
   onOpenTasks,
+  tasksLabel,
   footer,
   notice,
   children,
@@ -53,6 +54,7 @@ export function TodayPanel({
   // Where the head's link leads. Absent for a record with no task list of its
   // own to open.
   onOpenTasks?: () => void;
+  tasksLabel?: string;
   // The band under the rows: what the day counts down to, and what the day was
   // read from. It is a band and not a line in the head — a caller hands in a
   // commitment badge, a truncation count and the read's own provenance, and
@@ -94,7 +96,7 @@ export function TodayPanel({
           <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
           {onOpenTasks && (
             <button type="button" className="link-button" onClick={onOpenTasks}>
-              {t("co.suggest.viewTasks")}
+              {tasksLabel ?? t("co.suggest.viewTasks")}
             </button>
           )}
         </div>
@@ -114,7 +116,7 @@ export function TodayPanel({
       {state === "ready" &&
         (rows.length === 0 ? (
           // Not "nothing to do": the brief read everything it can read and
-          // found nothing that needs a person today. That is a real answer and
+          // found nothing that needs a contact today. That is a real answer and
           // it is different from the record being empty.
           <PanelBody>
             <EmptyState>{t("today.quiet")}</EmptyState>
@@ -259,6 +261,7 @@ export function TodoRow({
   meta,
   due,
   verb,
+  action,
 }: Readonly<{
   // Whose list it sits on. Absent when the record cannot say — an unassigned
   // task draws no mark rather than a monogram of nobody.
@@ -272,6 +275,8 @@ export function TodoRow({
   // does — a draft it writes — because the indigo mark means authorship and
   // nothing else.
   verb?: { label: string; onAct: () => void; byMargince?: boolean };
+  // For a shared action component that owns its drawer and pending state.
+  action?: ReactNode;
 }>) {
   return (
     <PanelRow className="co-todo">
@@ -293,19 +298,20 @@ export function TodoRow({
           {due.label}
         </span>
       )}
-      {verb && (
-        <Button
-          small
-          // Tinted, not filled: three filled buttons down a column outshout
-          // the one move above them that the pane is actually recommending,
-          // and `aiQuiet` is that volume for an agent's verb among equals.
-          variant={verb.byMargince ? "aiQuiet" : "ghost"}
-          onClick={verb.onAct}
-        >
-          {verb.byMargince && <Sparkles aria-hidden="true" />}
-          {verb.label}
-        </Button>
-      )}
+      {action ??
+        (verb && (
+          <Button
+            small
+            // Tinted, not filled: three filled buttons down a column outshout
+            // the one move above them that the pane is actually recommending,
+            // and `aiQuiet` is that volume for an agent's verb among equals.
+            variant={verb.byMargince ? "aiQuiet" : "ghost"}
+            onClick={verb.onAct}
+          >
+            {verb.byMargince && <Sparkles aria-hidden="true" />}
+            {verb.label}
+          </Button>
+        ))}
     </PanelRow>
   );
 }

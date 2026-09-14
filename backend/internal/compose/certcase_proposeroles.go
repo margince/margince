@@ -82,23 +82,23 @@ func (proposeRolesCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 				"%s: candidate %q carries no messages, and the input builder never assembles such a "+
 					"candidate — their own words are the only evidence this site may read, so a "+
 					"fixture supplying a bare name and title certifies a call the product never makes",
-				proposeRolesSite, candidate.PersonID)
+				proposeRolesSite, candidate.ContactID)
 		}
-		known[candidate.PersonID] = true
+		known[candidate.ContactID] = true
 	}
-	// A map of person id to the role that person should end up holding. Empty
+	// A map of contact id to the role that contact should end up holding. Empty
 	// is the correct expectation for a restraint scenario.
 	var want map[string]string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected value is not a person-to-role map: %w", proposeRolesSite, err)
+			"%s: the expected value is not a contact-to-role map: %w", proposeRolesSite, err)
 	}
-	for personID := range want {
-		if !known[personID] {
+	for contactID := range want {
+		if !known[contactID] {
 			return nil, fmt.Errorf(
 				"%s: the scenario expects a role for %q, who is not a candidate — the gate refuses a "+
 					"proposal for anybody this call did not offer, so no model answer could satisfy it",
-				proposeRolesSite, personID)
+				proposeRolesSite, contactID)
 		}
 	}
 	return &proposeRolesCase{in: in, expected: want}, nil
@@ -136,7 +136,7 @@ func (c *proposeRolesCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	}
 	got := map[string]string{}
 	for _, kept := range proposeroles.Gate(proposals, c.in.Candidates) {
-		got[kept.PersonID] = kept.Role
+		got[kept.ContactID] = kept.Role
 	}
 	if detail := disagreement(c.expected, got); detail != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: detail}
@@ -148,17 +148,17 @@ func (c *proposeRolesCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // ones, in one message so a reader fixes them together.
 func disagreement(want, got map[string]string) string {
 	var faults []string
-	for person, role := range want {
-		switch actual, ok := got[person]; {
+	for contact, role := range want {
+		switch actual, ok := got[contact]; {
 		case !ok:
-			faults = append(faults, fmt.Sprintf("%s: no role survived, wanted %s", person, role))
+			faults = append(faults, fmt.Sprintf("%s: no role survived, wanted %s", contact, role))
 		case actual != role:
-			faults = append(faults, fmt.Sprintf("%s: read %s, wanted %s", person, actual, role))
+			faults = append(faults, fmt.Sprintf("%s: read %s, wanted %s", contact, actual, role))
 		}
 	}
-	for person, role := range got {
-		if _, ok := want[person]; !ok {
-			faults = append(faults, fmt.Sprintf("%s: read %s, wanted none", person, role))
+	for contact, role := range got {
+		if _, ok := want[contact]; !ok {
+			faults = append(faults, fmt.Sprintf("%s: read %s, wanted none", contact, role))
 		}
 	}
 	sort.Strings(faults)

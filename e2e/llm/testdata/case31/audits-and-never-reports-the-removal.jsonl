@@ -1,4 +1,4 @@
 {"type": "system", "subtype": "init", "tools": ["mcp__margince__get_record_tags", "mcp__margince__remove_tag"]}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__get_record_tags", "input": {"record_type": "organization"}}]}}
-{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__remove_tag", "input": {"record_type": "organization"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__get_record_tags", "input": {"record_type": "company"}}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__remove_tag", "input": {"record_type": "company"}}]}}
 {"type": "result", "subtype": "success", "is_error": false, "result": "Here is everything sitting on Vorort Systeme KG, retired words included: Strategic Account, and K5 Conference 2025 \u2014 that one is on a list we have since retired, which is why the record view does not draw it and you could not see it.\n\nStrategic Account stays in the workspace either way; three other accounts genuinely are strategic accounts and they keep the word."}

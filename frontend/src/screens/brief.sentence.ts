@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { consequenceText, itemTitle } from "./worklist.copy";
+import { itemTitle, rowHref } from "./worklist.copy";
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
 // The Brief's opening sentence, composed from the rows the page is showing.
@@ -27,29 +27,56 @@ import type { Worklist, WorklistItem } from "./worklist.queries";
 export type BriefSentence = Readonly<{
   key: MessageKey;
   values: Readonly<Record<string, string>>;
+  /**
+   * Where the NAMED lead's own record is, so the words the sentence opens with
+   * are the way into the row they describe. Undefined where the row carries no
+   * destination — the same `rowHref` the feed's rows are linked by, so the
+   * sentence and the row below it cannot send a reader to two places.
+   */
+  leadHref?: string;
 }>;
+
+/** One run of a sentence template: its own words, or a hole to fill. */
+export type SentencePart =
+  | Readonly<{ kind: "text"; text: string }>
+  | Readonly<{ kind: "slot"; name: string }>;
+
+/**
+ * A template split into its words and its holes, in order.
+ *
+ * The Brief's opening sentence puts a LINK in two of its holes, and a string
+ * with the holes already filled has nowhere to put one. So the sentence is
+ * translated with its holes intact and cut here, which keeps the translator's
+ * word order: the lead can open the German sentence and close the Vietnamese
+ * one, and neither is assembled from clauses this file joined.
+ *
+ * The hole pattern is `translate`'s own (`{name}`), and it has to stay that way
+ * — a second spelling here would fill holes the translator never wrote.
+ */
+export function sentenceParts(template: string): readonly SentencePart[] {
+  const parts: SentencePart[] = [];
+  let at = 0;
+  for (const hole of template.matchAll(/\{(\w+)\}/g)) {
+    if (hole.index > at) {
+      parts.push({ kind: "text", text: template.slice(at, hole.index) });
+    }
+    parts.push({ kind: "slot", name: hole[1] });
+    at = hole.index + hole[0].length;
+  }
+  if (at < template.length) {
+    parts.push({ kind: "text", text: template.slice(at) });
+  }
+  return parts;
+}
 
 /** How many rows the sentence is allowed to name. */
 const NAMED = 1;
 
-/**
- * What the DECISIONS DECK above already answers, and this page therefore does
- * not count twice.
- *
- * ONE spelling for the whole Brief. The sentence names the lead row and the
- * section below draws it, so a rule kept in two places would let the sentence
- * open with a decision the section deliberately did not show — which is the
- * duplication that rule exists to stop, reappearing one element higher.
- */
-const DECK_ANSWERS = "approval";
-
-/** The rows this page is answerable for, in the server's order. */
+/** The agenda includes approvals, using the worklist's existing review action. */
 export function waitingRows(
   day: Worklist | undefined,
 ): readonly WorklistItem[] {
-  // The optional chain reaches the FIELD, not just the payload: an answer that
-  // carried no queue must draw nothing rather than throw.
-  return day?.queue?.filter((item) => item.source !== DECK_ANSWERS) ?? [];
+  return day?.focus?.items ?? [];
 }
 
 /**
@@ -65,10 +92,14 @@ export function briefSentence(
   t: (key: MessageKey, values?: Record<string, string>) => string,
   locale: Locale,
 ): BriefSentence | null {
-  if (!day?.queue) {
+  if (!day?.focus) {
     return null;
   }
   const waiting = waitingRows(day);
+  const partial = Boolean(
+    day.readings?.more_available || day.sources_unavailable?.length,
+  );
+  if (waiting.length === 0 && partial) return null;
   if (waiting.length === 0) {
     return { key: "brief.sentence.clear", values: {} };
   }
@@ -87,19 +118,21 @@ export function briefSentence(
     lead: itemTitle(lead, t, locale),
     rest: String(waiting.length - NAMED),
   };
-  const consequence = consequenceText(lead, t);
-  if (consequence) {
-    values.consequence = consequence;
-  }
-  if (waiting.length === NAMED) {
+  // The row's OWN destination, through the helper the feed's rows are linked
+  // by. A second rule for where the lead goes would let the sentence open a
+  // record the row under it does not.
+  const leadHref = rowHref(lead);
+  if (waiting.length === NAMED || partial) {
     return {
-      key: consequence ? "brief.sentence.oneWithCost" : "brief.sentence.one",
+      key: "brief.sentence.one",
       values,
+      leadHref,
     };
   }
   return {
-    key: consequence ? "brief.sentence.manyWithCost" : "brief.sentence.many",
+    key: "brief.sentence.many",
     values,
+    leadHref,
   };
 }
 
@@ -112,4 +145,9 @@ export function briefSentence(
  */
 export function leadOf(day: Worklist | undefined): WorklistItem | undefined {
   return waitingRows(day)[0];
+}
+
+/** Informational notices live in the rail; pins and urgent notices keep priority. */
+export function isBriefUpdate(item: WorklistItem): boolean {
+  return item.source === "notice" && item.level !== 0 && !item.urgent;
 }

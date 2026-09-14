@@ -214,7 +214,7 @@ func TestAnUndeclaredKindWithRowsIsReportedSeparately(t *testing.T) {
 	}
 	// Still counted where it is actually sitting: the depth gauge answers how
 	// much work a queue is holding, and work of a retired kind is work.
-	if !strings.Contains(out, `margince_job_queue_depth{queue="default",workspace_id=""} 4`) {
+	if !strings.Contains(out, `margince_job_queue_depth{kind="a_kind_no_longer_declared",queue="default",workspace_id=""} 4`) {
 		t.Errorf("the undeclared rows vanished from the queue they are actually in\ngot:\n%s", out)
 	}
 }
@@ -387,7 +387,7 @@ func TestAnExtensionKindThisBuildDoesNotComposeIsItsOwnFamily(t *testing.T) {
 	}
 	// Still counted where it is actually sitting, exactly as a retired core
 	// kind's rows are: the depth gauge answers what a queue is holding.
-	if !strings.Contains(out, `margince_job_queue_depth{queue="default"`) {
+	if !strings.Contains(out, `margince_job_queue_depth{kind="ext_absent_unit_refresh_ws",queue="default"`) {
 		t.Errorf("the ext_ rows vanished from the queue they are actually in\ngot:\n%s", out)
 	}
 }

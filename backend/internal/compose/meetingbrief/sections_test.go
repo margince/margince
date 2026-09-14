@@ -15,7 +15,7 @@ import (
 const (
 	meetingID  = "0198f000-0000-7000-8000-000000000001"
 	dealID     = "0198f000-0000-7000-8000-000000000002"
-	personID   = "0198f000-0000-7000-8000-000000000003"
+	contactID  = "0198f000-0000-7000-8000-000000000003"
 	activityID = "0198f000-0000-7000-8000-000000000004"
 	projectID  = "0198f000-0000-7000-8000-000000000005"
 )
@@ -43,10 +43,10 @@ func fullInput() Input {
 			AmountMinor: 9500000, Currency: "EUR", CloseDate: ptr(at(30)),
 		},
 		Attendees: []AttendeeIn{
-			{PersonID: personID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
+			{ContactID: contactID, FullName: "Ana Roth", Title: "CFO", DealRole: "economic_buyer", LastTouch: &touched},
 		},
 		Commitments: []ClaimIn{{
-			PersonName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
+			ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "send the security pack",
 			Status:   statusOpen,
 			SourceID: activityID, SourceLabel: "Re: security review", DueAt: ptr(at(8)),
 		}},
@@ -128,7 +128,7 @@ func TestRisksIsAbsentWhenNothingInTheRecordIsWrong(t *testing.T) {
 func TestAnOverduePromiseIsTheGoalOnceAndTheNextOneIsARisk(t *testing.T) {
 	in := fullInput()
 	in.Commitments = append(in.Commitments, ClaimIn{
-		PersonName: "Ana Roth", Kind: kindCommitmentOurs, Body: "share the reference call",
+		ContactName: "Ana Roth", Kind: kindCommitmentOurs, Body: "share the reference call",
 		Status: statusOpen, SourceID: activityID, DueAt: ptr(at(9)),
 	})
 	sections := Deterministic(in)
@@ -185,7 +185,7 @@ func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 	in := fullInput()
 	in.Commitments[0].DueAt = ptr(at(18))
 	in.Commitments = append(in.Commitments, ClaimIn{
-		PersonName: "Ana Roth", Kind: kindOpenQuestion, Body: "who signs the DPA",
+		ContactName: "Ana Roth", Kind: kindOpenQuestion, Body: "who signs the DPA",
 		Status: statusOpen, SourceID: activityID,
 	})
 	goal := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindGoal)
@@ -199,10 +199,10 @@ func TestTheGoalIsTheOpenQuestionWhenNothingOfOursIsOverdue(t *testing.T) {
 }
 
 // A dismissed claim is one a human said was never true. Resurrecting it in prep
-// would put the correction in front of the person it was wrong about.
+// would put the correction in front of the contact it was wrong about.
 func TestADismissedClaimNeverReachesTheBrief(t *testing.T) {
 	folded := foldClaims("Ana Roth", []crmcontracts.ConversationClaim{{
-		Kind:   crmcontracts.CommitmentTheirs,
+		Kind:   crmcontracts.ConversationClaimKindCommitmentTheirs,
 		Body:   "they will introduce us to procurement",
 		Status: crmcontracts.ConversationClaimStatusDismissed,
 	}})
@@ -370,3 +370,64 @@ func TestEveryPriorMeetingCitesTheMeetingItNames(t *testing.T) {
 		t.Errorf("evidence = %+v, want the earlier meeting's own activity", cited)
 	}
 }
+
+// FirstTime and a nil LastTouch are one fact with two spellings, and the
+// renderer must agree with the assembler about which. Reading only the flag
+// dereferenced the date for any caller that set neither — a panic where the
+// contract is that a brief always has a deterministic floor to fall back to.
+func TestAnAttendeeWithNoRecordedContactReadsAsAFirstMeeting(t *testing.T) {
+	t.Parallel()
+	in := Input{
+		ActivityID: "01998f00-0000-7000-8000-00000000000a",
+		Subject:    "Coffee with Rainer",
+		Company:    "Asia Flight Services",
+		Now:        time.Date(2026, time.August, 4, 12, 0, 0, 0, time.UTC),
+		Attendees: []AttendeeIn{{
+			ContactID: "01998f00-0000-7000-8000-00000000000b",
+			FullName:  "Rainer Vogt",
+			// Neither spelling set, which is what a caller assembling an
+			// attendee by hand produces.
+		}},
+	}
+	var line string
+	for _, section := range Deterministic(in) {
+		if section.Kind != crmcontracts.MeetingBriefSectionKindAttendees {
+			continue
+		}
+		for _, sentence := range section.Sentences {
+			line += sentence.Text
+		}
+	}
+	if !strings.Contains(line, "Rainer Vogt") {
+		t.Fatalf("the attendees section never named the attendee: %q", line)
+	}
+	if !strings.Contains(line, "first time") {
+		t.Errorf("an attendee with no recorded contact did not read as a first meeting: %q", line)
+	}
+	if strings.Contains(line, "last spoke") {
+		t.Errorf("the line dated a contact that was never recorded: %q", line)
+	}
+}
+
+// The invariant the renderer now relies on, held where it is produced: the
+// assembler's flag is the date's own emptiness, so the two can never disagree.
+func TestTheAssemblerDerivesFirstTimeFromTheDate(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name string
+		last *time.Time
+		want bool
+	}{
+		{name: "no recorded contact is a first meeting", last: nil, want: true},
+		{name: "a recorded contact is not", last: ptrTime(time.Date(2026, time.July, 1, 0, 0, 0, 0, time.UTC)), want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := (attendeeRow{LastTouch: tc.last}).firstTime(); got != tc.want {
+				t.Errorf("firstTime() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func ptrTime(t time.Time) *time.Time { return &t }

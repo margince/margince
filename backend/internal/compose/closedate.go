@@ -25,96 +25,69 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// closeDateStager adapts the approvals service onto the deals module's
-// CorrectionStager seam.
-type closeDateStager struct {
-	svc *approvals.Service
+// closeDatePolicy answers the deals module's CorrectionPolicy seam from the
+// approvals module's autonomy table.
+//
+// Bound to the DEAL'S OWNER, never to whoever the sweep is running as: the
+// setting is one rep's answer about their own deals, and the sweep is a system
+// pass with no seat of its own.
+type closeDatePolicy struct {
+	svc   *approvals.Service
+	owner dealOwnerAuthority
 }
 
-func (s closeDateStager) HasPendingCorrection(ctx context.Context, dealID ids.UUID) (bool, error) {
-	return s.svc.HasPendingKind(ctx, deals.CloseDateCorrectionKind, dealID)
-}
-
-// RefusedCloseDate answers the seam's question from the payloads the memory
-// stores.
+// CorrectsWithoutAsking reports whether this owner has left close-date hygiene
+// to the sweep.
 //
-// RejectedChangesFor hands back payloads rather than answering a containment
-// query because only the caller knows what makes two of its proposals the same
-// question. This walks them and lets the probe decide — the judgment is
-// RefusalProbe.SameQuestionAs, in the module that owns close dates, because it
-// is a fact about corrections rather than about staging.
+// Compared against ModeAuto rather than "not manual", because there is a third
+// rung: a rep on `veto` has asked to see a change before it lands, and reading
+// the setting as a two-way switch would take that as consent.
 //
-// The read commits before the caller stages, so it can lose a race to a decision
-// landing in the gap. That costs one extra offer and never an unasked write —
-// what the caller goes on to do is stage, and staging re-checks under its own
-// lock.
-func (s closeDateStager) RefusedCloseDate(ctx context.Context, dealID ids.UUID, proposed deals.RefusalProbe) (bool, error) {
-	refused, err := s.svc.RejectedChangesFor(ctx, deals.CloseDateCorrectionKind, dealID)
+// An owner who no longer holds a seat — suspended, archived, removed — answers
+// FALSE. Their deals still exist and still drift, but nobody has said the sweep
+// may write them unasked, and a missing authority is not consent.
+func (p closeDatePolicy) CorrectsWithoutAsking(ctx context.Context, owner ids.UUID) (bool, error) {
+	if owner == ids.Nil {
+		// An unowned deal has nobody to ask and nobody to leave alone. The
+		// sweep corrects it: a date nobody maintains is exactly the one that
+		// goes stale, and there is no rep whose morning it would surprise.
+		return true, nil
+	}
+	ownerCtx, err := p.owner.asOwner(ctx, owner)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	// The CHOICE, not the mode alone. AutoApplyMode reports 'manual' both for a
+	// rep who asked to be asked and for one who has never seen the setting, and
+	// this is the one caller whose default is not manual — so folding the two
+	// together would read silence as a refusal and leave every deal in the
+	// pipeline on a date nobody maintains.
+	choice, err := p.svc.AutonomyChoiceFor(ownerCtx, deals.CloseDateCorrectionKind)
 	if err != nil {
 		return false, err
 	}
-	for _, payload := range refused {
-		earlier, err := deals.UnmarshalCloseDateCorrection(payload)
-		if err != nil {
-			// A payload an older version of this stager wrote may not decode
-			// today, and a decision a human made does not expire because the
-			// shape moved. Reading it as "not this one" costs one card they
-			// have seen before; failing the sweep would cost every deal's
-			// date hygiene tonight.
-			continue
-		}
-		if proposed.SameQuestionAs(earlier) {
-			return true, nil
-		}
+	if !choice.Chosen {
+		// Nobody has decided. The sweep corrects and reports itself on the
+		// morning receipt with a way back, which is the honest version of the
+		// card it replaced: that card wrote the date FIRST and then asked a
+		// question whose answer changed nothing.
+		return true, nil
 	}
-	return false, nil
-}
-
-func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal deals.CloseDateCorrection) error {
-	raw, err := json.Marshal(proposal)
-	if err != nil {
-		return fmt.Errorf("compose: marshal close-date proposal: %w", err)
-	}
-	canonical, hash, err := diffhash.Canonical(raw)
-	if err != nil {
-		return fmt.Errorf("compose: canonicalize close-date proposal: %w", err)
-	}
-	// No Identity is declared, and that is deliberate rather than an omission.
-	//
-	// An Identity makes StageUnlessDeclined refuse on its own, by jsonb
-	// containment: same field, same value. What makes two close-date corrections
-	// the same question cannot be written that way — it compares TONIGHT's
-	// standing date against the date an EARLIER payload proposed, which is a
-	// relation between two different fields of two different rows. Declaring a
-	// containment identity anyway would give the memory a second, cruder
-	// enforcement point that silently wins: it would suppress a card
-	// RefusedCloseDate had already decided to raise, with nothing failing to say
-	// so. The judgment lives in exactly one place, in the module that owns close
-	// dates, and ensureStaged asks it before it gets here.
-	//
-	// Without an Identity the declined probe falls back to the whole-payload diff
-	// hash, which carries the proposed date and so changes nightly. It suppresses
-	// nothing, which is the right behaviour for a check that is not the memory.
-	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
-		Kind:           deals.CloseDateCorrectionKind,
-		ProposedChange: canonical,
-		DiffHash:       hash,
-		TargetType:     approvalTargetDeal,
-		TargetID:       dealID,
-		TargetVersion:  &targetVersion,
-		Summary:        summary,
-		JoinPending:    true,
-	})
-	return err
+	// Compared against auto explicitly rather than as "not manual": a third
+	// stored rung, veto, exists, and reading it as consent would write
+	// unattended for the one rep who asked hardest not to be written for.
+	return choice.Mode == approvals.ModeAuto, nil
 }
 
 // quietReviewReader adapts the deals module's QuietReviewReader seam: read one
@@ -127,7 +100,7 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 // under it would be any name in the workspace, frozen into a record no
 // read-side gate can re-filter. Resolving the owner's real grants — their
 // permissions, their teams, their seat, in ONE snapshot — makes the read no
-// wider than the person the card is for.
+// wider than the contact the card is for.
 //
 // Every failure here is the same answer: no facts, so the review falls back to
 // a reason with no name in it. That covers a deal with no owner (owner_id is
@@ -160,9 +133,9 @@ func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) 
 			return readErr
 		}
 		names, readErr = r.nameCounterparties(ownerCtx, tx, facts)
-		// An owner who may not read people still gets the dates. The two
+		// An owner who may not read contacts still gets the dates. The two
 		// answers are different sizes — WHEN the silence started is on the
-		// deal's own correspondence, WHO it was with belongs to the person
+		// deal's own correspondence, WHO it was with belongs to the contact
 		// record — and collapsing the first into the second's refusal throws
 		// away a fact the reader is entitled to.
 		if errors.Is(readErr, apperrors.ErrPermissionDenied) {
@@ -177,21 +150,21 @@ func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) 
 	return facts, names, nil
 }
 
-// nameCounterparties resolves both sides' people in ONE call, so a deal whose
+// nameCounterparties resolves both sides' contacts in ONE call, so a deal whose
 // two directions share a contact costs one read rather than two. It runs inside
-// the owner's transaction, so a person the owner may not see simply has no
+// the owner's transaction, so a contact the owner may not see simply has no
 // entry and the reason says "the contact".
 func (r quietReviewReader) nameCounterparties(ctx context.Context, tx pgx.Tx, facts deals.QuietFacts) (deals.QuietNames, error) {
-	var persons []ids.PersonID
+	var contactIDs []ids.ContactID
 	for _, side := range []*deals.QuietSide{facts.LastInbound, facts.LastOutbound} {
-		if side != nil && !side.PersonID.IsZero() {
-			persons = append(persons, ids.From[ids.PersonKind](side.PersonID))
+		if side != nil && !side.ContactID.IsZero() {
+			contactIDs = append(contactIDs, ids.From[ids.ContactKind](side.ContactID))
 		}
 	}
-	if len(persons) == 0 {
+	if len(contactIDs) == 0 {
 		return deals.QuietNames{}, nil
 	}
-	found, err := people.NewStore(r.db).PersonNamesTx(ctx, tx, persons)
+	found, err := contacts.NewStore(r.db).ContactNamesTx(ctx, tx, contactIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -202,9 +175,10 @@ func (r quietReviewReader) nameCounterparties(ctx context.Context, tx pgx.Tx, fa
 // the worker process role.
 func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDateCorrector {
 	db := InstallationDB(pool)
+	owner := dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}
 	return deals.NewCloseDateCorrector(db,
-		closeDateStager{svc: approvals.NewService(db)},
-		quietReviewReader{db: db, owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}},
+		closeDatePolicy{svc: approvals.NewService(db), owner: owner},
+		quietReviewReader{db: db, owner: owner},
 		log, installseam.Deals())
 }
 

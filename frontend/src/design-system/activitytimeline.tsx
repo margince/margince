@@ -11,12 +11,12 @@ import {
   TranscriptReadCard,
 } from "../screens/transcriptread";
 import type { TimelineEntry } from "./composed";
-import { type NameOf, peopleOn, withWhom } from "./participants";
+import { contactsOn, type NameOf, withWhom } from "./participants";
 
 type Activity = components["schemas"]["Activity"];
 
 // The adapter that turns the contract's activities into the shell's timeline
-// rows. It lives beside the shell that renders them rather than on the person
+// rows. It lives beside the shell that renders them rather than on the contact
 // screen, where five other screens had to import it from — a screen exporting
 // a primitive is how the design system grows a second copy of one.
 
@@ -104,7 +104,7 @@ export function activityTimeline(
   return (activities ?? []).map((activity) => {
     // Resolved once: the phrase the row shows and the names a thread counts
     // are two readings of ONE list, and resolving it twice is how they drift.
-    const people = who ? peopleOn(activity.links, who.nameOf) : undefined;
+    const contacts = who ? contactsOn(activity.links, who.nameOf) : undefined;
     return {
       id: activity.id,
       kind: timelineKind(activity.kind),
@@ -119,8 +119,8 @@ export function activityTimeline(
       body: activity.body,
       direction: activity.direction,
       counterparts:
-        people && who ? withWhom(people, who.t, who.locale) : undefined,
-      counterpartNames: people,
+        contacts && who ? withWhom(contacts, who.t, who.locale) : undefined,
+      counterpartNames: contacts,
       // What this exchange was ABOUT, when it is filed against a deal. A
       // chronology of an account runs several deals through one list, and the
       // row that does not say which one is a row a reader has to open to place.
@@ -137,7 +137,7 @@ export function activityTimeline(
       provenance: provenanceOf(activity.captured_by, viewerUserId),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance
-      // ends up on the deal and missing on the person who was in the meeting.
+      // ends up on the deal and missing on the contact who was in the meeting.
       detail: isTranscriptActivity(activity) ? (
         <TranscriptReadCard activityId={activity.id} />
       ) : undefined,

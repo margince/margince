@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -34,7 +34,7 @@ function readRow(
   return {
     id: READ_ID,
     target_kind: "onboarding",
-    organization_id: null,
+    company_id: null,
     root_url: "https://gradion.com",
     status,
     status_code: null,
@@ -63,7 +63,7 @@ function readRow(
     ],
     facts: [],
     comparisons: [],
-    people: [],
+    contacts: [],
     legal_entities: [],
     warnings: [],
     draft_version: 2,
@@ -92,7 +92,7 @@ function proposalFor(read: CompanySiteRead): Proposal {
 }
 
 const savedProfile = {
-  organization_id: "018f3a1b-0000-7000-8000-0000000000a1",
+  company_id: "018f3a1b-0000-7000-8000-0000000000a1",
   display_name: "Gradion",
   website: "gradion.com",
   offer_summary: "Revenue software for manufacturers",
@@ -587,7 +587,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await waitFor(() => {
-      expect(window.location.hash).toBe("#/brief");
+      expect(window.location.hash).toBe("#/home");
     });
   });
 });
@@ -748,7 +748,7 @@ describe("finishing the connect act", () => {
       screen.getByRole("button", { name: /Continue without a mailbox/ }),
     );
     await waitFor(() => {
-      expect(window.location.hash).toBe("#/brief");
+      expect(window.location.hash).toBe("#/home");
     });
     const writes = requestsTo(calls, "/onboarding/state", "PUT");
     const body = (await writes[writes.length - 1].clone().json()) as Record<

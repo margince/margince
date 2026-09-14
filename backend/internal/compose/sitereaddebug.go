@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -56,17 +56,17 @@ type SiteReadDebugOptions struct {
 // the deterministic crawl/merge order, so two runs of the same site
 // diff cleanly field by field.
 type SiteReadDebugReport struct {
-	SeedURL    string                   `json:"seed_url"`
-	Caps       DebugCaps                `json:"caps"`
-	Crawl      DebugCrawl               `json:"crawl"`
-	Extraction DebugExtraction          `json:"extraction"`
-	ModelCalls []DebugModelCall         `json:"model_calls"`
-	Proposal   *people.DeepReadProposal `json:"proposal"`
+	SeedURL    string                     `json:"seed_url"`
+	Caps       DebugCaps                  `json:"caps"`
+	Crawl      DebugCrawl                 `json:"crawl"`
+	Extraction DebugExtraction            `json:"extraction"`
+	ModelCalls []DebugModelCall           `json:"model_calls"`
+	Proposal   *contacts.DeepReadProposal `json:"proposal"`
 	// Logo is what the visual-identity lane made of the seed page's
 	// declarations for the WIDE slot, and LogoIcon for the square badge beside
 	// it. The debug run resolves and normalizes exactly as the cold-start
 	// worker does but stores nothing — it is DB-less and blob-less. An
-	// enrichment read of an existing organization stores the wide mark only,
+	// enrichment read of an existing company stores the wide mark only,
 	// on the terms resolveLogo states.
 	Logo     DebugLogo `json:"logo"`
 	LogoIcon DebugLogo `json:"logo_icon"`
@@ -187,7 +187,7 @@ func siteReadDebugRun(ctx context.Context, opts SiteReadDebugOptions, crawler *s
 	report.Extraction = DebugExtraction{
 		Fields:        debugFields(mergedFields),
 		Facts:         debugFacts(extraction.merged.facts),
-		People:        debugPeople(extraction.merged.people),
+		Contacts:      debugContacts(extraction.merged.contacts),
 		LegalEntities: debugLegalEntities(extraction.merged.entities),
 		Dropped:       dropped,
 	}

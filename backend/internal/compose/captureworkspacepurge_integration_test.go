@@ -102,7 +102,7 @@ func TestAWorkspacePurgeReachesMailTheRuleCaughtThroughCc(t *testing.T) {
 func TestAWorkspacePurgeLeavesActivityNobodyCaptured(t *testing.T) {
 	// A capture exclusion governs what capture stores. A meeting somebody logged
 	// by hand was never captured and no rule ever kept it out, so destroying it
-	// takes away work a person did.
+	// takes away work a contact did.
 	e := integration.Setup(t)
 	handLogged := seedHandLoggedMail(t, e, "spam@junk.example", "selbst notiert")
 	rule := seedWorkspaceExclusion(t, e, "junk.example")
@@ -322,7 +322,7 @@ func roleCtx(e *integration.Env, user ids.UUID, role string) context.Context {
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity":         {Read: true, Update: true, Delete: true},
-				"person":           {Read: true, Create: true, Update: true, Delete: true},
+				"contact":          {Read: true, Create: true, Update: true, Delete: true},
 				"capture_settings": {Read: true, Create: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,

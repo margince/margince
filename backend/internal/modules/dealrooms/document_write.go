@@ -39,7 +39,7 @@ type AddDocumentInput struct {
 // with no publish in between.
 //
 // Human-only, for the reason UpdateRoom states: handing a file to an outside
-// party is a disclosure, and a disclosure is a person's act. Removing one is
+// party is a disclosure, and a disclosure is a contact's act. Removing one is
 // already human-only, and adding is the half that matters more.
 func (s *Store) AddDocument(ctx context.Context, roomID ids.DealRoomID, in AddDocumentInput) (crmcontracts.DealRoomDocument, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionCreate); err != nil {
@@ -153,7 +153,7 @@ type UpdateDocumentInput struct {
 }
 
 // UpdateDocument renames, regroups or reorders a document. The buyer reads the
-// new title at once, so it is a person's act like the add.
+// new title at once, so it is a contact's act like the add.
 func (s *Store) UpdateDocument(ctx context.Context, roomID ids.DealRoomID, id ids.DealRoomDocumentID, in UpdateDocumentInput) (crmcontracts.DealRoomDocument, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoomDocument{}, err

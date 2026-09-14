@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The record's email box: the one place on a person, lead or deal page a rep
+// The record's email box: the one place on a contact, lead or deal page a rep
 // writes from.
 //
 // It is a MAIL box, not a to-do box. It is always here and it always offers to
@@ -12,7 +12,7 @@
 // "nothing to do here".
 //
 // DealEmailAside (dealemail.tsx) is the caller that reads `reply_to` off the
-// deal status card; a person or lead page has no such read today, so it turns
+// deal status card; a contact or lead page has no such read today, so it turns
 // on `detectWaitingReply` instead and lets this component ask the same
 // question directly. Whoever decides which state applies is the caller's
 // job: this component only draws it, from whichever of the two sources the
@@ -23,6 +23,7 @@ import { Mail } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { api } from "../api/client";
 import { Button } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -37,7 +38,7 @@ import { ComposeModal, type RelinkKind } from "./compose";
  *
  * `enabled` is the caller's opt-in, not a default: DealEmailAside supplies
  * its own `replyTo` and must never also run this query, or the box would
- * have two sources answering one question. A person or lead page turns it on
+ * have two sources answering one question. A contact or lead page turns it on
  * because it has no other read of the same fact.
  *
  * Undefined while the read is unsettled, finds nothing, or FAILED: fresh
@@ -76,11 +77,22 @@ function useWaitingReply(
 }
 
 /**
- * EmailVerb is the ONE way a record header offers writing: the mail glyph and
- * the word, as an ordinary verb among the header's others. Every record page
+ * EmailVerb is the ONE way a record header offers writing. Every record page
  * draws it, so a reader moving from a company to the contact on it finds the
- * same button in the same place. A page whose composer can open on another
+ * same control in the same place. A page whose composer can open on another
  * transport hands in the label and glyph it resolved; the default is mail.
+ *
+ * It is SQUARE, because an envelope is one of the handful of verbs a reader
+ * already knows from the glyph — the same reason Call and Meetings are squares
+ * beside it. The header's remaining verbs either keep their words outside the
+ * menu or move into it; a row where Write alone wore a label would put the
+ * page's most frequent action at the weight of its rarest.
+ *
+ * `label` is therefore the NAME rather than visible text: `IconAction` speaks
+ * it through `aria-label` and shows it on hover, so a transport-specific verb
+ * ("Send a WhatsApp") still reaches both readers. The refusals pass straight
+ * through — a header with nothing to write to says why on hover and under the
+ * control, rather than offering a square that does nothing.
  */
 export function EmailVerb({
   label,
@@ -90,6 +102,7 @@ export function EmailVerb({
   reason,
   reasonId,
 }: Readonly<{
+  /** The verb, translated — spoken as the name and shown as the tip. */
   label?: string;
   icon?: ReactNode;
   onClick: () => void;
@@ -99,15 +112,14 @@ export function EmailVerb({
 }>) {
   const t = useT();
   return (
-    <Button
+    <IconAction
+      label={label ?? t("contact.action.email")}
+      icon={icon ?? <Mail size={15} aria-hidden="true" />}
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}
       onClick={onClick}
-    >
-      {icon ?? <Mail size={15} aria-hidden="true" />}{" "}
-      {label ?? t("person.action.email")}
-    </Button>
+    />
   );
 }
 
@@ -118,13 +130,13 @@ export function EmailVerb({
 export function RecordEmailVerb({
   entityType,
   entityId,
-  personId,
+  contactId,
   recordAddress,
   disabledReasonId,
 }: Readonly<{
   entityType: RelinkKind;
   entityId: string;
-  personId?: string;
+  contactId?: string;
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
@@ -143,7 +155,7 @@ export function RecordEmailVerb({
           key={entityId}
           entityType={entityType}
           entityId={entityId}
-          personId={personId}
+          contactId={contactId}
           recordAddress={recordAddress}
           kind="email"
           open={composing}
@@ -159,7 +171,7 @@ export function RecordEmailAside({
   entityId,
   replyTo,
   detectWaitingReply = false,
-  personId,
+  contactId,
   recordAddress,
   strings,
 }: Readonly<{
@@ -171,7 +183,7 @@ export function RecordEmailAside({
   // caller that already knows its reply target (dealemail.tsx) leaves this
   // off and passes `replyTo` directly instead.
   detectWaitingReply?: boolean;
-  personId?: string;
+  contactId?: string;
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   // Overrides for a caller that already has its own wording for these five
@@ -229,7 +241,7 @@ export function RecordEmailAside({
           activityId={effectiveReplyTo}
           entityType={entityType}
           entityId={entityId}
-          personId={personId}
+          contactId={contactId}
           recordAddress={recordAddress}
           kind="email"
           open={composing}

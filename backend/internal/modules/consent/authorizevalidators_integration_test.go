@@ -49,7 +49,7 @@ func TestAReplyToAVeryOldThreadIsStillAReply(t *testing.T) {
 //
 // Thread continuity is one way to bind evidence, not the only one. A rep
 // answering yesterday's mail in a fresh compose window is the normal case, so
-// an unprompted follow-up falls back to "this person wrote to us inside the
+// an unprompted follow-up falls back to "this contact wrote to us inside the
 // window" without needing the same thread.
 func TestAnUnpromptedFollowUpRestsOnAnyRecentInbound(t *testing.T) {
 	e := setupResolve(t)
@@ -88,7 +88,7 @@ func TestAContactWhoAskedInPersonCanBeWrittenTo(t *testing.T) {
 
 // AND THE CONVERSE, or the test above passes with every acquisition kind
 // treated as permission. Where a contact CAME FROM is provenance; a purchased
-// list and a public source say nothing about what this person asked for.
+// list and a public source say nothing about what this contact asked for.
 func TestProvenanceIsNotPermission(t *testing.T) {
 	for _, kind := range []string{"purchased_or_imported", "public_or_business_source", "referral"} {
 		t.Run(kind, func(t *testing.T) {
@@ -111,7 +111,7 @@ func TestProvenanceIsNotPermission(t *testing.T) {
 // observed — never a deny that leaves finance unable to send an invoice.
 func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T) {
 	e := setupResolve(t)
-	invoice := e.invoice(t, e.organization(t), false)
+	invoice := e.invoice(t, e.company(t), false)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -119,25 +119,25 @@ func TestAnInvoiceRecipientWithNoEmploymentRowIsReviewedNotRefused(t *testing.T)
 	})
 
 	if got.Supported {
-		t.Fatal("an invoice reached a person with no link to the customer")
+		t.Fatal("an invoice reached a contact with no link to the customer")
 	}
 	if got.Reason != commsauthz.ReasonNoEvidence {
 		t.Errorf("reason = %q, want a reason naming the missing evidence", got.Reason)
 	}
 	// The claim survives under its own name, so the operator is told to link
-	// the person to the customer rather than to find a marketing consent.
+	// the contact to the customer rather than to find a marketing consent.
 	if got.Category != commsauthz.CategoryInvoiceOrPayment {
 		t.Errorf("category = %q, want the invoice claim kept for the reader", got.Category)
 	}
 }
 
-// And the same invoice DOES support the send once the person is linked to the
+// And the same invoice DOES support the send once the contact is linked to the
 // customer, or the test above would pass against a validator that never allows.
 func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -173,9 +173,9 @@ func TestAnInvoiceReachesAContactAtTheCustomer(t *testing.T) {
 // is the regression.
 func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	e.seedPurpose(t, "transactional", "transactional")
 
 	req := commsauthz.Request{
@@ -248,25 +248,25 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 // invoice you cannot, and let the worker do the reading.
 //
 // The fixture is exactly that shape: a live deal the recipient is a stakeholder
-// on (so the deal arm answers first), a REAL invoice for an organization that
+// on (so the deal arm answers first), a REAL invoice for a company that
 // employs them (so the invoice arm would allow if it ever ran), and a sender
 // principal holding neither finance nor contract.
 func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	deal := e.openDeal(t, "open", true)
 
-	// A seat that may write mail and read people, and may NOT read finance.
+	// A seat that may write mail and read contacts, and may NOT read finance.
 	// Everything else about the context is the ordinary sending principal.
 	e.ctx = principal.WithActor(e.ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
-				"person": {Read: true},
-				"deal":   {Read: true},
+				"contact": {Read: true},
+				"deal":    {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},
@@ -312,7 +312,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 }
 
 // AN ENDED EMPLOYMENT DOES NOT REACH. Somebody who left the customer is not the
-// person their invoices go to.
+// contact their invoices go to.
 //
 // Mutation: drop either r.ended_at IS NULL or r.archived_at IS NULL from the
 // invoice validator and this fails.
@@ -323,11 +323,11 @@ func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupResolve(t)
-			org := e.organization(t)
-			invoice := e.invoice(t, org, false)
-			e.employ(t, org)
+			company := e.company(t)
+			invoice := e.invoice(t, company, false)
+			e.employ(t, company)
 			if _, err := e.owner.Exec(context.Background(),
-				`UPDATE relationship SET `+tc.column+` = now() WHERE person_id = $1`, e.person); err != nil {
+				`UPDATE relationship SET `+tc.column+` = now() WHERE contact_id = $1`, e.contact); err != nil {
 				t.Fatal(err)
 			}
 
@@ -343,7 +343,7 @@ func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
 	}
 }
 
-// SOMEBODY SERVING NOTICE STILL WORKS THERE. ended_at is a date, and a person
+// SOMEBODY SERVING NOTICE STILL WORKS THERE. ended_at is a date, and a contact
 // whose last day is next month is still the one handling their employer's
 // invoices. Reading the column's mere presence as "gone" would take them off
 // the contact list the day their notice was filed — with no way back, because
@@ -354,12 +354,12 @@ func TestSomebodyWhoLeftTheCustomerIsNotReachedByItsInvoices(t *testing.T) {
 // what this validator shipped as until the gate caught it.
 func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE relationship SET ended_at = current_date + 30 WHERE person_id = $1`,
-		e.person); err != nil {
+		`UPDATE relationship SET ended_at = current_date + 30 WHERE contact_id = $1`,
+		e.contact); err != nil {
 		t.Fatal(err)
 	}
 
@@ -374,12 +374,12 @@ func TestSomebodyServingNoticeStillReceivesTheirEmployersInvoices(t *testing.T) 
 }
 
 // A CLAIM NAMING SOMEBODY ELSE'S INVOICE SUPPORTS NOTHING. The evidence id is
-// caller-supplied, so naming an invoice belonging to an organization this
-// person has nothing to do with must not admit the message.
+// caller-supplied, so naming an invoice belonging to a company this
+// contact has nothing to do with must not admit the message.
 func TestAnInvoiceForAnotherCustomerSupportsNothing(t *testing.T) {
 	e := setupResolve(t)
-	e.employ(t, e.organization(t))
-	elsewhere := e.invoice(t, e.organization(t), false)
+	e.employ(t, e.company(t))
+	elsewhere := e.invoice(t, e.company(t), false)
 
 	got := e.resolve(t, commsauthz.Request{
 		Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -435,7 +435,7 @@ func TestASupportedSendWritesDownTheGroundItRelliedOn(t *testing.T) {
 	var validUntil *time.Time
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT kind, coalesce(thread_key, ''), valid_until
-		  FROM communication_basis WHERE person_id = $1`, e.person).Scan(&kind, &threadKey, &validUntil); err != nil {
+		  FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&kind, &threadKey, &validUntil); err != nil {
 		t.Fatalf("reading the recorded ground: %v", err)
 	}
 	if kind != string(commsauthz.BasisSubjectInitiatedCorrespondence) {
@@ -464,7 +464,7 @@ func TestTheSameGroundIsRecordedOnce(t *testing.T) {
 
 	var rows int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 1 {
@@ -486,7 +486,7 @@ func TestASecondThreadEarnsItsOwnGround(t *testing.T) {
 
 	var rows int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 2 {
@@ -505,7 +505,7 @@ func TestAnUnsupportedResolutionRecordsNoGround(t *testing.T) {
 
 	var rows int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 0 {
@@ -513,32 +513,32 @@ func TestAnUnsupportedResolutionRecordsNoGround(t *testing.T) {
 	}
 }
 
-// organization plants a customer record.
-func (e *resolveEnv) organization(t *testing.T) ids.UUID {
+// company plants a customer record.
+func (e *resolveEnv) company(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO organization (id, display_name, source, captured_by)
+		INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Acme', 'manual', 'human:x')`, id); err != nil {
-		t.Fatalf("planting the organization: %v", err)
+		t.Fatalf("planting the company: %v", err)
 	}
 	return id
 }
 
-// employ links this env's person to an organization, the way a finance contact
+// employ links this env's contact to a company, the way a finance contact
 // reaches the customer whose invoices they receive.
-func (e *resolveEnv) employ(t *testing.T, org ids.UUID) {
+func (e *resolveEnv) employ(t *testing.T, company ids.UUID) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO relationship (kind, organization_id, person_id, source, captured_by)
-		VALUES ('employment', $1, $2, 'manual', 'human:x')`, org, e.person); err != nil {
+		INSERT INTO relationship (kind, company_id, contact_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, company, e.contact); err != nil {
 		t.Fatalf("planting the employment: %v", err)
 	}
 }
 
-// invoice plants a finance invoice against an organization, with the finance
+// invoice plants a finance invoice against a company, with the finance
 // connection it hangs off.
-func (e *resolveEnv) invoice(t *testing.T, org ids.UUID, _ bool) ids.UUID {
+func (e *resolveEnv) invoice(t *testing.T, company ids.UUID, _ bool) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	conn := ids.NewV7()
@@ -550,27 +550,27 @@ func (e *resolveEnv) invoice(t *testing.T, org ids.UUID, _ bool) ids.UUID {
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO finance_invoice
-		  (id, connection_id, organization_id, external_id, issued_at, status,
+		  (id, connection_id, company_id, external_id, issued_at, status,
 		   currency, net_minor, gross_minor, sync_hash, source, captured_by)
 		VALUES ($1, $2, $3, $4, current_date, 'open', 'EUR', 1000, 1190, 'hash', 'lexoffice', 'human:x')`,
-		id, conn, org, "ext-"+id.String()); err != nil {
+		id, conn, company, "ext-"+id.String()); err != nil {
 		t.Fatalf("planting the invoice: %v", err)
 	}
 	return id
 }
 
-// acquisition records why this env's person exists, which is what PR 4's
+// acquisition records why this env's contact exists, which is what PR 4's
 // evidence table holds and what a "they asked me in person" answer rests on.
 func (e *resolveEnv) acquisition(t *testing.T, kind string, when time.Time) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO person_acquisition_evidence (person_id, kind, occurred_at, captured_by)
-		VALUES ($1, $2, $3, 'human:x')`, e.person, kind, when); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by)
+		VALUES ($1, $2, $3, 'human:x')`, e.contact, kind, when); err != nil {
 		t.Fatalf("planting the acquisition evidence: %v", err)
 	}
 }
 
-// A FILED ACTIVITY IS NOT SOMETHING THE PERSON WROTE.
+// A FILED ACTIVITY IS NOT SOMETHING THE CONTACT WROTE.
 //
 // activity_link is a FILING link with no author concept, and a caller may post
 // an activity with direction=inbound and a link to any contact they can read
@@ -580,10 +580,10 @@ func (e *resolveEnv) acquisition(t *testing.T, kind string, when time.Time) {
 //
 // Mutation: ask activity_link instead of activity_participant with role 'from'
 // — the shape this shipped as — and this passes with forged evidence.
-func TestAFiledActivityIsNotSomethingThePersonWrote(t *testing.T) {
+func TestAFiledActivityIsNotSomethingTheContactWrote(t *testing.T) {
 	e := setupResolve(t)
 	ctx := context.Background()
-	// An inbound activity FILED under the person, which they did not write:
+	// An inbound activity FILED under the contact, which they did not write:
 	// no participant row names them as the author.
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
@@ -592,8 +592,8 @@ func TestAFiledActivityIsNotSomethingThePersonWrote(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, person_id)
-		VALUES ($1, 'person', $2)`, id, e.person); err != nil {
+		INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, id, e.contact); err != nil {
 		t.Fatal(err)
 	}
 
@@ -615,9 +615,9 @@ func TestAFiledActivityIsNotSomethingThePersonWrote(t *testing.T) {
 // Mutation: drop the refuseUnreadableEvidence call and this passes.
 func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	e := setupResolve(t)
-	org := e.organization(t)
-	invoice := e.invoice(t, org, false)
-	e.employ(t, org)
+	company := e.company(t)
+	invoice := e.invoice(t, company, false)
+	e.employ(t, company)
 	e.dropGrant(t, "finance")
 
 	var err error
@@ -625,7 +625,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 		_, err = e.gate.resolveCategory(e.ctx, tx, commsauthz.Request{
 			Context:  commsauthz.CategoryInvoiceOrPayment,
 			Evidence: commsauthz.Evidence{InvoiceID: invoice},
-		}, subjectRef{Kind: entityPerson, ID: e.person.String(), Address: e.address})
+		}, subjectRef{Kind: entityContact, ID: e.contact.String(), Address: e.address})
 		return nil
 	}); txErr != nil {
 		t.Fatalf("running the resolution: %v", txErr)
@@ -645,7 +645,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		spoil func(t *testing.T, e *resolveEnv, org, invoice ids.UUID)
+		spoil func(t *testing.T, e *resolveEnv, company, invoice ids.UUID)
 	}{
 		{"voided invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
 			if _, err := e.owner.Exec(context.Background(),
@@ -662,10 +662,10 @@ func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupResolve(t)
-			org := e.organization(t)
-			invoice := e.invoice(t, org, false)
-			e.employ(t, org)
-			tc.spoil(t, e, org, invoice)
+			company := e.company(t)
+			invoice := e.invoice(t, company, false)
+			e.employ(t, company)
+			tc.spoil(t, e, company, invoice)
 
 			got := e.resolve(t, commsauthz.Request{
 				Context:  commsauthz.CategoryInvoiceOrPayment,
@@ -711,7 +711,7 @@ func TestTheGroundIsRecordedAtStagingAndNotAgainAtTransmit(t *testing.T) {
 
 	var rows int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, e.person).Scan(&rows); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&rows); err != nil {
 		t.Fatal(err)
 	}
 	if rows != 1 {
@@ -719,7 +719,7 @@ func TestTheGroundIsRecordedAtStagingAndNotAgainAtTransmit(t *testing.T) {
 	}
 	var threadKey *string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT thread_key FROM communication_basis WHERE person_id = $1`, e.person).Scan(&threadKey); err != nil {
+		`SELECT thread_key FROM communication_basis WHERE contact_id = $1`, e.contact).Scan(&threadKey); err != nil {
 		t.Fatal(err)
 	}
 	if threadKey == nil || *threadKey != "thread-1" {

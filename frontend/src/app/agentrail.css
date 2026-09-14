@@ -414,7 +414,7 @@
  *
  * At 56px the orb IS the report, and it keeps as much of that width as the rail
  * will give it. The words, the chevron and the CTA go; the count stays, because a
- * number waiting for a person is the one thing that still has to get through at
+ * number waiting for a contact is the one thing that still has to get through at
  * this width. The button keeps its accessible name, so nothing is lost to a
  * screen reader. */
 .rail.collapsed .arwords,
@@ -1007,6 +1007,17 @@
   font-style: italic;
 }
 
+/* The recap's sentence, as ONE flex item.
+ *
+ * A recap line can carry a link around the record it names, and the line is
+ * rendered as a fragment — dropped straight into the row it would make that
+ * link a flex child of its own, with the row's gap opened between the words
+ * and the name. `min-width: 0` is what lets a long company name wrap inside
+ * the sentence instead of pushing the stamp out of the panel. */
+.arsaid {
+  min-width: 0;
+}
+
 .armuted {
   margin-left: auto;
   padding-left: var(--space-2);
@@ -1046,7 +1057,7 @@
   font-weight: var(--fw-medium);
 }
 .arwarn {
-  color: var(--warn);
+  color: var(--warnText);
   font-weight: var(--fw-medium);
 }
 .arconn {

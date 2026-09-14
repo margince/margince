@@ -40,11 +40,25 @@ type ActivityFields struct {
 }
 
 // LeadFields is a captured prospect bound for the lead pool — never
-// directly a person/organization (ADR-0008: leads graduate, raw
+// directly a contact/company (ADR-0008: leads graduate, raw
 // capture does not mint clean-core rows).
 type LeadFields struct {
 	FullName    string
 	Email       string
 	CompanyName string
 	Title       string
+	// Unowned declines ownership on the granting human's behalf, for a capture
+	// that is a RECORD rather than an assignment.
+	//
+	// The default is the opposite and stays that way: a captured lead belongs to
+	// the human whose connector found it, because the connector's own replay is
+	// a write and an ownerless row is nobody's to change (auth.EnsureWritable
+	// refuses one), so a lead it created it could never resume.
+	//
+	// This is for the path with no replay behind it. A name read off a company
+	// website and accepted by a human is a record that the contact exists, not a
+	// statement that the accepter has taken them on: owning it would put them in
+	// that contact's "owes a reply" lane and start their first-response clock,
+	// for somebody who has never written to anyone.
+	Unowned bool
 }

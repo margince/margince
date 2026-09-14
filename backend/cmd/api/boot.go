@@ -130,7 +130,7 @@ func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.L
 // reason: each must hold before the listener opens, and each refuses the boot on
 // an answer this build cannot honor. The deployment precondition that must fail
 // before any of it is checked here first, so a boot that would publish an
-// unreachable connector never gets as far as bootstrapping an organization.
+// unreachable connector never gets as far as bootstrapping a company.
 //
 // Returns the loaded deployment config every later boot phase reads, and the
 // license watcher whose posture baseComposeOptions reports.

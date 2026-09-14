@@ -10,6 +10,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { throwProblem } from "./common";
+import { worklistKey } from "./worklist.queries";
 
 // The forward half of the weekly. `brief.queries.ts` reads the week that closed;
 // this writes the week running.
@@ -111,6 +112,7 @@ export function useAddCommitment() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
+      void queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }
@@ -140,6 +142,7 @@ export function useSetCommitmentState() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
+      void queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }
@@ -163,6 +166,7 @@ export function useAskForHelp() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
+      void queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }
@@ -230,6 +234,7 @@ export function useSetPlanContract() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: weeklyPlanKey });
+      void queryClient.invalidateQueries({ queryKey: worklistKey });
     },
   });
 }

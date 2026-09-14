@@ -2,17 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package mailrole answers one question: does this address name a FUNCTION an
-// organization answers rather than a person? A yes means no contact may be
+// company answers rather than a contact? A yes means no contact may be
 // created for it — support@acme.com is a queue, not somebody called "Support".
 //
 // It is not the machine-address question. `noreply@` reaches nobody and capture
-// refuses it on those grounds (recordWorthy); `support@` reaches real people
+// refuses it on those grounds (recordWorthy); `support@` reaches real contacts
 // typing real replies all day, and the correspondence is genuine. What is
-// missing is a PERSON to name, which is why a role mailbox is captured, kept
+// missing is a CONTACT to name, which is why a role mailbox is captured, kept
 // visible, and simply never turned into a contact record.
 //
 // Two modules need the same answer from opposite ends of the capture path:
-// capture's tier ladder gates creation, and people's name parser must not lift
+// capture's tier ladder gates creation, and contacts's name parser must not lift
 // a role word into somebody's name. Neither may import the other, and a second
 // spelling of the list would be a second answer — the defect that put a contact
 // called "Billing" and one called "Events The Sentry" in a shared CRM.
@@ -55,10 +55,10 @@ func IsRoleLocalPart(local string) bool {
 
 // DisplayName reports whether a header display name is nothing but role words:
 // "Billing", "APAC Billing", "Support Team". Such a name is a department, and
-// storing it as a person's full name invents somebody.
+// storing it as a contact's full name invents somebody.
 //
 // A name carrying any word that is not a role token is left alone — "Anna from
-// Billing" names Anna, and refusing it would lose a real person.
+// Billing" names Anna, and refusing it would lose a real contact.
 func DisplayName(name string) bool {
 	fields := strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
 		return !isNameRune(r)
@@ -71,7 +71,7 @@ func DisplayName(name string) bool {
 			continue
 		}
 		// A qualifier that only ever modifies a department — a region, "team",
-		// "dept" — is not itself a person's name.
+		// "dept" — is not itself a contact's name.
 		if _, qualifier := roleQualifiers[field]; qualifier {
 			continue
 		}
@@ -156,8 +156,37 @@ func localPartRole(local string) (string, bool) {
 		if _, role := roleTokens[field]; role {
 			return field, true
 		}
+		// A NUMBERED queue: `support2`, `cs6`, `kundenservice3`. A desk that
+		// runs several mailboxes numbers them, and the digits say nothing about
+		// whether a contact is named — the word in front of them already
+		// answered that.
+		//
+		// Only when the stem is a whole role word on its own. `supporter` keeps
+		// its trailing letters and stays a name, and so does `newsome`: nothing
+		// is stripped but a run of digits at the very end.
+		if stem, ok := withoutTrailingDigits(field); ok {
+			if _, role := roleTokens[stem]; role {
+				return stem, true
+			}
+		}
 	}
 	return "", false
+}
+
+// withoutTrailingDigits removes a run of digits from the end of a word and
+// reports whether there was one to remove.
+//
+// A word that is ALL digits yields nothing: `2@` names no function, and
+// returning the empty stem would ask the vocabulary a question about "".
+func withoutTrailingDigits(field string) (string, bool) {
+	end := len(field)
+	for end > 0 && field[end-1] >= '0' && field[end-1] <= '9' {
+		end--
+	}
+	if end == len(field) || end == 0 {
+		return "", false
+	}
+	return field[:end], true
 }
 
 // isSeparator splits a local part into words. Only the three characters mail
@@ -191,7 +220,7 @@ func sortStrings(in []string) {
 }
 
 // GreetsNobody reports whether a display name and the address behind it,
-// together, name no natural person — so a greeting built from that name would
+// together, name no natural contact — so a greeting built from that name would
 // address somebody who does not exist.
 //
 // Three ways a mailbox can name nobody, and the third is why this is not just
@@ -200,11 +229,11 @@ func sortStrings(in []string) {
 //  1. The address is a role mailbox (Match).
 //  2. The display name is nothing but role words (DisplayName).
 //  3. The display name OPENS with the mailbox's own domain label. That token is
-//     the organization's name, so a greeting takes it for a first name and
+//     the company's name, so a greeting takes it for a first name and
 //     writes "steireif," to `partner@steireif.net` — a company greeted as a
-//     person, in the message a rep is about to send. `partner` is deliberately
+//     contact, in the message a rep is about to send. `partner` is deliberately
 //     not in the role vocabulary, because it is ordinary business vocabulary a
-//     person's address may honestly contain, so rule 1 cannot reach this and
+//     contact's address may honestly contain, so rule 1 cannot reach this and
 //     widening the vocabulary would refuse real contacts.
 //
 // Rule 3 costs a greeting where a directory writes surname first and the

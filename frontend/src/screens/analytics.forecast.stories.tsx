@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { viewerZone } from "../format/timezone";
 import type { AnalyticsSelection } from "./analytics.context";
@@ -109,6 +110,27 @@ export const SomeDealsUnpriced: Story = {
       <StoryProviders>
         <ForecastView selection={SELECTION} canSubmit={false} />
       </StoryProviders>
+    );
+  },
+};
+
+// Recording what somebody believes will close, opened. The editor is a panel of
+// its own: the lead sentence says a call moves no deal, the two fields are its
+// body, and cancel and save stand in the action band under them.
+export const RecordingACall: Story = {
+  render: () => {
+    installFetchStub(routes(readings()));
+    return (
+      <StoryProviders>
+        <ForecastView selection={SELECTION} canSubmit />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Update the current call",
+      }),
     );
   },
 };

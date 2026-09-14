@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { ContactsScreen, PersonScreen } from "./contacts";
+import { ContactsScreen } from "./contacts";
 import {
   installFetchStub,
   jsonResponse,
@@ -11,9 +11,9 @@ import {
   StoryProviders,
 } from "./story-utils";
 
-type Person = components["schemas"]["Person"];
+type Contact = components["schemas"]["Contact"];
 
-// ContactsScreen (list) and PersonScreen (360 Overview) both read through
+// ContactsScreen reads through
 // the api client on mount — fixtures mirror contacts.test.tsx's `anna` +
 // dormant-strength default (the Overview tab fires the strength GET
 // unconditionally).
@@ -35,18 +35,11 @@ const anna = {
   version: 1,
 };
 
-const dormantStrength = {
-  score: 0,
-  bucket: "none",
-  factors: { recency: 0, frequency: 0, reciprocity: 0, direction: 0 },
-  last_interaction: null,
-};
-
 export const ContactsList: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ person: ["read", "update"] }),
-      "GET /people": () =>
+      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /contacts": () =>
         jsonResponse({
           data: [anna],
           page: { next_cursor: null, has_more: false },
@@ -66,7 +59,7 @@ export const ContactsList: Story = {
 // hidden by overlay mode alone, and the archived badge paints off the row's own
 // archived_at rather than off a delete verb — so a wider grant would claim
 // affordances none of these stories draw.
-const contactsReader = meRoute({ person: ["read"] });
+const contactsReader = meRoute({ contact: ["read"] });
 
 // The empty list: no rows, the "unit.contacts" copy from ListSurface's
 // generic empty branch (table.none), nothing else on the page to distract
@@ -75,7 +68,7 @@ export const ContactsListEmpty: Story = {
   render: () => {
     installFetchStub({
       "GET /me": contactsReader,
-      "GET /people": () =>
+      "GET /contacts": () =>
         jsonResponse({
           data: [],
           page: { next_cursor: null, has_more: false },
@@ -96,7 +89,7 @@ export const ContactsListLoading: Story = {
   render: () => {
     installFetchStub({
       "GET /me": contactsReader,
-      "GET /people": () => new Promise<Response>(() => undefined),
+      "GET /contacts": () => new Promise<Response>(() => undefined),
     });
     return (
       <StoryProviders>
@@ -110,16 +103,16 @@ export const ContactsListLoading: Story = {
 // detail plus the retry button (listquery.tsx's `problem` slot), never a
 // thrown exception the story would surface as a broken render instead.
 //
-// The session holds no person grant, which is the same fact the 403 detail
-// states — a fixture carrying person:read here would have the seat and the
+// The session holds no contact grant, which is the same fact the 403 detail
+// states — a fixture carrying contact:read here would have the seat and the
 // server disagreeing about the very scope the story is showing refused.
 export const ContactsListFailed: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({}, { roles: ["rep"] }),
-      "GET /people": () =>
+      "GET /contacts": () =>
         jsonResponse(
-          { title: "Forbidden", detail: "missing scope people:read" },
+          { title: "Forbidden", detail: "missing scope contacts:read" },
           403,
         ),
     });
@@ -139,7 +132,7 @@ export const ContactsListMorePages: Story = {
   render: () => {
     installFetchStub({
       "GET /me": contactsReader,
-      "GET /people": () =>
+      "GET /contacts": () =>
         jsonResponse({
           data: [anna],
           page: { next_cursor: "cursor-2", has_more: true },
@@ -160,7 +153,7 @@ export const ContactsListMorePages: Story = {
 // prop to override it) and only flips on click, so this story shows the
 // badge a toggled-on list would surface without claiming the checkbox is
 // lit.
-const archivedContact: Person = {
+const archivedContact: Contact = {
   id: "p-2",
   full_name: "Mara Voss",
   title: "Former Head of Ops",
@@ -191,7 +184,7 @@ export const ContactsListArchivedRow: Story = {
   render: () => {
     installFetchStub({
       "GET /me": contactsReader,
-      "GET /people": () =>
+      "GET /contacts": () =>
         jsonResponse({
           data: [anna, archivedContact],
           page: { next_cursor: null, has_more: false },
@@ -200,28 +193,6 @@ export const ContactsListArchivedRow: Story = {
     return (
       <StoryProviders>
         <ContactsScreen />
-      </StoryProviders>
-    );
-  },
-};
-
-// PersonScreen (the 360 view below) is UNROUTED DEAD CODE: App.tsx routes
-// ContactsScreen for the list and PersonPageV2 for the record, never this
-// component. Left in place rather than expanded or deleted so a future
-// reader does not mistake it for a live surface.
-export const PersonOverview: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute({ person: ["read", "update"] }),
-      "GET /people/p-1": () => jsonResponse(anna),
-      "GET /people/p-1/strength": () => jsonResponse(dormantStrength),
-      "GET /activities": () => jsonResponse({ data: [] }),
-      "GET /records/person/p-1/context": () =>
-        jsonResponse({ anchor: { type: "person", id: "p-1" }, sections: [] }),
-    });
-    return (
-      <StoryProviders>
-        <PersonScreen id="p-1" />
       </StoryProviders>
     );
   },

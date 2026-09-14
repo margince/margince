@@ -18,7 +18,7 @@ import (
 // Any other failure is returned: a lane that is broken rather than withheld
 // must not read as a clear day.
 func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) {
-	// The page is a person's own day, and every lane is gated for itself —
+	// The page is a contact's own day, and every lane is gated for itself —
 	// a lane the caller may not read is omitted and named rather than
 	// returned empty. This asks the one question no single lane owns: is
 	// there a member here at all. Without it the page's admission is the

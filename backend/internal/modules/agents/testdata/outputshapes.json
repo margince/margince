@@ -44,37 +44,37 @@
             "items": {
               "type": "object",
               "properties": {
-                "days_since_touch": {
-                  "type": "integer"
-                },
-                "kind": {
-                  "type": "string"
-                },
-                "people": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "person_id": {
-                        "type": "string",
-                        "format": "uuid"
-                      }
-                    },
-                    "required": [
-                      "name",
-                      "person_id"
-                    ]
-                  }
-                },
-                "person_ids": {
+                "contact_ids": {
                   "type": "array",
                   "items": {
                     "type": "string",
                     "format": "uuid"
                   }
+                },
+                "contacts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "contact_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "contact_id",
+                      "name"
+                    ]
+                  }
+                },
+                "days_since_touch": {
+                  "type": "integer"
+                },
+                "kind": {
+                  "type": "string"
                 },
                 "summary": {
                   "type": "string"
@@ -104,23 +104,23 @@
             "items": {
               "type": "object",
               "properties": {
-                "engaged": {
-                  "type": "boolean"
-                },
-                "person_id": {
+                "contact_id": {
                   "type": "string",
                   "format": "uuid"
                 },
-                "person_name": {
+                "contact_name": {
                   "type": "string"
+                },
+                "engaged": {
+                  "type": "boolean"
                 },
                 "role": {
                   "type": "string"
                 }
               },
               "required": [
+                "contact_id",
                 "engaged",
-                "person_id",
                 "role"
               ]
             }
@@ -735,37 +735,37 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "days_since_touch": {
-                        "type": "integer"
-                      },
-                      "kind": {
-                        "type": "string"
-                      },
-                      "people": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "name": {
-                              "type": "string"
-                            },
-                            "person_id": {
-                              "type": "string",
-                              "format": "uuid"
-                            }
-                          },
-                          "required": [
-                            "name",
-                            "person_id"
-                          ]
-                        }
-                      },
-                      "person_ids": {
+                      "contact_ids": {
                         "type": "array",
                         "items": {
                           "type": "string",
                           "format": "uuid"
                         }
+                      },
+                      "contacts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "contact_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "contact_id",
+                            "name"
+                          ]
+                        }
+                      },
+                      "days_since_touch": {
+                        "type": "integer"
+                      },
+                      "kind": {
+                        "type": "string"
                       },
                       "summary": {
                         "type": "string"
@@ -1146,6 +1146,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "calendar_backing": {
+            "type": "string"
+          },
           "slots": {
             "type": "array",
             "items": {
@@ -1169,6 +1172,7 @@
           }
         },
         "required": [
+          "calendar_backing",
           "slots",
           "truncated"
         ]
@@ -2635,6 +2639,97 @@
       "warnings"
     ]
   },
+  "describe_record_fields": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "fields"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
   "describe_report_blocks": {
     "type": "object",
     "properties": {
@@ -3831,14 +3926,14 @@
           "companies": {
             "type": "integer"
           },
+          "contacts": {
+            "type": "integer"
+          },
           "deals": {
             "type": "integer"
           },
           "name": {
             "type": "string"
-          },
-          "people": {
-            "type": "integer"
           },
           "tag_id": {
             "type": "string",
@@ -3847,9 +3942,9 @@
         },
         "required": [
           "companies",
+          "contacts",
           "deals",
           "name",
-          "people",
           "tag_id"
         ]
       },
@@ -3939,7 +4034,7 @@
           "candidates_truncated": {
             "type": "boolean"
           },
-          "organization_id": {
+          "company_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -3948,18 +4043,18 @@
             "items": {
               "type": "object",
               "properties": {
+                "contact_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "contact_name": {
+                  "type": "string"
+                },
                 "display_name": {
                   "type": "string"
                 },
                 "interactions_90d": {
                   "type": "integer"
-                },
-                "person_id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "person_name": {
-                  "type": "string"
                 },
                 "strength": {
                   "type": "integer"
@@ -3973,10 +4068,10 @@
                 }
               },
               "required": [
+                "contact_id",
+                "contact_name",
                 "display_name",
                 "interactions_90d",
-                "person_id",
-                "person_name",
                 "strength_bucket",
                 "user_id"
               ]
@@ -3985,7 +4080,7 @@
         },
         "required": [
           "candidates_truncated",
-          "organization_id",
+          "company_id",
           "routes"
         ]
       },
@@ -4359,6 +4454,40 @@
       "data": {
         "type": "object",
         "properties": {
+          "all_colleagues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "is_agent": {
+                  "type": "boolean"
+                },
+                "seat_type": {
+                  "type": "string"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "email",
+                "is_agent",
+                "seat_type",
+                "user_id"
+              ]
+            }
+          },
+          "all_colleagues_truncated": {
+            "type": "boolean"
+          },
           "colleagues": {
             "type": "array",
             "items": {
@@ -6111,6 +6240,10 @@
           "as_of": {
             "type": "string"
           },
+          "company_id": {
+            "type": "string",
+            "format": "uuid"
+          },
           "deals": {
             "type": "array",
             "items": {
@@ -6244,10 +6377,6 @@
               ]
             }
           },
-          "organization_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "owner_id": {
             "type": "string",
             "format": "uuid"
@@ -6267,19 +6396,19 @@
             "items": {
               "type": "object",
               "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "person_id": {
+                "contact_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
                 },
                 "role": {
                   "type": "string"
                 }
               },
               "required": [
-                "person_id"
+                "contact_id"
               ]
             }
           },
@@ -6636,10 +6765,7 @@
       "data": {
         "type": "object",
         "properties": {
-          "merged": {
-            "type": "boolean"
-          },
-          "person": {
+          "contact": {
             "type": "object",
             "properties": {
               "fields": {
@@ -6664,11 +6790,14 @@
               "id",
               "record_type"
             ]
+          },
+          "merged": {
+            "type": "boolean"
           }
         },
         "required": [
-          "merged",
-          "person"
+          "contact",
+          "merged"
         ]
       },
       "evidence": {
@@ -7981,6 +8110,22 @@
               "truncated"
             ]
           },
+          "company": {
+            "type": "object",
+            "properties": {
+              "company_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "company_id",
+              "name"
+            ]
+          },
           "contracts": {
             "type": "object",
             "properties": {
@@ -8140,22 +8285,6 @@
               "unattributed_nearby"
             ]
           },
-          "organization": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "organization_id": {
-                "type": "string",
-                "format": "uuid"
-              }
-            },
-            "required": [
-              "name",
-              "organization_id"
-            ]
-          },
           "phase_history": {
             "type": "object",
             "properties": {
@@ -8227,6 +8356,10 @@
               "closed_reason": {
                 "type": "string"
               },
+              "company_id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "description": {
                 "type": "string"
               },
@@ -8238,10 +8371,6 @@
               },
               "name": {
                 "type": "string"
-              },
-              "organization_id": {
-                "type": "string",
-                "format": "uuid"
               },
               "owner_id": {
                 "type": "string",
@@ -8314,19 +8443,19 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "name": {
-                      "type": "string"
-                    },
-                    "person_id": {
+                    "contact_id": {
                       "type": "string",
                       "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
                     },
                     "role": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "person_id"
+                    "contact_id"
                   ]
                 }
               },
@@ -10465,14 +10594,14 @@
               ]
             }
           },
-          "person_id": {
+          "contact_id": {
             "type": "string",
             "format": "uuid"
           }
         },
         "required": [
           "colleagues",
-          "person_id"
+          "contact_id"
         ]
       },
       "evidence": {

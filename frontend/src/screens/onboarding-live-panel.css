@@ -53,7 +53,7 @@
 }
 
 .ob-live-card[data-done="true"] .ob-live-card-glyph {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .ob-live-card-title {
@@ -136,21 +136,24 @@
   text-transform: uppercase;
 }
 
-/* Three gaps, three voices. A skipped page is routine and must not shout; a page
+/* Four gaps, four voices. A note is a bound the read was configured with and
+   carries no alarm at all; a skipped page is routine and must not shout; a page
    that could not be read is a hole in the dossier and reads danger; a warning
-   about the read as a whole reads warn. One alarm colour for all three would
-   make a robots.txt skip indistinguishable from a failure. The label itself
-   states which in words — the colour only makes the difference scannable. */
+   about the read as a whole reads warn. One alarm colour for all four would
+   make a robots.txt skip indistinguishable from a failure, and would paint a
+   page cap — the read doing exactly what it was told — as a fault. The label
+   itself states which in words; the colour only makes it scannable. */
+.ob-live-coverage[data-kind="note"] .ob-live-coverage-label,
 .ob-live-coverage[data-kind="skip"] .ob-live-coverage-label {
   color: var(--textMeta);
 }
 
 .ob-live-coverage[data-kind="fail"] .ob-live-coverage-label {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .ob-live-coverage[data-kind="warn"] .ob-live-coverage-label {
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 /* What was missed, in the reader's vocabulary. It leads the row; the URL below

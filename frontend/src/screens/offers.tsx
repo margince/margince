@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Check, PenLine, RefreshCw, Send, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -7,15 +8,14 @@ import { navigate } from "../app/router";
 import {
   Badge,
   Button,
-  Card,
   DataTable,
   Field,
   Modal,
-  SectionHeader,
   TextInput,
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { MoneyInput } from "../design-system/moneyinput";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -29,14 +29,19 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
+import {
+  EMPTY_LINE_BILLING,
+  type LineBilling,
+  lineBillingBody,
+  OfferLineBillingFields,
+} from "./offerlinebilling";
+import { NewLineRates } from "./offerlinerates";
+import { OfferTotalsPanel } from "./offerrecurring";
 import { searchProductCandidates } from "./products";
 
-// The offer 360 skeleton (OP-5/OP-6): header, read-only totals, and a
-// draft-only header edit. buyer_org_id needs the shared RecordPicker and
-// template_id is a server-sourced select, neither of which the
-// field-driven EditAction/CreateField machinery (edit.tsx, create.tsx) has
-// a slot for — so the edit surface here is a small purpose-built modal,
-// not a migration onto that machinery.
+// The offer 360: header, read-only totals, and a draft-only header edit whose
+// surface is its own because buyer_company_id needs the shared RecordPicker and
+// template_id a server-sourced select — EditAction/CreateField fits neither.
 
 type Offer = components["schemas"]["Offer"];
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -45,16 +50,19 @@ type OfferLineItemInput = components["schemas"]["OfferLineItemInput"];
 type UpdateOfferLineItemRequest =
   components["schemas"]["UpdateOfferLineItemRequest"];
 
-async function searchOrganizationCandidates(
+async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 function useOfferTemplates() {
@@ -74,7 +82,7 @@ function useOfferTemplates() {
 
 type HeaderEditValues = {
   currency: string;
-  buyer_org_id: string | null;
+  buyer_company_id: string | null;
   valid_until: string;
   template_id: string | null;
   intro_text: string;
@@ -83,34 +91,34 @@ type HeaderEditValues = {
 
 // RecordPicker only highlights a selection among candidates its OWN search
 // turned up — it has no way to preview a value set outside its session. A
-// freshly reopened header-edit modal only has `offer.buyer_org_id` (a bare
-// id), so the picker would otherwise render empty even though a buyer org
-// IS set. This resolves that id to a name (the same GET /organizations/{id}
+// freshly reopened header-edit modal only has `offer.buyer_company_id` (a bare
+// id), so the picker would otherwise render empty even though a buyer company
+// IS set. This resolves that id to a name (the same GET /companies/{id}
 // lookup entityref.tsx uses for the same bare-id-to-name problem), and
 // prefers the caller's own override — set once the user actively picks a
-// different org — over the resolved incumbent.
-function useBuyerOrgPreview(buyerOrgId: string | null, open: boolean) {
+// different company — over the resolved incumbent.
+function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const [override, setOverride] = useState<RecordPickerCandidate | null>(null);
   const existingQuery = useQuery({
-    queryKey: ["organization", "ref", buyerOrgId],
+    queryKey: ["company", "ref", buyerCompanyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}", {
-        params: { path: { id: buyerOrgId ?? "" } },
+      const { data, error } = await api.GET("/companies/{id}", {
+        params: { path: { id: buyerCompanyId ?? "" } },
       });
       if (error) {
         throwProblem(error);
       }
       return {
-        id: buyerOrgId ?? "",
+        id: buyerCompanyId ?? "",
         name: data.display_name ?? "",
       } satisfies RecordPickerCandidate;
     },
-    enabled: Boolean(buyerOrgId) && open,
+    enabled: Boolean(buyerCompanyId) && open,
     staleTime: 60_000,
   });
-  const buyerOrg =
-    override ?? (buyerOrgId ? (existingQuery.data ?? null) : null);
-  return { buyerOrg, setBuyerOrgOverride: setOverride };
+  const buyerCompany =
+    override ?? (buyerCompanyId ? (existingQuery.data ?? null) : null);
+  return { buyerCompany, setBuyerCompanyOverride: setOverride };
 }
 
 function EditOfferHeaderModal({
@@ -124,14 +132,14 @@ function EditOfferHeaderModal({
   const templatesQuery = useOfferTemplates();
   const [values, setValues] = useState<HeaderEditValues>({
     currency: offer.currency,
-    buyer_org_id: offer.buyer_org_id ?? null,
+    buyer_company_id: offer.buyer_company_id ?? null,
     valid_until: offer.valid_until ?? "",
     template_id: offer.template_id ?? null,
     intro_text: offer.intro_text ?? "",
     terms_text: offer.terms_text ?? "",
   });
-  const { buyerOrg, setBuyerOrgOverride } = useBuyerOrgPreview(
-    offer.buyer_org_id ?? null,
+  const { buyerCompany, setBuyerCompanyOverride } = useBuyerCompanyPreview(
+    offer.buyer_company_id ?? null,
     open,
   );
   // Only the closed→open transition reprimes the form — a background
@@ -143,16 +151,16 @@ function EditOfferHeaderModal({
     if (open && !wasOpen.current) {
       setValues({
         currency: offer.currency,
-        buyer_org_id: offer.buyer_org_id ?? null,
+        buyer_company_id: offer.buyer_company_id ?? null,
         valid_until: offer.valid_until ?? "",
         template_id: offer.template_id ?? null,
         intro_text: offer.intro_text ?? "",
         terms_text: offer.terms_text ?? "",
       });
-      setBuyerOrgOverride(null);
+      setBuyerCompanyOverride(null);
     }
     wasOpen.current = open;
-  }, [open, offer, setBuyerOrgOverride]);
+  }, [open, offer, setBuyerCompanyOverride]);
 
   const mutation = useMutation({
     mutationFn: async (input: HeaderEditValues) => {
@@ -163,7 +171,7 @@ function EditOfferHeaderModal({
         },
         body: {
           currency: input.currency,
-          buyer_org_id: input.buyer_org_id,
+          buyer_company_id: input.buyer_company_id,
           valid_until: input.valid_until || null,
           template_id: input.template_id,
           intro_text: input.intro_text || null,
@@ -228,19 +236,22 @@ function EditOfferHeaderModal({
           />
         </div>
         <div className="field">
-          <span className="t-label">{t("offer.buyerOrg")}</span>
+          <span className="t-label">{t("offer.buyerCompany")}</span>
           <RecordPicker
-            label={t("offer.buyerOrg")}
-            searchTargets={searchOrganizationCandidates}
-            selected={buyerOrg}
+            label={t("offer.buyerCompany")}
+            searchTargets={searchCompanyCandidates}
+            selected={buyerCompany}
             onPick={(candidate) => {
-              setBuyerOrgOverride(candidate);
-              setValues((prev) => ({ ...prev, buyer_org_id: candidate.id }));
+              setBuyerCompanyOverride(candidate);
+              setValues((prev) => ({
+                ...prev,
+                buyer_company_id: candidate.id,
+              }));
             }}
           />
-          {buyerOrg && (
+          {buyerCompany && (
             <p className="t-caption">
-              {t("offer.buyerOrgConfirm", { name: buyerOrg.name })}
+              {t("offer.buyerCompanyConfirm", { name: buyerCompany.name })}
             </p>
           )}
         </div>
@@ -294,7 +305,7 @@ function EditOfferHeaderModal({
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
         >
           {errorMessage}
         </p>
@@ -446,11 +457,10 @@ function UnitPriceCell({
   );
 }
 
-// An ungrounded (price_grounded === false) line has no unit-price/line-total
-// input wired to it anywhere below — deliberately: grounding a price is a
-// server/AI concern, not something a human free-types over. The line stays
-// ungrounded until the server re-grounds it on a future regenerate, or the
-// human removes it and re-adds it with an explicit price.
+// An ungrounded (price_grounded === false) line has no price input anywhere
+// below, deliberately: grounding a price is a server/AI concern, not
+// something a human free-types over. It stays ungrounded until a regenerate
+// re-grounds it, or the human removes it and re-adds it with a price.
 function UnpricedCaption({ label }: Readonly<{ label: string }>) {
   return (
     <span className="t-caption" style={{ color: "var(--textMeta)" }}>
@@ -464,6 +474,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
+  const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
 
@@ -490,11 +501,9 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
     },
   });
 
-  // The generated contract (crm.yaml: updateOfferLineItem) declares no
-  // If-Match parameter on this operation — unlike the header-level Offer
-  // PATCH, a line item's own `version` is not a concurrency precondition
-  // the API accepts here. Sending one would fail to type-check against the
-  // generated client; contract wins over an assumed convention (P3).
+  // The contract declares no If-Match on updateOfferLineItem — unlike the
+  // header-level Offer PATCH, a line item's own `version` is not a
+  // precondition the API accepts, and the generated client refuses one.
   const updateMutation = useMutation({
     mutationFn: async (variables: {
       lineItemId: string;
@@ -657,14 +666,18 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   ];
 
   return (
-    <Card testId="offer-line-editor" title={t("offer.lines")}>
-      <DataTable
-        label={t("offer.lines")}
-        columns={columns}
-        rows={offer.line_items}
-        rowKey={(line) => `${line.id}:${line.version ?? 0}`}
-      />
-      <div style={{ marginTop: 16 }}>
+    <Panel title={t("offer.lines")}>
+      <PanelBody>
+        <DataTable
+          label={t("offer.lines")}
+          columns={columns}
+          rows={offer.line_items}
+          rowKey={(line) => `${line.id}:${line.version ?? 0}`}
+        />
+      </PanelBody>
+      {/* Its own body, so the seam divides the lines that exist from the one
+          being written. */}
+      <PanelBody>
         <span className="t-label">{t("offer.addLine")}</span>
         <div
           style={{
@@ -737,44 +750,8 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.discountPct")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-discount"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.discount_pct}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    discount_pct: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("offer.taxRate")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-tax"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.tax_rate}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    tax_rate: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
+          <NewLineRates value={newLine} onChange={setNewLine} />
+          <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
         <div
           style={{
@@ -820,6 +797,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                   newLine.tax_rate === ""
                     ? undefined
                     : Number(newLine.tax_rate),
+                ...lineBillingBody(billing),
               })
             }
           >
@@ -829,23 +807,22 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         {errorMessage && (
           <p
             className="t-caption"
-            style={{ color: "var(--danger)", marginTop: "var(--space-2)" }}
+            style={{ color: "var(--dangerText)", marginTop: "var(--space-2)" }}
           >
             {errorMessage}
           </p>
         )}
-      </div>
-    </Card>
+      </PanelBody>
+    </Panel>
   );
 }
 
-// The send/accept/reject lifecycle (OP-8/OP-9/OP-10). All three
-// return the FULL updated Offer (P11 — server-truth totals/status), so the
-// only client-side work on success is queryClient.setQueryData(["offer",
-// ...]) — never a locally-derived status flip. Send is the confirm-first
-// (🟡) action: a human's own click on this REST path IS the approval
-// (ADR-0055), so no ApprovalToken/Idempotency-Key header is sent here — that
-// plumbing belongs to the agent/passport path, out of scope for this screen.
+// The send/accept/reject lifecycle. All three return the FULL updated Offer
+// (server-truth totals/status), so the only client-side work on success is
+// queryClient.setQueryData(["offer", ...]) — never a locally-derived status
+// flip. Send is the confirm-first (🟡) action: a human's own click on this
+// REST path IS the approval, so no ApprovalToken/Idempotency-Key is sent
+// here — that plumbing belongs to the agent/passport path.
 
 function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
@@ -886,7 +863,7 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="send-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.send")}
+        <Send aria-hidden /> {t("offer.send")}
       </Button>
       <ConfirmModal
         open={open}
@@ -958,7 +935,7 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="accept-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.accept")}
+        <Check aria-hidden /> {t("offer.accept")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1029,7 +1006,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="reject-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.reject")}
+        <X aria-hidden /> {t("offer.reject")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1102,12 +1079,12 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
       >
-        {t("offer.regenerate")}
+        <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && (
         <p
           className="t-caption"
-          style={{ color: "var(--danger)", marginTop: 4 }}
+          style={{ color: "var(--dangerText)", marginTop: "var(--space-1)" }}
         >
           {errorMessage}
         </p>
@@ -1155,87 +1132,88 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
   const changed = diff?.changed ?? [];
 
   return (
-    <Card testId="ai-disclosure-banner" title={t("offer.aiDisclosureTitle")}>
-      {offer.ai_disclosure && <p className="t-body">{offer.ai_disclosure}</p>}
-      {diff && (
-        <div data-testid="offer-diff-summary" style={{ marginTop: 8 }}>
-          {added.length > 0 && (
-            <div>
-              <p className="t-label">
-                {t("offer.diffAdded", {
-                  count: formatNumber(added.length, locale),
-                })}
-              </p>
-              <ul>
-                {added.map((line) => (
-                  <DiffLine
-                    key={line.id}
-                    line={line}
-                    currency={offer.currency}
-                    locale={locale}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-          {removed.length > 0 && (
-            <div>
-              <p className="t-label">
-                {t("offer.diffRemoved", {
-                  count: formatNumber(removed.length, locale),
-                })}
-              </p>
-              <ul>
-                {removed.map((line) => (
-                  <DiffLine
-                    key={line.id}
-                    line={line}
-                    currency={offer.currency}
-                    locale={locale}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-          {changed.length > 0 && (
-            <div>
-              <p className="t-label">
-                {t("offer.diffChanged", {
-                  count: formatNumber(changed.length, locale),
-                })}
-              </p>
-              <ul>
-                {changed.map((pair) =>
-                  pair.after ? (
+    // No tone and no badge: indigo claims authorship, and this panel reports
+    // on a machine's work in the product's own words, offering no AI verb.
+    <Panel title={t("offer.aiDisclosureTitle")}>
+      <PanelBody>
+        {offer.ai_disclosure && <p className="t-body">{offer.ai_disclosure}</p>}
+        {diff && (
+          <div
+            data-testid="offer-diff-summary"
+            style={{ marginTop: "var(--space-2)" }}
+          >
+            {added.length > 0 && (
+              <div>
+                <p className="t-label">
+                  {t("offer.diffAdded", {
+                    count: formatNumber(added.length, locale),
+                  })}
+                </p>
+                <ul>
+                  {added.map((line) => (
                     <DiffLine
-                      key={pair.after.id}
-                      line={pair.after}
+                      key={line.id}
+                      line={line}
                       currency={offer.currency}
                       locale={locale}
                     />
-                  ) : null,
-                )}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {removed.length > 0 && (
+              <div>
+                <p className="t-label">
+                  {t("offer.diffRemoved", {
+                    count: formatNumber(removed.length, locale),
+                  })}
+                </p>
+                <ul>
+                  {removed.map((line) => (
+                    <DiffLine
+                      key={line.id}
+                      line={line}
+                      currency={offer.currency}
+                      locale={locale}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+            {changed.length > 0 && (
+              <div>
+                <p className="t-label">
+                  {t("offer.diffChanged", {
+                    count: formatNumber(changed.length, locale),
+                  })}
+                </p>
+                <ul>
+                  {changed.map((pair) =>
+                    pair.after ? (
+                      <DiffLine
+                        key={pair.after.id}
+                        line={pair.after}
+                        currency={offer.currency}
+                        locale={locale}
+                      />
+                    ) : null,
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 
-// Render the offer's branded PDF (OP-12). Per the contract's own
-// doc comment, a 501 here means the deployment has no blobstore wired — the
-// same unwired-by-omission posture as the attachments seam — which is a
-// deliberate, expected outcome, not an error: it is read off the raw
-// `response.status` (openapi-fetch's third destructured field, the same
-// idiom brief.tsx's useMorningBrief uses for its 404) BEFORE the `error`
-// branch, so it never reaches throwProblem/ProblemError. Every other
-// response (401/403/404/409/422) falls through to that verbatim path
-// unchanged. On 200 the full Offer comes back with pdf_asset_ref populated;
-// queryClient.setQueryData seeds the cache the same way every other action
-// in this file does, so the link below reads straight off the `offer` prop
-// once react-query re-renders this component.
+// Render the offer's branded PDF. A 501 here means the deployment has no
+// blobstore wired — the same unwired-by-omission posture as the attachments
+// seam — a deliberate outcome and not an error: it is read off the raw
+// `response.status` BEFORE the `error` branch, so it never reaches
+// throwProblem, and every other response falls through that verbatim path.
+// On 200 the full Offer seeds the cache, so the link reads off the `offer`.
 function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -1267,51 +1245,53 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
     : null;
 
   return (
-    <Card testId="offer-pdf-card" title={t("offer.renderPdf")}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <Button
-          small
-          data-testid="render-pdf"
-          disabled={mutation.isPending}
-          onClick={() => mutation.mutate()}
-        >
-          {t("offer.renderPdf")}
-        </Button>
-        {offer.pdf_asset_ref && (
-          <a
-            href={pdfHref}
-            target="_blank"
-            rel="noreferrer"
-            data-testid="pdf-link"
+    <Panel
+      title={t("offer.renderPdf")}
+      actions={
+        <>
+          <Button
+            small
+            data-testid="render-pdf"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
           >
-            {t("offer.viewPdf")}
-          </a>
-        )}
-      </div>
-      {unavailable && (
-        <p
-          className="t-caption"
-          data-testid="pdf-unavailable"
-          style={{ marginTop: 8 }}
-        >
-          {t("offer.pdfUnavailable")}
-        </p>
+            {t("offer.renderPdf")}
+          </Button>
+          {offer.pdf_asset_ref && (
+            <a
+              href={pdfHref}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="pdf-link"
+            >
+              {t("offer.viewPdf")}
+            </a>
+          )}
+        </>
+      }
+    >
+      {/* A body only when there is something to report: an empty one is a
+          padded band saying nothing. */}
+      {(unavailable || errorMessage) && (
+        <PanelBody>
+          {unavailable && (
+            <p className="t-caption" data-testid="pdf-unavailable">
+              {t("offer.pdfUnavailable")}
+            </p>
+          )}
+          {errorMessage && (
+            <p className="t-caption" style={{ color: "var(--dangerText)" }}>
+              {errorMessage}
+            </p>
+          )}
+        </PanelBody>
       )}
-      {errorMessage && (
-        <p
-          className="t-caption"
-          style={{ color: "var(--danger)", marginTop: 8 }}
-        >
-          {errorMessage}
-        </p>
-      )}
-    </Card>
+    </Panel>
   );
 }
 
 export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const { locale } = useLocale();
   const [editing, setEditing] = useState(false);
   const offerQuery = useQuery({
     queryKey: ["offer", id],
@@ -1324,14 +1304,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
       }
       return data;
     },
-    // RegenerateOfferAction seeds this exact query key with its 201
-    // response — the only place ai_disclosure/diff_from_previous are ever
-    // populated — right before navigating here. The default
-    // refetchOnMount would otherwise immediately re-GET and silently wipe
-    // both fields the instant this screen mounts, contradicting that
-    // seeding's whole purpose. This never blocks a genuinely fresh
-    // navigation (no cache entry yet): refetchOnMount only skips a refetch
-    // when there IS cached data for this key already.
+    // RegenerateOfferAction seeds this exact key with its 201 response — the
+    // only place ai_disclosure/diff_from_previous are ever populated — right
+    // before navigating here, and the default refetchOnMount would re-GET and
+    // wipe both the instant this screen mounts. A genuinely fresh navigation
+    // is unaffected: refetchOnMount only skips when the key is already cached.
     refetchOnMount: false,
   });
 
@@ -1340,67 +1317,50 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
       <QueryGate query={offerQuery} pendingLabel={t("nav.offers")}>
         {(offer) => (
           <>
-            <Card>
-              <div className="list-head">
-                <SectionHeader
-                  title={offer.offer_number}
-                  sub={t("offer.revision", {
-                    revision: identifierNumber(offer.revision),
-                  })}
-                />
-                <Badge>{offer.status}</Badge>
-              </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <Button
-                  small
-                  onClick={() =>
-                    navigate({ screen: "deals", id: offer.deal_id })
-                  }
-                >
-                  {t("offer.backToDeal")}
-                </Button>
-                {offer.status === "draft" && (
+            {/* The status is a fact about the record; the lifecycle verbs
+                change it, so they take the band rather than the head. */}
+            <Panel
+              title={offer.offer_number}
+              sub={t("offer.revision", {
+                revision: identifierNumber(offer.revision),
+              })}
+              titleAction={<Badge>{offer.status}</Badge>}
+              actions={
+                <>
                   <Button
                     small
-                    data-testid="edit-offer-header"
-                    onClick={() => setEditing(true)}
+                    onClick={() =>
+                      navigate({ screen: "deals", id: offer.deal_id })
+                    }
                   >
-                    {t("offer.edit")}
+                    <ArrowLeft aria-hidden /> {t("offer.backToDeal")}
                   </Button>
-                )}
-                {offer.status === "draft" && <SendOfferAction offer={offer} />}
-                {offer.status === "sent" && (
-                  <>
-                    <AcceptOfferAction offer={offer} />
-                    <RejectOfferAction offer={offer} />
-                    <RegenerateOfferAction offer={offer} />
-                  </>
-                )}
-              </div>
-            </Card>
+                  {offer.status === "draft" && (
+                    <Button
+                      small
+                      data-testid="edit-offer-header"
+                      onClick={() => setEditing(true)}
+                    >
+                      <PenLine aria-hidden /> {t("offer.edit")}
+                    </Button>
+                  )}
+                  {offer.status === "draft" && (
+                    <SendOfferAction offer={offer} />
+                  )}
+                  {offer.status === "sent" && (
+                    <>
+                      <AcceptOfferAction offer={offer} />
+                      <RejectOfferAction offer={offer} />
+                      <RegenerateOfferAction offer={offer} />
+                    </>
+                  )}
+                </>
+              }
+            >
+              {null}
+            </Panel>
             <AiDisclosureBanner offer={offer} />
-            <Card title={t("offer.totals")}>
-              <div style={{ display: "flex", gap: 24 }}>
-                <div>
-                  <span className="t-label">{t("offer.net")}</span>
-                  <div className="t-mono">
-                    {formatMoney(offer.net_minor, offer.currency, locale)}
-                  </div>
-                </div>
-                <div>
-                  <span className="t-label">{t("offer.tax")}</span>
-                  <div className="t-mono">
-                    {formatMoney(offer.tax_minor, offer.currency, locale)}
-                  </div>
-                </div>
-                <div>
-                  <span className="t-label">{t("offer.gross")}</span>
-                  <div className="t-mono">
-                    {formatMoney(offer.gross_minor, offer.currency, locale)}
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <OfferTotalsPanel offer={offer} />
             <RenderOfferPdfAction offer={offer} />
             {offer.status === "draft" && <OfferLineEditor offer={offer} />}
             {offer.status === "draft" && (

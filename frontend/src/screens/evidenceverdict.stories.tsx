@@ -27,7 +27,7 @@ import {
 
 type ProfileField = components["schemas"]["CompanyProfileField"];
 
-const ORG = "o-1";
+const COMPANY = "o-1";
 
 // A claim the site read made and nobody has ruled on: the only state in which
 // both verbs are offered at all.
@@ -45,8 +45,8 @@ const EXTRACTED: ProfileField = {
   version: 3,
 };
 
-const CONFIRM = `POST /organizations/${ORG}/profile-fields/${EXTRACTED.field}/confirm`;
-const CORRECT = `PATCH /organizations/${ORG}/profile-fields/${EXTRACTED.field}`;
+const CONFIRM = `POST /companies/${COMPANY}/profile-fields/${EXTRACTED.field}/confirm`;
+const CORRECT = `PATCH /companies/${COMPANY}/profile-fields/${EXTRACTED.field}`;
 
 function verdict(routes: RouteMap = {}) {
   return () => {
@@ -54,8 +54,8 @@ function verdict(routes: RouteMap = {}) {
     return (
       <StoryProviders>
         <EvidenceVerdict
-          orgId={ORG}
-          claim={profileFieldClaim(ORG, EXTRACTED)}
+          companyId={COMPANY}
+          claim={profileFieldClaim(COMPANY, EXTRACTED)}
           canEdit
         />
       </StoryProviders>

@@ -8,7 +8,7 @@ package activities
 // The deal page already answers this for ONE deal, by walking that deal's
 // timeline newest-first and stopping at the first outbound. This is the same
 // question asked of the whole workspace at once, and it cannot be the same walk:
-// a per-deal scan cannot find the person with no deal, and it cannot be run
+// a per-deal scan cannot find the contact with no deal, and it cannot be run
 // once per record on a page that must render in one read.
 //
 // So it is a query, and the two spellings are held together by a test that
@@ -43,14 +43,14 @@ type WaitingReply struct {
 	Kind    string
 	Subject string
 	// Sender is the address the message came from, so a caller can tell a
-	// person waiting from a machine sending. Empty when no sender was recorded.
+	// contact waiting from a machine sending. Empty when no sender was recorded.
 	Sender string
 	// OccurredAt is when they wrote, which is what the wait is measured from.
 	OccurredAt time.Time
 	// The record the thread is filed under, when it names one.
-	PersonID       ids.UUID
-	OrganizationID ids.UUID
-	DealID         ids.UUID
+	ContactID ids.UUID
+	CompanyID ids.UUID
+	DealID    ids.UUID
 	// HasOpenDeal reports whether an open deal is on this thread. It is what
 	// lets a caller keep an old wait that still has money behind it, and drop
 	// one that does not.
@@ -68,7 +68,8 @@ type WaitingReply struct {
 	// before the column existed, because a classifier that has not run, has run
 	// out of budget or answered below its confidence floor must not change what
 	// a rep sees.
-	OwedVerdict string
+	OwedVerdict  string
+	CaptureLabel string
 	// Engaged reports that this workspace wrote on this thread BEFORE the
 	// message arrived — the evidence that a conversation is one we are already
 	// in, rather than one that merely reached a mailbox.
@@ -79,12 +80,21 @@ type WaitingReply struct {
 	// which is the one failure this queue must not have. A caller demotes an
 	// unengaged wait instead, so being wrong costs a scroll.
 	Engaged bool
+	// AddressedElsewhere reports that the message names header recipients and
+	// none of them is this reader — mail written to a colleague that reached
+	// this mailbox.
+	//
+	// Phrased as the exception so FALSE is the answer whenever there is no
+	// evidence: no header recipients recorded, or the reader's own addresses
+	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
+	// caller demotes what it cannot prove.
+	AddressedElsewhere bool
 	// OwnerID is who owes this reply, resolved from the record the thread is
 	// filed under. Zero when no record on it names an owner.
 	//
-	// PRECEDENCE, first owner found: deal, lead, person, organization. It is the
+	// PRECEDENCE, first owner found: deal, lead, contact, company. It is the
 	// order of how specific the claim is — a thread on a deal is that deal
-	// owner's to answer whatever else it touches, and a person outranks their
+	// owner's to answer whatever else it touches, and a contact outranks their
 	// company because the company owner is answerable for the account rather
 	// than for every conversation inside it.
 	//
@@ -170,7 +180,7 @@ func liveRecord(predicate, alias string) string {
 // what each hiding rule is keeping off the queue. That question can only be
 // answered by the query that owns the OTHER rules: a second statement restating
 // the anti-joins, the machine-sender exclusion and the live-record predicates
-// would be a second answer to "is this person waiting", and the two would
+// would be a second answer to "is this contact waiting", and the two would
 // disagree the first time either was edited. Widening one clause of the real
 // query is the version that cannot drift.
 //
@@ -226,7 +236,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			return err
 		}
 		// The links come back only where the reader may see what they point at.
-		// One visible person must not expose a colleague's deal, which is the
+		// One visible contact must not expose a colleague's deal, which is the
 		// disclosure the timeline's own link read guards against.
 		//
 		// Aliased `wl`, not `l`: the discover gate composed above renders its
@@ -242,8 +252,8 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 			linkVisible = scopeUnbounded
 		}
 		// WHOSE set-asides apply. The reader comes from the principal rather
-		// than from a parameter, so one person's snooze cannot be asked for on
-		// another's behalf. A caller with no person behind it — a system pass
+		// than from a parameter, so one contact's snooze cannot be asked for on
+		// another's behalf. A caller with no contact behind it — a system pass
 		// reading the same query — matches no reader_state row and therefore
 		// has nothing hidden from it, which is the honest answer: a background
 		// job has set nothing aside.
@@ -261,6 +271,13 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		if err != nil {
 			return err
 		}
+		// The reader's own addresses, read in the SAME transaction as the scan
+		// so a mailbox connected mid-read cannot make one row judge the
+		// envelope differently from the next.
+		readerAddresses, err := s.readerAddressList(ctx, tx, readerOrNobody(ctx))
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx,
 			fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
 				horizon,
@@ -272,7 +289,9 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 				scopeUnbounded,
 				neverRelaxed, neverRelaxed,
 				neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)), args...)
+				messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+				fmt.Sprintf("$%d", arg(readerAddresses)),
+				unansweredConversationSQL(fmt.Sprintf("$%d", instant))), args...)
 		if err != nil {
 			return err
 		}
@@ -281,8 +300,9 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 		for rows.Next() {
 			var row WaitingReply
 			if err := rows.Scan(&row.ActivityID, &row.Kind, &row.Subject, &row.Sender, &row.OccurredAt,
-				&row.PersonID, &row.OrganizationID, &row.DealID,
-				&row.HasOpenDeal, &row.OwedVerdict, &row.Engaged, &row.OwnerID); err != nil {
+				&row.ContactID, &row.CompanyID, &row.DealID,
+				&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
+				&row.Engaged, &row.OwnerID); err != nil {
 				return err
 			}
 			waiting = append(waiting, row)
@@ -295,7 +315,7 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 	return waiting, nil
 }
 
-// OwnDomains reports the email domains this installation's own people write
+// OwnDomains reports the email domains this installation's own contacts write
 // from — the set a message's sender is tested against to tell a colleague from
 // a customer.
 //
@@ -314,6 +334,17 @@ func (s *Store) WaitingReplies(ctx context.Context, asOf time.Time) ([]WaitingRe
 // exactly one rule.
 type OwnDomains interface {
 	Domains(ctx context.Context, tx pgx.Tx) ([]string, error)
+	// ReaderAddresses is the reader's OWN addresses, for telling a message
+	// written to them from one written to a colleague that they can see.
+	//
+	// Capture stamps the mailbox owner as a recipient on every inbound message
+	// it stores, so a participant row alone proves nothing about the envelope.
+	// These are the addresses a header has to name.
+	//
+	// Empty admits everyone, like Domains above and for the same reason: a
+	// reader whose addresses cannot be resolved is one whose real waiting mail
+	// must not silently vanish.
+	ReaderAddresses(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error)
 }
 
 // WithOwnDomains wires the colleague-domain reader the waiting queue needs.
@@ -337,6 +368,21 @@ func (h Handlers) WithOwnDomains(own OwnDomains) Handlers {
 
 // ownDomainList reads the colleague domains for one query, or none when no
 // reader is wired.
+// readerAddressList is the reader's own addresses, or none when no seam is
+// wired — which admits every message, the same failure direction ownDomainList
+// takes and for the same reason: a reader whose addresses cannot be resolved
+// must not have their real waiting mail silently demoted.
+func (s *Store) readerAddressList(ctx context.Context, tx pgx.Tx, reader ids.UUID) ([]string, error) {
+	if s.ownDomains == nil {
+		return nil, nil
+	}
+	addresses, err := s.ownDomains.ReaderAddresses(ctx, tx, reader)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the reader's own addresses: %w", err)
+	}
+	return addresses, nil
+}
+
 func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if s.ownDomains == nil {
 		return nil, nil

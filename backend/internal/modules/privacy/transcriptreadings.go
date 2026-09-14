@@ -32,7 +32,7 @@ import (
 // activity ON DELETE CASCADE (core 0245). That cascade has never once fired,
 // because neither engine ever DELETES an activity — Art. 17 redacts the row in
 // place and retention nulls its body, both because a timeline row is other
-// people's record too. So the obligation the schema states has to be performed
+// contacts's record too. So the obligation the schema states has to be performed
 // by statement, in the same transaction that empties the body.
 //
 // Deleted rather than emptied, unlike the activity itself: nobody else's record

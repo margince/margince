@@ -70,7 +70,7 @@ import (
 const stageEvidenceBacklogWindow = 7 * 24 * time.Hour
 
 // stageEvidenceActor is what the audit trail names as the writer of these
-// rows. No human asked for them, and binding the last person to touch the deal
+// rows. No human asked for them, and binding the last contact to touch the deal
 // would put their name on an observation they never made.
 const stageEvidenceActor = "system:stage-evidence"
 
@@ -244,7 +244,7 @@ func (t *StageEvidenceTrigger) onContractStatus(ctx context.Context, env events.
 	}
 	dealID, err := t.dealOfContract(ctx, env.Entity.ID)
 	if err != nil {
-		// A contract naming no deal is an organization-level agreement. It
+		// A contract naming no deal is a company-level agreement. It
 		// settles no deal's criteria, which is an ordinary outcome.
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil

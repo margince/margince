@@ -21,18 +21,18 @@ func participantPathID(id openapi_types.UUID) ids.DealRoomParticipantID {
 // ListDealRoomParticipants returns the room's roster.
 func (h Handlers) ListDealRoomParticipants(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.ListDealRoomParticipantsParams) {
 	activeOnly := params.ActiveOnly != nil && *params.ActiveOnly
-	people, page, err := h.store.ListParticipants(r.Context(), pathID(id), activeOnly)
+	contacts, page, err := h.store.ListParticipants(r.Context(), pathID(id), activeOnly)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomParticipantListResponse{
-		Data: people,
+		Data: contacts,
 		Page: pageInfo(page),
 	})
 }
 
-// InviteDealRoomParticipant admits a named person and returns their credential.
+// InviteDealRoomParticipant admits a named contact and returns their credential.
 func (h Handlers) InviteDealRoomParticipant(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	var req crmcontracts.InviteDealRoomParticipantRequest
 	if !httperr.Decode(w, r, &req) {
@@ -61,7 +61,7 @@ func (h Handlers) ResendDealRoomInvitation(w http.ResponseWriter, r *http.Reques
 	httperr.WriteJSON(w, http.StatusCreated, h.issuedBody(r, issued))
 }
 
-// RevokeDealRoomParticipant takes a person's access away.
+// RevokeDealRoomParticipant takes a contact's access away.
 func (h Handlers) RevokeDealRoomParticipant(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, participantID openapi_types.UUID) {
 	participant, err := h.store.RevokeParticipant(r.Context(), pathID(id), participantPathID(participantID))
 	if err != nil {
@@ -96,7 +96,7 @@ func (h Handlers) UpdateDealRoomParticipant(w http.ResponseWriter, r *http.Reque
 //
 // Sending is best-effort and never fails the write: the participant and the
 // credential are recorded either way, so a relay outage leaves a seller with a
-// link they can pass on by hand rather than a half-admitted person and an error.
+// link they can pass on by hand rather than a half-admitted contact and an error.
 // `queued` says which happened, so the caller knows whether to send it.
 //
 // Queued, not delivered. All this knows is that the relay took the message; a

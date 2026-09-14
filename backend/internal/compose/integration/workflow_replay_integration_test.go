@@ -11,7 +11,7 @@ package integration
 // (storekit.Audit/Emit, events.md §2) — must let a reader RECONSTRUCT
 // the firing: which trigger fired it, what it planned, what it applied,
 // and its outcome. This suite fires ONE lead through the real domain
-// write path (people.Store.CreateLead, which stages "lead.created" in
+// write path (contacts.Store.CreateLead, which stages "lead.created" in
 // event_outbox), reads that staged envelope back, and dispatches it via
 // engine.HandleEvent — the exact call the cg:workflows redis subscriber
 // makes once it decodes an envelope off the bus (cmd/worker's
@@ -33,7 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -77,14 +77,14 @@ func TestWorkflowRunReplaysFromItsPersistedTrace(t *testing.T) {
 	seedAllStarterAutomations(t, e)
 
 	name := "Replay Trace Lead"
-	lead, _, err := e.People.CreateLead(e.Admin(), people.CreateLeadInput{FullName: &name, Source: "manual"})
+	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Source: "manual"})
 	if err != nil {
 		t.Fatalf("seeding the trigger lead: %v", err)
 	}
 	leadID := ids.UUID(lead.Id)
 
 	// Ground truth, read BEFORE dispatch runs: the real envelope
-	// people.Store.CreateLead staged in event_outbox for this lead —
+	// contacts.Store.CreateLead staged in event_outbox for this lead —
 	// independent of anything the engine or this test later derives
 	// from it. Dispatching THIS envelope (rather than a hand-built one)
 	// is what makes the reconstruction below prove something: the run's

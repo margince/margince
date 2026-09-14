@@ -70,7 +70,7 @@ type ControllerTemplates interface {
 //     in code and versioned, never composed at a call site;
 //   - a body whose placeholder count disagrees with the material, because a
 //     message that was supposed to carry a link and does not is a dead end for
-//     the person who receives it, and one that carries two is a bug nobody sees
+//     the contact who receives it, and one that carries two is a bug nobody sees
 //     until it ships;
 //   - HTML, because the operator relay is text-only and pretending otherwise
 //     would silently drop the markup.

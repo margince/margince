@@ -59,10 +59,10 @@ const (
 // unsealed credential and the frozen request, valid because the epoch was
 // re-read under the same lock a disconnect must take.
 type execLease struct {
-	cred   provider.Credential
-	req    provider.Request
-	epoch  int64
-	person string
+	cred    provider.Credential
+	req     provider.Request
+	epoch   int64
+	contact string
 }
 
 // The pass-control sentinels: each names a reason there is honestly nothing
@@ -145,20 +145,20 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 		return none, false, err
 	}
 	var state, corr string
-	var person *string
+	var contact *string
 	var runEpoch int64
 	var cats []string
 	err := tx.QueryRow(ctx, `
-		SELECT state, person_id::text, connection_epoch, external_correlation_id::text, requested_categories
+		SELECT state, contact_id::text, connection_epoch, external_correlation_id::text, requested_categories
 		  FROM provider_run WHERE id = $1 FOR UPDATE`, runID).
-		Scan(&state, &person, &runEpoch, &corr, &cats)
+		Scan(&state, &contact, &runEpoch, &corr, &cats)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return none, false, nil
 	}
 	if err != nil {
 		return none, false, fmt.Errorf("integrations: locking the run: %w", err)
 	}
-	if state != string(provider.RunQueued) || person == nil {
+	if state != string(provider.RunQueued) || contact == nil {
 		return none, false, nil
 	}
 	conn, err := s.readLiveConnection(ctx, tx, name)
@@ -177,7 +177,7 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	case conn.epoch != runEpoch:
 		return none, false, s.cancelWithdrawn(ctx, tx, runID)
 	}
-	req, err := s.frozenRequest(ctx, tx, name, *person, corr, cats)
+	req, err := s.frozenRequest(ctx, tx, name, *contact, corr, cats)
 	if err != nil {
 		return none, false, err
 	}
@@ -191,7 +191,7 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 	//
 	// Skipped rather than cancelled: `skipped` is excluded from spend exactly
 	// as `cancelled` is, so the hold is released either way, and the reason is
-	// what the person page needs to say what changed.
+	// what the contact page needs to say what changed.
 	desc, err := s.registry.Descriptor(name)
 	if err != nil {
 		return none, false, err
@@ -218,17 +218,17 @@ func (s *Store) leaseForSubmit(ctx context.Context, tx pgx.Tx, name, runID strin
 		 WHERE id = $1`, runID); err != nil {
 		return none, false, fmt.Errorf("integrations: marking the run in flight: %w", err)
 	}
-	return execLease{cred: cred, epoch: runEpoch, person: *person, req: req}, true, nil
+	return execLease{cred: cred, epoch: runEpoch, contact: *contact, req: req}, true, nil
 }
 
 // frozenRequest builds what may leave the installation for this run: the
 // subject's identifiers resolved through the owning domain, and exactly the
 // categories and cascades the frozen policy paid for.
-func (s *Store) frozenRequest(ctx context.Context, tx pgx.Tx, name, person, corr string, cats []string) (provider.Request, error) {
+func (s *Store) frozenRequest(ctx context.Context, tx pgx.Tx, name, contact, corr string, cats []string) (provider.Request, error) {
 	if s.identifiers == nil {
 		return provider.Request{}, errors.New("integrations: no owning domain is bound, so the submission cannot name its subject")
 	}
-	idents, err := s.identifiers(ctx, tx, person)
+	idents, err := s.identifiers(ctx, tx, contact)
 	if err != nil {
 		return provider.Request{}, err
 	}
@@ -340,9 +340,9 @@ func (s *Store) settleSubmit(ctx context.Context, desc provider.Descriptor, name
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// SUBJECT FIRST. A synchronous provider answers inside this
 		// transaction, so this settlement may go on to write the subject's
-		// record — and the eraser locks the person before it scrubs the runs
+		// record — and the eraser locks the contact before it scrubs the runs
 		// that bought their data. Taking the connection and the run first and
-		// the person last would close a cycle against it: one of the two dies
+		// the contact last would close a cycle against it: one of the two dies
 		// on a deadlock, either failing somebody's Art. 17 request or burning
 		// a paid run's hand-off into claims_unwritten.
 		//
@@ -350,7 +350,7 @@ func (s *Store) settleSubmit(ctx context.Context, desc provider.Descriptor, name
 		// recordSubmission takes is not known until the epoch has been
 		// re-read, and a lock order that depends on the answer is not an
 		// order.
-		if err := s.holdSubjectForSettlement(ctx, tx, lease.person); err != nil {
+		if err := s.holdSubjectForSettlement(ctx, tx, lease.contact); err != nil {
 			return err
 		}
 		if err := storekit.LockWriteIdentity(ctx, tx, "provider_connection", name); err != nil {
@@ -395,7 +395,7 @@ func (s *Store) recordSubmission(ctx context.Context, tx pgx.Tx, desc provider.D
 		if sub.Result == nil {
 			return nil
 		}
-		return s.writeClaimsInline(ctx, tx, runID, lease.person, name, sub.Result.Claims)
+		return s.writeClaimsInline(ctx, tx, runID, lease.contact, name, sub.Result.Claims)
 	case provider.OutcomeAmbiguous:
 		return s.parkUnknown(ctx, tx, runID, sub.SafeStatusCode)
 	default:

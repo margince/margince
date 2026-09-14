@@ -45,10 +45,10 @@ expect:
     never asked about. The apparent research is decorative — lifted from our
     homepage and used as an opener — the offer is generic ("operators like
     yours", "several firms in your segment"), the outcome claim is unfalsifiable
-    ("30-40% lift"), and no named customer, person or engagement appears anywhere.
+    ("30-40% lift"), and no named customer, contact or engagement appears anywhere.
     "spam" scores high. "newsletter" is a near miss scoring in the middle: wrong
     label, right effect, since both hide the mail and create no record.
-    "person" is the failure this scenario exists to catch and scores zero above
+    "contact" is the failure this scenario exists to catch and scores zero above
     the floor. It is the expensive direction of error for a reason the crude spam
     cases cannot show: a well-written pitch is precisely what a human reviewer
     also waves through, so the junk record this creates is the one least likely

@@ -37,7 +37,7 @@ var tagFields = map[string]Field{
 	"tag": {
 		Expr: "tg.tag_id",
 		Type: FieldID,
-		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+		Link: "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 			" AND tg.entity_id = t.id AND %s)",
 	},
 }
@@ -263,7 +263,7 @@ func TestCompileNeverInlinesValues(t *testing.T) {
 // carry this tag" is NOT EXISTS(… = …), where EXISTS(… <> …) would answer the
 // different question "carries some other tag" — true for almost every record.
 func TestLinkLeafGoldenSQLPerOperator(t *testing.T) {
-	const wrapper = "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+	const wrapper = "EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND %s)"
 	cases := []struct {
 		name     string
@@ -354,9 +354,9 @@ func TestLinkLeafNestsInsideAGroup(t *testing.T) {
 		leaf("tag", OpEq, tagUUID),
 		leaf("tag", OpExists, false),
 	}})
-	want := "(EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+	want := "(EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND tg.tag_id = $1)" +
-		" OR NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'person'" +
+		" OR NOT EXISTS (SELECT 1 FROM taggable tg WHERE tg.entity_type = 'contact'" +
 		" AND tg.entity_id = t.id AND tg.tag_id IS NOT NULL))"
 	if sql != want {
 		t.Errorf("sql = %q, want %q", sql, want)
@@ -462,7 +462,7 @@ func operandFor(t FieldType, op string) any { //craft:ignore naked-any mirrors P
 // Derived from the engine's own maps rather than a written-out list, so a new
 // FieldType or a new operator is covered the day it is added.
 func TestALinkedFieldAdvertisesExactlyWhatItCanCompile(t *testing.T) {
-	const wrapper = "EXISTS (SELECT 1 FROM organization o WHERE o.id = t.organization_id AND %s)"
+	const wrapper = "EXISTS (SELECT 1 FROM company o WHERE o.id = t.company_id AND %s)"
 	for fieldType, admitted := range operatorsByType {
 		linked := Field{Expr: "o.industry", Type: fieldType, Link: wrapper}
 		offered := make(map[string]bool)

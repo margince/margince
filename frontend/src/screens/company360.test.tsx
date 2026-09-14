@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -15,6 +15,7 @@ import { meFixture } from "../app/mefixture";
 import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
+import { CompanyScreen } from "./companies";
 import {
   CommercialPanel,
   NextSteps,
@@ -22,7 +23,6 @@ import {
   SuggestionsSection,
 } from "./company360";
 import { CompanyWorkCard } from "./companywork";
-import { CompanyScreen } from "./organizations";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
@@ -36,21 +36,21 @@ import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 //   - a workspace reading from an incumbent mirror gets one refusal, not a
 //     page that quietly omits most of itself.
 
-type Organization = components["schemas"]["Organization"];
-type Organization360 = components["schemas"]["Organization360"];
+type Company = components["schemas"]["Company"];
+type Company360 = components["schemas"]["Company360"];
 // The sections these tests build fixtures for, named once. A fixture declared
 // standalone gets no contextual type from `view()`, so its enums widen to
 // `string` and stop being checked at all — which is how eight of the shapes in
 // this file drifted off the contract while every test went on passing.
-type StateStrip360 = NonNullable<Organization360["state_strip"]>;
+type StateStrip360 = NonNullable<Company360["state_strip"]>;
 
 // Typed against the contract, not asserted into it. A fixture the compiler only
 // sees as `Record<string, unknown>` can name a field the wire dropped, spell an
 // enum the server no longer accepts, or miss one it now requires, and the tests
 // built on it go on passing while the shape moves underneath them. That is the
-// one thing a fixture must not do — so `view()` returns `Organization360`, and
+// one thing a fixture must not do — so `view()` returns `Company360`, and
 // every caller takes it as that type rather than through `as never`.
-const org: Organization = {
+const company: Company = {
   id: "o-1",
   // The server answers this per row; a fixture without it reads as NOT
   // writable, which is the correct fail-closed default and would strip the
@@ -67,12 +67,12 @@ const org: Organization = {
 
 const emptyPage = { has_more: false, next_cursor: null };
 
-function view(overrides: Partial<Organization360> = {}): Organization360 {
+function view(overrides: Partial<Company360> = {}): Company360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
-    organization: org,
+    company: company,
     sections_omitted: [],
-    people: { data: [], page: emptyPage },
+    contacts: { data: [], page: emptyPage },
     deals: {
       data: [],
       page: emptyPage,
@@ -112,7 +112,7 @@ const emptyRollup = {
 };
 
 const EMPTY_BRIEF = {
-  organization_id: "o-1",
+  company_id: "o-1",
   generated_at: "2026-06-01T09:00:00Z",
   generated_by: "deterministic",
   sentences: [],
@@ -122,19 +122,19 @@ const EMPTY_BRIEF = {
 // otherwise still being served to the next one.
 let briefBody: unknown = EMPTY_BRIEF;
 
-// partnerOrg is the account that HAS a partner programme, and so carries the
+// partnerCompany is the account that HAS a partner programme, and so carries the
 // second tab. Partnerhood is read off the relationship type rather than the
-// extension row, because the Organization read never selects that row — the
+// extension row, because the Company read never selects that row — the
 // two are equivalent, since the store enforces the invariant both ways.
 // The bare fixture deliberately carries neither: a Partner tab on an account
 // with no programme is the thing the tab gate removed.
-const partnerOrg = { ...org, relationship_types: ["partner"] };
+const partnerCompany = { ...company, relationship_types: ["partner"] };
 
 function stub(
   three60: unknown,
   status = 200,
-  account: unknown = org,
-  finance: unknown = { organization_id: "o-1", state: "no_connection" },
+  account: unknown = company,
+  finance: unknown = { company_id: "o-1", state: "no_connection" },
   financeStatus = 200,
 ) {
   // The paths actually requested. A test proves the page did NOT refetch by
@@ -148,16 +148,16 @@ function stub(
       if (pathname.endsWith("/360")) {
         return jsonResponse(three60, status);
       }
-      // The Contacts tab's list, served from the SAME people section the 360
+      // The Contacts tab's list, served from the SAME contacts section the 360
       // fixture carries: a test that seeds a contact sees it on the tab
       // without seeding it twice in two shapes that could disagree.
       if (pathname.endsWith("/contacts")) {
-        const people =
-          (three60 as { people?: { data?: Record<string, unknown>[] } })?.people
-            ?.data ?? [];
+        const contacts =
+          (three60 as { contacts?: { data?: Record<string, unknown>[] } })
+            ?.contacts?.data ?? [];
         return jsonResponse({
-          data: people.map((contact) => ({
-            person_id: contact.person_id,
+          data: contacts.map((contact) => ({
+            contact_id: contact.contact_id,
             full_name: contact.full_name,
             title: contact.title,
             engagement: "untried",
@@ -179,7 +179,7 @@ function stub(
         return jsonResponse({
           nodes: [
             { id: "u-2", kind: "user", label: "Mira", root: false },
-            { id: "p-1", kind: "person", label: "Dana Buyer", root: false },
+            { id: "p-1", kind: "contact", label: "Dana Buyer", root: false },
           ],
           edges: [
             {
@@ -200,10 +200,10 @@ function stub(
       // "never built".
       if (pathname.endsWith("/v1/me")) {
         return jsonResponse(
-          meFixture({ allow: { organization: ["read", "update"] } }),
+          meFixture({ allow: { company: ["read", "update"] } }),
         );
       }
-      if (pathname.endsWith("/organizations/o-1")) {
+      if (pathname.endsWith("/companies/o-1")) {
         return jsonResponse(account);
       }
       if (pathname.endsWith("/pipelines")) {
@@ -277,7 +277,7 @@ function renderCompany() {
 // directly rather than through the company page: the page does not render
 // either, so reaching for them through it would assert nothing.
 function renderNextSteps(
-  three60: Organization360,
+  three60: Company360,
   onOpenTask?: (step: { activity_id: string }) => void,
 ) {
   render(<NextSteps view={three60} onOpenTask={onOpenTask} />);
@@ -287,10 +287,8 @@ function renderNextSteps(
 // rather than owning. Mounting the two together is what pins the pairing the
 // suite is about: a row offers Done always and Snooze only when there is a
 // date to move.
-function NextStepsWithVerbs({
-  three60,
-}: Readonly<{ three60: Organization360 }>) {
-  const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
+function NextStepsWithVerbs({ three60 }: Readonly<{ three60: Company360 }>) {
+  const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
     <NextSteps
       view={three60}
@@ -307,7 +305,7 @@ function NextStepsWithVerbs({
   );
 }
 
-function renderWork(three60: Organization360) {
+function renderWork(three60: Company360) {
   render(<CompanyWorkCard view={three60} onOpenRecord={() => {}} />);
 }
 
@@ -315,12 +313,12 @@ function renderWork(three60: Organization360) {
 // stack could tint and box it separately, and the advice it carries is
 // exercised through it directly now.
 function renderSuggestions(
-  three60: Organization360,
+  three60: Company360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
     <SuggestionsSection
-      orgId="o-1"
+      companyId="o-1"
       view={three60}
       onOpenRecord={() => {}}
       onPerform={onPerform}
@@ -373,15 +371,15 @@ describe("company view — withheld sections", () => {
     ).toBeNull();
   });
 
-  it("reports no committee gap when the people section was withheld", async () => {
+  it("reports no committee gap when the contacts section was withheld", async () => {
     // The gap is computed from the contact list, and a withheld section
     // arrives as the same empty array an account with no contacts does.
     // Reading "nobody here is your champion" off contacts the caller was
     // never allowed to see states a fact about data the page does not have.
     stub(
       view({
-        people: undefined,
-        sections_omitted: ["people"],
+        contacts: undefined,
+        sections_omitted: ["contacts"],
         deals: {
           data: [
             {
@@ -566,7 +564,7 @@ describe("company view — the verbs that change a section", () => {
 
 describe("company view — the context column belongs to the account, not to a tab", () => {
   it("keeps the relationship rail mounted when the reader switches tab", async () => {
-    stub(view(), 200, partnerOrg);
+    stub(view(), 200, partnerCompany);
     renderCompany();
 
     await screen.findByRole("complementary", { name: "Context" });
@@ -582,7 +580,7 @@ describe("company view — the context column belongs to the account, not to a t
   });
 
   it("does not refetch the account when the reader switches tab and back", async () => {
-    const fetched = stub(view(), 200, partnerOrg);
+    const fetched = stub(view(), 200, partnerCompany);
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
     const before = fetched.filter((path) => path.endsWith("/360")).length;
@@ -594,7 +592,7 @@ describe("company view — the context column belongs to the account, not to a t
   });
 
   it("leaves the timeline to its own tab rather than repeating it under a form", async () => {
-    stub(view(), 200, partnerOrg);
+    stub(view(), 200, partnerCompany);
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -696,7 +694,7 @@ describe("company view — next steps", () => {
             due_at: "2026-05-01T09:00:00Z",
             overdue: true,
             linked_deal_id: null,
-            linked_person_id: null,
+            linked_contact_id: null,
             assignee_id: null,
           },
         ],
@@ -734,10 +732,10 @@ describe("company view — a section still loading is not one that failed", () =
           return jsonResponse(view());
         }
         if (pathname.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ allow: { organization: ["read"] } }));
+          return jsonResponse(meFixture({ allow: { company: ["read"] } }));
         }
-        if (pathname.endsWith("/organizations/o-1")) {
-          return jsonResponse(org);
+        if (pathname.endsWith("/companies/o-1")) {
+          return jsonResponse(company);
         }
         return jsonResponse({ data: [], page: emptyPage });
       }),
@@ -769,11 +767,11 @@ describe("company view — a section still loading is not one that failed", () =
 
     resolve360?.();
     await waitFor(() => expect(brief().querySelector(".skeleton")).toBeNull());
-    // The settled read on an account with nothing needing a person today —
+    // The settled read on an account with nothing needing a contact today —
     // the honest answer the brief gives once it has actually read the account,
     // never the failure text a still-loading read would be mistaken for.
     expect(
-      within(brief()).getByText("Nothing here needs you today."),
+      within(brief()).getByText("No outstanding work found in this view."),
     ).toBeTruthy();
     expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
   });
@@ -788,7 +786,7 @@ describe("company view — a failed read is not an empty account", () => {
       expect(screen.getByText(/may not show everything/)).toBeTruthy(),
     );
     // The business rail STAYS, with each card saying it could not be loaded.
-    // Removing it would read as an account with no people and no deals,
+    // Removing it would read as an account with no contacts and no deals,
     // which is the one thing this page does not know.
     const card = screen.getByRole("complementary", { name: "Context" });
     expect(
@@ -864,7 +862,7 @@ describe("company view — the citations under a finding", () => {
   // The citations are typed from the contract rather than taken as `unknown[]`:
   // an `entity_type` the server no longer serves is exactly the drift these
   // chips would go on rendering without complaint.
-  type Suggestion = NonNullable<Organization360["suggestions"]>[number];
+  type Suggestion = NonNullable<Company360["suggestions"]>[number];
   const suggestion = (evidence: Suggestion["evidence"]) => ({
     kind: "no_reply" as const,
     fingerprint: "f-1",
@@ -906,10 +904,10 @@ describe("company view — the citations under a finding", () => {
   // this account's 360 holds the rest.
   it("names the record from the account's own roster when the citation does not", async () => {
     const three60 = view({
-      people: {
+      contacts: {
         data: [
           {
-            person_id: "p-9",
+            contact_id: "p-9",
             full_name: "Frédéric de Gombert",
             deal_roles: [],
             consent: {},
@@ -927,7 +925,7 @@ describe("company view — the citations under a finding", () => {
         ],
         page: { has_more: false },
       },
-      suggestions: [suggestion([{ entity_type: "person", entity_id: "p-9" }])],
+      suggestions: [suggestion([{ entity_type: "contact", entity_id: "p-9" }])],
     });
     stub(three60);
     renderSuggestions(three60);
@@ -1013,7 +1011,7 @@ describe("company view — the citations under a finding", () => {
     ]);
   });
 
-  // deal/person each open their OWN screen rather than a shared stepper, so
+  // deal/contact each open their OWN screen rather than a shared stepper, so
   // grouping them the same way would silently drop every record past the
   // first — they stay one chip per record instead.
   it("keeps a separate chip per record for a kind with its own screen", async () => {
@@ -1042,7 +1040,7 @@ describe("company view — what is waiting on a decision", () => {
   // inferred as `string`: a fixture that widens it can name a status the server
   // never sends and the card would go on drawing it.
   type StagedApproval = NonNullable<
-    Organization360["pending_approvals"]
+    Company360["pending_approvals"]
   >["data"][number];
   const staged: StagedApproval = {
     id: "ap-1",
@@ -1051,7 +1049,7 @@ describe("company view — what is waiting on a decision", () => {
     summary: "Add Markus Bueckle as a contact",
     proposed_change: { full_name: "Markus Bueckle" },
     proposed_by: "agent:capture",
-    target_entity_type: "organization",
+    target_entity_type: "company",
     target_entity_id: "o-1",
     diff_hash: "h1",
     created_at: "2026-06-01T08:00:00Z",
@@ -1105,7 +1103,7 @@ describe("company view — an open task can be acted on", () => {
     due_at: "2026-06-10T09:00:00Z",
     overdue: false,
     linked_deal_id: null,
-    linked_person_id: null,
+    linked_contact_id: null,
     assignee_id: null,
   };
 
@@ -1194,7 +1192,7 @@ describe("CommercialPanel — a capped deals page says so", () => {
 // say who is: the roles live on relationship rows written from the deal
 // screen. The warning was true, unactionable and permanent.
 
-// A role belongs to a deal, so the same person can be champion on one and
+// A role belongs to a deal, so the same contact can be champion on one and
 // nobody on another. Rendering the role alone made two clauses that read
 // identically.
 
@@ -1213,7 +1211,7 @@ describe("company view — Partner is not a permanent tab", () => {
   });
 
   it("shows both tabs once the account has a programme", async () => {
-    stub(view(), 200, partnerOrg);
+    stub(view(), 200, partnerCompany);
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -1280,16 +1278,16 @@ describe("company view — where the account stands, and what it is to us", () =
     // Not "partner": that type also raises the Partner tab, and the badge and
     // the tab would then share a label, which tells the test nothing.
     // The SAME override goes into both reads the page makes — the composite
-    // 360's own `organization` (what the rail's grid reads) and the standalone
+    // 360's own `company` (what the rail's grid reads) and the standalone
     // GET (what the header reads) — because now that both draw a lifecycle
     // control, a fixture that only overrode one would fail for the same
     // reason two real reads of one row never disagree: there is only one row.
-    const withLifecycle: Organization = {
-      ...org,
+    const withLifecycle: Company = {
+      ...company,
       lifecycle: "former_customer",
       relationship_types: ["customer", "supplier"],
     };
-    stub(view({ organization: withLifecycle }), 200, withLifecycle);
+    stub(view({ company: withLifecycle }), 200, withLifecycle);
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -1321,7 +1319,11 @@ describe("company view — where the account stands, and what it is to us", () =
   });
 
   it("offers the lifecycle control on an account nobody has assessed yet", async () => {
-    stub(view(), 200, { ...org, lifecycle: "unknown", relationship_types: [] });
+    stub(view(), 200, {
+      ...company,
+      lifecycle: "unknown",
+      relationship_types: [],
+    });
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -1346,7 +1348,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // a save through EITHER control reaches the server exactly once, and the
     // OTHER control reflects the new value once the record refetches — not a
     // second write, and not one control left showing the stale value.
-    let currentOrg: Organization = { ...org, lifecycle: "unknown" };
+    let currentCompany: Company = { ...company, lifecycle: "unknown" };
     let patchCount = 0;
     let lastIfMatch: string | null = null;
     vi.stubGlobal(
@@ -1354,14 +1356,14 @@ describe("company view — where the account stands, and what it is to us", () =
       vi.fn(async (request: Request) => {
         const pathname = new URL(request.url).pathname;
         if (pathname.endsWith("/360")) {
-          return jsonResponse(view({ organization: currentOrg }));
+          return jsonResponse(view({ company: currentCompany }));
         }
         if (pathname.endsWith("/v1/me")) {
           return jsonResponse(
-            meFixture({ allow: { organization: ["read", "update"] } }),
+            meFixture({ allow: { company: ["read", "update"] } }),
           );
         }
-        if (pathname.endsWith("/organizations/o-1")) {
+        if (pathname.endsWith("/companies/o-1")) {
           if (request.method === "PATCH") {
             patchCount += 1;
             lastIfMatch = request.headers.get("if-match");
@@ -1373,20 +1375,20 @@ describe("company view — where the account stands, and what it is to us", () =
             if (sent === null || typeof sent !== "object") {
               throw new Error(`the PATCH body is not an object: ${sent}`);
             }
-            const body: { lifecycle?: Organization["lifecycle"] } = sent;
-            if (currentOrg.version === undefined) {
+            const body: { lifecycle?: Company["lifecycle"] } = sent;
+            if (currentCompany.version === undefined) {
               // What this case asserts is the If-Match the second write sends,
               // so a fixture with no version to increment would be measuring
               // nothing.
               throw new Error("the account fixture carries no version");
             }
-            currentOrg = {
-              ...currentOrg,
-              lifecycle: body.lifecycle ?? currentOrg.lifecycle,
-              version: currentOrg.version + 1,
+            currentCompany = {
+              ...currentCompany,
+              lifecycle: body.lifecycle ?? currentCompany.lifecycle,
+              version: currentCompany.version + 1,
             };
           }
-          return jsonResponse(currentOrg);
+          return jsonResponse(currentCompany);
         }
         return jsonResponse({ data: [], page: emptyPage });
       }),
@@ -1765,7 +1767,7 @@ describe("company view — advice you can act on", () => {
       due_at: "2026-05-01T09:00:00Z",
       overdue: true,
       linked_deal_id: null,
-      linked_person_id: null,
+      linked_contact_id: null,
       assignee_id: null,
     };
     const three60 = view({
@@ -1796,7 +1798,7 @@ describe("company view — where the record came from", () => {
   // OWN hand-typed entry — the one case that reports nothing they do not
   // already know — must not suppress the rest.
   it("names an agent that wrote the record", async () => {
-    stub(view(), 200, { ...org, captured_by: "agent:enricher" });
+    stub(view(), 200, { ...company, captured_by: "agent:enricher" });
     renderCompany();
     await screen.findByText("Brandt Automotive GmbH");
 
@@ -1810,10 +1812,10 @@ describe("company view — the account's own tabs", () => {
   it("keeps the rail summary beside the Contacts tab", async () => {
     stub(
       view({
-        people: {
+        contacts: {
           data: [
             {
-              person_id: "p-1",
+              contact_id: "p-1",
               full_name: "Christian Hagemeyer",
               title: "Managing director",
               strength: {
@@ -1879,7 +1881,7 @@ describe("company view — the account's own tabs", () => {
 
 // The connections card asked nobody and answered everybody: a staff directory
 // in the rail of every account, costing a graph read on every page load. The
-// route-in asks the question a rep actually has, about one person, and only
+// route-in asks the question a rep actually has, about one contact, and only
 // when they ask it.
 
 describe("company view — the account's primary actions", () => {
@@ -1900,7 +1902,7 @@ describe("company view — the account's primary actions", () => {
   });
 
   it("refuses both on an archived company, over one stated reason", async () => {
-    stub(view(), 200, { ...org, archived_at: "2026-07-01T09:00:00Z" });
+    stub(view(), 200, { ...company, archived_at: "2026-07-01T09:00:00Z" });
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
@@ -1932,7 +1934,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     account: { lifecycle: "customer" as const, relationship_types: [] },
   };
   const connected = (extra: Record<string, unknown>) => ({
-    organization_id: "o-1",
+    company_id: "o-1",
     state: "connected",
     provider: "offline_demo",
     ...extra,
@@ -1947,7 +1949,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     stub(
       view({ state_strip: customer }),
       200,
-      org,
+      company,
       connected({
         net_invoiced: { amount_minor: 18642000, currency: "EUR" },
         net_invoiced_lifetime: { amount_minor: 42800000, currency: "EUR" },
@@ -1983,7 +1985,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     stub(
       view({ state_strip: customer }),
       200,
-      org,
+      company,
       connected({
         net_invoiced: { amount_minor: 18642000, currency: "EUR" },
         net_invoiced_lifetime: { amount_minor: 42800000, currency: "EUR" },
@@ -2017,8 +2019,8 @@ describe("the money slot says WHY it has no figure", () => {
     await screen.findByRole("region", { name: "Where this account stands" });
 
   it("names the setup step only when there is no source", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "no_connection",
     });
     renderCompany();
@@ -2029,8 +2031,8 @@ describe("the money slot says WHY it has no figure", () => {
   });
 
   it("says the source is not matched rather than not connected", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "unmapped",
       provider: "offline_demo",
     });
@@ -2044,8 +2046,8 @@ describe("the money slot says WHY it has no figure", () => {
   });
 
   it("says a first sync is running rather than that nothing is connected", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "syncing",
       provider: "offline_demo",
     });
@@ -2062,7 +2064,7 @@ describe("the money slot says WHY it has no figure", () => {
     stub(
       view({ state_strip: customer }),
       200,
-      org,
+      company,
       {
         type: "about:blank",
         title: "Forbidden",
@@ -2084,7 +2086,7 @@ describe("the money slot says WHY it has no figure", () => {
     stub(
       view({ state_strip: customer }),
       200,
-      org,
+      company,
       { type: "about:blank", title: "Server error", status: 500 },
       500,
     );
@@ -2100,8 +2102,8 @@ describe("the money slot says WHY it has no figure", () => {
   // The contract: stale is a sync that SUCCEEDED long enough ago that the date
   // matters; error is the last good answer after an attempt that FAILED.
   it("calls a stale figure old, not failed", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "stale",
       provider: "offline_demo",
       net_invoiced: { amount_minor: 18642000, currency: "EUR" },
@@ -2117,8 +2119,8 @@ describe("the money slot says WHY it has no figure", () => {
 
   // Without this the last good figure renders bare, reading as current.
   it("marks a figure from a failed sync as possibly not current", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "error",
       provider: "offline_demo",
       net_invoiced: { amount_minor: 18642000, currency: "EUR" },
@@ -2133,8 +2135,8 @@ describe("the money slot says WHY it has no figure", () => {
 
   // A live, mapped source that produced no figure is not a missing setup.
   it("says nothing was invoiced rather than telling them to connect", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "connected",
       provider: "offline_demo",
     });
@@ -2147,8 +2149,8 @@ describe("the money slot says WHY it has no figure", () => {
   });
 
   it("names the source beside a real figure", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "connected",
       provider: "datev",
       net_invoiced: { amount_minor: 18642000, currency: "EUR" },
@@ -2171,8 +2173,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
     await screen.findByRole("region", { name: "Where this account stands" });
 
   it("says why there is no figure once, not once per money window", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "unmapped",
       provider: "offline_demo",
     });
@@ -2196,8 +2198,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
   // under the trailing year's label it would report a year that never happened,
   // so the slot must refuse and say why instead.
   it("refuses rather than showing a lifetime total as the trailing year", async () => {
-    stub(view({ state_strip: customer }), 200, org, {
-      organization_id: "o-1",
+    stub(view({ state_strip: customer }), 200, company, {
+      company_id: "o-1",
       state: "unmapped",
       provider: "offline_demo",
       net_invoiced_lifetime: { amount_minor: 42800000, currency: "EUR" },
@@ -2244,8 +2246,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
     });
 
   it("keeps the account's standing readings beside an unanswerable Finance slot", async () => {
-    stub(withStanding(), 200, org, {
-      organization_id: "o-1",
+    stub(withStanding(), 200, company, {
+      company_id: "o-1",
       state: "unmapped",
       provider: "offline_demo",
     });
@@ -2263,7 +2265,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // dimension of its own.
     expect(
       within(region).getByText("Conversation", {
-        selector: ".stat-card-label",
+        selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
     // The other two doors: the last touch and the calendar, whatever the
@@ -2274,8 +2276,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
   });
 
   it("shows the real figure beside the same standing readings", async () => {
-    stub(withStanding(), 200, org, {
-      organization_id: "o-1",
+    stub(withStanding(), 200, company, {
+      company_id: "o-1",
       state: "connected",
       provider: "datev",
       net_invoiced: { amount_minor: 18642000, currency: "EUR" },
@@ -2292,7 +2294,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // dimension of its own.
     expect(
       within(region).getByText("Conversation", {
-        selector: ".stat-card-label",
+        selector: ".stat-card-label-text",
       }),
     ).toBeTruthy();
     expect(within(region).getByText("Last touch")).toBeTruthy();

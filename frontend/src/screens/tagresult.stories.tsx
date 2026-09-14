@@ -39,11 +39,11 @@ function tagRead(usage: TagUsage) {
     });
 }
 
-const people = [
+const contacts = [
   { id: "p-1", full_name: "Katrin Hofmann" },
   { id: "p-2", full_name: "Devrim Aksoy" },
 ];
-const organizations = [
+const companies = [
   { id: "o-1", display_name: "MiTek" },
   { id: "o-2", display_name: "Nordfracht" },
 ];
@@ -55,9 +55,9 @@ const deals = [{ id: "d-1", name: "netcare GmbH — Einführung" }];
 export const RecordsInEveryGroup: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 2, deals: 1 }),
-      "GET /people": () => jsonResponse({ data: people }),
-      "GET /organizations": () => jsonResponse({ data: organizations }),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 2, deals: 1 }),
+      "GET /contacts": () => jsonResponse({ data: contacts }),
+      "GET /companies": () => jsonResponse({ data: companies }),
       "GET /deals": () => jsonResponse({ data: deals }),
     });
     return (
@@ -73,7 +73,7 @@ export const RecordsInEveryGroup: Story = {
 export const NothingCarriesIt: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 0, companies: 0, deals: 0 }),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 0, companies: 0, deals: 0 }),
     });
     return (
       <StoryProviders>
@@ -90,9 +90,9 @@ export const NothingCarriesIt: Story = {
 export const RowsStillLoading: Story = {
   render: () => {
     installFetchStub({
-      [`GET /tags/${TAG}`]: tagRead({ people: 2, companies: 2, deals: 1 }),
-      "GET /people": () => new Promise<Response>(() => {}),
-      "GET /organizations": () => new Promise<Response>(() => {}),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 2, deals: 1 }),
+      "GET /contacts": () => new Promise<Response>(() => {}),
+      "GET /companies": () => new Promise<Response>(() => {}),
       "GET /deals": () => new Promise<Response>(() => {}),
     });
     return (

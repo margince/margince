@@ -77,9 +77,9 @@ SELECT went.addr,
 // refused a delivery — present only while no clean delivery has landed since.
 // Addresses are matched lowercased, as the rows store them. Gated by the
 // activity read grant plus the caller's own content scope: a delivery
-// outcome is timeline content, and the person section this feeds is withheld
+// outcome is timeline content, and the contact section this feeds is withheld
 // on the same grant. It borrows the caller's transaction because its one
-// caller (the person page) reads every section under a single snapshot.
+// caller (the contact page) reads every section under a single snapshot.
 func (s *Store) DeadAddressesTx(ctx context.Context, tx pgx.Tx, addresses []string) (map[string]time.Time, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err

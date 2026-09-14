@@ -40,7 +40,7 @@ import (
 
 // ExpiryActor names the clock on every audit row this sweep writes.
 //
-// A system id rather than a person, and the reason is legibility rather than
+// A system id rather than a contact, and the reason is legibility rather than
 // ceremony: somebody reading the trail must be able to tell an ask a colleague
 // declined from one nobody ever answered. Those are different facts about that
 // colleague, and only the actor tells them apart.
@@ -152,7 +152,7 @@ func (s *Store) expireOne(ctx context.Context, id ids.UUID) (bool, error) {
 		// state ran out of time — an ask nobody answered and one a colleague
 		// accepted and then dropped are different stories about that colleague.
 		var before Status
-		var personID ids.UUID
+		var contactID ids.UUID
 		err := tx.QueryRow(ctx, `
 			WITH prior AS (
 				SELECT id, status FROM intro_request
@@ -167,7 +167,7 @@ func (s *Store) expireOne(ctx context.Context, id ids.UUID) (bool, error) {
 			  FROM prior
 			 WHERE r.id = prior.id
 			   AND r.status IN ('requested', 'accepted', 'name_drop_approved')
-			 RETURNING prior.status, r.person_id`, id, s.now().UTC()).Scan(&before, &personID)
+			 RETURNING prior.status, r.contact_id`, id, s.now().UTC()).Scan(&before, &contactID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -191,10 +191,10 @@ func (s *Store) expireOne(ctx context.Context, id ids.UUID) (bool, error) {
 		// apart. A rep withdrawing and a queue timing out call for different
 		// follow-ups, and a consumer that could not distinguish them would
 		// treat a colleague's silence as the rep's own decision.
-		if emitErr := storekit.EmitEvent(ctx, tx, auditID, personID,
+		if emitErr := storekit.EmitEvent(ctx, tx, auditID, contactID,
 			crmcontracts.PublicEventIntroRequestClosed{
 				IntroRequestId: openapi_types.UUID(id),
-				PersonId:       openapi_types.UUID(personID),
+				ContactId:      openapi_types.UUID(contactID),
 				Reason:         crmcontracts.IntroRequestClosedExpired,
 			}); emitErr != nil {
 			return emitErr

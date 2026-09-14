@@ -17,26 +17,26 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) {
-	// A human judges "is this the same person" on what LinkedIn actually said.
+	// A human judges "is this the same contact" on what LinkedIn actually said.
 	// The folded strings the matcher compared on — lowercased, unaccented,
 	// legal-suffix stripped — cannot be judged by anybody and must not travel:
 	// nobody can decide "andreas muller · simio".
-	m := people.PendingLinkedInMatch{
-		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), PersonID: ids.NewV7(),
+	m := contacts.PendingLinkedInMatch{
+		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), ContactID: ids.NewV7(),
 		ConnectionName: "André Schultewolter", ConnectionCompany: "SIMIO GmbH & Co. KG",
-		PersonName: "Andre Schultewolter",
+		ContactName: "Andre Schultewolter",
 	}
 	payload, err := json.Marshal(linkedInMatchProposal{
-		ConnectionID: m.ConnectionID, OwnerUserID: m.OwnerUserID, PersonID: m.PersonID,
+		ConnectionID: m.ConnectionID, OwnerUserID: m.OwnerUserID, ContactID: m.ContactID,
 		ConnectionName: m.ConnectionName, ConnectionCompany: m.ConnectionCompany,
-		PersonName: m.PersonName,
+		ContactName: m.ContactName,
 	})
 	if err != nil {
 		t.Fatalf("marshalling the proposal: %v", err)
@@ -50,8 +50,8 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	// so a payload cannot land on somebody else's connection. Nothing about the
 	// third party travels with it.
 	want := []string{
-		"connection_id", "owner_user_id", "person_id",
-		"connection_name", "connection_company", "person_name",
+		"connection_id", "owner_user_id", "contact_id",
+		"connection_name", "connection_company", "contact_name",
 	}
 	for _, key := range want {
 		if _, ok := fields[key]; !ok {

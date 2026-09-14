@@ -2,10 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { LogActivity } from "./logactivity";
+import { CheckSquare, FileText } from "lucide-react";
+import { LogActivity, LogActivityAction } from "./logactivity";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
-// The log-an-activity form embedded in every 360 (person/company/deal/lead).
+// The log-an-activity form embedded in every 360 (contact/company/deal/lead).
 // It reads GET /me only to gate itself on overlay mode (hidden there — its
 // POST /activities writes a mirrored record, unsupported_by_sor); the form
 // itself never fetches.
@@ -30,7 +31,7 @@ export const Native: Story = {
     installFetchStub({ "GET /me": admin() });
     return (
       <StoryProviders>
-        <LogActivity entityType="person" entityId="p1" />
+        <LogActivity entityType="contact" entityId="p1" />
       </StoryProviders>
     );
   },
@@ -51,7 +52,7 @@ export const HiddenInOverlay: Story = {
     });
     return (
       <StoryProviders>
-        <LogActivity entityType="person" entityId="p1" />
+        <LogActivity entityType="contact" entityId="p1" />
       </StoryProviders>
     );
   },
@@ -74,7 +75,7 @@ export const OpenedOnACall: Story = {
 
 // A task is the one kind held by a colleague, so it is the only one that draws
 // the assignee picker — beside the due date, defaulting to Unassigned. The
-// roster it offers is the workspace's people less agent seats: the walk stubbed
+// roster it offers is the workspace's contacts less agent seats: the walk stubbed
 // here carries a Runner Bot the picker must not list, because the server
 // refuses one as an assignee.
 export const OpenedOnATask: Story = {
@@ -93,7 +94,37 @@ export const OpenedOnATask: Story = {
     });
     return (
       <StoryProviders>
-        <LogActivity entityType="person" entityId="p1" askedKind="task" />
+        <LogActivity entityType="contact" entityId="p1" askedKind="task" />
+      </StoryProviders>
+    );
+  },
+};
+
+// The same form reached from a record header, where it is a TRIGGER rather
+// than a panel: two of them side by side, each naming its own verb and each
+// leading with the glyph the contact header already gives it. The words stay —
+// a page and a tick box do not say "write down what happened" and "file a task"
+// on their own, and a reader would have to hover to tell the pair apart. The
+// button sizes the glyph, so neither call site names a size.
+export const HeaderTriggers: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": admin() });
+    return (
+      <StoryProviders>
+        <div style={{ display: "flex", gap: "var(--gapActions)" }}>
+          <LogActivityAction
+            entityType="company"
+            entityId="o1"
+            triggerIcon={<FileText aria-hidden="true" />}
+          />
+          <LogActivityAction
+            entityType="company"
+            entityId="o1"
+            askedKind="task"
+            triggerLabel="log.addTask"
+            triggerIcon={<CheckSquare aria-hidden="true" />}
+          />
+        </div>
       </StoryProviders>
     );
   },

@@ -15,7 +15,7 @@ import (
 )
 
 // A human envelope carries the uuid ONLY inside Actor.ID, as "human:<uuid>":
-// OnBehalfOf is nil for a person acting as themselves. Parsing it here is the
+// OnBehalfOf is nil for a contact acting as themselves. Parsing it here is the
 // one place that spelling is understood, and storing a real uuid is the first
 // step of reconciling it rather than a fifth copy of the problem.
 func TestAHumanActorIsResolvedFromTheActorID(t *testing.T) {
@@ -62,7 +62,7 @@ func TestASystemActorWithNoHumanIsWorkspaceScoped(t *testing.T) {
 }
 
 // An unparseable human actor is REFUSED, never quietly downgraded. Silently
-// making it workspace-scoped is how one person's work becomes a system sweep
+// making it workspace-scoped is how one contact's work becomes a system sweep
 // that nobody can find and nobody notices is missing.
 func TestAnUnparseableHumanActorIsRefused(t *testing.T) {
 	for _, id := range []string{"human:not-a-uuid", "human:", "", ids.NewV7().String()} {
@@ -74,7 +74,7 @@ func TestAnUnparseableHumanActorIsRefused(t *testing.T) {
 
 // A human envelope that ALSO names somebody else is refused rather than
 // resolved either way. It is not a shape any writer produces, and guessing
-// which half is the truth is how one person's work is filed under another's.
+// which half is the truth is how one contact's work is filed under another's.
 func TestAHumanActorActingOnBehalfOfSomebodyElseIsRefused(t *testing.T) {
 	self, other := ids.NewV7(), ids.NewV7()
 	if _, _, err := ResolveActor(events.Actor{

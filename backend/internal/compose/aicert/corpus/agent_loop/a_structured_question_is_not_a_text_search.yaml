@@ -18,7 +18,7 @@ expect:
   answer: query_workspace
   rubric: >
     The goal states three conditions — a status, an amount floor, and a city
-    that belongs to the ORGANIZATION rather than to the deal — so it is a
+    that belongs to the COMPANY rather than to the deal — so it is a
     question about which records satisfy a structure, not about which records
     are called something. Score high only if the turn calls query_workspace.
     search_records matches text stored on a record and can express none of the

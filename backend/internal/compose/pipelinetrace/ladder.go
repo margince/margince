@@ -5,7 +5,7 @@
 // pipeline into something a member can read.
 //
 // WHY IT LIVES IN COMPOSE. The ladder crosses modules: capture owns the stored
-// rungs, activities owns the label and the person link, and neither may import
+// rungs, activities owns the label and the contact link, and neither may import
 // the other. A module never imports a sibling, so the assembly is a compose
 // orchestration that owns no entity of its own — the same shape compose/briefs
 // takes.

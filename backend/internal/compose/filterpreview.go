@@ -24,7 +24,7 @@ package compose
 // an agent reading records in bulk.
 //
 // Why un-logged is defensible at all, stated as the fact rather than the
-// intuition: GET /v1/people already returns the same Person projection, 200 rows
+// intuition: GET /v1/contacts already returns the same Contact projection, 200 rows
 // a page WITH a cursor, writing no ledger row either. Preview is strictly less
 // capable — 100 rows, no cursor — so it opens no channel a human with read access
 // did not have. The export's system_log row is about an extraction ARTIFACT

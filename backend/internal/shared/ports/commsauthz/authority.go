@@ -7,14 +7,14 @@ package commsauthz
 //
 // One rule, and it has no special cases: YOU MAY OVERRULE A DECISION MADE BELOW
 // YOUR LEVEL, NEVER AT OR ABOVE IT. The tiers are ordered by how much authority
-// the decision carries, not by how senior the person is — which is why the
+// the decision carries, not by how senior the contact is — which is why the
 // subject outranks the admin who administers the installation they are recorded
 // in.
 //
 // The engine deciding from evidence is the weakest, because it is a reading of
 // what the record happens to show and the record is often incomplete. A rep who
 // knows the customer phoned them can say so. An admin can overrule the rep. And
-// nobody overrules the person themselves: an Art. 21 objection to direct
+// nobody overrules the contact themselves: an Art. 21 objection to direct
 // marketing is absolute in law, so a product that offered an admin a button to
 // lift one would be offering a button that cannot lawfully be pressed.
 
@@ -36,7 +36,7 @@ const (
 	// somebody's recorded stop is a governance act, not wiring. An ops seat
 	// therefore decides at LevelUser and cannot overrule a rep's judgement.
 	LevelAdmin AuthorityLevel = "admin"
-	// LevelSubject is the person the data is about, acting for themselves.
+	// LevelSubject is the contact the data is about, acting for themselves.
 	LevelSubject AuthorityLevel = "subject"
 )
 
@@ -107,7 +107,7 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 // The question each arm answers is narrow: WHOSE DECISION WAS THIS. It is not
 // "how serious is the refusal" and not "how likely is a seat to be right". A
 // refusal can bind absolutely and still be nobody's decision — a dead mailbox,
-// a rolling volume window, an address the engine cannot resolve to one person.
+// a rolling volume window, an address the engine cannot resolve to one contact.
 // Those are facts about the world, and a fact is corrected rather than
 // overruled, which is why they are LevelMachine and a seat may clear them.
 //
@@ -116,13 +116,13 @@ func (l AuthorityLevel) CanOverrule(decided AuthorityLevel) bool {
 func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
 	// THE SUBJECT'S OWN ACT. An objection, a withdrawal, a restriction and a
-	// request to stop are things the person did, and Art. 21 makes the first
+	// request to stop are things the contact did, and Art. 21 makes the first
 	// absolute. Nobody in the installation lifts these, admin included.
 	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn:
 		return LevelSubject
 
 	// EVERYTHING ELSE IS THE ENGINE READING AN INCOMPLETE RECORD, and a seat
-	// may know better. That includes four refusals that BIND ABSOLUTELY but are
+	// may know better. That includes five refusals that BIND ABSOLUTELY but are
 	// nobody's decision, so being overrulable is the right answer for each:
 	//
 	//   - a hard bounce is a mailbox fact, cleared by correcting the address;
@@ -133,7 +133,12 @@ func LevelForReason(reasonCode string) AuthorityLevel {
 	//     wishes;
 	//   - an unconfirmed double opt-in is the absence of the subject's act
 	//     rather than an act, and an installation holding a paper opt-in needs
-	//     a way to say so.
+	//     a way to say so;
+	//   - a purpose contradicting the claim is a malformed REQUEST, corrected
+	//     by sending it with a purpose that means what the caller said. Nothing
+	//     about the recipient refuses it, and an admin who knows which of the
+	//     two the message really is can say so — by sending it again, which is
+	//     the remedy, not by overruling the recipient's wishes.
 	//
 	// Absolute and overrulable are different axes, and Absolute() already
 	// carries the first. Collapsing them here would make an admin stare at a

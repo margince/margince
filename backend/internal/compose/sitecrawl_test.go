@@ -185,6 +185,9 @@ func seedOnly(linkPaths ...string) map[string]fakeSitePage {
 
 func TestCrawlCapsZeroValueTakesTheDefaultsAndExplicitCapsHold(t *testing.T) {
 	defaulted := newSiteCrawler(&fakeSite{}, CrawlCaps{})
+	if defaulted.maxPages != 60 {
+		t.Fatalf("default page cap = %d, want 60", defaulted.maxPages)
+	}
 	if defaulted.maxPages != defaultCrawlMaxPages || defaulted.maxBytes != defaultCrawlMaxBytes || defaulted.wall != defaultCrawlWall {
 		t.Fatalf("zero caps gave %d pages / %d bytes / %s, want the defaults %d / %d / %s",
 			defaulted.maxPages, defaulted.maxBytes, defaulted.wall,
@@ -241,7 +244,7 @@ func TestCrawlContinuesAfterOnePageRequestTimesOut(t *testing.T) {
 	}
 	var timedOutUnreadable, laterPageRead bool
 	for _, skip := range crawl.Skipped {
-		if skip.URL == seedURL+"/impressum" && skip.Reason == crmcontracts.SiteReadSkipReasonUnreadable {
+		if skip.URL == seedURL+"/impressum" && skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonUnreadable {
 			timedOutUnreadable = true
 		}
 	}
@@ -321,12 +324,12 @@ func TestCrawlStopsAtThePageCapAndRecordsWhatWasCut(t *testing.T) {
 	if len(crawl.Pages) != maxPages {
 		t.Fatalf("fetched %d pages, want the cap %d", len(crawl.Pages), maxPages)
 	}
-	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonPageCap {
+	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonPageCap {
 		t.Fatalf("Stopped = %v, want page_cap", crawl.Stopped)
 	}
 	var capSkips int
 	for _, skip := range crawl.Skipped {
-		if skip.Reason == crmcontracts.SiteReadSkipReasonPageCap {
+		if skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonPageCap {
 			capSkips++
 		}
 	}
@@ -351,12 +354,12 @@ func TestCrawlStopsAtTheByteCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonByteCap {
+	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonByteCap {
 		t.Fatalf("Stopped = %v, want byte_cap", crawl.Stopped)
 	}
 	var found bool
 	for _, skip := range crawl.Skipped {
-		if skip.URL == seedURL+"/never-reached" && skip.Reason == crmcontracts.SiteReadSkipReasonByteCap {
+		if skip.URL == seedURL+"/never-reached" && skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonByteCap {
 			found = true
 		}
 	}
@@ -373,7 +376,7 @@ func TestCrawlRecordsARobotsRefusalAsASkip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := crawlSkip{URL: seedURL + "/impressum", Reason: crmcontracts.SiteReadSkipReasonRobots}
+	want := crawlSkip{URL: seedURL + "/impressum", Reason: crmcontracts.SiteReadSkipReasonSiteReadSkipReasonRobots}
 	var found bool
 	for _, skip := range crawl.Skipped {
 		if skip == want {
@@ -404,7 +407,7 @@ func TestCrawlNeverFollowsAnOffDomainLink(t *testing.T) {
 	}
 	var offDomainRecorded, subdomainFetched bool
 	for _, skip := range crawl.Skipped {
-		if skip.URL == hostileTarget && skip.Reason == crmcontracts.SiteReadSkipReasonOffDomain {
+		if skip.URL == hostileTarget && skip.Reason == crmcontracts.SiteReadSkipReasonSiteReadSkipReasonOffDomain {
 			offDomainRecorded = true
 		}
 	}
@@ -449,7 +452,7 @@ func TestCrawlClassifiesPageKinds(t *testing.T) {
 	site := &fakeSite{pages: seedOnly("/karriere")}
 	for path, text := range map[string]string{
 		"/impressum": "Acme GmbH, HRB 12345",
-		"/team":      "The people",
+		"/team":      "The contacts",
 		"/kontakt":   "Reach us",
 		"/services":  "What we do",
 		"/karriere":  "Open roles", // discovered link, no kind keyword → other
@@ -738,7 +741,7 @@ func TestCrawlStopsWhenTheClockRunsOut(t *testing.T) {
 	if len(crawl.Pages) != 1 {
 		t.Fatalf("fetched %d pages after the deadline, want only the seed", len(crawl.Pages))
 	}
-	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonDeadline {
+	if crawl.Stopped == nil || *crawl.Stopped != crmcontracts.SiteReadReportStoppedReasonSiteReadReportStoppedReasonDeadline {
 		t.Fatalf("Stopped = %v, want deadline", crawl.Stopped)
 	}
 }
@@ -796,7 +799,7 @@ func TestAutomaticReadsCarryTheirOwnPageCeiling(t *testing.T) {
 }
 
 // Only a human requester can be a human owner. A system namespace that happened
-// to name a uuid would otherwise be attributed to a person who never asked for
+// to name a uuid would otherwise be attributed to a contact who never asked for
 // the read — the provenance mistake this path exists to avoid.
 func TestOnlyAHumanNamespaceYieldsAnOwner(t *testing.T) {
 	human := ids.NewV7()
@@ -804,7 +807,7 @@ func TestOnlyAHumanNamespaceYieldsAnOwner(t *testing.T) {
 		t.Errorf("human requester = %v, want %v", got, human)
 	}
 	for _, requestedBy := range []string{
-		"system:" + ids.NewV7().String(), // a system uuid is not a person
+		"system:" + ids.NewV7().String(), // a system uuid is not a contact
 		systemAutoEnrichActor,
 		"agent:" + ids.NewV7().String(),
 		human.String(), // no namespace at all

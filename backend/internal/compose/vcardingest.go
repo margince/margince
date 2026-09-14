@@ -6,18 +6,18 @@ package compose
 // Importing the cards attached to one captured message.
 //
 // The authority question is the whole of this file. A card handed over by mail
-// creates and updates PEOPLE, and the obvious way to write them from a
+// creates and updates CONTACTS, and the obvious way to write them from a
 // background job — the system principal — is the wrong one: PrincipalSystem
 // bypasses object RBAC and row scope both, so it would happily update a contact
-// nobody may see and create people with no owner. What runs here instead is the
+// nobody may see and create contacts with no owner. What runs here instead is the
 // MAILBOX'S GRANTING USER: the human who connected the mailbox, with their live
 // permissions, teams and seat. The import can then reach exactly what that
-// person could reach by dragging the same file into the browser, which is the
+// contact could reach by dragging the same file into the browser, which is the
 // honest claim, because mail arriving in their mailbox is theirs to act on.
 //
 // When that human can no longer write — archived, suspended, seat downgraded —
 // the import stops rather than falling back to something stronger. A grant dies
-// with the person who gave it.
+// with the contact who gave it.
 
 import (
 	"context"
@@ -30,8 +30,8 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -155,12 +155,12 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 	// commits; the object-store fetches, and then a transaction per card, all
 	// happen after. A check here — before the writes, however close to them —
 	// would leave exactly the gap it looks like it closes.
-	store := people.NewStore(InstallationDB(w.pool))
+	store := contacts.NewStore(InstallationDB(w.pool))
 	results, err := store.ImportVCardsFromMessage(actorCtx, entries, args.Activity)
 	if err != nil {
 		return err
 	}
-	// The outcome per card, at info: this path writes people unattended, so
+	// The outcome per card, at info: this path writes contacts unattended, so
 	// "which contact did that come from" must be answerable from the log alone
 	// when somebody asks months later. The audit rows carry the same trace;
 	// this is what makes it findable without one.
@@ -170,64 +170,6 @@ func (w *vcardIngestWorker) importCards(ctx context.Context, args VCardIngestArg
 			"outcome", string(r.Outcome), "reason", r.Reason)
 	}
 	return w.stageReviews(actorCtx, args.Activity, entries, results)
-}
-
-// stageReviews turns every near-match into a proposal a human can decide.
-//
-// ImportVCards reports a card that RESEMBLES somebody rather than merging it,
-// and that verdict is only worth having if the question outlives the import. The
-// browser upload stages each one; without this the mailed path would log the
-// same verdict and drop it, so a contact who posted their card is never created
-// and nothing ever reaches a queue.
-//
-// The stager is self-only and takes the ACTING principal as the proposal's
-// subject, which here is the mailbox's granting human. That is the right
-// reviewer: the card arrived in their mailbox.
-func (w *vcardIngestWorker) stageReviews(ctx context.Context, activity ids.UUID, entries []people.VCardEntry, results []people.VCardResult) error {
-	return stageReviewsWith(ctx, w.log, activity, vcardCreateStager(w.pool), entries, results)
-}
-
-// stageReviewsWith is stageReviews against an injected stager, so a test can
-// make one card's stage fail without needing a real staging conflict — what
-// is under test is the aggregation below, not vcardCreateStager's own SQL.
-//
-// Every eligible card gets its own attempt: one card's staging fault must not
-// cost its siblings in the same message their own review, the way ImportVCards
-// already holds for the import itself.
-//
-// A card that failed is still worth a retry — the fault may be the database,
-// not the data — so the aggregate error is returned when any card failed, and
-// River still retries the whole message against vcardIngestMaxAttempts. It
-// wraps every card's error with errors.Join rather than reporting only the
-// count: Work classifies this error by errors.Is (ErrPermissionDenied,
-// ErrNotFound mean "not a fault, do not retry"), and a plain count would make
-// every staging failure look like a fault regardless of what actually failed.
-func stageReviewsWith(
-	ctx context.Context, log *slog.Logger, activity ids.UUID,
-	stage func(ctx context.Context, entry people.VCardEntry, candidate *ids.PersonID) error,
-	entries []people.VCardEntry, results []people.VCardResult,
-) error {
-	var eligible int
-	var failures []error
-	for _, r := range results {
-		// The index is ImportVCards' own position in the slice it was handed, so
-		// the bound is a belt on a contract that already holds — but a panic in
-		// an unattended writer is worth one comparison.
-		if r.Outcome != people.VCardNeedsReview || r.Index < 0 || r.Index >= len(entries) {
-			continue
-		}
-		eligible++
-		if err := stage(ctx, entries[r.Index], r.PersonID); err != nil {
-			log.ErrorContext(ctx, "a card attached to captured mail could not be staged for review",
-				"activity", activity, "card", r.Index+1, "err", err)
-			failures = append(failures, err)
-		}
-	}
-	if len(failures) > 0 {
-		return fmt.Errorf("compose: staging %d of %d mailed cards for review: %w",
-			len(failures), eligible, errors.Join(failures...))
-	}
-	return nil
 }
 
 // asMailboxGrantor binds the human who connected the mailbox this message
@@ -262,7 +204,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// stops the import rather than choosing one.
 	//
 	// The format is capture's, spelled again here because a module never imports
-	// a sibling; capture.connectorProvenance owns it, and people's own signature
+	// a sibling; capture.connectorProvenance owns it, and contacts's own signature
 	// candidates carry a third copy for the same reason. Nothing holds the three
 	// to each other, and a change to the Go owner makes every SQL copy match zero
 	// rows — which stops this import with no failing assertion anywhere.
@@ -270,7 +212,7 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 	// status = 'connected' with the archive test, because a mailbox the human
 	// DISCONNECTED without archiving is a grant they took back. The signature
 	// pass reads the same connection for its own switch, and this path writes
-	// people rather than filling a field, so it may not be the looser of the two.
+	// contacts rather than filling a field, so it may not be the looser of the two.
 	err = w.pool.QueryRow(ctx, `
 		SELECT cc.user_id, cc.provider
 		  FROM activity a
@@ -326,14 +268,14 @@ func (w *vcardIngestWorker) asMailboxGrantor(ctx context.Context, args VCardInge
 // The check exists because the trigger fired when the message was captured, and
 // a human or a verdict can narrow, restrict or archive that message before this
 // job runs. What this writes is a name, a number and a postal address onto
-// people every seat can read — so copying a narrowed message's contents into
-// person records republishes it in a form the narrowing does not reach.
-func (w *vcardIngestWorker) readCards(ctx context.Context, activity ids.UUID) ([]people.VCardEntry, error) {
+// contacts every seat can read — so copying a narrowed message's contents into
+// contact records republishes it in a form the narrowing does not reach.
+func (w *vcardIngestWorker) readCards(ctx context.Context, activity ids.UUID) ([]contacts.VCardEntry, error) {
 	keys, err := w.liveCardKeys(ctx, activity)
 	if err != nil || len(keys) == 0 {
 		return nil, err
 	}
-	var entries []people.VCardEntry
+	var entries []contacts.VCardEntry
 	for _, key := range keys {
 		parsed, err := w.parseCard(ctx, key)
 		if err != nil {
@@ -416,7 +358,7 @@ func (w *vcardIngestWorker) liveCardKeys(ctx context.Context, activity ids.UUID)
 // file that is not a card at all. Refusing would retry the same unparseable
 // bytes and then cancel the whole message's import, losing the cards in the
 // attachment beside it.
-func (w *vcardIngestWorker) parseCard(ctx context.Context, key string) ([]people.VCardEntry, error) {
+func (w *vcardIngestWorker) parseCard(ctx context.Context, key string) ([]contacts.VCardEntry, error) {
 	body, _, err := w.blob.Get(ctx, key)
 	if err != nil {
 		return nil, fmt.Errorf("compose: opening a stored card: %w", err)
@@ -426,7 +368,7 @@ func (w *vcardIngestWorker) parseCard(ctx context.Context, key string) ([]people
 			w.log.WarnContext(ctx, "closing a stored card", "err", cerr)
 		}
 	}()
-	entries, err := people.ParseVCards(body)
+	entries, err := contacts.ParseVCards(body)
 	if err != nil {
 		w.log.InfoContext(ctx, "an attachment that looked like a card did not parse as one", "err", err)
 		return nil, nil

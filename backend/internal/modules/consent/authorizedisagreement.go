@@ -63,7 +63,7 @@ type Disagreement struct {
 
 // DisagreementReport reads how the engine and the old gate have differed.
 //
-// Gated on reading the installation's own settings rather than on a person:
+// Gated on reading the installation's own settings rather than on a contact:
 // this discloses nothing about any subject — no address, no name, no consent
 // state — only how two rules have compared across the installation. It is an
 // operational question about the product, and the audience is whoever decides

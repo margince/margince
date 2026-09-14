@@ -121,7 +121,7 @@ func TestIngestHonorsStalenessAndTombstone(t *testing.T) {
 func TestIngestAcceptsAReprojectionAtTheSameBaseline(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "1"
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
@@ -163,7 +163,7 @@ func TestIngestAcceptsAReprojectionAtTheSameBaseline(t *testing.T) {
 func TestIngestAcceptsAReprojectionOverAnUnfingerprintedRow(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "2"
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
@@ -210,7 +210,7 @@ func TestIngestAcceptsAReprojectionOverAnUnfingerprintedRow(t *testing.T) {
 func TestIngestStillRefusesAnOlderReadAtTheSameFingerprint(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "3"
 	const fingerprint = "fingerprint-one"
 
@@ -251,7 +251,7 @@ func TestIngestStillRefusesAnOlderReadAtTheSameFingerprint(t *testing.T) {
 func TestIngestRefusesAnOlderReadEvenAtADifferentFingerprint(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass = "person"
+	const objectClass = "contact"
 	const externalID = "4"
 
 	newer := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
@@ -304,7 +304,7 @@ func TestIngestRefusesAnOlderReadEvenAtADifferentFingerprint(t *testing.T) {
 	}
 }
 
-// reprojectionFailureRecord answers the declaration the "person" row named by
+// reprojectionFailureRecord answers the declaration the "contact" row named by
 // externalID records it could not reach, read straight from the column, with a
 // NULL — the state of almost every row — rendered as the empty string the read
 // paths coalesce it to. That is the direct evidence and the only kind there is
@@ -316,9 +316,9 @@ func reprojectionFailureRecord(ctx context.Context, t *testing.T, pool *pgxpool.
 	var recorded *string
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT reprojection_failed_for FROM overlay_mirror
-			WHERE object_class='person' AND external_id=$1`, externalID).Scan(&recorded)
+			WHERE object_class='contact' AND external_id=$1`, externalID).Scan(&recorded)
 	}); err != nil {
-		t.Fatalf("reading person/%s's re-projection failure record: %v", externalID, err)
+		t.Fatalf("reading contact/%s's re-projection failure record: %v", externalID, err)
 	}
 	if recorded == nil {
 		return ""
@@ -333,7 +333,7 @@ func reprojectionFailureRecord(ctx context.Context, t *testing.T, pool *pgxpool.
 func TestRecordReprojectionFailureStoresTheFingerprintItFailedToReach(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass, externalID = "person", "10"
+	const objectClass, externalID = "contact", "10"
 
 	if err := store.Ingest(ctx, Record{
 		ObjectClass: objectClass, ExternalID: externalID,
@@ -358,7 +358,7 @@ func TestRecordReprojectionFailureStoresTheFingerprintItFailedToReach(t *testing
 func TestIngestClearsAReprojectionFailureRecord(t *testing.T) {
 	ctx, pool, ws := testWorkspaceCtx(t)
 	store := NewMirrorStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)), noOwnerEmails{})
-	const objectClass, externalID = "person", "11"
+	const objectClass, externalID = "contact", "11"
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 
 	if err := store.Ingest(ctx, Record{

@@ -220,8 +220,8 @@ func TestSubscribableEventTypeEnumMatchesPayloadCatalog(t *testing.T) {
 
 // dynamicProbeResolved names the x-entity-type: dynamic events whose runtime
 // subject IS a row-scoped record the fan-out gate probes — the subject class
-// travels at runtime (person XOR lead for consent.changed;
-// person/lead/deal/activity for retention.applied) rather than being fixed
+// travels at runtime (contact XOR lead for consent.changed;
+// contact/lead/deal/activity for retention.applied) rather than being fixed
 // in the schema, but every value it takes hits a probe branch in
 // entityVisibleTo, so delivery is authorized, not deferred. This is the
 // hand-ratified half of the dynamic-event partition (the deferred half lives
@@ -230,8 +230,8 @@ func TestSubscribableEventTypeEnumMatchesPayloadCatalog(t *testing.T) {
 // event is stale and fails below; a dynamic event in neither set is a silent
 // default and also fails.
 var dynamicProbeResolved = gatekit.Waive(map[string]string{
-	"consent.changed":   "subject is person XOR lead (consent/store.go stamps sub.entityType) — both hit the row-scope probe branch",
-	"retention.applied": "subject is person/lead/deal/activity for policy-driven sweeps (all row-scope probed); its ownerless ai_call/ai_call_payload/voice_learning_signal telemetry subjects are the deferredDeliveryEntities half",
+	"consent.changed":   "subject is contact XOR lead (consent/store.go stamps sub.entityType) — both hit the row-scope probe branch",
+	"retention.applied": "subject is contact/lead/deal/activity for policy-driven sweeps (all row-scope probed); its ownerless ai_call/ai_call_payload/voice_learning_signal telemetry subjects are the deferredDeliveryEntities half",
 })
 
 func TestEverySubscribableEventIsDeliveryResolvable(t *testing.T) {
@@ -355,7 +355,7 @@ func parseDeliveryClassification(t *testing.T) deliveryClassification {
 		t.Fatalf("parse %s: %v", deliveryVisibilityPath, err)
 	}
 	return deliveryClassification{
-		probeEntities:     switchCaseStrings(t, file, "entityVisibleTo"),
+		probeEntities:     switchCaseStrings(t, file, "entityVisibleTo", constValuesIn(t, deliveryVisibilityPath)),
 		workspaceEntities: mapLiteralKeys(t, file, "workspaceLevelEntities"),
 		deferredEntities:  mapLiteralKeys(t, file, "deferredDeliveryEntities"),
 		deferredEvents:    mapLiteralKeys(t, file, "deferredDeliveryEvents"),
@@ -407,7 +407,7 @@ func mapLiteralKeys(t *testing.T, file *ast.File, name string) map[string]bool {
 // switchCaseStrings collects every string literal appearing in a case clause
 // inside the named function's body — the row-scope probe branches of
 // entityVisibleTo's `switch entityType`.
-func switchCaseStrings(t *testing.T, file *ast.File, funcName string) map[string]bool {
+func switchCaseStrings(t *testing.T, file *ast.File, funcName string, consts map[string]string) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
 	found := false
@@ -423,8 +423,19 @@ func switchCaseStrings(t *testing.T, file *ast.File, funcName string) map[string
 				return true
 			}
 			for _, expr := range cc.List { // empty for the default clause
-				if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					out[gatekit.TextOf(lit)] = true
+				switch e := expr.(type) {
+				case *ast.BasicLit:
+					if e.Kind == token.STRING {
+						out[gatekit.TextOf(e)] = true
+					}
+				case *ast.Ident:
+					// A case label that NAMES its value is the same label. A
+					// census reading only literals goes short the moment
+					// somebody lifts one into a constant, and reports the
+					// entity it stopped seeing as unresolvable.
+					if value, ok := consts[e.Name]; ok {
+						out[value] = true
+					}
 				}
 			}
 			return true

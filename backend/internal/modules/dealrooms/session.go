@@ -27,7 +27,7 @@ type Session struct {
 	ID            ids.UUID
 	ParticipantID ids.DealRoomParticipantID
 	RoomID        ids.DealRoomID
-	// Capability is the seller's decision about this person: `view` reads
+	// Capability is the seller's decision about this contact: `view` reads
 	// only, `comment` may also write in the conversation. Read at every
 	// write, so a capability lowered after sign-in binds on the next request.
 	Capability string

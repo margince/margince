@@ -123,7 +123,7 @@ type Config struct {
 	// otherwise would be a setting nobody set.
 	SilentDays int
 	// MaterialMinor is the amount below which a discrepancy is not worth a
-	// person's morning.
+	// contact's morning.
 	MaterialMinor int64
 	// MaxClosePushes is how many times a date may move before the date itself
 	// is the finding rather than the moves.
@@ -227,7 +227,7 @@ func amountVsContract() Rule {
 // amountDisagreement is the shared shape of the two money rules.
 //
 // Below the materiality threshold it says nothing: a discrepancy of a few cents
-// is rounding somewhere, and a finding about it costs a person's morning to
+// is rounding somewhere, and a finding about it costs a contact's morning to
 // dismiss.
 func amountDisagreement(kind string, s Subject, against *int64, slot string, cfg Config) *Finding {
 	if s.AmountMinor == nil || against == nil {

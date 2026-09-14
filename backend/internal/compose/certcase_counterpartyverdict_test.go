@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -119,8 +120,8 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 	}{
 		{
 			name:       "the expected verdict, well formed",
-			expected:   capture.KindPerson,
-			answer:     func(id string) string { return verdictReply(id, capture.KindPerson) },
+			expected:   capture.KindContact,
+			answer:     func(id string) string { return verdictReply(id, capture.KindContact) },
 			wantResult: aitasks.OutcomeAccepted,
 		},
 		{
@@ -128,23 +129,23 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// answer about an address nobody asked about is the shape a talked-into
 			// model takes, and the record has to be able to say so.
 			name:     "an answer about a sender nobody asked about",
-			expected: capture.KindPerson,
+			expected: capture.KindContact,
 			answer: func(string) string {
-				return verdictReply(ids.NewV7().String(), capture.KindPerson)
+				return verdictReply(ids.NewV7().String(), capture.KindContact)
 			},
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "was not requested",
 		},
 		{
 			name:       "a verdict outside the closed vocabulary",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(id string) string { return verdictReply(id, capture.PendingStatusUnsure) },
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "is not one of " + strings.Join(verdictKindNames(), "|"),
 		},
 		{
 			name:       "a reply that is not the required JSON",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(string) string { return "I decline to answer." },
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "unparseable",
@@ -153,7 +154,7 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// Well formed and wrong is a measurement of the model, not a defect in
 			// the reply — the opposite fix from every case above it.
 			name:       "a well-formed answer the scenario disagrees with",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(id string) string { return verdictReply(id, capture.KindSpam) },
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: capture.KindSpam,
@@ -181,15 +182,38 @@ func TestVerdictFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	if err := json.Unmarshal(verdictFixture(t), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
-	given := map[string]bool{"display_name": true, "email": true, "subject": true, "body": true}
+	// The set is derived from the LEDGER ROW — the thing production actually
+	// hands the engine — not from the fixture struct.
+	//
+	// Deriving it from the fixture would be self-validating: the JSON under
+	// test is marshalled from that same struct, so any field added there would
+	// permit itself and the gate would agree with whatever it was shown. The
+	// ledger row is the independent subject, and a fixture field with no
+	// counterpart on it is exactly the invention this test exists to catch.
+	//
+	// Matched case-insensitively on the Go field name: the fixture's json tags
+	// are snake_case and the row's fields are not tagged at all, so the names
+	// are the only thing the two share.
+	given := map[string]bool{}
+	rowType := reflect.TypeFor[capture.PendingCounterparty]()
+	for i := range rowType.NumField() {
+		given[strings.ToLower(strings.ReplaceAll(rowType.Field(i).Name, "_", ""))] = true
+	}
+	if len(given) == 0 {
+		t.Fatal("no fields found on the ledger row — this census read nothing and would " +
+			"report PASS over any fixture at all")
+	}
 	for name := range fields {
-		if !given[name] {
+		if !given[strings.ReplaceAll(name, "_", "")] {
 			t.Errorf("the fixture carries %q, which the ledger row does not hand the engine", name)
 		}
 	}
-	for name := range given {
-		if _, present := fields[name]; !present {
-			t.Errorf("the fixture drops %q, which production always supplies", name)
+	// Only the fields a scenario must always state. Direction and wrote_back are
+	// deliberately absent: a row written before they were recorded carries
+	// neither, and a scenario describing one is a real ledger row.
+	for _, always := range []string{"display_name", "email", "subject", "body"} {
+		if _, present := fields[always]; !present {
+			t.Errorf("the fixture drops %q, which production always supplies", always)
 		}
 	}
 }
@@ -203,12 +227,12 @@ func TestVerdictCaseMintsTheRowIDRatherThanReadingIt(t *testing.T) {
 
 	ask := func() string {
 		t.Helper()
-		prepared, err := counterpartyVerdictCases{}.Prepare(fixture, verdictExpectation(t, capture.KindPerson))
+		prepared, err := counterpartyVerdictCases{}.Prepare(fixture, verdictExpectation(t, capture.KindContact))
 		if err != nil {
 			t.Fatalf("preparing the case: %v", err)
 		}
 		stub := &verdictCompleterStub{answer: func(id string) string {
-			return verdictReply(id, capture.KindPerson)
+			return verdictReply(id, capture.KindContact)
 		}}
 		if _, err := prepared.Run(context.Background(), stub); err != nil {
 			t.Fatalf("running the case: %v", err)
@@ -233,8 +257,8 @@ func TestVerdictCaseMintsTheRowIDRatherThanReadingIt(t *testing.T) {
 // production request but recorded nothing would certify a request nobody can
 // inspect.
 func TestVerdictCaseTraceCarriesTheRequestItIssued(t *testing.T) {
-	outcome, trace := runVerdictCase(t, capture.KindPerson,
-		func(id string) string { return verdictReply(id, capture.KindPerson) })
+	outcome, trace := runVerdictCase(t, capture.KindContact,
+		func(id string) string { return verdictReply(id, capture.KindContact) })
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want accepted", outcome.Result, outcome.Detail)
@@ -272,7 +296,7 @@ func TestVerdictCaseRefusesAnUnreachableExpectedVerdict(t *testing.T) {
 // nothing about the reply — and a case that ran it anyway would report a number
 // nobody wrote a claim for.
 func TestVerdictCaseRefusesAnExpectationItCannotRead(t *testing.T) {
-	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"verdict":"person"}`), json.RawMessage(`7`)} {
+	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"verdict":"contact"}`), json.RawMessage(`7`)} {
 		_, err := counterpartyVerdictCases{}.Prepare(verdictFixture(t), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)

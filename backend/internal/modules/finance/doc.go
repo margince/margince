@@ -16,7 +16,7 @@
 // artifact and asserts no tax position.
 //
 // The mirror is subordinate. A customer link maps two identifiers and
-// never merges: an accounting customer never becomes an organization,
+// never merges: an accounting customer never becomes a company,
 // and an unmapped one is a visible state rather than an auto-created
 // company.
 //

@@ -11,7 +11,7 @@ package agents
 // it leaves the workspace, which contract operation it maps to. A model choosing
 // between catch_me_up_on, prep_for_meeting, read_record and run_report is not
 // short of any of that; it is short of what each one produces and which of the
-// four its goal is asking for. Only a person who knows all four can write that
+// four its goal is asking for. Only a contact who knows all four can write that
 // down, so it is written down.
 //
 // WHY FOUR FIELDS AND ONE STRING. The four are the questions a wrong call

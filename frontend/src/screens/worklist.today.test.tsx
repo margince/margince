@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -40,7 +40,7 @@ function aTask(over = {}) {
     actions: ["complete", "snooze"],
     primary_action: "complete",
     subject: {
-      type: "person",
+      type: "contact",
       id: "01a05500-0000-7000-8000-000000000011",
       label: "Alice Müller",
     },
@@ -147,7 +147,7 @@ describe("the day is one panel", () => {
             source: "customer_waiting",
             category: "customer_waiting",
             subject: {
-              type: "person",
+              type: "contact",
               id: "01a05500-0000-7000-8000-0000000000aa",
               label: "Kirsten Vogel",
             },
@@ -162,7 +162,7 @@ describe("the day is one panel", () => {
     await waitFor(() => {
       expect(screen.getByRole("complementary")).toBeTruthy();
     });
-    // Exactly one row marked, and it is the person row rather than the deal.
+    // Exactly one row marked, and it is the contact row rather than the deal.
     const marked = container.querySelectorAll(".worklist-row-selected");
     expect(marked).toHaveLength(1);
     expect(marked[0].textContent).toContain("Kirsten replied");
@@ -267,7 +267,13 @@ describe("a clear day says whose it is", () => {
 
 describe("a task is finished where the reader is standing", () => {
   it("submits once however fast the reader presses", async () => {
+    const user = userEvent.setup();
+    let release: ((value: Response) => void) | undefined;
+    const response = new Promise<Response>((resolve) => {
+      release = resolve;
+    });
     let patches = 0;
+    let completed = false;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -275,48 +281,38 @@ describe("a task is finished where the reader is standing", () => {
         const url = String(request?.url ?? input);
         if (request?.method === "PATCH") {
           patches += 1;
-          // HELD, the way a real network holds it. A PATCH that resolves in
-          // the same tick never lets the button paint its busy state, so the
-          // test would be measuring the mock rather than the guard.
-          await new Promise((settle) => setTimeout(settle, 20));
-          return new Response(null, { status: 204 });
+          return response;
         }
         if (url.includes("/worklist")) {
-          return new Response(
-            JSON.stringify(
-              day({
-                queue: [aTask()],
-                summary: { urgent: 0, due: 0, lower_priority: 1, total: 1 },
-              }),
-            ),
-            { status: 200, headers: { "content-type": "application/json" } },
+          return jsonResponse(
+            day({
+              queue: completed ? [] : [aTask()],
+              summary: {
+                urgent: 0,
+                due: 0,
+                lower_priority: completed ? 0 : 1,
+                total: completed ? 0 : 1,
+              },
+            }),
           );
         }
-        return new Response(JSON.stringify({ data: [] }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        });
+        return jsonResponse({ data: [] });
       }),
     );
     renderWorklist();
 
     const done = await screen.findByRole("button", { name: "Done" });
-    // Two presses with no wait between them. The mutation holds the button
-    // pending until the refetch it triggered has settled, so the second press
-    // lands on a disabled control — without that the row sits there finished
-    // and pressable, and the second PATCH answers for a task already done.
-    await userEvent.click(done);
-    await userEvent.click(done);
-
-    // ONE write, however many presses. `Button` drops its `onClick` while
-    // `pending`, and the mutation stays pending until the refetch it triggered
-    // has settled — so the finished row is never both on screen and pressable.
-    // ONE write, and exactly one: `toBe(1)` excludes the second press getting
-    // through AND excludes neither press landing, so a button wired to nothing
-    // fails here just as a double-submitting one does.
-    await waitFor(() => {
+    try {
+      await user.click(done);
+      await user.click(done);
       expect(patches).toBe(1);
-    });
+    } finally {
+      completed = true;
+      release?.(new Response(null, { status: 204 }));
+    }
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Done" })).toBeNull(),
+    );
   });
 
   it("completes it rather than navigating to it", async () => {

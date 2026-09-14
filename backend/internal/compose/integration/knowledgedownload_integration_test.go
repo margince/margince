@@ -90,8 +90,8 @@ func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
 		t.Fatalf("decode upload response: %v", err)
 	}
 
-	// A REP, who holds knowledge_document:read, must be served — the person who
-	// received a cited answer is exactly the person who needs to open what it
+	// A REP, who holds knowledge_document:read, must be served — the contact who
+	// received a cited answer is exactly the contact who needs to open what it
 	// cited, and a download only admins can use makes every citation
 	// uncheckable for everyone else.
 	rep := e.As(e.Rep1, nil, corpusRepPerms)
@@ -115,7 +115,7 @@ func TestDownloadingWithoutTheDocumentGrantIsRefused(t *testing.T) {
 }
 
 // An id that names no document is 404, and the body says nothing about whether
-// some other organization holds one — existence stays hidden.
+// some other company holds one — existence stays hidden.
 func TestDownloadingAnUnknownDocumentIs404(t *testing.T) {
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)

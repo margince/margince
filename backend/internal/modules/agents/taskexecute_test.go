@@ -22,7 +22,7 @@ import (
 
 // The status machine: each thing a human can do to the staged proposal maps to
 // exactly one task state, and `rejected` is the one that reads backwards —
-// a person declining is a RESULT the surface returned, not a protocol fault.
+// a contact declining is a RESULT the surface returned, not a protocol fault.
 func TestEachApprovalOutcomeMapsToItsOwnTaskState(t *testing.T) {
 	for _, tc := range []struct {
 		decision   ApprovalDecision
@@ -113,7 +113,7 @@ func TestACompletedTasksResultIsWithheldOnceItsRecordsAreNoLongerReadable(t *tes
 	}
 }
 
-// What is executed is what the PERSON released, not what the agent proposed. A
+// What is executed is what the CONTACT released, not what the agent proposed. A
 // human may edit a staged proposal before approving it, which rewrites both the
 // payload and the hash that opens it — so a task replaying its original
 // arguments would perform the wrong change and be refused for saying so.

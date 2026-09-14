@@ -22,7 +22,7 @@ import "github.com/margince/margince/backend/internal/shared/ports/mcp"
 // plans carries exactly one datasource.EntityRef in its Target (a
 // single entity by construction — see ApplyActions' switch), and
 // assign_lead_owner — the only live user of "assign_owner" — resolves
-// its owner through people's own lead-routing SQL, never through this
+// its owner through contacts's own lead-routing SQL, never through this
 // resolver or ApplyActions' ActionAssignOwner case at all. Bulk exists
 // so the day a workspace author defines a genuinely bulk-scope
 // reassignment automation, ApplyActions already has a resolver ready to

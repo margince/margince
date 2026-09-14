@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ const labels = {
   ],
   reason: "Why",
   reasonHelp:
-    "The next person to see the number is owed the reason it is not flagged.",
+    "The next contact to see the number is owed the reason it is not flagged.",
   remindAt: "Bring it back on",
   expiresAt: "Stops holding on",
   expiresHelp: "At most 90 days.",
@@ -48,7 +48,7 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
 
     // An answer that hides nothing needs no reason — demanding one would make
-    // the common answers tedious enough that people stop giving them.
+    // the common answers tedious enough that contacts stop giving them.
     await user.click(screen.getByLabelText("I corrected the record"));
     expect(screen.queryByLabelText("Why")).toBeNull();
 

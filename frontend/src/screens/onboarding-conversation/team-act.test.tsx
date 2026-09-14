@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -116,7 +116,7 @@ describe("TeamAct", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it("an invite lists the person, turns the skip into a finish, and mints their link where no mail can carry it", async () => {
+  it("an invite lists the colleague, turns the skip into a finish, and mints their link where no mail can carry it", async () => {
     renderTeam({ passwordLink: true });
     const user = userEvent.setup();
 

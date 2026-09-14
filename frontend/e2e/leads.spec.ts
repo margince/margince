@@ -3,7 +3,7 @@ import { mockApi } from "./seed";
 
 /**
  * The lead surface end to end (ADR-0118, ADR-0119): the list names
- * the owner and opens the LEAD's own page (never the person's), the page can
+ * the owner and opens the LEAD's own page (never the contact's), the page can
  * be worked (a note logged against the lead), and promotion says what it will
  * do before it does it. German chrome, as the app renders it.
  */
@@ -19,10 +19,10 @@ test("AC-leads-list: a row names its owner and opens the lead's own page", async
   const row = page.getByRole("row", { name: /Jonas Petersen/ });
   await expect(row).toBeVisible();
   // The owner column answers "whose lead is this" — the same column the
-  // people and company lists carry, never "typed by a person".
+  // contacts and company lists carry, never "typed by a person".
   await expect(row).toContainText("Lena Fischer");
   // The link's accessible name also carries the company, while the row's
-  // selection checkbox carries the same person's name. Role plus a
+  // selection checkbox carries the same contact's name. Role plus a
   // start-anchored name selects the route without coupling to the company.
   await row.getByRole("link", { name: /^Jonas Petersen/ }).click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
@@ -46,12 +46,12 @@ test("AC-leaddetail-work: a note is logged against the lead itself", async ({
   const request = await posted;
   const body = request.postDataJSON();
   expect(body.subject).toBe("Rückruf vereinbart");
-  // The link is the LEAD, not a person: this is what activity_link's lead arm
+  // The link is the LEAD, not a contact: this is what activity_link's lead arm
   // (migration 0038) exists for.
   expect(body.links).toEqual([{ entity_type: "lead", entity_id: "l-1" }]);
 });
 
-test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, then the page stays and names the person", async ({
+test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, then the page stays and names the contact", async ({
   page,
 }) => {
   await page.goto("/#/leads/l-1");

@@ -66,9 +66,22 @@ const ANSWERED_BY = {
   // reader to the record to press reply there, which is the hand-off the queue
   // exists to remove.
   reply: { how: "inline", file: "worklist.row.tsx" },
+  // Putting an overnight correction back acts in place, on the receipt that
+  // reported it. It is the one verb this queue draws OUTSIDE the row: the
+  // handled panel is where a change nobody was asked about is told, so it is
+  // also where the way back belongs. Routing it would send the reader to the
+  // deal's history to find the entry themselves.
+  undo: {
+    how: "inline",
+    file: "worklist.receiptundo.tsx",
+    // The receipt is not a queue row and carries no `actions` array, so the
+    // control asks the field that decides it: a receipt with no `undo` is an
+    // approval somebody agreed to, and there is nothing to take back.
+    guardedBy: "if (!undo)",
+  },
 } as const satisfies Record<
   Verb,
-  { how: "routed" } | { how: "inline"; file: string }
+  { how: "routed" } | { how: "inline"; file: string; guardedBy?: string }
 >;
 
 describe("a row claims no verb it cannot perform", () => {
@@ -142,6 +155,14 @@ describe("a row claims no verb it cannot perform", () => {
       // pattern anchors on that field name, not on the bare word, so a verb
       // mentioned in a comment beside the table still fails.
       const source = readFileSync(join(SCREENS, where.file), "utf8");
+      if ("guardedBy" in where) {
+        // A verb the item's `actions` list does not carry. The receipt has no
+        // actions array — it is not a queue row — so its control is guarded on
+        // the field that decides it instead, and this names that field. Same
+        // obligation as the three spellings below: the control must ASK, and
+        // deleting the question must fail here.
+        return !source.includes(where.guardedBy);
+      }
       return !(
         source.includes(`offered("${verb}")`) ||
         source.includes(`includes("${verb}")`) ||

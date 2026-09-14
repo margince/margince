@@ -17,10 +17,10 @@ package usecases
 // arrives here as FIELDS.
 //
 // The two lanes are deliberately different products and this suite pins both:
-// an email address belongs to one person, so a second create on the same
+// an email address belongs to one contact, so a second create on the same
 // address is REFUSED; a phone number belongs to a switchboard, so a second
 // create sharing one LANDS and files a candidate for review. Collapsing them
-// would either lose real people or let real duplicates through.
+// would either lose real contacts or let real duplicates through.
 //
 // NOT covered here:
 //
@@ -62,7 +62,7 @@ const (
 func (s *scenario) createFromCard(t *testing.T, fields map[string]any) createdFromCard {
 	t.Helper()
 	got := s.MCP.CallOK(t, "create_record", map[string]any{
-		"record_type": "person", "fields": fields,
+		"record_type": "contact", "fields": fields,
 	})
 	var created createdFromCard
 	got.JSON(t, &created)
@@ -84,7 +84,7 @@ func cardFields(email string) map[string]any {
 	}
 }
 
-// TestCase2TheSamePersonIsNotCreatedTwice pins criteria 1 and 2.
+// TestCase2TheSameContactIsNotCreatedTwice pins criteria 1 and 2.
 //
 // The system refuses; it does not rely on the assistant being careful. An
 // assistant that checked first is good behaviour and not a guarantee — the same
@@ -92,16 +92,16 @@ func cardFields(email string) map[string]any {
 //
 // Criterion 2 is the half that makes the refusal usable: "already exists" is
 // not enough, it has to say WHO, so the user can go and look.
-func TestCase2TheSamePersonIsNotCreatedTwice(t *testing.T) {
+func TestCase2TheSameContactIsNotCreatedTwice(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 
 	first := s.createFromCard(t, cardFields(cardEmail))
 	if first.ID.IsZero() {
-		t.Fatalf("case 2: the first card did not create a person")
+		t.Fatalf("case 2: the first card did not create a contact")
 	}
 
 	refusal := s.MCP.CallRefused(t, "create_record", map[string]any{
-		"record_type": "person", "fields": cardFields(cardEmail),
+		"record_type": "contact", "fields": cardFields(cardEmail),
 	})
 	if !strings.Contains(strings.ToLower(refusal), "already exists") {
 		t.Fatalf("case 2 criterion 1: a second card for the same address was not refused as a "+
@@ -114,17 +114,17 @@ func TestCase2TheSamePersonIsNotCreatedTwice(t *testing.T) {
 			"told no and given nowhere to look:\n%s", refusal)
 	}
 
-	if people := s.countRows(t,
-		`SELECT count(*) FROM person WHERE full_name = $1 AND archived_at IS NULL`,
-		cardName); people != 1 {
-		t.Fatalf("case 2 criterion 1: the workspace holds %d people called %s after the same card "+
-			"was added twice", people, cardName)
+	if contacts := s.countRows(t,
+		`SELECT count(*) FROM contact WHERE full_name = $1 AND archived_at IS NULL`,
+		cardName); contacts != 1 {
+		t.Fatalf("case 2 criterion 1: the workspace holds %d contacts called %s after the same card "+
+			"was added twice", contacts, cardName)
 	}
 }
 
 // TestCase2ASharedPhoneLandsAndIsFiledForReview pins criterion 3.
 //
-// A switchboard belongs to many people, so this must NOT refuse — refusing
+// A switchboard belongs to many contacts, so this must NOT refuse — refusing
 // would lose a real second contact at a company whose number everyone shares.
 // It lands, and a possible duplicate is filed rather than lost.
 func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
@@ -140,7 +140,7 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 			"shared number is not a shared identity and refusing loses a real contact")
 	}
 	if second.ID == first.ID {
-		t.Fatalf("case 2 criterion 3: the second card returned the first person's id rather than " +
+		t.Fatalf("case 2 criterion 3: the second card returned the first contact's id rather than " +
 			"creating a record")
 	}
 
@@ -189,7 +189,7 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 
 // TestCase2ATagIsAppliedByNameInOneStep pins criterion 6.
 //
-// By NAME, in one call: "Add tag: Champion" is one act to the person asking,
+// By NAME, in one call: "Add tag: Champion" is one act to the contact asking,
 // and an assistant that had to look the id up first would be two round trips
 // deep in a conversation about a business card.
 //
@@ -198,13 +198,13 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 // as an admin first, which is the same order a real workspace works in.
 func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 	s := boot(t, scopesReadWrite)
-	person := s.createFromCard(t, cardFields(cardEmail))
+	contact := s.createFromCard(t, cardFields(cardEmail))
 
 	const word = "Tech Sauce Bangkok 2026"
 	s.seedTag(t, word)
 
 	got := s.MCP.CallOK(t, "apply_tag", map[string]any{
-		"tag_name": word, "record_type": "person", "record_id": person.ID.String(),
+		"tag_name": word, "record_type": "contact", "record_id": contact.ID.String(),
 	})
 	var applied agents.TagAppliedResult
 	got.JSON(t, &applied)
@@ -216,9 +216,9 @@ func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 		t.Fatalf("case 2 criterion 6: the tag was applied without naming the word's id, so a " +
 			"caller cannot refer to it again")
 	}
-	if n := s.countRows(t, `SELECT count(*) FROM taggable WHERE tag_id = $1 AND entity_type = 'person' AND entity_id = $2`,
-		applied.TagID, person.ID); n != 1 {
-		t.Fatalf("case 2 criterion 6: the tag reports applied and %d rows attach it to the person", n)
+	if n := s.countRows(t, `SELECT count(*) FROM taggable WHERE tag_id = $1 AND entity_type = 'contact' AND entity_id = $2`,
+		applied.TagID, contact.ID); n != 1 {
+		t.Fatalf("case 2 criterion 6: the tag reports applied and %d rows attach it to the contact", n)
 	}
 	if name := s.readString(t, "tag", "name", applied.TagID); name != word {
 		t.Fatalf("case 2 criterion 6: the applied tag reads %q, want %q", name, word)
@@ -232,11 +232,11 @@ func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 // preventing.
 func TestCase2AnUnknownTagNameIsRefusedRatherThanCoined(t *testing.T) {
 	s := boot(t, scopesReadWrite)
-	person := s.createFromCard(t, cardFields(cardEmail))
+	contact := s.createFromCard(t, cardFields(cardEmail))
 
 	const unknown = "Tech Sauce Bangkok 2027"
 	s.MCP.CallRefused(t, "apply_tag", map[string]any{
-		"tag_name": unknown, "record_type": "person", "record_id": person.ID.String(),
+		"tag_name": unknown, "record_type": "contact", "record_id": contact.ID.String(),
 	})
 
 	// Refused AND nothing written: a call that coined the word and then failed

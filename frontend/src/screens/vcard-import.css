@@ -33,5 +33,5 @@
    resembles somebody was written nowhere, and nothing else on this list needs
    them to act. */
 .vcard-import-warn {
-  color: var(--warn);
+  color: var(--warnText);
 }

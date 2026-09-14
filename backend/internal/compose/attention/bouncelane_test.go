@@ -4,7 +4,7 @@
 package attention
 
 // The bounces lane: the reader's own sends that never arrived, with `open`
-// exactly where a person to open exists.
+// exactly where a contact to open exists.
 
 import (
 	"context"
@@ -34,11 +34,11 @@ func bounceLaneService(bounces Bounces) *Service {
 		stubBriefing{}, nil, nil, nil, nil, nil, nil, nil, nil, nil, bounces, nil, nil, nil, fixedClock)
 }
 
-func TestABouncedSendNamesItselfAndOpensThePerson(t *testing.T) {
-	person := ids.NewV7()
+func TestABouncedSendNamesItselfAndOpensTheContact(t *testing.T) {
+	contact := ids.NewV7()
 	reported := readInstant.Add(-3 * time.Hour)
 	stub := &stubBounces{rows: []BouncedSend{
-		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "550 5.1.1 user unknown", BouncedAt: reported, PersonID: person},
+		{ID: ids.NewV7(), Subject: "Proposal for Weber GmbH", Reason: "550 5.1.1 user unknown", BouncedAt: reported, ContactID: contact},
 		{ID: ids.NewV7(), Subject: "Intro", BouncedAt: reported},
 	}}
 	out, err := bounceLaneService(stub).Assemble(pageReader())
@@ -60,11 +60,11 @@ func TestABouncedSendNamesItselfAndOpensThePerson(t *testing.T) {
 	if filed.Detail == nil || *filed.Detail != "550 5.1.1 user unknown" {
 		t.Errorf("detail = %v, want the receiving side's own words", filed.Detail)
 	}
-	if filed.Subject == nil || ids.UUID(filed.Subject.Id) != person {
-		t.Fatalf("subject = %v, want the person the send is filed under", filed.Subject)
+	if filed.Subject == nil || ids.UUID(filed.Subject.Id) != contact {
+		t.Fatalf("subject = %v, want the contact the send is filed under", filed.Subject)
 	}
 	if !slices.Contains(filed.Actions, crmcontracts.AttentionItemActions("open")) {
-		t.Error("a send filed under a person offers no open — the page where fixing the address lives")
+		t.Error("a send filed under a contact offers no open — the page where fixing the address lives")
 	}
 	unfiled := (*out.Bounces)[1]
 	if unfiled.Subject != nil || len(unfiled.Actions) != 0 {

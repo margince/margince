@@ -4,7 +4,7 @@
 package compose
 
 // telegramChannelPrincipal carries the only hand-written ObjectGrant map in
-// non-test product code, keyed on the tableActivity/tablePerson constants
+// non-test product code, keyed on the tableActivity/tableContact constants
 // (replayscope.go). Nothing else asserts those keys are the object names
 // platform/auth actually admits on, so a rename would otherwise surface only
 // in the real-Postgres lane — loudly, but minutes later.
@@ -26,9 +26,9 @@ import (
 func TestTelegramChannelPrincipalAdmitsOnlyTheGrantsTheIngestPathExercises(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), telegramChannelPrincipal())
 
-	// The activity the worker captures, and the person the channel ensure
+	// The activity the worker captures, and the contact the channel ensure
 	// auto-creates for an unmatched sender (design D1).
-	for _, object := range []string{"activity", "person"} {
+	for _, object := range []string{"activity", "contact"} {
 		if err := auth.Require(ctx, object, principal.ActionCreate); err != nil {
 			t.Errorf("%s.create refused: %v — the grant map is keyed on a name platform/auth does not admit on",
 				object, err)
@@ -46,8 +46,8 @@ func TestTelegramChannelPrincipalAdmitsOnlyTheGrantsTheIngestPathExercises(t *te
 		{"channel_connection", principal.ActionRead},
 		{"activity", principal.ActionUpdate},
 		{"activity", principal.ActionDelete},
-		{"person", principal.ActionUpdate},
-		{"person", principal.ActionDelete},
+		{"contact", principal.ActionUpdate},
+		{"contact", principal.ActionDelete},
 	} {
 		err := auth.Require(ctx, refused.object, refused.action)
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {

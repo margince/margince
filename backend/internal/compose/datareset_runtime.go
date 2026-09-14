@@ -185,7 +185,7 @@ func (s *Server) FlushResetCaches(ws ids.UUID) {
 //
 // Only the system-of-record cache is keyed by ws; the buckets clear
 // installation-wide. That is exact rather than over-broad: one installation
-// serves one organization (A107/ADR-0061), so there is no second workspace
+// serves one company (ADR-0061), so there is no second workspace
 // whose buckets this could reach.
 func (s *Server) flushAfterOwnReset(ws ids.UUID) {
 	s.FlushResetCaches(ws)

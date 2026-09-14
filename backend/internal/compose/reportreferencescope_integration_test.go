@@ -8,7 +8,7 @@ package compose
 // A reference scope narrows only what the query NAMES.
 //
 // A report row can point at a record the reader cannot open — a deal's partner
-// organization is the case that exists, because a connector mints a captured
+// company is the case that exists, because a connector mints a captured
 // company as `visibility='owner'` and it stays the importing user's until a
 // human promotes it. Grouping by that partner would name it, so those rows
 // leave the population. Summing by STAGE names no partner at all, and dropping
@@ -29,7 +29,7 @@ import (
 
 // hiddenPartnerEnv is the failing scenario from the report that prompted this:
 // two open deals in one stage, both readable, one of them naming a partner
-// organization the reader cannot open.
+// company the reader cannot open.
 type hiddenPartnerEnv struct {
 	*forecastEnv
 	hidden ids.UUID
@@ -46,20 +46,20 @@ func seedHiddenPartner(t *testing.T) hiddenPartnerEnv {
 	// Capture-private to Rep3, exactly as a connector-captured company is until
 	// a human promotes it: readable to its owner, invisible to every other seat
 	// including an admin's.
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Partners', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Open Partners', 'manual', 'human:x')`)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, expected_close_date, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, expected_close_date, source, captured_by)
 		VALUES ($1, 'From the hidden partner', $2, $3, $4, 'sourced', 90000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
 		e.pipeline, e.stages[60], hidden)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_org_id, partner_attribution, amount_minor, currency, expected_close_date, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, partner_company_id, partner_attribution, amount_minor, currency, expected_close_date, source, captured_by)
 		VALUES ($1, 'From the open partner', $2, $3, $4, 'sourced', 10000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
 		e.pipeline, e.stages[60], open)
 	return hiddenPartnerEnv{forecastEnv: e, hidden: hidden, open: open}
 }
 
-// blindReader reads every deal and holds no organization grant, so the hidden
+// blindReader reads every deal and holds no company grant, so the hidden
 // partner is out of reach for them and the open one is not.
 func (e hiddenPartnerEnv) blindReader() context.Context {
 	return e.dealReadCtx(ids.NewV7(), nil, principal.RowScopeAll)
@@ -97,11 +97,11 @@ func TestGroupingByPartnerStillExcludesThePartnerTheReaderCannotOpen(t *testing.
 	e := seedHiddenPartner(t)
 
 	result := e.runReport(e.blindReader(), t, "deals-by-stage",
-		`{"group_by":["partner_org_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
+		`{"group_by":["partner_company_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}]}`)
 
 	var sawOpen bool
 	for _, row := range result.Rows {
-		id, ok := row["partner_org_id"].(string)
+		id, ok := row["partner_company_id"].(string)
 		if !ok {
 			continue
 		}
@@ -133,7 +133,7 @@ func TestFilteringByAPartnerIsScopedLikeGroupingByOne(t *testing.T) {
 
 	hidden := e.runReport(reader, t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],`+
-			`"filters":{"partner_org_id":"`+e.hidden.String()+`"}}`)
+			`"filters":{"partner_company_id":"`+e.hidden.String()+`"}}`)
 	for _, row := range hidden.Rows {
 		if got := wireInt(t, row, "deals"); got != 0 {
 			t.Errorf("deals = %d, want 0 — filtering on an unreadable partner must not confirm their deals", got)
@@ -142,7 +142,7 @@ func TestFilteringByAPartnerIsScopedLikeGroupingByOne(t *testing.T) {
 
 	open := e.runReport(reader, t, "deals-by-stage",
 		`{"group_by":["stage_id","currency"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],`+
-			`"filters":{"partner_org_id":"`+e.open.String()+`"}}`)
+			`"filters":{"partner_company_id":"`+e.open.String()+`"}}`)
 	if len(open.Rows) == 0 {
 		t.Fatal("filtering on the READABLE partner returned nothing; the refusal above would pass against an engine that answers nobody")
 	}
@@ -159,21 +159,21 @@ func TestFilteringByAPartnerIsScopedLikeGroupingByOne(t *testing.T) {
 // A report answering with its DEFAULT plan is scoped by what that plan groups
 // by, not by what the caller happened to type.
 //
-// open-deals-per-company groups by organization_id when the request names no
-// group-by, and organization_id is a reference. A narrowing derived from the
+// open-deals-per-company groups by company_id when the request names no
+// group-by, and company_id is a reference. A narrowing derived from the
 // request alone reads "this query names nothing", and the answer then keys a
-// row on every organization in the installation — including one captured into
+// row on every company in the installation — including one captured into
 // a colleague's mailbox and never promoted.
 func TestADefaultGroupByIsScopedLikeAnAskedForOne(t *testing.T) {
 	e := setupForecast(t)
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Customer', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Open Customer', 'manual', 'human:x')`)
-	for _, org := range []ids.UUID{hidden, open} {
-		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, expected_close_date, source, captured_by)
+	for _, company := range []ids.UUID{hidden, open} {
+		e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, expected_close_date, source, captured_by)
 			VALUES ($1, 'Deal', $2, $3, $4, 50000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
-			e.pipeline, e.stages[60], org)
+			e.pipeline, e.stages[60], company)
 	}
 
 	// The empty request: no group_by, so the spec's default decides.
@@ -182,19 +182,19 @@ func TestADefaultGroupByIsScopedLikeAnAskedForOne(t *testing.T) {
 
 	var sawOpen bool
 	for _, row := range result.Rows {
-		id, ok := row["organization_id"].(string)
+		id, ok := row["company_id"].(string)
 		if !ok {
 			continue
 		}
 		if id == hidden.String() {
-			t.Errorf("the default plan named organization %s, which this caller cannot open", id)
+			t.Errorf("the default plan named company %s, which this caller cannot open", id)
 		}
 		if id == open.String() {
 			sawOpen = true
 		}
 	}
 	if !sawOpen {
-		t.Error("the readable organization vanished too; the default plan narrowed more than it should")
+		t.Error("the readable company vanished too; the default plan narrowed more than it should")
 	}
 }
 
@@ -211,7 +211,7 @@ func TestTheResultHandleExplainsThePopulationItsHeadlineReported(t *testing.T) {
 	reader := e.blindReader()
 
 	result := e.runReport(reader, t, "deals-by-stage",
-		`{"group_by":["partner_org_id"],"aggregates":[{"fn":"count","as":"deals"}],"filters":{"partner_sourced":true}}`)
+		`{"group_by":["partner_company_id"],"aggregates":[{"fn":"count","as":"deals"}],"filters":{"partner_sourced":true}}`)
 
 	var counted int64
 	for _, row := range result.Rows {
@@ -228,7 +228,7 @@ func TestTheResultHandleExplainsThePopulationItsHeadlineReported(t *testing.T) {
 			counted, detail.TotalRows)
 	}
 	for _, row := range detail.Rows {
-		if id, ok := row["partner_org_id"].(string); ok && id == e.hidden.String() {
+		if id, ok := row["partner_company_id"].(string); ok && id == e.hidden.String() {
 			t.Errorf("the drill-through named partner %s, which the headline excluded", id)
 		}
 	}
@@ -239,32 +239,32 @@ func TestTheResultHandleExplainsThePopulationItsHeadlineReported(t *testing.T) {
 // Its filter field is resolved against the analytics schema — the spec's
 // dimensions and measures — so a narrowing that looked the field up in the
 // report engine's own filter map missed wherever the two disagree.
-// open-deals-per-company is that spec: organization_id is a dimension there and
+// open-deals-per-company is that spec: company_id is a dimension there and
 // not a filter, which made a filtered count answer whether a capture-private
 // company exists and how many deals point at it.
 func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
 	e := setupForecast(t)
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Customer', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Open Customer', 'manual', 'human:x')`)
 	// Above the privacy floor on both sides, so a refusal can never stand in
 	// for the scope and pass this test for the wrong reason.
 	for i := 0; i < 6; i++ {
-		for _, org := range []ids.UUID{hidden, open} {
-			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, amount_minor, currency, expected_close_date, source, captured_by)
+		for _, company := range []ids.UUID{hidden, open} {
+			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, amount_minor, currency, expected_close_date, source, captured_by)
 				VALUES ($1, 'Deal', $2, $3, $4, 50000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
-				e.pipeline, e.stages[60], org)
+				e.pipeline, e.stages[60], company)
 		}
 	}
 
-	ask := func(org ids.UUID) AnalyticsAnswer {
+	ask := func(company ids.UUID) AnalyticsAnswer {
 		t.Helper()
 		answer, err := e.askAnalytics(e.reportReaderCtx(), t, analyticsquery.Query{
 			Entity:   "open-deals-per-company",
 			Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}},
 			Filters: []analyticsquery.Filter{
-				{Field: "organization_id", Op: analyticsquery.OpEq, Value: org.String()},
+				{Field: "company_id", Op: analyticsquery.OpEq, Value: company.String()},
 			},
 		})
 		if err != nil {
@@ -275,11 +275,11 @@ func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
 
 	for _, row := range ask(hidden).Rows {
 		if got, ok := row["n"]; ok && got != nil {
-			t.Errorf("filtering on a capture-private organization answered n = %v; "+
+			t.Errorf("filtering on a capture-private company answered n = %v; "+
 				"a count over an unreadable reference confirms it exists and how many deals name it", got)
 		}
 	}
-	// The readable organization still answers, or the arm above proves only
+	// The readable company still answers, or the arm above proves only
 	// that this engine refuses everybody.
 	var answered bool
 	for _, row := range ask(open).Rows {
@@ -288,7 +288,7 @@ func TestAnAnalyticsFilterOnAReferenceIsScoped(t *testing.T) {
 		}
 	}
 	if !answered {
-		t.Error("filtering on the READABLE organization answered nothing; the refusal above would be vacuous")
+		t.Error("filtering on the READABLE company answered nothing; the refusal above would be vacuous")
 	}
 }
 
@@ -333,9 +333,9 @@ func TestTheDrillThroughBlanksAnUnreadablePartnerAndKeepsItsRow(t *testing.T) {
 	}
 	var blanked, named int
 	for _, row := range detail.Rows {
-		partner, present := row["partner_org_id"]
+		partner, present := row["partner_company_id"]
 		if !present {
-			t.Fatal("the drill-through dropped the partner_org_id column entirely; it returns every dimension")
+			t.Fatal("the drill-through dropped the partner_company_id column entirely; it returns every dimension")
 		}
 		switch id, isString := partner.(string); {
 		case partner == nil:
@@ -345,7 +345,7 @@ func TestTheDrillThroughBlanksAnUnreadablePartnerAndKeepsItsRow(t *testing.T) {
 		case isString && id == e.hidden.String():
 			t.Errorf("the drill-through named partner %s, which this caller's own deal read masks", id)
 		default:
-			t.Errorf("unexpected partner_org_id %v (%T)", partner, partner)
+			t.Errorf("unexpected partner_company_id %v (%T)", partner, partner)
 		}
 	}
 	if blanked != 1 {
@@ -356,9 +356,9 @@ func TestTheDrillThroughBlanksAnUnreadablePartnerAndKeepsItsRow(t *testing.T) {
 	}
 }
 
-// The owner of the captured organization sees their own partner named, in the
+// The owner of the captured company sees their own partner named, in the
 // same drill-through that blanks it for everybody else. Without this the suite
-// above would pass against an engine that blanked partner_org_id for every
+// above would pass against an engine that blanked partner_company_id for every
 // caller, which is a different product and not a privacy boundary.
 func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 	e := seedHiddenPartner(t)
@@ -370,7 +370,7 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 
 	var sawHidden bool
 	for _, row := range detail.Rows {
-		if id, ok := row["partner_org_id"].(string); ok && id == e.hidden.String() {
+		if id, ok := row["partner_company_id"].(string); ok && id == e.hidden.String() {
 			sawHidden = true
 		}
 	}
@@ -381,8 +381,8 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 
 // A JOINED ATTRIBUTE inherits the row scope of the id it hangs off.
 //
-// size_band is a column of the ORGANIZATION, not of the deal, so it reaches the
-// query over win-loss's join and its expression is `org.size_band`.
+// size_band is a column of the COMPANY, not of the deal, so it reaches the
+// query over win-loss's join and its expression is `company.size_band`.
 // referenceScopes renders `ref.id = <column>` and a size band is not an id, so
 // it matched no entry and the dimension carried no row scope at all: a seat
 // excluded from an account could group by that account's size and read its win
@@ -396,17 +396,17 @@ func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
 	e := setupForecast(t)
 	// Capture-private to Rep3, exactly as seedHiddenPartner's is: readable to
 	// its owner and invisible to every other seat.
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, size_band, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, size_band, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, size_band, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, size_band, source, captured_by)
 		VALUES ($1, 'Open Startup', '11-50', 'manual', 'human:x')`)
 	// Won deals, because win-loss reads none that are still open. The amounts
 	// differ by an order of magnitude so no subset's total collides with
 	// another's.
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
 		VALUES ($1, 'Won at the hidden company', $2, $3, $4, 'won', now() - interval '2 days', 90000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
 		e.pipeline, e.stages[60], hidden)
-	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
 		VALUES ($1, 'Won at the open company', $2, $3, $4, 'won', now() - interval '2 days', 10000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
 		e.pipeline, e.stages[60], open)
 
@@ -439,7 +439,7 @@ func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
 	//
 	// A handle carrying `by=` is covered by namedByDerivation's groupBy loop.
 	// A hand-built one that pins size_band as a BARE PREDICATE carries it as an
-	// EXPRESSION — `org.size_band` — which matches no referenceScopes key, so
+	// EXPRESSION — `company.size_band` — which matches no referenceScopes key, so
 	// only the walk-back from spec.scopeVia names the id column and narrows the
 	// rows. Without that loop this URL opens the hidden company's deal.
 	bare := e.explainReport(blind, t, "win-loss",
@@ -466,15 +466,15 @@ func TestGroupingByAJoinedAttributeIsScopedLikeTheIdItHangsOff(t *testing.T) {
 // the wrong reason.
 func TestTheAnalyticsSurfaceScopesAJoinedAttributeToo(t *testing.T) {
 	e := setupForecast(t)
-	hidden := e.seedID(t, `INSERT INTO organization (id, owner_id, display_name, size_band, visibility, source, captured_by)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, size_band, visibility, source, captured_by)
 		VALUES ($1, $2, 'Hidden Enterprise', '1001-5000', 'owner', 'manual', 'human:x')`, e.Rep3)
-	open := e.seedID(t, `INSERT INTO organization (id, display_name, size_band, source, captured_by)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, size_band, source, captured_by)
 		VALUES ($1, 'Open Startup', '11-50', 'manual', 'human:x')`)
 	for i := 0; i < 6; i++ {
-		for _, org := range []ids.UUID{hidden, open} {
-			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, organization_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
+		for _, company := range []ids.UUID{hidden, open} {
+			e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, status, closed_at, amount_minor, currency, fx_rate_to_base, expected_close_date, source, captured_by)
 				VALUES ($1, 'Won deal', $2, $3, $4, 'won', now() - interval '2 days', 50000, 'EUR', 1.0, (now() - interval '2 days')::date, 'manual', 'human:x')`,
-				e.pipeline, e.stages[60], org)
+				e.pipeline, e.stages[60], company)
 		}
 	}
 

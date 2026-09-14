@@ -45,7 +45,7 @@
 }
 
 .retention-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The pin form in the row under the restricted-records table: an id and the
@@ -73,5 +73,5 @@
 .restricted-pin-error {
   flex-basis: 100%;
   margin: 0;
-  color: var(--danger);
+  color: var(--dangerText);
 }

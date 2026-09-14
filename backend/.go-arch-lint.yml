@@ -44,6 +44,12 @@ vendors:
   river:  { in: github.com/riverqueue/** }
   minio:  { in: github.com/minio/** }
   fpdf:   { in: github.com/go-pdf/** }
+  # pdftext's engine: pdfium (the PDF implementation in Chrome) compiled to
+  # WebAssembly, plus the instance pool it is driven through. It runs under
+  # wazero, so an upload is parsed inside a sandbox rather than in the host heap.
+  # No cgo — the WASM build is what makes that true.
+  pdfium:  { in: github.com/klippa-app/** }
+  gopool:  { in: github.com/jolestar/** }
   # unicode transforms for the PO-PARAM-JW-2 dedupe preprocessing (casefold+unaccent)
   xtext:  { in: golang.org/x/text/** }
   # webread's crawl mechanics: the html tokenizer (link harvest from raw HTML)
@@ -85,7 +91,7 @@ components:
   consent:     { in: internal/modules/consent }
   collections: { in: internal/modules/collections }
   signals:     { in: internal/modules/signals }
-  people:      { in: internal/modules/people }
+  contacts:      { in: internal/modules/contacts }
   privacy:     { in: internal/modules/privacy }
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
@@ -110,6 +116,7 @@ components:
   webhooks:    { in: internal/modules/webhooks }
   comms:       { in: internal/modules/comms }
   notices:     { in: internal/modules/notices }
+  assignments: { in: internal/modules/assignments }
   introductions: { in: internal/modules/introductions }
   weeklyplan:  { in: internal/modules/weeklyplan }
   forecasting: { in: internal/modules/forecasting }
@@ -135,7 +142,11 @@ deps:
     # wazero + brotli: licensecheck's runtime for the bundled validation
     # module, and the compression it is published in.
     # xsyswindows: ownedfile's DACL, the Windows half of an owner-only file.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus]
+    # pdfium + gopool: pdftext reads a PDF's text layer through a sandboxed
+    # pdfium; fpdf is its TESTS building the fixtures they then read.
+    # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
+    # characters the word is made of — a Unicode normal form the stdlib lacks.
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, xsyswindows, prometheus, pdfium, gopool, fpdf, xtext]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -163,9 +174,9 @@ deps:
   signals:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
-  people:
+  contacts:
     mayDependOn: [contracts, platform]
-    # xnet: publicsuffix registrable-label derivation for org display names (ADR-0072).
+    # xnet: publicsuffix registrable-label derivation for company display names (ADR-0072).
     canUse: [pgx, oapi, xtext, xnet]
   privacy:
     mayDependOn: [contracts, platform]
@@ -243,6 +254,9 @@ deps:
   notices:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
+  assignments:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
   introductions:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
@@ -256,7 +270,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -264,7 +278,10 @@ deps:
     # platform already owns, so it needs the same parser platform does.
     # emersion: the in-memory IMAP server the standing-connect transport
     # test drives; production compose reaches IMAP only through capture.
-    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi]
+    # fpdf: the document lane's TESTS build the PDF they then read, so the
+    # fixture is a real file rather than a string somebody believed was one.
+    # Production compose writes no PDF and reads one only via platform/pdftext.
+    canUse: [pgx, chi, oapi, river, xtext, yaml, emersion, kinopenapi, fpdf]
   # migrations depends on itself, which no production file can express: Go
   # forbids a package importing itself. It is reachable only from the external
   # test package this directory's tagged suites live in (package
@@ -311,15 +328,27 @@ deps:
     # halves" shape — forecasting must not gain a YAML dependency to check that
     # every window a client may ask for is one it can resolve. Without it an
     # unrecognised period answers as a QUARTER under the caller's own word.
-    # dedupeevidencefields_test.go reads people.DedupeEvidenceFields and holds it
+    # dedupeevidencefields_test.go reads contacts.DedupeEvidenceFields and holds it
     # to the contract's AttentionPairEvidence enum: once more the "only gates may
     # hold both halves" shape. The dedupe evidence snapshot is stored as free
     # JSON, so a field name the detector writes and the contract omits reaches a
-    # reader as a database column — people must not gain a dependency on the
+    # reader as a database column — contacts must not gain a dependency on the
     # contract document to know its own field names are sayable.
+    # outboundfilesnapshot_test.go reads comms.OutboundFile and activities.Out-
+    # boundFile together: comms writes what a message carried into a JSON column
+    # and activities reads it back to tell the timeline, so the two spellings of
+    # that snapshot are one item. Nothing in Go connects them — the way back is
+    # an unmarshal, which reports no error for a key it does not recognise — and
+    # neither module may import the other to notice. Only gates sees both.
+    # runtimeddlwholerow_test.go reads customfields.FieldObjects: the tables an
+    # administrator can ALTER while the app pool holds cached plans, held
+    # against every SQL statement in the tree. The prohibition's corpus is the
+    # whole module and its banned set is one module's vocabulary, so only gates
+    # can see both — and deriving the set from the engine that alters them is
+    # what stops the gate becoming a second copy of the list.
     # gates carries test files only, so this grants no production edge.
-    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people, forecasting]
+    mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, contacts, customfields, forecasting, comms]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, people, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, signals, customfields, overlay, migration, webhooks, comms, notices, introductions, weeklyplan, forecasting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

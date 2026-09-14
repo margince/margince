@@ -18,7 +18,7 @@ import {
  * ## When a write gets one
  *
  * The bar is whether the reader can otherwise tell it worked. A toast for
- * something already visible on screen is noise, and noise is what teaches people
+ * something already visible on screen is noise, and noise is what teaches contacts
  * to stop reading the region that will one day carry something they need.
  *
  * **Show one** when the write succeeded and its result is NOT visible: a setting

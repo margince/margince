@@ -13,8 +13,8 @@ package integration
 // goes wrong, so that is what most of this file is about. An edge's visibility
 // derives from its ENDPOINTS — every non-null one must be visible to the caller
 // — and the failure mode is specific: an edge that answered would name two
-// records, so an edge readable by someone who cannot read its organization
-// leaks that organization's existence and its link to a person. Unit tests
+// records, so an edge readable by someone who cannot read its company
+// leaks that company's existence and its link to a contact. Unit tests
 // cannot reach that rule; it is rendered as SQL against the caller's row scope.
 
 import (
@@ -27,7 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -41,8 +41,8 @@ import (
 // the whole point for project_id, which it used to drop.
 type edgeFields struct {
 	Kind             string    `json:"kind"`
-	PersonID         *ids.UUID `json:"person_id"`
-	OrganizationID   *ids.UUID `json:"organization_id"`
+	ContactID        *ids.UUID `json:"contact_id"`
+	CompanyID        *ids.UUID `json:"company_id"`
 	DealID           *ids.UUID `json:"deal_id"`
 	ProjectID        *ids.UUID `json:"project_id"`
 	Role             *string   `json:"role"`
@@ -80,8 +80,8 @@ func relationshipReaderPerms() principal.Permissions {
 	return principal.Permissions{
 		RoleKeys: []string{"rep"},
 		Objects: map[string]principal.ObjectGrant{
-			"person":                {Create: true, Read: true, Update: true, Delete: true},
-			"organization":          {Create: true, Read: true, Update: true, Delete: true},
+			"contact":               {Create: true, Read: true, Update: true, Delete: true},
+			"company":               {Create: true, Read: true, Update: true, Delete: true},
 			"relationship":          {Create: true, Read: true, Update: true, Delete: true},
 			"installation_settings": {Read: true},
 		},
@@ -89,28 +89,28 @@ func relationshipReaderPerms() principal.Permissions {
 	}
 }
 
-// seedEndpointPair creates a person and an organization under the caller's own
+// seedEndpointPair creates a contact and a company under the caller's own
 // context, so both are visible to it whatever row scope it carries.
-func seedEndpointPair(ctx context.Context, t *testing.T, e *Env, who, where string) (person, org ids.UUID) {
+func seedEndpointPair(ctx context.Context, t *testing.T, e *Env, who, where string) (contact, company ids.UUID) {
 	t.Helper()
-	p, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: who, Source: "manual"})
+	p, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: who, Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the person %q: %v", who, err)
+		t.Fatalf("seeding the contact %q: %v", who, err)
 	}
-	o, err := e.People.CreateOrganization(ctx, people.CreateOrganizationInput{DisplayName: where, Source: "manual"})
+	o, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: where, Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the organization %q: %v", where, err)
+		t.Fatalf("seeding the company %q: %v", where, err)
 	}
 	return ids.UUID(p.Id), ids.UUID(o.Id)
 }
 
 // createEmployment writes one employment edge through create_record and returns
 // the edge as the caller reads it back.
-func createEmployment(ctx context.Context, t *testing.T, r *agents.Registry, person, org ids.UUID, extra string) (ids.UUID, edgeFields) {
+func createEmployment(ctx context.Context, t *testing.T, r *agents.Registry, contact, company ids.UUID, extra string) (ids.UUID, edgeFields) {
 	t.Helper()
 	created, err := r.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"%s}}`,
-		person, org, extra)))
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"%s}}`,
+		contact, company, extra)))
 	if err != nil {
 		t.Fatalf("create_record relationship: %v", err)
 	}
@@ -121,15 +121,15 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
-	person, org := seedEndpointPair(ctx, t, e, "Ada Employed", "Employer GmbH")
+	contact, company := seedEndpointPair(ctx, t, e, "Ada Employed", "Employer GmbH")
 
 	// CREATE. The read-back is what proves the write landed: create_record
 	// answers with the record it made, and for an edge that means the seam had
 	// to serve a relationship Read too — without it the row would commit and the
 	// tool would report a read-back failure.
-	edgeID, fields := createEmployment(ctx, t, registry, person, org, `,"role":"cto","is_current_primary":true`)
-	if fields.Kind != "employment" || fields.PersonID == nil || *fields.PersonID != person ||
-		fields.OrganizationID == nil || *fields.OrganizationID != org {
+	edgeID, fields := createEmployment(ctx, t, registry, contact, company, `,"role":"cto","is_current_primary":true`)
+	if fields.Kind != "employment" || fields.ContactID == nil || *fields.ContactID != contact ||
+		fields.CompanyID == nil || *fields.CompanyID != company {
 		t.Fatalf("the edge read back as %+v, want an employment between the seeded pair", fields)
 	}
 	if fields.Role == nil || *fields.Role != "cto" {
@@ -151,7 +151,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	}
 	// The endpoints survived the patch: coalesce-style updates that lost a
 	// nullable column would silently detach the edge from one of its ends.
-	if patched.PersonID == nil || patched.OrganizationID == nil {
+	if patched.ContactID == nil || patched.CompanyID == nil {
 		t.Errorf("the patch dropped an endpoint: %+v", patched)
 	}
 	if patched.Role == nil || *patched.Role != "cto" {
@@ -179,7 +179,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	}
 	// And it is GONE from the read, like every other archived record: a Read
 	// that went on serving it would report an employment that had been ended.
-	if _, err := e.People.GetRelationship(ctx, edgeID); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := e.Contacts.GetRelationship(ctx, edgeID); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("reading the archived edge = %v, want ErrNotFound", err)
 	}
 	if _, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
@@ -191,7 +191,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 // The tri-state reaches the tool surface, or it is a rule only REST has. An
 // agent calling create_record sends `fields` as JSON, and an omitted key has to
 // survive StrictDecode into a nil *bool — a seam that defaulted it to false
-// would make a person's only employer unmarked over MCP while REST marked it,
+// would make a contact's only employer unmarked over MCP while REST marked it,
 // and both halves would look correct in isolation.
 //
 // Sending it explicitly is the other half: the store decides only for a caller
@@ -201,15 +201,15 @@ func TestTheToolSurfaceCanBothOmitAndStateTheCurrentPrimaryFlag(t *testing.T) {
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
-	person, org := seedEndpointPair(ctx, t, e, "Ida Omitted", "Only Employer GmbH")
+	contact, company := seedEndpointPair(ctx, t, e, "Ida Omitted", "Only Employer GmbH")
 
-	_, derived := createEmployment(ctx, t, registry, person, org, "")
+	_, derived := createEmployment(ctx, t, registry, contact, company, "")
 	if !primaryFlag(t, derived) {
 		t.Error("is_current_primary came back false with the key omitted — their only employment is their primary one")
 	}
 
-	other, secondOrg := seedEndpointPair(ctx, t, e, "Ida Stated", "Side Job GmbH")
-	_, stated := createEmployment(ctx, t, registry, other, secondOrg, `,"is_current_primary":false`)
+	other, secondCompany := seedEndpointPair(ctx, t, e, "Ida Stated", "Side Job GmbH")
+	_, stated := createEmployment(ctx, t, registry, other, secondCompany, `,"is_current_primary":false`)
 	if primaryFlag(t, stated) {
 		t.Error("is_current_primary came back true with false sent explicitly — the store overrode what the caller stated")
 	}
@@ -232,32 +232,32 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	admin := e.As(e.Rep1, nil, AdminPerms)
 
 	// Both endpoints captured privately by Rep2 — ownership alone leaves a
-	// person or an organization readable by every seat with the grant. The
+	// contact or a company readable by every seat with the grant. The
 	// edge is created by the admin, so its existence owes nothing to Rep1.
 	owner := ids.From[ids.UserKind](e.Rep2)
-	person, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	contact, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Rep2 Contact", OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
-	org, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	company, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Rep2 Account", OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seeding the organization: %v", err)
+		t.Fatalf("seeding the company: %v", err)
 	}
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
-		person.Id, org.Id)))
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
+		contact.Id, company.Id)))
 	if err != nil {
 		t.Fatalf("create_record relationship as admin: %v", err)
 	}
 	edgeID, _ := wireEdge(t, created)
 	// Made private once the edge exists: the admin who seeded it is not the
 	// captor and could not create an edge over a private endpoint.
-	e.MakeCapturePrivate(t, "person", ids.UUID(person.Id), e.Rep2)
-	e.MakeCapturePrivate(t, "organization", ids.UUID(org.Id), e.Rep2)
+	e.MakeCapturePrivate(t, "contact", ids.UUID(contact.Id), e.Rep2)
+	e.MakeCapturePrivate(t, "company", ids.UUID(company.Id), e.Rep2)
 
 	// Rep3 can read neither endpoint. Every verb that
 	// returns or touches the row must answer NOT FOUND — not permission-denied,
@@ -281,8 +281,8 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	// refusals above are the scope rule and not a blanket denial. Without this
 	// control the whole test would pass against a provider that refused every
 	// relationship.
-	ownPerson, ownOrg := seedEndpointPair(stranger, t, e, "Rep3 Own", "Rep3 Account")
-	ownEdge, _ := createEmployment(stranger, t, registry, ownPerson, ownOrg, "")
+	ownContact, ownCompany := seedEndpointPair(stranger, t, e, "Rep3 Own", "Rep3 Account")
+	ownEdge, _ := createEmployment(stranger, t, registry, ownContact, ownCompany, "")
 	// started_at, not role: role carries a human's audited write from the create,
 	// so patching it would stage for precedence and say nothing about row scope.
 	if _, err := registry.Invoke(stranger, "update_record", json.RawMessage(fmt.Sprintf(
@@ -300,25 +300,25 @@ func TestAnEdgeCannotBeCreatedOverAnEndpointTheCallerCannotSee(t *testing.T) {
 	admin := e.As(e.Rep1, nil, AdminPerms)
 
 	owner := ids.From[ids.UserKind](e.Rep2)
-	hidden, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	hidden, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Not Yours", OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seeding the hidden organization: %v", err)
+		t.Fatalf("seeding the hidden company: %v", err)
 	}
-	e.MakeCapturePrivate(t, "organization", ids.UUID(hidden.Id), e.Rep2)
+	e.MakeCapturePrivate(t, "company", ids.UUID(hidden.Id), e.Rep2)
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, relationshipReaderPerms())
-	mine, err := e.People.CreatePerson(stranger, people.CreatePersonInput{FullName: "Rep3 Contact", Source: "manual"})
+	mine, err := e.Contacts.CreateContact(stranger, contacts.CreateContactInput{FullName: "Rep3 Contact", Source: "manual"})
 	if err != nil {
-		t.Fatalf("Rep3 creating their own person: %v", err)
+		t.Fatalf("Rep3 creating their own contact: %v", err)
 	}
 
 	_, err = registry.Invoke(stranger, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
 		mine.Id, hidden.Id)))
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("err = %v, want ErrNotFound — an edge onto an invisible organization would disclose it", err)
+		t.Fatalf("err = %v, want ErrNotFound — an edge onto an invisible company would disclose it", err)
 	}
 }
 
@@ -331,32 +331,32 @@ func TestAMisshapenEdgeIsRefusedWithSomethingTheCallerCanAct(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, nil, AdminPerms)
 
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Shape Probe", Source: "manual"})
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Shape Probe", Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
-	org, err := e.People.CreateOrganization(ctx, people.CreateOrganizationInput{DisplayName: "Shape Org", Source: "manual"})
+	company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Shape Company", Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the organization: %v", err)
+		t.Fatalf("seeding the company: %v", err)
 	}
 
 	for _, tc := range []struct {
 		name, args, wants string
 	}{
 		{
-			// The kind/endpoint mismatch: employment wants person + organization,
-			// so a counterparty org is the wrong pair. The refusal is a
+			// The kind/endpoint mismatch: employment wants contact + company,
+			// so a counterparty company is the wrong pair. The refusal is a
 			// MessageFault, because the fault is in the PAIR — no single
 			// argument is wrong on its own.
 			name: "wrong endpoint pair for the kind",
-			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,`+
-				`"counterparty_org_id":%q,"source":"ui"}}`, person.Id, org.Id),
+			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,`+
+				`"counterparty_company_id":%q,"source":"ui"}}`, contact.Id, company.Id),
 			wants: "employment",
 		},
 		{
 			name: "a kind the vocabulary does not have",
-			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"drinking_buddy","person_id":%q,`+
-				`"organization_id":%q,"source":"ui"}}`, person.Id, org.Id),
+			args: fmt.Sprintf(`{"record_type":"relationship","fields":{"kind":"drinking_buddy","contact_id":%q,`+
+				`"company_id":%q,"source":"ui"}}`, contact.Id, company.Id),
 			wants: "kind",
 		},
 	} {
@@ -390,18 +390,18 @@ func TestAnEdgeEndingBeforeItBeganNamesTheDateField(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, nil, AdminPerms)
 
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Date Probe", Source: "manual"})
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Date Probe", Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
-	org, err := e.People.CreateOrganization(ctx, people.CreateOrganizationInput{DisplayName: "Date Org", Source: "manual"})
+	company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Date Company", Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the organization: %v", err)
+		t.Fatalf("seeding the company: %v", err)
 	}
 
 	_, err = registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,`+
-			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"ui"}}`, person.Id, org.Id)))
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,`+
+			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"ui"}}`, contact.Id, company.Id)))
 	if err == nil {
 		t.Fatal("an edge that ended before it began was accepted")
 	}
@@ -430,17 +430,17 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
-	person, err := e.People.CreatePerson(ctx, people.CreatePersonInput{FullName: "Stakeholder", Source: "manual"})
+	contact, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Stakeholder", Source: "manual"})
 	if err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		t.Fatalf("seeding the contact: %v", err)
 	}
-	org := e.SeedOrg(t, "Project Owner GmbH", nil)
-	project := seedProject(ctx, t, e, "Edge project", org, nil)
+	company := e.SeedCompany(t, "Project Owner GmbH", nil)
+	project := seedProject(ctx, t, e, "Edge project", company, nil)
 	projectID := project.ID.UUID
 
 	created, err := registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"project_stakeholder","project_id":%q,"person_id":%q,`+
-			`"role":"sponsor","source":"ui"}}`, projectID, person.Id)))
+		`{"record_type":"relationship","fields":{"kind":"project_stakeholder","project_id":%q,"contact_id":%q,`+
+			`"role":"sponsor","source":"ui"}}`, projectID, contact.Id)))
 	if err != nil {
 		t.Fatalf("create_record project_stakeholder: %v — this is the shape that fails when project_id "+
 			"is dropped between the body and the store", err)
@@ -456,9 +456,9 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 // the case the both-hidden test above cannot reach.
 //
 // This file's premise is that an edge readable by someone who cannot read its
-// ORGANIZATION discloses that organization's existence and its link to a person
+// COMPANY discloses that company's existence and its link to a contact
 // they can read. With both ends hidden, an edge would also be refused by a
-// provider that only ever checked the person — so the both-hidden case passes
+// provider that only ever checked the contact — so the both-hidden case passes
 // against a weaker rule than the one claimed. Only this case separates a
 // CONJUNCTION from a check of whichever endpoint happens to be looked at first.
 func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
@@ -467,23 +467,23 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 	admin := e.As(e.Rep1, nil, AdminPerms)
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, relationshipReaderPerms())
 
-	// The person is the STRANGER's own, so their row scope admits it. The
-	// organization is Rep2's private capture, so it does not.
-	mine, err := e.People.CreatePerson(stranger, people.CreatePersonInput{FullName: "Rep3 Visible", Source: "manual"})
+	// The contact is the STRANGER's own, so their row scope admits it. The
+	// company is Rep2's private capture, so it does not.
+	mine, err := e.Contacts.CreateContact(stranger, contacts.CreateContactInput{FullName: "Rep3 Visible", Source: "manual"})
 	if err != nil {
-		t.Fatalf("Rep3 creating their own person: %v", err)
+		t.Fatalf("Rep3 creating their own contact: %v", err)
 	}
 	owner := ids.From[ids.UserKind](e.Rep2)
-	hidden, err := e.People.CreateOrganization(admin, people.CreateOrganizationInput{
+	hidden, err := e.Contacts.CreateCompany(admin, contacts.CreateCompanyInput{
 		DisplayName: "Rep2 Only", OwnerID: &owner, Source: "manual",
 	})
 	if err != nil {
-		t.Fatalf("seeding the hidden organization: %v", err)
+		t.Fatalf("seeding the hidden company: %v", err)
 	}
 
 	// Created by the admin, so the edge's existence owes nothing to the stranger.
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
+		`{"record_type":"relationship","fields":{"kind":"employment","contact_id":%q,"company_id":%q,"source":"ui"}}`,
 		mine.Id, hidden.Id)))
 	if err != nil {
 		t.Fatalf("create_record as admin over a mixed pair: %v", err)
@@ -491,12 +491,12 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 	edgeID, _ := wireEdge(t, created)
 	// Made private once the edge exists: the admin who seeded it is not the
 	// captor and could not create an edge over a private endpoint.
-	e.MakeCapturePrivate(t, "organization", ids.UUID(hidden.Id), e.Rep2)
+	e.MakeCapturePrivate(t, "company", ids.UUID(hidden.Id), e.Rep2)
 
-	// The stranger can read the person. They must still not reach the edge — and
+	// The stranger can read the contact. They must still not reach the edge — and
 	// the answer must be NOT FOUND, because a permission-denied would confirm it.
-	if _, err := e.People.GetPerson(stranger, ids.From[ids.PersonKind](ids.UUID(mine.Id)), storekit.LiveOnly); err != nil {
-		t.Fatalf("the stranger cannot read their OWN person, so this case proves nothing: %v", err)
+	if _, err := e.Contacts.GetContact(stranger, ids.From[ids.ContactKind](ids.UUID(mine.Id)), storekit.LiveOnly); err != nil {
+		t.Fatalf("the stranger cannot read their OWN contact, so this case proves nothing: %v", err)
 	}
 	for _, call := range []struct{ tool, args string }{
 		{"update_record", fmt.Sprintf(`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-05-01"}}`, edgeID)},
@@ -504,23 +504,23 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 	} {
 		_, err := registry.Invoke(stranger, call.tool, json.RawMessage(call.args))
 		if !errors.Is(err, apperrors.ErrNotFound) {
-			t.Errorf("%s on an edge with ONE hidden endpoint = %v, want ErrNotFound — the visible person "+
+			t.Errorf("%s on an edge with ONE hidden endpoint = %v, want ErrNotFound — the visible contact "+
 				"is not enough, or the rule is a check of one end rather than a conjunction of all of them",
 				call.tool, err)
 		}
 	}
 
-	// And the edge is absent from the person-filtered LIST, which is how a list
+	// And the edge is absent from the contact-filtered LIST, which is how a list
 	// hides: by omission, not by refusing.
-	edges, _, err := e.People.ListRelationships(stranger, people.ListRelationshipsInput{
-		PersonID: idPtr(ids.From[ids.PersonKind](ids.UUID(mine.Id))),
+	edges, _, err := e.Contacts.ListRelationships(stranger, contacts.ListRelationshipsInput{
+		ContactID: idPtr(ids.From[ids.ContactKind](ids.UUID(mine.Id))),
 	})
 	if err != nil {
-		t.Fatalf("listing the stranger's own person's edges: %v", err)
+		t.Fatalf("listing the stranger's own contact's edges: %v", err)
 	}
 	if len(edges) != 0 {
-		t.Errorf("the list returned %d edge(s) for a person whose only edge points at an organization the "+
-			"caller cannot read — the organization's existence and its link to this person both leak",
+		t.Errorf("the list returned %d edge(s) for a contact whose only edge points at a company the "+
+			"caller cannot read — the company's existence and its link to this contact both leak",
 			len(edges))
 	}
 }

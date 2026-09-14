@@ -142,7 +142,7 @@ func (s *Service) Worklist(
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
 	// left the second half seeing no named owner: it fell through to "mine" and
-	// returned the READER's own day under the named person's heading, which is
+	// returned the READER's own day under the named contact's heading, which is
 	// the one way this page can be wrong that its reader cannot detect.
 	//
 	// The two refusals travel INTO the projection rather than onto the finished
@@ -169,31 +169,19 @@ func (s *Service) Worklist(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(night.scores, night.cutoff)
+	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, leads, cursor,
-		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr})
+		[]*crmcontracts.WorklistSourceUnavailable{waitingErr, leadsErr, planErr})
 	out.Scope = crmcontracts.WorklistScope(resolved)
 	out.ScopeOptions = scopeOptions(scopeOptionsFor(ctx))
-	// The step each deal row suggests, read for the CUT page rather than the
-	// whole ranking: a move is drawn and never ranked, so reading one for a row
-	// this caller will not receive spends a query on nothing. dealmoves.go
-	// states why this reads a cache and never assembles.
-	if err := reader.nameTheStep(ctx, out.Queue); err != nil {
+	if err := reader.nameWorklistRows(ctx, out.Queue, night.findings); err != nil {
 		return crmcontracts.Worklist{}, err
 	}
-	// And how each deal row's deal is STANDING, over the same cut page and for
-	// the same reason. Read after the step because the two are independent: a
-	// row can carry a move and no verdict, or a verdict and no move, and neither
-	// absence is a reason to withhold the other. dealstanding.go states the
-	// three-source order and why its floor is no verdict at all.
-	if err := reader.nameTheStanding(ctx, out.Queue, night.findings); err != nil {
-		return crmcontracts.Worklist{}, err
-	}
-	// And the name beside each owner id, over the same cut page and for the same
-	// reason: a label is drawn and never ranked, so resolving one for a row this
-	// caller will not receive spends a read on nothing.
-	if err := reader.nameTheOwners(ctx, out.Queue); err != nil {
-		return crmcontracts.Worklist{}, err
+	if out.Focus != nil {
+		if err := reader.nameWorklistRows(ctx, out.Focus.Items, night.findings); err != nil {
+			return crmcontracts.Worklist{}, err
+		}
 	}
 	return out, nil
 }
@@ -216,6 +204,7 @@ func (s *Service) worklistFrom(
 		limit = worklistMaxPage
 	}
 	rows := classifyDay(day, day.AsOf, s.money)
+	rows = append(rows, s.planRows...)
 	rows = append(rows, s.rankedWaits(ctx, waiting, day.AsOf, scope)...)
 	rows = append(rows, rankedLeads(leads, day.AsOf)...)
 	// What the night thought of each deal, onto whichever row is about it — the
@@ -229,7 +218,7 @@ func (s *Service) worklistFrom(
 	// One late reply is one row, not three: the escalation's own task about a
 	// lead this queue already shows says nothing the lead row does not.
 	rows = dropEscalationTasksAlreadyOwed(rows)
-	// One PERSON is one row. "Nobody has spoken to them in sixty days" and
+	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
 	// "they wrote last week and are waiting" are both true of the same contact
 	// and read as a contradiction side by side.
 	//
@@ -253,18 +242,10 @@ func (s *Service) worklistFrom(
 	// deal's figures and reasons but not the brief's id. So this runs against
 	// whatever actually survives.
 	rows = foldBriefIntoRisk(rows)
-	// The reader's own override, raised AFTER the dedupe passes and before the
-	// ranking. After, because a pin on a row those passes remove is a pin on a
-	// row that is not on the page — the day decides what it holds, and the pin
-	// only says which of what it holds leads. Before the ranking, because a pin
-	// is a level: the ordering, the band heading and the "why here" line all
-	// read it, so moving rows after the sort would leave those three saying
-	// something the page contradicts.
-	rows = applyPins(rows, s.pinned)
 
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
-	// person's day, and leaving it in would make a manager's answer to "show me
+	// contact's day, and leaving it in would make a manager's answer to "show me
 	// Lena's queue" quietly include rows that are not hers.
 	//
 	// The waiting rows above already ran through this — they had to, before
@@ -305,6 +286,12 @@ func (s *Service) worklistFrom(
 	// the count disagreeing — the defect these two filter values exist to fix. It
 	// costs one comparison per row against an instant this call already holds.
 	rows = markChangedSinceBrief(rows, s.briefCutoff)
+	// Focus is independent of queue filters and pins, so it always folds routine work.
+	focusRows := foldRoutineDecisionsBounded(rows, len(day.NeedsYou) >= batchScanDepth)
+	focus := focusOf(focusRows, considered, day.AsOf, readerOf(ctx))
+	// Pins belong to the personal queue. Focus keeps the ordinary ranking and
+	// eligibility, including when this reader has saved pins on the queue.
+	rows = applyPins(rows, s.pinned)
 	// The fold, skipped for a narrowing that IS opening the group — foldAndRepin's
 	// own rule, and the reason it is conditional at all.
 	//
@@ -362,6 +349,10 @@ func (s *Service) worklistFrom(
 	// decided over the rows that actually survive to the page: the folds above
 	// turn several rows into one, and a group is one thing to read rather than
 	// the three it was assembled from.
+	for i := range missing {
+		category := string(categoryOfSource(crmcontracts.WorklistItemSource(missing[i].Source)))
+		missing[i].Category = &category
+	}
 	rows = markCrowding(rows)
 	sortByRank(rows)
 	shown, more, reached, walk := s.pageOf(
@@ -384,6 +375,7 @@ func (s *Service) worklistFrom(
 	out := crmcontracts.Worklist{
 		AsOf:  day.AsOf,
 		Queue: ordered,
+		Focus: &focus,
 		// The headings, in draw order, over the rows this page actually holds.
 		Bands: &bands,
 		// The bar is re-derived rather than threaded out of classifyDay: it is a

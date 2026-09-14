@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The verbs the client performs on click. Unchanged from the card this
@@ -40,31 +41,14 @@ const (
 // next move. Past it, the meeting is a plan rather than a thing to prepare.
 const meetingHorizon = 14 * 24 * time.Hour
 
-// decideMove picks the move from the records. A closed deal gets none: there
-// is nothing to advance, and inventing a step would be the card talking for
-// the sake of filling its own layout.
+// decideMove keeps operational obligations separate from sales progression.
+// Closing a deal ends pipeline advice, not meetings, tasks or customer requests.
 func decideMove(f facts) crmcontracts.DealStatusCardMove {
-	if f.deal.Status != crmcontracts.DealStatusOpen {
-		return crmcontracts.DealStatusCardMove{
-			Action:   ActionNone,
-			Reason:   fmt.Sprintf("This deal is %s — there is no next step to take.", f.deal.Status),
-			Evidence: []crmcontracts.DealNextBestActionEvidence{},
-		}
-	}
 	if meeting, ok := upcomingMeeting(f); ok {
 		return move(ActionOpenMeetingBrief,
 			fmt.Sprintf("A meeting is booked %s — read the brief before it.", until(f.now, meeting.OccurredAt)),
 			map[string]any{"activity_id": meeting.Id},
 			evidenceOf(meeting, "Booked: "+subjectOf(meeting)))
-	}
-	if inbound, ok := unansweredInbound(f); ok {
-		return move(ActionDraftEmail,
-			fmt.Sprintf("They wrote %s and nobody has answered — draft the reply.", since(f.now, inbound.OccurredAt)),
-			map[string]any{"activity_id": inbound.Id},
-			evidenceOf(inbound, "Unanswered: "+subjectOf(inbound)))
-	}
-	if opening, ok := firstOutreach(f); ok {
-		return opening
 	}
 	// Existing work is the next step until somebody completes it. Creating
 	// another generic follow-up here duplicates the task the card just read.
@@ -73,6 +57,29 @@ func decideMove(f facts) crmcontracts.DealStatusCardMove {
 		activityID := openapi_types.UUID(task.ID)
 		return move(ActionOpenTask, "Complete the existing task: "+task.Subject, map[string]any{"activity_id": activityID},
 			crmcontracts.DealNextBestActionEvidence{ActivityId: &activityID, Text: task.Subject})
+	}
+	if request, ok := unansweredInbound(f); ok {
+		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
+			return move(ActionDraftEmail, "This request already has a reminder. The reply still needs to be handled.", map[string]any{"activity_id": request.Id},
+				evidenceOf(request, "Request: "+subjectOf(request)))
+		}
+		reason := "Review and take responsibility for the outstanding request: " + subjectOf(request)
+		if request.EmailSummary == nil || request.EmailSummary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
+			reason = "Review whether this conversation needs a follow-up: " + subjectOf(request)
+		}
+		return move(ActionCreateTask, reason,
+			map[string]any{"subject": subjectOf(request), "request_activity_id": request.Id, "source": "ui"},
+			evidenceOf(request, "Request: "+subjectOf(request)))
+	}
+	if f.deal.Status != crmcontracts.DealStatusOpen {
+		return crmcontracts.DealStatusCardMove{
+			Action:   ActionNone,
+			Reason:   fmt.Sprintf("This deal is %s — there is no next step to take.", f.deal.Status),
+			Evidence: []crmcontracts.DealNextBestActionEvidence{},
+		}
+	}
+	if opening, ok := firstOutreach(f); ok {
+		return opening
 	}
 	return move(ActionCreateTask, nextStepReason(f),
 		map[string]any{
@@ -100,7 +107,7 @@ const (
 // openingRoles is who to write to first, best answer first. A champion will
 // carry the conversation internally; an economic buyer can decide; a
 // decision-maker or an influencer is a way in. A blocker is deliberately
-// absent — opening a deal by writing to the person most likely to refuse it is
+// absent — opening a deal by writing to the contact most likely to refuse it is
 // not a first move, and suggesting it would be worse than saying nothing.
 var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, roleInfluencer}
 
@@ -108,7 +115,7 @@ var openingRoles = []string{roleChampion, roleEconomicBuyer, roleDecisionMaker, 
 //
 // Without it such a deal was told "Nothing has been logged on this deal yet —
 // agree the next step", which restates the empty timeline the reader is
-// looking at and names no person, no role and no verb they could not have
+// looking at and names no contact, no role and no verb they could not have
 // worked out themselves. A deal with named seats and no contact has exactly
 // one obvious next move, and the records already say who it is with.
 //
@@ -135,7 +142,7 @@ func firstOutreach(f facts) (crmcontracts.DealStatusCardMove, bool) {
 // openingReason says who to open with and why they are the one.
 //
 // It carries the seat COUNT because that is the fact a reader checks the
-// advice against: "four people are named and none has been contacted" is
+// advice against: "four contacts are named and none has been contacted" is
 // checkable against the page, where "reach out" is not.
 func openingReason(seat Seat, seats int) string {
 	who := roleWord(seat.Role)
@@ -145,7 +152,7 @@ func openingReason(seat Seat, seats int) string {
 	if seats == 1 {
 		return fmt.Sprintf("Nobody has been contacted yet. Open with %s.", who)
 	}
-	return fmt.Sprintf("%d people are named on this deal and none has been contacted. Open with %s.", seats, who)
+	return fmt.Sprintf("%d contacts are named on this deal and none has been contacted. Open with %s.", seats, who)
 }
 
 // roleWords is the wire value on the left, the words a sentence uses on the
@@ -186,7 +193,7 @@ func move(action, reason string, args map[string]any, evidence ...crmcontracts.D
 }
 
 // upcomingMeeting is the soonest booked meeting inside the horizon. A meeting
-// with no status is booked — the predicate person360 and org360's next-meeting
+// with no status is booked — the predicate contact360 and company360's next-meeting
 // reads spell — so the card and the record pages agree about which is next.
 func upcomingMeeting(f facts) (crmcontracts.Activity, bool) {
 	var best crmcontracts.Activity
@@ -208,43 +215,24 @@ func upcomingMeeting(f facts) (crmcontracts.Activity, bool) {
 	return best, found
 }
 
-// unansweredInbound is the latest inbound MAIL with no outbound mail after it.
-// Mail only: the verb this arm names drafts a threaded reply, which the draft
-// path composes only for an inbound email — an inbound call has no thread to
-// answer on, and falls through to the next rule.
-//
-// It answers for the card's move AND for reply_to, so the button and the email
-// box in the deal's margin cannot disagree about whether somebody is waiting.
-//
-// Held by: TestTheMoveAndReplyToNameTheSameMail (move_test.go)
+// unansweredInbound selects from the activities module's obligation read, not
+// the recent timeline. An unrelated reply or a history page boundary cannot
+// settle a request. The same selection supplies the move and its reply target.
 func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
-	for _, a := range f.timeline {
-		if a.Kind != crmcontracts.ActivityKindEmail || a.Direction == nil || a.OccurredAt.After(f.now) {
-			continue
+	for _, a := range f.requests {
+		if a.Kind == crmcontracts.ActivityKindEmail && !withheld(a) {
+			return a, true
 		}
-		// A withheld row still ANSWERS. Only its words are hidden from this
-		// reader, and skipping it would walk past the reply to the inbound
-		// behind it and report a mail as unanswered after somebody answered
-		// it. So an outbound ends the scan whether or not it can be read, and
-		// only a readable inbound is offered — there is no drafting a reply to
-		// a message whose text this reader may not see.
-		if *a.Direction != crmcontracts.ActivityDirectionInbound {
-			return crmcontracts.Activity{}, false
-		}
-		if withheld(a) {
-			return crmcontracts.Activity{}, false
-		}
-		return a, true
 	}
 	return crmcontracts.Activity{}, false
 }
 
-// lastContact is the newest row that has already happened. The timeline's
+// lastContact is the newest exchange that has already happened. The timeline's
 // first rows can be scheduled meetings with future times, which are plans and
 // not contact.
 func lastContact(f facts) (crmcontracts.Activity, bool) {
 	for _, a := range f.timeline {
-		if !a.OccurredAt.After(f.now) {
+		if !a.OccurredAt.After(f.now) && relstrength.IsInteractionKind(string(a.Kind)) {
 			return a, true
 		}
 	}

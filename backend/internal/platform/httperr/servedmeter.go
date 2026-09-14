@@ -69,7 +69,7 @@ func recordsIn(body any) int {
 // `append` to it works, `len` and `range` work, and the only place it behaves
 // differently is `encoding/json`.
 //
-// The cost fell on every client. The generated TypeScript reads `data: Person[]`
+// The cost fell on every client. The generated TypeScript reads `data: Contact[]`
 // — because the contract says so — and gives a caller no reason to guard, so
 // `data.data.map(...)` on such a response threw and took down the screen
 // rendering it (issue #1606). Thirty-six reads across eighteen files were one
@@ -83,7 +83,7 @@ func recordsIn(body any) int {
 // place that can be wrong once.
 //
 // A COPY, not a mutation of the caller's value. Every handler in this tree
-// writes a struct VALUE — `crmcontracts.PersonListResponse{Data: people, …}` —
+// writes a struct VALUE — `crmcontracts.ContactListResponse{Data: contacts, …}` —
 // and a value handed to an `any` parameter is not addressable, so a version of
 // this that set the field in place did nothing at all for the case that
 // actually ships. It passed its own unit test through a pointer.

@@ -90,7 +90,7 @@ func (s *Store) ListParticipants(ctx context.Context, roomID ids.DealRoomID, act
 		out = withEngagement(out, seen)
 		return nil
 	})
-	// The roster is small and bounded by how many people a seller invites, so it
+	// The roster is small and bounded by how many contacts a seller invites, so it
 	// answers whole rather than paged. The envelope still carries a page object
 	// because every list response in this contract does.
 	return out, storekit.Page{}, err

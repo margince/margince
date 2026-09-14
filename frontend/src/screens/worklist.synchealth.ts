@@ -20,7 +20,7 @@ import type { MessageKey } from "../i18n/en";
 // syncClasses are the incumbent object classes a stale, backfilling or
 // overwritten concern names (overlay/incumbent.go). Listed rather than derived
 // because they are the INCUMBENT's classes, not ours: "companies" is what a
-// connected CRM calls what this product calls organizations, and the row is
+// connected CRM calls what this product calls companies, and the row is
 // describing that system's sync rather than this one's records.
 const syncClasses = [
   "contacts",

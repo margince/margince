@@ -12,7 +12,7 @@ import {
 } from "./story-utils";
 
 // One staged proposal as a decidable row — the canonical affordance for
-// anything an agent proposes and a person decides. Several surfaces draw this
+// anything an agent proposes and a human decides. Several surfaces draw this
 // row (the workspace queue, Brief, the company record), so it is the one place
 // the states below are worth reading side by side.
 //

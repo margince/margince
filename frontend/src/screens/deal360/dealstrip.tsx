@@ -19,6 +19,7 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
+import { reveal } from "../../app/reveal";
 import { StatCard } from "../../design-system/atoms";
 import { FactList } from "../../design-system/factlist";
 import { ReadingsGrid } from "../../design-system/readingsgrid";
@@ -28,12 +29,20 @@ import {
   formatDayMonth,
   formatMoneyOrAbsent,
   formatNumber,
+  MONEY_ABSENT,
   relativeDays,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRoleLabel } from "../record360";
-import { SeatPerson } from "./seatperson";
+import { SeatContact } from "./seatcontact";
+
+// Where the money reading's door leads. The deal's overview draws the offers
+// card under these readings — the same tab, one screen down — so the door is a
+// scroll to it rather than a route. Named here and given to the element by
+// `deals.tsx`, which owns the layout, so the two cannot drift apart into an id
+// nothing carries.
+export const DEAL_OFFERS_ANCHOR = "deal-offers";
 
 type Deal = components["schemas"]["Deal"];
 type Offer = components["schemas"]["Offer"];
@@ -87,7 +96,7 @@ export function DealStrip({
     <ReadingsGrid label={t("deal.strip.title")} testId="deal-strip">
       <MoneyStat deal={deal} offers={offers} locale={locale} t={t} />
       <CloseStat deal={deal} locale={locale} zone={zone} t={t} />
-      <PeopleStat
+      <ContactsStat
         coverage={coverage}
         withheld={coverageWithheld}
         locale={locale}
@@ -146,13 +155,22 @@ function MoneyStat({
         }))}
       />
     ) : undefined;
+  const amount = formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale);
   return (
     <StatCard
       label={t("deal.strip.money")}
-      value={formatMoneyOrAbsent(deal.amount_minor, deal.currency, locale)}
+      // A deal nobody has priced says so. `formatMoneyOrAbsent` owns whether
+      // the pair can be said as money and its sentinel is that answer; the word
+      // is the slot's, because "not priced yet" is work somebody can do and a
+      // dash is a reading that failed to load.
+      value={amount === MONEY_ABSENT ? t("deal.strip.money.unpriced") : amount}
       detail={detail}
-      numeric
       basis={basis}
+      // The paper the amount was written on. Drawn on the unpriced arm too:
+      // this is the same card either way, and a deal nobody has priced is
+      // exactly the one whose reader wants the offers card, where the price
+      // gets written.
+      onOpen={reveal(DEAL_OFFERS_ANCHOR)}
     />
   );
 }
@@ -221,10 +239,10 @@ function CloseStat({
   );
 }
 
-// How many of the people on this deal are actually talking to us, and — behind
+// How many of the contacts on this deal are actually talking to us, and — behind
 // the figure — who they are: the buying side, by seat, with whether each has
 // answered.
-function PeopleStat({
+function ContactsStat({
   coverage,
   withheld,
   locale,
@@ -238,7 +256,7 @@ function PeopleStat({
   if (withheld) {
     return (
       <StatCard
-        label={t("deal.strip.people")}
+        label={t("deal.strip.contacts")}
         value={t("deal.strip.withheld")}
         detail={t("deal.strip.withheldDetail")}
       />
@@ -249,37 +267,36 @@ function PeopleStat({
   if (seats.length === 0) {
     return (
       <StatCard
-        label={t("deal.strip.people")}
-        value={t("deal.strip.people.none")}
-        detail={t("deal.strip.people.noneDetail")}
+        label={t("deal.strip.contacts")}
+        value={t("deal.strip.contacts.none")}
+        detail={t("deal.strip.contacts.noneDetail")}
         tone="warn"
       />
     );
   }
   const champion = seats.some((seat) => seat.role === "champion");
   const detail = champion
-    ? t("deal.strip.people.champion")
-    : t("deal.strip.people.noChampion");
+    ? t("deal.strip.contacts.champion")
+    : t("deal.strip.contacts.noChampion");
   return (
     <StatCard
-      label={t("deal.strip.people")}
-      value={t("deal.strip.people.count", {
+      label={t("deal.strip.contacts")}
+      value={t("deal.strip.contacts.count", {
         engaged: formatNumber(engaged, locale),
         total: formatNumber(seats.length, locale),
       })}
       detail={detail}
       tone={engaged <= 1 || !champion ? "warn" : undefined}
-      numeric
       // Counted segments, because a committee is a thing a reader counts.
       meter={{ filled: engaged, total: seats.length }}
       basis={
         <FactList
           facts={seats.map((seat) => ({
-            key: seat.person_id,
-            // The person, linked — or the withheld sentence when only the
-            // identity is hidden. SeatPerson owns both, because two other
+            key: seat.contact_id,
+            // The contact, linked — or the withheld sentence when only the
+            // identity is hidden. SeatContact owns both, because two other
             // cards on this record ask the same question.
-            term: <SeatPerson seat={seat} />,
+            term: <SeatContact seat={seat} />,
             value: dealRoleLabel(seat.role, t),
             note: seat.engaged ? t("coverage.engaged") : t("coverage.quiet"),
           }))}
@@ -313,8 +330,6 @@ function MomentumStat({
       value={relativeDays(deal.last_activity_at, t, locale)}
       detail={parts.join(" · ")}
       tone={deal.stalled ? "danger" : undefined}
-      dot={deal.stalled}
-      openLabel={t("deal.strip.openHistory")}
       onOpen={onOpen}
       basis={
         deal.last_activity_at ? (

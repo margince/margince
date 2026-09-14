@@ -32,7 +32,7 @@ const (
 	// `https://www.acme.example/careers` out of an email signature is asking
 	// about `acme.example`, which is what the column holds.
 	//
-	// The organization LIST already folds its `domain` parameter that way, so
+	// The company LIST already folds its `domain` parameter that way, so
 	// without a type here one product fact would answer two different questions
 	// depending on which surface asked — a saved view returning nothing for the
 	// URL the list matches.
@@ -101,13 +101,13 @@ type Reference string
 // own record-type words (`app_user`, not `user`), so a client keying a picker on
 // them needs no translation table.
 const (
-	RefTag          Reference = "tag"
-	RefAppUser      Reference = "app_user"
-	RefTeam         Reference = "team"
-	RefOrganization Reference = "organization"
-	RefPipeline     Reference = "pipeline"
-	RefStage        Reference = "stage"
-	RefProject      Reference = "project"
+	RefTag      Reference = "tag"
+	RefAppUser  Reference = "app_user"
+	RefTeam     Reference = "team"
+	RefCompany  Reference = "company"
+	RefPipeline Reference = "pipeline"
+	RefStage    Reference = "stage"
+	RefProject  Reference = "project"
 )
 
 // ReferenceTargets is every target the engine admits, and the ONE list of them.
@@ -120,7 +120,7 @@ const (
 // pass on a stale copy of it, which is the one failure they exist to catch.
 func ReferenceTargets() []Reference {
 	return []Reference{
-		RefTag, RefAppUser, RefTeam, RefOrganization,
+		RefTag, RefAppUser, RefTeam, RefCompany,
 		RefPipeline, RefStage, RefProject,
 	}
 }

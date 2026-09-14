@@ -34,7 +34,7 @@ RBAC**:
 | An **agent** | REST | `Authorization: Bearer mgp_…` (a passport) |
 | An **agent** | MCP (`/mcp`, Streamable HTTP) | `Authorization: Bearer mgp_…` — a passport minted directly, or one the OAuth handshake issued for exactly the scopes the human ticked on the consent screen |
 
-(No request names a tenant: one installation serves one organization, and the
+(No request names a tenant: one installation serves one company, and the
 admission middleware binds that singleton workspace itself before any handler runs.)
 
 **Calling `/v1` as a human from a shell.** `crm_session` is set `Secure`, so a
@@ -51,7 +51,7 @@ curl -sS http://localhost:8080/v1/me -H "Cookie: crm_session=$token"
 ```
 
 There is no bearer token for a human — `Authorization: Bearer` is the agent's
-credential, and a passport is not something a person's session can be exchanged
+credential, and a passport is not something a colleague's session can be exchanged
 for. An agent calling the same routes uses its passport and skips all of this.
 
 ### What a passport is
@@ -95,7 +95,7 @@ An action's autonomy tier is **declared once in the contract** (`x-mcp-tool: { t
 
 - **🟢 `auto_execute`** — the default, and what a passport's holder could already do unaided. A passport
   carries the granting human's own seat, grants and row scope, so requiring a second confirmation from
-  that same person made the agent surface weaker than the person behind it rather than safer. Audited,
+  that same contact made the agent surface weaker than the contact behind it rather than safer. Audited,
   with agent-stamped provenance. This is ADR-0055's argument — already accepted for *deciding* an
   approval — applied to doing the thing itself.
 - **🟡 `confirmation_required`** — kept for the calls whose destination the credential-holder did **not**
@@ -114,7 +114,7 @@ An action's autonomy tier is **declared once in the contract** (`x-mcp-tool: { t
 
 **Deciding an approval is not in that class** (ADR-0055). A passport is a credential a human minted
 and can revoke, carrying that human's own seat, grants and row scope, so answering a staged proposal
-on it is that person answering — from the conversation the call was staged in rather than only from
+on it is that contact answering — from the conversation the call was staged in rather than only from
 the web app. What bounds the answer is what bounds them: the RBAC the staged effect itself needs,
 row-scope visibility of its target, the seat ceiling, expiry — plus the caps they chose to lend,
 because a decision spends what the release spends. A `read` passport lists the queue and is refused
@@ -122,7 +122,7 @@ the decision; releasing a held message spends `send`; and no passport answers it
 which is the one decision `on_behalf_of` cannot make safe. An agent never exceeds the granting
 human's live authority.
 
-The premise is that a person is behind the call, so the surface where nobody is — a scheduled,
+The premise is that a contact is behind the call, so the surface where nobody is — a scheduled,
 unattended run — cannot reach the decide verbs at all: the runner's catalog allowlist is gated
 against them by name, because a run that could answer its own staged calls would walk through the
 confirm-first tier by itself.
@@ -138,7 +138,7 @@ whether it arrives over MCP or REST.
 ## The structural backstop — one transaction seam and the app role's grants
 
 No table carries row-level security and no policy exists to read: an installation holds one
-organization (ADR-0061), so what a statement reaches is decided by the statement and by the role
+company (ADR-0061), so what a statement reaches is decided by the statement and by the role
 issuing it.
 
 - Module statements are reachable **only** through `database.WithWorkspaceTx`, which **fails closed
@@ -170,7 +170,7 @@ See [write-backbone.md](write-backbone.md) for the write path that rides inside 
 - **Anything that returns a record is a read** and carries the row-scope gate — including replay,
   conflict, and error paths. A 409 that echoes a hidden row's id is a leak.
 - **A foreign-key reference to a row-scoped record is also a read** (`auth.EnsureLinkTarget`): naming a
-  deal's organization or an activity's link target asserts the target exists, so it is gated like a
+  deal's company or an activity's link target asserts the target exists, so it is gated like a
   read of that target.
 - **Object denial answers 403** (`apperrors.ErrPermissionDenied`): your role cannot do this at all.
 - **A row-scope miss answers 404** (`apperrors.ErrNotFound`): a record you cannot see is

@@ -120,7 +120,7 @@ func actPhrase(pol agentPolicy, method, path string) string {
 }
 
 // recordNoun is the record type as a reader says it: the wire spells
-// `deal_room`, a person says "deal room".
+// `deal_room`, a contact says "deal room".
 func recordNoun(record agentRecordType) string {
 	return strings.ReplaceAll(string(record), "_", " ")
 }

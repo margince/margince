@@ -39,7 +39,7 @@ func TestTheDayEndsAtTheInstallationsMidnight(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			s := &Service{zone: zoneNamed(t, tc.zone)}
-			got, err := s.endOfDay(context.Background(), asOf)
+			got, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -64,7 +64,7 @@ func TestADayTheClocksChangedInStillEndsAtMidnight(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			s := &Service{zone: berlin}
-			got, err := s.endOfDay(context.Background(), asOf)
+			got, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -85,7 +85,7 @@ func TestADayTheClocksChangedInStillEndsAtMidnight(t *testing.T) {
 // to ask gets — and is why the shipped wiring has to bind one.
 func TestAnUnboundZoneIsUTC(t *testing.T) {
 	asOf := time.Date(2026, 6, 15, 8, 30, 0, 0, time.UTC)
-	got, err := (&Service{}).endOfDay(context.Background(), asOf)
+	got, _, err := (&Service{}).endOfDay(context.Background(), asOf)
 	if err != nil {
 		t.Fatalf("endOfDay: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestAnUnboundZoneIsUTC(t *testing.T) {
 // under the installation's name.
 func TestAZoneThatWillNotResolveIsAnError(t *testing.T) {
 	boom := func(context.Context) (*time.Location, error) { return nil, context.DeadlineExceeded }
-	if _, err := (&Service{zone: boom}).endOfDay(context.Background(), time.Now()); err == nil {
+	if _, _, err := (&Service{zone: boom}).endOfDay(context.Background(), time.Now()); err == nil {
 		t.Error("a zone the installation could not answer for produced a boundary anyway")
 	}
 }
@@ -137,7 +137,7 @@ func TestAZoneSeamAnsweringNoLocationIsAnErrorNotAPanic(t *testing.T) {
 	// this pins is that the feed survives a binding somebody got wrong.
 	//nolint:nilnil // the malformed seam IS the subject
 	nothing := func(context.Context) (*time.Location, error) { return nil, nil }
-	if _, err := (&Service{zone: nothing}).endOfDay(context.Background(), time.Now()); err == nil {
+	if _, _, err := (&Service{zone: nothing}).endOfDay(context.Background(), time.Now()); err == nil {
 		t.Error("a nil location produced a boundary; the next call would have panicked instead")
 	}
 }
@@ -257,7 +257,7 @@ func TestTheDaysTwoEndsBoundTheSameDay(t *testing.T) {
 			if err != nil {
 				t.Fatalf("startOfDay: %v", err)
 			}
-			ends, err := s.endOfDay(context.Background(), asOf)
+			ends, _, err := s.endOfDay(context.Background(), asOf)
 			if err != nil {
 				t.Fatalf("endOfDay: %v", err)
 			}
@@ -306,5 +306,38 @@ func TestADayWhoseMidnightDoesNotExistBeginsAtItsFirstInstant(t *testing.T) {
 	}
 	if found == 0 {
 		t.Fatal("no day without a local midnight under this tzdata, so this test proves nothing")
+	}
+}
+
+// The five runs, at their boundaries rather than in their middles: a grouping
+// is only ever wrong at an edge, and each of these edges is a day a reader
+// would notice.
+func TestADatedRowFallsInTheRunItsDeadlineNames(t *testing.T) {
+	loc := time.FixedZone("Europe/Berlin", 2*60*60)
+	asOf := time.Date(2026, 9, 10, 14, 0, 0, 0, loc)
+	until := startOfNextDay(asOf, loc)
+
+	cases := []struct {
+		name string
+		due  time.Time
+		want string
+	}{
+		{"an hour ago", asOf.Add(-time.Hour), dueGroupOverdue},
+		// Not yet late, which is deadline.Passed's rule rather than this
+		// file's: a promise due at this instant still has the instant.
+		{"exactly now", asOf, dueGroupToday},
+		{"this afternoon", asOf.Add(3 * time.Hour), dueGroupToday},
+		{"a second before midnight", until.Add(-time.Second), dueGroupToday},
+		{"exactly midnight", until, dueGroupTomorrow},
+		{"tomorrow afternoon", until.Add(14 * time.Hour), dueGroupTomorrow},
+		{"the day after", until.AddDate(0, 0, 1), dueGroupThisWeek},
+		{"six days out", until.AddDate(0, 0, 6), dueGroupThisWeek},
+		{"seven days out", until.AddDate(0, 0, upcomingWeekDays), dueGroupLater},
+		{"a month out", until.AddDate(0, 1, 0), dueGroupLater},
+	}
+	for _, tc := range cases {
+		if got := dueGroup(tc.due, asOf, until, loc); got != tc.want {
+			t.Errorf("%s: dueGroup = %q, want %q", tc.name, got, tc.want)
+		}
 	}
 }

@@ -7,7 +7,7 @@ package deployconfig
 //
 // Split from deployconfig.go because the two have different lifetimes and that
 // is the whole distinction ADR-0061 §2 draws: a seed is consumed exactly once,
-// at organization creation, and the database is authoritative afterwards —
+// at company creation, and the database is authoritative afterwards —
 // which is why the `bootstrap_admin` and `seeds` sections may be deleted once
 // an installation exists, and why nothing else in that file may be.
 
@@ -18,7 +18,7 @@ import (
 // Seeds externalizes the workspace defaults bootstrap previously seeded
 // from code. Every key is optional — an omitted key seeds the built-in
 // default, so a minimal file behaves exactly like the historical
-// bootstrap. Values are consumed once, at organization creation.
+// bootstrap. Values are consumed once, at company creation.
 type Seeds struct {
 	Pipeline           *PipelineSeed    `yaml:"pipeline"`
 	ConsentPurposes    []ConsentPurpose `yaml:"consent_purposes"`

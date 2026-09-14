@@ -3,7 +3,7 @@
 
 package network
 
-// The forwardable note, and the ways it could embarrass the person who sends
+// The forwardable note, and the ways it could embarrass the contact who sends
 // it.
 //
 // This note is the only text in the introduction workflow a CUSTOMER reads.
@@ -46,7 +46,7 @@ func TestTheFloorWritesANoteTheColleagueCanForward(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Philipp",      // addressed to the contact
-		"Lena Fischer", // the person being introduced
+		"Lena Fischer", // the contact being introduced
 		"developing",   // the relationship, in the page's own vocabulary
 		"2026-08-20",   // when they last spoke
 		"depot energy", // the rep's own reason
@@ -60,7 +60,7 @@ func TestTheFloorWritesANoteTheColleagueCanForward(t *testing.T) {
 
 // The note is addressed to the CONTACT and never mentions the ask behind it.
 //
-// This is the difference from org360's drafter, which writes the internal
+// This is the difference from company360's drafter, which writes the internal
 // request. A note that said "Lena asked me to introduce you" tells a prospect
 // they are the subject of an internal favour — true, and not something anybody
 // would choose to put in front of them.
@@ -166,7 +166,7 @@ func TestEveryFactIsFencedBeforeItReachesTheModel(t *testing.T) {
 // outsideEveryNoteSpan reports whether the needle occurs anywhere that is not
 // between two markers.
 //
-// Its own copy rather than org360's: that one is an unexported test helper in
+// Its own copy rather than company360's: that one is an unexported test helper in
 // another package, and exporting a test-only function to share four lines of
 // string walking would put a seam in production code for a test's convenience.
 func outsideEveryNoteSpan(content, marker, needle string) bool {
@@ -180,7 +180,7 @@ func outsideEveryNoteSpan(content, marker, needle string) bool {
 	return false
 }
 
-// A reply that does not name the two people it is about falls back to the
+// A reply that does not name the two contacts it is about falls back to the
 // template.
 //
 // A note addressed to nobody, or about nobody, is one the colleague has to
@@ -201,7 +201,7 @@ func TestAReplyThatNamesNobodyIsRefused(t *testing.T) {
 	good := `{"subject":"Introducing Lena Fischer",` +
 		`"body":"Hi Philipp Königs, I wanted to introduce Lena Fischer."}`
 	if _, err := parseIntroNote(good, facts); err != nil {
-		t.Errorf("a note naming both people was refused: %v", err)
+		t.Errorf("a note naming both contacts was refused: %v", err)
 	}
 }
 
@@ -215,7 +215,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 	t.Parallel()
 	note := introNote{subject: "s", body: "b"}
 
-	written := wireIntroNote(note, crmcontracts.Model, warmNote())
+	written := wireIntroNote(note, crmcontracts.WrittenByModel, warmNote())
 	if written.AiGenerated == nil || !*written.AiGenerated {
 		t.Error("a model-written note does not say so")
 	}
@@ -223,7 +223,7 @@ func TestOnlyAModelWrittenNoteCarriesTheDisclosure(t *testing.T) {
 		t.Error("a model-written note carries no Art. 50 disclosure")
 	}
 
-	floor := wireIntroNote(note, crmcontracts.Deterministic, warmNote())
+	floor := wireIntroNote(note, crmcontracts.WrittenByDeterministic, warmNote())
 	if floor.AiGenerated == nil || *floor.AiGenerated {
 		t.Error("a template-written note claims a model wrote it")
 	}
@@ -239,7 +239,7 @@ func TestTheDisclosureSpeaksTheNotesLanguage(t *testing.T) {
 	note := introNote{subject: "s", body: "b"}
 	facts := warmNote()
 	facts.lang = textlang.German
-	german := wireIntroNote(note, crmcontracts.Model, facts)
+	german := wireIntroNote(note, crmcontracts.WrittenByModel, facts)
 	if german.AiDisclosure == nil || !strings.Contains(*german.AiDisclosure, "KI") {
 		t.Errorf("a German note's disclosure is %v; want German", german.AiDisclosure)
 	}
@@ -256,9 +256,9 @@ func TestReasoningIsAlwaysAnArrayOnTheWire(t *testing.T) {
 	bare := noteFacts{lang: textlang.English}
 	for name, out := range map[string]crmcontracts.AccountEmailDraft{
 		"with facts": wireIntroNote(
-			introNote{subject: "s", body: "b"}, crmcontracts.Model, warmNote()),
+			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByModel, warmNote()),
 		"with none": wireIntroNote(
-			introNote{subject: "s", body: "b"}, crmcontracts.Deterministic, bare),
+			introNote{subject: "s", body: "b"}, crmcontracts.WrittenByDeterministic, bare),
 	} {
 		raw, err := json.Marshal(out)
 		if err != nil {
@@ -279,7 +279,7 @@ func TestTheReasonsNameTheRouteAndOnlyWhatIsRecorded(t *testing.T) {
 	}
 	if !strings.Contains(reasons[0].Label, "Sofia Meier") ||
 		!strings.Contains(reasons[0].Label, "developing") {
-		t.Errorf("the relationship reason is %q; want the two people and the band",
+		t.Errorf("the relationship reason is %q; want the two contacts and the band",
 			reasons[0].Label)
 	}
 

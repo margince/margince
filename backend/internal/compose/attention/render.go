@@ -18,9 +18,9 @@ import (
 
 // One item's shape, per producer.
 //
-// The rule every renderer here keeps: the title is what a person would say
+// The rule every renderer here keeps: the title is what a contact would say
 // happened, and the identifiers stay in `id` and `subject` where a client uses
-// them to navigate. A card that printed `organization_id` at a reader was
+// them to navigate. A card that printed `company_id` at a reader was
 // showing them the plumbing and calling it information.
 
 // actionOpen sends the reader to the record named in the item's `subject`, so
@@ -28,11 +28,18 @@ import (
 // lanewiring_test.go refuses the rest.
 const actionOpen crmcontracts.AttentionItemActions = "open"
 
+// actionUndo puts back a change the system made without asking.
+//
+// Offered on a receipt alone, and only on one carrying an audit row to restore:
+// the record-history route reads the before-image from it, so a card without
+// one would be a button naming nothing to reverse.
+const actionUndo crmcontracts.AttentionItemActions = "undo"
+
 // actionDismiss puts a lapsed contact aside for a while.
 //
 // Offered ONLY where a dismissal endpoint takes the row's own id, which today
-// is the relationship-decay lane: its rows carry the person's id, and
-// /people/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
+// is the relationship-decay lane: its rows carry the contact's id, and
+// /contacts/{id}/nudge-dismissal is keyed on exactly that. A verb on a row whose
 // id the endpoint cannot take would be a control that 404s.
 //
 // A reader's own judgement rather than a change to the record — the contact is
@@ -279,7 +286,7 @@ func stagedFacts(
 	// matching" (modules/capture/pending.go). A sender types it, so
 	// `Alice <alice@gmail.com>` would have read as a company we know.
 	//
-	// A real match needs a lookup against the organizations this workspace has,
+	// A real match needs a lookup against the companies this workspace has,
 	// which is a read this assembler does not make. Until it does, a contact
 	// question is either from a machine or is the honest remainder.
 	return facts, true
@@ -291,7 +298,7 @@ func stagedFacts(
 // — the one place that decides whether a due moment is behind now.
 // Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
 // (backend/gates/overdueboundary_test.go).
-func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
+func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{
 		Id:      task.ID.String(),
@@ -300,11 +307,20 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
 	}
+	if task.LeadResponseEscalation {
+		kind := "lead_response_escalation"
+		item.Kind = &kind
+	}
 	if task.DueAt != nil {
 		due := *task.DueAt
 		item.DueAt = &due
 		past := deadline.Passed(task.DueAt, asOf)
 		item.Overdue = &past
+		// Which run of the page it heads. Only dated rows carry one, which is
+		// what the contract says and what lets a client group without having to
+		// decide the day's end for itself.
+		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		item.DueGroup = &group
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.
@@ -314,7 +330,7 @@ func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	}
 	// The row this item's verbs write to. `complete` and `snooze` both PATCH the
 	// task, and a client that cannot name the version cannot make either
-	// conditional — so two people acting on one task overwrite each other and
+	// conditional — so two contacts acting on one task overwrite each other and
 	// the second is told nothing.
 	if task.Version != nil {
 		version := *task.Version
@@ -371,7 +387,7 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // used to name a debt every morning with no way to say it was paid, because
 // nothing anywhere could write the `done` the status column has always had.
 //
-// And `open`: the person the promise was made to is named on the card, and a
+// And `open`: the contact the promise was made to is named on the card, and a
 // reader who cannot reach them has been told about a debt and denied the way to
 // pay it.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
@@ -384,7 +400,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Source:  crmcontracts.AttentionItemSource("conversation_claim"),
 		Title:   &body,
 		Detail:  &quote,
-		Subject: subjectOf("person", promise.PersonID),
+		Subject: subjectOf("contact", promise.ContactID),
 		DueAt:   &due,
 		Overdue: &past,
 		Actions: []crmcontracts.AttentionItemActions{
@@ -397,34 +413,6 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		item.Kind = &label
 	}
 	return item
-}
-
-// receiptItem renders one thing the system did on its own.
-//
-// It offers no decision: a receipt reports a finished act, and asking the reader
-// to answer a question already answered is not a verb this lane has.
-//
-// It offers `open` only when the decision named a record. Not every approval is
-// about one, and a card that advertised the verb regardless would send a client
-// that trusts it to a destination the card never carried.
-func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
-	kind := receipt.Kind
-	occurred := receipt.OccurredAt
-	summary := receipt.Summary
-	subject := subjectOf(receipt.TargetType, receipt.TargetID)
-	actions := []crmcontracts.AttentionItemActions{}
-	if openableSubject(subject) {
-		actions = append(actions, actionOpen)
-	}
-	return crmcontracts.AttentionItem{
-		Id:         receipt.ID.String(),
-		Source:     crmcontracts.AttentionItemSource("approval"),
-		Kind:       &kind,
-		Title:      &summary,
-		Subject:    subject,
-		OccurredAt: &occurred,
-		Actions:    actions,
-	}
 }
 
 // subjectOf names the record an item concerns, when the producer named one.
@@ -446,8 +434,8 @@ func subjectOf(entityType string, id ids.UUID) *crmcontracts.AttentionSubject {
 // pointed a reader at the wrong record would be worse than one that pointed
 // nowhere.
 var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
-	"organization": "organization",
-	"person":       "person",
+	subjectCompany: subjectCompany,
+	"contact":      "contact",
 	"deal":         "deal",
 	"lead":         "lead",
 	"activity":     "activity",
@@ -463,7 +451,7 @@ func openableSubject(subject *crmcontracts.AttentionSubject) bool {
 		return false
 	}
 	switch subject.Type {
-	case "organization", "person", "deal", "lead", "project":
+	case subjectCompany, subjectContact, subjectDeal, "lead", "project":
 		return true
 	}
 	return false

@@ -45,7 +45,7 @@ type ThreadOutcome struct {
 // thread it had already imported and not yet decided.
 //
 // Scoped to the seat whose verdict it is, like the single-message stamp beside
-// it: a thread reaching two mailboxes is two people's correspondence, each may
+// it: a thread reaching two mailboxes is two contacts's correspondence, each may
 // conclude differently, and the derivation takes the strictest of their
 // answers. A stamp that ignored user_id would let one seat's `ordinary`
 // publish a message their colleague's mailbox is holding.

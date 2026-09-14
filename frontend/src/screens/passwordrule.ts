@@ -15,7 +15,7 @@
  * on which side of twelve it landed. The server has one rule; the client had
  * two, and neither screen could see the other.
  *
- * Code points is the reading kept, because it is what a person means by "twelve
+ * Code points is the reading kept, because it is what a contact means by "twelve
  * characters" — a single emoji is one character to the reader who typed it, and
  * counting it as two lets a password that LOOKS eleven characters long pass.
  */

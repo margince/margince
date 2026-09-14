@@ -51,7 +51,7 @@ func TestChangeValidateRefusesWhatTheLedgerCannotHold(t *testing.T) {
 		"no action at all":                          func(c *Change) { c.Action = "" },
 		// entity_type names a KIND of record. A core one would put a line into
 		// a core record's history describing a write the core never made.
-		"a core entity type":       func(c *Change) { c.Entity = "person" },
+		"a core entity type":       func(c *Change) { c.Entity = "contact" },
 		"a schema-qualified table": func(c *Change) { c.Entity = "ext.ext_notes_note" },
 		"no entity":                func(c *Change) { c.Entity = "" },
 		// entity_id is a uuid column.
@@ -136,7 +136,7 @@ func TestOneCallRecordsTheLedgerRowAndTheEvent(t *testing.T) {
 		ev Event
 	}{
 		"a change the ledger refuses": {
-			Change{Action: AuditCreate, Entity: "person", ID: testRowID}, Event{Verb: "note_added"},
+			Change{Action: AuditCreate, Entity: "contact", ID: testRowID}, Event{Verb: "note_added"},
 		},
 		"an event the bus refuses": {
 			Change{Action: AuditCreate, Entity: "ext_notes_note", ID: testRowID}, Event{Verb: "Note Added"},

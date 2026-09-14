@@ -21,6 +21,7 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { useRecordZone } from "../app/recordzone";
 import { DataTable } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
@@ -30,10 +31,13 @@ import { useLocale, useT } from "../i18n";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { listReadState } from "./worklist.listread";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+import { receiptSummary } from "./worklist.receiptcopy";
+import { ReceiptReview } from "./worklist.receiptreview";
 
 export function HandledForYouPanel() {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
   const zone = viewerZone();
@@ -98,7 +102,8 @@ export function HandledForYouPanel() {
                   {
                     key: "summary",
                     header: t("worklist.handled.what"),
-                    render: (row: Receipt) => row.summary,
+                    render: (row: Receipt) =>
+                      receiptSummary(row, t, locale, recordZone),
                   },
                   {
                     key: "subject",
@@ -115,6 +120,15 @@ export function HandledForYouPanel() {
                     header: t("worklist.handled.when"),
                     render: (row: Receipt) =>
                       formatDateTime(row.occurred_at, locale, zone),
+                  },
+                  {
+                    // The one verb this panel carries, and only on the rows
+                    // that earned it. A receipt for a decision somebody made
+                    // renders an empty cell: the work was agreed to, so there
+                    // is nothing here to take back.
+                    key: "undo",
+                    header: t("worklist.handled.wayBack"),
+                    render: (row: Receipt) => <ReceiptReview receipt={row} />,
                   },
                 ]}
               />

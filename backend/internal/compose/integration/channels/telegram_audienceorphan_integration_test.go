@@ -53,7 +53,7 @@ func (c *telegramEnv) audienceWriterCtx(t *testing.T) context.Context {
 			RoleKeys: []string{"rep"},
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true, Update: true},
-				"person":   {Read: true, Update: true},
+				"contact":  {Read: true, Update: true},
 			},
 			RowScope: principal.RowScopeAll,
 		},

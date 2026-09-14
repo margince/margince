@@ -56,7 +56,7 @@ func lineOf(e entry) (crmcontracts.MagicLine, bool) {
 	line := crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(e.ID),
 		OccurredAt: e.OccurredAt,
-		Lane:       crmcontracts.MagicLaneDone,
+		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    crmcontracts.MagicSentence{Key: meaning.sentence},
 		Entity: &crmcontracts.MagicEntityRef{
 			Type: e.EntityType,

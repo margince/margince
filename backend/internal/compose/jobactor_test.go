@@ -90,7 +90,7 @@ var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|Install
 // no actor in it — the precise bug this gate exists to catch, sailing past a
 // check that only asked whether the name appeared.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|principal\.WithActor)\(`)
+	`\w+\s*(=|:=)\s*(providerJobActor|reconcileWorkerCtx|partSlimJobActor|principal\.WithActor)\(`)
 
 // workMethod matches a River worker's entry point and captures its receiver,
 // which is the worker's name in the failure message.
@@ -475,7 +475,7 @@ func bindActor(ctx context.Context) context.Context {
 // suppress the follow to the package's real bindActor, and the worker — which
 // calls it and IS bound — came back unbound. That is the cry-wolf direction,
 // and this file's own prose says what a gate that cries wolf gets: deleted by
-// the next person who sees it red.
+// the next contact who sees it red.
 func TestTheFollowIgnoresAnAssignmentInsideACommentOrAString(t *testing.T) {
 	t.Parallel()
 	const pkg = `package compose

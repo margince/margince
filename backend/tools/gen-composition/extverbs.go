@@ -328,7 +328,7 @@ const rbacActionExtension = "x-rbac-action"
 // a stored role document granting the object makes policy.Parse reject the
 // document, which fails that user's ENTIRE identity resolution — not the one
 // screen the unit shipped. A typo in a fragment must not be able to lock a
-// person out of the product.
+// contact out of the product.
 //
 // Closed rather than "check the ones we know": an operation carrying, say,
 // x-agent-access would be stating an authority posture this tier does not read,

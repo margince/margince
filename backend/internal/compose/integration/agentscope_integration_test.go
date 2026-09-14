@@ -48,21 +48,21 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Enrich Scope", "enrich@fable.test", "Admin")
 
-	var org struct {
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
 		"domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create org → %d", status)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company → %d", status)
 	}
 
 	// The old default: everything a mutating agent did cost `write`.
 	writeOnly := apptest.PassportBearer(t, e, "write-only agent", "read", "write")
 
 	var refusal capRefusal
-	status := e.Call(t, "POST", "/v1/organizations/"+org.ID+"/enrich", nil, writeOnly, &refusal)
+	status := e.Call(t, "POST", "/v1/companies/"+company.ID+"/enrich", nil, writeOnly, &refusal)
 	if status != http.StatusForbidden || refusal.Code != scopeRefusalCode || refusal.Type != scopeRefusalType {
 		t.Fatalf("enrich on read+write → %d %q %q, want 403 %s / %s",
 			status, refusal.Code, refusal.Type, scopeRefusalCode, scopeRefusalType)
@@ -89,7 +89,7 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 	// request and answers before the handler runs, so no website is fetched
 	// on this path at all.
 	var staged capRefusal
-	status = e.Call(t, "POST", "/v1/organizations/"+org.ID+"/enrich", nil, withEnrich, &staged)
+	status = e.Call(t, "POST", "/v1/companies/"+company.ID+"/enrich", nil, withEnrich, &staged)
 	if status != http.StatusForbidden || staged.Code != "approval_required" {
 		t.Fatalf("enrich with the enrich cap → %d %q, want 403 approval_required (the 🟡 gate)", status, staged.Code)
 	}

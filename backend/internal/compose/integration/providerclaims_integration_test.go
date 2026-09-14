@@ -13,7 +13,7 @@ package integration
 //   - Art. 17 erasure (the delete arm) removes the claims and detaches the
 //     runs that bought them;
 //   - the retention sweep's anonymize-in-place arm does the SAME, since it
-//     leaves the person row standing and nothing cascades;
+//     leaves the contact row standing and nothing cascades;
 //   - Art. 15 hands the claims and the run history back;
 //   - a merge keeps BOTH sides' purchases, because both were paid for.
 
@@ -28,7 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -37,21 +37,21 @@ import (
 
 // seedPurchase writes one completed run and one claim for a subject.
 //
-// The CLAIM goes through people.WriteProviderClaims, the real writer, so
+// The CLAIM goes through contacts.WriteProviderClaims, the real writer, so
 // these tests see the rows production produces. The RUN row is hand-built:
 // reaching a completed run through integrations.QueueRun would need a live
 // connection, a registered adapter and a job inserter, and what these tests
 // are about is what happens to a run once it exists.
-func seedPurchase(t *testing.T, e *Env, personID ids.UUID) (runID string) {
+func seedPurchase(t *testing.T, e *Env, contactID ids.UUID) (runID string) {
 	t.Helper()
-	return seedRun(t, e, personID, "completed", "fp-"+personID.String(), true)
+	return seedRun(t, e, contactID, "completed", "fp-"+contactID.String(), true)
 }
 
 // seedRun writes one run in a named state at a named fingerprint, optionally
 // with a claim hanging off it. The fingerprint is a parameter because the
 // merge collision rules are defined over it: two runs collide only when they
 // share one.
-func seedRun(t *testing.T, e *Env, personID ids.UUID, state, fingerprint string, withClaim bool) (runID string) {
+func seedRun(t *testing.T, e *Env, contactID ids.UUID, state, fingerprint string, withClaim bool) (runID string) {
 	t.Helper()
 	completed := "NULL"
 	if state == "completed" || state == "no_match" {
@@ -61,12 +61,12 @@ func seedRun(t *testing.T, e *Env, personID ids.UUID, state, fingerprint string,
 	err := database.WithWorkspaceTx(seedCtx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
-			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 			   external_correlation_id, connection_version, connection_epoch,
 			   configuration_snapshot, requested_categories, completed_at)
-			VALUES ('person', $1, 'surfe', 'manual', $2, $3,
+			VALUES ('contact', $1, 'surfe', 'manual', $2, $3,
 			        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['professional_email'], `+completed+`)
-			RETURNING id::text`, personID, state, fingerprint).Scan(&runID); err != nil {
+			RETURNING id::text`, contactID, state, fingerprint).Scan(&runID); err != nil {
 			return err
 		}
 		if !withClaim {
@@ -74,7 +74,7 @@ func seedRun(t *testing.T, e *Env, personID ids.UUID, state, fingerprint string,
 		}
 		// The store's own context, not a bare one: the claim write audits the
 		// arrival, and an audit row needs the actor that caused it.
-		return people.WriteProviderClaims(seedCtx, tx, runID, personID.String(), "surfe",
+		return contacts.WriteProviderClaims(seedCtx, tx, runID, contactID.String(), "surfe",
 			[]provider.Claim{{
 				Key:   provider.ClaimProfessionalEmails,
 				Value: []byte(`[{"value":"bought@example.com","validation_status":"valid"}]`),
@@ -100,41 +100,41 @@ func runState(t *testing.T, e *Env, runID string) (state, fingerprint string) {
 	return state, fingerprint
 }
 
-// seedMergeSubject writes a person with their own address, so two of them can
+// seedMergeSubject writes a contact with their own address, so two of them can
 // coexist before a merge brings them together.
 func seedMergeSubject(t *testing.T, e *Env, name string) ids.UUID {
 	t.Helper()
-	personID := ids.NewV7()
+	contactID := ids.NewV7()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, source, captured_by)
-			 VALUES ($1, $2, 'manual', 'human:x')`, personID, name); err != nil {
+			`INSERT INTO contact (id, full_name, source, captured_by)
+			 VALUES ($1, $2, 'manual', 'human:x')`, contactID, name); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
 			 VALUES ($1, $2, 'manual', 'human:x')`,
-			personID, personID.String()+"@example.com")
+			contactID, contactID.String()+"@example.com")
 		return err
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return personID
+	return contactID
 }
 
 // claimAndRunState reads what survives for a subject: how many claims, and
 // whether the run still names them.
-func claimAndRunState(t *testing.T, e *Env, personID ids.UUID, runID string) (claims int, stillNamed bool, kind string) {
+func claimAndRunState(t *testing.T, e *Env, contactID ids.UUID, runID string) (claims int, stillNamed bool, kind string) {
 	t.Helper()
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_provider_claim WHERE person_id = $1`, personID).Scan(&claims); err != nil {
+			`SELECT count(*) FROM contact_provider_claim WHERE contact_id = $1`, contactID).Scan(&claims); err != nil {
 			return err
 		}
 		return tx.QueryRow(context.Background(),
-			`SELECT person_id IS NOT NULL, subject_kind FROM provider_run WHERE id = $1`,
+			`SELECT contact_id IS NOT NULL, subject_kind FROM provider_run WHERE id = $1`,
 			runID).Scan(&stillNamed, &kind)
 	})
 	if err != nil {
@@ -147,22 +147,22 @@ func claimAndRunState(t *testing.T, e *Env, personID ids.UUID, runID string) (cl
 // nobody.
 func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
-	runID := seedPurchase(t, e, personID)
+	contactID := seedSubject(t, e)
+	runID := seedPurchase(t, e, contactID)
 
-	if claims, _, _ := claimAndRunState(t, e, personID, runID); claims != 1 {
+	if claims, _, _ := claimAndRunState(t, e, contactID, runID); claims != 1 {
 		t.Fatalf("seeded %d claims, want 1 — the test proves nothing about erasure without one", claims)
 	}
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), personID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
-	claims, stillNamed, kind := claimAndRunState(t, e, personID, runID)
+	claims, stillNamed, kind := claimAndRunState(t, e, contactID, runID)
 	if claims != 0 {
 		t.Errorf("%d purchased claims survive the erasure — a value bought about the subject is still readable", claims)
 	}
 	if stillNamed {
-		t.Error("the run still names the erased subject: a row saying we bought data about this person IS data about them")
+		t.Error("the run still names the erased subject: a row saying we bought data about this contact IS data about them")
 	}
 	if kind != "scrubbed" {
 		t.Errorf("run subject_kind is %q, want scrubbed", kind)
@@ -182,28 +182,28 @@ func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing
 	}
 }
 
-// The same human as TWO person rows: an archived duplicate holding their
+// The same human as TWO contact rows: an archived duplicate holding their
 // address, and the live record being erased. The archived row's purchased
 // claims and its runs' provider_job_id — the handle that would let the
 // provider be re-asked for exactly what this erasure destroyed — must go
-// too. Keying the erasure on person_id alone erases one row of a person who
+// too. Keying the erasure on contact_id alone erases one row of a contact who
 // exists as two.
 func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 	e := Setup(t)
 	live := seedSubject(t, e)
 
 	// The archived duplicate, carrying the SAME address. Legitimate:
-	// uq_person_email_dedupe is partial on archived_at IS NULL.
+	// uq_contact_email_dedupe is partial on archived_at IS NULL.
 	archived := ids.NewV7()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, source, captured_by, archived_at)
+			`INSERT INTO contact (id, full_name, source, captured_by, archived_at)
 			 VALUES ($1, 'Selma Subject', 'manual', 'human:x', now())`, archived); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by, archived_at)
+			`INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
 			 VALUES ($1, $2, 'manual', 'human:x', now())`, archived, subjectEmail)
 		return err
 	}); err != nil {
@@ -211,7 +211,7 @@ func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 	}
 	archivedRun := seedPurchase(t, e, archived)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), live, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), live, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -225,21 +225,21 @@ func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 }
 
 // The retention sweep's anonymize-in-place arm. It is a SEPARATE code path
-// from ErasePerson above and the one that gets missed: it leaves the person
+// from EraseContact above and the one that gets missed: it leaves the contact
 // row standing, so nothing cascades, and without its own statements the page
 // would show a bought email beside an "Erased Subject" name.
 func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
-	personID := seedSubject(t, e)
-	runID := seedPurchase(t, e, personID)
+	contactID := seedSubject(t, e)
+	runID := seedPurchase(t, e, contactID)
 
-	// Age the person past every policy window so the sweep acts on them.
+	// Age the contact past every policy window so the sweep acts on them.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			UPDATE person SET created_at = now() - interval '4000 days',
+			UPDATE contact SET created_at = now() - interval '4000 days',
 			                  updated_at = now() - interval '4000 days'
-			 WHERE id = $1`, personID)
+			 WHERE id = $1`, contactID)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -253,8 +253,8 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 	var anonymized bool
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT first_name IS NULL AND last_name IS NULL FROM person WHERE id = $1`,
-			personID).Scan(&anonymized)
+			`SELECT first_name IS NULL AND last_name IS NULL FROM contact WHERE id = $1`,
+			contactID).Scan(&anonymized)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 		t.Fatal("the sweep did not anonymize the seeded subject, so this test proves nothing — fix the fixture's age or the policy window")
 	}
 
-	claims, stillNamed, _ := claimAndRunState(t, e, personID, runID)
+	claims, stillNamed, _ := claimAndRunState(t, e, contactID, runID)
 	if claims != 0 {
 		t.Errorf("%d purchased claims survive the anonymize sweep — the page would show a bought email beside an anonymized name", claims)
 	}
@@ -278,10 +278,10 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 // that we went out and bought them.
 func TestSARHandsBackTheProviderClaimsAndTheRunHistory(t *testing.T) {
 	e := Setup(t)
-	personID := seedSubject(t, e)
-	seedPurchase(t, e, personID)
+	contactID := seedSubject(t, e)
+	seedPurchase(t, e, contactID)
 
-	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.PersonKind](personID))
+	pkg, err := privacy.AssembleSAR(e.Admin(), e.DB(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,16 +312,16 @@ func TestMergeKeepsBothSidesPurchasedClaims(t *testing.T) {
 	seedPurchase(t, e, survivor)
 	seedPurchase(t, e, source)
 
-	store := people.NewStore(e.DB())
-	if _, err := store.MergePerson(e.Admin(), ids.From[ids.PersonKind](source),
-		ids.From[ids.PersonKind](survivor)); err != nil {
+	store := contacts.NewStore(e.DB())
+	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
+		ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatal(err)
 	}
 
 	var onSurvivor int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM person_provider_claim WHERE person_id = $1`, survivor).Scan(&onSurvivor)
+			`SELECT count(*) FROM contact_provider_claim WHERE contact_id = $1`, survivor).Scan(&onSurvivor)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -344,9 +344,9 @@ func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
 	survivorRun := seedRun(t, e, survivor, "submitting", shared, false)
 	sourceRun := seedRun(t, e, source, "in_progress", shared, true)
 
-	store := people.NewStore(e.DB())
-	if _, err := store.MergePerson(e.Admin(), ids.From[ids.PersonKind](source),
-		ids.From[ids.PersonKind](survivor)); err != nil {
+	store := contacts.NewStore(e.DB())
+	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
+		ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -367,7 +367,7 @@ func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
 	var onSurvivor int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM provider_run WHERE person_id = $1`, survivor).Scan(&onSurvivor)
+			`SELECT count(*) FROM provider_run WHERE contact_id = $1`, survivor).Scan(&onSurvivor)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -385,9 +385,9 @@ func TestMergeCancelsTheMergedAwayRecordsUnspentRun(t *testing.T) {
 	source := seedMergeSubject(t, e, "Cara Source")
 	sourceRun := seedRun(t, e, source, "queued", "fp-unspent", false)
 
-	store := people.NewStore(e.DB())
-	if _, err := store.MergePerson(e.Admin(), ids.From[ids.PersonKind](source),
-		ids.From[ids.PersonKind](survivor)); err != nil {
+	store := contacts.NewStore(e.DB())
+	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source),
+		ids.From[ids.ContactKind](survivor)); err != nil {
 		t.Fatal(err)
 	}
 

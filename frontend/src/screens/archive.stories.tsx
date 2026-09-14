@@ -35,8 +35,8 @@ export const ConfirmOpen: Story = {
     confirmText:
       "Are you sure? This archives the record — there is no undo control.",
     archive: () => Promise.resolve({ id: "p-1" }),
-    invalidate: "people",
-    recordKey: "person",
+    invalidate: "contacts",
+    recordKey: "contact",
     onArchived: () => undefined,
   },
   play: async ({ canvasElement }) => {

@@ -17,15 +17,15 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// seedTaskAndTarget logs one task activity plus a person for it to be
+// seedTaskAndTarget logs one task activity plus a contact for it to be
 // relinked onto, returning both ids.
-func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (personID, taskID string) {
+func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (contactID, taskID string) {
 	t.Helper()
-	var person struct {
+	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Task Target"}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person → %d", status)
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Task Target"}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
 	}
 	var task struct {
 		ID string `json:"id"`
@@ -35,13 +35,13 @@ func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (personID, taskID string
 	}, nil, &task); status != http.StatusCreated {
 		t.Fatalf("log task → %d", status)
 	}
-	return person.ID, task.ID
+	return contact.ID, task.ID
 }
 
 func TestActivityUpdateArchiveRelink(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Act E2E", "act@fable.test", "Admin")
-	personID, taskID := seedTaskAndTarget(t, e)
+	contactID, taskID := seedTaskAndTarget(t, e)
 
 	// Completing the task stamps done_at with it.
 	var updated struct {
@@ -63,7 +63,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 		t.Fatalf("stale If-Match → %d %q", status, problem.Code)
 	}
 
-	assertRelinkIdempotentAndVisibilityScoped(t, e, taskID, personID)
+	assertRelinkIdempotentAndVisibilityScoped(t, e, taskID, contactID)
 
 	// Archive is the soft flag (same semantics as every entity): the
 	// record stays readable by id, stamped archived_at, and further
@@ -83,22 +83,22 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 }
 
 // assertRelinkIdempotentAndVisibilityScoped covers the relink arm:
-// an idempotent association onto a visible person, replay-silent in the
-// audit trail, with invisible targets (person and lead alike) reading
+// an idempotent association onto a visible contact, replay-silent in the
+// audit trail, with invisible targets (contact and lead alike) reading
 // as absent.
-func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, taskID, personID string) {
+func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, taskID, contactID string) {
 	t.Helper()
-	// Relink: idempotent association onto a visible person.
+	// Relink: idempotent association onto a visible contact.
 	for i := 0; i < 2; i++ {
 		if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
-			"entity_type": "person", "entity_id": personID,
+			"entity_type": "contact", "entity_id": contactID,
 		}, nil, nil); status != http.StatusOK {
 			t.Fatalf("relink (round %d) → %d", i, status)
 		}
 	}
 	var links int
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT count(*) FROM activity_link WHERE person_id = $1`, personID).Scan(&links); err != nil {
+		`SELECT count(*) FROM activity_link WHERE contact_id = $1`, contactID).Scan(&links); err != nil {
 		t.Fatal(err)
 	}
 	if links != 1 {
@@ -115,7 +115,7 @@ func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, 
 	}
 	// An invisible relink target reads as absent (H1).
 	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
-		"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead",
+		"entity_type": "contact", "entity_id": "00000000-0000-7000-8000-00000000dead",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("invisible relink target → %d, want 404", status)
 	}

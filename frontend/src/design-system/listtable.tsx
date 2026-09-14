@@ -1378,7 +1378,7 @@ function HeaderCell<Row>({
  * Deliberately hidden from assistive technology. A labelled control inside a
  * `th` joins that header's accessible name, so every column would announce as
  * "Value, resize the Value column" — the price of a keyboard affordance here is
- * making every header read worse for the people who rely on the name most. The
+ * making every header read worse for the contacts who rely on the name most. The
  * column picker already gives keyboard users control over what a table shows,
  * and a width is presentation rather than content.
  */

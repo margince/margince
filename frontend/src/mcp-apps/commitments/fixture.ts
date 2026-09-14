@@ -47,7 +47,7 @@ export const commitmentsFixture: Envelope = {
         assignee_name: "Ravi Bhatt",
         about: [
           {
-            entity_type: "organization",
+            entity_type: "company",
             entity_id: "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6",
             name: "Acme GmbH",
           },

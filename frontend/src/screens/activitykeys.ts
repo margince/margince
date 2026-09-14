@@ -29,15 +29,15 @@ export function entityTimelineKeys(
   return keys;
 }
 
-const ORGANIZATION_360_KEY = (id: string): QueryKey => ["organization360", id];
+const COMPANY_360_KEY = (id: string): QueryKey => ["company360", id];
 
 // The composite reads that carry a timeline's first page, by record kind —
 // spelled the way each page's own query spells its key.
 const TIMELINE_SEED_KEYS: Partial<
   Record<EntityKind, (entityId: string) => QueryKey>
 > = {
-  organization: (id) => ORGANIZATION_360_KEY(id),
-  person: (id) => ["person360", id],
+  company: (id) => COMPANY_360_KEY(id),
+  contact: (id) => ["contact360", id],
   project: (id) => ["project", id, "360"],
 };
 
@@ -83,7 +83,7 @@ export function derivedRecordKeys(
 // every one of them is stale the moment a seat is added, re-roled or removed.
 // Keyed per deal by the reader (dealCoverageKey); named here as the prefix,
 // because a writer usually knows only that SOME deal's edges moved — a
-// stakeholder is seated from the person's page as readily as from the deal's.
+// stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey> = {
@@ -109,20 +109,18 @@ export function taskWriteKeys(
 // its project into delivery in the same server write, so besides the project
 // page and list, the company page — it embeds the account's projects with
 // their phase — is stale the moment the advance returns. A deal names no
-// contact of its own (the Deal schema carries organization_id and project_id
-// only), so there is no person page to reach from here. Derived beside the
+// contact of its own (the Deal schema carries company_id and project_id
+// only), so there is no contact page to reach from here. Derived beside the
 // timeline keys so the 360 keys keep one spelling.
 export function dealWinKeys(
-  deal:
-    | { project_id?: string | null; organization_id?: string | null }
-    | undefined,
+  deal: { project_id?: string | null; company_id?: string | null } | undefined,
 ): QueryKey[] {
   const keys: QueryKey[] = [["projects"]];
   if (deal?.project_id) {
     keys.push(["project", deal.project_id]);
   }
-  if (deal?.organization_id) {
-    keys.push(ORGANIZATION_360_KEY(deal.organization_id));
+  if (deal?.company_id) {
+    keys.push(COMPANY_360_KEY(deal.company_id));
   }
   return keys;
 }
@@ -195,7 +193,7 @@ function matchesShape(
 // ── The record's own read ───────────────────────────────────────────────────
 
 // The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
-// seed is the status card, which is written by a model; what carries the
+// seed is the status card; what carries the
 // deal's own fields is this.
 const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
 
@@ -208,17 +206,16 @@ const DEAL_RECORD_KEY = (id: string): QueryKey => ["deal", id];
  * app/queryclient.ts): a record on screen re-reads itself, and everything else
  * is served from cache the way it always was.
  *
- * Derived from TIMELINE_SEED_KEYS rather than listed a second time, so a
- * record kind that grows a composite read joins this by being added there —
- * the list that goes stale silently is the one nobody has to touch. Matched
- * EXACTLY rather than as a prefix: a record's read is that key, and a prefix
- * would sweep in whatever else a page happens to hang under it.
+ * Composite records derive their shapes from TIMELINE_SEED_KEYS. The deal
+ * adds its field read and its facts-only status read; the latter cannot ask
+ * a model. Matching exact shapes keeps unrelated cached reads out.
  */
 export function isRecordRead(key: QueryKey): boolean {
   const shapes = Object.values(TIMELINE_SEED_KEYS).map(
     (seed) => seed(SHAPE_ID) as unknown[],
   );
   shapes.push(DEAL_RECORD_KEY(SHAPE_ID) as unknown[]);
+  shapes.push(DEAL_STATUS_KEY(SHAPE_ID) as unknown[]);
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 

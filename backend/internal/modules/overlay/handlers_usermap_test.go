@@ -199,7 +199,7 @@ func TestAStaleOwnerReferenceIsFlaggedOnlyWhenTheDirectoryWasRead(t *testing.T) 
 	}
 }
 
-// The picker needs a person, not an opaque incumbent id, so a mapped user
+// The picker needs a contact, not an opaque incumbent id, so a mapped user
 // carries the owner's name and email from the live directory.
 func TestAMappedUserCarriesTheOwnersIdentityFromTheDirectory(t *testing.T) {
 	views := userMapViews(

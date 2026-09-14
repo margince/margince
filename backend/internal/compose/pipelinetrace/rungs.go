@@ -48,8 +48,8 @@ func (a *Assembler) rung(reg trace.Registration, v view, facts *activities.Pipel
 		return activityWriteRung(out, v)
 	case trace.StageTierLadder:
 		return storedRung(out, stored, owned, trace.StageTierLadder)
-	case trace.StagePersonCreate:
-		return personCreateRung(out, v, facts)
+	case trace.StageContactCreate:
+		return contactCreateRung(out, v, facts)
 	case trace.StageVerdict:
 		return verdictRung(out, v)
 	case trace.StageAttentionLabel:
@@ -118,11 +118,11 @@ func activityWriteRung(out Rung, v view) Rung {
 	return notApplicableOrUnknown(out, stored)
 }
 
-// personCreateRung is derived by ELIMINATION. There is no stored "the ladder
+// contactCreateRung is derived by ELIMINATION. There is no stored "the ladder
 // decided to create a contact" — the ladder decides it in memory and explicitly
-// refuses to re-derive it downstream — so this reads the person link, and falls
+// refuses to re-derive it downstream — so this reads the contact link, and falls
 // back to what the ladder's own rung concluded.
-func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
+func contactCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 	stored, owned := v.stored, v.owned
 	if v.activityHidden {
 		// The activity exists and is not this reader's to open, so nothing
@@ -133,7 +133,7 @@ func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 		// No activity at all: the message never reached the step.
 		return notApplicableOrUnknown(out, stored)
 	}
-	if facts.HasPersonLink {
+	if facts.HasContactLink {
 		out.Status = trace.StatusDone
 		return out
 	}
@@ -149,7 +149,7 @@ func personCreateRung(out Rung, v view, facts *activities.PipelineFacts) Rung {
 		return out
 	}
 	// A contact was intended and none is linked. This promises nothing about
-	// when: the link_reconcile sweep links a message the moment a person
+	// when: the link_reconcile sweep links a message the moment a contact
 	// exists for its address — it repairs the LINK, it does not re-run the
 	// resolver, so a sender nobody was created for waits on that instead of
 	// activities, but a channel identity conflict stages a human review the

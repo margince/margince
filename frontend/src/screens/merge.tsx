@@ -12,8 +12,8 @@ import "./candidatepicker.css";
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
 // this record (the source, A) into a picked survivor (B) — A is archived
 // with merged_into_id=B, B keeps the id the rest of the CRM already points
-// at. Person and Company 360s have an identical merge shape (target_id body
-// + If-Match precondition, survivor Person/Organization back), so this stays
+// at. Contact and Company 360s have an identical merge shape (target_id body
+// + If-Match precondition, survivor Contact/Company back), so this stays
 // resource-agnostic: the screen supplies the search transport, the merge
 // transport, and where the survivor's 360 lives.
 
@@ -154,7 +154,7 @@ export function MergeAction<Survivor extends { id: string }>({
           }}
         />
         {searchFailure ? (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(searchFailure, t)}
           </p>
         ) : null}
@@ -177,7 +177,7 @@ export function MergeAction<Survivor extends { id: string }>({
           </p>
         )}
         {mutation.isError && (
-          <p className="t-caption" style={{ color: "var(--danger)" }}>
+          <p className="t-caption" style={{ color: "var(--dangerText)" }}>
             {problemMessageOf(mutation.error, t)}
           </p>
         )}

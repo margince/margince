@@ -17,12 +17,12 @@ import (
 // inside its participants. The row scope makes a link-less activity
 // workspace-shared — right for a hand-written note, wrong for a mailbox
 // owner's correspondence with a sender the ladder just judged noise or
-// infrastructure: nobody but the people on it has a reason to read it. Only
+// infrastructure: nobody but the contacts on it has a reason to read it. Only
 // the TERMINAL no-record outcomes qualify (captured without a counterparty,
 // suppressed); a deferred sender may still be admitted and linked later, and
 // a connector-supplied link keeps the row readable through that record.
 // derivedLinks is what a link writer inside THIS transaction actually wrote —
-// a captured meeting filed under the people who were in it. It is a count of
+// a captured meeting filed under the contacts who were in it. It is a count of
 // links written rather than attempted, because this write is deterministic: a
 // row claimed to be linked and left unlinked would be workspace-readable with
 // nothing filing it anywhere.
@@ -31,7 +31,7 @@ import (
 // event arrives from one seat's connector without anybody choosing to share it,
 // it carries their private appointments, and it links no record at all until
 // something files it — so reading it as a workspace-shared note published one
-// seat's diary to every account in the installation. It is held to the people on
+// seat's diary to every account in the installation. It is held to the contacts on
 // it and opens when a link to a record the reader can already see arrives, which
 // is what noRecordHoldStands does with the no_counterparty reason.
 //

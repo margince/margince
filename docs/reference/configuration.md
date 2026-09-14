@@ -65,7 +65,7 @@ Operational endpoints (served next to `/v1`):
   2s, else 503 naming the unready dependency.
 - `/metrics` — Prometheus text format: the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`,
-  `margince_pgxpool_conns{state=…}`, the AI router's counters, the overlay
+  the **connection-pool section** below, the AI router's counters, the overlay
   sync-health section, and the **job-runtime section** below. Served openly by
   default, so an annotation-discovered scraper works with no configuration; set
   `--metrics-token` to require a Bearer credential where the port itself is not
@@ -116,6 +116,54 @@ Operational endpoints (served next to `/v1`):
 
   Mind the scrape interval when choosing that window: a rate needs several
   points, so a cluster scraping every 5m wants `[30m]` or wider.
+
+  The connection-pool section reports this process's own pool. It publishes
+  every value pgx computes, and the split between the two kinds is what makes
+  it readable:
+
+  | Family | Type | Labels |
+  |---|---|---|
+  | `margince_pgxpool_conns` | gauge | `state`: `acquired`, `idle`, `constructing`, `total`, `max` |
+  | `margince_pgxpool_acquire_total` | counter | — |
+  | `margince_pgxpool_acquire_empty_total` | counter | — |
+  | `margince_pgxpool_acquire_canceled_total` | counter | — |
+  | `margince_pgxpool_acquire_seconds_total` | counter | — |
+  | `margince_pgxpool_acquire_wait_seconds_total` | counter | — |
+  | `margince_pgxpool_conns_opened_total` | counter | — |
+  | `margince_pgxpool_conns_retired_lifetime_total` | counter | — |
+  | `margince_pgxpool_conns_retired_idle_total` | counter | — |
+
+  **The gauges cannot tell a queue from a busy pool, which is what the counters
+  are for.** `acquired` near `max` is what saturation looks like AND what a
+  healthy peak looks like; the series that separates them is
+  `acquire_empty_total`, an acquire that found nothing free and had to wait.
+  The gauges also only describe the instant they were scraped, so at a 5-minute
+  interval a queue that formed and drained between two scrapes leaves no trace
+  in them at all. The counters carry it into the next scrape regardless.
+
+  **The three wait series count acquires that SUCCEEDED.** pgx increments
+  `EmptyAcquireCount`, `EmptyAcquireWaitTime` and `AcquireDuration` when a
+  caller eventually gets a connection; one that gives up while queued — a
+  cancelled context, a request that went away — lands only in
+  `acquire_canceled_total` and contributes none of its wait. That is the
+  opposite of an academic distinction during the incident these exist for: the
+  callers who gave up are the requests that FAILED, so a mean wait read alone
+  averages over the survivors and reports a shorter queue than the one callers
+  actually stood in. Read the two together.
+
+  The waiting line, and the mean wait of a caller that joined it:
+
+  ```promql
+  rate(margince_pgxpool_acquire_empty_total[30m])
+
+  rate(margince_pgxpool_acquire_wait_seconds_total[30m])
+    / rate(margince_pgxpool_acquire_empty_total[30m])
+  ```
+
+  `acquire_seconds_total` is over every SUCCESSFUL acquire including the ones
+  that waited for nothing, so it measures what acquiring costs on average;
+  `acquire_wait_seconds_total` is over the ones that queued and were then
+  served, and is the one that answers how long anybody actually waited.
 - `GET /v1/admin/job-health` — the per-workspace read of the same job
   table, for an admin rather than a scrape. See
   [Reading the job surfaces](#reading-the-job-surfaces).
@@ -155,7 +203,7 @@ copy reported a truthful-looking zero. That stays true — the worker never
 re-serves a job-table gauge, and `--observe-addr` below is about the process,
 not the fleet.
 
-**`/metrics` — is a queue growing?** Nine gauge families over the job table:
+**`/metrics` — is a queue growing?** Ten gauge families over the job table:
 
 | Family | Labels | Meaning |
 |---|---|---|
@@ -168,8 +216,16 @@ not the fleet.
 | `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
 | `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
 | `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
+| `margince_job_failures` | `kind`, `class` | failing work (retryable or discarded) by WHAT went wrong — the same class the failure list shows. `unclassified` is a failure whose recorded text nothing recognises, which is what an outage nobody has enumerated looks like. Cancelled work is not here: a deliberate stop is not an outage |
 
-The last two exist because the workspace pair counts each workspace once, and
+`margince_job_failures` is the one that makes an outage alertable rather than
+only readable. Without a class the only signal a monitor sees is the discarded
+count rising, and that rises identically for a provider outage, a revoked
+credential and a bug — three situations wanting three different responses. Its
+cardinality is bounded by the vocabularies: every class the core declares, plus
+each composed unit's own, plus the reserved one, for each failing kind.
+
+The sweep pairs exist because the workspace pair counts each workspace once, and
 four dispatchers fan out below that grain. They report **only** the kinds whose
 declared `fan_out_unit` is finer than a workspace — for the other twenty the
 unit *is* the workspace, so the two pairs would carry the same numbers.
@@ -397,7 +453,7 @@ api's boot line says so; `cmd/worker` is load-bearing for E10 retry. See
 | `--send-rate-window` | — | `0` (= built-in 1m) | the window the per-mailbox send rate is measured over |
 | `--send-max-age` | — | `0` (= built-in 24h) | how long a staged send may be deferred by the pacing chain before it parks with a reason instead. Without a bound a permanently saturated policy would defer a message forever, silently |
 | — (env-only) | `MARGINCE_AUTO_ENRICH_DAILY_CAP` | `0` (= built-in 500) | installation-wide daily ceiling on AUTOMATIC site deep reads — company auto-enrich and domain triage spend the one atomically-reserved budget (`capture_auto_enrich_budget`). Raise it when backfills routinely meet more than 500 new domains in one UTC day and their companies should not trickle in over following days; it paces only — concurrency stays bounded by the two deep-read workers and model spend by the AI budget. Read by **both roles** (an approval accept on the api can queue a triage read); an invalid value is a boot error on both, never a silent default |
-| `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 40) | deep-read crawl page cap |
+| `--deepread-max-pages` | `MARGINCE_DEEPREAD_MAX_PAGES` | `0` (= built-in 60) | deep-read crawl page cap |
 | `--deepread-max-bytes` | `MARGINCE_DEEPREAD_MAX_BYTES` | `0` (= built-in 32 MiB) | deep-read crawl aggregate byte cap |
 | `--deepread-wall` | `MARGINCE_DEEPREAD_WALL` | `0` (= built-in 4m) | deep-read crawl wall clock |
 | `--observe-addr` | `MARGINCE_OBSERVE_ADDR` | — (off) | address to serve this worker's `/healthz`, `/readyz` and `/metrics` on, e.g. `127.0.0.1:9101`. Empty serves nothing — see below |
@@ -420,7 +476,7 @@ re-serves no fleet-wide reading:
 | `go_gc_duration_seconds` | GC pause quantiles — the stop-the-world cost, not merely the cycle count |
 | `process_cpu_seconds_total`, `process_resident_memory_bytes` | this process's CPU and RSS, which cAdvisor can only give per container |
 | `process_start_time_seconds` | uptime, and a crash loop that restarts between scrapes |
-| `margince_pgxpool_conns` | this process's own connection pool, by class |
+| `margince_pgxpool_*` | this process's own connection pool — see the connection-pool section |
 | `margince_relay_published_total` | outbox rows *this* relay has shipped since start |
 | `margince_ai_*` | the AI calls *this* process made — every Router in a binary increments one process-wide collector |
 
@@ -545,7 +601,7 @@ runs the background sync.
 | `--gmail-client-id` / `--gmail-client-secret` | `MARGINCE_GMAIL_CLIENT_ID` / `MARGINCE_GMAIL_CLIENT_SECRET` | api + worker | the Google OAuth app; with the state key and `--public-base-url`, enables `/connectors/gmail/*` (api) and the sync poll (worker). **Optional once an admin stores the app under Settings** (or during the first run): capture and Google sign-in both resolve the stored app first and fall back to this pair, at the moment a flow runs, so a stored app needs no restart |
 | `--graph-client-id` / `--graph-client-secret` | `MARGINCE_GRAPH_CLIENT_ID` / `MARGINCE_GRAPH_CLIENT_SECRET` | api + worker | the Microsoft (Entra) app; same enablement shape for `/connectors/graph/*` (Outlook mail) and `/connectors/graphcal/*` (Outlook calendar). One app serves both, with `Mail.Read` and `Calendars.Read` granted and a redirect URI registered for each — they are separate connections with separate consents. The same stored-app-first rule as the Google pair, for capture and for Microsoft sign-in |
 | `--graph-tenant` | `MARGINCE_GRAPH_TENANT` | api + worker | Microsoft identity tenant (default `common` — any organization) |
-| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory ids** (GUIDs, comma-separated) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory rather than an authority alias. When it is unset, a Microsoft app stored under Settings signs people in on the directory it is **pinned** to, and an unpinned one signs nobody in; when it is set, this list wins over the pin. **Sign-in cannot run on `common`/`organizations`/`consumers`**: it matches the token's address to an existing member, and the administrator of any Entra tenant can set any of their own users' `mail` attribute to any string — so an unbounded authority would let anyone who can create a tenant sign in as anyone here. Each id is therefore a directory whose administrators this installation vouches for, which is a thing somebody can decide; an alias is not, and leaves the provider off with the reason in the boot log. One work directory routes the browser through that directory's own authority, personal accounts alone through `consumers`, several work directories through `organizations`, and a mixed list through `common` — the routing never decides what is ACCEPTED, which is the `tid` check against the list. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the Entra app's redirect URIs, and grant it the `openid profile email` delegated permissions |
+| `--microsoft-signin-tenant` | `MARGINCE_MICROSOFT_SIGNIN_TENANT` | api | the Entra **directory ids** (GUIDs, comma-separated) whose members may sign in through `/auth/oidc/microsoft/*`, on the same client as Graph capture. Defaults to `--graph-tenant` when that already names a directory rather than an authority alias. When it is unset, a Microsoft app stored under Settings signs contacts in on the directory it is **pinned** to, and an unpinned one signs nobody in; when it is set, this list wins over the pin. **Sign-in cannot run on `common`/`organizations`/`consumers`**: it matches the token's address to an existing member, and the administrator of any Entra tenant can set any of their own users' `mail` attribute to any string — so an unbounded authority would let anyone who can create a tenant sign in as anyone here. Each id is therefore a directory whose administrators this installation vouches for, which is a thing somebody can decide; an alias is not, and leaves the provider off with the reason in the boot log. One work directory routes the browser through that directory's own authority, personal accounts alone through `consumers`, several work directories through `organizations`, and a mixed list through `common` — the routing never decides what is ACCEPTED, which is the `tid` check against the list. Add the callback the api prints at boot (`<api-base>/v1/auth/oidc/microsoft/callback`) to the Entra app's redirect URIs, and grant it the `openid profile email` delegated permissions |
 | | | | The Entra **registration's own audience has to reach that authority**, or Microsoft refuses at the authorize step and the callback never runs. One directory works under any audience. Several work directories need at least *Accounts in any organizational directory* (`AzureADMultipleOrgs`). A list naming personal accounts needs *…and personal Microsoft accounts* (`AzureADandPersonalMicrosoftAccount`) — the audience is a property of the app registration, not of this setting, so widening the list without widening the registration fails at Microsoft rather than here |
 | | | | **Personal Microsoft accounts** sign in by naming their tenant, `9188040d-6c67-4c5b-b112-36a304b66dad`, in that list. The trust is different in kind rather than merely narrower: no administrator stands over a consumer tenant, so the address is one Microsoft made the holder prove they receive mail at — the same bar this installation already accepts for a password reset. Their `preferred_username` is deliberately NOT accepted as an address, because unlike a work account's UPN it is a handle the holder picks rather than a domain a tenant proved by DNS |
 | `--connector-state-key` | `MARGINCE_CONNECTOR_STATE_KEY` | api | HMAC key (≥32 bytes) signing the OAuth connect `state`; required for both connect flows |
@@ -722,22 +778,45 @@ credential this DSN names must be the same owner role `cmd/migrate` uses.
 Configured, it also gains the api's `/readyz` `customfields-schema-pool`
 probe.
 
+### Enabling custom fields on an installation
+
+`make dev` supplies the selected stack's owner DSN to the API's schema pool,
+including the isolated database name in a linked worktree. The ordinary API
+pool still uses the app role; the schema credential is not exported to the
+worker or frontend. Configure the dev database through `OWNER_DSN`/`APP_DSN`
+or their environment fallbacks, rather than overriding the schema database.
+
+The container API entrypoint defaults `MARGINCE_SCHEMA_DSN` to
+`MARGINCE_OWNER_DSN`. A direct API launch bypasses both launchers and must set
+`MARGINCE_SCHEMA_DSN` explicitly, using the owner role for the same database as
+the app connection. The annotated setting is in [`.env.example`](../../.env.example).
+
+If adding a field reports “operation custom-field schema changes is specified
+but not yet implemented”, the API was started without this pool. Configure it
+and restart the API; no database reset or field-name change is needed. The
+startup log confirms `api custom-field schema changes enabled (schema pool configured)`.
+Then check `/readyz` and, on a rehearsal installation, create a picklist through
+Settings, save a value, and read it back. The ordinary ready response alone is
+not proof that the pool was configured: an omitted optional dependency has no
+readiness probe. A configured pool is checked and makes readiness fail if its
+connection fails.
+
 ## cmd/migrate — schema migrations
 
 ```
 migrate <up|down> --dsn <owner-dsn> [--steps n]
 migrate reset-password --dsn <owner-dsn> --email <user-email>
 migrate <recreate-db|drop-db|db-exists> --dsn <owner-maintenance-dsn> --name <db> [--template <db>]
-migrate org-exists --dsn <owner-dsn>
+migrate workspace-exists --dsn <owner-dsn>
 ```
 
-`org-exists` prints `true` or `false`: whether this installation already holds an
-active organization. It takes no `--name` — it asks about the database the DSN
+`workspace-exists` prints `true` or `false`: whether this installation already
+holds an active workspace — the tenant, not a company record. It takes no `--name` — it asks about the database the DSN
 names. A deployment asks before the api starts, to know whether a bootstrap
 credential is still needed; `scripts/deploy/api-entrypoint.sh` writes the
 `bootstrap_admin` password file only while the answer is `false`, because
 ADR-0061 §2 consumes bootstrap values exactly once and permits deleting that
-secret once the organization exists. The answer is **printed rather than
+secret once the workspace exists. The answer is **printed rather than
 signalled by exit status**, so a caller can tell "no" from "could not ask"; a
 failed probe exits non-zero and must not be read as "unprovisioned".
 
@@ -1139,7 +1218,7 @@ licensed full seat is taken, inviting a member and reactivating a deactivated
 full seat are refused with `403 seat_limit_reached`, carrying the granted and
 used counts. Nothing already in use is touched: no seat is demoted, no session
 ends, and a license that lapses mid-month refuses the NEXT seat rather than
-taking away the ones people are working in (P7). Read seats are unlimited and
+taking away the ones colleagues are working in (P7). Read seats are unlimited and
 never counted; a suspended or deactivated seat frees its own, so an admin at the
 ceiling can make room. A license carrying no seat count caps nothing, and so
 does an unlicensed development installation — the ceiling is read live, so a
@@ -1331,7 +1410,11 @@ about what the endpoint you chose does with what it receives.
   silently disable the feature it was meant to enable. `pdf` is deliberately not
   accepted: a PDF rides a vendor-proprietary request extension on one gateway
   and nothing at all on a self-hosted endpoint, so the word would mean different
-  things per vendor. Scanned PDFs take the text-extraction lane.
+  things per vendor. A PDF does not need the word — on a binding whose wire has
+  no document part, the document lane reads the text the PDF already carries and
+  sends that instead, which every wire spells the same way. A SCAN is the case
+  that cannot be helped: its pages are pictures, there is no text to read, and
+  the reading says so rather than guessing.
 - **The `embeddings:` binding does not take it** — that lane sends no
   attachments.
 - **A declaration is a claim, not a checked fact.** A binding that claims more

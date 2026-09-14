@@ -17,7 +17,7 @@
 }
 
 .purpose-form-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The queue inside its stacked row: the facet bar, the rows and the pager are
@@ -78,7 +78,7 @@
 }
 
 .dsr-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 /* The typed-ERASE field, one gap-step below the modal's lead paragraph —

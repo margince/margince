@@ -7,7 +7,7 @@ package gates
 
 // The plaintext confirm token goes into the mail body and nowhere else.
 //
-// The token is a bearer credential over one person's record: whoever holds it
+// The token is a bearer credential over one contact's record: whoever holds it
 // can open what is held about them, correct it, and answer for them about
 // marketing. The claim that a grant made through it is the SUBJECT'S rests
 // entirely on the plaintext having reached only the subject's own mailbox — so
@@ -16,7 +16,7 @@ package gates
 //
 // The retired operator-token endpoint is what this prevents returning. It handed
 // the plaintext back to the caller, who could paste it straight in again, so one
-// person could mint and redeem a confirmation the subject never saw. Those rows
+// contact could mint and redeem a confirmation the subject never saw. Those rows
 // are still on the proof log and authorize nothing (recordedStateFor's
 // issuance_trigger IS NOT NULL clause is what excludes them); this gate is what
 // stops the shape coming back.
@@ -29,7 +29,7 @@ package gates
 // fmt.Fprintf to a writer, and — worse, through a sink the list DID hold — a
 // slog.InfoContext handed the bare local the token actually lives in, because
 // the value match only recognised a ".Token" field selection. Both published a
-// bearer credential over one person's record and both read green. Publishing is
+// bearer credential over one contact's record and both read green. Publishing is
 // open-ended and cannot be enumerated; the legitimate destinations are named,
 // are named in the code, and change only when somebody edits this file.
 //
@@ -37,7 +37,7 @@ package gates
 // and it arrives as a "token" parameter — on the store lookups and, before them,
 // on the unauthenticated HTTP handlers a mailed link resolves to.
 //
-// It may then be laundered (hashConfirmToken, confirmLink), handed to a consumer
+// It may then be laundered (hashPublicToken, confirmLink), handed to a consumer
 // that looks it up and returns a record, or placed on the IssuedConfirm the mail
 // path reads. Everything else is a finding.
 //
@@ -100,7 +100,7 @@ const tokenParameterName = "token"
 //
 // gatekit:fixture why each destination may receive the plaintext
 var ratifiedDestinations = map[string]string{
-	"hashConfirmToken":        "returns only the digest, which is what the row holds",
+	"hashPublicToken":         "returns only the digest, which is what the row holds",
 	"confirmLink":             "returns the URL that goes in the mail body",
 	"ResolveConfirmToken":     "looks the token up and returns a record, never the token",
 	"subjectOfConfirmTokenTx": "looks the token up and returns whose link it is",
@@ -108,6 +108,21 @@ var ratifiedDestinations = map[string]string{
 	"SubmitConfirmation":      "is the store method the public handler forwards its token to",
 	"ResolvePreferenceToken":  "consumes a different credential, the preference-centre token",
 	"QueryRow":                "is the parameterised lookup: the token is a bound argument, never text in a statement",
+
+	// The WITHDRAWAL credential travels the same edge and is tracked the same
+	// way. It is hashed at rest like the confirm token, so the plaintext is
+	// equally short-lived and equally worth following.
+	"ResolveWithdrawalToken":            "looks the token up and returns an address and a scope, never the token",
+	"resolveWithdrawalTokenTx":          "is the same resolve inside a caller's transaction",
+	"legacyPreferenceTokenAsWithdrawal": "looks up an OLD preference token and returns a withdrawal ref, never the token",
+	"HasPrefix":                         "reads the credential's family prefix and returns a bool; a prefix test discloses nothing the link's own shape does not",
+	"StopForCredential":                 "re-resolves the token inside the transaction that writes and returns nothing about it. It receives the plaintext DELIBERATELY: resolving in the handler and writing in a second transaction let an erasure commit in the gap, after which the write put the erased plaintext address back",
+
+	"stopForCredential": "resolves the token and records the stop it presses, returning nothing about the token itself",
+
+	"oneClickSubject": "resolves the press to the contact it acts for, trying both credential families, and returns that contact and the withdrawal scope — never the token",
+
+	"publicStopSubject": "resolves a stop request to the contact it acts for, trying both credential families, and returns that contact — never the token",
 }
 
 // launderers are the two functions whose OWN BODY this gate does not inspect,
@@ -127,7 +142,7 @@ var ratifiedDestinations = map[string]string{
 // fmt.Println(token) inside it then read green. So this map names only the two
 // functions that end the credential, and receipt is decided separately above.
 var launderers = map[string]bool{
-	"hashConfirmToken":  true,
+	"hashPublicToken":   true,
 	"Store.confirmLink": true,
 }
 
@@ -180,7 +195,7 @@ func TestThePlaintextConfirmTokenReachesNoSinkButTheMail(t *testing.T) {
 			for _, finding := range unratifiedUsesOf(fn, holders) {
 				t.Errorf("%s: %s hands the plaintext confirm token to %s, which is not one of "+
 					"the destinations it may reach (%s). The token is a bearer credential "+
-					"over one person's record, and a copy anywhere an operator can read it ends "+
+					"over one contact's record, and a copy anywhere an operator can read it ends "+
 					"the claim that a grant made through it was the subject's own.",
 					path, finding.holder, finding.call, ratifiedList())
 			}
@@ -447,7 +462,7 @@ func taintAssignment(assign *ast.AssignStmt, names map[string]bool) bool {
 // mint's result, a tainted name, or a read of IssuedConfirm.Token.
 //
 // A call's RESULT is never the token, even when the token went in.
-// ResolveConfirmToken(token) evaluates to a record, hashConfirmToken(token) to
+// ResolveConfirmToken(token) evaluates to a record, hashPublicToken(token) to
 // a digest, confirmLink(token) to the URL that goes in the mail. Treating a
 // result as tainted was the first shape of this walk, and it reported the
 // handlers' own WriteJSON — which carries the resolved card — as a leak of the
@@ -609,8 +624,8 @@ func ratifiedCall(call *ast.CallExpr, callee string, names map[string]bool) bool
 // to a launderer. launderers itself is receiver-qualified, which is the right
 // key for asking whether a DECLARATION is one.
 var laundererNames = map[string]bool{
-	"hashConfirmToken": true,
-	"confirmLink":      true,
+	"hashPublicToken": true,
+	"confirmLink":     true,
 }
 
 // carriesPlaintextAt reports whether one positional argument is the plaintext.

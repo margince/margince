@@ -50,10 +50,20 @@ type commsAdapter struct {
 	// defer, exactly as it does on the HTTP transport: an agent must not be
 	// able to promise a moment nothing will wake at.
 	timer activities.ScheduleTimer
-	// own answers whether an addressee is one of the workspace's own people.
+	// calendars answers whether a host's own diary reaches this product. Nil
+	// answers no, so a free/busy window from an unwired deployment says what it
+	// is instead of passing for a reading of the host's calendar
+	// (calendarBacking, schedulingseam.go).
+	calendars calendarBacking
+	// own answers whether an addressee is one of the workspace's own contacts.
 	// The activities store excludes participants with a seat; a colleague
 	// without one is only recognisable by domain, and that set is capture's.
 	own *capture.OwnDomainStore
+	// externalSoR answers whether this workspace's records have moved to an
+	// external system of record. See comms_soraut.go: refusing at staging is
+	// not enough on its own, because the mode can flip while an approval waits
+	// in somebody's inbox.
+	externalSoR externalSoR
 }
 
 var _ agents.Comms = commsAdapter{}
@@ -138,7 +148,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // It returns text and writes no timeline row, which is the same answer the HTTP
 // draft endpoint gives — the one the web app's own draft button calls. That
 // agreement is the feature: the same act should not mean two different things
-// depending on whether a person did it through the app or through an agent.
+// depending on whether a contact did it through the app or through an agent.
 // Drafting proposes words; sending is the separate consent-gated act, and a
 // draft that filed itself would put messages nobody sent on the record a rep
 // goes to for what actually happened with a customer.
@@ -210,6 +220,13 @@ func (c commsAdapter) SendAccountEmail(
 func (c commsAdapter) send(
 	ctx context.Context, origin activities.SendOrigin, in agents.SendEmailArgs,
 ) (agents.SendEmailResult, error) {
+	// FIRST, before the message is composed or a consent decision is recorded:
+	// a record this installation no longer holds is not one to file a send
+	// against, and the staging gate that already said so ran before the
+	// approval waited in somebody's inbox (comms_soraut.go).
+	if err := c.refuseIfHeldElsewhere(ctx, "send mail"); err != nil {
+		return agents.SendEmailResult{}, err
+	}
 	sched, err := agentSchedule(in)
 	if err != nil {
 		return agents.SendEmailResult{}, err
@@ -270,6 +287,9 @@ func agentSchedule(in agents.SendEmailArgs) (*activities.SendSchedule, error) {
 // resolution and the RBAC check cannot differ by transport. The recipient is
 // absent from the arguments by design: the store resolves it from the anchor.
 func (c commsAdapter) SendMessage(ctx context.Context, anchor ids.UUID, in agents.SendMessageArgs) (agents.SendMessageResult, error) {
+	if err := c.refuseIfHeldElsewhere(ctx, "send a message"); err != nil {
+		return agents.SendMessageResult{}, err
+	}
 	input, err := activities.ApplyChannelContext(activities.SendMessageInput{
 		Body:           in.Body,
 		ConsentPurpose: in.ConsentPurpose,
@@ -334,8 +354,24 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
-	// The store applies its default slot duration when none is named.
-	slots, truncated, err := c.store.Availability(ctx, ids.From[ids.UserKind](hostID), from, to, time.Duration(durationMinutes)*time.Minute)
+	calendarOwner := ids.From[ids.UserKind](hostID)
+	// The store applies its default slot duration when none is named. It runs
+	// FIRST because it carries the object gate: a caller it refuses must not
+	// have caused a read of anybody's connector state on the way.
+	slots, truncated, err := c.store.Availability(ctx, calendarOwner, from, to, time.Duration(durationMinutes)*time.Minute)
+	if err != nil {
+		return agents.AvailabilityResult{}, err
+	}
+	// The busy list alone cannot be read honestly: a host with no connected
+	// calendar and a host with an empty day produce the same slots, and the
+	// caller has no other way to tell them apart.
+	//
+	// ONLY FOR THE ACTING SEAT. capture is per-user, and this tool takes any
+	// host_user_id — so asking it for an arbitrary host would answer, to anyone
+	// holding read, which colleagues have connected Google or Microsoft and
+	// whose grant has since stopped working. capture's own connections reader
+	// hard-scopes to the actor for that reason and this follows it.
+	backing, err := c.calendarBackingFor(ctx, calendarOwner)
 	if err != nil {
 		return agents.AvailabilityResult{}, err
 	}
@@ -351,10 +387,13 @@ func (c commsAdapter) Availability(ctx context.Context, host *ids.UUID, from, to
 	for _, s := range slots {
 		free = append(free, agents.FreeSlot{Start: s.Start, End: s.End})
 	}
-	return agents.AvailabilityResult{Slots: free, Truncated: truncated}, nil
+	return agents.AvailabilityResult{Slots: free, Truncated: truncated, CalendarBacking: backing}, nil
 }
 
 func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs) (json.RawMessage, error) {
+	if err := c.refuseIfHeldElsewhere(ctx, "book a meeting"); err != nil {
+		return nil, err
+	}
 	hostID, err := defaultHost(ctx, in.HostUserID)
 	if err != nil {
 		return nil, err
@@ -377,6 +416,27 @@ func (c commsAdapter) BookMeeting(ctx context.Context, in agents.BookMeetingArgs
 // defaultHost resolves the calendar owner: the explicit host, else the
 // acting principal's user. An agent principal has no own calendar —
 // it must name one (and the store's delegation gate answers).
+// calendarBackingFor answers what backs this host's window, and refuses to look
+// when the host is not the acting seat.
+//
+// The unknown answer is returned WITHOUT reading anything, so it is the same
+// bytes and the same cost whatever that host has connected. A version that read
+// first and withheld afterwards would still be a timing signal.
+func (c commsAdapter) calendarBackingFor(ctx context.Context, host ids.UserID) (agents.CalendarBacking, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() || actor.UserID != host.UUID {
+		return agents.CalendarBackingUnknown, nil
+	}
+	connected, err := c.calendars.connected(ctx, host)
+	if err != nil {
+		return "", err
+	}
+	if connected {
+		return agents.CalendarBacked, nil
+	}
+	return agents.CalendarUnbacked, nil
+}
+
 func defaultHost(ctx context.Context, host *ids.UUID) (ids.UUID, error) {
 	if host != nil {
 		return *host, nil

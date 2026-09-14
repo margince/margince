@@ -5,7 +5,7 @@ package capture
 
 // A sender saying, in the subject line, that a message is confidential.
 //
-// This is the one confidentiality signal that needs no model: the person who
+// This is the one confidentiality signal that needs no model: the contact who
 // wrote the mail already told us. It runs inside the capture transaction, so a
 // message marked [Vertraulich] is never workspace-readable for the window a
 // classifier would take to reach the same conclusion.
@@ -30,7 +30,7 @@ import (
 //
 // "NDA" and "non-disclosure" were, and they are the wrong kind of word. An NDA
 // is a routine agreement between two COMPANIES — signed by the company rather
-// than by a person — and that one exists is not itself a secret. "Re: NDA",
+// than by a contact — and that one exists is not itself a secret. "Re: NDA",
 // "NDA signed" and "NDA für das Projekt" are threads ABOUT ordinary
 // contracting, so holding them took a deal's own paperwork away from the team
 // doing the deal. Naming a document is not asking for confidence: the material

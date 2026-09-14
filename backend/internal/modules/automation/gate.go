@@ -36,7 +36,7 @@ import (
 
 // reasonOwnerGone is what both gates say when the owner's authority no longer
 // resolves. One spelling, because the two answer different questions about the
-// same person and a reader comparing two run rows should not have to work out
+// same contact and a reader comparing two run rows should not have to work out
 // whether two wordings mean the same thing.
 const reasonOwnerGone = "the automation's owner no longer has access"
 
@@ -141,7 +141,7 @@ func checkActionPermission(rbac authz.RBAC, action workflow.Action) (gateDecisio
 	if perm.Shape == PermissionTargetScoped {
 		// Gate the action's OWN write target, never the trigger's entity:
 		// every shipped handler's Plan sets Target to the entity it fired
-		// on (people/leadrouting.go's ActionAssignOwner: Target: ev.Entity),
+		// on (contacts/leadrouting.go's ActionAssignOwner: Target: ev.Entity),
 		// so the two coincide today — but a future handler whose Plan
 		// routes a target-scoped action at a DIFFERENT entity than its
 		// trigger must still be gated against what it actually writes,

@@ -57,7 +57,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				slog.ErrorContext(ctx, "meeting brief: the sections writer panicked; serving the deterministic floor", "panic", recovered)
-				out.sections, out.sectionsBy = Deterministic(in), crmcontracts.Deterministic
+				out.sections, out.sectionsBy = Deterministic(in), crmcontracts.WrittenByDeterministic
 			}
 		}()
 		out.sections, out.sectionsBy = Write(ctx, s.lane, in, lang)
@@ -67,7 +67,7 @@ func (s *Service) write(ctx context.Context, in Input) writtenBrief {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				slog.ErrorContext(ctx, "meeting brief: the plan writer panicked; serving the deterministic floor", "panic", recovered)
-				out.plan, out.planBy = floor, crmcontracts.Deterministic
+				out.plan, out.planBy = floor, crmcontracts.WrittenByDeterministic
 			}
 		}()
 		out.plan, out.planBy = WritePlan(ctx, s.lane, in, floor, lang)

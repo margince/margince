@@ -5,7 +5,7 @@ package compose_test
 
 // The assign_lead_owner config seam, fixture-tested end to end (B-E13.7b
 // reusable-artifact DoD): the catalog's params_schema in automation and the
-// RoutingConfig decoder in people describe the SAME shape — a fixture
+// RoutingConfig decoder in contacts describe the SAME shape — a fixture
 // the validator accepts must decode losslessly, an out-of-schema knob
 // must be refused, and the schema's property names must be exactly the
 // knobs the decoder reads, so the two sides cannot drift apart.
@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -44,7 +44,7 @@ func TestLeadRoutingConfigValidatesAndDecodesFromOneFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := people.ParseRoutingConfig(raw)
+	cfg, err := contacts.ParseRoutingConfig(raw)
 	if err != nil {
 		t.Fatalf("the validated fixture fails the runtime decode: %v", err)
 	}

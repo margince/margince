@@ -48,7 +48,8 @@ func readingsOf(
 	bounds map[crmcontracts.WorklistItemSource]bool,
 	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
-	out := crmcontracts.WorklistReadings{}
+	unpriced := unpricedDeals(considered)
+	out := crmcontracts.WorklistReadings{UnpricedDeals: &unpriced}
 	// A priced deal is one the estate could state a comparable figure for. An
 	// unpriced one is LEFT OUT rather than added as zero: a deal nobody recorded
 	// an amount for is not a deal worth nothing, and counting it as nothing
@@ -67,6 +68,20 @@ func readingsOf(
 	// the deal, and it is the only field the two lanes' rows share.
 	countedDeals := map[openapi_types.UUID]bool{}
 	for _, row := range considered {
+		// The freshness figure, and it is counted HERE rather than in the
+		// browser for the reason the set makes obvious: a client counts the
+		// flag over the rows it received, which is one page of an unfiltered
+		// read, while the door beside the number opens every row past that cut.
+		// The two then disagree by whatever ranked below the page, and only ever
+		// in the direction that makes a busy morning look quiet.
+		//
+		// keepsRow, not a second spelling of its rule. The filter already
+		// excludes a row a decisions-drawing surface answers — a card on screen
+		// is not also news — and that exclusion is exactly the kind of detail a
+		// reimplementation here would drop.
+		if keepsRow(row, filterChangedSinceBrief) {
+			out.ChangedSinceBrief++
+		}
 		switch row.item.Category {
 		case crmcontracts.WorklistItemCategoryCustomerWaiting:
 			out.BuyerReplies++
@@ -83,12 +98,12 @@ func readingsOf(
 			// decide whether to offer one: a duplicate pair reaches
 			// duplicateItem with a merge action only when the reader could write
 			// BOTH records, and an approval carries its verbs only where the
-			// inbox admits them. Counting the rest tells somebody a person is
+			// inbox admits them. Counting the rest tells somebody a contact is
 			// blocked on an answer they are not able to give.
 			//
 			// KNOWN NARROWING, and it is the safe direction rather than an
 			// oversight. A duplicate pair the reader may write but nobody may
-			// MERGE — two organizations each carrying live projects — can still
+			// MERGE — two companies each carrying live projects — can still
 			// be dismissed as not-a-duplicate, and reaches here with no verb
 			// because the surface offers no dismiss control for this source
 			// yet (issue 5066). Such a pair is missing from this count until it
@@ -163,4 +178,22 @@ func readingsOf(
 		}
 	}
 	return out
+}
+
+func unpricedDeals(rows []ranked) int {
+	priced := map[openapi_types.UUID]bool{}
+	for _, row := range rows {
+		if row.item.Category != crmcontracts.WorklistItemCategoryDealsAtRisk || row.item.Subject == nil {
+			continue
+		}
+		id := row.item.Subject.Id
+		priced[id] = priced[id] || row.hasExpected
+	}
+	count := 0
+	for _, known := range priced {
+		if !known {
+			count++
+		}
+	}
+	return count
 }

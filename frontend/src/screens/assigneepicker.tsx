@@ -10,10 +10,10 @@ import { useRoster, useRosterPartial, useRosterPartialHint } from "./entityref";
 export type UserOption = { value: string; label: string };
 
 /**
- * The workspace's people as assignment options — everyone the roster carries
+ * The workspace's contacts as assignment options — everyone the roster carries
  * LESS agent seats.
  *
- * An agent seat is an Agent Runner identity, not a person: the server refuses
+ * An agent seat is an Agent Runner identity, not a colleague: the server refuses
  * one as an assignee or owner (the activities module's
  * `ensureAssigneeCanHoldWork`), so offering it is a control whose only outcome
  * is a refusal. Every picker that hands work to somebody asks that same
@@ -37,14 +37,14 @@ export function useAssignableUserOptions(enabled = true): UserOption[] {
 }
 
 /**
- * The assignee picker for a task being written: the workspace's people, less
+ * The assignee picker for a task being written: the workspace's contacts, less
  * agent seats, plus a leading "Unassigned".
  *
  * Renders nothing while `active` is false, and its roster walk is deferred to
  * that same flag — a note or meeting is not held by a colleague, so neither the
  * control nor the `/users` walk behind it appears while one is being logged.
  * Because it OFFERS colleagues it owes the roster-partial caveat beside it: a
- * picker missing people looks exactly like a small workspace, so the `Field`
+ * picker missing contacts looks exactly like a small workspace, so the `Field`
  * carries the hint into the control's `aria-describedby`.
  */
 export function TaskAssigneeField({

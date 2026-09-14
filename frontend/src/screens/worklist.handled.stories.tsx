@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
+import { meFixture } from "../app/mefixture";
 import { jsonResponse, StoryProviders } from "./story-utils";
 import { HandledForYouPanel } from "./worklist.handled";
 
@@ -12,10 +13,15 @@ import { HandledForYouPanel } from "./worklist.handled";
 // it is the receipt a reader checks, and the reason the acts above it are safe
 // to take at all.
 //
-// NO VERBS, and that is what to look for in the first frame rather than an
-// omission to overlook. A row here offering "complete" would ask the reader to
-// redo work that is already done, on the one surface that exists to tell them
-// they need not.
+// NO VERBS on a receipt for a DECISION, and that is what to look for in the
+// first frame rather than an omission to overlook. A row offering "complete"
+// would ask the reader to redo work that is already done, on the one surface
+// that exists to tell them they need not.
+//
+// ONE EXCEPTION, in its own frame: a close date the nightly sweep corrected was
+// never staged as a card and nobody agreed to it. This receipt is its only
+// telling, so the way back has to be on the row — there is no approval to go
+// and reject. A correction already put back keeps its row and says so.
 //
 // The other three frames are the states that must not look alike:
 //
@@ -46,7 +52,7 @@ const aBusyMorning: HandledData = {
       summary: "Sent the confirmation to Kirsten",
       occurred_at: "2026-09-05T08:12:00Z",
       subject: {
-        type: "person",
+        type: "contact",
         id: "00000000-0000-4000-8000-0000000000a1",
         label: "Kirsten Bauer",
       },
@@ -77,6 +83,8 @@ const aBusyMorning: HandledData = {
 function stubHandled(answer: () => Promise<Response>) {
   globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.endsWith("/me"))
+      return jsonResponse(meFixture({ allow: { deal: ["read", "update"] } }));
     return url.includes("/worklist/handled")
       ? answer()
       : jsonResponse({ data: [] });
@@ -125,6 +133,53 @@ export const MoreWasDoneThanWasRead: Story = {
         ...aBusyMorning,
         receipts: aBusyMorning.receipts.slice(0, 2),
         truncated: true,
+      }),
+    ),
+};
+
+/** The nightly sweep corrected a close date nobody was asked about, so its
+ *  receipt carries the way back — and the one already put back says so instead
+ *  of offering a second undo. */
+export const CorrectionsNobodyWasAskedAbout: Story = {
+  render: () =>
+    frame(async () =>
+      jsonResponse({
+        ...aBusyMorning,
+        receipts: [
+          {
+            id: "00000000-0000-4000-8000-0000000000e4",
+            kind: "close_date_correction",
+            summary:
+              'Corrected the close date on "Northstar renewal" — nobody has answered since June',
+            occurred_at: "2026-09-05T03:00:00Z",
+            subject: {
+              type: "deal",
+              id: "00000000-0000-4000-8000-0000000000b2",
+              label: "Northstar renewal",
+            },
+            undo: {
+              audit_log_id: "00000000-0000-4000-8000-0000000000c1",
+              version: 7,
+              reversed: false,
+            },
+          },
+          {
+            id: "00000000-0000-4000-8000-0000000000e5",
+            kind: "close_date_correction",
+            summary: 'Corrected the close date on "Ablösung Checkout"',
+            occurred_at: "2026-09-05T02:00:00Z",
+            subject: {
+              type: "deal",
+              id: "00000000-0000-4000-8000-0000000000b3",
+              label: "Ablösung Checkout",
+            },
+            undo: {
+              audit_log_id: "00000000-0000-4000-8000-0000000000c2",
+              version: 9,
+              reversed: true,
+            },
+          },
+        ],
       }),
     ),
 };

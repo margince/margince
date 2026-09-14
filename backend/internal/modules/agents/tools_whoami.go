@@ -14,7 +14,7 @@ package agents
 // description.
 //
 // Locale alone did not close that, because it is empty until somebody picks a
-// language and most people never do: an English workspace whose members had
+// language and most contacts never do: an English workspace whose members had
 // chosen nothing still got German records off an English conversation. So the
 // answer carries ProseLanguage as well — the member's choice where they made
 // one, the installation's base language otherwise — and it is never empty,
@@ -38,7 +38,7 @@ type ActingIdentity struct {
 	UserID      ids.UUID
 	DisplayName string
 	Email       string
-	// Locale is the language this person chose, empty when they never did.
+	// Locale is the language this contact chose, empty when they never did.
 	// The caller decides what to do with empty rather than being handed a
 	// default that cannot be told apart from a choice.
 	Locale string

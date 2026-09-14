@@ -131,7 +131,7 @@ func nilToNull(id ids.UUID) *ids.UUID {
 	return &id
 }
 
-// withoutParties is the record with everything that names a person or says
+// withoutParties is the record with everything that names a contact or says
 // what was written removed — what an exclusion drop may leave a trace of.
 func withoutParties(rec connector.NormalizedRecord) connector.NormalizedRecord {
 	rec.Counterparty = connector.Counterparty{}

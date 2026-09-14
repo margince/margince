@@ -7,15 +7,15 @@ package integration
 
 // The fold agrees with the writer.
 //
-// The decode structs in person360 are hand-written against a JSON shape a
+// The decode structs in contact360 are hand-written against a JSON shape a
 // DIFFERENT module produces: the adapter normalizes a provider answer,
-// people.WriteProviderClaims stores that value verbatim, and the fold reads
+// contacts.WriteProviderClaims stores that value verbatim, and the fold reads
 // it back. Nothing in the type system connects those three, so a renamed
 // field or a changed shape renders a blank page in silence — the failure this
 // test exists to make loud.
 //
 // It runs the OFFLINE provider's real result through the real writer, then
-// reads the real Person360 section, so all three agree or this fails.
+// reads the real Contact360 section, so all three agree or this fails.
 
 import (
 	"context"
@@ -24,14 +24,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/person360"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -39,13 +39,13 @@ import (
 
 // completeOneRun drives the offline provider end to end for a subject and
 // writes what it returns through the real claim writer.
-func completeOneRun(t *testing.T, e *Env, personID ids.UUID) string {
+func completeOneRun(t *testing.T, e *Env, contactID ids.UUID) string {
 	t.Helper()
 	fake := integrations.NewOfflineProvider(0, time.Now)
 	cred := provider.Credential("test-key")
 	sub, err := fake.Submit(context.Background(), cred, provider.Request{
 		CorrelationID: ids.NewV7().String(),
-		Identifiers:   provider.PersonIdentifiers{FirstName: "Anna", LastName: "Muster", CompanyName: "Example GmbH"},
+		Identifiers:   provider.ContactIdentifiers{FirstName: "Anna", LastName: "Muster", CompanyName: "Example GmbH"},
 		Categories:    []provider.Category{"professional_email", "mobile"},
 	})
 	if err != nil {
@@ -64,16 +64,16 @@ func completeOneRun(t *testing.T, e *Env, personID ids.UUID) string {
 	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
-			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 			   external_correlation_id, connection_version, connection_epoch,
 			   configuration_snapshot, requested_categories, completed_at)
-			VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+			VALUES ('contact', $1, 'surfe', 'manual', 'completed', $2,
 			        gen_random_uuid(), 1, 1, '{}'::jsonb,
 			        ARRAY['professional_email','mobile'], now())
-			RETURNING id::text`, personID, "fp-fold-"+personID.String()).Scan(&runID); err != nil {
+			RETURNING id::text`, contactID, "fp-fold-"+contactID.String()).Scan(&runID); err != nil {
 			return err
 		}
-		return people.WriteProviderClaims(admin, tx, runID, personID.String(), "surfe",
+		return contacts.WriteProviderClaims(admin, tx, runID, contactID.String(), "surfe",
 			status.Result.Claims, time.Now().UTC())
 	}); err != nil {
 		t.Fatal(err)
@@ -85,18 +85,22 @@ func completeOneRun(t *testing.T, e *Env, personID ids.UUID) string {
 // the NAME rather than through a position, because the page carries one
 // section per provider and a positional read would pass while showing another
 // vendor's purchases under this one's heading.
-func sectionFor(t *testing.T, page crmcontracts.Person360, name string) crmcontracts.PersonProviderProfile {
+// took only the page would read as "the one section", which is the thing
+// these tests exist to deny.
+//
+//nolint:unparam // the provider is what each case is about; a helper that
+func sectionFor(t *testing.T, page crmcontracts.Contact360, name string) crmcontracts.ContactProviderProfile {
 	t.Helper()
 	if page.ProviderProfiles == nil {
-		t.Fatal("the person page carries no provider sections at all")
+		t.Fatal("the contact page carries no provider sections at all")
 	}
 	for _, profile := range *page.ProviderProfiles {
 		if string(profile.Provider) == name {
 			return profile
 		}
 	}
-	t.Fatalf("the person page carries no section for %q", name)
-	return crmcontracts.PersonProviderProfile{}
+	t.Fatalf("the contact page carries no section for %q", name)
+	return crmcontracts.ContactProviderProfile{}
 }
 
 // connectProvider puts the singleton connection into the connected state the
@@ -124,9 +128,9 @@ func connectProvider(t *testing.T, e *Env) {
 	})
 }
 
-func person360Service(e *Env) *person360.Service {
+func contact360Service(e *Env) *contact360.Service {
 	reg, _ := integrations.NewRegistry(integrations.NewOfflineProvider(0, time.Now))
-	return person360.NewService(e.Pool, people.NewStore(e.DB()), e.Deals, e.Projects,
+	return contact360.NewService(e.Pool, contacts.NewStore(e.DB()), e.Deals, e.Projects,
 		consent.NewStore(e.DB()), comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()), time.Now).WithProviders(reg)
 }
 
@@ -135,10 +139,10 @@ func person360Service(e *Env) *person360.Service {
 func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
 	e := Setup(t)
 	connectProvider(t, e)
-	personID := seedSubject(t, e)
-	runID := completeOneRun(t, e, personID)
+	contactID := seedSubject(t, e)
+	runID := completeOneRun(t, e, contactID)
 
-	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	page, err := contact360Service(e).Assemble(e.Admin(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,8 +208,8 @@ func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
 func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T) {
 	e := Setup(t)
 	connectProvider(t, e)
-	personID := seedSubject(t, e)
-	completeOneRun(t, e, personID)
+	contactID := seedSubject(t, e)
+	completeOneRun(t, e, contactID)
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
@@ -215,7 +219,7 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 		t.Fatal(err)
 	}
 
-	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	page, err := contact360Service(e).Assemble(e.Admin(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,14 +243,14 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 func TestASecondPurchaseDoesNotDenyWhatAnEarlierRunAskedFor(t *testing.T) {
 	e := Setup(t)
 	connectProvider(t, e)
-	personID := seedSubject(t, e)
-	completeOneRun(t, e, personID)
+	contactID := seedSubject(t, e)
+	completeOneRun(t, e, contactID)
 	// The narrow follow-up: one category, nothing else. No claims — the
 	// provider had no number, which is exactly the case that produced the
 	// contradiction.
-	seedNarrowRun(t, e, personID, "mobile")
+	seedNarrowRun(t, e, contactID, "mobile")
 
-	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	page, err := contact360Service(e).Assemble(e.Admin(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,17 +266,17 @@ func TestASecondPurchaseDoesNotDenyWhatAnEarlierRunAskedFor(t *testing.T) {
 
 // seedNarrowRun writes a completed run that asked for one category and brought
 // nothing back, the way a paid button press with no answer lands.
-func seedNarrowRun(t *testing.T, e *Env, personID ids.UUID, category string) {
+func seedNarrowRun(t *testing.T, e *Env, contactID ids.UUID, category string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_run
-			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 			   external_correlation_id, connection_version, connection_epoch,
 			   configuration_snapshot, requested_categories, completed_at)
-			VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+			VALUES ('contact', $1, 'surfe', 'manual', 'completed', $2,
 			        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY[$3], now())`,
-			personID, "fp-narrow-"+personID.String(), category)
+			contactID, "fp-narrow-"+contactID.String(), category)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -288,15 +292,15 @@ func seedNarrowRun(t *testing.T, e *Env, personID ids.UUID, category string) {
 func TestACategoryOnThePageIsNeverCalledUnrequested(t *testing.T) {
 	e := Setup(t)
 	connectProvider(t, e)
-	personID := seedSubject(t, e)
+	contactID := seedSubject(t, e)
 	// A purchase with NO run behind it, which is what a merge or a seed leaves.
-	seedOrphanClaim(t, e, personID, "mobile_phones",
+	seedOrphanClaim(t, e, contactID, "mobile_phones",
 		`[{"value": "+49 170 0000000"}]`)
 	// Plus a run that asked for something else entirely, so the list is built
 	// from a run history that never mentions the mobile.
-	seedNarrowRun(t, e, personID, "linkedin_profile")
+	seedNarrowRun(t, e, contactID, "linkedin_profile")
 
-	page, err := person360Service(e).Assemble(e.Admin(), ids.From[ids.PersonKind](personID))
+	page, err := contact360Service(e).Assemble(e.Admin(), ids.From[ids.ContactKind](contactID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,27 +318,27 @@ func TestACategoryOnThePageIsNeverCalledUnrequested(t *testing.T) {
 
 // seedOrphanClaim writes a stored claim with no run of its own, the way a merge
 // relink and a seeded installation both leave one.
-func seedOrphanClaim(t *testing.T, e *Env, personID ids.UUID, key, value string) {
+func seedOrphanClaim(t *testing.T, e *Env, contactID ids.UUID, key, value string) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var runID string
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
-			  (subject_kind, person_id, provider, trigger, state, input_fingerprint,
+			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
 			   external_correlation_id, connection_version, connection_epoch,
 			   configuration_snapshot, requested_categories, completed_at)
-			VALUES ('person', $1, 'surfe', 'manual', 'completed', $2,
+			VALUES ('contact', $1, 'surfe', 'manual', 'completed', $2,
 			        gen_random_uuid(), 1, 1, '{}'::jsonb, ARRAY['job_history'], now())
-			RETURNING id::text`, personID, "fp-orphan-"+personID.String()).Scan(&runID); err != nil {
+			RETURNING id::text`, contactID, "fp-orphan-"+contactID.String()).Scan(&runID); err != nil {
 			return err
 		}
 		// The claim names a category that run never requested — which is exactly
 		// the shape a relink leaves behind.
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO person_provider_claim
-			  (person_id, run_id, provider, claim_key, value_json, source, captured_by, retrieved_at)
+			INSERT INTO contact_provider_claim
+			  (contact_id, run_id, provider, claim_key, value_json, source, captured_by, retrieved_at)
 			VALUES ($1, $2, 'surfe', $3, $4::jsonb, 'provider', 'connector:surfe', now())`,
-			personID, runID, key, value)
+			contactID, runID, key, value)
 		return err
 	}); err != nil {
 		t.Fatal(err)

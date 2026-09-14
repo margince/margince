@@ -76,7 +76,7 @@ func (h Handlers) WithSendAuthority(authority SendAuthority) Handlers {
 }
 
 // WithRecipientDirectory returns handlers whose account-started sends resolve
-// every typed address to a person the sender can read, so a rep is told which
+// every typed address to a contact the sender can read, so a rep is told which
 // address is not on file instead of mailing someone the record cannot name.
 func (h Handlers) WithRecipientDirectory(dir RecipientDirectory) Handlers {
 	h.store = h.store.WithRecipientDirectory(dir)

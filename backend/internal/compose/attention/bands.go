@@ -41,7 +41,7 @@ const (
 // already produces. Spelled here so the client is told the sequence rather than
 // inferring it from the rows it happens to receive: a day with no `now` rows
 // must still draw its remaining bands in this order.
-var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandReview}
+var bandOrder = []string{bandNow, bandKeepMomentum, bandBuildPipeline, bandReview}
 
 // bandOfRow says which heading a row sits under.
 //
@@ -54,14 +54,8 @@ var bandOrder = []string{bandNow, bandBuildPipeline, bandKeepMomentum, bandRevie
 // CROWDING CHANGES THE BAND, and this is where two right rules meet. Past the
 // lead group a wait is demoted so a hundred replies cannot own the page — that
 // is the anti-monopoly rule, and it has to move the row a long way down.
-// Headings have to stay contiguous, or the page draws "Now" twice with other
-// work in between. Demoting the row's POSITION while leaving its heading
-// alone cannot satisfy both.
-//
-// So a crowded row is not `now` work any more. It is still a customer waiting,
-// still says so on its face, and still sits above the hygiene: what changed is
-// the claim that it needs answering today, which is exactly what being the
-// ninth of its kind means.
+// A crowded row leaves the immediate-work band but remains ahead of hygiene.
+// The two agreed-work labels can recur as their facts decide the order.
 func bandOfRow(row ranked) string {
 	item := row.item
 	// A pinned row is whatever the reader said it was, and they put it at the
@@ -157,6 +151,8 @@ func bandsOf(items []crmcontracts.WorklistItem) []crmcontracts.WorklistBand {
 // A band this build does not know sorts last rather than first: an unknown
 // heading must not push real work off the top of the page.
 func bandRank(band string) int {
+	// Existing customer work precedes routine prospecting. A lead with a real
+	// response deadline already belongs to the urgent band.
 	for i, known := range bandOrder {
 		if known == band {
 			return i

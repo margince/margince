@@ -7,7 +7,7 @@ import { CompanyWorkCard } from "./companywork";
 import { StoryProviders } from "./story-utils";
 
 // What is moving on the account, and for each piece the one reason it wants a
-// person today.
+// contact today.
 //
 // Deals only — the account's projects have their one home in the ProjectLinks
 // section. Two rules run through every story here and neither is visible in a
@@ -16,13 +16,13 @@ import { StoryProviders } from "./story-utils";
 // open deals" on an account with a full pipeline is the worst thing this card
 // can say.
 
-type View = components["schemas"]["Organization360"];
+type View = components["schemas"]["Company360"];
 
 const page = { has_more: false, next_cursor: null };
 
 const base = {
   as_of: "2026-08-25T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     captured_by: "human:u1",
@@ -42,7 +42,7 @@ const base = {
   projects_page: page,
 } as unknown as View;
 
-// Shaped as Organization360Deal serves it: `status` is required, and the
+// Shaped as Company360Deal serves it: `status` is required, and the
 // money is a nested Money rather than two loose fields. The loose spelling
 // typechecked through the cast below and silently drew no figure at all —
 // the card reads `deal.amount.amount_minor`.

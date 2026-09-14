@@ -63,7 +63,7 @@ func TestListTagAndLineItemCommandsStageAndAdmitOutsideTheRecordSeam(t *testing.
 
 // The two offer-line-item commands with a second path operand name the LINE
 // ITEM in the summary, distinct per line the same way removeStakeholder's
-// own summary names PersonID.
+// own summary names ContactID.
 func TestOfferLineItemSummariesNameTheLineItem(t *testing.T) {
 	offerID, lineItemID := ids.NewV7(), ids.NewV7()
 

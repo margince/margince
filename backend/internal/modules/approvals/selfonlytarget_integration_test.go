@@ -12,7 +12,7 @@ package approvals
 // The inbox scan applies decidable() per row and always narrowed correctly. The
 // target-filtered reads settle target visibility once for the record and then
 // filter each row themselves, and both filtered on the decision grants alone: a
-// colleague holding person.update and able to read the contact received another
+// colleague holding contact.update and able to read the contact received another
 // member's linkedin_match in full — the connection's real name and employer out
 // of a private address book, third parties who never agreed to be in this CRM.
 
@@ -26,7 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seatFor is the colleague seat the leak was read from: person grants outright
+// seatFor is the colleague seat the leak was read from: contact grants outright
 // and row scope over every row, which is what a manager, ops or management grid
 // actually holds. If this seat cannot see the row, no weaker one can.
 func seatFor(ws, user ids.UUID) context.Context {
@@ -37,7 +37,7 @@ func seatFor(ws, user ids.UUID) context.Context {
 		Permissions: principal.Permissions{
 			RowScope: principal.RowScopeAll,
 			Objects: map[string]principal.ObjectGrant{
-				tablePerson: {Create: true, Read: true, Update: true, Delete: true},
+				tableContact: {Create: true, Read: true, Update: true, Delete: true},
 			},
 		},
 	})
@@ -60,20 +60,20 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 	// empty for a reason that has nothing to do with the narrowing under test.
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
+		INSERT INTO contact (id, full_name, source, captured_by)
 		VALUES ($1, 'Jan Dow', 'linkedin:seed', 'connector:linkedin')`, target); err != nil {
 		t.Fatalf("seeding the contact: %v", err)
 	}
 
 	// Staged through the REAL writer, on the shape the importer produces: an
-	// agent acting for e.rep, which is what stamps on_behalf_of with a person
+	// agent acting for e.rep, which is what stamps on_behalf_of with a colleague
 	// rather than leaving it NULL. A test that wrote the row itself would be
 	// asserting over a shape production does not make.
 	staged, err := e.svc.Stage(e.asAgent(t), StageInput{
 		Kind:           kindLinkedInMatch,
 		ProposedChange: []byte(`{"connection_name":"Jane Doe","connection_company":"Contoso GmbH"}`),
 		DiffHash:       "linkedin-match-" + target.String(),
-		TargetType:     tablePerson,
+		TargetType:     tableContact,
 		TargetID:       target,
 		Summary:        "Jane Doe at Contoso GmbH looks like Jan Dow",
 	})
@@ -81,7 +81,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 		t.Fatalf("staging the match: %v", err)
 	}
 
-	targetType := tablePerson
+	targetType := tableContact
 	read := func(t *testing.T, as context.Context) (int, int) {
 		t.Helper()
 		listed, _, listErr := e.svc.List(as, ListInput{TargetType: &targetType, TargetID: &target})
@@ -99,7 +99,7 @@ func TestASelfOnlyStagingIsAbsentFromAColleaguesTargetFilteredReads(t *testing.T
 		return len(listed), panel
 	}
 
-	// THE LEAK. The colleague holds every person grant and every row, so
+	// THE LEAK. The colleague holds every contact grant and every row, so
 	// requireDecisionGrants and targetVisible both pass — and the self-only
 	// narrowing is the only thing standing between them and the row.
 	if listed, panel := read(t, seatFor(e.ws, colleague)); listed != 0 || panel != 0 {

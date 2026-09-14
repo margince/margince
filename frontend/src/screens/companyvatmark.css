@@ -29,11 +29,11 @@
    is a fact about the lookup and not about the company — so it takes the
    secondary ink every other unset value in this panel takes. */
 .vatmark-glyph[data-tone="success"] {
-  color: var(--success);
+  color: var(--successText);
 }
 
 .vatmark-glyph[data-tone="danger"] {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .vatmark-glyph[data-tone="none"] {

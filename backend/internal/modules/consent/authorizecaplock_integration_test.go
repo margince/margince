@@ -13,7 +13,7 @@ package consent
 // beside this file derive lock KEYS and say themselves that they never open a
 // second transaction, so the serialization was unproven.
 //
-// Held the way TestOnePersonsConsentWritesDoNotInterleave holds its lock: take
+// Held the way TestOneContactsConsentWritesDoNotInterleave holds its lock: take
 // the same key from a separate session, drive the REAL authorization, and watch
 // Postgres report it stopped. That is the mechanism rather than a race for the
 // symptom — a test that launched two dispatches and hoped they crossed would
@@ -101,15 +101,27 @@ var capJurisdictions = struct {
 	next int
 }{}
 
+// testJurisdictionSlots is how many codes the minter can hand out: q…a through
+// q…z, minus the letters before "a" — the whole "q" prefix.
+//
+// WIDENED from the QM-QZ fourteen when the requirement tests began drawing from
+// the same counter and the two together came within two of exhausting it. ISO
+// 3166 reserves every QM-QZ code and assigns no other "q" code except QA
+// (Qatar), which this skips: a test jurisdiction that collided with a real one
+// would read as a pack for a country the product actually serves.
+const testJurisdictionSlots = 25
+
 func testJurisdiction(t *testing.T) jurisdiction.Code {
 	t.Helper()
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
-	if capJurisdictions.next >= 14 {
-		t.Fatalf("this package has taken all %d test jurisdictions in the QM-QZ range — widen the "+
-			"range rather than reusing one, which panics the registry for every test after it", 14)
+	if capJurisdictions.next >= testJurisdictionSlots {
+		t.Fatalf("this package has taken all %d test jurisdictions in the q… range — widen the "+
+			"range rather than reusing one, which panics the registry for every test after it",
+			testJurisdictionSlots)
 	}
-	code := jurisdiction.Code("q" + string(rune('m'+capJurisdictions.next)))
+	// 'b' onward, skipping QA: Qatar is the one assigned "q" code.
+	code := jurisdiction.Code("q" + string(rune('b'+capJurisdictions.next)))
 	capJurisdictions.next++
 	return code
 }
@@ -129,28 +141,28 @@ func (e *capEnv) cappedGate(t *testing.T, messages int) *Gate {
 		}))
 }
 
-// grantMarketingTo gives a SECOND address a person with a live marketing grant,
+// grantMarketingTo gives a SECOND address a contact with a live marketing grant,
 // so the engine reaches an allow for it and the lock is what a dispatch to it
 // waits on — or does not. It reuses the purpose seedMarketingSubject created;
 // calling that a second time would collide on the purpose key.
 func (e *capEnv) grantMarketingTo(t *testing.T, address string) {
 	t.Helper()
 	ctx := context.Background()
-	personID := ids.New[ids.PersonKind]()
+	contactID := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person (id, full_name, source, captured_by)
-		VALUES ($1, 'Other Cap Subject', 'manual', 'human:x')`, personID); err != nil {
+		INSERT INTO contact (id, full_name, source, captured_by)
+		VALUES ($1, 'Other Cap Subject', 'manual', 'human:x')`, contactID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-		VALUES ($1, $2, true, 'manual', 'human:x')`, personID, address); err != nil {
+		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:x')`, contactID, address); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(ctx, `
-		INSERT INTO person_consent (person_id, purpose_id, state, lawful_basis, captured_at, source)
+		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
 		SELECT $1, id, 'granted', 'consent', now(), 'test'
-		  FROM consent_purpose WHERE key = $2`, personID, marketingPurposeKey); err != nil {
+		  FROM consent_purpose WHERE key = $2`, contactID, marketingPurposeKey); err != nil {
 		t.Fatal(err)
 	}
 }

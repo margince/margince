@@ -1,7 +1,7 @@
 # Security Policy
 
 Margince handles customer relationship data under a single-tenant,
-agent-governed security model: one installation serves one organization,
+agent-governed security model: one installation serves one company,
 and boot refuses a second. Reports about weaknesses in that model are
 welcome and taken seriously.
 

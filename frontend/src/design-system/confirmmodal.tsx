@@ -31,6 +31,7 @@ export function ConfirmModal({
   size,
   placement,
   returnFocusTo,
+  initialFocusTo,
   children,
 }: Readonly<{
   open: boolean;
@@ -84,6 +85,8 @@ export function ConfirmModal({
   // place focus should land instead, since the trigger will not be there to
   // take it back.
   returnFocusTo?: () => HTMLElement | null;
+  /** The writing field can take focus before supporting context controls. */
+  initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -96,6 +99,7 @@ export function ConfirmModal({
       size={size}
       placement={placement}
       returnFocusTo={returnFocusTo}
+      initialFocusTo={initialFocusTo}
     >
       <h2 id={headingId} className="t-h2" style={{ marginBottom: 12 }}>
         {tier && (
@@ -112,7 +116,7 @@ export function ConfirmModal({
         <p
           className="t-caption"
           role="alert"
-          style={{ color: "var(--danger)" }}
+          style={{ color: "var(--dangerText)" }}
         >
           {error}
         </p>

@@ -11,7 +11,7 @@
 #   - Clones are copied from a migrated template (margince_test), CREATE DATABASE
 #     ... TEMPLATE — a fast file copy. This repo has two kinds of integration
 #     package: the compose/e2e suites migrate the database themselves, but the
-#     module suites (people, agents, consent, identity) assume an already-migrated
+#     module suites (contacts, agents, consent, identity) assume an already-migrated
 #     database and only seed their own rows. A migrated template satisfies both:
 #     the module suites get their schema for free, and the self-migrating suites
 #     rebuild it once per process (harness migrate-once) — either way correct. The
@@ -436,7 +436,7 @@ drop_clone() { local db="$1"; db_admin drop-db --name "$db" >/dev/null; }
 #
 # It exists because the benchmark suites are DESTRUCTIVE in a way the lane's
 # suites are not. perfbench's benchDatabase does `DROP SCHEMA public CASCADE`
-# and then seeds up to 250k persons and 500k activities, with no cleanup —
+# and then seeds up to 250k contacts and 500k activities, with no cleanup —
 # reasonable for a measurement, ruinous for the database it runs in. Pointed at
 # the default MARGINCE_TEST_DSN, that database is `margince_test`: the TEMPLATE
 # every per-package clone is copied from. ensure_template reuses an existing

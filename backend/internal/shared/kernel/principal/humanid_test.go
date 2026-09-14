@@ -3,9 +3,9 @@
 
 package principal
 
-// The one spelling of "which person is this". Three callers parsed it
+// The one spelling of "which contact is this". Three callers parsed it
 // separately before it lived here, and the failure they each had to avoid is
-// the same one: reading a uuid out of a namespace that is not a person's.
+// the same one: reading a uuid out of a namespace that is not a contact's.
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {
+func TestHumanUserIDReadsAContactAndOnlyAContact(t *testing.T) {
 	user := ids.NewV7()
 	cases := []struct {
 		name string
@@ -21,7 +21,7 @@ func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {
 		want ids.UUID
 		ok   bool
 	}{
-		{"a person", HumanIDPrefix + user.String(), user, true},
+		{"a contact", HumanIDPrefix + user.String(), user, true},
 		// A system namespace carrying a uuid is the case that matters: read
 		// loosely, it files the system's work under whoever that uuid is.
 		{"a system id that happens to carry a uuid", "system:" + user.String(), ids.Nil, false},

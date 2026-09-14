@@ -427,7 +427,7 @@
 .ob-scan-cost-unpriced {
   font-family: var(--f-body);
   font-variant-numeric: normal;
-  color: var(--warn);
+  color: var(--warnText);
 }
 .ob-scan-cost-model {
   margin: 0;

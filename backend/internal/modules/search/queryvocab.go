@@ -113,8 +113,8 @@ type Relation struct {
 	// caller can see WHY a hop exists.
 	//
 	// For a SCALAR edge it is also what E2 executes the join on, in two
-	// spellings newHopBinding reads apart: bare (`organization_id`, the
-	// target's own column) or qualified (`deal.organization_id`, the referring
+	// spellings newHopBinding reads apart: bare (`company_id`, the
+	// target's own column) or qualified (`deal.company_id`, the referring
 	// record's). For a join edge it is prose only — Join below carries what
 	// executes.
 	Via string
@@ -318,7 +318,7 @@ func storedInverseRelations(ctx context.Context, schema *schemaReads, entity str
 
 // admittedRelations drops the hops that land on a record type this caller may
 // not read. A hop is a read of the record it lands on, so admitting it would
-// let a plan filter deals by an organization the caller cannot see — and the
+// let a plan filter deals by a company the caller cannot see — and the
 // result count would disclose what the row scope hides.
 func (r *VocabularyResolver) admittedRelations(ctx context.Context, relations []Relation) []Relation {
 	return slices.DeleteFunc(relations, func(rel Relation) bool {

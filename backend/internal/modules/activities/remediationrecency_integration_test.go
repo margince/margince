@@ -153,7 +153,7 @@ func (e *recencyEnv) logAgainstDeal(t *testing.T, deal ids.UUID, subject, origin
 
 // TestRemediationWorkDoesNotRefreshTheDealClock is the whole point: the same
 // write, twice, differing only in origin. A human task moves the clock because
-// a person did something; a system review task does not, because nobody did.
+// a contact did something; a system review task does not, because nobody did.
 func TestRemediationWorkDoesNotRefreshTheDealClock(t *testing.T) {
 	e := setupRecency(t)
 	quietSince := time.Now().Add(-90 * 24 * time.Hour).Truncate(time.Second)

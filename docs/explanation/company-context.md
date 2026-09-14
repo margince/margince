@@ -1,9 +1,9 @@
 # Company context — cold-start onboarding and governed AI grounding
 
-One installation serves one organization — and Margince keeps a confirmed,
+One installation serves one company — and Margince keeps a confirmed,
 durable understanding of that company: what it sells, to whom, and what proves
 it. That understanding is born in first-run onboarding (from a website read, a
-manual form, or both), lives as provenance-bearing rows in the `people` module,
+manual form, or both), lives as provenance-bearing rows in the `contacts` module,
 and is injected into AI tasks as **governed, scoped data** — never as ad-hoc
 prompt prose. This page explains the whole lane; the model runtime it feeds is
 [ai-runtime.md](ai-runtime.md).
@@ -11,11 +11,11 @@ prompt prose. This page explains the whole lane; the model runtime it feeds is
 ## The shape at a glance
 
 ```text
- FIRST RUN (the wizard)                 THE PROFILE (people module)       AI TASKS (compose + ai)
+ FIRST RUN (the wizard)                 THE PROFILE (contacts module)       AI TASKS (compose + ai)
  ─────────────────────                 ───────────────────────────      ───────────────────────
- Read → Confirm → Basis → Voice         organization        (identity)   CompanyContextProvider
-      → Connect                         organization_profile_field         task → scopes | none
-   │                                    organization_fact   (evidence)        │  (closed policy,
+ Read → Confirm → Basis → Voice         company        (identity)   CompanyContextProvider
+      → Connect                         company_profile_field         task → scopes | none
+   │                                    company_fact   (evidence)        │  (closed policy,
    ├─ "Read my website"                 site_read           (dossier)         │   fitness-gated)
    │    progressive, evidence-or-omit        ▲                                ▼
    │    confirm = accept-subset ─────────────┘                        <company_context_data>
@@ -30,12 +30,12 @@ There is no denormalized "AI profile" that can drift from company data. The
 governed source of truth is four distinct concepts, all workspace-scoped and
 provenance-bearing:
 
-1. **Identity** — canonical `organization` columns and the primary domain.
+1. **Identity** — canonical `company` columns and the primary domain.
 2. **Business profile** — human-confirmable single-value statements
-   (`organization_profile_field`: offer summary, ICP, value proposition, USP,
+   (`company_profile_field`: offer summary, ICP, value proposition, USP,
    buyer roles, …) with evidence, confidence, source, and capture actor.
 3. **Evidence facts** — repeatable, source-grounded findings
-   (`organization_fact`: locations, services, products, certifications, named
+   (`company_fact`: locations, services, products, certifications, named
    customers, technologies, …), linked back to their `site_read`.
 4. **Operational dossier** — the crawl record itself (`site_read`: progress,
    pages read/skipped, stop reason). Never prompt context by itself.
@@ -44,7 +44,7 @@ The standing rule across all of them: **human edits outrank machine
 refreshes.** A website re-read may *propose* a change; it never silently
 replaces a human-held value.
 
-Over these rows the people module exposes one typed, read-only
+Over these rows the contacts module exposes one typed, read-only
 **`CompanyContext`** read model (`GET /company/context`) — deterministic field
 ordering, named scopes (identity, positioning, sales, offer, markets, proof,
 capabilities, administrative), and a deterministic fingerprint. Consumers get
@@ -62,7 +62,7 @@ round-trip reconstructs the same scene.
 
 The creator's rail reads **Read · Confirm · Basis · Voice · Connect**. Basis is
 what the setup settles right after the company is confirmed and before any step
-about the person answering: the installation's reporting basis — base currency
+about the contact answering: the installation's reporting basis — base currency
 and reporting timezone — and what the agent may change on its own. An admin can
 change any of it later in Settings, and a currency a deal has already frozen is
 shown locked there as it is here. Connect is the last stop: leaving it writes
@@ -93,10 +93,14 @@ without claiming a numbered slot.
   never a universal block.
 - **A website read is progressive and honest.** The onboarding dossier
   (`/company/site-reads` start → poll → confirm, an *unbound* `site_read` that
-  needs no pre-existing organization) streams grounded findings as pages are
+  needs no pre-existing company) streams grounded findings as pages are
   read, under the standing crawl guarantees: SSRF guard, robots handling, hard
   page/byte/time bounds, and evidence-or-omit — an ungrounded value stays
   empty rather than guessed.
+- The default crawl reads up to **60 pages**, within the existing byte and
+  time limits. The legal page-facts lane preserves heading boundaries before
+  packing the usual bounded passages, keeping short company blocks together
+  without widening the evidence scope or changing the attribution checks.
 - **Confirmation is accept-subset in one transaction.** The confirm request
   binds the inspected read version, writes only the selected fields/facts
   (audited, outbox-evented), and treats any edited value as a human assertion.
@@ -137,14 +141,14 @@ The safety frame:
 
 | Concern | Where |
 |---|---|
-| Read model + policy | `GET /company`, `GET /company/context` (people module); scopes/fingerprint |
-| Onboarding dossier | `/company/site-reads` start/poll/confirm; unbound `site_read` (people) |
+| Read model + policy | `GET /company`, `GET /company/context` (contacts module); scopes/fingerprint |
+| Onboarding dossier | `/company/site-reads` start/poll/confirm; unbound `site_read` (contacts) |
 | Wizard state | `/onboarding/state`, `onboarding_wizard_state` (identity; migration `0103`) |
 | Provider + prompt block | `internal/compose/companycontextprompt.go` |
 | Rollout switch | `company_context.rollout` (`margince.yaml`, `platform/deployconfig`, migration `0105`) |
 | Trace provenance | `ai_call` context columns (migration `0102`) — see [ai-runtime.md](ai-runtime.md) |
 | The UI | `frontend/src/screens/onboarding-conversation/` (the machine + acts), the scene modules `onboarding-gate.tsx` / `onboarding-backread.tsx`, and `company-context.tsx` (the settings screen). `onboarding.tsx` is the entry point and the journey's shared vocabulary, not a screen |
-| Deep read (existing orgs) | `POST /organizations/{id}/deep-read` — same engine, approval-staged |
+| Deep read (existing companies) | `POST /companies/{id}/deep-read` — same engine, approval-staged |
 
 **Related:** [ai-runtime.md](ai-runtime.md) (the Router, tracing, budget) ·
 [agent-surface.md](agent-surface.md) (the agent loop that consumes the compact

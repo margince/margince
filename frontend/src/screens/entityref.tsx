@@ -12,7 +12,7 @@ import { throwProblem } from "./common";
 
 // A cross-record reference rendered as the target's display name plus a
 // backlink to its 360, resolved by id. Records point at each other by id
-// across the contract (owner, counterparty, partner org, deal); showing the
+// across the contract (owner, counterparty, partner company, deal); showing the
 // raw UUID is honest but unreadable, so this hydrates the name off the record
 // read and links through. A reference that cannot be named renders the id
 // (mono, no link) rather than blank or a dead link — on an audit row or a
@@ -55,22 +55,19 @@ function unnamedOrThrow(error: unknown, response: Response): null {
   throwProblem(error);
 }
 
-// One reader per kind: each reads a different endpoint and a differently
-// named field, so the table is the honest shape — a generic lookup would have
-// to guess the field. A missing name coerces to null (never undefined):
-// react-query forbids an undefined resolve, and a record that answers without
-// its name field has answered.
+// Each entity endpoint names its display field differently. Missing names
+// resolve to null because React Query rejects undefined query results.
 const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
   {
-    person: async (id) => {
-      const { data, error, response } = await api.GET("/people/{id}", {
+    contact: async (id) => {
+      const { data, error, response } = await api.GET("/contacts/{id}", {
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);
       return data.full_name ?? null;
     },
-    organization: async (id) => {
-      const { data, error, response } = await api.GET("/organizations/{id}", {
+    company: async (id) => {
+      const { data, error, response } = await api.GET("/companies/{id}", {
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);
@@ -99,7 +96,10 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
     },
   };
 
-function fetchEntityName(kind: EntityKind, id: string): Promise<string | null> {
+export function fetchEntityName(
+  kind: EntityKind,
+  id: string,
+): Promise<string | null> {
   return NAME_READERS[kind](id);
 }
 
@@ -203,7 +203,7 @@ function useRosterWalk(kind: RosterKind, enabled: boolean) {
  *
  * A consumer that OFFERS these entries as a list of who exists owes its reader
  * `useRosterPartial` beside it: this result cannot say whether the walk reached
- * the end, and a picker missing people looks exactly like a small workspace.
+ * the end, and a picker missing contacts looks exactly like a small workspace.
  */
 export function useRoster(kind: RosterKind, enabled: boolean) {
   return useQuery({

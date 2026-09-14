@@ -239,12 +239,12 @@ const (
 	offerTemplateDefaultColumn = "is_default"
 )
 
-var offerTemplateListFields = map[string]string{
-	listCreatedAtColumn:        storekit.KindTimestamp,
-	listUpdatedAtColumn:        storekit.KindTimestamp,
-	offerTemplateNameField:     fieldcatalog.TypeText,
-	offerTemplateLocaleColumn:  fieldcatalog.TypeText,
-	offerTemplateDefaultColumn: fieldcatalog.TypeBoolean,
+var offerTemplateListFields = map[string]storekit.SortField{
+	listCreatedAtColumn:        storekit.Column(storekit.KindTimestamp),
+	listUpdatedAtColumn:        storekit.Column(storekit.KindTimestamp),
+	offerTemplateNameField:     storekit.Column(fieldcatalog.TypeText),
+	offerTemplateLocaleColumn:  storekit.Column(fieldcatalog.TypeText),
+	offerTemplateDefaultColumn: storekit.Column(fieldcatalog.TypeBoolean),
 }
 
 // ListOfferTemplates pages the workspace's templates keyset-style

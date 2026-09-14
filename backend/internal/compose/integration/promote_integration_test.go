@@ -5,7 +5,7 @@
 
 package integration
 
-// The features/01 §6.4 acceptance criteria for lead→person promotion:
+// The features/01 §6.4 acceptance criteria for lead→contact promotion:
 // non-lossy graduation carrying provenance, merge-not-duplicate via the
 // §1.3 email path, the one-transaction audit+event shape, and the scope
 // rules a merge inherits from being a read.
@@ -16,7 +16,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,26 +25,26 @@ import (
 
 func seedLead(t *testing.T, e *Env, name, email string, owner *ids.UUID) ids.LeadID {
 	t.Helper()
-	in := people.CreateLeadInput{Source: "import", OwnerID: userIDPtr(owner)}
+	in := contacts.CreateLeadInput{Source: "import", OwnerID: userIDPtr(owner)}
 	if name != "" {
 		in.FullName = &name
 	}
 	if email != "" {
 		in.Email = &email
 	}
-	l, _, err := e.People.CreateLead(e.Admin(), in)
+	l, _, err := e.Contacts.CreateLead(e.Admin(), in)
 	if err != nil {
 		t.Fatalf("seeding lead %s: %v", name, err)
 	}
 	return leadIDOf(ids.UUID(l.Id))
 }
 
-func TestPromoteCreatesAPersonCarryingProvenance(t *testing.T) {
+func TestPromoteCreatesAContactCarryingProvenance(t *testing.T) {
 	e := Setup(t)
 	leadID := seedLead(t, e, "Ada Prospect", "ada@prospect.test", &e.Rep1)
 	admin := e.Admin()
 
-	person, merged, err := e.People.PromoteLead(admin, leadID, people.PromoteLeadInput{
+	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{
 		Trigger: "inbound_reply", EvidenceNote: strPtr("replied to outreach"),
 	})
 	if err != nil {
@@ -53,136 +53,136 @@ func TestPromoteCreatesAPersonCarryingProvenance(t *testing.T) {
 	if merged {
 		t.Error("fresh email should create, not merge")
 	}
-	if person.ConvertedFromLeadId == nil || leadIDOf(ids.UUID(*person.ConvertedFromLeadId)) != leadID {
-		t.Error("person lost the converted_from_lead_id origin pointer")
+	if contact.ConvertedFromLeadId == nil || leadIDOf(ids.UUID(*contact.ConvertedFromLeadId)) != leadID {
+		t.Error("contact lost the converted_from_lead_id origin pointer")
 	}
-	if person.OwnerId == nil || ids.UUID(*person.OwnerId) != e.Rep1 {
+	if contact.OwnerId == nil || ids.UUID(*contact.OwnerId) != e.Rep1 {
 		t.Error("promotion dropped the lead's owner")
 	}
-	if person.Source != "import" {
-		t.Errorf("promotion rewrote provenance source to %q; the capture channel must survive", person.Source)
+	if contact.Source != "import" {
+		t.Errorf("promotion rewrote provenance source to %q; the capture channel must survive", contact.Source)
 	}
-	if person.Emails == nil || len(*person.Emails) != 1 || string((*person.Emails)[0].Email) != "ada@prospect.test" {
+	if contact.Emails == nil || len(*contact.Emails) != 1 || string((*contact.Emails)[0].Email) != "ada@prospect.test" {
 		t.Error("promotion lost the lead's email")
 	}
 
 	// The lead is graduated: promoted, stamped with the outcome, archived
 	// off the lead list — but still resolvable by id for the audit trail.
-	lead, err := e.People.GetLead(admin, leadID, storekit.IncludeArchived)
+	lead, err := e.Contacts.GetLead(admin, leadID, storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(lead.Status) != "promoted" || lead.PromotedPersonId == nil || lead.ArchivedAt == nil {
-		t.Errorf("lead after promote: status=%s promoted_person_id=%v archived_at=%v", lead.Status, lead.PromotedPersonId, lead.ArchivedAt)
+	if string(lead.Status) != "promoted" || lead.PromotedContactId == nil || lead.ArchivedAt == nil {
+		t.Errorf("lead after promote: status=%s promoted_contact_id=%v archived_at=%v", lead.Status, lead.PromotedContactId, lead.ArchivedAt)
 	}
 
 	// Exactly one lead.promoted with the §5.5 payload, plus the caused
-	// person.created — same correlation, same audit row.
+	// contact.created — same correlation, same audit row.
 	owner := OwnerConn(t)
 	var payload json.RawMessage
-	var promotedAudit, personAudit string
+	var promotedAudit, contactAudit string
 	if err := owner.QueryRow(context.Background(),
 		`SELECT envelope->'payload', envelope->'trace'->>'audit_log_id' FROM event_outbox
 		 WHERE envelope->>'type' = 'lead.promoted'`).Scan(&payload, &promotedAudit); err != nil {
 		t.Fatalf("lead.promoted not staged: %v", err)
 	}
 	var p struct {
-		PromotedPersonID ids.UUID `json:"promoted_person_id"`
-		DedupeOutcome    string   `json:"dedupe_outcome"`
-		Trigger          string   `json:"trigger"`
+		PromotedContactID ids.UUID `json:"promoted_contact_id"`
+		DedupeOutcome     string   `json:"dedupe_outcome"`
+		Trigger           string   `json:"trigger"`
 	}
 	if err := json.Unmarshal(payload, &p); err != nil {
 		t.Fatal(err)
 	}
-	if p.PromotedPersonID != ids.UUID(person.Id) || p.DedupeOutcome != "created" || p.Trigger != "inbound_reply" {
+	if p.PromotedContactID != ids.UUID(contact.Id) || p.DedupeOutcome != "created" || p.Trigger != "inbound_reply" {
 		t.Errorf("lead.promoted payload %s", payload)
 	}
 	if err := owner.QueryRow(context.Background(),
 		`SELECT envelope->'trace'->>'audit_log_id' FROM event_outbox
-		 WHERE envelope->>'type' = 'person.created' AND envelope->'entity'->>'id' = $1`,
-		person.Id.String()).Scan(&personAudit); err != nil {
-		t.Fatalf("person.created not staged: %v", err)
+		 WHERE envelope->>'type' = 'contact.created' AND envelope->'entity'->>'id' = $1`,
+		contact.Id.String()).Scan(&contactAudit); err != nil {
+		t.Fatalf("contact.created not staged: %v", err)
 	}
-	if promotedAudit != personAudit {
+	if promotedAudit != contactAudit {
 		t.Error("promotion split across audit rows; the spec demands one transaction, one audit entry")
 	}
 
 	// Promotion happens once: the replay answers the typed 409 with the
-	// outcome pointer, never a second person.
-	_, _, err = e.People.PromoteLead(admin, leadID, people.PromoteLeadInput{Trigger: "human_qualify"})
-	var already *people.AlreadyPromotedError
+	// outcome pointer, never a second contact.
+	_, _, err = e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"})
+	var already *contacts.AlreadyPromotedError
 	if !errors.As(err, &already) {
-		t.Fatalf("re-promote → %v, want people.AlreadyPromotedError", err)
+		t.Fatalf("re-promote → %v, want contacts.AlreadyPromotedError", err)
 	}
-	if already.PersonID != PersonIDOf(ids.UUID(person.Id)) {
-		t.Error("409 lost the promoted_person_id pointer")
+	if already.ContactID != ContactIDOf(ids.UUID(contact.Id)) {
+		t.Error("409 lost the promoted_contact_id pointer")
 	}
 }
 
-func TestPromoteMergesIntoAnExistingPersonNotADuplicate(t *testing.T) {
+func TestPromoteMergesIntoAnExistingContactNotADuplicate(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	existing, err := e.People.CreatePerson(admin, people.CreatePersonInput{
+	existing, err := e.Contacts.CreateContact(admin, contacts.CreateContactInput{
 		FullName: "Grace Known", OwnerID: userIDPtr(&e.Rep1), Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "grace@known.test", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "grace@known.test", EmailType: "work", IsPrimary: true, Position: 1}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	leadID := seedLead(t, e, "G. Known", "grace@known.test", &e.Rep2)
 
-	person, merged, err := e.People.PromoteLead(admin, leadID, people.PromoteLeadInput{Trigger: "meeting_booked"})
+	contact, merged, err := e.Contacts.PromoteLead(admin, leadID, contacts.PromoteLeadInput{Trigger: "meeting_booked"})
 	if err != nil {
 		t.Fatalf("promote-with-match: %v", err)
 	}
-	if !merged || ids.UUID(person.Id) != ids.UUID(existing.Id) {
-		t.Fatalf("merged=%v into %s, want merge into the one existing person %s", merged, person.Id, existing.Id)
+	if !merged || ids.UUID(contact.Id) != ids.UUID(existing.Id) {
+		t.Fatalf("merged=%v into %s, want merge into the one existing contact %s", merged, contact.Id, existing.Id)
 	}
-	if person.ConvertedFromLeadId == nil || leadIDOf(ids.UUID(*person.ConvertedFromLeadId)) != leadID {
+	if contact.ConvertedFromLeadId == nil || leadIDOf(ids.UUID(*contact.ConvertedFromLeadId)) != leadID {
 		t.Error("merge did not record the lead origin")
 	}
-	if person.FullName != "Grace Known" {
-		t.Errorf("merge overwrote the human-curated name with %q", person.FullName)
+	if contact.FullName != "Grace Known" {
+		t.Errorf("merge overwrote the human-curated name with %q", contact.FullName)
 	}
 
 	owner := OwnerConn(t)
-	var people int
+	var contacts int
 	if err := owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM person p JOIN person_email pe ON pe.person_id = p.id
-		 WHERE pe.email = 'grace@known.test' AND p.archived_at IS NULL`).Scan(&people); err != nil {
+		`SELECT count(*) FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
+		 WHERE pe.email = 'grace@known.test' AND p.archived_at IS NULL`).Scan(&contacts); err != nil {
 		t.Fatal(err)
 	}
-	if people != 1 {
-		t.Fatalf("%d live people hold the email after promotion, want exactly 1 (merge-not-duplicate)", people)
+	if contacts != 1 {
+		t.Fatalf("%d live contacts hold the email after promotion, want exactly 1 (merge-not-duplicate)", contacts)
 	}
 }
 
 func TestPromoteDoesNotDiscloseAnOutOfScopeMergeTarget(t *testing.T) {
 	e := Setup(t)
-	if _, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{
+	if _, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 		FullName: "Foreign Match", OwnerID: userIDPtr(&e.Rep3), Source: "manual",
-		Emails: []people.PersonEmailInput{{Email: "match@foreign.test", EmailType: "work", IsPrimary: true, Position: 1}},
+		Emails: []contacts.ContactEmailInput{{Email: "match@foreign.test", EmailType: "work", IsPrimary: true, Position: 1}},
 	}); err != nil {
 		t.Fatal(err)
 	}
 	leadID := seedLead(t, e, "Mine", "match@foreign.test", &e.Rep1)
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, repPermsWithCapture())
-	if _, _, err := e.People.PromoteLead(rep, leadID, people.PromoteLeadInput{Trigger: "inbound_reply"}); !errors.Is(err, apperrors.ErrConflict) {
+	if _, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "inbound_reply"}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("promote into an out-of-scope match → %v, want bare ErrConflict (a merge is a read)", err)
 	}
 }
 
-func TestPromoteRequiresBothLeadAndPersonGrants(t *testing.T) {
+func TestPromoteRequiresBothLeadAndContactGrants(t *testing.T) {
 	e := Setup(t)
 	leadID := seedLead(t, e, "Gated", "gated@x.test", &e.Rep1)
 
-	// Lead grants but no person.create: leads may be worked, contacts may
+	// Lead grants but no contact.create: leads may be worked, contacts may
 	// not be minted through the promotion door.
 	perms := repPermsWithCapture()
-	perms.Objects["person"] = principal.ObjectGrant{Read: true, Update: true}
+	perms.Objects["contact"] = principal.ObjectGrant{Read: true, Update: true}
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
-	if _, _, err := e.People.PromoteLead(rep, leadID, people.PromoteLeadInput{Trigger: "human_qualify"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("promote without person.create → %v, want ErrPermissionDenied", err)
+	if _, _, err := e.Contacts.PromoteLead(rep, leadID, contacts.PromoteLeadInput{Trigger: "human_qualify"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("promote without contact.create → %v, want ErrPermissionDenied", err)
 	}
 }

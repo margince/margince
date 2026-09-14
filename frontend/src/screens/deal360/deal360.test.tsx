@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { DealIdentityLine } from "../dealidentity";
 import { DealPulse } from "./dealpulse";
 import { DealSeats } from "./dealseats";
-import { DealStrip } from "./dealstrip";
+import { DEAL_OFFERS_ANCHOR, DealStrip } from "./dealstrip";
 
 // What the deal page owes a reader before they read anything.
 //
@@ -53,7 +54,7 @@ function deal(over: Partial<Deal> = {}): Deal {
   } as Deal;
 }
 
-// One harness, with the query client: the seat cells resolve a person through
+// One harness, with the query client: the seat cells resolve a contact through
 // `EntityRef` now, so every card on this record needs one. There were two
 // helpers before — this and `showFacts` below — differing only in whether they
 // supplied it.
@@ -213,8 +214,8 @@ describe("the readings say what is wrong, with the figure behind it", () => {
         coverage={{
           deal_id: DEAL_ID,
           stakeholders: [
-            { person_id: "p1", role: "champion", engaged: true },
-            { person_id: "p2", role: "user", engaged: false },
+            { contact_id: "p1", role: "champion", engaged: true },
+            { contact_id: "p2", role: "user", engaged: false },
           ],
           our_side: [],
           risks: [],
@@ -226,7 +227,7 @@ describe("the readings say what is wrong, with the figure behind it", () => {
     expect(screen.getByText(/a champion is named/)).toBeInTheDocument();
   });
 
-  it("says the people are hidden rather than reporting nobody", () => {
+  it("says the contacts are hidden rather than reporting nobody", () => {
     // Withheld and empty are different answers, and a card that read one as
     // the other would report a clean bill of health from a check that never
     // ran.
@@ -235,6 +236,53 @@ describe("the readings say what is wrong, with the figure behind it", () => {
       screen.getByText(/may not read who is on this deal/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/No stakeholder is recorded/)).toBeNull();
+  });
+
+  // The money reading's way out. Its receipt lists the offers; the door goes to
+  // the offers CARD, which is on the same tab one screen down — so it is a
+  // scroll rather than a route, and the id is the strip's own so the two cannot
+  // drift apart.
+  it("reveals the offers card from the money reading", async () => {
+    const offers = document.createElement("div");
+    offers.id = DEAL_OFFERS_ANCHOR;
+    document.body.append(offers);
+    // jsdom implements no scrolling at all, so the page's own element is what
+    // records the call.
+    const scrolled = vi.fn();
+    offers.scrollIntoView = scrolled;
+
+    show(<DealStrip deal={deal()} coverageWithheld={false} />);
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "Open",
+        description: en["deal.strip.money"],
+      }),
+    );
+
+    expect(scrolled).toHaveBeenCalledTimes(1);
+    offers.remove();
+  });
+
+  // A deal nobody has priced keeps the door, because the offers card is where
+  // the price gets written — the reading whose figure is missing is the one
+  // whose reader most needs it.
+  it("keeps the money door on a deal nobody has priced", () => {
+    show(
+      <DealStrip
+        deal={deal({ amount_minor: undefined, currency: undefined })}
+        coverageWithheld={false}
+      />,
+    );
+
+    expect(
+      screen.getByText(en["deal.strip.money.unpriced"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Open",
+        description: en["deal.strip.money"],
+      }),
+    ).toBeInTheDocument();
   });
 
   it("names the offer's state and never a date it was sent", () => {
@@ -281,8 +329,8 @@ describe("the rail says who is on the deal", () => {
           deal_id: DEAL_ID,
           stakeholders: [
             {
-              person_id: "p1",
-              person_name: "Thorsten Ortner",
+              contact_id: "p1",
+              contact_name: "Thorsten Ortner",
               role: "economic_buyer",
               engaged: true,
             },
@@ -318,7 +366,7 @@ describe("the rail says who is on the deal", () => {
         overlay={false}
         coverage={{
           deal_id: DEAL_ID,
-          stakeholders: [{ person_id: "p1", role: "user", engaged: false }],
+          stakeholders: [{ contact_id: "p1", role: "user", engaged: false }],
           our_side: [],
           risks: [],
           sections_omitted: [],
@@ -410,7 +458,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     ).toBeInTheDocument();
   });
 
-  it("prints the words a person wrote rather than the category they chose", () => {
+  it("prints the words a contact wrote rather than the category they chose", () => {
     // `other` is the only reason carrying a detail, and the detail is the only
     // part of this answer somebody typed. "Something else: renewed on a
     // handshake" says the category twice and buries it.
@@ -441,7 +489,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
     // VISUALLY, with the whole string in the DOM. An earlier version trimmed it
     // in TS and put the rest in a `title`, which reads as solved and is not: a
     // tooltip wants a mouse, is ignored by most screen readers, and never
-    // appears for a keyboard or touch reader. The person most likely to look is
+    // appears for a keyboard or touch reader. The contact most likely to look is
     // the one checking the words they just typed.
     const long =
       `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
@@ -478,7 +526,7 @@ describe("the identity line says what it is worth, where it is, and whose it is"
   // This has been wrong twice in opposite directions, which is why it is held
   // rather than described. Clipped with the rest in a `title` needs a mouse;
   // clipped with no `title` is unreadable for everyone. Either way the reader
-  // who loses is the person checking the words they just typed, and the value
+  // who loses is the contact checking the words they just typed, and the value
   // exists to be audited.
   it("bounds the won-reason detail's width and never its content", () => {
     const css = readFileSync(

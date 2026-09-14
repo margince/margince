@@ -6,10 +6,10 @@
 package gates
 
 // The consent carry — what happens to a retiring record's consent when another
-// record survives it — is spelled once inside the people module.
+// record survives it — is spelled once inside the contacts module.
 //
-// It was spelled three times: a person merge, a lead merge, and a lead's
-// promotion to a person, each with its own copy of one CTE differing only in a
+// It was spelled three times: a contact merge, a lead merge, and a lead's
+// promotion to a contact, each with its own copy of one CTE differing only in a
 // key column and a literal. Consent is the domain where a fix applied to two
 // of three copies is a lawful-processing defect rather than an untidiness: the
 // rule the CTE encodes is "a withdrawal always wins", and a copy that missed a
@@ -20,7 +20,7 @@ package gates
 // declared in the spec now, and asserted against real rows by
 // TestEachConsentCarryProvesItsProofRule.
 //
-// SCOPED TO people, deliberately. The consent module owns these tables and
+// SCOPED TO contacts, deliberately. The consent module owns these tables and
 // writes them for its own reasons — a preference centre save, a double
 // opt-in confirmation — and those are not carries. What this gate governs is
 // the SIBLING that reaches across into them under the package's sanctioned
@@ -55,7 +55,7 @@ import (
 // survivor. A read of either table is not a subject — the defect is a second
 // implementation of the RULE, not a second reader of the rows.
 var consentStateStatement = regexp.MustCompile(
-	`(?is)INSERT\s+INTO\s+consent_event\b|UPDATE\s+person_consent\b|DELETE\s+FROM\s+person_consent\b`)
+	`(?is)INSERT\s+INTO\s+consent_event\b|UPDATE\s+contact_consent\b|DELETE\s+FROM\s+contact_consent\b`)
 
 // writesConsentState reports whether a file carries any of those statements.
 func writesConsentState(_ string, file *ast.File) bool {
@@ -74,18 +74,18 @@ func writesConsentState(_ string, file *ast.File) bool {
 // theCarryFile is where the carry lives. Named because the two tests below ask
 // questions ABOUT that file rather than about a count.
 //
-// Held by: TestTheConsentCarryIsSpelledOnceInPeople (backend/gates/oneconsentcarry_test.go) — which fails
-// if the people module's consent writes are in any other file, and fails again
+// Held by: TestTheConsentCarryIsSpelledOnceInContacts (backend/gates/oneconsentcarry_test.go) — which fails
+// if the contacts module's consent writes are in any other file, and fails again
 // if they have moved out of this one.
-const theCarryFile = "internal/modules/people/consentcarry.go"
+const theCarryFile = "internal/modules/contacts/consentcarry.go"
 
-func TestTheConsentCarryIsSpelledOnceInPeople(t *testing.T) {
+func TestTheConsentCarryIsSpelledOnceInContacts(t *testing.T) {
 	t.Parallel()
 	scope := gatekit.Scope{
-		Roots:   []string{"internal/modules/people"},
+		Roots:   []string{"internal/modules/contacts"},
 		Subject: writesConsentState,
 		Exempt: gatekit.Waive(map[string]string{
-			"internal/modules/consent/store.go":        "the consent module OWNS these tables and writes them for its own reasons — a preference-centre save, a double opt-in confirmation, a withdrawal a person asked for. None of those is a carry: they record what a subject decided, where a carry decides what happens to a decision when the record holding it retires. The two would not share an implementation even if they were in one package",
+			"internal/modules/consent/store.go":        "the consent module OWNS these tables and writes them for its own reasons — a preference-centre save, a double opt-in confirmation, a withdrawal a contact asked for. None of those is a carry: they record what a subject decided, where a carry decides what happens to a decision when the record holding it retires. The two would not share an implementation even if they were in one package",
 			"internal/modules/consent/consentproof.go": "the paired state-and-proof write the consent module's own Record makes, split out of store.go for the file-length cap. Same reason as store.go beside it: recording a decision a subject made, never deciding what becomes of one when a record retires",
 		}),
 	}
@@ -95,13 +95,13 @@ func TestTheConsentCarryIsSpelledOnceInPeople(t *testing.T) {
 		for _, f := range inside {
 			where = append(where, f.Path)
 		}
-		t.Errorf("the people module writes consent state from %d files:\n\t%s\n\n"+
+		t.Errorf("the contacts module writes consent state from %d files:\n\t%s\n\n"+
 			"One carry, with its differences declared in the spec rather than left to a reader comparing "+
 			"files. A withdrawal that wins in two copies and not the third is a lawful-processing defect",
 			len(inside), strings.Join(where, "\n\t"))
 	}
 	if len(inside) == 1 && inside[0].Path != theCarryFile {
-		t.Errorf("the people module's consent writes have moved to %s; the tests below ask their questions "+
+		t.Errorf("the contacts module's consent writes have moved to %s; the tests below ask their questions "+
 			"of %s and would be reading an empty file", inside[0].Path, theCarryFile)
 	}
 }
@@ -145,7 +145,7 @@ func TestEveryConsentWriteInTheCarryFileBelongsToTheCarry(t *testing.T) {
 // these tables names the column it means. Recording a decision never re-keys
 // the row the decision sits on, which is why this can tell a preference-centre
 // save from a carry where the file-keyed waiver above cannot.
-var reKeyedConsent = regexp.MustCompile(`(?is)UPDATE\s+(person_consent|consent_event)\b[^;]*?\bSET\s+%\[\d+\]s\s*=`)
+var reKeyedConsent = regexp.MustCompile(`(?is)UPDATE\s+(contact_consent|consent_event)\b[^;]*?\bSET\s+%\[\d+\]s\s*=`)
 
 // TestOnlyTheCarryReKeysAConsentRow sweeps EVERY module, waiver or not, because
 // the waiver above ratifies a file and this obligation is about statements.

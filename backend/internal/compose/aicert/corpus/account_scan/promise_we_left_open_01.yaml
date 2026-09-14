@@ -1,6 +1,6 @@
 name: scan_finds_the_promise_we_did_not_keep
 task: account_scan
-site: org_scan
+site: company_scan
 source: hand_authored
 sanitized_by: hand_authored/claude-fable-5-1
 fixture:

@@ -42,13 +42,13 @@ expect_order() {
 # the helper ever split on them, these lines would come back mangled.
 cat > "$work/grouped" <<'GROUPED'
 backend|./internal/compose/integration|^(TestA|TestB)$
-backend|./internal/modules/people|^(TestC)$
+backend|./internal/modules/contacts|^(TestC)$
 backend|./migrations|^(TestD)$
 backend|./cmd/worker|^(TestE)$
 GROUPED
 
 cat > "$work/measured" <<'HINT'
-./internal/modules/people|31.500
+./internal/modules/contacts|31.500
 ./migrations|104.135
 ./internal/compose/integration|221.093
 ./cmd/worker|4.498
@@ -58,7 +58,7 @@ HINT
 expect_order "named packages must sort longest-first" \
   './internal/compose/integration
 ./migrations
-./internal/modules/people
+./internal/modules/contacts
 ./cmd/worker' \
   "$(order_by_hint "$work/grouped" "$work/measured" | cut -d'|' -f2)"
 
@@ -73,7 +73,7 @@ cat > "$work/partial" <<'HINT'
 ./internal/compose/integration|221.093
 HINT
 expect_order "unnamed packages must keep the order they arrived in" \
-  './internal/modules/people
+  './internal/modules/contacts
 ./migrations
 ./cmd/worker
 ./internal/compose/integration' \
@@ -94,7 +94,7 @@ expect_order "a wholly stale baseline must degrade to discovery order" \
 # thing the whole run waits for.
 cat > "$work/unmeasured" <<'HINT'
 ./internal/compose/integration|
-./internal/modules/people|31.500
+./internal/modules/contacts|31.500
 ./migrations|not-a-number
 ./cmd/worker|0
 HINT
@@ -102,20 +102,20 @@ expect_order "a duration that is not a positive number is no duration at all" \
   './internal/compose/integration
 ./migrations
 ./cmd/worker
-./internal/modules/people' \
+./internal/modules/contacts' \
   "$(order_by_hint "$work/grouped" "$work/unmeasured" | cut -d'|' -f2)"
 
 # The committed baseline carries a human-readable header. It must not disturb the
 # order: an unrecognised key is one nothing looks up, and this pins that reading
 # rather than leaving it to be rediscovered the next time somebody edits the file.
 cat > "$work/commented" <<'HINT'
-# a header a person wrote
+# a header a contact wrote
 
 ./migrations|104.135
 HINT
 expect_order "a header in a hint file leaves the order alone" \
   './internal/compose/integration
-./internal/modules/people
+./internal/modules/contacts
 ./cmd/worker
 ./migrations' \
   "$(order_by_hint "$work/grouped" "$work/commented" | cut -d'|' -f2)"
@@ -138,13 +138,13 @@ HINT
 # A hint whose only content is a header must order nothing rather than sort every
 # package behind a phantom named '#'.
 cat > "$work/commented" <<'HINT'
-# a header a person wrote
+# a header a contact wrote
 
 ./migrations|104.135
 HINT
 expect_order "comment and blank lines in a hint are not packages" \
   './internal/compose/integration
-./internal/modules/people
+./internal/modules/contacts
 ./cmd/worker
 ./migrations' \
   "$(order_by_hint "$work/grouped" "$work/commented" | cut -d'|' -f2)"

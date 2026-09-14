@@ -3,11 +3,25 @@
 All notable changes to this project are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-This is a pre-release proof of concept: nothing has been versioned or
-released yet, so everything that exists lives under Unreleased. Version
-numbers appear here when releases start.
+Releases are cut by pushing a `v*` tag, which publishes a GitHub release with
+the desktop bundles attached — see
+[docs/how-to/cut-a-release.md](docs/how-to/cut-a-release.md). The constellation
+dist release is versioned separately, on the `YYYY.edition.bugfix` scheme.
+
+There is deliberately no empty `Unreleased` section: `scripts/check-changelog-
+sections.sh` refuses a release heading with nothing under it, so one appears
+when it has content.
 
 ## [Unreleased]
+
+### Fixed
+
+- Customer meeting requests remain actionable on won or lost deals and outside
+  recent email history. Source-linked reminders reconcile without duplicates;
+  accepting or completing one updates request state across the deal and email
+  views. Background deal refresh updates facts without model calls.
+
+## [0.0.1] - 2026-09-10
 
 ### Removed
 
@@ -949,4 +963,4 @@ numbers appear here when releases start.
   without touching a committed file; the annotated template stays the
   parse-guarded source of truth.
 
-[Unreleased]: https://github.com/margince/margince
+[0.0.1]: https://github.com/margince/margince/releases/tag/v0.0.1

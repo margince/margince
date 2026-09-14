@@ -30,7 +30,7 @@ const pausedSubscription = {
   id: "sub-paused",
   owner_id: "u1",
   target_url: "https://hooks.partner.test/inbound",
-  event_types: ["organization.updated"],
+  event_types: ["company.updated"],
   state: "paused",
   version: 5,
   created_at: "2026-05-11T09:00:00Z",
@@ -46,7 +46,7 @@ function meRoute(allow: GrantSpec) {
   return () =>
     jsonResponse({
       ...meFixture({ allow }),
-      user: { ...meFixture().user, email: "person@acme.test" },
+      user: { ...meFixture().user, email: "contact@acme.test" },
     });
 }
 
@@ -156,8 +156,8 @@ export const ManyEventTypes: Story = {
           "lead.created",
           "offer.accepted",
           "offer.rejected",
-          "person.merged",
-          "organization.updated",
+          "contact.merged",
+          "company.updated",
         ],
       },
     ]),
@@ -345,7 +345,7 @@ const deadLetteredDelivery = {
   id: "del-dead",
   subscription_id: "sub-active",
   event_id: "evt-3",
-  event_type: "organization.updated",
+  event_type: "company.updated",
   status: "dead_lettered",
   attempts: 6,
   last_status_code: 500,

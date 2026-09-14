@@ -51,9 +51,9 @@ func projectClock(ctx context.Context, t *testing.T, e *Env, id ids.ProjectID) *
 
 func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Clocked Client", nil)
-	erp := seedProject(e.Admin(), t, e, "ERP replacement", org, nil)
-	crm := seedProject(e.Admin(), t, e, "CRM rollout", org, nil)
+	company := e.SeedCompany(t, "Clocked Client", nil)
+	erp := seedProject(e.Admin(), t, e, "ERP replacement", company, nil)
+	crm := seedProject(e.Admin(), t, e, "CRM rollout", company, nil)
 
 	before, err := e.Projects.GetProject(e.Admin(), erp.ID, storekit.LiveOnly)
 	if err != nil {
@@ -137,12 +137,12 @@ func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.
 // separately; the stored column stays one cheap, unambiguous question.
 func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Deal-Reached Client", nil)
-	project := seedProject(e.Admin(), t, e, "Programme", org, nil)
+	company := e.SeedCompany(t, "Deal-Reached Client", nil)
+	project := seedProject(e.Admin(), t, e, "Programme", company, nil)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Phase one", AmountMinor: int64Ptr(100), Currency: strPtr("EUR"),
-		PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(org)),
+		PipelineID: pipeline, StageID: open, CompanyID: companyIDPtr(companyIDOf(company)),
 		ProjectID: &project.ID, Source: "manual",
 	})
 	if err != nil {

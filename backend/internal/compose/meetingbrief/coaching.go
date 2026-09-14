@@ -17,7 +17,7 @@ package meetingbrief
 // surface is caller-scoped on purpose: `readLastSpoke` keys "since you last
 // spoke" on the reader's own id, the history is filtered through the reader's
 // activity scope, and a team-scoped lead reaches rows an own-scoped rep does
-// not. Two people reading one meeting get two briefs, and that was true before
+// not. Two readers reading one meeting get two briefs, and that was true before
 // this file existed. Claiming otherwise would be claiming this layer flattens a
 // difference it does not touch.
 //
@@ -165,7 +165,7 @@ func coachingFailureMode(plan Plan) string {
 		return "Defending the history instead of owning it and naming a date."
 	case len(plan.LikelyAsks) >= 2:
 		return "Answering the asks one by one and never getting to a question of their own."
-	case plan.Type.Value == crmcontracts.MeetingPlanTypeUnknown:
+	case plan.Type.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown:
 		return "Assuming what the meeting is for, and finding out at the end that it was not."
 	case len(plan.Arc) == 0:
 		return "Filling the silence with product rather than asking what is actually going on."

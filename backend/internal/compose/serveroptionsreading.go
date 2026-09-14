@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // WithColdStart enables the cold-start read-back over the given fetch
@@ -30,7 +30,7 @@ func WithColdStart(fetch PageFetcher, brain completer) Option {
 	}
 }
 
-// WithScrape enables per-organization enrichment (scrapeCompany) over the same
+// WithScrape enables per-company enrichment (scrapeCompany) over the same
 // fetch and model seams as the read-back. Without it the operation stays an
 // explicit 501 — the api role must DECLARE its model path, never pick one
 // silently.
@@ -38,7 +38,7 @@ func WithScrape(fetch PageFetcher, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.scrapeHandlers = scrapeHandlers{engine: &scrapeEngine{
 			extract:   evidenceExtractor{fetch: fetch, brain: brain},
-			people:    people.NewStore(InstallationDB(pool)),
+			contacts:  contacts.NewStore(InstallationDB(pool)),
 			approvals: approvals.NewService(InstallationDB(pool)),
 		}}
 	}

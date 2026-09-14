@@ -46,7 +46,7 @@ func buildCatalog() map[Language]Copy {
 // three renderings in the order the languages are declared.
 type writeLine = func(field func(*Copy) *string, english, german, vietnamese string)
 
-// resetLines is the password reset a person asked for.
+// resetLines is the password reset a colleague asked for.
 // unsubscribeLines is the footer beneath an outgoing message.
 func unsubscribeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.UnsubscribeLabel },
@@ -204,9 +204,9 @@ func weeklyMovementLines(line writeLine) {
 // list is written in.
 func weeklyClosingLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"Plan your week",
-		"Ihre Woche planen",
-		"Lập kế hoạch tuần của bạn")
+		"This week’s commitments",
+		"Zusagen für diese Woche",
+		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
 		"The full week, and the ones before it:",
 		"Die ganze Woche, und die davor:",
@@ -240,9 +240,9 @@ func morningLines(line writeLine) {
 		"Womit du anfängst:",
 		"Bắt đầu với:")
 	line(func(c *Copy) *string { return &c.MorningAndMore },
-		"and %d more in the brief",
-		"und %d weitere im Briefing",
-		"và %d mục khác trong bản tóm tắt")
+		"and %d more on Home",
+		"und %d weitere auf der Startseite",
+		"và %d mục khác trên Trang chủ")
 	line(func(c *Copy) *string { return &c.MorningQuiet },
 		"Nothing is waiting on you this morning.",
 		"Heute Morgen wartet nichts auf dich.",
@@ -253,17 +253,62 @@ func morningLines(line writeLine) {
 		"Mở ngày của bạn:")
 }
 
-// confirmLines is the two links the installation sends as itself.
+// confirmLines is the copy for messages addressed to a contact the installation
+// holds a record about, rather than to a colleague who works here.
 //
 // The English is the wording that shipped, unchanged: it is pinned by hash and
 // recorded on every consent proof, so moving a word here is a version bump, not
-// a translation.
+// a translation. The order these are registered in is part of that — the
+// sections below run in sequence for the same reason.
 //
 // The German and Vietnamese use the formal address (Sie / quý vị), unlike the
 // reset and invite copy above. Those speak to a colleague who works here; these
 // speak to a stranger the installation holds a record about, and about their
 // own rights.
 func confirmLines(line writeLine) {
+	confirmAskLines(line)
+	recordNoticeLines(line)
+	confirmConsentLines(line)
+}
+
+// confirmAskLines is what the confirm SCREEN asks, and the two answers it
+// offers. A consent proof names the row a reader was shown, so this is the
+// published wording rather than whatever arrived alongside the answer.
+func confirmAskLines(line writeLine) {
+	// THE QUESTION THE PAGE ASKS, which is what a consent is given TO. Its
+	// translations are the ones the confirm screen shipped, moved here so the
+	// proof can name a published row rather than quoting whatever arrived with
+	// the answer.
+	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
+		"News from time to time, roughly once a month. You decide, and I will hold to it.",
+		"Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
+		"Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.")
+	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
+		"Yes, keep me posted",
+		"Ja, halten Sie mich auf dem Laufenden",
+		"Có, hãy gửi tin cho tôi")
+	line(func(c *Copy) *string { return &c.ConfirmMarketingNo },
+		"No thanks, just keep my details correct",
+		"Nein danke, nur meine Daten korrekt halten",
+		"Không, chỉ cần giữ thông tin của tôi chính xác")
+	// THE DEDICATED SUBSCRIPTION LINK'S OWN QUESTION, which names the purpose
+	// rather than describing a frequency. A grant through that door binds this;
+	// one through the record-confirmation door binds the pair above.
+	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAsk },
+		"Confirm that you want to receive {purpose}.",
+		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+		"Xác nhận rằng bạn muốn nhận {purpose}.")
+	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
+		"Yes, subscribe me",
+		"Ja, ich möchte das Abo",
+		"Có, đăng ký cho tôi")
+}
+
+// recordNoticeLines is the copy for the messages the installation sends about a
+// record it already holds: the invitation to check it, the notice that it
+// exists, and the acknowledgement that advertising has stopped. None of them
+// asks the reader for anything.
+func recordNoticeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordSubject },
 		"Your details, and whether we may stay in touch",
 		"Ihre Daten, und ob wir in Kontakt bleiben dürfen",
@@ -275,6 +320,45 @@ func confirmLines(line writeLine) {
 			"und uns sagen, ob Sie von uns hören möchten.",
 		"Quý vị có thể xem chúng tôi lưu giữ thông tin gì về mình, sửa những gì chưa đúng,\n"+
 			"và cho chúng tôi biết quý vị có muốn nhận tin từ chúng tôi hay không.")
+	line(func(c *Copy) *string { return &c.NoticeSubject },
+		"What we hold about you, and where it came from",
+		"Was wir über Sie gespeichert haben, und woher es stammt",
+		"Chúng tôi lưu giữ thông tin gì về quý vị, và từ đâu")
+	line(func(c *Copy) *string { return &c.NoticeBody },
+		"We hold some information about you and we are telling you so, as the law\n"+
+			"requires. The link below shows what we hold, where we got it, what we use it\n"+
+			"for, and the rights you have over it.",
+		"Wir haben Informationen über Sie gespeichert und teilen Ihnen das mit, wie es\n"+
+			"das Gesetz verlangt. Der Link unten zeigt, was wir gespeichert haben, woher\n"+
+			"wir es haben, wofür wir es nutzen und welche Rechte Sie daran haben.",
+		"Chúng tôi có lưu giữ một số thông tin về quý vị và xin thông báo điều đó,\n"+
+			"theo quy định của pháp luật. Liên kết bên dưới cho thấy chúng tôi lưu giữ gì,\n"+
+			"lấy từ đâu, dùng để làm gì, và quý vị có những quyền nào đối với nó.")
+	line(func(c *Copy) *string { return &c.NoticeIgnore },
+		"You do not need to reply or do anything. This is not a request.",
+		"Sie müssen nicht antworten und nichts tun. Dies ist keine Aufforderung.",
+		"Quý vị không cần trả lời hay làm gì cả. Đây không phải là một yêu cầu.")
+	line(func(c *Copy) *string { return &c.OptOutAckSubject },
+		"We have stopped sending you advertising",
+		"Wir senden Ihnen keine Werbung mehr",
+		"Chúng tôi đã ngừng gửi quảng cáo cho quý vị")
+	line(func(c *Copy) *string { return &c.OptOutAckBody },
+		"You asked us to stop sending you advertising, and we have. It may take a\n"+
+			"short time for anything already on its way to stop arriving.",
+		"Sie haben uns gebeten, Ihnen keine Werbung mehr zu senden, und das haben wir\n"+
+			"getan. Bereits versendete Nachrichten können noch kurz ankommen.",
+		"Quý vị đã yêu cầu chúng tôi ngừng gửi quảng cáo, và chúng tôi đã ngừng.\n"+
+			"Những thư đã gửi đi có thể còn đến trong một thời gian ngắn.")
+	line(func(c *Copy) *string { return &c.OptOutAckIgnore },
+		"You do not need to reply. We are telling you because the law requires it.",
+		"Sie müssen nicht antworten. Wir teilen es Ihnen mit, weil das Gesetz es verlangt.",
+		"Quý vị không cần trả lời. Chúng tôi thông báo vì pháp luật yêu cầu.")
+}
+
+// confirmConsentLines is the message that asks a reader to turn a request into
+// a permission, and the lines both confirmation links share — what the link is,
+// how long it lasts, and what ignoring it does.
+func confirmConsentLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
 		"Please confirm you want to hear from us",
 		"Bitte bestätigen Sie, dass Sie von uns hören möchten",

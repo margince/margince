@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// The routing version is a cache key. It travels into personbrief.Fingerprint
+// The routing version is a cache key. It travels into contactbrief.Fingerprint
 // and its siblings, where it decides whether a stored brief may be reused, so
 // what it must track is the BINDING — and what it must ignore is everything
 // about how that binding was written down.

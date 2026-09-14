@@ -30,7 +30,7 @@ type Reader interface {
 	Mine(ctx context.Context, startOfToday time.Time, kinds []string) (Feed, error)
 }
 
-// Handlers serves one person's view of the AI's work.
+// Handlers serves one contact's view of the AI's work.
 type Handlers struct {
 	store Reader
 	// now stamps as_of and bounds "today" — injected so a test states the
@@ -49,7 +49,7 @@ func NewHandlers(store Reader, now func() time.Time) Handlers {
 //
 // A caller with no user identity is REFUSED rather than served empty arrays: an
 // empty feed is the real answer for an AI at rest, so handing one to an
-// unidentified caller would report "nothing is running" about a person the
+// unidentified caller would report "nothing is running" about a contact the
 // server never resolved.
 func (h Handlers) GetMyAiActivity(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMyAiActivityParams) {
 	// Refused HERE as well as in the store, and the duplication is deliberate:
@@ -138,7 +138,7 @@ func allBlank(kinds []crmcontracts.AiActivityKind) bool {
 }
 
 // startOfDay is midnight in the clock's own location, which is what "today"
-// means to the person reading the rail.
+// means to the reader reading the rail.
 func startOfDay(now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }

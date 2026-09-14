@@ -62,5 +62,5 @@
  * not — the caution below states that in words as well. */
 .webhook-secret-caution {
   margin-top: var(--space-2);
-  color: var(--danger);
+  color: var(--dangerText);
 }

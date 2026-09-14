@@ -4,7 +4,7 @@
 // Whether a promised moment is LATE, and by how many whole days.
 //
 // One place, because lateness was spelled once per screen and the spellings
-// disagreed. The person card required a full elapsed day before it would say
+// disagreed. The contact card required a full elapsed day before it would say
 // overdue, while the task list, every backend surface and the SQL all flip the
 // instant the moment passes — so for a whole day the same promise read "due
 // yesterday" on the contact and "overdue" on the task list, and a reader had no

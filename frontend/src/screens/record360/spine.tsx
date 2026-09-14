@@ -21,8 +21,8 @@ import { useRecordZone } from "../../app/recordzone";
 import { EmailReference } from "../../design-system/emailreference";
 import { PanelBody } from "../../design-system/panel";
 import {
-  mergePeople,
-  peopleOn,
+  contactsOn,
+  mergeContacts,
   withWhom,
 } from "../../design-system/participants";
 import {
@@ -85,7 +85,7 @@ export type SpineSource = {
       // or a hand-logged call carries none, and those fall back to their
       // subject.
       thread_key?: string | null;
-      // What the message is filed against. The people among them are who was
+      // What the message is filed against. The contacts among them are who was
       // ON it, which is the half of "what happened" a subject line does not
       // carry.
       links?: readonly { entity_type: string; entity_id: string }[];
@@ -153,7 +153,7 @@ export function RecordSpine({
   onOpenEmail?: (activityId: string) => void;
   // What a linked record is called. Handed in, because the names live in the
   // sections around this one and the thread holds no read of its own: a
-  // conversation the thread cannot name a person for says the kind alone
+  // conversation the thread cannot name a contact for says the kind alone
   // rather than an id nobody can read.
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   // Null as well as absent: a record whose commercial reading was withheld
@@ -340,7 +340,7 @@ function withToday(stops: readonly Stop[], ctx: Ctx): Stop[] {
 // It is the only stop with no record behind it, and it is the reason this
 // component exists: an account nobody has heard from is a fact no row on the
 // page states, because it is the ABSENCE of rows. The count is calendar days
-// from the last conversation, which is what a person means by "days".
+// from the last conversation, which is what a contact means by "days".
 //
 // Never drawn on an account we heard from more recently than we wrote: that
 // is a conversation in progress, not a silence.
@@ -482,7 +482,7 @@ type Exchange = {
   // Who was on it, in the order the conversation introduced them. A mail or a
   // call with no name beside it is a subject line and nothing a reader can act
   // on: the whole question is who they have to go back to.
-  readonly people: readonly string[];
+  readonly contacts: readonly string[];
   // Which way the conversation's latest message went. The conversation as a
   // whole has no direction; its last message does, and that is what says who
   // owes whom.
@@ -598,10 +598,11 @@ function earlierStop(
         }),
     // Who those conversations were with. A count on its own says the record
     // has a history and nothing about it; the names are what tell a reader
-    // whether the history is with the person they are about to write to.
+    // whether the history is with the contact they are about to write to.
     detail: withWhom(
       folded.reduce<readonly string[]>(
-        (people, conversation) => mergePeople(people, conversation.people),
+        (contacts, conversation) =>
+          mergeContacts(contacts, conversation.contacts),
         [],
       ),
       ctx.t,
@@ -690,7 +691,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
         // from every other reader's.
         `subject:${subject.toLowerCase()}`;
     const seen = conversations.get(key);
-    const people = peopleOn(entry.links, ctx.nameOf);
+    const contacts = contactsOn(entry.links, ctx.nameOf);
     // The list arrives newest-first, so the first row of a conversation is its
     // latest message: that is the date the thread shows it at, and its subject
     // is the one the conversation currently goes by after a mid-thread rename.
@@ -700,7 +701,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
         ? {
             ...seen,
             count: seen.count + 1,
-            people: mergePeople(seen.people, people),
+            contacts: mergeContacts(seen.contacts, contacts),
           }
         : {
             key,
@@ -708,7 +709,7 @@ function exchanges(view: SpineSource, ctx: Ctx): Exchange[] {
             subject,
             kind: entry.kind,
             count: 1,
-            people,
+            contacts,
             direction: entry.direction,
             // Set from the FIRST row of a conversation, which this list orders
             // newest-first — the same row the date and subject above come
@@ -756,7 +757,7 @@ function relationLine(conversation: Exchange, ctx: Ctx): string {
           count: formatNumber(conversation.count, ctx.locale),
         })
       : ctx.t(EXCHANGE_KINDS[conversation.kind]);
-  const who = withWhom(conversation.people, ctx.t, ctx.locale);
+  const who = withWhom(conversation.contacts, ctx.t, ctx.locale);
   // A meeting we know the host of names BOTH sides, which is the one exchange
   // where the record can: "Lena Fischer met Frédéric de Gombert". On an account
   // several colleagues work, which of them was in the room is half the answer
@@ -776,7 +777,7 @@ function relationLine(conversation: Exchange, ctx: Ctx): string {
   return ctx.t(preposition(conversation), { what, who });
 }
 
-// Which word joins the exchange to the people on it.
+// Which word joins the exchange to the contacts on it.
 //
 // A meeting is WITH everyone in it however it was arranged, so it never takes
 // a side. Everything else follows the message: one they sent went TO them, one

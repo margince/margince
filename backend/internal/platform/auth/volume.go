@@ -79,7 +79,7 @@ func (e *VolumeExceededError) Error() string {
 	}
 	if e.Releasable() {
 		return fmt.Sprintf(
-			"%s: this agent has spent %d of its %d %s for this window; it may continue once the person who connected it releases the window, or when the window rolls",
+			"%s: this agent has spent %d of its %d %s for this window; it may continue once the contact who connected it releases the window, or when the window rolls",
 			what, e.Reading.Observed, e.Reading.Limit, e.Reading.Counter)
 	}
 	return fmt.Sprintf(

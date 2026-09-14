@@ -91,7 +91,7 @@ func QuietSQL(alias string, days int) string {
 // table sharing a column name this expression touches must qualify it or
 // the reference is ambiguous SQL.
 func PartnerSourcedSQL(alias string) string {
-	return columnPrefix(alias) + "partner_org_id IS NOT NULL"
+	return columnPrefix(alias) + "partner_company_id IS NOT NULL"
 }
 
 // columnPrefix renders a query's table alias as a column prefix — "" for

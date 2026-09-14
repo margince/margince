@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
-// Draft and Reason are draftcore's. They were declared here and in persondraft
+// Draft and Reason are draftcore's. They were declared here and in contactdraft
 // and were identical field for field, so they were one type written twice — and
 // a field added to one would have been silently missing from the other's
 // contract mapping.
@@ -117,7 +117,7 @@ func deterministicReasons(in Input) []Reason {
 	reasons := []Reason{{
 		Kind:       crmcontracts.AccountDraftReasonKindRecipient,
 		Label:      in.Recipient.Name,
-		EntityType: "person",
+		EntityType: "contact",
 		EntityID:   in.Recipient.ID,
 	}}
 	if in.Commitment != nil {

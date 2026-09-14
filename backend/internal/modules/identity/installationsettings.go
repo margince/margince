@@ -27,8 +27,14 @@ type InstallationSettings struct {
 	Timezone     string
 	BaseCurrency string
 	BaseLanguage string
+	DateFormat   string
+	TimeFormat   string
 	// FiscalYearStartMonth is the month the business year begins, 1..12.
 	FiscalYearStartMonth int
+	// DeadWorkBannerHours is how far back the maintenance banner looks before
+	// it calls dead work a problem. The full count stays a report figure; this
+	// bounds the one that is styled as an alarm.
+	DeadWorkBannerHours int
 	// ForecastForwardMeasure is which remaining-pipeline reading a projected
 	// landing is built from. A string here rather than a values.ForwardMeasure
 	// because this struct is what the setting STORED, and reporting it as the
@@ -56,7 +62,10 @@ type InstallationPatch struct {
 	Timezone               *string
 	BaseCurrency           *string
 	BaseLanguage           *string
+	DateFormat             *string
+	TimeFormat             *string
 	FiscalYearStartMonth   *int
+	DeadWorkBannerHours    *int
 	ForecastForwardMeasure *string
 	// EnabledOidcProviders replaces the whole list. A nil pointer leaves it
 	// unchanged; a pointer to an empty slice is a real choice — offer password
@@ -142,6 +151,10 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	bannerHours, err := settings.Get(ctx, s.settings, DeadWorkBannerHours)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	measure, err := settings.Get(ctx, s.settings, ForecastForwardMeasure)
 	if err != nil {
 		return InstallationSettings{}, err
@@ -150,13 +163,18 @@ func (s *InstallationSettingsStore) GetInstallation(ctx context.Context) (Instal
 	if err != nil {
 		return InstallationSettings{}, err
 	}
+	dateFormat, timeFormat, err := s.regionalFormats(ctx)
+	if err != nil {
+		return InstallationSettings{}, err
+	}
 	locked, why, err := s.baseCurrencyLock(ctx)
 	if err != nil {
 		return InstallationSettings{}, err
 	}
 	return InstallationSettings{
-		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language,
+		Name: name, Timezone: zone, BaseCurrency: currency, BaseLanguage: language, DateFormat: dateFormat, TimeFormat: timeFormat,
 		FiscalYearStartMonth:   fiscalStart,
+		DeadWorkBannerHours:    bannerHours,
 		ForecastForwardMeasure: measure,
 		BaseCurrencyLocked:     locked, BaseCurrencyLockedReason: why,
 		EnabledOidcProviders: providers,
@@ -218,11 +236,23 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
+	bannerHours, err := encodePatchField(DeadWorkBannerHours, in.DeadWorkBannerHours)
+	if err != nil {
+		return nil, err
+	}
 	measure, err := encodePatchField(ForecastForwardMeasure, in.ForecastForwardMeasure)
 	if err != nil {
 		return nil, err
 	}
 	providers, err := encodePatchField(EnabledOidcProviders, in.EnabledOidcProviders)
+	if err != nil {
+		return nil, err
+	}
+	dateFormat, err := encodePatchField(DateFormat, in.DateFormat)
+	if err != nil {
+		return nil, err
+	}
+	timeFormat, err := encodePatchField(TimeFormat, in.TimeFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +264,7 @@ func encodeInstallationPatch(in InstallationPatch) ([]pendingWrite, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []pendingWrite{name, zone, currency, language, fiscal, measure, providers, requireSSO, requireMFA}, nil
+	return []pendingWrite{name, zone, currency, language, fiscal, bannerHours, measure, providers, dateFormat, timeFormat, requireSSO, requireMFA}, nil
 }
 
 // UpdateInstallation applies a sparse patch. Named for the same reason as

@@ -3,11 +3,11 @@
 
 package consent
 
-// What the installation owes a person it obtained without asking them, and
+// What the installation owes a contact it obtained without asking them, and
 // whether it has told them yet.
 //
-// person_acquisition_evidence records HOW a contact came to exist. The duty
-// that follows is a separate fact: a person acquired from a list, a referral or
+// contact_acquisition_evidence records HOW a contact came to exist. The duty
+// that follows is a separate fact: a contact acquired from a list, a referral or
 // an import never asked to hear from us, and Art. 14 gives the controller one
 // month to say we hold their data and how to object. A case per acquisition
 // makes that duty enumerable — "who have we not told yet" is a query rather
@@ -59,15 +59,46 @@ type NoticeState string
 // to match what every writer wrote.
 const fieldState = "state"
 
-// The states a notice case rests in. Open is owed and untouched; queued means a
-// disclosure is on its way; blocked means we cannot send one yet and says why;
-// completed and not_required are the two ways a duty ends, and both record when.
+// fieldRule is the name of the rule field wherever it crosses a boundary, for
+// the same reason fieldState is: three audit payloads carry it, and a reader
+// filtering audit rows on which disclosure duty moved has to match what every
+// writer wrote.
+const fieldRule = "rule"
+
+// The states a notice case rests in. Open is owed and untouched; assigned is
+// owed with somebody's name on it; queued means a disclosure is on its way;
+// delivery_failed means one went and did not arrive, so the duty is owed again;
+// blocked means we cannot send one yet and says why. Four states END a duty and
+// all four record when: completed is a disclosure that was sent and delivered,
+// provided_elsewhere and exempt_with_reason each say why no disclosure was
+// needed from here, and not_required is the older way of closing a case with no
+// reason attached.
 const (
-	NoticeOpen        NoticeState = "open"
-	NoticeQueued      NoticeState = "queued"
-	NoticeCompleted   NoticeState = "completed"
-	NoticeBlocked     NoticeState = "blocked"
-	NoticeNotRequired NoticeState = "not_required"
+	NoticeOpen     NoticeState = "open"
+	NoticeAssigned NoticeState = "assigned"
+	NoticeQueued   NoticeState = "queued"
+	// NoticeDeliveryFailed — a disclosure this installation sent did not
+	// arrive. The duty is owed AGAIN: the subject was not told, so the case
+	// returns to the queue rather than resting in a state that reads like an
+	// outcome. Distinct from blocked, which says we cannot send at all — here
+	// we sent, and an operator answers it differently: correct the address,
+	// then send again.
+	NoticeDeliveryFailed NoticeState = "delivery_failed"
+	// NoticeCompleted — a disclosure this installation sent was delivered.
+	NoticeCompleted NoticeState = "completed"
+	// NoticeProvidedElsewhere — the subject already has the information, and
+	// it did not come from a mail this installation sent. Somebody told them
+	// in a meeting, or a colleague wrote from their own mailbox. The duty is
+	// met; the evidence is the officer's statement, and the row carries it.
+	NoticeProvidedElsewhere NoticeState = "provided_elsewhere"
+	// NoticeExemptWithReason — the duty does not apply, on a ground the officer
+	// states. Art. 14(5) disapplies it where the subject already has the
+	// information, where notice is impossible or disproportionate, or where
+	// disclosure is laid down by law. Distinct from NoticeNotRequired, which
+	// records the same conclusion with no reason attached.
+	NoticeExemptWithReason NoticeState = "exempt_with_reason"
+	NoticeBlocked          NoticeState = "blocked"
+	NoticeNotRequired      NoticeState = "not_required"
 )
 
 // noticeStates is every state a case can be in, and the ONE place they are
@@ -81,7 +112,9 @@ const (
 //
 // gatekit:fixture the notice-case state vocabulary, mirroring the table CHECK
 var noticeStates = []NoticeState{
-	NoticeOpen, NoticeQueued, NoticeCompleted, NoticeBlocked, NoticeNotRequired,
+	NoticeOpen, NoticeAssigned, NoticeQueued, NoticeDeliveryFailed,
+	NoticeCompleted, NoticeProvidedElsewhere, NoticeExemptWithReason,
+	NoticeBlocked, NoticeNotRequired,
 }
 
 // terminalNoticeStates are the states a discharged duty rests in. Membership
@@ -89,7 +122,23 @@ var noticeStates = []NoticeState{
 // somebody decides otherwise — the safe direction: a duty wrongly shown costs a
 // look, one wrongly hidden is invisible.
 func terminalNoticeStates() map[NoticeState]bool {
-	return map[NoticeState]bool{NoticeCompleted: true, NoticeNotRequired: true}
+	return map[NoticeState]bool{
+		NoticeCompleted:         true,
+		NoticeNotRequired:       true,
+		NoticeProvidedElsewhere: true,
+		NoticeExemptWithReason:  true,
+	}
+}
+
+// excusingNoticeStates are the terminal states that end a duty WITHOUT this
+// installation having sent anything. Both say why in resolution_note, which the
+// table's resolution_shape CHECK also holds, and membership here is what makes
+// the note required rather than each writer remembering to ask for one.
+func excusingNoticeStates() map[NoticeState]bool {
+	return map[NoticeState]bool{
+		NoticeProvidedElsewhere: true,
+		NoticeExemptWithReason:  true,
+	}
 }
 
 // unresolvedNoticeStates is "still owed", derived from the vocabulary rather
@@ -110,15 +159,15 @@ func unresolvedNoticeStates() []string {
 // OpenNoticeCase is one duty still owed: whose it is, what rule put it there,
 // and by when.
 //
-// PersonID is carried because the duty is discharged on that person's own
+// ContactID is carried because the duty is discharged on that contact's own
 // screen — there is no notice-case screen to route to, so a card naming only the
 // case would prompt a reader with nowhere to go.
 type OpenNoticeCase struct {
-	ID       ids.UUID
-	PersonID ids.PersonID
-	Rule     NoticeRule
-	DueAt    time.Time
-	Blocked  bool
+	ID        ids.UUID
+	ContactID ids.ContactID
+	Rule      NoticeRule
+	DueAt     time.Time
+	Blocked   bool
 }
 
 // openNoticeLaneDefault mirrors the DSR lane's small page for the same reason:
@@ -127,7 +176,7 @@ const openNoticeLaneDefault = 8
 
 // NoticeCaseInput is one duty, as the writer states it.
 type NoticeCaseInput struct {
-	PersonID      ids.PersonID
+	ContactID     ids.ContactID
 	AcquisitionID ids.UUID
 	Rule          NoticeRule
 	DueAt         time.Time
@@ -145,7 +194,7 @@ type NoticeCaseInput struct {
 // OpenNoticeCasesDueSoonest lists the duties nobody has discharged, soonest
 // deadline first.
 //
-// Gated as the subject-request queue is: a notice case says how a named person
+// Gated as the subject-request queue is: a notice case says how a named contact
 // was obtained and whether we have told them, which is the same disclosure the
 // DSR queue makes about who exercised a right. Reusing privacy_request rather
 // than minting an object means an installation that delegated its privacy inbox
@@ -160,7 +209,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 	var out []OpenNoticeCase
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT id, person_id, rule, due_at, state = 'blocked'
+			SELECT id, contact_id, rule, due_at, state = 'blocked'
 			  FROM privacy_notice_case
 			 WHERE state = ANY($1)
 			 ORDER BY due_at, id
@@ -171,7 +220,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 		defer rows.Close()
 		for rows.Next() {
 			var c OpenNoticeCase
-			if err := rows.Scan(&c.ID, &c.PersonID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
+			if err := rows.Scan(&c.ID, &c.ContactID, &c.Rule, &c.DueAt, &c.Blocked); err != nil {
 				return err
 			}
 			out = append(out, c)
@@ -184,7 +233,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, limit int) ([]Ope
 // OpenNoticeCaseTx records one duty, in the transaction that created the
 // acquisition it is owed for.
 //
-// IDEMPOTENT BY THE DATABASE, not by a check here. The person.created consumer
+// IDEMPOTENT BY THE DATABASE, not by a check here. The contact.created consumer
 // is at-least-once, so a redelivery reaches this a second time; the unique
 // index on acquisition_id refuses the duplicate and ON CONFLICT DO NOTHING
 // makes that refusal the expected outcome rather than an error the caller has
@@ -221,12 +270,12 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 	var caseID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO privacy_notice_case
-		       (person_id, acquisition_id, rule, due_at, allowed_routes,
+		       (contact_id, acquisition_id, rule, due_at, allowed_routes,
 		        state, owner_user_id, blocked_reason, completed_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (acquisition_id) DO NOTHING
 		RETURNING id`,
-		in.PersonID, in.AcquisitionID, string(in.Rule), in.DueAt, routes,
+		in.ContactID, in.AcquisitionID, string(in.Rule), in.DueAt, routes,
 		string(in.State), in.OwnerUserID, in.BlockedReason, in.CompletedAt).Scan(&caseID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The duty was already recorded for this acquisition. Nothing happened,
@@ -237,12 +286,12 @@ func OpenNoticeCaseTx(ctx context.Context, tx pgx.Tx, in NoticeCaseInput) error 
 		return fmt.Errorf("record the notice case owed for this acquisition: %w", err)
 	}
 	// Audited because a notice case is a compliance record: "when did this
-	// workspace learn it owed this person a disclosure, and what opened the
+	// workspace learn it owed this contact a disclosure, and what opened the
 	// case" is the question an auditor asks, and audit_log is where the answer
 	// lives. No event: nothing outside this module acts on a case being opened,
 	// and an event no consumer reads is a contract nobody can change later.
 	if _, err := storekit.Audit(ctx, tx, "create", "privacy_notice_case", caseID, nil, map[string]any{
-		"rule": string(in.Rule), "due_at": in.DueAt, fieldState: string(in.State),
+		fieldRule: string(in.Rule), "due_at": in.DueAt, fieldState: string(in.State),
 	}); err != nil {
 		return fmt.Errorf("audit the notice case: %w", err)
 	}

@@ -31,7 +31,7 @@ type Teammates interface {
 	// LiveTeammatesOfCaller enumerates what the method above answers one edge
 	// of. The two live on ONE interface so a binding cannot supply the yes/no
 	// half without the roster: a board listing a name the other read then
-	// refuses would show a manager a person they cannot open.
+	// refuses would show a manager a contact they cannot open.
 	//
 	// The bool reports that the roster was CUT — more teammates exist than the
 	// answer names — so a board can say it is showing part of a team rather
@@ -45,7 +45,7 @@ type TeamMember struct {
 	DisplayName string
 }
 
-// OverdueLoad counts each person's open tasks already past due.
+// OverdueLoad counts each contact's open tasks already past due.
 //
 // Its own reader rather than a bucketing of what Tasks returns, and the reason
 // is the bound: the task lane's page stops at a dozen, so a board built by
@@ -63,7 +63,7 @@ type OverdueLoad interface {
 	OverduePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error)
 }
 
-// PromiseLoad counts each person's commitments due by an instant.
+// PromiseLoad counts each contact's commitments due by an instant.
 //
 // Read from extracted claims, like the rep's own commitments lane, so the board
 // and the rep's day count the same thing. A count taken from open tasks instead
@@ -75,7 +75,7 @@ type OverdueLoad interface {
 // their team promised nothing — when in truth nobody was listening.
 // It takes the OWNERS to count rather than answering for everyone, because the
 // promise store answers one owner at a time — the claim's owner is the owner of
-// the PERSON it was made to, and that ladder lives in the store's own query. A
+// the CONTACT it was made to, and that ladder lives in the store's own query. A
 // board asking for a roster it already has is cheaper than a second aggregate
 // restating who owns a promise.
 type PromiseLoad interface {

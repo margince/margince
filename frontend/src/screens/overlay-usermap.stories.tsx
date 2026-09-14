@@ -78,7 +78,7 @@ function unmapped(
 const allMapped: Entry[] = [
   mapped(
     "me-1",
-    "Admin Person",
+    "Admin Contact",
     "admin@acme.test",
     "o1",
     "Ada Lovelace",

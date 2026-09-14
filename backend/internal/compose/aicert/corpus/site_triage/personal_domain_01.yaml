@@ -18,7 +18,7 @@ expect:
   outcome: accepted
   answer: personal
   rubric: >
-    A private landing page whose entire content is the name of the person who
+    A private landing page whose entire content is the name of the contact who
     owns the domain and how to reach him. It sells nothing, names no team and
     presents no business. "personal" scores high: the CRM must create a contact
     and no company. "company" scores low — it is the exact defect this site

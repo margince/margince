@@ -5,10 +5,10 @@ package commsauthz
 
 // The seam a merge crosses to keep a subject's stops.
 //
-// people owns the merge and lead promotion; consent owns
+// contacts owns the merge and lead promotion; consent owns
 // communication_suppression. Neither may import the other, and the types they
 // have to agree on are two: which subject is retiring, and which survives.
-// They live here, in the port both already depend on, so the interface people
+// They live here, in the port both already depend on, so the interface contacts
 // declares and the method consent implements are talking about one shape.
 //
 // WHY THE SEAM EXISTS AT ALL. Until it did, a merge carried the grants and
@@ -19,18 +19,18 @@ package commsauthz
 
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
-// StopSubject names one side of a carry: a person, or a lead.
+// StopSubject names one side of a carry: a contact, or a lead.
 //
-// Exactly one of the two ids is set. A merge names two people; a promotion
-// names the lead and the person it became.
+// Exactly one of the two ids is set. A merge names two contacts; a promotion
+// names the lead and the contact it became.
 type StopSubject struct {
-	PersonID ids.PersonID
-	LeadID   ids.LeadID
+	ContactID ids.ContactID
+	LeadID    ids.LeadID
 }
 
-// PersonStopSubject names a person, so a caller cannot pass a half-filled
+// ContactStopSubject names a contact, so a caller cannot pass a half-filled
 // struct by accident.
-func PersonStopSubject(id ids.PersonID) StopSubject { return StopSubject{PersonID: id} }
+func ContactStopSubject(id ids.ContactID) StopSubject { return StopSubject{ContactID: id} }
 
 // LeadStopSubject names a lead, the other half of the same guard.
 func LeadStopSubject(id ids.LeadID) StopSubject { return StopSubject{LeadID: id} }
@@ -38,5 +38,5 @@ func LeadStopSubject(id ids.LeadID) StopSubject { return StopSubject{LeadID: id}
 // IsZero reports a subject naming nobody, which is a caller bug rather than an
 // empty case: every carry has two real sides.
 func (s StopSubject) IsZero() bool {
-	return s.PersonID.IsZero() && s.LeadID.IsZero()
+	return s.ContactID.IsZero() && s.LeadID.IsZero()
 }

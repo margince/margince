@@ -6,7 +6,7 @@ package compose
 // Filing what a connector captures under the connector's own word, so
 // "which records came in from this source" has an answer.
 //
-// The import side of this already existed (csvcontexttag.go): a person picks an
+// The import side of this already existed (csvcontexttag.go): a human picks an
 // existing tag at the start of a run and every record the run creates is filed
 // under it. Capture's equivalent is the CONNECTOR's word — the operator chose
 // it once, on a thing that exists, rather than a machine minting one per sync
@@ -35,7 +35,7 @@ func newConnectorTagFiler(pool *pgxpool.Pool) *connectorTagFiler {
 	return &connectorTagFiler{tags: collections.NewStore(InstallationDB(pool))}
 }
 
-// fileUnderConnectorTag files one newly created person under the word the
+// fileUnderConnectorTag files one newly created contact under the word the
 // connector that captured them was set to.
 //
 // Inside the create's own transaction: a record and the tag that files it land
@@ -44,11 +44,11 @@ func newConnectorTagFiler(pool *pgxpool.Pool) *connectorTagFiler {
 // knows to look for it. The same argument the import's filing makes.
 //
 // A nil filer files nothing. A verdict engine composed without one is a real
-// shape in this tree, and it must create the person either way: the word is a
+// shape in this tree, and it must create the contact either way: the word is a
 // finding aid, and refusing to create a contact because a tag could not be
 // applied would trade the product's actual job for its index.
 func (f *connectorTagFiler) fileUnderConnectorTag(
-	ctx context.Context, tx pgx.Tx, in counterpartyCreation, personID ids.PersonID,
+	ctx context.Context, tx pgx.Tx, in counterpartyCreation, contactID ids.ContactID,
 ) error {
 	if f == nil {
 		return nil
@@ -60,15 +60,15 @@ func (f *connectorTagFiler) fileUnderConnectorTag(
 	if tagID.IsZero() {
 		return nil
 	}
-	_, err = f.tags.ApplyTagTx(ctx, tx, tagID, "person", personID.UUID)
+	_, err = f.tags.ApplyTagTx(ctx, tx, tagID, "contact", contactID.UUID)
 	if errors.Is(err, apperrors.ErrConflict) {
-		// The person already carries the word — a replayed effect, or a second
+		// The contact already carries the word — a replayed effect, or a second
 		// verdict for an address the first already answered. Not a failure: the
 		// record is filed exactly as asked.
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("capture: filing %s under its connector's word: %w", personID, err)
+		return fmt.Errorf("capture: filing %s under its connector's word: %w", contactID, err)
 	}
 	return nil
 }

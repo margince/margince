@@ -193,7 +193,7 @@ func TestToContractLicenseHolder(t *testing.T) {
 	full := licensecheck.License{
 		ID:           "0199c4f2-1d6e-7a41-9f0b-7b2a2c1d5e30",
 		Subject:      "acme-prod",
-		Org:          "Acme GmbH",
+		Company:      "Acme GmbH",
 		ContactName:  "Ada Lovelace",
 		ContactEmail: "ada@acme.example",
 		Expiry:       resolvedAt.AddDate(1, 0, 0),
@@ -206,7 +206,7 @@ func TestToContractLicenseHolder(t *testing.T) {
 			t.Errorf("identifiers = %q / %q", got.Id, got.Subject)
 		}
 		for name, field := range map[string]*string{
-			"org": got.Org, "contact_name": got.ContactName, "contact_email": got.ContactEmail,
+			"company": got.Company, "contact_name": got.ContactName, "contact_email": got.ContactEmail,
 		} {
 			if field == nil {
 				t.Errorf("%s is absent for a license that carries it", name)
@@ -225,8 +225,8 @@ func TestToContractLicenseHolder(t *testing.T) {
 		got := toContractLicenseHolder(licensecheck.License{
 			ID: full.ID, Subject: full.Subject, Expiry: full.Expiry,
 		}, resolvedAt)
-		if got.Org != nil || got.ContactName != nil || got.ContactEmail != nil {
-			t.Errorf("absent claims rendered as %v / %v / %v", got.Org, got.ContactName, got.ContactEmail)
+		if got.Company != nil || got.ContactName != nil || got.ContactEmail != nil {
+			t.Errorf("absent claims rendered as %v / %v / %v", got.Company, got.ContactName, got.ContactEmail)
 		}
 		if got.Id == "" || got.Subject == "" {
 			t.Error("the identifiers every license carries went missing")

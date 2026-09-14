@@ -7,7 +7,7 @@ package main
 // computes. What a row MEANS — current, partial, stale, absent, and why —
 // belongs to aicert.Readiness, which the generated docs/reference/ai-certification.md
 // page reads through as well; this file owns only the columns and the prose a
-// person reads at a prompt.
+// contact reads at a prompt.
 
 import (
 	"fmt"

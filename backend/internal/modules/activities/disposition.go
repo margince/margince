@@ -62,7 +62,7 @@ const (
 
 // readerOrNobody is whose set-asides a read should apply.
 //
-// The nil UUID for a caller with no person behind it, which matches no
+// The nil UUID for a caller with no contact behind it, which matches no
 // reader_state row — so a system pass sees every waiting message, because a
 // background job has set nothing aside. Returning the acting user of an agent
 // or connector principal instead would apply a human's private snoozes to work
@@ -241,7 +241,7 @@ func (s *Store) SnoozeMessage(
 	return s.setReaderState(ctx, id, stateSnoozed, until, on, ref)
 }
 
-// SetMessageNotMine records that this reader is not the person to answer.
+// SetMessageNotMine records that this reader is not the contact to answer.
 //
 // It carries no moment. "This is not my work" does not become false on a
 // Thursday — what makes it stop applying is the record changing hands, which
@@ -338,7 +338,7 @@ func (s *Store) setReaderState(
 // The object grant is `read`, not `update`. Nothing here changes the message —
 // the row is exactly as the customer sent it — and demanding update authority
 // would refuse a reader whose whole relationship to the thread is reading it,
-// which is the person this queue is built for.
+// which is the contact this queue is built for.
 //
 // An id the caller cannot read answers not-found, the same as one that does not
 // exist, so nothing here confirms a message is there.

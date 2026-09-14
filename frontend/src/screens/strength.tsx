@@ -8,11 +8,11 @@ import { useRecordZone } from "../app/recordzone";
 import { ActivityReferenceList } from "../design-system/activityreferencelist";
 import {
   Badge,
-  Card,
   Disclosure,
   EmptyState,
   Skeleton,
 } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -45,11 +45,11 @@ const BUCKET_TONE: Record<
 };
 
 async function fetchStrength(
-  kind: "person" | "organization",
+  kind: "contact" | "company",
   id: string,
 ): Promise<RelationshipStrength> {
-  if (kind === "person") {
-    const { data, error } = await api.GET("/people/{id}/strength", {
+  if (kind === "contact") {
+    const { data, error } = await api.GET("/contacts/{id}/strength", {
       params: { path: { id } },
     });
     if (error) {
@@ -57,7 +57,7 @@ async function fetchStrength(
     }
     return data;
   }
-  const { data, error } = await api.GET("/organizations/{id}/strength", {
+  const { data, error } = await api.GET("/companies/{id}/strength", {
     params: { path: { id } },
   });
   if (error) {
@@ -70,12 +70,12 @@ function factorPercent(value: number): number {
   return Math.round(value * 100);
 }
 
-export function StrengthCard({
+export function StrengthPanel({
   kind,
   id,
   onOpenEmail,
 }: Readonly<{
-  kind: "person" | "organization";
+  kind: "contact" | "company";
   id: string;
   // Opens one cited message in the host's own drawer. A host that mounts none
   // passes nothing, and the receipts render without an opener.
@@ -83,7 +83,7 @@ export function StrengthCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Relationship strength is computed over the native people graph, which the
+  // Relationship strength is computed over the native contacts graph, which the
   // incumbent mirror does not hold (the endpoint 404s in overlay). Show the
   // honest unavailable state and skip the doomed fetch.
   const overlay = useSorMode() === "overlay";
@@ -94,34 +94,33 @@ export function StrengthCard({
   });
 
   return (
-    <Card
-      style={{ marginBottom: "var(--space-4)" }}
-      title={t("strength.title")}
-    >
-      {overlay && <OverlayUnavailable />}
-      {!overlay && query.isPending && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-3)",
-          }}
-        >
-          <Skeleton width="40%" />
-          <Skeleton width="90%" />
-        </div>
-      )}
-      {!overlay && query.isError && (
-        <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
-      )}
-      {!overlay && query.isSuccess && (
-        <StrengthBody
-          strength={query.data}
-          locale={locale}
-          onOpenEmail={onOpenEmail}
-        />
-      )}
-    </Card>
+    <Panel title={t("strength.title")}>
+      <PanelBody>
+        {overlay && <OverlayUnavailable />}
+        {!overlay && query.isPending && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-3)",
+            }}
+          >
+            <Skeleton width="40%" />
+            <Skeleton width="90%" />
+          </div>
+        )}
+        {!overlay && query.isError && (
+          <EmptyState>{problemMessageOf(query.error, t)}</EmptyState>
+        )}
+        {!overlay && query.isSuccess && (
+          <StrengthBody
+            strength={query.data}
+            locale={locale}
+            onOpenEmail={onOpenEmail}
+          />
+        )}
+      </PanelBody>
+    </Panel>
   );
 }
 

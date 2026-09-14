@@ -8,7 +8,7 @@
 # It is bounded by this workflow's last GREEN run, so it is an OVER-approximation:
 # every commit that landed since main was last known good. That is deliberate.
 # Naming a dozen commits, one of which is responsible, is useful; naming one by
-# guessing is worse than naming none, because it sends the wrong person looking.
+# guessing is worse than naming none, because it sends the wrong contact looking.
 #
 # WHAT THIS CATCHES: the window. Not the culprit.
 #

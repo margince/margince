@@ -46,7 +46,6 @@ export function LandingCard({
         label={t("forecast.landing")}
         value={money(landing.amount_minor)}
         detail={detail}
-        numeric
       />
       {/* Its OWN heading, not the card's: the caveat sat under a repeat of
           `forecast.landing` and read as a second copy of the figure's label
@@ -122,7 +121,6 @@ export function SufficiencyCard({
       // holds, clamped at the track: a book at three times its requirement
       // would otherwise draw a bar three times the width of its own card.
       meter={{ filled: Math.min(current, needed), total: needed }}
-      numeric
     />
   );
 }

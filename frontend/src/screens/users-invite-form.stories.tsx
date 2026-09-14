@@ -12,7 +12,7 @@ import {
 import { InviteUserForm } from "./users-invite-form";
 
 // An address, a name, a role and the teams the member lands in, committed
-// together. TWO surfaces ask it — the roster's dialog in Settings → People and
+// together. TWO surfaces ask it — the roster's dialog in Settings → Contacts and
 // the setup journey's team step — and it is one form so the two cannot come to
 // invite differently, which is the difference the `askName` story shows.
 
@@ -41,7 +41,7 @@ function Served({ children }: Readonly<{ children: ReactNode }>) {
     "GET /users/access-preview": () =>
       jsonResponse({
         objects: {
-          person: { create: true, read: true, update: true, delete: false },
+          contact: { create: true, read: true, update: true, delete: false },
           deal: { create: true, read: true, update: true, delete: false },
         },
         row_scope: "own",
@@ -61,7 +61,7 @@ export const WithName: Story = {
 };
 
 /**
- * The setup journey's step. One address is enough to get a first person in,
+ * The setup journey's step. One address is enough to get a first contact in,
  * and the name is derived from it until somebody changes it.
  */
 export const AddressOnly: Story = {

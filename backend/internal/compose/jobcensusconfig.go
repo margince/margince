@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -86,6 +87,10 @@ func censusCaptureRegistry() *capture.Registry {
 func censusJobConfig() JobRunnerConfig {
 	seam := censusSeam{}
 	return JobRunnerConfig{
+		// Present so the raw-capture part sweep counts as wired. It removes an
+		// attachment's octets from the provider original only once the store
+		// can vouch for them, so the kind is gated on a store existing at all.
+		Blobstore:    blobstore.NewMemory(),
 		SendRegistry: &capture.Registry{},
 		// Present so the scheduled-send alarm counts as wired. Firing one
 		// stages a delivery, so the kind is gated on this machinery existing;

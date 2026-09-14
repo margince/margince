@@ -437,13 +437,13 @@ export function Avatar({
   identity,
   src,
   size = "sm",
-  shape = "person",
+  shape = "contact",
 }: Readonly<{
   name: string;
   /**
    * What the tint is derived FROM, when that is not the displayed name — a
    * record id, an address, anything stable for the life of the record. The
-   * name is the fallback and it is a poor key: renaming a person or a company
+   * name is the fallback and it is a poor key: renaming a contact or a company
    * silently moves them to a different colour on every screen at once, which
    * reads as a different record rather than as a rename.
    */
@@ -463,12 +463,12 @@ export function Avatar({
   /**
    * What KIND of thing this chip stands for, which decides its shape.
    *
-   * A person is round, the way a face is drawn everywhere; an organization is
+   * A contact is round, the way a face is drawn everywhere; a company is
    * a rounded square, the way a logo is. The distinction is not decoration —
    * on a page carrying both, the shape is what tells a reader whether a chip
    * is a company or somebody at it before they have read a word of it.
    */
-  shape?: "person" | "organization";
+  shape?: "contact" | "company";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -501,7 +501,7 @@ export function Avatar({
     tone = (tone + (char.codePointAt(0) ?? 0)) % AVATAR_TONES;
   }
   const classes = ["avatar", `avatar-t${tone}`, `avatar-${size}`];
-  if (shape === "organization") classes.push("avatar-org");
+  if (shape === "company") classes.push("avatar-company");
   if (src && !broken) classes.push("avatar-has-logo");
   if (painted) classes.push("avatar-painted");
   return (
@@ -808,6 +808,10 @@ export function Field({
  * StatCard is one reading at the top of a record: a label, the reading itself,
  * and one line of detail saying what it is drawn from.
  *
+ * Every reading has a label and a value, and the value is never EMPTY: an
+ * empty reading spells its emptiness — "0", "None yet" — because a blank where
+ * a figure belongs reads as a page that failed. So there is no fallback here.
+ *
  * The detail line is not decoration. A reading with no basis stated is a number
  * a reader has to trust, and this surface exists because a number nobody could
  * scale — "Relationship 2/100" — was doing exactly that.
@@ -849,11 +853,10 @@ export function Field({
 // The bar under a reading: segments a reader would count, or one track they
 // would not.
 //
-// Six is the line, and it is about counting rather than about width: "one of
-// three signals" is a set a reader checks off, and "two of ten people" is a
-// share they read as a length. Drawn the other way round, three segments of a
-// hundred are invisible and a tenth of one track says nothing about which
-// signal is out.
+// Six is the line, and it is about counting rather than width: "one of three
+// signals" is a set a reader checks off, and "two of ten contacts" is a share
+// they read as a length. Drawn the other way round, three segments of a hundred
+// are invisible and a tenth of one track says nothing about which signal is out.
 const COUNTABLE = 6;
 
 // The segments' own names. A position in a bar has no identity of its own —
@@ -902,88 +905,84 @@ export function StatCard({
   tone,
   source,
   alert,
-  dot,
-  numeric,
-  openLabel,
   onOpen,
+  openLabel,
   meter,
+  narrow,
 }: Readonly<{
   label: string;
   value: string;
   // The line under the figure: what it rests on, in the reader's words. A node
-  // rather than a string, because a reading whose detail is two facts — how
-  // much is failing, and why — says them on two lines rather than in one
-  // sentence a reader has to parse.
+  // rather than a string, because a reading whose detail is two facts — how much
+  // is failing, and why — says them on two lines, not in one parsed sentence.
   detail?: ReactNode;
-  // The way OUT of the reading: the tab that holds what it was read from.
-  // Both or neither, like `basis` — a labelled door with nothing behind it is
-  // worse than no door.
-  //
-  // The whole CARD is this button's target: the words at the foot say where the
-  // door goes, and the tile answers the pointer aimed anywhere on it (atoms.css
-  // stretches the button over the card). ONE control and not two — the basis
-  // chip is layered above that target and keeps its own press, so asking what a
-  // figure rests on never also leaves the page.
-  openLabel?: string;
+  // The way OUT of the reading: the tab that holds what it was read from. The
+  // whole CARD is this button's target (atoms.css stretches it over the tile).
+  // ONE control and not two — the basis chip layers above that target and keeps
+  // its own press, so asking what a figure rests on never also leaves the page.
   onOpen?: () => void;
+  // What the door SAYS, where "Open" is not enough. The default stays "Open"
+  // and 90-odd callers keep it, because doors each inventing a destination were
+  // several spellings of one control. Five readings on ONE plate are the case
+  // that does not cover: five buttons reading "Open" name none of them. This
+  // REPLACES the word rather than appending — appending produced "Open Open
+  // pipeline", which is why the name was generic.
+  openLabel?: string;
   // How far along this reading is, as the two numbers it is made of. Drawn as
   // separate segments when there are few enough to count (a verdict made of
   // three signals) and as one filled track when there are not (two of ten
-  // people replying) — the difference is whether a reader would count them.
+  // contacts replying) — the difference is whether a reader would count them.
   //
   // Only for a reading that HAS a denominator. A figure with nothing to be out
   // of gets no bar rather than a bar with an invented one.
   meter?: { filled: number; total: number };
-  // What the reading rests on, and the words that name it. Both or neither —
-  // an unlabelled disclosure asks a reader to open it to find out whether they
-  // wanted it. The copy belongs to the caller, because no copy lives in a
-  // primitive.
+  // What the reading rests on, and the words that name it. The copy belongs to
+  // the caller, because no copy lives in a primitive.
   basis?: ReactNode;
   // `good` is not "no tone": a slot whose reading is a VERDICT says so in both
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet.
   tone?: "good" | "warn" | "danger";
   // Where the figure came from, named on the card that shows it. A money
-  // reading a reader cannot trace is one they have to go and verify
-  // elsewhere, which is the trip the badge saves them.
+  // reading a reader cannot trace is one they must verify elsewhere.
   source?: ReactNode;
   // Tints the whole tile. See the docblock above — this is not `tone` at
   // stronger volume, it is a different judgement (the slot itself is bad
   // news, not just its figure).
   alert?: boolean;
-  // A small coloured mark before the value, for the one slot whose reading
-  // is a VERDICT rather than a figure — a glance a reader can catch without
-  // reading the word. Gated on `tone` as well as this flag, never on its
-  // own: the colour and the decision to show it at all come from the same
-  // judgement, so a fine verdict can never carry a leftover dot.
-  dot?: boolean;
-  // The reading is a FIGURE — money, a count, a duration — so it draws in the
-  // mono face, where digits share one width and a column of readings lines up
-  // instead of shifting slot to slot with every comma.
-  //
-  // A flag rather than a `ReactNode` value: the value stays a string this
-  // component owns the type of. Widened to a node, the face would be the
-  // caller's to spell, and a screen that spells type is the second author of a
-  // scale this tier owns — which is also markup arriving at a slot the copy and
-  // colour gates read as a string.
-  numeric?: boolean;
+  // What the reading becomes where its strip can no longer hold two tiles
+  // abreast: `row` folds it into one full-width line, label and basis leading,
+  // figure trailing (statstrip.css). Nothing about the tile's air or type at
+  // any wider width — this reading is the reading beside it on a record page,
+  // and a tighter tile here once made the same figure read as a different
+  // card. A closed word, not a boolean: `narrow={true}` is a place for a
+  // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
+  narrow?: "row";
 }>) {
   const t = useT();
+  const labelId = useId();
   // No `t-h3`: the card owns the figure's face and size (atoms.css), because
   // a reading is compared across a row and the row is the thing that has to
   // agree. Sharing the page's heading class made the figure change size with a
   // scale that answers a different question.
-  const valueClass = [
-    "stat-card-value",
-    numeric ? "t-mono" : "",
-    tone ? `stat-card-${tone}` : "",
+  const valueClass = tone
+    ? `stat-card-value stat-card-${tone}`
+    : "stat-card-value";
+  const cardClass = [
+    "stat-card",
+    alert && "stat-card-alert",
+    narrow && `stat-card-narrow-${narrow}`,
   ]
     .filter(Boolean)
     .join(" ");
   return (
-    <section className={alert ? "stat-card stat-card-alert" : "stat-card"}>
-      <span className="stat-card-label t-eyebrow">
-        {label}
+    <section className={cardClass}>
+      <span className="stat-card-label">
+        {/* The name in its own box: the row also holds the source badge and the
+            receipt chip, and a clamp on the row would take those with it. */}
+        <span className="stat-card-label-text" id={labelId}>
+          {label}
+        </span>
         {source && <span className="stat-card-source">{source}</span>}
         {basis && (
           // The panel is READ, never operated: it holds the working and
@@ -1009,15 +1008,7 @@ export function StatCard({
           </Popover>
         )}
       </span>
-      <span className={valueClass}>
-        {dot && tone && (
-          <span
-            className={`stat-card-dot stat-card-dot-${tone}`}
-            aria-hidden="true"
-          />
-        )}
-        {value}
-      </span>
+      <span className={valueClass}>{value}</span>
       {detail && <span className="stat-card-detail t-caption">{detail}</span>}
       {/* The proportion under the words that state it. A bar rather than a
           second figure: the reader has the number above it, and what a bar
@@ -1029,11 +1020,21 @@ export function StatCard({
       {/* THE CARD'S FOOT: the way out, at the end of the card a reader
           finishes on rather than up beside the reading's name, where it
           competed with the label for the first glance. */}
-      {onOpen && openLabel && (
+      {onOpen && (
         <span className="stat-card-foot">
-          <button type="button" className="stat-card-open" onClick={onOpen}>
-            {openLabel}
-            <span aria-hidden="true">{" \u2192"}</span>
+          {/* The card's label reaches a screen reader as this button's
+              DESCRIPTION whatever the word is — folded into the NAME it read
+              "Open Open pipeline". A named door names the ACTION. */}
+          <button
+            type="button"
+            className="stat-card-open"
+            onClick={onOpen}
+            aria-describedby={labelId}
+          >
+            {openLabel ?? t("stat.open")}
+            <span className="stat-card-arrow" aria-hidden="true">
+              {"\u2192"}
+            </span>
           </button>
         </span>
       )}
@@ -1184,7 +1185,7 @@ const PENDING_LINES = [
  *
  * `delayMs` holds the whole thing back until the wait has actually been long
  * enough to be worth reporting. It is for a surface that re-reads as a reader
- * types, where the usual answer arrives faster than a person can perceive: a
+ * types, where the usual answer arrives faster than a contact can perceive: a
  * placeholder that flashes on every keystroke is noise, and it reports work
  * that was already done. Nothing renders before the delay elapses — the spoken
  * line included, deliberately, because announcing a wait that is about to end
@@ -1350,7 +1351,7 @@ export function SectionHeader({
  * face so a column of them lines up, the reader's own number format, the host's
  * class, and the SEPARATOR — which is the one that was missing. Both strips
  * rendered `{label}{count}` as adjacent nodes, so the accessible name a screen
- * reader speaks was "People2", "Deals0", "Tasks0". The comma is
+ * reader speaks was "Contacts2", "Deals0", "Tasks0". The comma is
  * visually hidden because the gap between them is already drawn in CSS; what it
  * fixes is the spoken name, where there was nothing between the two at all.
  *
@@ -1393,7 +1394,7 @@ export function SegmentedControl<Option extends string>({
   // count is a fact about the section and does not.
   //
   // Inside the button, so the count joins the option's accessible name and a
-  // screen reader announces "People 6" rather than leaving the figure to a
+  // screen reader announces "Contacts 6" rather than leaving the figure to a
   // sighted reader alone.
   counts?: Partial<Record<Option, number>>;
   // Accessible name for the control as a whole (the `fieldset` group); a
@@ -1441,6 +1442,7 @@ export function Modal({
   size = "default",
   placement = "center",
   returnFocusTo,
+  initialFocusTo,
   children,
 }: Readonly<{
   open: boolean;
@@ -1466,25 +1468,22 @@ export function Modal({
   // that completely: `size` names widths for a centred box and there is
   // nothing left for one to vary here.
   placement?: "center" | "right" | "full";
-  // Where focus should land instead of the opener, for a dialog whose OWN
-  // mutation removes the control that opened it — a Deactivate button that
-  // becomes Reactivate, a row the delete drops from the list.
-  //
-  // A callback rather than a ref because the resting place frequently does not
-  // exist while the dialog is open: it is produced by the very mutation the
-  // dialog performs, and the opener is detached by the time anything could ask
-  // about it. Resolving at restore time is the only moment the answer is known.
-  // A caller that does hold a ref passes `() => ref.current`, so the ref form
-  // is a subset of this one rather than a second API.
+  // Resolve at close time when a mutation replaces the opener (for example,
+  // Deactivate becoming Reactivate). A callback can find the newly mounted control.
   returnFocusTo?: () => HTMLElement | null;
+  /** The writing field can take focus before supporting context controls. */
+  initialFocusTo?: () => HTMLElement | null;
   children: ReactNode;
 }>) {
   const dialog = useRef<HTMLDivElement | null>(null);
-  // Escape, the Tab trap and focus in-and-back live in `dialogfocus.ts`,
-  // because this is not the only dialog in the product: the ⌘K palette draws
-  // its own box and had grown its own, weaker, answer to the same three
-  // questions. The chrome below stays this component's; the keyboard does not.
-  useDialogFocus({ open, onClose, container: dialog, returnFocusTo });
+  // The palette shares keyboard behavior without sharing modal chrome.
+  useDialogFocus({
+    open,
+    onClose,
+    container: dialog,
+    returnFocusTo,
+    initialFocusTo,
+  });
 
   if (!open) {
     return null;

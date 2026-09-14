@@ -99,7 +99,8 @@ func (s *Service) nameTheStep(ctx context.Context, queue []crmcontracts.Worklist
 // needsDealMove answers which deal a row is about, where the row is about a
 // deal and carries no step of its own.
 func needsDealMove(item crmcontracts.WorklistItem) (ids.UUID, bool) {
-	if item.Move != nil || item.Subject == nil || item.Subject.Type != subjectDeal {
+	if (item.Source != sourceBriefItem && item.Source != sourceAtRisk) ||
+		item.Move != nil || item.Subject == nil || item.Subject.Type != subjectDeal {
 		return ids.UUID{}, false
 	}
 	return ids.UUID(item.Subject.Id), true
@@ -162,7 +163,10 @@ func worklistMoveOf(decided crmcontracts.DealStatusCardMove) *crmcontracts.Workl
 //
 // Held by: TestBothSidesReadTheRecordArgumentAlike (backend/gates)
 func NamedActivityArgument(args map[string]any) (ids.UUID, bool) {
-	raw, present := args["activity_id"]
+	raw, present := args["request_activity_id"]
+	if !present {
+		raw, present = args["activity_id"]
+	}
 	if !present {
 		return ids.UUID{}, false
 	}

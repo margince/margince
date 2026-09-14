@@ -5,7 +5,9 @@ Four things are checked per run, and all four must hold:
 
   must_call        Did it reach the tools it needed? An answer written from the
                    model's own memory, with Margince never asked, is a failure
-                   however good the prose reads.
+                   however good the prose reads. Alternatives inside one entry
+                   are an any-of group, as in must_mention — for the question
+                   more than one engine answers honestly.
   must_mention     Does the answer contain what it has to contain? Each entry is
                    a regex, and alternatives inside one entry are an any-of
                    group.
@@ -377,40 +379,81 @@ def tool_matches(called, want):
     return any(name == want or name.endswith("__" + want) for name in called)
 
 
+# ALTERNATIVES INSIDE ONE ENTRY ARE AN ANY-OF GROUP, which is what `|` already
+# means in a must_mention entry, and it means the same thing here: this entry
+# holds when ANY of its alternatives does.
+#
+# It exists because some questions have more than one honest engine. Case 7 asks
+# for a count broken down by a dimension, and both run_report and
+# run_analytics_query produce it from the same population — so a scenario that
+# named one of them would be measuring which engine the model happened to pick
+# rather than whether the number came from a real aggregate. Separate entries
+# cannot say that: they are ANDed, and would demand both.
+#
+# The separator is `|` with NO surrounding space, because a scenario's list item
+# is read as one token by more than one reader. It follows that an argument
+# VALUE carrying a literal `|` cannot use this construct; no scenario needs one,
+# and the alternative — a second separator nobody recognises — would be worse.
+def alternatives(entry):
+    return [part.strip() for part in str(entry).split("|") if part.strip()]
+
+
+def _called_with(calls, alternative):
+    """Whether one `tool.argument=value` alternative holds, and what was seen.
+
+    The value is compared against the argument rendered as JSON without quotes
+    for a plain string, so both `report=activities-by-kind` and
+    `group_by=["direction"]` are expressible.
+
+    A malformed alternative RAISES rather than answering no: it is a fault in
+    the scenario, and reading it as an argument the answer failed to send would
+    file a broken entry as a finding about the product.
+    """
+    target, _, expected = alternative.partition("=")
+    tool, _, argument = target.partition(".")
+    if not tool or not argument:
+        raise ValueError(f"must_call_with entry {alternative!r} is not tool.argument=value")
+    seen = []
+    for name, arguments in calls:
+        if not tool_matches([name], tool):
+            continue
+        actual = arguments.get(argument)
+        rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
+        seen.append(rendered)
+        if rendered == expected:
+            return True, seen
+    return False, seen
+
+
 def check(scenario, transcript_path):
     called, said, calls = read_transcript(transcript_path)
     problems = []
 
-    for want in scenario.get("must_call", []):
-        if not tool_matches(called, want):
+    for entry in scenario.get("must_call", []):
+        wanted = alternatives(entry)
+        if not any(tool_matches(called, want) for want in wanted):
             problems.append(
-                f"never called {want} — the answer was not drawn from Margince "
+                f"never called {' or '.join(wanted)} — the answer was not drawn from Margince "
                 f"(called: {', '.join(sorted(set(called))) or 'nothing'})"
             )
 
     # must_call_with entries are `tool.argument=value`, flat rather than nested
-    # because parse_scenario reads a deliberately small YAML subset. The value is
-    # compared against the argument rendered as JSON without quotes for a plain
-    # string, so both `report=activities-by-kind` and `group_by=["direction"]`
-    # are expressible.
-    for spec in scenario.get("must_call_with", []):
-        target, _, expected = spec.partition("=")
-        tool, _, argument = target.partition(".")
-        if not tool or not argument:
-            problems.append(f"must_call_with entry {spec!r} is not tool.argument=value")
+    # because parse_scenario reads a deliberately small YAML subset.
+    for entry in scenario.get("must_call_with", []):
+        wanted = alternatives(entry)
+        held, seen = False, []
+        try:
+            for alternative in wanted:
+                held, saw = _called_with(calls, alternative)
+                seen.extend(saw)
+                if held:
+                    break
+        except ValueError as malformed:
+            problems.append(str(malformed))
             continue
-        seen = []
-        for name, arguments in calls:
-            if not tool_matches([name], tool):
-                continue
-            actual = arguments.get(argument)
-            rendered = actual if isinstance(actual, str) else json.dumps(actual, separators=(",", ":"))
-            seen.append(rendered)
-            if rendered == expected:
-                break
-        else:
+        if not held:
             problems.append(
-                f"never called {tool} with {argument}={expected} — "
+                f"never called {' or '.join(wanted)} — "
                 f"saw {', '.join(repr(s) for s in seen) or 'no such call'}"
             )
 

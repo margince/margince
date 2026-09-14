@@ -74,7 +74,7 @@ const (
 	ActorRequester Actor = "requester"
 	// ActorIntroducer is the colleague being asked.
 	ActorIntroducer Actor = "introducer"
-	// ActorClock is the expiry sweep. Not a person, and it may only expire —
+	// ActorClock is the expiry sweep. Not a contact, and it may only expire —
 	// a job that could decline on somebody's behalf would put words in a
 	// colleague's mouth.
 	ActorClock Actor = "clock"
@@ -131,7 +131,7 @@ var transitions = []transition{
 // and refuses with the sentinel the HTTP layer turns into 403.
 //
 // The two failures are told apart on purpose: a move nobody may make is a
-// conflict with the record's state, while a move the WRONG person attempts is a
+// conflict with the record's state, while a move the WRONG contact attempts is a
 // permission failure.
 func May(from, to Status, by Actor) error {
 	legal := false

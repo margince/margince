@@ -5,10 +5,10 @@ package consent
 
 // What a suppression binds, and what it leaves alone.
 //
-// A suppression is not one rule. Three kinds of "do not write to this person"
+// A suppression is not one rule. Three kinds of "do not write to this contact"
 // exist and they bind different things, so applying the strongest one to every
 // message refuses mail nobody objected to — an Art. 21 marketing objection
-// stopping that person's INVOICE is the case this file exists to prevent.
+// stopping that contact's INVOICE is the case this file exists to prevent.
 
 import (
 	"slices"
@@ -26,7 +26,7 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 	if len(kinds) == 0 {
 		return d
 	}
-	// EVERY kind is asked, and the first that binds refuses. A person may
+	// EVERY kind is asked, and the first that binds refuses. A contact may
 	// carry several at once, and since this change they no longer agree: an
 	// objection binds only marketing while a hard bounce binds everything, so
 	// picking one and asking it alone lets the others through.
@@ -63,7 +63,7 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 //
 //   - A MARKETING OBJECTION binds marketing and nothing else. Art. 21 is an
 //     objection to direct marketing, so it beats consent and every exception
-//     for that category, and says nothing about the invoice the same person is
+//     for that category, and says nothing about the invoice the same contact is
 //     owed. Today's objectionStands is already purpose-scoped for the legacy
 //     gate; this is the same scoping, one layer up.
 //   - A STATUTORY RESTRICTION (Art. 18) binds everything except the three
@@ -77,7 +77,7 @@ func applySuppression(d commsauthz.Decision, kinds []string) commsauthz.Decision
 //     bind all fourteen, on the reasoning that somebody said stop and answering
 //     with unasked-for mail is the thing they asked us not to do. That reasoning
 //     is right about the twelve and wrong about these three, and the way it was
-//     wrong is visible: a person who said "stop emailing me" never received the
+//     wrong is visible: a contact who said "stop emailing me" never received the
 //     confirmation that we had stopped, because opt-out confirmation was bound
 //     by the very request it was confirming. The privacy notice that answers
 //     their own rights request and the security warning about their own account

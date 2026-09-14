@@ -114,7 +114,7 @@
 
 .pref-partial-banner {
   margin-top: var(--space-4);
-  color: var(--warn);
+  color: var(--warnText);
 }
 
 .pref-unsub {
@@ -126,7 +126,7 @@
 }
 
 .pref-unsub-error {
-  color: var(--danger);
+  color: var(--dangerText);
 }
 
 .pref-unsub-banner {

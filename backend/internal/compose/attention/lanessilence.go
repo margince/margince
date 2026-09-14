@@ -5,7 +5,7 @@ package attention
 
 // The two lanes that report a SILENCE, and what each reads it into.
 //
-// A deal nobody is moving and a person nobody is talking to. They rest on
+// A deal nobody is moving and a contact nobody is talking to. They rest on
 // different records and warn about different things, which is why they are two
 // lanes rather than more rows in one — a contact carrying no open deal never
 // reaches the risk lane at all, and those are exactly the relationships that
@@ -55,8 +55,10 @@ type AtRisk interface {
 // anyone touched it. A card that collapsed them would say "at risk" and leave
 // the rep to guess which.
 type RiskyDeal struct {
-	DealID ids.UUID
-	Name   string
+	CloseDateProvisional *bool
+	ForecastCategory     *string
+	DealID               ids.UUID
+	Name                 string
 	// The card's facts, carried so the client draws value, stage and
 	// ownership without a second read per row. All optional: a deal can be
 	// ownerless, unpriced, or an overlay mirror with no native stage.
@@ -88,7 +90,7 @@ type RiskyDeal struct {
 //
 // A separate lane from AtRisk rather than more rows in it, because the two rest
 // on different records and warn about different things: AtRisk is a DEAL nobody
-// is moving, and this is a PERSON nobody is talking to. A contact carrying no
+// is moving, and this is a CONTACT nobody is talking to. A contact carrying no
 // open deal never reaches that lane at all, and those are exactly the
 // relationships that lapse without anyone noticing.
 //
@@ -105,8 +107,8 @@ type Decay interface {
 
 // QuietRelationship is one contact this reader has stopped talking to.
 type QuietRelationship struct {
-	PersonID ids.UUID
-	Name     string
+	ContactID ids.UUID
+	Name      string
 	// QuietDays is how long the silence has run, which is the number the card
 	// says out loud. It comes from the derivation rather than from the
 	// projection's own last_at, so the card and the contact's page agree.

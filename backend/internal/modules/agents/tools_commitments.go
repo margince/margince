@@ -4,7 +4,7 @@
 package agents
 
 // review_commitments: the open promises this workspace has made, earliest due
-// date first, each with the person who owes it and the record it was made
+// date first, each with the contact who owes it and the record it was made
 // about.
 //
 // MOST OVERDUE FIRST, and the order is kernel/owedwork's — the same ranking the
@@ -266,7 +266,7 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 // commitmentState judges one promise against the instant the set was swept at.
 //
 // The boundary is deadline.Passed's, so this surface and every list, card and
-// figure the same person can open agree about the same promise.
+// figure the same contact can open agree about the same promise.
 func commitmentState(dueAt *time.Time, asOf time.Time) string {
 	switch {
 	case dueAt == nil:

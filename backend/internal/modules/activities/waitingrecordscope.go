@@ -24,15 +24,15 @@ import (
 
 // waitingReplyEntityClause narrows the thread walk to one record, in the SAME
 // vocabulary linktarget.go and listActivitiesFilter's own entity_type/id
-// filter use — a record type added to linkColumn or the organization arm
+// filter use — a record type added to linkColumn or the company arm
 // reaches this walk too, rather than a second copy silently missing it.
 func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any) int) (string, error) {
-	if entityType == string(datasource.RecordOrganization) {
+	if entityType == string(datasource.RecordCompany) {
 		// An account's timeline is wider than its direct links (mail is filed
-		// against the person it was with), so this reuses the SAME three-arm
+		// against the contact it was with), so this reuses the SAME three-arm
 		// walk the timeline list and the company view both read through —
-		// see OrgLinkedActivityExists.
-		return OrgLinkedActivityExists(arg(entityID)), nil
+		// see CompanyLinkedActivityExists.
+		return CompanyLinkedActivityExists(arg(entityID)), nil
 	}
 	column := linkColumn(entityType)
 	if column == "" {
@@ -52,7 +52,7 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 // The subquery is uncorrelated — it computes its own candidate set rather
 // than reading the outer FROM — so its own `a` alias shadowing the outer
 // query's is harmless.
-func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains []string, horizonDays int, alsoBeforeTheCap string) (string, error) {
+func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap string) (string, error) {
 	instant := arg(asOf)
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
@@ -108,7 +108,9 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			entityClause,
 			neverRelaxed, neverRelaxed,
 			neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
-			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent)) +
+			messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
+			fmt.Sprintf("$%d", arg(readerAddresses)),
+			unansweredConversationSQL(fmt.Sprintf("$%d", instant))) +
 		") waiting_thread)", nil
 }
 
@@ -119,9 +121,26 @@ func appendWaitingReplyClause(ctx context.Context, in ListActivitiesInput, arg f
 	if in.WaitingReplyAsOf == nil {
 		return where, nil
 	}
-	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.horizonDays, "")
+	clause, err := waitingReplyExistsClause(ctx, arg, *in.WaitingReplyAsOf, in.EntityType, in.EntityID, in.ownDomains, in.readerAddresses, in.horizonDays, "")
 	if err != nil {
 		return nil, err
 	}
 	return append(where, clause), nil
+}
+
+func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
+	if in.RequestReviewAsOf == nil {
+		return where, nil
+	}
+	instant := fmt.Sprintf("$%d", arg(*in.RequestReviewAsOf))
+	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	if err != nil {
+		return nil, err
+	}
+	wake := messageSnoozeLiftedSQL(instant, backContent)
+	reader := arg(readerOrNobody(ctx))
+	disposition := fmt.Sprintf(`NOT EXISTS (SELECT 1 FROM activity_reader_state mine
+ WHERE mine.activity_id = a.id AND mine.reader_id = $%d
+ AND (mine.state = 'not_mine' OR (mine.state = 'snoozed' AND NOT %s)))`, reader, wake)
+	return append(where, "("+reviewableRequestSQL(instant)+")", "a.occurred_at <= "+instant, disposition), nil
 }

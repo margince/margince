@@ -20,13 +20,13 @@ func TestGeneratedMeetingsFileThroughTheirAttendees(t *testing.T) {
 		meetings++
 		record := message.record()
 		for _, link := range record.Links {
-			if link.Type == datasource.EntityOrganization {
+			if link.Type == datasource.EntityCompany {
 				t.Fatal("meeting links a company directly")
 			}
 		}
 		found := false
 		for _, party := range record.Participants {
-			if party.Email == box.Accounts[0].People[0].Email && party.Role == connector.ParticipantRoleAttendee {
+			if party.Email == box.Accounts[0].Contacts[0].Email && party.Role == connector.ParticipantRoleAttendee {
 				found = true
 			}
 		}

@@ -9,12 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,7 +79,9 @@ func memberWeek(
 		SELECT count(*) FROM weekly_plan_commitment c
 		  JOIN weekly_plan p ON p.id = c.plan_id
 		 WHERE p.owner_id = $1 AND p.local_week_start = $2
-		   AND btrim(c.help_requested) <> ''`, userID, week).Scan(&help); err != nil {
+		   AND btrim(c.help_requested) <> ''
+		   AND btrim(coalesce(c.manager_response, '')) = ''
+		   AND c.state NOT IN ('done', 'dropped')`, userID, week).Scan(&help); err != nil {
 		return Counts{}, Money{}, 0, fmt.Errorf("weekly: counting a member's requests: %w", err)
 	}
 	return c, money, help, nil
@@ -108,20 +112,28 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 	add("meetings_with_next_step", c.MeetingsWithNextStep)
 	add("commitments_due", c.CommitmentsDue)
 	add("commitments_kept", c.CommitmentsKept)
-	// The four money columns go together or not at all — the table's own CHECK
-	// says a figure names its currency and a currency names figures.
+	var created, won, lost *int64
+	var currency *string
 	if review.Money.Known {
-		add("pipeline_created_minor", review.Money.CreatedMinor)
-		add("pipeline_won_minor", review.Money.WonMinor)
-		add("pipeline_lost_minor", review.Money.LostMinor)
-		add("base_currency", review.Money.Currency)
+		created, won, lost = &review.Money.CreatedMinor, &review.Money.WonMinor, &review.Money.LostMinor
+		currency = &review.Money.Currency
+	}
+	add("pipeline_created_minor", created)
+	add("pipeline_won_minor", won)
+	add("pipeline_lost_minor", lost)
+	add("base_currency", currency)
+	updates := []string{"generated_at = now()"}
+	for _, col := range cols {
+		updates = append(updates, col+" = EXCLUDED."+col)
 	}
 
 	var id ids.UUID
+	var inserted bool
 	err := tx.QueryRow(ctx, fmt.Sprintf(`
 		INSERT INTO team_weekly_review (%s) VALUES (%s)
-		ON CONFLICT ON CONSTRAINT uq_team_weekly_review_team_week DO NOTHING
-		RETURNING id`, cols.names(), cols.placeholders()), args...).Scan(&id)
+		ON CONFLICT ON CONSTRAINT uq_team_weekly_review_team_week DO UPDATE SET %s
+		WHERE team_weekly_review.reps_counted = 0 AND EXCLUDED.reps_counted > 0
+		RETURNING id, (xmax = 0)`, cols.names(), cols.placeholders(), strings.Join(updates, ", ")), args...).Scan(&id, &inserted)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The team's week already had a snapshot. The loser of that race is not
 		// an error: the constraint did its job.
@@ -129,6 +141,19 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 	}
 	if err != nil {
 		return ids.Nil, false, fmt.Errorf("weekly: writing the team's week: %w", err)
+	}
+	after := map[string]any{"local_week_start": review.LocalWeekStart, "reps_counted": review.Counts.RepsCounted}
+	if inserted {
+		if _, err := storekit.Audit(ctx, tx, "create", "team_weekly_review", id, nil, after); err != nil {
+			return ids.Nil, false, err
+		}
+	} else {
+		if _, err := tx.Exec(ctx, `DELETE FROM team_weekly_review_outlook WHERE team_weekly_review_id = $1`, id); err != nil {
+			return ids.Nil, false, fmt.Errorf("weekly: replacing an unmeasured outlook: %w", err)
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", "team_weekly_review", id, map[string]any{"reps_counted": 0}, after); err != nil {
+			return ids.Nil, false, err
+		}
 	}
 	return id, true, nil
 }
@@ -155,7 +180,7 @@ func insertTeamReps(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, reps []Te
 //
 // TWO QUESTIONS, and both have to be asked. The row scope says whether a team
 // snapshot is a question this reader may ask at all — an own-scoped reader
-// would get a page about people whose rows they cannot read. Membership says
+// would get a page about contacts whose rows they cannot read. Membership says
 // WHICH team, and without it a lead of one team reads any other team's week by
 // changing one query parameter, because the team id arrives from the request
 // and nothing else narrows the row.

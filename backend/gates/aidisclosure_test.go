@@ -35,7 +35,7 @@ import (
 // rather than a violation.
 //
 // Held by: TestTheAIDisclosureHasOneSpelling (backend/gates/aidisclosure_test.go)
-const disclosureHome = "backend/internal/shared/kernel/draftfloor/persontext.go"
+const disclosureHome = "backend/internal/shared/kernel/draftfloor/contacttext.go"
 
 // disclosureStems are the parts of each sentence a copy would carry, short of
 // the citation clause: a drafter that wrote its own would spell the opening and

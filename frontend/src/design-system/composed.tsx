@@ -12,12 +12,9 @@ import {
 import type { ReactNode } from "react";
 import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../api/schema";
-import { calendarDay, middayInstant } from "../format/calendarday";
 import { splitEmailBody } from "../format/emailtext";
 import {
   formatDate,
-  formatDayMonth,
-  formatDuration,
   formatMoneyOrAbsent,
   formatNumber,
   formatTimeOfDay,
@@ -25,11 +22,11 @@ import {
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
+import { type BoardDealMail, DealCard } from "./dealcard";
 import { EmailEntry, EmailWords } from "./emailentry";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { withWhom } from "./participants";
-import { FieldGuard } from "./rbac";
-import { useTooltip, useTruncationTooltip } from "./tooltip";
+import { useTruncationTooltip } from "./tooltip";
 import { type Provenance, ProvenanceTag } from "./trust";
 import { type Visibility, VisibilityBadge } from "./visibility";
 import "./composed.css";
@@ -39,6 +36,11 @@ import "./composed.css";
 // distinguishable styles through composition.
 
 // ----- Pipeline board -----
+
+// The card itself lives in dealcard.tsx: one concept per file, and the board
+// and its card are two. Re-exported here so a caller of the board finds the
+// card where the catalog names it.
+export { type BoardDealMail, DealCard };
 
 export type BoardRecord = {
   id: string;
@@ -50,7 +52,7 @@ export type BoardDeal = BoardRecord & {
    * The company this deal is with, as a name a reader recognises. Empty for a
    * deal that names no company, which is the one reading that draws nothing.
    */
-  org: string;
+  company: string;
   /**
    * The company's own address, when the caller has one to give.
    *
@@ -60,34 +62,34 @@ export type BoardDeal = BoardRecord & {
    * Absent renders the company as prose, which is what a caller that cannot
    * link it is saying.
    */
-  orgHref?: string;
+  companyHref?: string;
   /** The company's resolved mark. Absent leaves the monogram, which is the
    *  floor rather than a fallback. */
-  orgLogoUrl?: string | null;
+  companyLogoUrl?: string | null;
   /**
    * The company is not this reader's to read: the wire sent no id and named the
    * field in `masked_fields`, so the slot carries the MASK rather than a name.
    *
-   * A flag rather than a node in `org`, for the reason `TimelineEntry.withheld`
+   * A flag rather than a node in `company`, for the reason `TimelineEntry.withheld`
    * is one: the withheld reading is this tier's to spell, and a caller handing
    * in its own words for it is how one reading ends up with two spellings. It
    * also keeps the mark honest — a monogram cut from the word for "withheld"
    * would be a mark no company has.
    */
-  orgWithheld?: boolean;
+  companyWithheld?: boolean;
   /**
    * The company's name could not be READ — the caller's lookup failed rather
-   * than answering. A distinct flag from `orgWithheld`, because the two say
+   * than answering. A distinct flag from `companyWithheld`, because the two say
    * opposite things about the reader: withheld means the answer exists and is
    * not theirs, unreadable means nobody got an answer at all.
    *
-   * It exists because the alternative is worse than either. An empty `org` is
+   * It exists because the alternative is worse than either. An empty `company` is
    * the reading for a deal that names NO company, and a failed lookup falling
    * into it tells the reader the deal is unlinked when it is linked to a
    * company they simply could not fetch. The table's own company cell has had
    * this reading all along; this is the card's half of it.
    */
-  orgUnreadable?: boolean;
+  companyUnreadable?: boolean;
   /**
    * The deal's money, as the two halves it actually has: an integer minor
    * amount and its ISO currency, either of which can be missing on a deal
@@ -119,6 +121,16 @@ export type BoardDeal = BoardRecord & {
    * told apart.
    */
   owner?: string | null;
+  /**
+   * The newest email on the deal that the whole workspace may see, as how long
+   * ago it was and which way it went. A span rather than an instant, for the
+   * reason `ageMs` is one: the caller owns the clock, and a card that read
+   * `Date.now()` would be a card no test could pin. Absent or null on a deal
+   * nobody has mailed about, and the card then draws no mail line at all —
+   * "no mail yet" is a fact the timeline states, not one worth a row on every
+   * fresh card in a column.
+   */
+  lastEmail?: BoardDealMail | null;
   stalled?: boolean;
   singleThreaded?: boolean;
   staged?: boolean;
@@ -193,272 +205,6 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
   currency: string | null;
 };
 
-/**
- * The company slot on a deal card, in the four readings a company has.
- *
- * Withheld is the MASK — the same `FieldGuard` control the deals table's
- * company cell draws, so one refusal has one spelling wherever it is read. A
- * name that could not be read says so, in the same words the shared reference
- * resolver uses for its own failed read. A company the caller named takes its
- * mark and its name. Only a deal that names no company draws nothing, which is
- * the one reading an empty slot states truthfully.
- */
-function DealCardCompany({
-  deal,
-  onOpen,
-}: Readonly<{
-  deal: BoardDeal;
-  // The same press hook the deal's own link takes, for the same reason: a
-  // click that ends a drag is not a click on the company either, and a card
-  // that suppressed one link and not the other would open the account a rep
-  // was only moving.
-  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
-}>) {
-  const t = useT();
-  if (deal.orgWithheld) {
-    return (
-      <span className="deal-org">
-        <FieldGuard mode="masked" />
-      </span>
-    );
-  }
-  if (deal.orgUnreadable) {
-    return (
-      <span className="deal-org">
-        <span className="deal-org-name">{t("ref.nameLoadFailed")}</span>
-      </span>
-    );
-  }
-  if (!deal.org) {
-    return null;
-  }
-  return (
-    <span className="deal-org">
-      <Avatar name={deal.org} src={deal.orgLogoUrl} shape="organization" />
-      {/* The name needs a box of its own to be truncated in: a bare text node
-          has nothing for the ellipsis to apply to, and wraps under its own
-          mark instead. */}
-      {deal.orgHref ? (
-        // The company's own door, beside the deal's. The whole card used to be
-        // one anchor to the deal, so a rep looking at a board of deals could
-        // not reach the account behind any of them without opening a deal
-        // first.
-        //
-        // stopPropagation keeps the click off the card's stretched anchor.
-        // preventDefault would be wrong: it would leave the card's own
-        // navigation to fire while this link did nothing.
-        <a
-          className="deal-org-name deal-org-link"
-          href={deal.orgHref}
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpen?.(deal, event);
-          }}
-        >
-          {deal.org}
-        </a>
-      ) : (
-        <span className="deal-org-name">{deal.org}</span>
-      )}
-    </span>
-  );
-}
-
-/**
- * Who carries the deal, as a mark at the edge of the company line.
- *
- * A monogram is not an answer on its own — a teammate has to decode it — so the
- * mark carries the full name as its label, which a screen reader gets as part
- * of the card's own name and a pointer gets as a tip. The tip grants no tab
- * stop of its own: the card is a link and already has one, and a second stop
- * inside it would be a control that does nothing.
- */
-function DealOwner({ name }: Readonly<{ name: string }>) {
-  const tip = useTooltip<HTMLSpanElement>(name);
-  return (
-    <span
-      className="deal-owner"
-      role="img"
-      aria-label={name}
-      ref={tip.ref}
-      {...tip.trigger}
-    >
-      <Avatar name={name} size="xs" />
-      {tip.tip}
-    </span>
-  );
-}
-
-/**
- * When the deal closes, on the card's figure line.
- *
- * Read as a calendar day in the record's zone, never as the instant midnight
- * UTC — that instant is the previous date for half the world. The tone marks
- * the DATE when it is one nobody confirmed or one already behind us, and says
- * so in words for a reader who does not get the colour; the deal strip states
- * the same fact the same two ways.
- */
-function DealCloses({
-  day,
-  provisional,
-  zone,
-}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const overdue = day < calendarDay(new Date(), zone);
-  const classes =
-    provisional || overdue ? "deal-closes deal-closes-warn" : "deal-closes";
-  return (
-    <span className={classes}>
-      {t("deal.closes", {
-        date: formatDayMonth(middayInstant(day, zone), locale, zone),
-      })}
-      {provisional && (
-        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
-      )}
-    </span>
-  );
-}
-
-/**
- * One deal, as a card on the board.
- *
- * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
- * work in front of the reader, and a board is scanned: three coloured chips per
- * card turned five columns into a field of colour with the deal names competing
- * against it. The words are a column in the deals table and a panel on the
- * record, which are the two places a reader goes to ask how something is filed.
- * What stays here is what a reader triages by — who it is with, what it is,
- * what it is worth, how long it has sat, and what is wrong with it.
- */
-export function DealCard({
-  deal,
-  href,
-  zone,
-  onOpen,
-  dragHandlers,
-}: Readonly<{
-  deal: BoardDeal;
-  /**
-   * The IANA zone the close date is read in. A close date is a calendar day,
-   * and a day formatted as if it were an instant lands on the previous date
-   * for every reader west of Greenwich — so the card takes the zone the record
-   * lives in, the same way the timeline does, rather than the browser's.
-   */
-  zone: string;
-  /**
-   * The deal's own address.
-   *
-   * An anchor and not a button, which is what this was: a card that opens a
-   * record is a link, and drawn as a button it could not be opened in a new
-   * tab, middle-clicked, or copied — while every other record row in the
-   * product could. The board is the one surface where a rep wants three deals
-   * open side by side, so it was the worst place to lose that.
-   *
-   * The address arrives as a prop because this tier holds no routes: it is the
-   * same reason `OffsiteLink` takes an href and `ProjectLinks` takes an
-   * adapter.
-   */
-  href: string;
-  /**
-   * What a press does BESIDE following the link, and the reason the event
-   * comes with it: the board's card is draggable, and the click that ends a
-   * drag must not also navigate. A caller that needs to refuse the press calls
-   * `preventDefault` on the event it is handed.
-   */
-  onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
-  dragHandlers?: {
-    draggable: true;
-    onDragStart: (event: React.DragEvent) => void;
-  };
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // No `stalled` class: the warn Badge below says it in words, and an edge
-  // stripe saying the same thing is one statement drawn twice — the reader who
-  // cannot see colour reads the badge, and the reader who can read both.
-  const classes = [
-    "deal-card",
-    deal.staged ? "staged" : "",
-    deal.archived ? "archived" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    // A div with a STRETCHED anchor inside it, not one anchor around
-    // everything. The card carries a second destination now — the company —
-    // and an anchor inside an anchor is invalid markup the browser silently
-    // unnests, which is how the inner link stops being clickable at all.
-    //
-    // The stretched link keeps every property the outer anchor had: the whole
-    // card is still the deal's click target, still opens in a new tab, still
-    // middle-clicks, and is still one tab stop.
-    <div className={classes} data-deal={deal.id} {...dragHandlers}>
-      {/* Read in the order a rep asks (composed.css says why): what needs
-          them, on this card, if anything; whose deal it is; what it is worth
-          and when it closes; and what it is called. */}
-      {(deal.staged ||
-        deal.stalled ||
-        deal.singleThreaded ||
-        deal.archived) && (
-        <span className="deal-flags">
-          {deal.staged && <Badge tone="ai">{t("deal.staged")}</Badge>}
-          {deal.singleThreaded && (
-            <Badge quiet tone="danger">
-              {t("deal.singleThreaded")}
-            </Badge>
-          )}
-          {deal.stalled && (
-            <Badge quiet tone="warn">
-              {t("deal.stalled")}
-            </Badge>
-          )}
-          {/* How long it has sat is the size of the stall, and only then: on a
-              healthy card the number is a fact nobody acts on. */}
-          {deal.stalled && (
-            <span className="deal-age">
-              {formatDuration(deal.ageMs, locale)}
-            </span>
-          )}
-          {deal.archived && <Badge quiet>{t("deal.archived")}</Badge>}
-        </span>
-      )}
-      <span className="deal-head">
-        <DealCardCompany deal={deal} onOpen={onOpen} />
-        {deal.owner && <DealOwner name={deal.owner} />}
-      </span>
-      <span className="deal-figure">
-        <span className="deal-value">
-          {formatMoneyOrAbsent(deal.valueMinor, deal.currency, locale)}
-        </span>
-        {deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
-      </span>
-      {/* The deal's own door, stretched over the card by CSS. It carries the
-          NAME rather than sitting empty, so the accessible name of the link is
-          the deal a reader is opening — an empty stretched anchor reads to a
-          screen reader as a link with no text. */}
-      <a
-        className="deal-name deal-open"
-        href={href}
-        // The press handler rides the ANCHOR, not the div around it: the div
-        // would also catch the company link's bubbled click, and the drop
-        // guard would then refuse a navigation the reader did ask for.
-        onClick={(event) => onOpen?.(deal, event)}
-      >
-        {deal.name}
-      </a>
-    </div>
-  );
-}
-
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
@@ -499,6 +245,8 @@ type DealBoardProps = BoardHandlers<BoardDeal> & {
    */
   cardHref: (deal: BoardDeal) => string;
   onOpen?: (deal: BoardDeal, event: React.MouseEvent) => void;
+  /** Each card's mail flyout — see `DealCard`'s `mailAside`. */
+  mailAside?: (deal: BoardDeal) => ReactNode;
   /** The zone a close date is read in — see `DealCard`'s `zone`. */
   zone: string;
 };
@@ -692,6 +440,7 @@ export function PipelineBoard<Record extends BoardRecord>(
           href={props.cardHref(deal)}
           zone={props.zone}
           onOpen={props.onOpen}
+          mailAside={props.mailAside}
           dragHandlers={props.cardDragHandlers?.(deal, column)}
         />
       )}
@@ -707,7 +456,7 @@ export function PipelineBoard<Record extends BoardRecord>(
 
 /**
  * TimelineGroup is a run of entries the reader sees as ONE event: a
- * conversation, or one message sent to several people. It lives here with the
+ * conversation, or one message sent to several contacts. It lives here with the
  * component that renders it — the rules that BUILD one are a screen concern,
  * but the shape is the list's own vocabulary.
  */
@@ -731,7 +480,7 @@ export type TimelineEntry = {
   //
   // `change` is not an activity: it is a field edit projected from the audit
   // spine. It rides the same list because what was said to an account and what
-  // was changed about it are one chronology to the person reading them — kept
+  // was changed about it are one chronology to the reader reading them — kept
   // apart, a rep comparing "we told them X" against "someone set stage to Y"
   // had to hold two orderings in their head.
   kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
@@ -763,9 +512,9 @@ export type TimelineEntry = {
    */
   counterparts?: string;
   /**
-   * The same people, one name each, before they were joined into the phrase
+   * The same contacts, one name each, before they were joined into the phrase
    * above. A thread lists everyone it was with and draws each sender's face,
-   * and both need a person, not a phrase: a set of phrases lists "Ida Keller"
+   * and both need a contact, not a phrase: a set of phrases lists "Ida Keller"
    * and "Ida Keller, Marc Dubois" as two entries, and a monogram of a phrase
    * is nobody's. Absent where nothing resolved a name, exactly as the phrase.
    */
@@ -942,7 +691,7 @@ function RecordHead({
   actions?: ReactNode;
   actionsAt: "none" | "inline" | "controls" | "below";
   wide: boolean;
-  markShape: "person" | "organization";
+  markShape: "contact" | "company";
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -1015,7 +764,7 @@ export function RecordView({
   pulse,
   actions,
   controls,
-  markShape = "person",
+  markShape = "contact",
   actionsInline,
   band,
   rail,
@@ -1028,6 +777,7 @@ export function RecordView({
   timelineHeader,
   timelineFooter,
   timelineNotice,
+  timelineAnchorId,
   tabs,
   zone,
   children,
@@ -1058,9 +808,9 @@ export function RecordView({
   // action row under the header.
   controls?: ReactNode;
   // What KIND of record this is, which decides whether its mark is drawn round
-  // like a face or as a rounded square like a logo. Defaults to `person`,
-  // which is what every record but an organization is.
-  markShape?: "person" | "organization";
+  // like a face or as a rounded square like a logo. Defaults to `contact`,
+  // which is what every record but a company is.
+  markShape?: "contact" | "company";
   // Puts `actions` on the SAME row as the identity block, right-aligned,
   // instead of the default full-width row underneath the header (or the
   // stacked column `controls` produces). An explicit opt-in: every other
@@ -1093,7 +843,7 @@ export function RecordView({
   timeline?: TimelineEntry[];
   /**
    * When set, the timeline renders CONVERSATIONS rather than messages. The
-   * flat list stays the default: a person's timeline is a handful of rows and
+   * flat list stays the default: a contact's timeline is a handful of rows and
    * grouping it would collapse events that were never one.
    */
   timelineGroups?: readonly TimelineGroup[];
@@ -1105,6 +855,11 @@ export function RecordView({
   // note, since the mirror cannot serve entity-scoped activity reads. Keeps the
   // section honest instead of rendering an empty list that reads as "no activity".
   timelineNotice?: ReactNode;
+  // The id the timeline SECTION carries, so a reading's door can scroll to the
+  // record's story (app/reveal) rather than route. It belongs here because the
+  // section is inside the work column this component draws, where a caller has
+  // nothing to wrap an anchor of its own around.
+  timelineAnchorId?: string;
   // The bar that chooses which part of the record is below it. It runs the
   // full width over the columns, because the details pane opens under it
   // (DESIGN.md §6): the switch at the row's end governs the column beside the
@@ -1183,6 +938,7 @@ export function RecordView({
                  the deal's and the project's bodies met the chronology's
                  heading at the border. */
               <section
+                id={timelineAnchorId}
                 className="record-timeline"
                 aria-label={t("record.timeline")}
               >
@@ -1485,7 +1241,7 @@ function TimelineList({
  *
  * A thread is one card, open: what it IS — "3 messages", who with, whose
  * move — over its subject, then the messages themselves. A bulk send is
- * folded, stating "sent to 3 people" before what it says, because the reader
+ * folded, stating "sent to 3 contacts" before what it says, because the reader
  * is scanning for an event rather than for a sentence; expanding it shows the
  * same rows the flat list would have shown, from the same component, so the
  * two can never drift.
@@ -1570,7 +1326,7 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
 }
 
-// The same people one at a time, for a set and for a face. The resolved
+// The same contacts one at a time, for a set and for a face. The resolved
 // names when the adapter had any; otherwise the one phrase the row shows,
 // which is then the best name there is. Nothing on a withheld row, as above.
 function otherSideNames(entry: TimelineEntry): readonly string[] {
@@ -1586,7 +1342,7 @@ function otherSideNames(entry: TimelineEntry): readonly string[] {
 
 // Who a thread was with, as one phrase: the other side's names, each once,
 // joined ONCE at the end — joining per message and then collecting the
-// phrases listed one person under two spellings. Our own seats are not
+// phrases listed one contact under two spellings. Our own seats are not
 // listed: every thread on this record is with us, and a name that appears
 // on all of them tells a reader nothing.
 function threadParticipants(
@@ -1678,7 +1434,7 @@ function MessageMark({ entry }: Readonly<{ entry: TimelineEntry }>) {
       </span>
     );
   }
-  // The face is ONE person's — the first named on the other side — never
+  // The face is ONE contact's — the first named on the other side — never
   // the phrase the lead line shows, whose monogram would be nobody's.
   const [face] = otherSideNames(entry);
   if (entry.direction === "inbound" && face) {
@@ -1893,7 +1649,7 @@ function ThreadRow({
 // groupCountLabel counts the group's members in words that read. A group of
 // one is reachable both ways — a thread whose other messages are on another
 // page, and a single message the sender attested as a bulk send — and the
-// plural forms rendered "1 messages" and "sent to 1 people" for it.
+// plural forms rendered "1 messages" and "sent to 1 contacts" for it.
 function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
   const base =
@@ -1903,7 +1659,7 @@ function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   });
 }
 
-// BulkGroupRow is one send to several people, folded: the newest copy stands
+// BulkGroupRow is one send to several contacts, folded: the newest copy stands
 // for the send while it is closed, and opening it lists every copy through
 // the ordinary row. A THREAD is not drawn here — it is a conversation, and
 // ThreadRow draws it open, as one card of messages.
@@ -2023,7 +1779,7 @@ function directionPhrase(
   if (entry.direction === "inbound") {
     return t("timeline.receivedFrom", { who });
   }
-  // A meeting or a note has no side. It still has people in it, and naming
+  // A meeting or a note has no side. It still has contacts in it, and naming
   // them is the whole reason this line exists.
   return t("timeline.withWhom", { who });
 }

@@ -57,6 +57,13 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
+  /* The band's own leading, tighter than the body scale: a single line
+     inherits its half-leading as air above and below, and at the reading
+     scale the title and the description together sat low in the 56px the
+     band gives them. Declared here rather than left to inherit, so the pair
+     is centred by the same number on every page whatever text scale the
+     surrounding screen sets. */
+  line-height: 1.25;
 }
 
 /* The title and its description are one stacked item, and that item absorbs the
@@ -73,7 +80,7 @@
   flex-direction: column;
   /* No gap: the two lines' own leading is already the interval between them,
      and inside a fixed band a gap on top of it is what pushes the pair past the
-     band's edges. The stack measures 43px of the 56 the band gives it. */
+     band's edges. The stack measures 35px of the 56 the band gives it. */
   gap: 0;
   min-width: 0;
   margin-right: auto;
@@ -87,6 +94,9 @@
 .panel-head-sub {
   font-size: var(--fs-meta);
   color: var(--textMeta);
+  /* The title's leading, so the two lines of the head are one block set on
+     one interval rather than two lines each spaced by its own rung. */
+  line-height: 1.25;
 }
 
 /* Both lines of the head end in an ellipsis rather than in a second row: the
@@ -192,10 +202,50 @@
   background: var(--bgHover);
 }
 
+/* A state arm standing where full-bleed rows will stand pays the PANE's inset,
+ * because it has no body to pay it. `QueryStates`' ready arm is a list of
+ * `PanelRow`s, which draw to the panel's own edges — so a `PanelBody` around
+ * the read would inset the rows it must not, and the pending and error arms
+ * that share that place printed their sentence hard against the pane's edge.
+ * Named by the pane's role rather than by a rung, so a skeleton reserves the
+ * space at exactly the x the rows it stands in for will use. */
+.panel > .pending,
+.panel > .empty {
+  padding: var(--padPanel);
+}
+
+/* A DISCLOSURE standing where full-bleed rows stand is a row of the panel: its
+ * summary is one line among `PanelRow`s and pays the row's own interval and the
+ * pane's gutter, and its body is whatever rows or bodies the caller put there,
+ * each already paying its own. The atom ships free-standing — a hairline over
+ * itself, its own top interval, air under it for whatever follows — because
+ * that is what a fold in a column of prose needs, and in a panel every one of
+ * those is paid twice: under the head, the hairline doubled the band's own
+ * rule and the caret sat hard against the card's edge, a gutter left of the
+ * text it opens. Three rails had each written this correction in their own
+ * sheet; it is the panel's to make once. `:where` on the summary keeps a rail
+ * that shapes its own (a heading, a badge pushed to the far end) ahead of this
+ * by specificity rather than by sheet order; the body's rule is spelt plainly
+ * because `disclosure-inset.test.ts` reads the combinator, and every rail's
+ * own body rule agrees with it. */
+.panel > .disclosure {
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.panel-head + .disclosure {
+  border-top: 0;
+}
+.panel > .disclosure > :where(.disclosure-summary) {
+  padding: var(--space-3) var(--padPanel);
+}
+.panel > .disclosure > .disclosure-body {
+  margin-top: 0;
+}
+
 /* A section heading INSIDE a body has a body's padding above it already, so it
  * does not also pay `.section-header`'s own 24px top margin. Unreset, a rule
  * followed by a level-3 heading measured 45px from line to text on the
- * connections tab, 41px on general and 8px on people — three distances for one
+ * connections tab, 41px on general and 8px on contacts — three distances for one
  * relationship, none of them chosen. `.card` has carried this reset since it
  * was written; `.panel` never got it. */
 .panel-body > .section-header:first-child {
@@ -338,7 +388,7 @@
   border-bottom: 1px solid var(--warnBorder);
 }
 .panel-warn > .panel-head .panel-title {
-  color: var(--warn);
+  color: var(--warnText);
 }
 .panel-warn > .panel-foot {
   border-top-color: var(--warnBorder);
@@ -385,7 +435,7 @@
  * has accepted it yet, and the dashes going solid is what acceptance looks
  * like. So a panel a machine WROTE keeps the hairline it inherits from
  * `.panel`, and a card a machine has only PROPOSED wears the dash until a
- * person answers it.
+ * contact answers it.
  *
  * The tint goes under the TEXT rather than into a head band, because neither
  * box has a head to put it in and the reader has to be able to tell a proposal

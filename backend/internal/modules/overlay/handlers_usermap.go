@@ -59,7 +59,7 @@ func (h Handlers) SetOverlayUserMap(w http.ResponseWriter, r *http.Request, id c
 	// would map the user onto every mirrored record that has no owner.
 	if req.IncumbentUserId == "" {
 		httperr.Write(w, r, httperr.Validation("incumbent_user_id", "required",
-			"name the incumbent user this person maps to"))
+			"name the incumbent user this contact maps to"))
 		return
 	}
 	if err := h.svc.SetUserMap(r.Context(), ids.UserID{UUID: ids.UUID(id)}, req.IncumbentUserId); err != nil {

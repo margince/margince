@@ -42,23 +42,23 @@ export const NEW_PROJECT = "__new_project__";
  * them and narrows on the anchor itself. "What may THIS deal take" does not: a
  * deal with no company shares a company with no project, so answering with the
  * whole installation offers pairings the server refuses
- * (deal_project_same_org, 422). A caller acting on one deal uses this.
+ * (deal_project_same_company, 422). A caller acting on one deal uses this.
  */
-export function useProjectsOfCompany(organizationId?: string): Project[] {
-  return useProjectPage(organizationId, Boolean(organizationId));
+export function useProjectsOfCompany(companyId?: string): Project[] {
+  return useProjectPage(companyId, Boolean(companyId));
 }
 
 function useProjectPage(
-  organizationId: string | undefined,
+  companyId: string | undefined,
   enabled: boolean,
 ): Project[] {
   const projects = useQuery({
-    queryKey: ["projects", "open", organizationId ?? "all"],
+    queryKey: ["projects", "open", companyId ?? "all"],
     queryFn: async () => {
       const { data, error } = await api.GET("/projects", {
         params: {
           query: {
-            ...(organizationId ? { organization_id: organizationId } : {}),
+            ...(companyId ? { company_id: companyId } : {}),
             limit: 200,
           },
         },
@@ -98,7 +98,7 @@ export function dealProjectFields(
   // is a render rather than a workaround: the reader changes the company, the
   // new query is in flight, and for that moment the list on hand is the
   // previous company's. Offering it would let a save carry a pairing the server
-  // refuses (deal_project_same_org, 422), so the picker holds nothing until the
+  // refuses (deal_project_same_company, 422), so the picker holds nothing until the
   // answer for the company on screen arrives.
   narrowedFor?: string,
 ): CreateField[] {
@@ -108,7 +108,7 @@ export function dealProjectFields(
       label: "deal.project",
       type: "select",
       optionsFor: (values) => {
-        const company = values.organization_id ?? "";
+        const company = values.company_id ?? "";
         if (!company) {
           return [];
         }
@@ -161,20 +161,20 @@ export function dealProjectFields(
  */
 export async function resolveDealProject(
   values: Record<string, string>,
-  organizationId: string | null,
+  companyId: string | null,
   t: (key: MessageKey) => string,
 ): Promise<string | null> {
   const picked = values.project_id?.trim() ?? "";
   if (picked !== NEW_PROJECT) {
     return picked || null;
   }
-  if (!organizationId) {
+  if (!companyId) {
     throw new Error(t("deal.projectNeedsCompany"));
   }
   const { data, error } = await api.POST("/projects", {
     body: {
       name: values.new_project_name?.trim() ?? "",
-      organization_id: organizationId,
+      company_id: companyId,
       source: "manual",
     },
   });
@@ -232,9 +232,9 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
   const queryClient = useQueryClient();
   // The server answers with the projects this deal's company is on — as the
   // customer, a partner or a subcontractor — so there is nothing left to filter
-  // here. Comparing organization_id would drop every project the company works
+  // here. Comparing company_id would drop every project the company works
   // as anything but the customer.
-  const candidates = useProjectsOfCompany(deal.organization_id ?? undefined);
+  const candidates = useProjectsOfCompany(deal.company_id ?? undefined);
   const attach = useMutation({
     mutationFn: async (input: {
       dealId: string;

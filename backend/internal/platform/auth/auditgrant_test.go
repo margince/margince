@@ -205,8 +205,8 @@ func TestOnlyAConnectorWithNoHumanBehindItRecordsNoRule(t *testing.T) {
 		OnBehalfOf:  ids.NewV7(),
 		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn},
 	}
-	want := "role[rep] person.create row_scope=own"
-	if got := AuthzRule(forHuman, "person", "create"); got != want {
+	want := "role[rep] contact.create row_scope=own"
+	if got := AuthzRule(forHuman, "contact", "create"); got != want {
 		t.Errorf("a connector acting for a human renders %q, want %q — its grant is the human's, "+
 			"and that IS what admitted the call", got, want)
 	}

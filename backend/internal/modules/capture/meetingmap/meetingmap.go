@@ -67,13 +67,13 @@ type Event struct {
 
 // Actor is one organizer or attendee. The address is all the rules need to
 // resolve the counterparty and the internal-vs-external classification; Room
-// says the provider marked this a booked room or device rather than a person,
+// says the provider marked this a booked room or device rather than a contact,
 // which each decoder answers in its own vendor's terms.
 type Actor struct {
 	Email string
 	// Name is what the invitation called this party, or "" when the provider
 	// named nobody. It is the only full name an attendee-only contact ever
-	// gets: a person minted from a bare invitation address is otherwise named
+	// gets: a contact minted from a bare invitation address is otherwise named
 	// by the local part of their own email.
 	Name string
 	Room bool

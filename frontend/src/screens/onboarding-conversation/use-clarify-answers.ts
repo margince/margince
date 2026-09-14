@@ -166,7 +166,7 @@ export function useClarifyAnswers({
   //
   // A sibling the human has already answered or dismissed keeps THEIR record:
   // a retirement is what the machine concluded, and it never overwrites what a
-  // person said about the same question.
+  // contact said about the same question.
   //
   // The caller passes the entity, and passing one is the whole permission: the
   // block is settled by a PICK that resolved to a candidate, which is the only
@@ -304,7 +304,7 @@ export function useClarifyAnswers({
   // written to the field, so there is nothing for the server to confirm.
   // Recording it as an answer stops the question from counting as an open
   // decision; the confirm resolutions map it per its comparison kind.
-  // This is a PERSON declining a question, always: the one retirement the
+  // This is a CONTACT declining a question, always: the one retirement the
   // machine performs is retireLegalSiblings above, which records itself. No
   // flag to pass, so no call site can file its own conclusion as a human's.
   const dismissClarify = useCallback(

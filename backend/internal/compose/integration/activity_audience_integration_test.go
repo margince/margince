@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/person360"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -30,12 +30,12 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Dana Buyer", &e.Rep1)
+	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 
 	subject, body := "Q3 renewal terms", "confidential pricing"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -82,7 +82,7 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 	if after.Direction == nil || after.OccurredAt.IsZero() {
 		t.Errorf("the withheld row lost its safe markers: %+v", after)
 	}
-	page, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{EntityType: strPtr("person"), EntityID: &contact})
+	page, _, err := e.Activities.ListActivities(colleague, activities.ListActivitiesInput{EntityType: strPtr("contact"), EntityID: &contact})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 	}
 }
 
-// The record page reads its timeline through the person 360, which assembles
+// The record page reads its timeline through the contact 360, which assembles
 // its OWN statement over `activity` rather than going through the shared
 // projection. So it is a second writer of the same promise, and the promise has
 // to be proved on it separately: a colleague reading a contact's page learns
@@ -127,16 +127,16 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 // This is the read that shipped without the reason at all, which is the other
 // half of the same bug — the field is optional on the wire, so both a dropped
 // reason and a leaked one pass unnoticed by everything downstream.
-func TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T) {
+func TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T) {
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
-	contact := e.SeedPerson(t, "Nadia Renewal", &e.Rep1)
+	contact := e.SeedContact(t, "Nadia Renewal", &e.Rep1)
 
 	subject, body := "Aufhebungsvertrag draft", "terms nobody else is owed"
 	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: strPtr("outbound"),
-		Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
 	if err != nil {
 		t.Fatalf("log: %v", err)
@@ -147,14 +147,14 @@ func TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T
 		t.Fatalf("limiting: %v", err)
 	}
 
-	svc := person360.NewService(e.Pool, e.People, e.Deals, e.Projects, consent.NewStore(e.DB()),
+	svc := contact360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, consent.NewStore(e.DB()),
 		comms.NewStore(e.DB(), time.Now, activities.NewStore(e.DB())), ai.NewFeedbackStore(e.DB()),
 		func() time.Time { return roomFixedNow })
 
 	// The AUTHOR's page carries the reason: it is their message, and the reason
 	// is what the share decision is made against. Asserted first, so a version
 	// that withholds it from everybody cannot pass the colleague's arm below.
-	mine, err := svc.Assemble(author, ids.From[ids.PersonKind](contact))
+	mine, err := svc.Assemble(author, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the author's page: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T
 			"is where that decision is made, so a reason it never receives is a reason nobody acts on")
 	}
 
-	theirs, err := svc.Assemble(colleague, ids.From[ids.PersonKind](contact))
+	theirs, err := svc.Assemble(colleague, ids.From[ids.ContactKind](contact))
 	if err != nil {
 		t.Fatalf("assembling the colleague's page: %v", err)
 	}
@@ -173,11 +173,11 @@ func TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T
 		t.Fatalf("the colleague's timeline row = %+v, want content_state=withheld", row)
 	}
 	if row.AudienceReason != nil {
-		t.Errorf("the person page told a colleague why the message is held: %q — the reason "+
+		t.Errorf("the contact page told a colleague why the message is held: %q — the reason "+
 			"describes what the message is about", *row.AudienceReason)
 	}
 	if row.Subject != nil || row.Body != nil {
-		t.Errorf("the person page carried a limited message's content to a colleague: %+v", row)
+		t.Errorf("the contact page carried a limited message's content to a colleague: %+v", row)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestThePersonPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T
 // fails rather than returning a zero row when the section is missing or holds
 // a different number: an assertion against a row that is not there passes for
 // the wrong reason, which is the failure this whole file exists to catch.
-func onlyTimelineRow(t *testing.T, page crmcontracts.Person360) crmcontracts.Activity {
+func onlyTimelineRow(t *testing.T, page crmcontracts.Contact360) crmcontracts.Activity {
 	t.Helper()
 	if page.Activities == nil {
 		t.Fatal("the page carried no activities section")

@@ -82,7 +82,7 @@ func (h connectorHandlers) providerWired(provider string) bool {
 // one without the other.
 //
 // Checked here so that gap answers the declared 501 at the gate, rather than
-// letting a person through the vendor's consent screen and failing afterwards
+// letting a contact through the vendor's consent screen and failing afterwards
 // with "connector not registered" — a refusal they cannot act on, having already
 // granted access.
 func (h connectorHandlers) canRunConsent(provider string) bool {

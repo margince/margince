@@ -16,7 +16,7 @@ import { parseSource } from "../../scripts/lib/source-tree";
 // `format/format.ts` is where this application asks it. A screen that carries
 // its own map of codes is answering one of those questions a second time.
 //
-// It is not a tidiness argument. `personstrip.tsx` carried
+// It is not a tidiness argument. `contactstrip.tsx` carried
 // `{EUR:"€", USD:"$", GBP:"£", default: CODE+" "}` beside a hard-coded /1000
 // tier, so every reader was told "k" — including the German one, whose
 // conventions abbreviate at the million and put the symbol after the figure.
@@ -258,7 +258,7 @@ describe("a currency", () => {
 
   const planted: ReadonlyArray<readonly [string, string, number]> = [
     [
-      "the symbol table personstrip really carried",
+      "the symbol table contactstrip really carried",
       'function s(c) { switch (c) { case "EUR": return "€"; case "USD": return "$"; case "GBP": return "£"; default: return c; } }',
       1,
     ],

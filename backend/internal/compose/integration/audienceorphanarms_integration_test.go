@@ -119,7 +119,7 @@ func audienceArmCases(teamOne ids.UUID) []armCase {
 			},
 		},
 		{
-			name:     "a participant row admits the person on the conversation",
+			name:     "a participant row admits the contact on the conversation",
 			audience: "participants",
 			arrange: func(t *testing.T, e *Env, tx pgx.Tx, id ids.UUID) ids.UUID {
 				t.Helper()

@@ -3,13 +3,13 @@
 -- Postgres.
 --
 -- What it deletes: every base table in `public` except the preserved set below.
--- What it keeps: the installation itself — its workspace, its people, its roles
+-- What it keeps: the installation itself — its workspace, its contacts, its roles
 -- and sessions, its configuration and its append-only ledgers — so the stack is
 -- usable the moment this finishes. `make seed-dev` runs straight afterwards with
 -- no restart, because the admin it logs in as is still there.
 --
 -- IT NO LONGER DELETES THE WORKSPACE. It used to, and the recovery then depended
--- on the API re-bootstrapping the organization from margince.yaml at its NEXT
+-- on the API re-bootstrapping the company from margince.yaml at its NEXT
 -- boot — so a reset against a running stack left seed-dev with no workspace to
 -- seed into and nothing saying why.
 --
@@ -41,9 +41,12 @@ DECLARE
     'ai_call_config',
     'app_user',
     'audit_log',
+    'activity_review_template',
     'auth_token',
     'channel_provider',
+    'communication_instruction',
     'currency_minor_digits',
+    'deal_acquisition_source',
     'embed_store_binding',
     'consent_text_version',
     'event_outbox',
@@ -51,8 +54,11 @@ DECLARE
     'lead_source',
     'overlay_mode',
     'passport',
+    'project_health_assessment',
+    'record_role',
     'role',
     'role_assignment',
+    'sdr_handoff_reason',
     'session',
     'setting',
     'system_log',
@@ -108,6 +114,33 @@ BEGIN
   DELETE FROM activity_retention_evidence are
    WHERE NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = are.activity_id);
 
+  -- communication_instruction is the SAME shape one column over: preserved
+  -- above because its own trigger refuses every direct DELETE unconditionally
+  -- ("a communication instruction is the record of a decision and is never
+  -- deleted") — but that trigger is suppressed by replica mode exactly like
+  -- activity_retention_evidence's own, and so is communication_review's
+  -- ON DELETE CASCADE into it. Without this statement, sweeping
+  -- communication_review above would leave every instruction behind, now
+  -- naming a review that no longer exists — silently, since replica mode
+  -- means neither the FK nor the trigger would raise to say so.
+  --
+  -- The in-product reset has no equivalent answer: it runs as the
+  -- application role, which cannot disable the trigger, so the same cascade
+  -- there aborts the whole reset instead of orphaning anything — tracked as
+  -- margince#5287, a product decision this script is not the place to make
+  -- on its own.
+  DELETE FROM communication_instruction ci
+   WHERE NOT EXISTS (SELECT 1 FROM communication_review cr WHERE cr.id = ci.review_id);
+
+  -- project_health_assessment is the SAME shape as activity_retention_evidence
+  -- above: its own trigger refuses a direct DELETE while the project it
+  -- judged still exists, and this script's replica mode suppresses both that
+  -- trigger and project's ON DELETE CASCADE into it. Without this statement,
+  -- sweeping `project` above would leave every assessment behind, now naming
+  -- a project that no longer exists.
+  DELETE FROM project_health_assessment pha
+   WHERE NOT EXISTS (SELECT 1 FROM project p WHERE p.id = pha.project_id);
+
   -- event_outbox is preserved the same way: "not a target" of the generic
   -- sweep, never "kept" outright. Clearing it here removes only the DATABASE
   -- rows — it is not the guarantee the in-product reset gives. The relay
@@ -122,7 +155,7 @@ BEGIN
   -- or expect a consumer to see a handful of not-found records after a reset.
   DELETE FROM event_outbox;
 
-  RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its people and its configuration are untouched — run make seed-dev to fill it', targets;
+  RAISE NOTICE 'seed-reset: cleared % record table(s); the installation, its contacts and its configuration are untouched — run make seed-dev to fill it', targets;
 END $$;
 
 COMMIT;

@@ -30,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// TestReembedReembedsAllLiveEntitiesAndIsResumable seeds 3 people
+// TestReembedReembedsAllLiveEntitiesAndIsResumable seeds 3 contacts
 // under a stale identity, then proves a single Reembed call under
 // a NEW identity re-embeds all 3 (their stored model becomes the new
 // identity) and reads EntitiesPending == 0 afterward. A SECOND pass over
@@ -53,13 +53,13 @@ func TestReembedReembedsAllLiveEntitiesAndIsResumable(t *testing.T) {
 	}
 
 	names := []string{"Reembed One", "Reembed Two", "Reembed Three"}
-	personIDs := make([]ids.UUID, len(names))
+	contactIDs := make([]ids.UUID, len(names))
 	for i, name := range names {
-		id := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
-		if _, err := e.Store.UpsertEmbedding(e.Admin(), "person", id, name, staleEmbedder); err != nil {
+		id := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
+		if _, err := e.Store.UpsertEmbedding(e.Admin(), "contact", id, name, staleEmbedder); err != nil {
 			t.Fatalf("seeding the stale-identity baseline for %s: %v", name, err)
 		}
-		personIDs[i] = id
+		contactIDs[i] = id
 	}
 	baselineCalls := len(fake.Calls())
 
@@ -68,9 +68,9 @@ func TestReembedReembedsAllLiveEntitiesAndIsResumable(t *testing.T) {
 		t.Fatalf("Reembed: %v", err)
 	}
 
-	for i, id := range personIDs {
+	for i, id := range contactIDs {
 		if got := e.storedEmbeddingModel(t, id); got != newIdentity {
-			t.Fatalf("person[%d] model = %q, want %q (must have been re-embedded under the new identity)", i, got, newIdentity)
+			t.Fatalf("contact[%d] model = %q, want %q (must have been re-embedded under the new identity)", i, got, newIdentity)
 		}
 	}
 
@@ -163,7 +163,7 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 
-	e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Unwritable Person', 'manual', 'human:x')`)
+	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unwritable Contact', 'manual', 'human:x')`)
 	failEmbeddingWrites(t, e.Owner)
 
 	if err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity}, embedder); err == nil {
@@ -182,7 +182,7 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 // past it. A run has five attempts; a corpus reached the same bad entity in
 // each of them.
 //
-// The refusing embedder fails exactly one person by its text, so the assertion
+// The refusing embedder fails exactly one contact by its text, so the assertion
 // is not "some rows survived" but "the row AFTER the failing one is current".
 func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
 	e := SetupSearch(t)
@@ -194,14 +194,14 @@ func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
 		t.Fatalf("SeedBinding: %v", err)
 	}
 
-	// Three people, and the embedder refuses whichever it is asked for FIRST.
+	// Three contacts, and the embedder refuses whichever it is asked for FIRST.
 	// Naming a fixed victim would leave the test at the mercy of scan order:
 	// liveEntitiesOf has no ORDER BY, so a refused row that happened to come
 	// last would let the old stop-at-first-failure code pass this test with
 	// nothing embedded after it. Refusing the first row asked for makes the
 	// two survivors the rows BEHIND the failure in every possible order.
 	for _, name := range []string{"Reachable One", "Reachable Two", "Reachable Three"} {
-		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
+		e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name)
 	}
 
 	err := e.Store.Reembed(ctx, search.ReembedPass{Run: ids.NewV7(), Identity: identity},
@@ -215,13 +215,13 @@ func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
 
 	var current int
 	if scanErr := e.Owner.QueryRow(ctx,
-		`SELECT count(*) FROM embedding em JOIN person p ON p.id = em.entity_id
-		  WHERE em.entity_type = 'person' AND em.model = $1 AND p.full_name LIKE 'Reachable %'`,
+		`SELECT count(*) FROM embedding em JOIN contact p ON p.id = em.entity_id
+		  WHERE em.entity_type = 'contact' AND em.model = $1 AND p.full_name LIKE 'Reachable %'`,
 		identity).Scan(&current); scanErr != nil {
-		t.Fatalf("counting embedded people: %v", scanErr)
+		t.Fatalf("counting embedded contacts: %v", scanErr)
 	}
 	if current != 2 {
-		t.Fatalf("%d of the 2 people behind the refused one are current under %s; a pass that stops at the first refusal leaves them stale", current, identity)
+		t.Fatalf("%d of the 2 contacts behind the refused one are current under %s; a pass that stops at the first refusal leaves them stale", current, identity)
 	}
 }
 
@@ -243,8 +243,8 @@ func TestReembedStopsCallingAProviderThatAnswersNothing(t *testing.T) {
 
 	seeded := search.ReembedConsecutiveFailureLimit + 5
 	for i := range seeded {
-		e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
-			fmt.Sprintf("Outage Person %d", i))
+		e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+			fmt.Sprintf("Outage Contact %d", i))
 	}
 
 	embedder := &refusingEmbedder{inner: inner, refuseEvery: true}
@@ -300,11 +300,11 @@ func TestReembedIdentityDriftCancelsWithoutTouchingRows(t *testing.T) {
 	if err := e.Store.SeedBinding(ctx, markerIdentity); err != nil {
 		t.Fatalf("SeedBinding: %v", err)
 	}
-	personID := e.SeedID(t, `INSERT INTO person (id, full_name, source, captured_by) VALUES ($1, 'Drift Person', 'manual', 'human:x')`)
+	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Drift Contact', 'manual', 'human:x')`)
 	if _, err := e.Owner.Exec(ctx, `
 		INSERT INTO embedding (entity_type, entity_id, chunk_ix, chunk_hash, model, embedding)
-		VALUES ('person', $1, 0, 'stale-hash', $2, '[1,2,3]'::vector)`,
-		personID, staleRowIdentity); err != nil {
+		VALUES ('contact', $1, 0, 'stale-hash', $2, '[1,2,3]'::vector)`,
+		contactID, staleRowIdentity); err != nil {
 		t.Fatalf("seeding the stale-identity row: %v", err)
 	}
 
@@ -318,7 +318,7 @@ func TestReembedIdentityDriftCancelsWithoutTouchingRows(t *testing.T) {
 	if calls := len(fake.Calls()); calls != 0 {
 		t.Fatalf("identity drift must not call the embedder, got %d calls", calls)
 	}
-	if got := e.storedEmbeddingModel(t, personID); got != staleRowIdentity {
+	if got := e.storedEmbeddingModel(t, contactID); got != staleRowIdentity {
 		t.Fatalf("drift guard must not touch existing rows, model = %q, want unchanged %q", got, staleRowIdentity)
 	}
 	_, status, _, err := e.Store.PopulatedIdentity(ctx)

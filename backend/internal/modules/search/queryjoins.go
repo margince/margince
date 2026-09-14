@@ -12,9 +12,9 @@ package search
 // by construction rather than by omission: there was no member to read it off.
 //
 // What makes one rule enough for both join tables in this schema is that they
-// are the same shape physically. `activity_link` carries `person_id`,
-// `organization_id`, `deal_id` and `lead_id`; `relationship` carries
-// `person_id`, `organization_id`, `deal_id` and `project_id`. The contract's
+// are the same shape physically. `activity_link` carries `contact_id`,
+// `company_id`, `deal_id` and `lead_id`; `relationship` carries
+// `contact_id`, `company_id`, `deal_id` and `project_id`. The contract's
 // `ActivityLink{entity_id, entity_type}` is the WIRE shape of a link and not
 // its storage — the columns are typed, and a CHECK constraint says which one
 // each row fills. So the rule reads columns, exactly as the field vocabulary
@@ -41,18 +41,18 @@ import (
 // this file exists to avoid; a two-entry list of tables that a test holds
 // against the schema is not that.
 var joinTables = []joinTable{
-	// Every kind this hub reaches pairs a person with one arm: employment is
-	// person+organization, deal_stakeholder is person+deal,
-	// project_stakeholder is person+project (core 0007, 0131).
+	// Every kind this hub reaches pairs a contact with one arm: employment is
+	// contact+company, deal_stakeholder is contact+deal,
+	// project_stakeholder is contact+project (core 0007, 0131).
 	//
 	// It does NOT reach every legal row. The partner kinds (partner_of,
-	// referred_by, co_sell_with) pair organization_id with counterparty_org_id
-	// and require person_id IS NULL, so they are an organization↔organization
-	// edge with no person in it — a shape one hub cannot express, on a column
+	// referred_by, co_sell_with) pair company_id with counterparty_company_id
+	// and require contact_id IS NULL, so they are a company↔company
+	// edge with no contact in it — a shape one hub cannot express, on a column
 	// arms cannot read. Those rows stay untraversable, which is stated here and
 	// gated by TestAReferenceNamedForItsRoleYieldsNoHop rather than left to be
 	// rediscovered.
-	{table: "relationship", hub: personRef, object: objectRelationship},
+	{table: "relationship", hub: contactRef, object: objectRelationship},
 	// activity_id is NOT NULL and exactly one arm is set, which the table's
 	// own activity_link_shape CHECK enforces arm by arm (core 0008, 0038).
 	// No object of its own: a link is not a record, and reading one discloses
@@ -60,10 +60,10 @@ var joinTables = []joinTable{
 	{table: "activity_link", hub: "activity_id"},
 }
 
-// personRef is the reference column two of the derivations name, spelled once.
+// contactRef is the reference column two of the derivations name, spelled once.
 // The linter asks for the constant; what makes it worth having is that a
 // misspelling in the hub declaration would silently derive no hops at all.
-const personRef = entityPerson + relationSuffix
+const contactRef = entityContact + relationSuffix
 
 // objectRelationship is the RBAC object governing the employment and
 // stakeholder edges. Named here rather than imported: a module never imports a
@@ -83,9 +83,9 @@ const (
 //
 // The hub is what makes the derivation exact rather than combinatorial. A join
 // table's record references are not interchangeable — `relationship` holds
-// `organization_id` and `deal_id` and no row ever fills both, because they
+// `company_id` and `deal_id` and no row ever fills both, because they
 // belong to different kinds. Pairing every column with every other would
-// publish `organization → deals` through this table, a hop no row can satisfy
+// publish `company → deals` through this table, a hop no row can satisfy
 // and which a caller would read as "no data" rather than "not a thing".
 //
 // So one column is named and the rest are arms, and the edges are hub↔arm.
@@ -101,7 +101,7 @@ type joinTable struct {
 	//
 	// It is not the same question as the two endpoints' own grants, which is
 	// why gating those is not enough: `relationship` is a first-class object
-	// precisely because an edge discloses its endpoints as a PAIR. The people
+	// precisely because an edge discloses its endpoints as a PAIR. The contacts
 	// module says so where it gates the same read — "reading an edge discloses
 	// its endpoints, which is what `relationship` read governs" — and a
 	// traversal that skipped it would answer "who works at Acme" for a role
@@ -114,22 +114,37 @@ type joinTable struct {
 //
 // Carrying two references is what makes a table a candidate, not what makes it
 // an edge, and the census in queryjoins_test.go cannot tell the two apart —
-// `activity_participant` and `person_consent` look identical to it. So every
+// `activity_participant` and `contact_consent` look identical to it. So every
 // candidate gets a verdict in one of these two lists and a new table gets
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"provider_employment_resolution": "retained provider evidence and its resolution outcome, including unresolved and dismissed entries; canonical employment traversal belongs to relationship, otherwise rejected evidence would become a search edge",
+	"record_assignment": "company_id, deal_id and project_id are alternative PARENTS of one " +
+		"assignment — the record_assignment_one_parent CHECK admits exactly one — so the three " +
+		"together are a polymorphic parent rather than a path between records. Nothing traverses " +
+		"from a deal to a company through one: an assignment relates a record to the COLLEAGUE OR TEAM " +
+		"responsible for it, and that subject is an app_user or a team, neither of which a record " +
+		"hop searches for",
+	"activity_review_response": "activity_id and deal_id are the review's two HALVES, not a path " +
+		"between them: the activity IS the review and the deal is what it is about, so traversing " +
+		"the pair would answer \"which deal is this note about\" — which activity_link already " +
+		"answers, for every note rather than only for the ones carrying a review",
 	"activity_participant": "who capture MATCHED from an address, where activity_link is what it " +
 		"ASSERTED about the record — graphactivity.go ranks the assertion above the match for the " +
 		"same reason a hop should traverse it and not this",
-	"person_consent": "person_id and lead_id are alternative OWNERS of one consent record, never both, " +
+	"contact_consent": "contact_id and lead_id are alternative OWNERS of one consent record, never both, " +
 		"so the pair is a polymorphic parent rather than an edge between the two",
-	"consent_event": "the append-only log behind person_consent, and polymorphic in the same way",
-	"communication_basis": "person_id and lead_id are alternative SUBJECTS of one basis, never both, so " +
-		"the pair is polymorphic exactly as person_consent is — and a basis says why a message to that " +
-		"subject was lawful, which relates a person to a DECISION and not to another record",
+	"consent_event": "the append-only log behind contact_consent, and polymorphic in the same way",
+	"communication_basis": "contact_id and lead_id are alternative SUBJECTS of one basis, never both, so " +
+		"the pair is polymorphic exactly as contact_consent is — and a basis says why a message to that " +
+		"subject was lawful, which relates a contact to a DECISION and not to another record",
 	"communication_suppression": "polymorphic in the same way, and for the same reason: an objection is " +
 		"something one subject said, not a path from them to anybody else",
+	"withdrawal_credential": "polymorphic exactly as the two above: contact_id and lead_id are " +
+		"alternative HOLDERS of one credential, never both, and most rows name neither — the " +
+		"credential is keyed by the address the mail went to, which is what an opt-out acts on. " +
+		"It relates a subject to a CAPABILITY over their own mail, not to another record",
 	"activity_retention_evidence": "what a retention decision was taken on; it relates a record to a " +
 		"DECISION about it, and nothing traverses from one record to another through it",
 	"project_link_candidate": "a RETIRED table: it held questions the attribution ladder's uncertain rung " +
@@ -138,15 +153,15 @@ var notAnEdge = map[string]string{
 		"shipped, so the create is still here and still owes a verdict. It was never an edge even while " +
 		"live: until a human confirmed one nothing connected the two records, and once they did the " +
 		"activity_link row was the edge a hop traverses",
-	"person_signature_enrich_state": "enrichment bookkeeping keyed by the activity a signature was read " +
+	"contact_signature_enrich_state": "enrichment bookkeeping keyed by the activity a signature was read " +
 		"from — a cursor over work, not a statement about the two records",
 	"attachment": "a file, which is a record in its own right. Its extra references are the " +
 		"ROLL-UP READ PATH core 0195 declares them to be — the primary parent still owns the " +
 		"file's visibility — so they denormalize one record's parentage rather than relating two",
 	"sdr_handoff": "a decision ABOUT a prospect, not a path from one record to another. Its four " +
-		"references are the subject that was handed on (a lead or a person, never both), the company " +
+		"references are the subject that was handed on (a lead or a contact, never both), the company " +
 		"it belongs to, and the deal an acceptance produced — a hop through it would answer \"which " +
-		"deals came from leads\" by way of somebody's routing decision, when deal.organization_id " +
+		"deals came from leads\" by way of somebody's routing decision, when deal.company_id " +
 		"already answers that about the records themselves. The same ground activity_retention_evidence " +
 		"sits on: it relates a record to a judgement made about it",
 	"contract": "a finance record in its own right. Its references are the scalar kind any record " +
@@ -166,7 +181,7 @@ var notAnEdge = map[string]string{
 // Archived is DELETED: the edge was recorded in error, or the row was swept.
 // Ended is LEFT: the edge was true and stopped being true, which is the
 // ordinary end of a job and leaves the row in place. Filtering only the first
-// is what makes a company a person left go on reading as where they work —
+// is what makes a company a contact left go on reading as where they work —
 // the same conflation #1789 fixed on the write side of this column.
 type JoinEdge struct {
 	Table      string
@@ -261,9 +276,9 @@ func (j joinTable) edges(stored *storage, entity string) []joinEdge {
 //
 // A column is a reference only when stripping `_id` leaves the name of a record
 // type this module searches — the same test contractRelations applies, and it
-// is what keeps `relationship.counterparty_org_id` out. That column names its
-// ROLE (the partner org on an org↔org edge) rather than its target, so
-// org↔org partner edges stay untraversable. Special-casing the name here would
+// is what keeps `relationship.counterparty_company_id` out. That column names its
+// ROLE (the partner company on a company↔company edge) rather than its target, so
+// company↔company partner edges stay untraversable. Special-casing the name here would
 // make this derivation carry one table's naming history; the honest fix is in
 // the contract, and until it happens the gap is visible rather than papered
 // over.
@@ -282,8 +297,8 @@ func (j joinTable) arms(stored *storage) []string {
 // joinVia renders the published explanation of a join edge.
 //
 // It is prose, not a parse target. The two SCALAR spellings of Via are read
-// back apart by newHopBinding — a bare `organization_id` against a qualified
-// `deal.organization_id` — and a join edge is told apart from both by carrying
+// back apart by newHopBinding — a bare `company_id` against a qualified
+// `deal.company_id` — and a join edge is told apart from both by carrying
 // a JoinEdge, never by its text. The arrow is what keeps a reader from trying:
 // no scalar Via has ever contained one.
 func joinVia(table, from, to string) string {
@@ -293,8 +308,8 @@ func joinVia(table, from, to string) string {
 // pluralRelationName is the ONE spelling of a hop that may land on many rows.
 //
 // Both derivations that produce one use it: the inverse of a scalar reference
-// (`organization` → `deals`) and either direction of a join edge
-// (`person` → `organizations`). A second pluralization rule beside this one is
+// (`company` → `deals`) and either direction of a join edge
+// (`contact` → `companies`). A second pluralization rule beside this one is
 // how a vocabulary comes to answer to two names for one hop.
 func pluralRelationName(entity string) string {
 	if plural, irregular := irregularPlurals[entity]; irregular {
@@ -309,13 +324,16 @@ func pluralRelationName(entity string) string {
 // before that, no record declared a scalar activity_id, so the rule was never
 // asked. A name a caller has to misspell to use is a worse answer than a
 // missing hop.
-var irregularPlurals = map[string]string{entityActivity: "activities"}
+var irregularPlurals = map[string]string{
+	entityActivity: "activities",
+	entityCompany:  "companies",
+}
 
 // mergeRelations keeps ONE relation per name, and a direct edge wins.
 //
 // No pair collides on today's schema, and that is a property of the hub rule
 // rather than of the namespace: an arm reaches only the hub, so `relationship`
-// never offers `organization → deals` beside the scalar edge of that name. This
+// never offers `company → deals` beside the scalar edge of that name. This
 // stays because the two derivations share ONE namespace and neither knows what
 // the other produced — the day a second hub, a same-type edge or a new join
 // table makes a name contested, which of them ran would otherwise depend on the
@@ -346,7 +364,7 @@ func mergeRelations(direct, joined []Relation) []Relation {
 //
 // The tenant is not named, and the reason is not RLS: ADR-0091 retired every
 // policy (core 0217) and dropped workspace_id from both join tables (the
-// activity-spine and records sweeps). One installation serves one organization,
+// activity-spine and records sweeps). One installation serves one company,
 // so there is no tenant predicate anywhere on this read — the outer statement
 // and the lateral hop carry none either. What bounds this subquery is what
 // bounds them: the caller's row scope and object RBAC, applied to the records at
@@ -360,13 +378,13 @@ func joinEdgeCondition(edge JoinEdge) string {
 	if edge.Ends {
 		// A hop is CURRENT membership, which is what every other reader of this
 		// column in the tree means by it (compose/introseams.go,
-		// compose/network/persongraphaccount.go). "People at this company"
+		// compose/network/contactgraphaccount.go). "Contacts at this company"
 		// answering with the ones who left would be wrong in the direction that
 		// costs something: a stale contact is acted on, a missing one is asked
 		// about.
 		//
 		// A FUTURE ended_at is a notice period, and it is still current — the
-		// person works there until the date arrives. Compared against the
+		// contact works there until the date arrives. Compared against the
 		// DATABASE's clock, because the row is dated by it and a comparison
 		// against any other would disagree with it near midnight.
 		where = append(where, fmt.Sprintf("(j.%s IS NULL OR j.%s > current_date)", columnEndedAt, columnEndedAt))

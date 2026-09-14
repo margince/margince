@@ -17,7 +17,7 @@ You connect these yourself, at **Settings → Connections → Connected inboxes*
 | **Google Calendar** | "Your Google calendar. It connects separately from Gmail." | No |
 | **Microsoft** | "Mail and calendar on a Microsoft work account, over the Graph API. Capture only." | No |
 | **IMAP mailbox** | "Any other mail host, with an app password. Capture only." | No |
-| **Telegram** | One bot for the whole organization. An administrator connects it, not you. | Yes |
+| **Telegram** | One bot for the whole company. An administrator connects it, not you. | Yes |
 
 A mailbox connected before sending existed **cannot be upgraded in place**. The
 provider only grants sending on a fresh connection, so you have to reconnect.
@@ -48,9 +48,9 @@ account's third-party access. Remove it there too if you want it fully revoked.
 ### An agent can never connect a mailbox for you
 
 Connecting is a human-only action. An agent granting itself read access to a
-person's personal mail is exactly what this product does not allow.
+contact's personal mail is exactly what this product does not allow.
 
-A connection also cannot exceed the person who made it. If your permissions are
+A connection also cannot exceed the contact who made it. If your permissions are
 reduced later, the connection's reach is reduced with them on its next poll.
 
 ## Importing your mail history
@@ -72,7 +72,7 @@ hourly and enrichment daily afterwards.
 
 **Everything it brings in is held to begin with.** A new mailbox is *Held until
 classified*, so a backfill of five years of mail does not put five years of mail
-in front of your colleagues: each thread stays with the people who were on it
+in front of your colleagues: each thread stays with the contacts who were on it
 until a classifier judges it ordinary business. That is also true of the records
 the import mints — a contact created from a thread nothing has judged yet is
 yours alone until the verdict clears it.
@@ -115,7 +115,7 @@ marked Done, Skipped, Waiting, Failed, Did not apply, or Cannot tell.
 
 Plain rules, checked in order. No model is involved in any of this.
 
-**Is the sender a colleague?** Then judge the external person on the message
+**Is the sender a colleague?** Then judge the external contact on the message
 instead. If *everyone* on it is internal, create nothing.
 
 **Have we provably sent mail to this address before?** Then create the contact.
@@ -142,7 +142,7 @@ Worth saying on its own, because it is a deliberate change. Creating a contact
 does not create their employer.
 
 It used to. Deriving a company from every mail domain manufactured companies
-named after people — `sebastian@kestner.example` became a company called
+named after contacts — `sebastian@kestner.example` became a company called
 "Kestner". So now capture records an open question, and a separate step that
 actually reads the domain's website answers it.
 
@@ -154,7 +154,7 @@ An unknown sender goes into a queue. Once an hour, the system works through it.
 asked once per *sender*, never per message, and only for senders the plain rules
 could not classify. Six answers are possible:
 
-- **A person** → create the contact, and go check whether the domain deserves a
+- **A contact** → create the contact, and go check whether the domain deserves a
   company.
 - **A role mailbox** or **a company sender** → keep the mail visible, create no
   contact.
@@ -168,7 +168,7 @@ capture works normally — only this judging step is skipped.
 ### Low confidence never becomes a deletion
 
 Below a confidence of 0.7 the sender is asked about once more on its own. If it
-is still below, it becomes **unsure** and goes to a person. The rule the product
+is still below, it becomes **unsure** and goes to a contact. The rule the product
 states: a low score costs an extra question, never a wrong deletion.
 
 An unsure sender reaches you as an approval card called **"Add someone from your
@@ -178,7 +178,7 @@ rejected one can never delete anything.
 
 ### Two safety limits
 
-Margince holds at most **500 open sender questions** per organization, and at
+Margince holds at most **500 open sender questions** per company, and at
 most **50 from any one sender domain**. When either limit is hit, the log
 records *which* one — so "the queue is full" and "one domain is flooding it" are
 never confused with each other.
@@ -204,7 +204,7 @@ two different projects, both settle nothing and the ladder moves on.
 
 If nothing matches, nothing happens. No link, and no question raised. Filing by
 guesswork is exactly what the product will not do — every rule above is either
-exact, or confirmed by a person.
+exact, or confirmed by a contact.
 
 A message that arrives before its project exists is not re-filed later on its
 own. Relink it, or let the next message in the thread carry the filing.
@@ -248,7 +248,7 @@ The check runs **before** the message is stored, on purpose, so no copy exists
 anywhere. The log row does not record the address or the subject — recording
 them would leak exactly what dropping the message was meant to prevent.
 
-This extends further than people expect: a colleague's recap *about* a client is
+This extends further than contacts expect: a colleague's recap *about* a client is
 still internal mail. A recap about a client is not correspondence with one.
 
 **Capture cannot send anything.** It is read-only. Sending is a completely
@@ -294,7 +294,7 @@ never offered again by any mailbox.
 
 **Keep out of capture** (Settings → Capture activity) — addresses and domains
 whose messages never enter the CRM. Your own rules bind only the mailboxes you
-connected; the organization's rules bind everyone, and only an administrator may
+connected; the company's rules bind everyone, and only an administrator may
 change one of those. Takes effect from the next message; messages already
 captured stay.
 
@@ -303,21 +303,21 @@ from a consumer mailbox still creates the contact — it just never creates a
 company."
 
 **Refused domains** — which domains this installation refuses a company, and
-what decided each one: a model verdict, a heuristic, or a person. Letting a
+what decided each one: a model verdict, a heuristic, or a contact. Letting a
 domain back in re-opens the company question rather than merely clearing a flag.
 
 **Who may read mail from this inbox** (Settings → Connections, under each
 mailbox) — the posture that mailbox asks for. Three answers:
 
 - **Held until classified** — the default for every new mailbox. A message stays
-  with the people who were on it until a classifier judges the thread ordinary
+  with the contacts who were on it until a classifier judges the thread ordinary
   business; only then can colleagues read it. Nothing is shared before a
   decision, so a classifier that is down or out of budget leaves mail held
   rather than open.
 - **Always held** — the same, minus the classifier. You share a thread yourself,
   one at a time, from its row on the record timeline.
 - **Shared with the team** — a captured message is readable the moment it lands.
-  Off unless an admin allows it for the organization, because reading an
+  Off unless an admin allows it for the company, because reading an
   employee's mailbox into a shared CRM is what a works-council agreement covers
   in Germany and Austria. Margince does not verify that one exists.
 
@@ -326,18 +326,18 @@ narrow what is already captured; it only ever narrows, because re-opening what
 was captured under a stricter answer is a separate decision.
 
 **Senders** (Settings → Connections) — every address your mailbox brought in and
-what the classifier concluded about each: a person, a role mailbox, an automated
+what the classifier concluded about each: a contact, a role mailbox, an automated
 tool, a newsletter, an advisor, personal. You can overrule any of them. "This is
 business" readmits a sender; "keep out" destroys what they brought into your
 mailbox and stops the next message. A decision you make is never overwritten by
 a later verdict.
 
 **Private correspondence** (a contact's or company's page) — keep your mail with
-one party to the people on it, without deciding message by message. A domain
+one party to the contacts on it, without deciding message by message. A domain
 hold covers the whole firm, which is usually what you want for a lawyer or an
 accountant. It binds mail from then on, and lifting it re-opens nothing.
 
-**Email sharing** (Settings → Capture, admin) — the organization-wide floor. On
+**Email sharing** (Settings → Capture, admin) — the company-wide floor. On
 by default; turned off, every message captured from then on is held to its
 participants whatever any mailbox asks for. The app warns you honestly that
 doing so "will make usage of the CRM difficult."
@@ -346,10 +346,10 @@ doing so "will make usage of the CRM difficult."
 
 Your own connections need no permission from anyone — it is your own mail.
 
-Messages that arrived through an organization-wide connection, like the Telegram
-bot, belong to nobody in particular and are shown to people granted that access.
+Messages that arrived through a company-wide connection, like the Telegram
+bot, belong to nobody in particular and are shown to contacts granted that access.
 
-**No permission grant ever reaches a colleague's mailbox.** The organization-wide
+**No permission grant ever reaches a colleague's mailbox.** The company-wide
 view never returns a member's personal rows.
 
 A held message is not hidden — it is visible as a row with its date and kind,

@@ -58,13 +58,13 @@ func TestResetDataOverHTTP(t *testing.T) {
 		t.Fatalf("reset with wrong confirmation = %d, want 422", code)
 	}
 
-	// The organization name resets the workspace to first-boot state.
+	// The company name resets the workspace to first-boot state.
 	var out struct {
 		Status        string `json:"status"`
 		TablesCleared int    `json:"tables_cleared"`
 	}
 	if code := e.Call(t, "POST", "/v1/admin/reset-data", AnyMap{"confirmation": "Fable E2E"}, nil, &out); code != 200 {
-		t.Fatalf("reset with the org name = %d, want 200", code)
+		t.Fatalf("reset with the company name = %d, want 200", code)
 	}
 	if out.Status != "reset" {
 		t.Fatalf("reset status = %q, want %q", out.Status, "reset")

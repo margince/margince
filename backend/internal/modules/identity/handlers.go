@@ -273,17 +273,17 @@ func (h Handlers) accessTokenTTL() *time.Duration {
 // momentary mis-report costs an unsorted list, never a wrong answer.
 func (h Handlers) resolveSorMode(ctx context.Context) crmcontracts.MeResponseSystemOfRecordMode {
 	if h.sorMode == nil {
-		return crmcontracts.Native
+		return crmcontracts.MeResponseSystemOfRecordModeNative
 	}
 	overlay, err := h.sorMode(ctx)
 	if err != nil || !overlay {
-		return crmcontracts.Native
+		return crmcontracts.MeResponseSystemOfRecordModeNative
 	}
-	return crmcontracts.Overlay
+	return crmcontracts.MeResponseSystemOfRecordModeOverlay
 }
 
 // Login implements (POST /auth/login). The route is public; the singleton
-// organization is bound by the middleware (installation.go).
+// company is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.LoginRequest
 	if !httperr.Decode(w, r, &req) {

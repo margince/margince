@@ -10,8 +10,8 @@ package gates
 // An agent principal names the human whose authority it acts under, or says
 // here why there is none.
 //
-// PD-002 is that a change names the PERSON behind it first, and the read path
-// can only name a person the WRITE recorded. An audit row minted under
+// PD-002 is that a change names the CONTACT behind it first, and the read path
+// can only name a contact the WRITE recorded. An audit row minted under
 // actor_type='agent' with a NULL on_behalf_of therefore has nobody to name, and
 // the audit screen renders it "No human authority recorded" — which is honest
 // where it is TRUE and a silent gap where it is merely forgotten. From outside
@@ -45,7 +45,7 @@ import (
 // agentsWithNoHumanAuthority ratifies each site that mints an agent principal
 // and records no human behind it, with the reason there is none to record.
 var agentsWithNoHumanAuthority = gatekit.Waive(map[string]string{
-	"internal/compose:extensionJobPrincipal": "a scheduled extension tick is work NOBODY requested, so there is no person to name and naming one would be the invention. Its own doc says why the type is still agent rather than system: auth.Require returns nil for PrincipalSystem before Permissions is consulted, so system would delete the second of the two locks on the governed core-write door, and auth.Unbounded would hand the tick RowScopeAll. The units that ship scheduled work do not act on this authority anyway — each lands its records through Runtime.Ingest, which resolves the member's live grants and discards what the tick carried",
+	"internal/compose:extensionJobPrincipal": "a scheduled extension tick is work NOBODY requested, so there is no contact to name and naming one would be the invention. Its own doc says why the type is still agent rather than system: auth.Require returns nil for PrincipalSystem before Permissions is consulted, so system would delete the second of the two locks on the governed core-write door, and auth.Unbounded would hand the tick RowScopeAll. The units that ship scheduled work do not act on this authority anyway — each lands its records through Runtime.Ingest, which resolves the member's live grants and discards what the tick carried",
 })
 
 // buildsAgentPrincipal reports whether this function CONSTRUCTS an agent

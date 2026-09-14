@@ -7,7 +7,7 @@
  *
  * It is the second thing a reader looks at on a record page, after the name,
  * and every record has one — so it was written three times. The company's
- * lived in `company360.css` as `.co-meta-*`, the person's in `person360.css`
+ * lived in `company360.css` as `.co-meta-*`, the contact's in `contact360.css`
  * as `.pe-meta-*`, and the deal was about to grow a third. Two spellings of
  * one row is how a reader gets a 13px meta line on one record and a 13px
  * content-ink line with different gaps on the next, one click apart.

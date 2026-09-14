@@ -25,7 +25,7 @@ func TestSuppressionHashNormalizes(t *testing.T) {
 // The channel key must separate the two fields it joins, and must separate
 // providers: two accounts whose ids differ only in where the boundary falls
 // are different humans, and the same numeric id on two providers is two
-// people. A key that collided would suppress a stranger.
+// contacts. A key that collided would suppress a stranger.
 func TestChannelIdentityHashSeparatesProviderFromAccount(t *testing.T) {
 	base := ChannelIdentityHash("telegram", "123456789")
 	others := map[string]string{

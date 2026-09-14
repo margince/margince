@@ -88,7 +88,7 @@ async function decide(
   const { data, error } = await api.POST("/commissions/{id}/decide", {
     params: {
       path: { id: entry.id },
-      // The entry carries its own version, so two people deciding the same
+      // The entry carries its own version, so two contacts deciding the same
       // row at once get a 409 rather than the second one silently winning.
       ...ifMatch(entry.version ?? 0),
     },
@@ -116,11 +116,11 @@ async function decide(
 export function CommissionDecision({
   entry,
   decision,
-  organizationId,
+  companyId,
 }: Readonly<{
   entry: CommissionEntry;
   decision: Decision;
-  organizationId: string;
+  companyId: string;
 }>) {
   const t = useT();
   const { show: showToast } = useToast();
@@ -151,7 +151,7 @@ export function CommissionDecision({
       // decision: version skew".
       if (err instanceof ProblemError && isVersionSkew(err.problem)) {
         queryClient.invalidateQueries({
-          queryKey: ["partner-commissions", organizationId],
+          queryKey: ["partner-commissions", companyId],
         });
       }
     },
@@ -161,7 +161,7 @@ export function CommissionDecision({
       // second key nothing reads would be a line that looks like caution and
       // does nothing.
       queryClient.invalidateQueries({
-        queryKey: ["partner-commissions", organizationId],
+        queryKey: ["partner-commissions", companyId],
       });
       setOpen(false);
       setReason("");
@@ -246,7 +246,7 @@ export function CommissionDecision({
           <p
             className="t-caption"
             role="alert"
-            style={{ color: "var(--danger)" }}
+            style={{ color: "var(--dangerText)" }}
           >
             {mutation.error instanceof ProblemError &&
             isVersionSkew(mutation.error.problem)

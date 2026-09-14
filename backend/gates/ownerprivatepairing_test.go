@@ -14,7 +14,7 @@ package gates
 // row_scope=all principal alike. It is a record destroyed rather than a record
 // made private.
 //
-// The application cannot hold this on its own. people/personvisibility.go
+// The application cannot hold this on its own. contacts/contactvisibility.go
 // refuses a PATCH that sets 'owner' while clearing or omitting the owner, and
 // that is the right check to have; it cannot refuse the two-step route, because
 // it is a rule about a request and this is a property of a record. Narrow with

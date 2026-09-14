@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -54,6 +54,7 @@ function day(counts: WorklistCount[], shown = 1): Worklist {
     summary: { urgent: 0, due: 0, lower_priority: 0, total: shown },
     sources_unavailable: [],
     readings: {
+      changed_since_brief: 0,
       revenue_at_risk_minor: null,
       buyer_replies: 0,
       prospecting: 0,

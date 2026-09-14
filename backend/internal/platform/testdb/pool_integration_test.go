@@ -32,7 +32,7 @@ import (
 // assertion goes red, the typed-id slice bind stays green. That is not a weak
 // assertion, it is what the exec mode does — the pool runs describe_exec, where
 // the parameter OID always arrives from the server, so pgx never has to consult
-// the registered type to encode []ids.PersonID. The bind is here to pin the idiom
+// the registered type to encode []ids.ContactID. The bind is here to pin the idiom
 // itself: pgx's exec and simple_protocol modes infer parameter types from the Go
 // values instead, and would fail on this slice, so a future change of mode meets
 // this test rather than a record store. jit is the half that catches the
@@ -52,12 +52,12 @@ func TestSharedPoolKeepsTheProductionConnectionSetup(t *testing.T) {
 			got)
 	}
 
-	want := ids.New[ids.PersonKind]()
-	other := ids.New[ids.PersonKind]()
+	want := ids.New[ids.ContactKind]()
+	other := ids.New[ids.ContactKind]()
 	var matched int
 	if err := pool.QueryRow(ctx,
 		`SELECT count(*) FROM (SELECT unnest(ARRAY[$1::uuid, $2::uuid]) AS id) rows WHERE rows.id = ANY($3)`,
-		want, other, []ids.PersonID{want, other}).Scan(&matched); err != nil {
+		want, other, []ids.ContactID{want, other}).Scan(&matched); err != nil {
 		t.Fatalf("binding a typed-id slice through the shared pool: %v — ANY($n) over typed ids is used throughout the record stores, so the lane can no longer exercise them", err)
 	}
 	if matched != 2 {

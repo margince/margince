@@ -45,13 +45,13 @@ func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBri
 	// from the category alone.
 	switch {
 	case respondsNow(item):
-		return crmcontracts.BriefSectionRespondNow
+		return crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow
 	case closesOffAConversation(item):
-		return crmcontracts.BriefSectionReviewAndRepair
+		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
 	case preparesAConversation(item):
-		return crmcontracts.BriefSectionPrepareConversations
+		return crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations
 	case sectionBuildsPipeline(item):
-		return crmcontracts.BriefSectionBuildPipeline
+		return crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline
 	}
 	return sectionOfCategory(item.Category)
 }
@@ -72,17 +72,17 @@ func BriefSectionOf(item crmcontracts.WorklistItem) crmcontracts.WorklistItemBri
 func sectionOfCategory(category crmcontracts.WorklistItemCategory) crmcontracts.WorklistItemBriefSection {
 	switch category {
 	case crmcontracts.WorklistItemCategoryCustomerWaiting:
-		return crmcontracts.BriefSectionRespondNow
+		return crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow
 	case crmcontracts.WorklistItemCategoryLeads:
-		return crmcontracts.BriefSectionBuildPipeline
+		return crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline
 	case crmcontracts.WorklistItemCategoryMeetings:
-		return crmcontracts.BriefSectionPrepareConversations
+		return crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations
 	case crmcontracts.WorklistItemCategoryDecisions, crmcontracts.WorklistItemCategorySystem:
-		return crmcontracts.BriefSectionReviewAndRepair
+		return crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair
 	case crmcontracts.WorklistItemCategoryDealsAtRisk, crmcontracts.WorklistItemCategoryTasks:
 		// The two that are revenue to move: a deal drifting, and the work
 		// somebody agreed to do about one.
-		return crmcontracts.BriefSectionMoveRevenue
+		return crmcontracts.WorklistItemBriefSectionBriefSectionMoveRevenue
 	default:
 		// A category this build does not place. Empty rather than a guess, so
 		// the census gate says so out loud.
@@ -130,7 +130,15 @@ func owedAReply(item crmcontracts.WorklistItem) bool {
 // it under preparing would tell a rep to get ready for something they already
 // did. Recording what happened is repair.
 func closesOffAConversation(item crmcontracts.WorklistItem) bool {
-	return item.Source == crmcontracts.WorklistItemSourceMeetingOutcome
+	if item.Source == crmcontracts.WorklistItemSourceMeetingOutcome {
+		return true
+	}
+	// A silence nobody has a reason to chase is review work, which is where the
+	// worklist bands it. Left to fall through to its category it would land in
+	// "move revenue" — a lapsed contact drawn under a heading about deals — so
+	// the placement is stated here rather than inherited.
+	return item.Source == crmcontracts.WorklistItemSourceRelationshipDecay &&
+		item.Level >= levelRoutine
 }
 
 // preparesAConversation: a meeting is coming and somebody has to walk in ready.
@@ -159,6 +167,11 @@ func preparesAConversation(item crmcontracts.WorklistItem) bool {
 // row is pipeline by its category even where its subject resolves elsewhere. And
 // a relationship going quiet has no lead and no deal at risk, yet reconnecting is
 // exactly how pipeline gets built.
+//
+// A quiet relationship reaches this arm only when it is worth reviving: a
+// routine one was already claimed by closesOffAConversation above, which is
+// where the level is read. Both arms testing the level would be two spellings
+// of one rule, and the first to run would be the only one that mattered.
 func sectionBuildsPipeline(item crmcontracts.WorklistItem) bool {
 	if item.Source == crmcontracts.WorklistItemSourceRelationshipDecay {
 		return true

@@ -46,7 +46,7 @@ type FreshnessReader struct {
 	ms               *MirrorStore
 	meter            *overlaybudget.Meter
 	// toIncumbentClasses translates a CANONICAL entity-type name (e.g.
-	// "person", the datasource.EntityRef.Type this reader is called
+	// "contact", the datasource.EntityRef.Type this reader is called
 	// with) to the INCUMBENT's own object class (e.g. "contacts") — the
 	// Incumbent seam is asymmetric by design: Backfill/Modified/Get take
 	// an incumbent class as input, while Record.ObjectClass and the

@@ -39,7 +39,7 @@ func egressAgentCtx() context.Context {
 // approval": there is no approval an agent could get for this in this build,
 // and naming a path that dead-ends is what the sentinel exists to avoid.
 func TestEgressBackstopRefusesAnUnreleasedAgentWrite(t *testing.T) {
-	err := refuseUngovernedAgentEgress(egressAgentCtx(), overlay.WriteUpdate, datasource.EntityPerson)
+	err := refuseUngovernedAgentEgress(egressAgentCtx(), overlay.WriteUpdate, datasource.EntityContact)
 
 	if !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Fatalf("err = %v, want ErrUnsupportedBySoR", err)
@@ -50,7 +50,7 @@ func TestEgressBackstopRefusesAnUnreleasedAgentWrite(t *testing.T) {
 // with its own object-RBAC and row-scope checks — not this gate's. Otherwise
 // an agent is told to seek approval for something permanently unsupported.
 func TestEgressBackstopLeavesUnsupportedVerbsToTheProvider(t *testing.T) {
-	if err := refuseUngovernedAgentEgress(egressAgentCtx(), overlay.WriteCreate, datasource.EntityPerson); err != nil {
+	if err := refuseUngovernedAgentEgress(egressAgentCtx(), overlay.WriteCreate, datasource.EntityContact); err != nil {
 		t.Errorf("Create err = %v, want nil (the provider declares it unsupported)", err)
 	}
 	if err := refuseUngovernedAgentEgress(egressAgentCtx(), overlay.WriteArchive, datasource.EntityLead); err != nil {
@@ -71,11 +71,11 @@ func TestRESTRedemptionMarksTheCallReleasedForTheSeam(t *testing.T) {
 	})
 
 	approvalID := ids.New[ids.ApprovalKind]()
-	req := httptest.NewRequest(http.MethodPatch, "/v1/people/"+ids.NewV7().String(), http.NoBody)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/contacts/"+ids.NewV7().String(), http.NoBody)
 	req.Header.Set(approvalTokenHeader, approvalID.String())
 
 	handled, _ := redeemIfPresented(httptest.NewRecorder(), req, next, stubApprovals{},
-		agentPolicy{Op: "updatePerson", Access: "tool", Tool: "update_record", RecordType: "person"}, []byte(`{}`))
+		agentPolicy{Op: "updateContact", Access: "tool", Tool: "update_record", RecordType: "contact"}, []byte(`{}`))
 
 	if !handled {
 		t.Fatal("a presented approval token was not consumed by the REST gate")
@@ -92,7 +92,7 @@ func TestRESTGateDoesNotMarkAnUnredeemedCall(t *testing.T) {
 	next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		seen = agents.ApprovalRedeemed(r.Context())
 	})
-	req := httptest.NewRequest(http.MethodPatch, "/v1/people/"+ids.NewV7().String(), http.NoBody)
+	req := httptest.NewRequest(http.MethodPatch, "/v1/contacts/"+ids.NewV7().String(), http.NoBody)
 
 	if handled, _ := redeemIfPresented(httptest.NewRecorder(), req, next, stubApprovals{}, agentPolicy{Tool: "update_record"}, []byte(`{}`)); handled {
 		t.Fatal("a request with no approval token was treated as a redemption")
@@ -114,15 +114,15 @@ func TestEgressBackstopAllowsAReleasedAgentWrite(t *testing.T) {
 		t.Fatalf("redeeming: %v", err)
 	}
 
-	if err := refuseUngovernedAgentEgress(ctx, overlay.WriteUpdate, datasource.EntityPerson); err != nil {
+	if err := refuseUngovernedAgentEgress(ctx, overlay.WriteUpdate, datasource.EntityContact); err != nil {
 		t.Fatalf("err = %v, want nil for a released call", err)
 	}
 }
 
-// A person acting in their own seat is governed by object RBAC; gating them
+// A colleague acting in their own seat is governed by object RBAC; gating them
 // here would break the human write path the SPA and REST both offer.
 func TestEgressBackstopDoesNotGateAHumanSeat(t *testing.T) {
-	if err := refuseUngovernedAgentEgress(humanCtx(), overlay.WriteUpdate, datasource.EntityPerson); err != nil {
+	if err := refuseUngovernedAgentEgress(humanCtx(), overlay.WriteUpdate, datasource.EntityContact); err != nil {
 		t.Fatalf("err = %v, want nil for a human seat", err)
 	}
 }
@@ -135,10 +135,10 @@ func TestEgressBackstopDoesNotGateASystemOrUnboundContext(t *testing.T) {
 	system := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:reconcile",
 	})
-	if err := refuseUngovernedAgentEgress(system, overlay.WriteUpdate, datasource.EntityPerson); err != nil {
+	if err := refuseUngovernedAgentEgress(system, overlay.WriteUpdate, datasource.EntityContact); err != nil {
 		t.Errorf("system principal err = %v, want nil", err)
 	}
-	if err := refuseUngovernedAgentEgress(context.Background(), overlay.WriteUpdate, datasource.EntityPerson); err != nil {
+	if err := refuseUngovernedAgentEgress(context.Background(), overlay.WriteUpdate, datasource.EntityContact); err != nil {
 		t.Errorf("unbound context err = %v, want nil", err)
 	}
 }

@@ -7,7 +7,7 @@ package gates
 
 // The defect this census is for, planted and run.
 //
-// #1876 was a read that projected an organization id and probed a deal. A gate
+// #1876 was a read that projected a company id and probed a deal. A gate
 // that counted probes rather than matching them to the table would have gone
 // green over it — and worse, would then have CERTIFIED it, because the obvious
 // way to quiet such a gate is to add a probe over whatever the function already
@@ -61,7 +61,7 @@ func judgePlanted(t *testing.T, source string) map[string]bool {
 }
 
 // Obstacle 1: the obligation is per table, so a deal probe does not answer for
-// an organization the same read hands back.
+// a company the same read hands back.
 func TestAProbeOverAnotherTableDoesNotAnswerForTheOneServed(t *testing.T) {
 	t.Parallel()
 	judged := judgePlanted(t, `package planted
@@ -70,17 +70,17 @@ func readDeal(ctx C, tx T, id U) error {
 	if err := auth.EnsureVisible(ctx, tx, "deal", id); err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, "SELECT d.id, d.organization_id FROM deal d WHERE d.id = $1", id)
+	rows, err := tx.Query(ctx, "SELECT d.id, d.company_id FROM deal d WHERE d.id = $1", id)
 	_, _ = rows, err
 	return nil
 }
 `)
-	satisfied, judgedAtAll := judged["readDeal:organization"]
+	satisfied, judgedAtAll := judged["readDeal:company"]
 	if !judgedAtAll {
-		t.Fatal("the organization reference was not judged at all, so nothing below is about the defect")
+		t.Fatal("the company reference was not judged at all, so nothing below is about the defect")
 	}
 	if satisfied {
-		t.Error("a deal probe answered for an organization this read hands back — which is #1876, and " +
+		t.Error("a deal probe answered for a company this read hands back — which is #1876, and " +
 			"a gate that accepts it certifies the defect the next author would 'fix' by adding one more probe")
 	}
 }
@@ -106,21 +106,21 @@ func readLink(ctx C, tx T, id U) error {
 	}
 }
 
-// Obstacle 2: an FK named for its ROLE is a reference. `partner_org_id` was one
+// Obstacle 2: an FK named for its ROLE is a reference. `partner_company_id` was one
 // of the three #1876 fixed, and the name-derived extractor could not see it.
 func TestARoleNamedForeignKeyIsStillAReference(t *testing.T) {
 	t.Parallel()
 	judged := judgePlanted(t, `package planted
 
 func readPartners(ctx C, tx T) error {
-	rows, err := tx.Query(ctx, "SELECT p.id, p.partner_org_id FROM partner p")
+	rows, err := tx.Query(ctx, "SELECT p.id, p.partner_company_id FROM partner p")
 	_, _ = rows, err
 	return nil
 }
 `)
-	satisfied, judgedAtAll := judged["readPartners:organization"]
+	satisfied, judgedAtAll := judged["readPartners:company"]
 	if !judgedAtAll {
-		t.Fatal("partner_org_id was not read as an organization reference — the extractor is back to " +
+		t.Fatal("partner_company_id was not read as a company reference — the extractor is back to " +
 			"deriving the table from the column's own words, and drops every role-named FK silently")
 	}
 	if satisfied {
@@ -135,23 +135,23 @@ func TestARoleNamedForeignKeyPassesWhenItsOwnTableIsScoped(t *testing.T) {
 	judged := judgePlanted(t, `package planted
 
 func readPartners(ctx C, tx T, arg A) error {
-	clause, err := auth.ScopeClauseFor(ctx, "organization", "o", arg)
+	clause, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, "SELECT p.id, p.partner_org_id FROM partner p JOIN organization o ON o.id = p.partner_org_id WHERE "+clause)
+	rows, err := tx.Query(ctx, "SELECT p.id, p.partner_company_id FROM partner p JOIN company o ON o.id = p.partner_company_id WHERE "+clause)
 	_, _ = rows, err
 	return nil
 }
 `)
-	if satisfied, judgedAtAll := judged["readPartners:organization"]; !judgedAtAll || !satisfied {
+	if satisfied, judgedAtAll := judged["readPartners:company"]; !judgedAtAll || !satisfied {
 		t.Errorf("a role-named reference bounded by its own table's scope was reported unscoped "+
-			"(judged=%v satisfied=%v) — a census that refuses correct code is one people turn off",
+			"(judged=%v satisfied=%v) — a census that refuses correct code is one contacts turn off",
 			judgedAtAll, satisfied)
 	}
 }
 
-// The edge conjunction bounds its endpoints, so a person id projected from a
+// The edge conjunction bounds its endpoints, so a contact id projected from a
 // relationship that passed it is bounded — reading it as "relationship only"
 // would send the next author to add a clause over a column already covered.
 func TestTheEdgeConjunctionAnswersForItsEndpoints(t *testing.T) {
@@ -163,32 +163,32 @@ func readStakeholders(ctx C, tx T, arg A) error {
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, "SELECT r.person_id FROM relationship r WHERE "+clause)
+	rows, err := tx.Query(ctx, "SELECT r.contact_id FROM relationship r WHERE "+clause)
 	_, _ = rows, err
 	return nil
 }
 `)
-	if satisfied, judgedAtAll := judged["readStakeholders:person"]; !judgedAtAll || !satisfied {
-		t.Errorf("a person projected from an edge bounded by the endpoint conjunction was reported "+
+	if satisfied, judgedAtAll := judged["readStakeholders:contact"]; !judgedAtAll || !satisfied {
+		t.Errorf("a contact projected from an edge bounded by the endpoint conjunction was reported "+
 			"unscoped (judged=%v satisfied=%v)", judgedAtAll, satisfied)
 	}
 }
 
 // A count hands back a number. The account-coverage total is deliberately taken
-// past the caller's person scope, because the difference between it and the
+// past the caller's contact scope, because the difference between it and the
 // visible set is what "contacts you cannot see" means.
 func TestACountOfAReferenceIsNotAReference(t *testing.T) {
 	t.Parallel()
 	judged := judgePlanted(t, `package planted
 
 func countStakeholders(ctx C, tx T) error {
-	row := tx.QueryRow(ctx, "SELECT count(DISTINCT r.person_id) FROM relationship r")
+	row := tx.QueryRow(ctx, "SELECT count(DISTINCT r.contact_id) FROM relationship r")
 	_ = row
 	return nil
 }
 `)
-	if _, judgedAtAll := judged["countStakeholders:person"]; judgedAtAll {
-		t.Error("a count() over a person id was read as handing one back — the total is a number, and " +
+	if _, judgedAtAll := judged["countStakeholders:contact"]; judgedAtAll {
+		t.Error("a count() over a contact id was read as handing one back — the total is a number, and " +
 			"scoping it would collapse the difference the coverage card is about")
 	}
 }
@@ -199,13 +199,13 @@ func TestAnAggregateThatReturnsTheIdsIsStillAReference(t *testing.T) {
 	judged := judgePlanted(t, `package planted
 
 func listStakeholders(ctx C, tx T) error {
-	row := tx.QueryRow(ctx, "SELECT array_agg(r.person_id) FROM relationship r")
+	row := tx.QueryRow(ctx, "SELECT array_agg(r.contact_id) FROM relationship r")
 	_ = row
 	return nil
 }
 `)
-	if _, judgedAtAll := judged["listStakeholders:person"]; !judgedAtAll {
-		t.Error("array_agg over a person id was dropped as though it were a count — it hands every one " +
+	if _, judgedAtAll := judged["listStakeholders:contact"]; !judgedAtAll {
+		t.Error("array_agg over a contact id was dropped as though it were a count — it hands every one " +
 			"of those ids back, which is the reference this census is about")
 	}
 }

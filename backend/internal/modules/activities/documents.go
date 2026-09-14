@@ -5,7 +5,7 @@ package activities
 
 // The account's document library, and the metadata a human asserts on a file.
 //
-// A document reachable from a company may hang off a deal, a person, an activity
+// A document reachable from a company may hang off a deal, a contact, an activity
 // or the company itself, and each of those has its OWN visibility. So the
 // roll-up scopes every candidate through its own primary parent rather than
 // filtering afterwards: a contract on a deal the viewer cannot see contributes
@@ -13,7 +13,7 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `organization_id` on the row is a READ PATH, not a second parent. It makes the
+// `company_id` on the row is a READ PATH, not a second parent. It makes the
 // roll-up affordable at a hundred documents; it never decides who may see one.
 
 import (
@@ -51,17 +51,17 @@ type DocumentFilters struct {
 	Limit      *int
 }
 
-// ListOrganizationDocuments returns every document rolling up to one account,
+// ListCompanyDocuments returns every document rolling up to one account,
 // pinned first and then newest.
 //
 // The caller must be able to read the ACCOUNT to ask the question at all; each
 // row then passes its own parent's gate. Both are needed: the first stops the
 // endpoint being an oracle for accounts the caller cannot see, the second stops
 // the roll-up widening what a parent already refuses.
-func (s *Store) ListOrganizationDocuments(
-	ctx context.Context, orgID ids.UUID, in DocumentFilters,
+func (s *Store) ListCompanyDocuments(
+	ctx context.Context, companyID ids.UUID, in DocumentFilters,
 ) ([]crmcontracts.Attachment, storekit.Page, error) {
-	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	lim := storekit.ClampLimit(in.Limit)
@@ -70,19 +70,19 @@ func (s *Store) ListOrganizationDocuments(
 		page storekit.Page
 	)
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, "organization", orgID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID); err != nil {
 			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		where := []string{
-			fmt.Sprintf("at.organization_id = $%d", arg(orgID)),
+			fmt.Sprintf("at.company_id = $%d", arg(companyID)),
 			"at.archived_at IS NULL",
 		}
 		// Keyset, not offset: the library is ordered pinned-then-newest and a
 		// page boundary has to survive a pin being added between two reads.
 		if in.Cursor != nil && *in.Cursor != "" {
-			sort, err := documentSort()
+			sort, err := documentSort(ctx)
 			if err != nil {
 				return err
 			}
@@ -122,7 +122,7 @@ func (s *Store) ListOrganizationDocuments(
 		}
 		if len(out) > lim {
 			out = out[:lim]
-			p, err := documentPage(out[len(out)-1])
+			p, err := documentPage(ctx, out[len(out)-1])
 			if err != nil {
 				return err
 			}
@@ -154,9 +154,9 @@ func (s *Store) ListOrganizationDocuments(
 // fixed here and ParseListSort is only the constructor — which is why the error
 // is returned rather than swallowed: the alternative to a parseable sort is an
 // unordered library, not a default one.
-func documentSort() (*storekit.ListSort, error) {
+func documentSort(ctx context.Context) (*storekit.ListSort, error) {
 	spec := "-pinned"
-	sort, err := storekit.ParseListSort(&spec, map[string]string{"pinned": fieldcatalog.TypeBoolean})
+	sort, err := storekit.ParseListSort(ctx, &spec, map[string]storekit.SortField{"pinned": storekit.Column(fieldcatalog.TypeBoolean)}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("activities: the document library's fixed sort no longer parses: %w", err)
 	}
@@ -242,7 +242,7 @@ const scopeUnbounded = "TRUE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityOrganization, linkEntityDeal, linkEntityPerson}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy
@@ -396,7 +396,7 @@ var provenanceCategories = map[string]struct{}{
 // it did not.
 //
 // The two `*_attachment` values are the document library's answer to "where did
-// this come from", and a hand upload came from the person uploading it. Letting
+// this come from", and a hand upload came from the contact uploading it. Letting
 // the patch set one would mint a false provenance claim that every later reader
 // takes for a derived fact — and unlike a wrong title, nothing downstream can
 // tell it apart from the real thing.
@@ -448,8 +448,8 @@ func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) 
 // the PINNED half as well as the house (created_at, id) tuple, because the
 // library orders on all three — a token that dropped it would strand every
 // newer unpinned document behind the pinned group.
-func documentPage(last crmcontracts.Attachment) (storekit.Page, error) {
-	sort, err := documentSort()
+func documentPage(ctx context.Context, last crmcontracts.Attachment) (storekit.Page, error) {
+	sort, err := documentSort(ctx)
 	if err != nil {
 		return storekit.Page{}, err
 	}

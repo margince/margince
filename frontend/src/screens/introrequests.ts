@@ -19,18 +19,18 @@ export type IntroDecision =
   components["schemas"]["IntroRequestDecisionInput"]["decision"];
 
 /** The cached read of one contact's asks. */
-export function introRequestsKey(personId: string) {
-  return ["introRequests", personId] as const;
+export function introRequestsKey(contactId: string) {
+  return ["introRequests", contactId] as const;
 }
 
 /** useIntroRequests reads the asks about this contact the viewer is party to. */
-export function useIntroRequests(personId: string, enabled = true) {
+export function useIntroRequests(contactId: string, enabled = true) {
   return useQuery({
-    queryKey: introRequestsKey(personId),
+    queryKey: introRequestsKey(contactId),
     enabled,
     queryFn: async () => {
-      const { data, error } = await api.GET("/people/{id}/intro-requests", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.GET("/contacts/{id}/intro-requests", {
+        params: { path: { id: contactId } },
       });
       if (error) {
         throwProblem(error);
@@ -47,13 +47,13 @@ export function useIntroRequests(personId: string, enabled = true) {
  * drawer's route can change while a request is in flight, and a closure would
  * send the reason for one route with the colleague from another.
  */
-export function useCreateIntroRequest(personId: string) {
-  const invalidate = useAskInvalidation(personId);
+export function useCreateIntroRequest(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
   return useMutation({
-    mutationKey: ["introRequest.create", personId],
+    mutationKey: ["introRequest.create", contactId],
     mutationFn: async (body: IntroRequestInput) => {
-      const { data, error } = await api.POST("/people/{id}/intro-requests", {
-        params: { path: { id: personId } },
+      const { data, error } = await api.POST("/contacts/{id}/intro-requests", {
+        params: { path: { id: contactId } },
         body,
       });
       if (error) {
@@ -75,10 +75,10 @@ export type DecisionVariables = Readonly<{
 }>;
 
 /** useDecideIntroRequest records one of the four answers. */
-export function useDecideIntroRequest(personId: string) {
-  const invalidate = useAskInvalidation(personId);
+export function useDecideIntroRequest(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
   return useMutation({
-    mutationKey: ["introRequest.decide", personId],
+    mutationKey: ["introRequest.decide", contactId],
     mutationFn: async (v: DecisionVariables) => {
       const { data, error } = await api.POST("/intro-requests/{id}/decision", {
         params: { path: { id: v.id } },
@@ -108,10 +108,10 @@ export function useDecideIntroRequest(personId: string) {
  * one as a name-drop. This surface cannot claim a handshake that did not happen
  * even if it wanted to.
  */
-export function useCompleteIntroRequest(personId: string) {
-  const invalidate = useAskInvalidation(personId);
+export function useCompleteIntroRequest(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
   return useMutation({
-    mutationKey: ["introRequest.complete", personId],
+    mutationKey: ["introRequest.complete", contactId],
     mutationFn: async (
       v: Readonly<{ id: string; version: number; sourceActivityId?: string }>,
     ) => {
@@ -134,10 +134,10 @@ export function useCompleteIntroRequest(personId: string) {
 }
 
 /** useCancelIntroRequest withdraws an ask the viewer made. */
-export function useCancelIntroRequest(personId: string) {
-  const invalidate = useAskInvalidation(personId);
+export function useCancelIntroRequest(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
   return useMutation({
-    mutationKey: ["introRequest.cancel", personId],
+    mutationKey: ["introRequest.cancel", contactId],
     mutationFn: async (
       v: Readonly<{ id: string; version: number; reason?: string }>,
     ) => {
@@ -161,10 +161,10 @@ export function useCancelIntroRequest(personId: string) {
  * whether an open ask exists, so a tab that refreshed only the list would keep
  * offering "Ask" on a route it had just asked for.
  */
-function useAskInvalidation(personId: string) {
+function useAskInvalidation(contactId: string) {
   const qc = useQueryClient();
   return () => {
-    void qc.invalidateQueries({ queryKey: introRequestsKey(personId) });
-    void qc.invalidateQueries({ queryKey: ["person-graph", personId] });
+    void qc.invalidateQueries({ queryKey: introRequestsKey(contactId) });
+    void qc.invalidateQueries({ queryKey: ["contact-graph", contactId] });
   };
 }

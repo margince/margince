@@ -13,7 +13,7 @@ package usecases
 //	to move forward. Grab the transcript from Plaud and put it all in the
 //	CRM.
 //
-// Nothing it names exists yet: the company, the person and the deal all have to
+// Nothing it names exists yet: the company, the contact and the deal all have to
 // be created from one sentence naming no fields.
 //
 // UNLIKE cases 4 and 5, this suite WRITES through the tools rather than seeding
@@ -57,14 +57,14 @@ const meetingTranscript = "Matthias: Danke für die Übersicht zu den Lieferzeit
 
 const (
 	newCompanyName = "Kugellager-online.de"
-	newPersonName  = "Matthias Ortner"
+	newContactName = "Matthias Ortner"
 	newDealName    = "Erstauftrag Kugellager"
 )
 
 // loggedMeeting is what one run of this journey created.
 type loggedMeeting struct {
-	org      ids.UUID
-	person   ids.UUID
+	company  ids.UUID
+	contact  ids.UUID
 	deal     ids.UUID
 	activity ids.UUID
 }
@@ -85,7 +85,7 @@ func (s *scenario) createRecord(t *testing.T, recordType string, fields map[stri
 	return created.ID
 }
 
-// logTheMeeting walks the journey: the company, the person who works there, the
+// logTheMeeting walks the journey: the company, the contact who works there, the
 // deal, and the meeting linked to all three in ONE call.
 //
 // Every step goes through a tool. Nothing here inserts a row, so what the test
@@ -94,20 +94,20 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 	t.Helper()
 	var m loggedMeeting
 
-	m.org = s.createRecord(t, "organization", map[string]any{"display_name": newCompanyName})
-	m.person = s.createRecord(t, "person", map[string]any{"full_name": newPersonName})
-	// The employment edge, so the person is AT the company rather than merely
+	m.company = s.createRecord(t, "company", map[string]any{"display_name": newCompanyName})
+	m.contact = s.createRecord(t, "contact", map[string]any{"full_name": newContactName})
+	// The employment edge, so the contact is AT the company rather than merely
 	// mentioned in the same conversation.
 	s.MCP.CallOK(t, "create_record", map[string]any{
 		"record_type": "relationship",
 		"fields": map[string]any{
-			"kind": "employment", "person_id": m.person.String(), "organization_id": m.org.String(),
+			"kind": "employment", "contact_id": m.contact.String(), "company_id": m.company.String(),
 		},
 	})
 
 	pipeline, stage := s.defaultOpenStage(t)
 	m.deal = s.createRecord(t, "deal", map[string]any{
-		"name": newDealName, "organization_id": m.org.String(),
+		"name": newDealName, "company_id": m.company.String(),
 		"pipeline_id": pipeline.String(), "stage_id": stage.String(),
 	})
 
@@ -116,7 +116,7 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 	// them one at a time raised three relink approvals for what is not a
 	// decision.
 	//
-	// The company is NOT among them, and cannot be: a meeting is with a person,
+	// The company is NOT among them, and cannot be: a meeting is with a contact,
 	// and it reaches the company through the employment edge written above. The
 	// tool refuses the company link rather than storing one, which the case
 	// below asserts from the other end.
@@ -125,7 +125,7 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 		"body":          meetingTranscript,
 		"source_system": transcriptMarker,
 		"links": []map[string]any{
-			{"entity_type": "person", "entity_id": m.person.String()},
+			{"entity_type": "contact", "entity_id": m.contact.String()},
 			{"entity_type": "deal", "entity_id": m.deal.String()},
 		},
 	})
@@ -144,16 +144,16 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 // value out loud for exactly that reason.
 const transcriptMarker = "transcript"
 
-// TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards pins criteria 1, 2
+// TestCase1TheCompanyTheContactAndTheDealAllExistAfterwards pins criteria 1, 2
 // and 3.
 //
 // None of the three existed before. If the assistant reports success and only
 // some of them are there, the case has failed — and the employment edge must be
-// written a single time, because an early run left the person's page listing
+// written a single time, because an early run left the contact's page listing
 // the company twice.
 //
 // Held by: this test's own employment-edge count, below.
-func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
+func TestCase1TheCompanyTheContactAndTheDealAllExistAfterwards(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
@@ -162,8 +162,8 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 		id            ids.UUID
 		value         string
 	}{
-		{"organization", "display_name", m.org, newCompanyName},
-		{"person", "full_name", m.person, newPersonName},
+		{"company", "display_name", m.company, newCompanyName},
+		{"contact", "full_name", m.contact, newContactName},
 		{"deal", "name", m.deal, newDealName},
 	} {
 		if got := s.readString(t, want.table, want.column, want.id); got != want.value {
@@ -174,10 +174,10 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 
 	// Criterion 2: attached once, not twice.
 	if edges := s.countRows(t, `SELECT count(*) FROM relationship
-		WHERE kind = 'employment' AND person_id = $1 AND organization_id = $2
-		  AND archived_at IS NULL`, m.person, m.org); edges != 1 {
+		WHERE kind = 'employment' AND contact_id = $1 AND company_id = $2
+		  AND archived_at IS NULL`, m.contact, m.company); edges != 1 {
 		t.Fatalf("case 1 criterion 2: %s is linked to %s %d times — a duplicate edge makes the "+
-			"person's page list the company twice", newPersonName, newCompanyName, edges)
+			"contact's page list the company twice", newContactName, newCompanyName, edges)
 	}
 
 	// Criterion 3: nothing invented. The conversation named no amount and no
@@ -195,10 +195,10 @@ func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 //
 // One write, not one write plus corrections: the link rows share a timestamp
 // because they were written together. And no approval is raised — connecting a
-// meeting to the people and the deal it was about is not a decision.
+// meeting to the contacts and the deal it was about is not a decision.
 //
-// "Every record" is the person and the deal. The company is not among them and
-// cannot be — a meeting is with a person — and it is not lost either: the case
+// "Every record" is the contact and the deal. The company is not among them and
+// cannot be — a meeting is with a contact — and it is not lost either: the case
 // below reads it back off the account's own timeline, reached through the
 // employment edge this same act wrote.
 func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
@@ -210,7 +210,7 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 		id     ids.UUID
 		what   string
 	}{
-		{"person_id", m.person, "the person"},
+		{"contact_id", m.contact, "the contact"},
 		{"deal_id", m.deal, "the deal"},
 	} {
 		if n := s.countRows(t,
@@ -221,13 +221,13 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 		}
 	}
 	// And NOT to the company, which is not somebody you can meet. The account
-	// still sees the meeting — through the person who was in it — and that half
+	// still sees the meeting — through the contact who was in it — and that half
 	// is asserted below against the timeline an assistant actually reads.
 	if n := s.countRows(t,
-		`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND organization_id = $2`,
-		m.activity, m.org); n != 0 {
+		`SELECT count(*) FROM activity_link WHERE activity_id = $1 AND company_id = $2`,
+		m.activity, m.company); n != 0 {
 		t.Fatalf("case 1 criterion 4: the meeting is filed against the company %d times; a meeting "+
-			"is with a person, and a direct link is the redundancy that made two records disagree "+
+			"is with a contact, and a direct link is the redundancy that made two records disagree "+
 			"about who was in the room", n)
 	}
 
@@ -262,14 +262,14 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 // This is the assertion the rule rests on. Forbidding the direct link without
 // it removes the company from every surface that assembles context — which is
 // what happened the first time the refusal shipped, and why it was withdrawn.
-// The account reaches the meeting through the person who was in the room, and
+// The account reaches the meeting through the contact who was in the room, and
 // the timeline an assistant actually reads is where that has to be true.
-func TestCase1TheAccountSeesTheMeetingThroughThePersonWhoWasInIt(t *testing.T) {
+func TestCase1TheAccountSeesTheMeetingThroughTheContactWhoWasInIt(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)
 
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
-		"record_type": "organization", "record_id": m.org.String(),
+		"record_type": "company", "record_id": m.company.String(),
 	})
 	var answer agents.AssembledContextResult
 	got.JSON(t, &answer)
@@ -298,11 +298,11 @@ func TestCase1FilingTheMeetingAgainstTheCompanyIsRefusedWithSomethingToDo(t *tes
 	refusal := s.MCP.CallRefused(t, "log_activity", map[string]any{
 		"kind": "meeting", "body": meetingTranscript,
 		"links": []map[string]any{
-			{"entity_type": "person", "entity_id": m.person.String()},
-			{"entity_type": "organization", "entity_id": m.org.String()},
+			{"entity_type": "contact", "entity_id": m.contact.String()},
+			{"entity_type": "company", "entity_id": m.company.String()},
 		},
 	})
-	for _, want := range []string{"with a person", "employer"} {
+	for _, want := range []string{"with a contact", "employer"} {
 		if !strings.Contains(refusal, want) {
 			t.Errorf("the refusal does not say %q, so it tells the caller what is wrong without "+
 				"telling them what to do instead: %s", want, refusal)
@@ -353,7 +353,7 @@ func TestCase1TheTranscriptIsStoredAsATranscriptAndReadWithoutAsking(t *testing.
 	routedTo, isHuman := principal.HumanUserID(requestedBy)
 	if !isHuman {
 		t.Fatalf("case 1 criterion 10: the reading was requested by %q, which the product's own "+
-			"parser does not read as a person — the proposals it stages reach no rep", requestedBy)
+			"parser does not read as a human — the proposals it stages reach no rep", requestedBy)
 	}
 	if routedTo != s.Rep {
 		t.Fatalf("case 1 criterion 10: the reading is routed to %s, and the human behind the "+

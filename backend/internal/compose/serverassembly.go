@@ -21,43 +21,45 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
-	"github.com/margince/margince/backend/internal/compose/org360"
-	"github.com/margince/margince/backend/internal/compose/orgbrief"
-	"github.com/margince/margince/backend/internal/compose/orgdossier"
-	"github.com/margince/margince/backend/internal/compose/orgscan"
+	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/companybrief"
+	"github.com/margince/margince/backend/internal/compose/companydossier"
+	"github.com/margince/margince/backend/internal/compose/companyscan"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// newPeopleHandlers builds the person/organization/lead transport with the
+// newContactsHandlers builds the contact/company/lead transport with the
 // seams compose owns for it.
 //
 // The fieldcatalog seam: customfields' catalog read makes the
-// workspace's active cf_* columns ride person/organization
+// workspace's active cf_* columns ride contact/company
 // payloads (values only — the schema-change engine stays behind
 // WithSchemaPool; ActiveColumns needs none of it).
 // The match stager is injected here because approvals is a sibling of
-// people and a module never imports one: compose is where that edge is
+// contacts and a module never imports one: compose is where that edge is
 // made, as it is for every other cross-module dependency.
 //
 // The lead settings write through the installation settings store, and the
 // qualify dialog's "also open a deal" rides the deals store through the
-// people→deals edge (leadDealOpener) — both injected here for the same
+// contacts→deals edge (leadDealOpener) — both injected here for the same
 // ADR-0054 reason as the stager.
-func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
-	return people.NewHandlers(InstallationDB(pool)).
+func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
+	return contacts.NewHandlers(InstallationDB(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
 		WithVCardReviewStager(vcardCreateStager(pool)).
@@ -65,9 +67,23 @@ func newPeopleHandlers(pool *pgxpool.Pool) peopleHandlers {
 		WithSeatReadsLeads(seatReadsLeads(pool)).
 		WithDealOpener(leadDealOpener{deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}).
 		// A merge carries the retiring subject's stops, or it refuses. consent
-		// owns communication_suppression; people owns the merge; neither
+		// owns communication_suppression; contacts owns the merge; neither
 		// imports the other, so the edge is injected here.
 		WithStopCarrier(consent.NewStore(InstallationDB(pool)))
+}
+
+// newFinanceHandlers builds the invoicing transport over the two edges it
+// cannot reach for itself: the installation's base currency, and who at the
+// account receives an invoice.
+//
+// The billing-contact edge is an injection rather than an import for the
+// ordinary ADR-0054 reason — contacts owns relationship, finance owns the
+// invoice — and it matters more than usual here: the same read serves the
+// company page's own billing section, so a second one would let the finance
+// card and the account panel disagree about who the recipient is.
+func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
+	return finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf).
+		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
 }
 
 // newActivitiesHandlers builds the timeline transport over the sibling
@@ -81,18 +97,26 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	return activities.NewHandlers(InstallationDB(pool)).
 		WithConsent(gate).
 		WithSendPreview(gate).
-		// The public booking capture seams (feedback/14): people is the
-		// idempotent-on-email person path, consent records the
+		// The public booking capture seams (feedback/14): contacts is the
+		// idempotent-on-email contact path, consent records the
 		// passthrough — both injected here, never sibling imports.
-		WithPublicBooking(people.NewStore(InstallationDB(pool)), bookingConsentAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		WithPublicBooking(contacts.NewStore(InstallationDB(pool)), bookingConsentAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The RFC 8058 unsubscribe linker (B-E11.32): consent mints the
 		// preference token behind the List-Unsubscribe URL.
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
-		// The sender's own sign-off (core 0235). people owns the row because
-		// it owns the person the seat belongs to; activities appends it because
+		// The disclosures a jurisdiction demands, put into the body that owes
+		// them. See compose/disclosurefooter.go.
+		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
+			// WITH THE COUNTRY READER, which decides which pack applies. A bare
+			// store answers no country, so applicableRules finds no pack and
+			// every message silently owes nothing — the failure this seam
+			// exists to end, arriving through the wiring instead.
+			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
+		// The sender's own sign-off (core 0235). contacts owns the row because
+		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
 		// like every other cross-module edge on this path.
-		WithSignature(people.NewStore(InstallationDB(pool))).
+		WithSignature(contacts.NewStore(InstallationDB(pool))).
 		// The name on the envelope. identity owns who the acting human is —
 		// including the human an agent acts on behalf of — and that resolution
 		// must be the same one the audit log records, so it is injected rather
@@ -103,7 +127,7 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		// count as vouched-for, so the edge is injected rather than restated.
 		WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))}).
 		// When a host is bookable. identity owns the setting because it is a
-		// fact about a person; this transport asks for it rather than holding
+		// fact about a contact; this transport asks for it rather than holding
 		// a pair of numbers for everybody (docs/explanation/scheduling.md).
 		WithWorkingHours(workingHoursResolver(pool))
 }
@@ -115,6 +139,12 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
+}
+
+func (o ownDomainReader) ReaderAddresses(
+	ctx context.Context, tx pgx.Tx, reader ids.UUID,
+) ([]string, error) {
+	return o.store.ReaderAddressesTx(ctx, tx, reader)
 }
 
 // NewCollectionsStore is the ONE spelling of "the collections store with
@@ -221,7 +251,7 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 	// its own visibility gate. WithFieldCatalog widens that same store's
 	// vocabulary with this workspace's cf_* columns, so an export cannot
 	// disagree with the list or the saved view it was built from — the same
-	// seam newPeopleHandlers wires for the record stores.
+	// seam newContactsHandlers wires for the record stores.
 	// One store for both surfaces: the preview rides the same engine and the same
 	// projection as the export, so a filter's count and sample cannot disagree
 	// with an export of that filter.
@@ -242,14 +272,14 @@ func (s *Server) wireExportSurface(pool *pgxpool.Pool, log *slog.Logger) {
 // report progress through — all three gated by the same rollout.
 func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// The installation's own company (the 0083 anchor). Its own store
-	// instance, like every other people-backed shadow here: the company
-	// form's write shape is people's, the transport is compose's.
-	s.companyHandlers = companyHandlers{store: people.NewStore(InstallationDB(pool)), rollout: companyContextRolloutOnboarding}
+	// instance, like every other contacts-backed shadow here: the company
+	// form's write shape is contacts's, the transport is compose's.
+	s.companyHandlers = companyHandlers{store: contacts.NewStore(InstallationDB(pool)), rollout: companyContextRolloutOnboarding}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
 	s.onboardingStateHandlers = onboardingStateHandlers{
-		state: identity.NewOnboardingStore(InstallationDB(pool)), company: people.NewStore(InstallationDB(pool)),
+		state: identity.NewOnboardingStore(InstallationDB(pool)), company: contacts.NewStore(InstallationDB(pool)),
 		proposal: &onboardingProposalEngine{
-			state: identity.NewOnboardingStore(InstallationDB(pool)), people: people.NewStore(InstallationDB(pool)),
+			state: identity.NewOnboardingStore(InstallationDB(pool)), contacts: contacts.NewStore(InstallationDB(pool)),
 			rollout: companyContextRolloutOnboarding,
 		},
 	}
@@ -266,22 +296,22 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// boot-time SetOverlayIncumbentResolver reaches the same instance this
 	// field serves reads through.
 	s.sorDispatch = NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, s.overlayMeter, nil), pool)
-	// The company view (org360) is assembled from THIS system of record;
+	// The company view (company360) is assembled from THIS system of record;
 	// it asks the same dispatch every other overlay-aware read asks, so a
 	// workspace running on the incumbent mirror gets one honest refusal
 	// instead of a page that quietly omits most of itself. Wired after the
 	// dispatch because it needs it.
-	// The people store carries the SAME fieldcatalog seam peopleHandlers
-	// gets: the 360 serves the organization object, and without it the
+	// The contacts store carries the SAME fieldcatalog seam contactsHandlers
+	// gets: the 360 serves the company object, and without it the
 	// company view would silently omit the cf_* columns GET
-	// /organizations/{id} returns for the same record.
+	// /companies/{id} returns for the same record.
 	// The brief reads THROUGH the 360 service, so it inherits every gate the
 	// page itself applies and can only describe what this caller may see.
 	// The model lane is nil here: WithAccountBrief binds the api role's
 	// summarize lane, and without it the brief serves its deterministic
 	// floor.
-	s.peopleStore = people.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
-	s.blockedDomainHandlers = blockedDomainHandlers{people: s.peopleStore}
+	s.contactsStore = contacts.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil))
+	s.blockedDomainHandlers = blockedDomainHandlers{contacts: s.contactsStore}
 	s.captureExclusionHandlers = captureExclusionHandlers{store: capture.NewExclusionStore(InstallationDB(pool))}
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{
@@ -295,15 +325,15 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 		recompute: activities.RecomputeAudienceTx,
 		clearHold: activities.ClearCounterpartyHoldTx,
 	}
-	s.claimHandlers = claimHandlers{people: s.peopleStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.claimHandlers = claimHandlers{contacts: s.contactsStore, deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	// The importer maps only core columns (see importTargets for why custom
 	// fields are not among them), so it needs no field catalog of its own.
 	s.importHandlers = importHandlers{db: InstallationDB(pool), uploadLimit: s.uploadLimits.CSVImport}
-	s.org360Svc = org360.NewService(pool, s.peopleStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
-	s.orgBriefSvc = orgbrief.NewService(pool, s.org360Svc, s.peopleStore, nil, "", time.Now).
+	s.company360Svc = company360.NewService(pool, s.contactsStore, s.dealsStore, ProjectsStore(pool), approvals.NewService(InstallationDB(pool)), time.Now)
+	s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
-	s.orgBriefHandlers = orgbrief.NewHandlers(s.orgBriefSvc, s.sorDispatch.isOverlay)
-	// The dossier reads the SAME people store the 360 and the brief read, so
+	s.companyBriefHandlers = companybrief.NewHandlers(s.companyBriefSvc, s.sorDispatch.isOverlay)
+	// The dossier reads the SAME contacts store the 360 and the brief read, so
 	// the three cannot drift about what a company's facts are. No model lane is
 	// wired yet: every assembly is the deterministic floor and says so.
 	// Both lanes are nil here: WithCompanyDossier and WithGrowthFit bind the
@@ -311,21 +341,21 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// The two floors differ in kind — the dossier's still describes the company,
 	// where growth fit's can only abstain — which is why they are separate
 	// options rather than one.
-	s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, nil, "", time.Now).
+	s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, nil, "", time.Now).
 		WithEmailSummaries(emailRows(pool))
-	s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
-		pool, s.peopleStore, offeringConfirmed(s.peopleStore), nil, "", time.Now,
+	s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
+		pool, s.contactsStore, offeringConfirmed(s.contactsStore), nil, "", time.Now,
 	).WithEmailSummaries(emailRows(pool))
-	s.orgDossierHandlers = orgdossier.NewHandlers(
-		s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
+	s.companyDossierHandlers = companydossier.NewHandlers(
+		s.companyDossierSvc, s.companyGrowthFitSvc, s.sorDispatch.isOverlay,
 	)
 	// The account scan over the same composite read and the same dismissals.
 	// No lane and no job runner here: an ensure on this role settles the
 	// rules' floor in-request, and WithAccountScan binds the api role's.
-	s.orgScanSvc = orgscan.NewService(pool, s.org360Svc, s.org360Svc, nil, nil, nil, time.Now, s.log).
+	s.companyScanSvc = companyscan.NewService(pool, s.company360Svc, s.company360Svc, nil, nil, nil, time.Now, s.log).
 		WithEmailSummaries(emailRows(pool))
-	s.orgScanHandlers = orgscan.NewHandlers(s.orgScanSvc, s.sorDispatch.isOverlay)
-	s.org360Svc.RecogniseScanFindings(s.orgScanSvc)
+	s.companyScanHandlers = companyscan.NewHandlers(s.companyScanSvc, s.sorDispatch.isOverlay)
+	s.company360Svc.RecogniseScanFindings(s.companyScanSvc)
 	// AFTER the dossier service exists: the drafter takes it as a dependency,
 	// and a nil *Service handed through the interface is not the nil INTERFACE
 	// the drafter guards against — it would pass the guard and panic on the
@@ -336,19 +366,19 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// brief's: WithAccountDraft binds the api role's, and without it the
 	// endpoint answers from its deterministic floor rather than 501-ing.
 	s.accountDraftHandlers = accountdraft.NewHandlers(
-		accountdraft.NewService(s.org360Svc, nil).
+		accountdraft.NewService(s.company360Svc, nil).
 			WithEnvelope(draftEnvelope(pool, s.log)).
 			WithEmailSummaries(emailRows(pool)).
-			WithDossier(s.orgDossierSvc), s.sorDispatch.isOverlay,
+			WithDossier(s.companyDossierSvc), s.sorDispatch.isOverlay,
 	)
-	s.org360Handlers = org360.NewHandlers(
-		s.org360Svc,
+	s.company360Handlers = company360.NewHandlers(
+		s.company360Svc,
 		s.sorDispatch.isOverlay,
 	)
-	// The person page is the company page's sibling and rides the same
+	// The contact page is the company page's sibling and rides the same
 	// dispatch, so it is wired here rather than beside the handler sets: a
 	// workspace on the incumbent mirror refuses both the same way.
-	s.wirePerson360(pool)
+	s.wireContact360(pool)
 	// After sorDispatch exists: the reversal reads the SAME dispatcher every
 	// other write on this server does.
 	s.wireReversal(pool)
@@ -374,11 +404,19 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
+		// THE SAME APPROVALS ENGINE the inbox decides through, so a card raised
+		// here is answered there rather than sitting in a second queue nobody
+		// reads.
+		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
 		WithEraser(privacy.NewEraser(InstallationDB(pool))).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).
 		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
-		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
+		// The edge that writes an accepted correction, through contacts' own
+		// update path — so the subject's correction is governed by the same
+		// gates as any other edit to that field.
+		WithCorrectionApplier(correctionApplier{store: contacts.NewStore(InstallationDB(pool))})
 }

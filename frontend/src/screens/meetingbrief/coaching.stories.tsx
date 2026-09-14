@@ -35,7 +35,7 @@ function coachingOf(brief: MeetingBrief): Coaching {
 const coaching = coachingOf(briefManager);
 
 const meta: Meta<typeof CoachPanel> = {
-  title: "Records/Person record/Meeting brief/Coaching",
+  title: "Records/Contact record/Meeting brief/Coaching",
   component: CoachPanel,
 };
 export default meta;

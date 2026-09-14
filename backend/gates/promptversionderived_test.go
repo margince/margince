@@ -76,7 +76,7 @@ var promptSurfaceRoots = []string{"internal/compose", "internal/modules"}
 // the surface, not of the syntax: nothing in the declaration says whether its
 // output is cached.
 var uncachedPrompts = gatekit.Waive(map[string]string{
-	"internal/compose/orgbrief:askSystem": "Ask answers are not cached (orgbrief.Service.Ask says so and explains why: a question is asked once and read once). Binding the ask prompt to the BRIEF's key would rewrite every cached brief for a change that cannot affect one.",
+	"internal/compose/companybrief:askSystem": "Ask answers are not cached (companybrief.Service.Ask says so and explains why: a question is asked once and read once). Binding the ask prompt to the BRIEF's key would rewrite every cached brief for a change that cannot affect one.",
 })
 
 // promptPackage is one package directory: its product files, and the string
@@ -459,7 +459,7 @@ func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
 			t.Errorf("the census does not recognise %q as a prompt constant", name)
 		}
 	}
-	for _, name := range []string{"storedVersion", "auditKeyDomain", "entityTypePerson", "systemOfRecord"} {
+	for _, name := range []string{"storedVersion", "auditKeyDomain", "entityTypeContact", "systemOfRecord"} {
 		if promptConstantName.MatchString(name) {
 			t.Errorf("the census reports %q, which is not a prompt constant", name)
 		}

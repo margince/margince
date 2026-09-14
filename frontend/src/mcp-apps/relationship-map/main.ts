@@ -98,11 +98,11 @@ function colleagueRow(colleague: Colleague, position: number): HTMLElement {
 /** The meta line. "warmest first" is only true of a COMPLETE ranking: when the
  *  read stopped at its bound these are the warmest FOUND, and saying otherwise
  *  is the claim the tool itself refuses to make. */
-function metaLine(found: number, personID: string, bounded: boolean): string {
+function metaLine(found: number, contactID: string, bounded: boolean): string {
   if (bounded) {
     return `${found} colleague(s) found — more know this contact than are listed, so this is not the whole network`;
   }
-  return `${found} colleague(s), warmest first · ${personID}`;
+  return `${found} colleague(s), warmest first · ${contactID}`;
 }
 
 export function render(
@@ -130,7 +130,7 @@ export function render(
       "meta",
       metaLine(
         colleagues.length,
-        asText(answer.person_id),
+        asText(answer.contact_id),
         warned(warnings, SWEEP_TRUNCATED),
       ),
     ),

@@ -34,7 +34,7 @@ const (
 	// from invalid, and the distinction matters to whoever reads it: invalid
 	// will never work, unsupported might next quarter.
 	RefusalUnsupported RefusalKind = "unsupported"
-	// RefusalPrivacy is a question whose answer would describe too few people
+	// RefusalPrivacy is a question whose answer would describe too few contacts
 	// or records.
 	RefusalPrivacy RefusalKind = "privacy"
 	// RefusalTooExpensive is a question the database would answer eventually.

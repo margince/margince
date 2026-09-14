@@ -8,7 +8,7 @@ package compose
 // canonical writes to the incumbent, but ONLY through the SoR seam — the
 // datasource Provider's Create/Update/Archive verbs the Dispatcher and the
 // agent tool registry call. The REST record-write handlers are the
-// module-owned transports (people.Handlers.CreatePerson, …): they write
+// module-owned transports (contacts.Handlers.CreateContact, …): they write
 // their native tables DIRECTLY and never ride the SoR seam, so nothing on
 // that path consults the overlay mode or reaches the incumbent.
 //

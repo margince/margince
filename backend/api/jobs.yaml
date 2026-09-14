@@ -107,7 +107,7 @@ queues:
       capture pool's reason names "delay sends, Telegram polls, and capture
       syncs" as the thing to avoid, and the send had since become a member of
       it. THREE rather than deep read's two: unlike a crawl, a send is a
-      message a person pressed a button for and is waiting on, so the pool is
+      message a contact pressed a button for and is waiting on, so the pool is
       wide enough that an ordinary text send is not queued behind two album
       uploads.
   deep_read:
@@ -181,6 +181,13 @@ queues:
     reason: >-
       A batch of agent runs, each entitled to the full RunWallClock — the
       longest pass in the tree.
+  capture_part_slim:
+    max_workers: 1
+    reason: >-
+      One object read per part plus an encode of those octets, for a bounded
+      batch — outbound-bound work that would hold a default worker for as long
+      as the object store takes to answer.
+
   privacy_retention:
     max_workers: 2
     reason: >-
@@ -205,7 +212,7 @@ kinds:
     registration: {when: [AccountScanBrain], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       ScanID: id
       ViewerID: id
     reason: >-
@@ -281,7 +288,7 @@ kinds:
       only ever bounded an enumeration and an insert.
 
       Database-only: the pass reserves a budget slot and queues a deep read per
-      due org, and never crawls anything itself. autoEnrichDailyCap bounds it at
+      due company, and never crawls anything itself. autoEnrichDailyCap bounds it at
       500 trigger transactions, and a pass that stops early simply leaves the
       rest due for tomorrow.
 
@@ -332,7 +339,7 @@ kinds:
       attempt is ever lost to something the engine never sees — a worker killed
       mid-page, a rescue, a queue that dropped it — the row stays live with no
       job behind it, and the index then refuses every future StartBackfill for
-      that connection. The import stops and the only symptom is a person who
+      that connection. The import stops and the only symptom is a contact who
       cannot start one.
 
       It re-enqueues rather than deciding anything: the insert carries the same
@@ -391,7 +398,7 @@ kinds:
     timeout: 15m
     opts_owner: caller
     cadence: 1h
-    registration: {when: [OwedBrain], absent: registers_nothing}
+    registration: {when: [OwedBrain], absent: registers_anyway}
     reason: >-
       Hourly, like the capture-label pass it is modelled on, and for the same
       reason: the backlog is a query, so a caught-up tenant costs one cheap
@@ -411,7 +418,7 @@ kinds:
       reason: the ledger's due-index makes an empty pass one cheap probe, so the
       cadence is paid for by the mail that arrives rather than by the tick. An
       hour was the wrong price on the other side — a sender who writes just
-      after a tick waited most of an hour to become a record, and the person
+      after a tick waited most of an hour to become a record, and the contact
       waiting for them cannot tell that from the message not having arrived.
       Every stage runs in dependency order inside one workspace's job — judging
       fills the unsure backlog that staging then offers, and redaction only ever
@@ -559,7 +566,7 @@ kinds:
       leaves every one of them with nothing to say. Run at boot like the other
       passes here, and for a sharper reason than most: until the first run
       exists the read answers 404, which the tab renders as a failed panel — so
-      the gap between an install starting and its first check is time a person
+      the gap between an install starting and its first check is time a contact
       spends looking at what reads like a broken page.
 
 
@@ -747,7 +754,7 @@ kinds:
       value: 5m
       reason: >-
         Fetching a handful of small attachments from blob storage and writing
-        at most five people. No model call is in it, and the one dependency
+        at most five contacts. No model call is in it, and the one dependency
         read is scoped to this message's own attachments, so anything past
         this is a stuck database handle or an unreachable store rather than
         a large card.
@@ -1007,7 +1014,7 @@ kinds:
       One attempt, not three: the retry is the next tick, a minute away, and a
       row this pass did not apply is still pending then. A row that failed
       because its owner has gone or lost the grants is not a fault to retry at
-      all — it is a proposal waiting for a person, which is where it stays.
+      all — it is a proposal waiting for a contact, which is where it stays.
 
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
@@ -1095,10 +1102,10 @@ kinds:
       the morning should not wait until tomorrow to see it on an account.
 
 
-  org_name_promotion:
+  company_name_promotion:
     role: worker
     fleet: true
-    go_type: OrgNamePromotionArgs
+    go_type: CompanyNamePromotionArgs
     queue: default
     timeout: 5m
     opts_owner: caller
@@ -1184,6 +1191,16 @@ kinds:
   # cap. The dispatcher enumerated EVERY workspace including archived ones,
   # because archiving does not un-store the subject data inside one — that
   # obligation is the pass's own now rather than the enumeration's.
+  capture_part_slim:
+    role: worker
+    go_type: CapturePartSlimArgs
+    queue: capture_part_slim
+    timeout: 15m
+    opts_owner: caller
+    cadence: 5m
+    registration: {when: [Blobstore], absent: registers_nothing}
+    args: {}
+
   privacy_retention:
     role: worker
     go_type: PrivacyRetentionArgs
@@ -1223,6 +1240,16 @@ kinds:
       long ladder would suppress the very recovery it is waiting for while
       each rung risks buying the same answer again.
 
+  employment_import_sweep:
+    role: worker
+    fleet: true
+    go_type: EmploymentImportSweepArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 30s
+    reason: Applies bounded retained employment evidence without any vendor lookup; also reconciles historical purchases after upgrade.
+
   provider_run_poll_sweep:
     role: worker
     fleet: true
@@ -1234,7 +1261,7 @@ kinds:
     registration: {when: [ProviderRuns.Registry, ProviderRuns.Vault], absent: registers_nothing}
     reason: >-
       Surfe resolves a bulk enrichment in seconds, so a 30-second scan keeps
-      the person page's in-progress state honest without hammering the fleet —
+      the contact page's in-progress state honest without hammering the fleet —
       the same cadence telegram_poll_sweep uses for the same promptness
       argument. A caught-up workspace costs one indexed probe of the due
       partial index.
@@ -1284,7 +1311,7 @@ kinds:
     registration: {when: [DeepReadBrain], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       SiteReadID: id
       RequestedBy: id
       MaxPages:
@@ -1301,41 +1328,41 @@ kinds:
       terminal writes. Not knowable here: it is computed from CrawlCaps at
       registration.
 
-  check_organization_vat:
+  check_company_vat:
     role: worker
-    go_type: CheckOrganizationVatArgs
+    go_type: CheckCompanyVatArgs
     queue: vat_check
     timeout: 2m
     opts_owner: caller
     registration: {when: [VatChecker], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
       Requested:
         scalar: true
         reason: >-
-          whether a person asked for this consultation, rather than a write
+          whether a contact asked for this consultation, rather than a write
           having earned it. It decides whether the worker asks about a number
           the register has already answered, so it cannot be resolved from the
-          organization the job names — the row says what the number is, never
+          company the job names — the row says what the number is, never
           who wanted it re-checked. A bare true/false carrying no subject data:
-          it names no person, and erasing the contact who pressed the button
+          it names no contact, and erasing the contact who pressed the button
           leaves nothing here to erase.
     reason: >-
       One number, one consultation, plus the write — and the ceiling is set by
       what the job can WAIT for. The pacer may hold it for the full interval
       before the request is built, the HTTP client allows 20s, and the write
       follows. Two minutes is that with room to spare.
-  geocode_organization:
+  geocode_company:
     role: worker
-    go_type: GeocodeOrganizationArgs
+    go_type: GeocodeCompanyArgs
     queue: geocode
     timeout: 3m
     opts_owner: caller
     registration: {when: [Geocoder], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
     reason: >-
       One address, one lookup, plus the write — but the ceiling is set by what
       the job can WAIT for, not by what it does. The pacer may hold it for the
@@ -1358,7 +1385,7 @@ kinds:
   # would never be located at all.
   #
   # It NOMINATES; it does not decide. Each candidate is handed to
-  # geocode_organization, which re-asks AddressForGeocode, so the retry ledger
+  # geocode_company, which re-asks AddressForGeocode, so the retry ledger
   # and the settled-address rules stay in exactly one place.
   #
   # NO WORKSPACE ARG, like webhook_retry and for the same reason: a periodic
@@ -1382,16 +1409,16 @@ kinds:
       queues, each paced by the installation-wide requester. Two minutes is
       generous for that and bounded by the batch.
 
-  technical_enrich_organization:
+  technical_enrich_company:
     role: worker
-    go_type: TechnicalEnrichOrganizationArgs
+    go_type: TechnicalEnrichCompanyArgs
     queue: technical_lookup
     timeout: 4m
     opts_owner: caller
     registration: {when: [TechnicalEnricher], absent: registers_anyway}
     args:
       Workspace: id
-      OrganizationID: id
+      CompanyID: id
     reason: >-
       Three lanes for one company, and the ceiling is set by what the job can
       WAIT for rather than by what it does. The certificate log is the long

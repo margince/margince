@@ -210,6 +210,15 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// a caller only needs when narrowing: a description still listing one
 	// report's names would be the same second copy in a shorter font.
 	//
+	// THE DIMENSIONS BELONG HERE AND DO NOT FIT. A report's admitted group_by
+	// names are a selection signal exactly as its default is — a caller that
+	// cannot see `direction` on activities-by-kind concludes no prebuilt report
+	// reaches it — and publishing them costs more of the single-tool ration
+	// than run_report has left. What stands in their place is the sentence
+	// saying a default is not a report's reach, which attacks the same wrong
+	// conclusion with no enumeration. Widening the ration is a decision with a
+	// measurement behind it: #5333.
+	//
 	// DERIVED from the fixture rather than listed, so renaming a name in
 	// twoReportCatalog() cannot leave this passing while the description recites
 	// the new one.
@@ -220,6 +229,7 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	// TestEveryToolNeedingAPipelineOrStageIDPointsAtListPipelines requires that
 	// sentence as long as the schema names them. Sweeping them up here would be
 	// demanding the removal of the one sentence another gate demands.
+	//
 	provenance := map[string]bool{"pipeline_id": true, "stage_id": true}
 	swept := 0
 	for _, entry := range twoReportCatalog() {

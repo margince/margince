@@ -3,7 +3,7 @@
 
 package attention
 
-// The two filter values a count links to.
+// The three filter values a count links to.
 //
 // Both exist for one reason: a Brief surface counted a population this
 // vocabulary could not then ask for, so its "N more" link opened a queue holding
@@ -11,6 +11,7 @@ package attention
 // answer, and each test states the wrong number it stops.
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -104,6 +105,124 @@ func TestExceptDecisionsKeepsEveryKindButDecisions(t *testing.T) {
 			t.Fatalf("kept a %q row: the complement of decisions holds none",
 				row.item.Category)
 		}
+	}
+}
+
+// TestUrgentKeepsExactlyWhatTheSummaryCounted is the one that matters, because
+// it is the defect stated as an equation.
+//
+// The Brief's first reading counts `summary.urgent` and its door opened `all`,
+// so a figure of two sent a reader into a queue of five with nothing saying
+// which two. The filter and the figure must agree on every day, so this asserts
+// the COUNT rather than a row list — and spans the whole ladder, because a
+// predicate written `== levelWaiting` passes a fixture holding only that level.
+func TestUrgentKeepsExactlyWhatTheSummaryCounted(t *testing.T) {
+	t.Parallel()
+
+	rows := []ranked{
+		candidate("waiting", levelWaiting),
+		candidate("promise", levelPromise),
+		candidate("risk", levelMaterialRisk),
+		candidate("agreed", levelAgreed),
+		candidate("blocking", levelBlocking),
+		candidate("hygiene", levelRoutine),
+	}
+
+	kept := keepFiltered(rows, filterUrgent)
+	summary := summarize(rows, materialBar{})
+
+	if len(kept) != int(summary.Urgent) {
+		t.Fatalf("the urgent lane holds %d rows and the figure above it says %d: "+
+			"a count whose door opens a different population is a number that lies",
+			len(kept), summary.Urgent)
+	}
+	// The positive control: two zeros satisfy the equation and prove neither
+	// side of it.
+	if summary.Urgent != 2 {
+		t.Fatalf("counted %d urgent over a waiting row and a breaking promise, "+
+			"wanted 2", summary.Urgent)
+	}
+	for _, row := range kept {
+		if semanticLevelOf(row) > levelPromise {
+			t.Fatalf("kept a level-%d row: urgent is somebody waiting or a promise "+
+				"breaking, and nothing below that", semanticLevelOf(row))
+		}
+	}
+}
+
+// TestAPinnedRowIsNotUrgentInEitherPlace holds the half of the rule a reader
+// controls.
+//
+// A pin is one reader's ordering preference. It moves a row to the top of their
+// own morning and makes nothing urgent — so pinning hygiene must grow neither
+// the figure nor the list it opens. The two read ONE predicate for exactly this
+// reason: a filter reading `item.Level` while the summary reads the semantic one
+// would let a pin inflate the lane but not the count, and the door would open
+// more than the number that sent the reader.
+func TestAPinnedRowIsNotUrgentInEitherPlace(t *testing.T) {
+	t.Parallel()
+
+	// Pinned through the real writer, so the row carries whatever shape
+	// production gives a pinned row rather than one this test invented.
+	rows := applyPins(
+		[]ranked{candidate("waiting", levelWaiting), candidate("hygiene", levelRoutine)},
+		map[RowRef]bool{{RowID: "hygiene"}: true}, // candidate() sets no Source
+	)
+
+	kept := keepFiltered(rows, filterUrgent)
+	summary := summarize(rows, materialBar{})
+
+	if len(kept) != int(summary.Urgent) {
+		t.Fatalf("pinned: the lane holds %d and the figure says %d", len(kept),
+			summary.Urgent)
+	}
+	for _, row := range kept {
+		if row.item.Id == "hygiene" {
+			t.Fatal("a pinned routine row reached the urgent lane: a reader's " +
+				"ordering preference made hygiene urgent")
+		}
+	}
+}
+
+// TestAPinnedMemberDoesNotDragItsGroupIntoTheUrgentLane holds the seam between
+// the pin, the fold and the filter.
+//
+// A system incident folds its members whatever their level, and the synthetic
+// row takes the MOST urgent member's `item.Level`. A pin writes level 0 into
+// exactly that field — so a reader pinning one automation failure minted a
+// level-0 group, and `semanticLevelOf` had no `pinned` flag on the synthetic
+// row to see through it. Three routine failures then reached the urgent lane
+// while the figure above it still said none of them were urgent.
+//
+// The two previous tests cannot catch this: one never folds, the other pins
+// without folding. This one pins, folds, and filters, in that order.
+func TestAPinnedMemberDoesNotDragItsGroupIntoTheUrgentLane(t *testing.T) {
+	t.Parallel()
+
+	cause := "one-broken-rule"
+	incident := func(id string) ranked {
+		return candidate(id, levelBlocking, func(r *ranked) {
+			r.item.Category = categorySystem
+			r.item.Source = "automation_run"
+			r.item.CauseRef = &cause
+		})
+	}
+	rows := applyPins(
+		[]ranked{incident("run-1"), incident("run-2"), incident("run-3")},
+		map[RowRef]bool{{Source: "automation_run", RowID: "run-1"}: true},
+	)
+
+	folded := foldRoutineDecisions(rows)
+	kept := keepFiltered(folded, filterUrgent)
+	summary := summarize(rows, materialBar{})
+
+	if summary.Urgent != 0 {
+		t.Fatalf("three routine failures counted %d urgent before the fold",
+			summary.Urgent)
+	}
+	if len(kept) != 0 {
+		t.Fatalf("the urgent lane kept %d row(s) over work the figure called "+
+			"none: a pin on one member minted a level-0 group", len(kept))
 	}
 }
 
@@ -498,4 +617,74 @@ func rankedIDs(rows []ranked) []string {
 		out = append(out, row.item.Id)
 	}
 	return out
+}
+
+// TestTheChangedCountMatchesWhatTheLaneOpens is the defect #5362 reported,
+// stated as the property that makes it impossible.
+//
+// The strip's number and the door beside it are one question asked twice, and
+// they used to be answered in two places: the browser tallied the flag over the
+// rows it received — one page of an unfiltered read — while the link opened
+// every row this filter admits. The gap was whatever ranked past the cut, and it
+// only ever ran one way: a busy morning read as a quiet one.
+//
+// So the count is taken where the filter lives, over `considered`, and this
+// holds the two to each other. The set here is deliberately larger than any
+// page: the point is that the figure does not stop at one.
+func TestTheChangedCountMatchesWhatTheLaneOpens(t *testing.T) {
+	t.Parallel()
+
+	cutoff := rankInstant.Add(-time.Hour)
+	fresh := cutoff.Add(time.Minute)
+	stale := cutoff.Add(-time.Minute)
+	var lanes []crmcontracts.AttentionItem
+	for at := range 40 {
+		when := stale
+		if at%2 == 0 {
+			when = fresh
+		}
+		lanes = append(lanes,
+			item(strconv.Itoa(at), "deal_at_risk", withOccurred(when)))
+	}
+	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(lanes...)}
+
+	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
+	readings := readingsOf(considered, nil, nil)
+	opened := keepFiltered(considered, filterChangedSinceBrief)
+
+	if got, want := int(readings.ChangedSinceBrief), len(opened); got != want {
+		t.Fatalf("the strip says %d and its own lane opens %d — the number and the door it labels are one question", got, want)
+	}
+	// And the figure reaches past a page, which is the half a count taken from
+	// the drawn rows could never satisfy.
+	if readings.ChangedSinceBrief != 20 {
+		t.Fatalf("counted %d of 20 fresh rows — a figure that stops at the page is the defect this replaced",
+			readings.ChangedSinceBrief)
+	}
+}
+
+// TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew keeps the count on the
+// filter's own rule rather than a second reading of it. A row already on screen
+// as a card is not also news, and a count that forgot the exclusion would
+// overstate the door by exactly the decisions the deck is drawing.
+func TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew(t *testing.T) {
+	t.Parallel()
+
+	cutoff := rankInstant.Add(-time.Hour)
+	fresh := cutoff.Add(time.Minute)
+	day := crmcontracts.Attention{
+		AsOf: rankInstant,
+		NeedsYou: []crmcontracts.AttentionItem{
+			item("decision", "approval", withKind("send_email"), withOccurred(fresh)),
+		},
+		AtRisk: lane(item("risk", "deal_at_risk", withOccurred(fresh))),
+	}
+
+	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
+	readings := readingsOf(considered, nil, nil)
+
+	if readings.ChangedSinceBrief != 1 {
+		t.Fatalf("counted %d, want 1 — the approval is already a card and the strip does not name it twice",
+			readings.ChangedSinceBrief)
+	}
 }

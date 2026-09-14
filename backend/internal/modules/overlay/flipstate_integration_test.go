@@ -54,15 +54,15 @@ func setConnectionStatus(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 	}
 }
 
-// seedMirrorPerson seeds one mirrored person row in the given sync
-// state — person is the class these flip-state tests exercise; the
+// seedMirrorContact seeds one mirrored contact row in the given sync
+// state — contact is the class these flip-state tests exercise; the
 // cross-class estate lives in the compose flip lane.
-func seedMirrorPerson(ctx context.Context, t *testing.T, pool *pgxpool.Pool, ext, syncState string) {
+func seedMirrorContact(ctx context.Context, t *testing.T, pool *pgxpool.Pool, ext, syncState string) {
 	t.Helper()
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO overlay_mirror (object_class, external_id, fields, updated_at_baseline, sync_state)
-			VALUES ('person', $1, '{"full_name":"Fixture Row"}'::jsonb, now(), $2)`,
+			VALUES ('contact', $1, '{"full_name":"Fixture Row"}'::jsonb, now(), $2)`,
 			ext, syncState)
 		return err
 	})
@@ -106,9 +106,9 @@ func flipService(db *database.DB) *Service {
 	svc := NewService(db, nil, NewMirrorStore(db, nil))
 	return svc.WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
 		switch canonical {
-		case "person":
+		case "contact":
 			return []string{IncumbentClassContacts}, true
-		case "organization":
+		case "company":
 			return []string{IncumbentClassCompanies}, true
 		default:
 			return nil, false
@@ -164,7 +164,7 @@ func TestFlipChecksRefuseAProjectionAnOlderDeclarationProduced(t *testing.T) {
 	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
-	ingestMirrorRow(ctx, t, ms, "person", "p-current", currentContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-current", currentContactsDeclaration, baseline)
 	checks, err := svc.FlipChecks(ctx)
 	if err != nil {
 		t.Fatalf("FlipChecks: %v", err)
@@ -173,7 +173,7 @@ func TestFlipChecksRefuseAProjectionAnOlderDeclarationProduced(t *testing.T) {
 		t.Fatalf("checks = %+v, want force-fresh done with every projection current", checks)
 	}
 
-	ingestMirrorRow(ctx, t, ms, "person", "p-legacy", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-legacy", oldContactsDeclaration, baseline)
 	checks, err = svc.FlipChecks(ctx)
 	if err != nil {
 		t.Fatalf("FlipChecks: %v", err)
@@ -184,13 +184,48 @@ func TestFlipChecksRefuseAProjectionAnOlderDeclarationProduced(t *testing.T) {
 
 	// Re-projecting at the SAME baseline is the convergence path (the
 	// incumbent has not touched the record, so nothing else can change).
-	ingestMirrorRow(ctx, t, ms, "person", "p-legacy", currentContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-legacy", currentContactsDeclaration, baseline)
 	checks, err = svc.FlipChecks(ctx)
 	if err != nil {
 		t.Fatalf("FlipChecks: %v", err)
 	}
 	if !checks.ForceFreshDone {
 		t.Fatal("force-fresh stayed blocked after the row was re-projected by the current declaration")
+	}
+}
+
+// An operator held by force_fresh_incomplete is waiting on one of two things,
+// and they need opposite actions: a sweep that has not finished, or a mapping
+// nobody has repaired. The preflight told them neither — only that it failed.
+//
+// Both arms, because the count is only useful if zero is trustworthy: a
+// PENDING row blocks the flip too and is not stuck, so reporting it here would
+// send somebody looking for a declaration to fix that is already correct.
+func TestFlipChecksCountTheRowsNoDeclarationCanProject(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	seedOverlayWorkspace(ctx, t, pool)
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
+	svc := flipServiceJudgingContacts(db)
+	ms := NewMirrorStore(db, nil)
+	recordSweepSuccess(ctx, t, pool)
+	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
+
+	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-old-1", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-old-2", oldContactsDeclaration, baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-current", currentContactsDeclaration, baseline)
+
+	checks, err := svc.FlipChecks(ctx)
+	if err != nil {
+		t.Fatalf("FlipChecks: %v", err)
+	}
+	if checks.ForceFreshDone {
+		t.Fatal("force-fresh reported done with rows the current declaration cannot project")
+	}
+	if checks.UnprojectableRows != 2 {
+		t.Errorf("the preflight reports %d un-projectable rows, want 2 — an operator blocked by "+
+			"force_fresh_incomplete is told the flip failed and not how much is stuck",
+			checks.UnprojectableRows)
 	}
 }
 
@@ -210,8 +245,8 @@ func TestFlipChecksBlockOnARowWhoseReprojectionFailed(t *testing.T) {
 	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
-	ingestMirrorRow(ctx, t, ms, "person", "p-unmappable", oldContactsDeclaration, baseline)
-	if err := ms.RecordReprojectionFailure(ctx, "person", "p-unmappable", currentContactsDeclaration); err != nil {
+	ingestMirrorRow(ctx, t, ms, "contact", "p-unmappable", oldContactsDeclaration, baseline)
+	if err := ms.RecordReprojectionFailure(ctx, "contact", "p-unmappable", currentContactsDeclaration); err != nil {
 		t.Fatalf("RecordReprojectionFailure: %v", err)
 	}
 	// A row holding the old declaration already blocks the flip on its own, so
@@ -248,7 +283,7 @@ func TestFlipChecksCountARowThatRecordsNoDeclarationAsStale(t *testing.T) {
 	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
-	ingestMirrorRow(ctx, t, ms, "person", "p-unfingerprinted", "", baseline)
+	ingestMirrorRow(ctx, t, ms, "contact", "p-unfingerprinted", "", baseline)
 	var stored *string
 	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(
@@ -287,10 +322,10 @@ func TestFlipChecksSpareAClassNoCurrentDeclarationJudges(t *testing.T) {
 	markBackfillDone(ctx, t, pool, IncumbentClassCompanies)
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
-	ingestMirrorRow(ctx, t, ms, "person", "p-current", currentContactsDeclaration, baseline)
-	// organization resolves to companies, which the injected map does not
+	ingestMirrorRow(ctx, t, ms, "contact", "p-current", currentContactsDeclaration, baseline)
+	// company resolves to companies, which the injected map does not
 	// name — and the row carries a fingerprint that matches nothing.
-	ingestMirrorRow(ctx, t, ms, "organization", "org-retired", "companies-declaration-retired", baseline)
+	ingestMirrorRow(ctx, t, ms, "company", "company-retired", "companies-declaration-retired", baseline)
 
 	checks, err := svc.FlipChecks(ctx)
 	if err != nil {
@@ -306,8 +341,8 @@ func TestFlipChecksReportUnreachableStaleAndPending(t *testing.T) {
 	seedOverlayWorkspace(ctx, t, pool)
 	svc := flipService(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)))
 
-	// Fresh overlay, one converged person row.
-	seedMirrorPerson(ctx, t, pool, "p-1", "fresh")
+	// Fresh overlay, one converged contact row.
+	seedMirrorContact(ctx, t, pool, "p-1", "fresh")
 	recordSweepSuccess(ctx, t, pool)
 	markBackfillDone(ctx, t, pool, IncumbentClassContacts)
 
@@ -323,8 +358,8 @@ func TestFlipChecksReportUnreachableStaleAndPending(t *testing.T) {
 	}
 
 	// A stale row breaks force-fresh; a pending_sync row is counted.
-	seedMirrorPerson(ctx, t, pool, "p-stale", "stale")
-	seedMirrorPerson(ctx, t, pool, "p-dirty", "pending_sync")
+	seedMirrorContact(ctx, t, pool, "p-stale", "stale")
+	seedMirrorContact(ctx, t, pool, "p-dirty", "pending_sync")
 	checks, err = svc.FlipChecks(ctx)
 	if err != nil {
 		t.Fatalf("FlipChecks: %v", err)
@@ -349,7 +384,7 @@ func TestFlipChecksRequireBackfillConvergence(t *testing.T) {
 	seedOverlayWorkspace(ctx, t, pool)
 	svc := flipService(database.BindTo(pool, ids.From[ids.WorkspaceKind](ws)))
 
-	seedMirrorPerson(ctx, t, pool, "p-1", "fresh")
+	seedMirrorContact(ctx, t, pool, "p-1", "fresh")
 	recordSweepSuccess(ctx, t, pool)
 	// No backfill cursor at all → not converged, not force-fresh.
 	checks, err := svc.FlipChecks(ctx)
@@ -387,7 +422,7 @@ func TestSealUnsealLifecycleAndFreezeFence(t *testing.T) {
 
 	// A fenced ingest refuses while frozen — the snapshot cannot drift.
 	err = ms.WithFence().Ingest(ctx, Record{
-		ExternalID: "p-frozen", ObjectClass: "person",
+		ExternalID: "p-frozen", ObjectClass: "contact",
 		Fields: map[string]any{"full_name": "Late Arrival"}, ModifiedAt: time.Now(),
 	})
 	if !errors.Is(err, ErrMirrorFrozen) {
@@ -408,7 +443,7 @@ func TestSealUnsealLifecycleAndFreezeFence(t *testing.T) {
 		t.Fatalf("UnsealFlipSnapshot: %v", err)
 	}
 	err = ms.WithFence().Ingest(ctx, Record{
-		ExternalID: "p-thawed", ObjectClass: "person",
+		ExternalID: "p-thawed", ObjectClass: "contact",
 		Fields: map[string]any{"full_name": "After Thaw"}, ModifiedAt: time.Now(),
 	})
 	if err != nil {
