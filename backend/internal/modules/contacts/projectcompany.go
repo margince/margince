@@ -116,6 +116,16 @@ func CompaniesOnProjectTx(
 	}
 	// And the company itself is a row-scoped record, so one the caller may not
 	// open is omitted rather than named.
+	//
+	// BOTH halves, because the row half alone answers WHICH companies and never
+	// whether this caller may read companies at all: under row_scope=all it
+	// admits every row, so a seat holding relationship.read and project.update
+	// and no company grant would be handed display names it is refused on every
+	// other surface. Withheld the same way the relationship grant above is —
+	// the section goes, not the project.
+	if !auth.ReadGranted(ctx, "company") {
+		return nil, nil
+	}
 	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
 		return nil, err

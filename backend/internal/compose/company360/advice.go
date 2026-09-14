@@ -61,6 +61,18 @@ func (s *Service) UndismissedAdvice(
 	}
 	now := s.now().UTC()
 	var kept []crmcontracts.Company360Suggestion
+	// The object half before the row half, because EnsureVisible answers only
+	// WHICH companies: under row_scope=all it admits every row, so a seat with
+	// no company grant would be handed the account's display name and lifecycle
+	// stage inside the advice text readCompanyHeading renders.
+	//
+	// No advice rather than a refusal. Advice is one section of the account
+	// page, and failing it would take the page from a caller over a section
+	// they were never entitled to — the same answer the rest of this assembly
+	// gives an ungranted section.
+	if !auth.ReadGranted(ctx, "company") {
+		return nil, nil
+	}
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
 			return err

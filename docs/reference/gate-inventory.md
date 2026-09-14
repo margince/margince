@@ -132,7 +132,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `worklistbounds_test.go` | H2 | The worklist reports a source as possibly having more work behind it when its lane came back exactly at its bound. |
 | `worklistverdictstandings_test.go` | H2 | The queue's verdict standings ARE the deal card's, and this derives them from the card rather than keeping a second list of them. |
 
-## Census (147)
+## Census (148)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -166,6 +166,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
+| `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confirmcardfields_test.go` | H2 | The confirm page shows a data subject their own record, and only that. |
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role — or is a reserved placeholder that says so. |
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |

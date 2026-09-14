@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attachCompanyCounts fills contact_count and open_deal_count for a page.
@@ -60,8 +59,8 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	// governs, and a count that answered without it would be a counting oracle
 	// over edges the role is refused on every other surface. Absent, again —
 	// zero would be a wrong number on screen rather than a withheld one.
-	contactsVisible := grantVisible(ctx, "contact") && grantVisible(ctx, "relationship")
-	dealsVisible := grantVisible(ctx, "deal") && computedFieldsVisible(ctx)
+	contactsVisible := auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
+	dealsVisible := auth.ReadGranted(ctx, "deal") && auth.ReadGranted(ctx, "computed_field")
 	for i := range companies {
 		idx[companies[i].Id] = &companies[i]
 		companyIDs[i] = ids.UUID(companies[i].Id)
@@ -83,20 +82,6 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 		return nil
 	}
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
-}
-
-// grantVisible is the object-grant half of a read, answered from the
-// principal's merged permissions the way computedFieldsVisible answers its
-// own: no query, system principal trusted, no actor fails closed.
-func grantVisible(ctx context.Context, object string) bool {
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return false
-	}
-	if actor.Type == principal.PrincipalSystem {
-		return true
-	}
-	return actor.Permissions.Allows(object, principal.ActionRead)
 }
 
 // fillContactCounts counts current-primary employment edges to live contacts
