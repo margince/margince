@@ -56,6 +56,14 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if p.Type != principal.PrincipalAgent {
 		return true
 	}
+	// A HumanOnly tool requests no agent authority and RequireHuman refuses
+	// this same principal at Invoke — offering it here would advertise a call
+	// the gate can only ever deny, exactly the lie this function exists to
+	// prevent. Ordered first rather than relying on it never co-occurring
+	// with SelfDescribing, so the rule reads plainly.
+	if spec.HumanOnly {
+		return false
+	}
 	// A tool answering who the caller is stays offered whatever the passport
 	// is scoped to do; mcp.ToolSpec.SelfDescribing says why, and the
 	// admission gate reads the same flag so the listing cannot offer what the
