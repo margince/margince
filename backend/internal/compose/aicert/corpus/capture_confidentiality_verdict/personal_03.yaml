@@ -29,7 +29,7 @@ expect:
     A co-living operator invoicing the mailbox owner for the rent on the room he
     lives in. It is addressed to him by name, it names the room he sleeps in, and
     the money is his own.
-    Rent on a person's home is that person's household, not a supplier
+    Rent on a contact's home is that contact's household, not a supplier
     relationship of the company. A landlord is not a vendor the team deals with,
     and where the founder lives is not the workspace's business. "personal"
     scores high.

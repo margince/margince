@@ -19,7 +19,7 @@ export default meta;
 
 type Story = StoryObj;
 
-const ORG = "01a06151-0000-7000-8000-000000000001";
+const COMPANY = "01a06151-0000-7000-8000-000000000001";
 
 type PanelTag = {
   tag_id: string;
@@ -36,12 +36,12 @@ function Panel({
   canEdit = true,
 }: Readonly<{ tags: PanelTag[]; withheld?: boolean; canEdit?: boolean }>) {
   installFetchStub({
-    [`GET /records/organization/${ORG}/tags`]: () =>
+    [`GET /records/company/${COMPANY}/tags`]: () =>
       jsonResponse({ data: tags, withheld }),
   });
   return (
     <StoryProviders>
-      <TagsPanel entityType="organization" entityID={ORG} canEdit={canEdit} />
+      <TagsPanel entityType="company" entityID={COMPANY} canEdit={canEdit} />
     </StoryProviders>
   );
 }

@@ -25,7 +25,7 @@ shared  →  platform  →  modules  →  compose  →  cmd
   one admission point), `events` (outbox relay/subscriber/dedupe),
   `dbmigrate`, `httperr`, `httpserver`.
 - **`internal/modules/`** — the twenty bounded capabilities (identity,
-  people, deals, activities, approvals, agents, automation, ai, search,
+  contacts, deals, activities, approvals, agents, automation, ai, search,
   capture, comms, consent, privacy, collections, signals, customfields,
   webhooks, overlay, migration; the `de` jurisdiction pack is an
   extension under `extensions/`, not a module). A
@@ -176,7 +176,7 @@ cross-module need as a `compose` adapter — never a sibling import.
 
 Modules follow one of two sanctioned shapes — don't invent a third:
 
-- **Handlers → Store** (CRUD modules: people, deals, activities, …).
+- **Handlers → Store** (CRUD modules: contacts, deals, activities, …).
   Transport handlers map contract DTOs and call the store; the store
   owns the transactional write shape and the RBAC gate at its entry
   points.
@@ -201,7 +201,7 @@ envelope, the relay, dedupe — is detailed in
 
 ## Tenancy as structure
 
-An installation holds ONE organization (ADR-0061), so no table carries a
+An installation holds ONE company (ADR-0061), so no table carries a
 row-level policy. Every module statement still goes through the one
 workspace-transaction helper — the auditable boundary a fitness function
 derived from the live tree holds — and row scope is decided by

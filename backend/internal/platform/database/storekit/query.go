@@ -50,7 +50,7 @@ type Query struct {
 // clauses without the gate. The row scope is the one that matters most: it is
 // what makes a predicate able only to NARROW what the caller may already see,
 // and an executor that forgot it would still return plausible rows, just other
-// people's. One point of composition means "is this scoped?" has one answer for
+// contacts's. One point of composition means "is this scoped?" has one answer for
 // every caller.
 func (q Query) predicateWhere(ctx context.Context, p Predicate) (string, []any, error) {
 	if err := auth.Require(ctx, q.Table, principal.ActionRead); err != nil {

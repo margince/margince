@@ -9,10 +9,10 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY } from "../app/entity";
 import { routeHash } from "../app/router";
-import { splitEmailBody } from "../format/emailtext";
 import { formatBytes, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { Button, Modal } from "./atoms";
+import { EmailText } from "./emailtext";
 import { FileChip } from "./filechip";
 import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
@@ -259,7 +259,6 @@ function EmailBody({
       </SurfaceState>
     );
   }
-  const parts = splitEmailBody(presentation.body ?? "");
   return (
     <div className="emaildetail__body">
       <Parties
@@ -267,27 +266,7 @@ function EmailBody({
         formatWhen={formatWhen}
         renderRecords={renderRecords}
       />
-      <p className="emaildetail__main">{parts.main}</p>
-      {/* A SIGN-OFF is the sender still speaking, and it is two lines. It is
-          shown, quietly, under the message it belongs to.
-
-          Folding it away was the defect: the tail was one field for two
-          different things, so a message ending "Viele Grüße / Bảo" and no
-          quoted reply at all put the sender's own name behind a control
-          promising history that was not there. A reader pressed nothing,
-          because the label said the thing they did not want. */}
-      {parts.tail === "signature" && (
-        <p className="emaildetail__signoff">{parts.trimmed}</p>
-      )}
-      {/* An older message under this one. Kept and folded rather than dropped:
-          a splitter that guesses wrong must stay one press from being wrong in
-          public. */}
-      {parts.tail === "quote" && (
-        <details className="emaildetail__quoted">
-          <summary>{t("email.detail.showQuoted")}</summary>
-          <p>{parts.trimmed}</p>
-        </details>
-      )}
+      <EmailText body={presentation.body ?? ""} />
       <Attachments files={presentation.attachments} />
     </div>
   );
@@ -363,19 +342,19 @@ function partyName(party: EmailParty): string {
  * tab would close the message they are part-way through reading to reach a
  * page they could have opened from behind it. Opening beside it keeps both.
  *
- * `person_id` is the server's own resolution — set only when the address
+ * `contact_id` is the server's own resolution — set only when the address
  * belongs to a contact this caller may see — so a stranger's address stays
  * text rather than becoming a link into a 404.
  */
 function PartyName({ party }: Readonly<{ party: EmailParty }>) {
   const name = partyName(party);
-  if (!party.person_id) {
+  if (!party.contact_id) {
     return <>{name}</>;
   }
   return (
     <a
       className="entity-link"
-      href={routeHash(ENTITY.person.route(party.person_id))}
+      href={routeHash(ENTITY.contact.route(party.contact_id))}
       // `rel` travels with `target`, never behind it: a blank target without
       // `noopener` hands the opened page a live handle back into this one.
       target="_blank"
@@ -391,7 +370,7 @@ function PartyName({ party }: Readonly<{ party: EmailParty }>) {
  *
  * Only the parties that can actually be NAMED. A row carrying neither a name
  * nor an address says nothing to a reader, and joining it in puts a gap in the
- * list where a person should be — so it is dropped, and a line with nobody
+ * list where a contact should be — so it is dropped, and a line with nobody
  * left to name does not draw at all, rather than drawing a label over
  * punctuation.
  */
@@ -416,7 +395,7 @@ function PartyLine({
         // seat is two rows the server sends on one line, and two children
         // under one key is a rendering React warns about and then gets wrong.
         <Fragment
-          key={`${party.address}|${party.person_id ?? ""}|${party.user_id ?? ""}`}
+          key={`${party.address}|${party.contact_id ?? ""}|${party.user_id ?? ""}`}
         >
           {index > 0 && ", "}
           <PartyName party={party} />

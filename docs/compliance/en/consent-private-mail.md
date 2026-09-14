@@ -21,7 +21,7 @@ Margince, including messages that are private in character — having been told:
 1. **What is captured** — sender, recipients, subject, body and attachments,
    plus the contact records derived from them.
 2. **Who can read it** — under the default `classified` setting, only them and
-   the people on the message. A classifier then releases only ordinary business
+   the contacts on the message. A classifier then releases only ordinary business
    threads to the team. Correspondence judged personal or advisory stays held.
    An administrator cannot read held content.
 3. **What they control** — exclude senders, destroy captured mail, see and
@@ -36,7 +36,7 @@ Margince, including messages that are private in character — having been told:
 
 ## Notes for whoever runs this
 
-- **One consent per person per version.** If what the system does changes, ask
+- **One consent per contact per version.** If what the system does changes, ask
   again — a consent covers only what it informed about.
 - **Document it, do not merely collect it.** Art. 7(1) requires proof: who
   signed which version, and when.

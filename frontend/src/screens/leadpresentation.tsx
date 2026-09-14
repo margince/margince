@@ -100,7 +100,7 @@ const LEAD_BOARD_STAGES = [
 // the leads-by-status report instead.
 //
 // They are not statuses a card can simply be MOVED to. Qualifying promotes the
-// lead into a person (and maybe a deal) and disqualifying records a reason, so
+// lead into a contact (and maybe a deal) and disqualifying records a reason, so
 // each drop opens the dialog that collects what the transition needs — the
 // server refuses a bare status PATCH into either, and rightly.
 const LEAD_TERMINAL_STAGES = [
@@ -211,8 +211,8 @@ function LeadCard({
         {leadIdentityName(lead) || t("lead.unnamed")}
       </span>
       {lead.company_name && (
-        <span className="deal-org">
-          <span className="deal-org-name">{lead.company_name}</span>
+        <span className="deal-company">
+          <span className="deal-company-name">{lead.company_name}</span>
         </span>
       )}
       <span className="deal-meta">
@@ -351,7 +351,7 @@ export function LeadBoard({
   // WHERE a dropped card lands, as one decision.
   //
   // A terminal column FIRST. Neither of those transitions is a status change:
-  // qualifying promotes the lead into a person and maybe a deal, disqualifying
+  // qualifying promotes the lead into a contact and maybe a deal, disqualifying
   // records a reason, and the server refuses a bare status PATCH into either.
   // The drop opens the dialog that collects what the transition needs; only an
   // open stage is a move.
@@ -520,26 +520,6 @@ export function LeadBoard({
 
 export function promoteEligible(lead: Lead): boolean {
   return isOpenStatus(lead.status) && Boolean(lead.email);
-}
-
-// The terminal badge a lead status earns (null = live/open, no badge). A lead
-// is archived iff it is promoted or disqualified; keying the label off the
-// status — not a bare archived_at — is what stops a promoted lead reading
-// "Disqualified". Exhaustive over the four statuses: a new value is a compile
-// error here, not a silently-unlabelled row.
-export function terminalBadge(
-  status: Lead["status"],
-): { label: MessageKey; tone: "warn" } | null {
-  switch (status) {
-    case "disqualified":
-      return { label: "lead.disqualified", tone: "warn" };
-    case "promoted":
-      return { label: "record.archived", tone: "warn" };
-    case "new":
-    case "contacted":
-    case "engaged":
-      return null;
-  }
 }
 
 // The open ladder, as the page's open-step predicate reads it.

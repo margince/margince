@@ -30,7 +30,7 @@ import (
 )
 
 // AttentionBaseMoney prices one read's amounts against the stored rates — the
-// seam the Worklist is wired with. Exported the way OrgHierarchyRollup is: the
+// seam the Worklist is wired with. Exported the way CompanyHierarchyRollup is: the
 // integration lane proves it against real rates, because the cutoff,
 // newest-wins and the identity shortcut are SQL a unit test cannot fail.
 type AttentionBaseMoney struct{ Pool *pgxpool.Pool }

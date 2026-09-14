@@ -1,7 +1,7 @@
 # Information for employees: how your mail is captured
 
 > Reading copy. The [German version](../de/mitarbeiterinformation.md) is the one
-> to issue, and it must reach people **before** a mailbox is connected.
+> to issue, and it must reach contacts **before** a mailbox is connected.
 
 ## What happens
 
@@ -17,7 +17,7 @@ system reaches nothing.
 This is the question that matters, and the answer depends on one setting:
 
 - **`classified` (the default)** — every captured message is visible only to
-  you and the people who were on the mail. A classifier then reads each thread
+  you and the contacts who were on the mail. A classifier then reads each thread
   and releases only the ordinary business conversations to your colleagues.
   Everything else stays private.
 - **`held`** — nothing is ever released.

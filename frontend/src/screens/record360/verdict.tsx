@@ -16,7 +16,7 @@
 // its rule's own words instead — never nothing, which would read as a signal
 // somebody cleared.
 //
-// Entity-agnostic on purpose. Company360 and Person360 answer the same
+// Entity-agnostic on purpose. Company360 and Contact360 answer the same
 // question about a different record, and the day they grow a verdict they take
 // this one rather than a second shaped like it.
 

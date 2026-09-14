@@ -36,7 +36,7 @@ func deepReadWorkerCtx(ctx context.Context, args SiteDeepReadArgs) context.Conte
 
 // withClaimedRequester stamps the principal every store write is attributed to.
 // The human named here owns what this read creates, so it must be the one the
-// DOSSIER ROW records: a payload that disagreed would hang another person's
+// DOSSIER ROW records: a payload that disagreed would hang another contact's
 // name on the rows, which no later gate would catch — provenance is written
 // once and never re-derived.
 func withClaimedRequester(ctx context.Context, requestedBy string, readID ids.UUID) context.Context {
@@ -61,7 +61,7 @@ func withClaimedRequester(ctx context.Context, requestedBy string, readID ids.UU
 func requestedByUserID(requestedBy string) ids.UUID {
 	// Only a HUMAN requester can be a human owner, which is exactly what
 	// principal.HumanUserID answers: a system namespace naming a uuid is not a
-	// person, and attributing it to one is the provenance mistake this whole
+	// contact, and attributing it to one is the provenance mistake this whole
 	// path exists to avoid.
 	id, ok := principal.HumanUserID(requestedBy)
 	if !ok {

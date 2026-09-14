@@ -5,7 +5,7 @@ package privacy
 
 // The privacy half: drives retentionAppliedPayload — the exact function
 // the retention.applied emit sites call (retention.go's eraseEmbedCall,
-// eraseVoiceSignalContent and apply, erasure.go's ErasePerson) — then
+// eraseVoiceSignalContent and apply, erasure.go's EraseContact) — then
 // round-trips the result through JSON exactly as
 // storekit.EmitEventForEntity marshals it into the outbox envelope's
 // payload column. There is no non-integration harness in this repo that
@@ -18,8 +18,8 @@ package privacy
 // retention.applied is dynamic-entity (contract x-entity-type: dynamic):
 // its subject is ai_call (the embedding-retention sweep),
 // voice_learning_signal (the voice-learning content sweep), pol.ObjectType
-// (a workspace's configured retention policy — activity/deal/lead/person/
-// ai_call_payload), or person (Art. 17 erasure) — DIFFERENT runtime values
+// (a workspace's configured retention policy — activity/deal/lead/contact/
+// ai_call_payload), or contact (Art. 17 erasure) — DIFFERENT runtime values
 // across the sites, none of which is the payload's own (unused, "dynamic")
 // EntityType(). This file proves each site's entity-type expression
 // survives into the wire envelope via storekit.EmitEventForEntity, using
@@ -47,7 +47,7 @@ import (
 // TestRetentionAppliedPayload_ActionOnly proves the embed-call sweep's
 // subset (retention.go's eraseEmbedCall): action only, no policy or reason.
 func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
-	payload := retentionAppliedPayload(actionErase, nil, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
 	if !reflect.DeepEqual(payload.EventType(), "retention.applied") {
 		t.Errorf("got %v, want %v", payload.EventType(), "retention.applied")
@@ -55,8 +55,8 @@ func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
 	if !reflect.DeepEqual(payload.EntityType(), "dynamic") {
 		t.Errorf("retention.applied is a dynamic-entity type — its static EntityType() is unused; the real subject comes from EmitEventForEntity's caller-supplied entityType: got %v, want %v", payload.EntityType(), "dynamic")
 	}
-	if !reflect.DeepEqual(payload.Action, actionErase) {
-		t.Errorf("got %v, want %v", payload.Action, actionErase)
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedErase) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedErase)
 	}
 	if payload.Policy != nil {
 		t.Errorf("expected nil, got %v", payload.Policy)
@@ -89,10 +89,10 @@ func TestRetentionAppliedPayload_ActionOnly(t *testing.T) {
 func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 	policyID := ids.NewV7()
 
-	payload := retentionAppliedPayload("archive", &policyID, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedArchive, &policyID, nil)
 
-	if !reflect.DeepEqual(payload.Action, "archive") {
-		t.Errorf("got %v, want %v", payload.Action, "archive")
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedArchive) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedArchive)
 	}
 	if payload.Policy == nil {
 		t.Fatalf("expected non-nil value")
@@ -106,14 +106,14 @@ func TestRetentionAppliedPayload_WithPolicy(t *testing.T) {
 }
 
 // TestRetentionAppliedPayload_WithReason proves the Art. 17 erasure
-// subset (erasure.go's ErasePerson): action + reason, no policy.
+// subset (erasure.go's EraseContact): action + reason, no policy.
 func TestRetentionAppliedPayload_WithReason(t *testing.T) {
 	reason := "dsr_request"
 
-	payload := retentionAppliedPayload(actionErase, nil, &reason)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, &reason)
 
-	if !reflect.DeepEqual(payload.Action, actionErase) {
-		t.Errorf("got %v, want %v", payload.Action, actionErase)
+	if !reflect.DeepEqual(payload.Action, crmcontracts.RetentionAppliedErase) {
+		t.Errorf("got %v, want %v", payload.Action, crmcontracts.RetentionAppliedErase)
 	}
 	if payload.Policy != nil {
 		t.Errorf("expected nil, got %v", payload.Policy)
@@ -202,15 +202,15 @@ func decodedOutboxEntityType(t *testing.T, tx *fakeTx) string {
 // TestRetentionAppliedEmitUsesRuntimeEntityType is the dynamic-entity twist:
 // retention.applied's subject varies by site — ai_call (the embed-call
 // sweep), a policy's configured object type (the policy-driven sweep), or
-// person (Art. 17 erasure) — none of which is the payload's own (unused,
+// contact (Art. 17 erasure) — none of which is the payload's own (unused,
 // "dynamic") EntityType(). Driving the exact
 // same seam each site uses against all three runtime values proves the
 // wire entity_type tracks the caller-supplied subject, not the payload's
 // static type.
 func TestRetentionAppliedEmitUsesRuntimeEntityType(t *testing.T) {
-	payload := retentionAppliedPayload(actionErase, nil, nil)
+	payload := retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil)
 
-	for _, entityType := range []string{"ai_call", "activity", "deal", "person"} {
+	for _, entityType := range []string{"ai_call", "activity", "deal", "contact"} {
 		t.Run(entityType, func(t *testing.T) {
 			tx := &fakeTx{}
 			auditID := ids.NewV7()
@@ -225,5 +225,49 @@ func TestRetentionAppliedEmitUsesRuntimeEntityType(t *testing.T) {
 				t.Errorf("retention.applied must carry the site's runtime entity type, not the payload's static (unused) EntityType(): got %v, want %v", decodedOutboxEntityType(t, tx), entityType)
 			}
 		})
+	}
+}
+
+// The row-sourced action is checked against what the contract publishes.
+//
+// Every other emit site passes a contract constant and is held by the compiler.
+// This one takes retention_policy.action off the row, and the CHECK there
+// currently admits exactly the three the contract does — held by
+// TestTheRetentionActionSetIsOneSet, which is what makes the two agree today.
+//
+// So this guard is for the day they DO NOT: a migration that widens the CHECK
+// without the contract, or an installation whose schema drifted. It fails at a
+// different moment than the gate does — the gate on a diff, this on a database
+// — and the failure it prevents is an event every subscriber drops in silence,
+// which reads exactly like no event having been emitted.
+//
+// Asserted as a function rather than through a row, because the CHECK means no
+// row can carry the value that exercises it; a case that went through Postgres
+// could only test the arm the constraint already forbids.
+func TestARowsRetentionActionIsCheckedAgainstWhatIsPublished(t *testing.T) {
+	policy := ids.NewV7()
+
+	for _, published := range []string{"archive", "anonymize", "erase"} {
+		action, err := publishedRetentionAction(published, policy)
+		if err != nil {
+			t.Errorf("the contract publishes %q and the check refused it: %v", published, err)
+		}
+		if string(action) != published {
+			t.Errorf("checking %q answered %q — the value a subscriber switches on must be the one stored",
+				published, action)
+		}
+	}
+
+	action, err := publishedRetentionAction("redact", policy)
+	if err == nil {
+		t.Fatalf("an action retention.applied does not publish was accepted as %q — the event would "+
+			"ship and every subscriber switching on the three known values would drop it", action)
+	}
+	// The VALUE and the POLICY, both. An operator meeting this has to find the
+	// row, and a message naming neither sends them to grep the whole table.
+	for _, want := range []string{"redact", policy.String()} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal %q does not name %q", err, want)
+		}
 	}
 }

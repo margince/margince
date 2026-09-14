@@ -32,7 +32,7 @@ type PayloadPurger interface {
 // erasePayloads destroys the link material behind the subject's controller
 // deliveries and clears the references that named it.
 //
-// A subject is reached through their DELIVERIES rather than through a person
+// A subject is reached through their DELIVERIES rather than through a contact
 // column, because comms_outbound carries no subject id: the tie is the activity,
 // which is exactly how the rest of the delivery scrub finds these rows.
 func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, payloads PayloadPurger) error {

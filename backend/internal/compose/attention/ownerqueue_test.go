@@ -6,7 +6,7 @@ package attention
 // A manager asking for a rep's queue gets the REP's work.
 //
 // The narrowing happens twice on this path and both halves have to agree: the
-// lanes are read for the named person, and the assembled rows are then kept for
+// lanes are read for the named contact, and the assembled rows are then kept for
 // them. A projection that consulted the wrong service saw no named owner, fell
 // through to "mine", and handed back the MANAGER's own day under the rep's
 // name — a page that is wrong in the one way its reader cannot detect, because
@@ -39,7 +39,7 @@ func managerReading() context.Context {
 	})
 }
 
-// waitingOwnedBy is the who-is-waiting lane over rows attributed to two people.
+// waitingOwnedBy is the who-is-waiting lane over rows attributed to two contacts.
 type waitingOwnedBy []WaitingCustomer
 
 func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
@@ -60,12 +60,12 @@ func (w waitingOwnedBy) Hidden(context.Context, time.Time) (HiddenWork, error) {
 	return HiddenWork{Shown: len(w)}, nil
 }
 
-// Opening a named person's queue keeps THEIR waiting customers and drops the
+// Opening a named contact's queue keeps THEIR waiting customers and drops the
 // reader's own.
 //
 // Both rows qualify, both are visible to this reader, and the only thing
 // separating them is who owes the reply — so a projection that narrows against
-// the wrong person returns exactly the wrong row while still returning one.
+// the wrong contact returns exactly the wrong row while still returning one.
 func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *testing.T) {
 	t.Parallel()
 
@@ -101,7 +101,7 @@ func TestANamedOwnersQueueCarriesTheirWaitingCustomersAndNotTheReadersOwn(t *tes
 	}
 	if titles["the manager's own customer"] {
 		t.Error("the reader's OWN waiting customer arrived on a page headed with " +
-			"somebody else's name — the projection narrowed against the wrong person")
+			"somebody else's name — the projection narrowed against the wrong contact")
 	}
 }
 

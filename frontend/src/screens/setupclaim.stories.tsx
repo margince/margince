@@ -7,7 +7,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * The first-run claim (ADR-0105).
  *
  * An installation whose deployment file names no `bootstrap_admin` holds no
- * organization. Its boundary would otherwise render "installation not ready" —
+ * company. Its boundary would otherwise render "installation not ready" —
  * true, and a dead end. This screen is what stands there when the installation
  * is instead WAITING to be claimed, and it is the only screen in the product
  * that creates an account without one.
@@ -16,7 +16,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * assertion: whether the warning that this account is the installation's ROOT
  * reads as a warning, whether the token field reads as something copied from a
  * server log rather than a password, and whether a refusal is legible next to a
- * form the person has just filled in. The three refusals differ in meaning, not
+ * form the contact has just filled in. The three refusals differ in meaning, not
  * just wording — a wrong token, an installation someone else already claimed,
  * and a field to fix are three different next actions — so each is a story.
  */
@@ -38,7 +38,7 @@ export default meta;
 type Story = StoryObj<typeof SetupClaimScreen>;
 
 /**
- * fill drives the form to the state a person reaches before pressing submit.
+ * fill drives the form to the state a contact reaches before pressing submit.
  * Shared by every story below, so the refusals differ only in what the server
  * answers — which is the thing each of them is about.
  */
@@ -49,10 +49,7 @@ async function fill(canvasElement: HTMLElement) {
     canvas.getByLabelText(/setup token/i),
     "9f2c-not-a-real-token",
   );
-  await user.type(
-    canvas.getByLabelText(/organization name/i),
-    "Brandt Automotive",
-  );
+  await user.type(canvas.getByLabelText(/company name/i), "Brandt Automotive");
   await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");
   await user.type(canvas.getByLabelText(/your email/i), "ilse@brandt.example");
   await user.type(
@@ -68,9 +65,7 @@ async function submitAgainst(canvasElement: HTMLElement, status: number) {
     "POST /setup/claim": () => jsonResponse({}, status),
   });
   const { canvas, user } = await fill(canvasElement);
-  await user.click(
-    canvas.getByRole("button", { name: /create the organization/i }),
-  );
+  await user.click(canvas.getByRole("button", { name: /create the company/i }));
 }
 
 /** The screen an operator's first visit lands on. */
@@ -91,7 +86,7 @@ export const Ready: Story = {
  * A password below the floor. The refusal takes the field's `error` slot — the
  * danger tone and an `aria-invalid` outline, where it used to ride the same grey
  * `hint` as the neutral rule it replaced — and the button stays disabled, so the
- * refusal happens here rather than as a 422 after a round trip the person has
+ * refusal happens here rather than as a 422 after a round trip the contact has
  * already waited for.
  */
 export const PasswordTooShort: Story = {
@@ -103,7 +98,7 @@ export const PasswordTooShort: Story = {
       "9f2c-not-a-real-token",
     );
     await user.type(
-      canvas.getByLabelText(/organization name/i),
+      canvas.getByLabelText(/company name/i),
       "Brandt Automotive",
     );
     await user.type(canvas.getByLabelText(/your name/i), "Ilse Brandt");

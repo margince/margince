@@ -92,7 +92,7 @@ func TestARosterPastTheCoresCapIsDroppedWhole(t *testing.T) {
 
 // The published cap and the core's are ONE number. A unit that checks itself
 // against the published one and a core that applies its own must not be able to
-// answer differently about the same sixty-person group: the unit would report a
+// answer differently about the same sixty-contact group: the unit would report a
 // record it believes landable and read a refusal it cannot explain.
 func TestThePublishedRosterCapIsTheCoresOwn(t *testing.T) {
 	if extension.MaxParticipants != connector.MaxParticipants {

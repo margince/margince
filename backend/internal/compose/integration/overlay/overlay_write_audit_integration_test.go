@@ -148,16 +148,16 @@ func TestOverlayUpdateWritesTheAuditTrail(t *testing.T) {
 // writes only a derived-cache health event.
 func TestOverlayArchiveWritesTheAuditTrail(t *testing.T) {
 	e := setupOverlayWrite(t)
-	e.seed(t, "person", "9202", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
-	id := firstListedID(t, e.AppEnv, "/v1/people")
+	e.seed(t, "contact", "9202", map[string]any{"first_name": "Ada", "last_name": "Overlay"})
+	id := firstListedID(t, e.AppEnv, "/v1/contacts")
 
-	if status := e.Call(t, "DELETE", "/v1/people/"+id, nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("DELETE /v1/people/%s = %d", id, status)
+	if status := e.Call(t, "DELETE", "/v1/contacts/"+id, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("DELETE /v1/contacts/%s = %d", id, status)
 	}
 
-	audits := auditRowsFor(t, e.AppEnv, "person", id)
+	audits := auditRowsFor(t, e.AppEnv, "contact", id)
 	if len(audits) != 1 {
-		t.Fatalf("audit_log rows for the archived person = %d, want exactly 1 — a record removed from the customer's CRM with no audit row has no answer to who removed it", len(audits))
+		t.Fatalf("audit_log rows for the archived contact = %d, want exactly 1 — a record removed from the customer's CRM with no audit row has no answer to who removed it", len(audits))
 	}
 	if audits[0].action != "archive" {
 		t.Errorf("audit action = %q, want %q", audits[0].action, "archive")
@@ -166,9 +166,9 @@ func TestOverlayArchiveWritesTheAuditTrail(t *testing.T) {
 		t.Errorf("audit actor_type = %q, want %q", audits[0].actorType, "human")
 	}
 
-	types := outboxTypesFor(t, e.AppEnv, "person", id)
-	if !containsString(types, "person.archived") {
-		t.Errorf("staged events = %v, want them to include person.archived", types)
+	types := outboxTypesFor(t, e.AppEnv, "contact", id)
+	if !containsString(types, "contact.archived") {
+		t.Errorf("staged events = %v, want them to include contact.archived", types)
 	}
 }
 

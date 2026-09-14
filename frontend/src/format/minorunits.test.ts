@@ -4,7 +4,7 @@ import { minorUnitDigits, toMajorUnits, toMinorUnits } from "./minorunits";
 // The defect this module closes: eleven call sites hard-coded 100, so a dong
 // price typed as 18,000,000 was stored as 1,800,000,000. The zero-decimal rows
 // are the point of the table, not an edge case.
-describe("the scale between what a person types and what we store", () => {
+describe("the scale between what a human types and what we store", () => {
   it.each([
     ["EUR", 2],
     ["USD", 2],
@@ -39,7 +39,7 @@ describe("the scale between what a person types and what we store", () => {
   //
   // Two reviewers arrived at this from opposite ends and neither could be
   // satisfied by rounding. One reported that 1.005 EUR stored 100 rather than
-  // 101 — the cent a person typed, lost to binary. The other reported that
+  // 101 — the cent a human typed, lost to binary. The other reported that
   // 1.004951 EUR stored 101 rather than 100 — a cent invented out of a value
   // below the halfway point. Both are true, and they differ only past the
   // tolerance any rounding has to pick, so any choice of tolerance is wrong for

@@ -88,7 +88,7 @@ func tablesWithFrozenRateColumn(t *testing.T) []string {
 			if err != nil {
 				return err
 			}
-			for _, table := range tablesDefiningFrozenRate(string(raw)) {
+			for _, table := range tablesDefiningFrozenRate(withCurrentNames(string(raw))) {
 				found[table] = true
 			}
 			return nil
@@ -142,11 +142,11 @@ func TestNoArchiveColumnIsOnlyPassedForTablesWithoutOne(t *testing.T) {
 	t.Parallel()
 	archivable := tablesWithArchivedAt(t)
 	// Both halves are derived, so both can go silently empty and leave the
-	// comparison vacuously true. `organization` is the archivable table this
+	// comparison vacuously true. `company` is the archivable table this
 	// whole guard exists around; if the schema reader cannot see its
 	// archived_at, it is reading nothing.
-	if !archivable["organization"] {
-		t.Fatal("the migration reader found no archived_at on organization — it has stopped reading the schema it derives from")
+	if !archivable["company"] {
+		t.Fatal("the migration reader found no archived_at on company — it has stopped reading the schema it derives from")
 	}
 	claimed := tablesPassedNoArchiveColumn(t)
 	if len(claimed) == 0 {
@@ -202,7 +202,7 @@ func tablesWithArchivedAt(t *testing.T) map[string]bool {
 				return err
 			}
 			subject := ""
-			for _, line := range strings.Split(string(raw), "\n") {
+			for _, line := range strings.Split(withCurrentNames(string(raw)), "\n") {
 				if m := tableStatement.FindStringSubmatch(line); m != nil {
 					subject = m[1]
 				}

@@ -7,7 +7,7 @@ package activities
 //
 // Separate from the signature seam beside it, and deliberately: a signature is
 // what the sender WROTE and this is who they ARE. They also come from different
-// owners — the signature is the person's own text, the display name is the seat
+// owners — the signature is the colleague's own text, the display name is the seat
 // the identity module holds — and a message can honestly carry one without the
 // other.
 //

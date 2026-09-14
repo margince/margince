@@ -11,7 +11,7 @@ package weekly
 // neither moves under the comparison.
 //
 // It reads only reviews that are already written, which is why the job runs it
-// as a third phase: a snapshot assembled while reps are still being measured
+// after individual measurement: a snapshot assembled while reps are still being measured
 // would freeze a team that was half-counted, and nothing afterwards would say
 // so.
 
@@ -36,17 +36,18 @@ import (
 const (
 	// They asked. Nothing outranks a request already made.
 	FocusHelpRequested = "help_requested"
-	// A customer waited past the target and nobody answered.
+	// A customer waited past the response target, even if answered later.
 	FocusLeadsBreached = "leads_breached"
 	// They planned a week and did not keep it.
 	FocusCommitmentsMissed = "commitments_missed"
-	// Meetings happened and left nothing behind.
+	// Meetings have no explicit follow-up recorded.
 	FocusMeetingsWithoutNextStep = "meetings_without_next_step"
 	// Nothing to fix, and something to copy. Without this a healthy rep
 	// produces no row at all, and a page promising one focus per rep would
 	// quietly shorten to the troubled ones — which reads as a team where only
-	// those people exist.
-	FocusStrongWeek = "strong_week"
+	// those contacts exist.
+	FocusStrongWeek  = "strong_week"
+	FocusDealsAtRisk = "deals_at_risk"
 	// Nothing to fix and nothing that stood out. Said plainly rather than
 	// dressed as either a problem or a triumph.
 	FocusQuietWeek = "quiet_week"
@@ -123,6 +124,9 @@ type TeamRep struct {
 func (e *Engine) AssembleTeamFor(
 	ctx context.Context, teamID ids.UUID, teamName string, members []TeamMember, now time.Time,
 ) (TeamReview, bool, error) {
+	if err := e.mayReadTeam(ctx, teamID); err != nil {
+		return TeamReview{}, false, err
+	}
 	var review TeamReview
 	var created bool
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -135,6 +139,13 @@ func (e *Engine) AssembleTeamFor(
 		review = TeamReview{
 			TeamID: teamID, TeamName: teamName,
 			LocalWeekStart: week, AsOf: now.UTC(),
+		}
+		var measured bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM team_weekly_review WHERE team_id=$1 AND local_week_start=$2 AND reps_counted>0)`, teamID, week).Scan(&measured); err != nil {
+			return err
+		}
+		if measured {
+			return nil
 		}
 		if err := gatherTeamWeek(ctx, tx, &review, members); err != nil {
 			return err
@@ -221,13 +232,14 @@ func gatherTeamWeek(
 ) error {
 	// Money is answerable only if EVERY member's week converted. One rep whose
 	// currency had no rate makes the team total unanswerable, exactly as one
-	// unconvertible deal does for that rep — a sum quietly missing a person is
+	// unconvertible deal does for that rep — a sum quietly missing a contact is
 	// worse than an absent one.
 	money := Money{Known: true}
 	for _, member := range members {
 		counts, memberMoney, help, err := memberWeek(ctx, tx, member.UserID, review.LocalWeekStart)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			review.RepsUnread++
+			money.Known = false
 			continue
 		}
 		if err != nil {
@@ -235,7 +247,7 @@ func gatherTeamWeek(
 		}
 		review.Counts.RepsCounted++
 		addTeamCounts(&review.Counts, counts)
-		if !memberMoney.Known {
+		if !memberMoney.Known || (money.Currency != "" && money.Currency != memberMoney.Currency) {
 			money.Known = false
 		} else if money.Known {
 			money.Currency = memberMoney.Currency
@@ -243,7 +255,11 @@ func gatherTeamWeek(
 			money.WonMinor += memberMoney.WonMinor
 			money.LostMinor += memberMoney.LostMinor
 		}
-		review.Reps = append(review.Reps, repFrom(member, counts, help))
+		recovery, err := memberDealRecovery(ctx, tx, member.UserID, review.LocalWeekStart)
+		if err != nil {
+			return err
+		}
+		review.Reps = append(review.Reps, repFrom(member, counts, help, recovery))
 	}
 	if money.Known && money.Currency != "" {
 		review.Money = money
@@ -266,8 +282,8 @@ func addTeamCounts(team *TeamCounts, member Counts) {
 }
 
 // repFrom builds one member's row, focus and all.
-func repFrom(member TeamMember, counts Counts, help int) TeamRep {
-	kind, label := focusFor(counts, help)
+func repFrom(member TeamMember, counts Counts, help int, recovery string) TeamRep {
+	kind, label := focusFor(counts, help, recovery)
 	return TeamRep{
 		UserID: member.UserID, DisplayName: member.DisplayName,
 		DealsWon: counts.DealsWon, LeadsBreached: counts.LeadsBreached,
@@ -282,12 +298,12 @@ func repFrom(member TeamMember, counts Counts, help int) TeamRep {
 //
 // One per rep, always — including the rep whose week went well, whose focus is
 // what the team should copy. A page promising one focus per rep and delivering
-// rows only for the troubled ones reads as a team where only those people
+// rows only for the troubled ones reads as a team where only those contacts
 // exist, which is both untrue and demoralising to be listed in.
 //
 // The label is composed here rather than by a model: it states a stored figure
 // and nothing else, so it cannot say something the snapshot does not hold.
-func focusFor(counts Counts, help int) (kind, label string) {
+func focusFor(counts Counts, help int, recovery string) (kind, label string) {
 	switch {
 	case help > 0:
 		return FocusHelpRequested, fmt.Sprintf("Asked for help on %s", plural(help, "commitment"))
@@ -297,16 +313,18 @@ func focusFor(counts Counts, help int) (kind, label string) {
 	case counts.CommitmentsDue > counts.CommitmentsKept:
 		return FocusCommitmentsMissed, fmt.Sprintf("Kept %d of %d commitments",
 			counts.CommitmentsKept, counts.CommitmentsDue)
-	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
-		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s left without a next step",
-			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))
+	case recovery != "":
+		return FocusDealsAtRisk, recovery
 	case counts.DealsWon > 0:
 		return FocusStrongWeek, fmt.Sprintf("Won %s — worth asking how",
 			plural(counts.DealsWon, "deal"))
 	case counts.CommitmentsDue > 0 && counts.CommitmentsDue == counts.CommitmentsKept:
 		return FocusStrongWeek, fmt.Sprintf("Kept every commitment (%d)", counts.CommitmentsDue)
+	case counts.MeetingsHeld > counts.MeetingsWithNextStep:
+		return FocusMeetingsWithoutNextStep, fmt.Sprintf("%s have no linked follow-up recorded",
+			plural(counts.MeetingsHeld-counts.MeetingsWithNextStep, "meeting"))
 	default:
-		return FocusQuietWeek, "A quiet week"
+		return FocusQuietWeek, "No priority indicated by the recorded metrics"
 	}
 }
 

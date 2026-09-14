@@ -13,7 +13,7 @@ type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 const BASE_READ: CompanySiteRead = {
   id: "018f3a1b-0000-7000-8000-0000000000b2",
   target_kind: "onboarding",
-  organization_id: null,
+  company_id: null,
   root_url: "https://gradion.com",
   status: "reading",
   status_code: null,
@@ -23,7 +23,7 @@ const BASE_READ: CompanySiteRead = {
   profile_fields: [],
   facts: [],
   comparisons: [],
-  people: [],
+  contacts: [],
   warnings: [],
   draft_version: 1,
   proposal_hash: "h1",

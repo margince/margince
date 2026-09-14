@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { EyeOff, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -239,7 +238,6 @@ function FileMenu({
     >
       {captured && !doc.hidden ? (
         <Button small variant="ghost" onClick={onHide}>
-          <EyeOff aria-hidden />
           {t("files.hide")}
         </Button>
       ) : null}
@@ -255,7 +253,6 @@ function FileMenu({
       ) : null}
       {!captured ? (
         <Button small variant="ghost" onClick={onDelete}>
-          <Trash2 aria-hidden />
           {t("files.delete")}
         </Button>
       ) : null}

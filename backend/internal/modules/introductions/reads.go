@@ -49,8 +49,8 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 // same SELECT drift the moment a column is added, and the reader that still
 // works is the one whose scan happens to line up.
 const requestColumns = `
-	SELECT id, person_id, requester_user_id, introducer_user_id, route_type,
-	       through_person_id, internal_reason, value_for_target, forwardable_note,
+	SELECT id, contact_id, requester_user_id, introducer_user_id, route_type,
+	       through_contact_id, internal_reason, value_for_target, forwardable_note,
 	       note_generated_by, note_ai_generated, fallback_policy, name_drop_allowed,
 	       status, decision_reason, suggested_user_id, source_activity_id,
 	       due_at, requested_at, decided_at, introduced_at, name_dropped_at,
@@ -61,8 +61,8 @@ type row interface{ Scan(dest ...any) error }
 
 func scanRequest(src row, r *Request) error {
 	return src.Scan(
-		&r.ID, &r.PersonID, &r.RequesterUserID, &r.IntroducerUser, &r.RouteType,
-		&r.ThroughPersonID, &r.InternalReason, &r.ValueForTarget, &r.ForwardableNote,
+		&r.ID, &r.ContactID, &r.RequesterUserID, &r.IntroducerUser, &r.RouteType,
+		&r.ThroughContactID, &r.InternalReason, &r.ValueForTarget, &r.ForwardableNote,
 		&r.NoteGeneratedBy, &r.NoteAIGenerated, &r.FallbackPolicy, &r.NameDropAllowed,
 		&r.Status, &r.DecisionReason, &r.SuggestedUserID, &r.SourceActivityID,
 		&r.DueAt, &r.RequestedAt, &r.DecidedAt, &r.IntroducedAt, &r.NameDroppedAt,
@@ -75,7 +75,7 @@ func scanRequest(src row, r *Request) error {
 // granting human's UserID, so matching on the id alone would make a credential
 // a PARTY to its human's asks — reading the request text, the status and the
 // reason somebody gave for refusing. Being lent authority to act is not the
-// same as being the person whose favour was asked.
+// same as being the contact whose favour was asked.
 func (s *Store) roleOf(ctx context.Context, r *Request) Actor {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ""
@@ -115,8 +115,8 @@ func (s *Store) Get(ctx context.Context, id ids.UUID) (*Request, error) {
 	return out, nil
 }
 
-// ForPerson lists the asks about one contact, newest first.
-func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]Request, error) {
+// ForContact lists the asks about one contact, newest first.
+func (s *Store) ForContact(ctx context.Context, contactID ids.UUID, limit int) ([]Request, error) {
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -139,10 +139,10 @@ func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]
 		// fetch what the list already had in hand would be one.
 		rows, err := tx.Query(ctx, requestColumns+`
 			  FROM intro_request
-			 WHERE person_id = $1 AND archived_at IS NULL
+			 WHERE contact_id = $1 AND archived_at IS NULL
 			   AND (requester_user_id = $2 OR introducer_user_id = $2)
 			 ORDER BY requested_at DESC, id DESC
-			 LIMIT $3`, personID, actor.UserID, limit)
+			 LIMIT $3`, contactID, actor.UserID, limit)
 		if err != nil {
 			return fmt.Errorf("introductions: listing the asks about this contact: %w", err)
 		}
@@ -166,7 +166,7 @@ func (s *Store) ForPerson(ctx context.Context, personID ids.UUID, limit int) ([]
 // AwaitingMyAnswer lists the asks waiting on the CALLER to answer, the ones
 // closest to lapsing first.
 //
-// Bound to the acting person and to no other, exactly as a notice is: an ask
+// Bound to the acting contact and to no other, exactly as a notice is: an ask
 // names one colleague, and there is no wider scope for it to widen to. A
 // manager asking for `team` does not reach a colleague's asks, because the
 // question "whose favour was somebody asked for" is not shared record-bearing
@@ -187,7 +187,7 @@ func (s *Store) AwaitingMyAnswer(ctx context.Context, limit int) ([]Request, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		// No human, no queue. A caller with no person behind it has nobody
+		// No human, no queue. A caller with no human behind it has nobody
 		// whose favour was asked for, and answering with somebody else's asks
 		// would be handing an agent a colleague's inbox.
 		return nil, apperrors.ErrPermissionDenied

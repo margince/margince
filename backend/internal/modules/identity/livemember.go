@@ -21,7 +21,7 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 // TestEveryLiveMemberAliasIsALiteral holds that.
 //
 // WHO CAN CALL THIS: identity owns app_user, and a module never imports a
-// sibling (ADR-0054 §3) — so `search`, `projects`, `dealrooms`, `people` and
+// sibling (ADR-0054 §3) — so `search`, `projects`, `dealrooms`, `contacts` and
 // `activities` cannot, and spell the pair themselves. Those are ratified by name
 // in TestOnlyOneSpellingOfALiveMember rather than left looking clean, which is
 // the same shape the employment-currency census settled on. `compose` can import
@@ -38,7 +38,7 @@ func LiveMemberSQL(alias string) string {
 // that has never been entered, and an active one.
 //
 // It is NOT a second spelling of LiveMemberSQL and never answers "may this
-// person act". Every read that gates access asks that question and takes
+// contact act". Every read that gates access asks that question and takes
 // LiveMemberSQL, which excludes an invited member on purpose: they have no
 // password and no linked identity, so they sign in nowhere.
 //

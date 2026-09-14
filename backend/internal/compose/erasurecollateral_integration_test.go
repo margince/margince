@@ -37,26 +37,26 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 	e := integration.Setup(t)
 	const subjectEmail = "collateral.subject@counterparty.test"
 
-	var person, attachment ids.UUID
+	var contact, attachment ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO person (full_name, owner_id, source, captured_by, visibility)
+			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES ('Collateral Subject', $1, 'manual', 'human:test', 'workspace')
-			RETURNING id`, e.Rep1).Scan(&person); err != nil {
+			RETURNING id`, e.Rep1).Scan(&contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
-			VALUES ($1, $2, true, 'manual', 'human:test')`, person, subjectEmail); err != nil {
+			INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+			VALUES ($1, $2, true, 'manual', 'human:test')`, contact, subjectEmail); err != nil {
 			return err
 		}
 		// The row the erasure deletes, and the image that outlives it. The
 		// filename is what a reader must stop being able to see.
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO attachment (entity_type, entity_id, filename, storage_key, source, captured_by)
-			VALUES ('person', $1, 'collateral-subject-passport.pdf', 'blob/collateral', 'manual', 'human:test')
-			RETURNING id`, person).Scan(&attachment); err != nil {
+			VALUES ('contact', $1, 'collateral-subject-passport.pdf', 'blob/collateral', 'manual', 'human:test')
+			RETURNING id`, contact).Scan(&attachment); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
@@ -73,8 +73,8 @@ func TestAnErasureTombstonesTheAttachmentsItPurged(t *testing.T) {
 	// purge, so the bytes never outlive their only key. An in-memory store is
 	// the boundary stood in for; what is under test is the tombstone.
 	if err := privacy.NewEraser(InstallationDB(e.Pool)).WithBlobstore(blobstore.NewMemory()).
-		ErasePerson(e.Admin(), person, "subject request"); err != nil {
-		t.Fatalf("ErasePerson: %v", err)
+		EraseContact(e.Admin(), contact, "subject request"); err != nil {
+		t.Fatalf("EraseContact: %v", err)
 	}
 
 	// The tombstone, written by the erasure itself — not seeded here, because

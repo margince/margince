@@ -16,7 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// TestAdapterCreatePostsMappedProps: a canonical person Create projects onto
+// TestAdapterCreatePostsMappedProps: a canonical contact Create projects onto
 // contacts firstname/lastname (OVA-MAP-W1), POSTs to /crm/v3/objects/contacts,
 // and maps the created record back to canonical.
 func TestAdapterCreatePostsMappedProps(t *testing.T) {
@@ -41,7 +41,7 @@ func TestAdapterCreatePostsMappedProps(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	res, err := adapter.Create(t.Context(), "person", map[string]any{
+	res, err := adapter.Create(t.Context(), "contact", map[string]any{
 		"first_name": "Ada", "last_name": "Lovelace",
 	})
 	if err != nil {
@@ -85,7 +85,7 @@ func TestAdapterUpdateRefusesOnBaselineDrift(t *testing.T) {
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC) // older than the current 2026-06-01
-	_, err := adapter.Update(t.Context(), "person", "555", map[string]any{"first_name": "Ada2"}, baseline)
+	_, err := adapter.Update(t.Context(), "contact", "555", map[string]any{"first_name": "Ada2"}, baseline)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("Update on drift: err = %v, want ErrVersionSkew", err)
 	}
@@ -128,7 +128,7 @@ func TestAdapterUpdateAppliesWhenBaselineFresh(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	res, err := adapter.Update(t.Context(), "person", "555", map[string]any{"first_name": "Ada2"}, baseline)
+	res, err := adapter.Update(t.Context(), "contact", "555", map[string]any{"first_name": "Ada2"}, baseline)
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -165,7 +165,7 @@ func TestAdapterArchiveDeletes(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	if err := adapter.Archive(t.Context(), "person", "555", baseline); err != nil {
+	if err := adapter.Archive(t.Context(), "contact", "555", baseline); err != nil {
 		t.Fatalf("Archive: %v", err)
 	}
 	if deleted != "/crm/v3/objects/contacts/555" {
@@ -188,7 +188,7 @@ func TestAdapterArchiveRefusesOnDrift(t *testing.T) {
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
 	baseline := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC) // older than current 2026-07-01
-	if err := adapter.Archive(t.Context(), "person", "555", baseline); !errors.Is(err, apperrors.ErrVersionSkew) {
+	if err := adapter.Archive(t.Context(), "contact", "555", baseline); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("Archive on drift: err = %v, want ErrVersionSkew", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestAdapterArchiveActivityResolvesClassFromNamespacedID(t *testing.T) {
 }
 
 // TestAdapterCreateRejectsAllReadOnlyFields: a create whose every supplied
-// field is read-only/derived (a person with only full_name) cannot create an
+// field is read-only/derived (a contact with only full_name) cannot create an
 // incumbent object — it errors and never POSTs a blank record.
 func TestAdapterCreateRejectsAllReadOnlyFields(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +233,7 @@ func TestAdapterCreateRejectsAllReadOnlyFields(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	if _, err := adapter.Create(t.Context(), "person", map[string]any{"full_name": "Ada Lovelace"}); err == nil {
+	if _, err := adapter.Create(t.Context(), "contact", map[string]any{"full_name": "Ada Lovelace"}); err == nil {
 		t.Error("Create with only read-only fields must error, not POST a blank record")
 	}
 }
@@ -253,7 +253,7 @@ func TestAdapterUpdateNoOpWhenOnlyReadOnlyFields(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	res, err := adapter.Update(t.Context(), "person", "555", map[string]any{"full_name": "Ada Renamed"}, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC))
+	res, err := adapter.Update(t.Context(), "contact", "555", map[string]any{"full_name": "Ada Renamed"}, time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("no-op Update: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestAdapterCreateSurfacesIncumbentError(t *testing.T) {
 	defer srv.Close()
 
 	adapter := hubspot.NewAdapter(hubspot.NewClient("us", "tok", hubspot.WithBaseURL(srv.URL)))
-	_, err := adapter.Create(t.Context(), "person", map[string]any{"first_name": "Ada"})
+	_, err := adapter.Create(t.Context(), "contact", map[string]any{"first_name": "Ada"})
 	if err == nil {
 		t.Fatal("Create against a 5xx incumbent must error")
 	}

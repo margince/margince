@@ -32,7 +32,7 @@ expect:
   outcome: accepted
   answer:
     title: Head of Quality Assurance
-    org_name: Nordwerk Metalworks GmbH
+    company_name: Nordwerk Metalworks GmbH
     phone: +49 521 555 0142
   rubric: >
     The trailing lines of this mail are an ordinary block signature: a title, an

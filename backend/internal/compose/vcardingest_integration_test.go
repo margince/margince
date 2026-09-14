@@ -27,7 +27,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -187,7 +187,7 @@ func cardKeysOf(ctx context.Context, t *testing.T, w *vcardIngestWorker, activit
 
 // A mailbox whose owner turned off "read my mail for contact details" is not a
 // mailbox this path may mine either. The switch is the signature pass's, and
-// this writes people rather than filling a field, so it may not be the looser of
+// this writes contacts rather than filling a field, so it may not be the looser of
 // the two.
 //
 // Both arms again, and here the admit arm is doing more work than it looks: the
@@ -253,13 +253,13 @@ var errNoActorBound = errors.New("the import context carries no actor")
 // TestAStagingFailureRaisesAWorklistNoticeForTheImporter drives
 // recordStagingFailure's real write, against a real database, under a real
 // bound actor — the wiring the unit lane's injected recordFailure never
-// touches: a real notice row a person's Worklist would actually show, not an
+// touches: a real notice row a contact's Worklist would actually show, not an
 // audit row nothing renders.
 func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
-	entry := people.VCardEntry{FullName: "A Broken Card"}
+	entry := contacts.VCardEntry{FullName: "A Broken Card"}
 
 	if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {
 		t.Fatalf("recording a staging failure: %v", err)
@@ -273,7 +273,7 @@ func TestAStagingFailureRaisesAWorklistNoticeForTheImporter(t *testing.T) {
 		 WHERE recipient_user_id = $1 AND kind = $2`,
 		e.AdminUser, noticeKindVCardStagingFailed).Scan(&kind, &targetType, &targetID, &dedupe); err != nil {
 		t.Fatalf("reading the raised notice: %v — a mailed card's staging failure must reach "+
-			"the importer's own Worklist, the one screen a person unattended can still check", err)
+			"the importer's own Worklist, the one screen a contact unattended can still check", err)
 	}
 	if targetType != "activity" || targetID != activity {
 		t.Errorf("notice target = (%s, %s), want (activity, %s) — an activity subject renders no "+
@@ -295,7 +295,7 @@ func TestARetriedStagingFailureRaisesOnlyOneNotice(t *testing.T) {
 	e := integration.Setup(t)
 	worker := newVCardIngestWorker(e.Pool, blobstore.NewMemory(), quietIngestLog())
 	activity := ids.NewV7()
-	entry := people.VCardEntry{FullName: "A Broken Card"}
+	entry := contacts.VCardEntry{FullName: "A Broken Card"}
 
 	for i := 0; i < 3; i++ {
 		if err := worker.recordStagingFailure(e.Admin(), activity, entry); err != nil {

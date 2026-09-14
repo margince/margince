@@ -50,7 +50,7 @@ func summarize(rows []ranked, bar materialBar) crmcontracts.WorklistSummary {
 		// work, blocking decisions — fell between the two and a queue holding
 		// only at-risk deals reported three zeros over a page full of rows.
 		switch {
-		case level <= levelPromise:
+		case urgentWork(row):
 			summary.Urgent++
 		case level >= levelRoutine:
 			summary.LowerPriority++
@@ -158,11 +158,13 @@ func bucketOf(row ranked, level int, buckets *crmcontracts.WorklistBuckets) {
 // deadline is still inside today by construction.
 func dueToday(row ranked) bool {
 	if group := row.item.DueGroup; group != nil {
-		return *group == crmcontracts.WorklistDueGroupToday ||
-			*group == crmcontracts.WorklistDueGroupOverdue
+		return *group == crmcontracts.WorklistItemDueGroupWorklistDueGroupToday ||
+			*group == crmcontracts.WorklistItemDueGroupWorklistDueGroupOverdue
 	}
 	if !row.deadlineAt.IsZero() {
 		return true
 	}
 	return row.item.Overdue != nil && *row.item.Overdue
 }
+
+func urgentWork(row ranked) bool { return semanticLevelOf(row) <= levelPromise }

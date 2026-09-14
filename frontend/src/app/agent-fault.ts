@@ -9,7 +9,7 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
 /**
  * The run that broke, held on the orb until somebody has actually looked at it.
  *
- * A scheduled run fails at four in the morning and the person it ran for is
+ * A scheduled run fails at four in the morning and the contact it ran for is
  * asleep. Whatever the orb does at 04:12 is seen by nobody, so a fault that
  * decays on a timer, or on the next run settling, is a fault the reader can miss
  * entirely: the product knew its overnight work failed and never said so.
@@ -22,8 +22,8 @@ type AiActivityItem = components["schemas"]["AiActivityItem"];
  * delivered once.
  *
  * The seen marks are per browser and nothing else. There is no server-side read
- * or write for "this person has been told", and inventing one here would be a
- * durable claim about a person built out of one tab's local storage. What the
+ * or write for "this contact has been told", and inventing one here would be a
+ * durable claim about a contact built out of one tab's local storage. What the
  * mark actually buys is the thing it can honestly buy: a reload, or a second
  * screen in the same browser, does not raise a fault the reader already dealt
  * with.

@@ -11,7 +11,7 @@ package surfe
 // The awkward parts of the real payload are the point — an absent emailType
 // under the professional cascade, empty strings where the vendor has no
 // value, month-precision job dates — because those are what a naive mapping
-// gets wrong and what the person page then renders as blanks or lies.
+// gets wrong and what the contact page then renders as blanks or lies.
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func testAdapter(rec *recorder) *Adapter {
 func aRequest() provider.Request {
 	return provider.Request{
 		CorrelationID: "corr-1",
-		Identifiers: provider.PersonIdentifiers{
+		Identifiers: provider.ContactIdentifiers{
 			FirstName: "Anna", LastName: "Muster", CompanyDomain: "example.com",
 		},
 		Categories: []provider.Category{"professional_email", "mobile", "job_history"},
@@ -77,7 +77,7 @@ func TestSubmitSendsTheDocumentedBodyAndNothingElse(t *testing.T) {
 	if sub.Outcome != provider.OutcomeAccepted || sub.ProviderJobID != "enr-9" {
 		t.Fatalf("submission = %+v, want accepted with the enrichment id", sub)
 	}
-	if got := rec.seen.URL.String(); got != "https://api.surfe.com/v2/people/enrich" {
+	if got := rec.seen.URL.String(); got != "https://api.surfe.com/v2/contacts/enrich" {
 		t.Errorf("posted to %q, want the documented enrich endpoint", got)
 	}
 	if got := rec.seen.Header.Get("Authorization"); got != "Bearer k" {
@@ -88,14 +88,14 @@ func TestSubmitSendsTheDocumentedBodyAndNothingElse(t *testing.T) {
 	if err := json.Unmarshal([]byte(rec.sent), &body); err != nil {
 		t.Fatalf("the request body is not the documented shape: %v", err)
 	}
-	if len(body.People) != 1 {
-		t.Fatalf("sent %d people, want exactly one — a run is one subject, and batching would tie their fates together", len(body.People))
+	if len(body.Contacts) != 1 {
+		t.Fatalf("sent %d contacts, want exactly one — a run is one subject, and batching would tie their fates together", len(body.Contacts))
 	}
-	person := body.People[0]
-	if person.FirstName != "Anna" || person.LastName != "Muster" || person.CompanyDomain != "example.com" {
-		t.Errorf("identifiers = %+v, want the ones the run froze", person)
+	contact := body.Contacts[0]
+	if contact.FirstName != "Anna" || contact.LastName != "Muster" || contact.CompanyDomain != "example.com" {
+		t.Errorf("identifiers = %+v, want the ones the run froze", contact)
 	}
-	if person.ExternalID != "corr-1" {
+	if contact.ExternalID != "corr-1" {
 		t.Error("the correlation id did not ride as externalID: a returned result cannot be matched back to its run")
 	}
 	// The request asked for no LinkedIn category, so the flag must be off —
@@ -187,7 +187,7 @@ func TestVendorRefusalsMapOntoClosedProductCodes(t *testing.T) {
 
 // A poll that is still running costs nothing and asserts nothing.
 func TestPollReportsPendingUntilTheVendorCompletes(t *testing.T) {
-	rec := &recorder{status: http.StatusOK, body: `{"status":"IN_PROGRESS","percentCompleted":40,"people":[]}`}
+	rec := &recorder{status: http.StatusOK, body: `{"status":"IN_PROGRESS","percentCompleted":40,"contacts":[]}`}
 	status, err := testAdapter(rec).Poll(context.Background(), provider.Credential("k"), "enr-9")
 	if err != nil {
 		t.Fatal(err)
@@ -203,7 +203,7 @@ func TestPollReportsPendingUntilTheVendorCompletes(t *testing.T) {
 const completedBody = `{
   "enrichmentID": "enr-9",
   "status": "COMPLETED",
-  "people": [{
+  "contacts": [{
     "status": "COMPLETED",
     "firstName": "Anna", "lastName": "Muster",
     "emails": [{"email": "a.muster@example.com", "validationStatus": "valid"}],
@@ -281,7 +281,7 @@ func TestPollNormalizesTheAwkwardPartsOfTheRealPayload(t *testing.T) {
 // A completed enrichment that found nothing is a no-match, which releases
 // the whole reservation on per-successful-result billing.
 func TestACompletedEnrichmentWithNothingFoundIsANoMatch(t *testing.T) {
-	rec := &recorder{status: http.StatusOK, body: `{"status":"COMPLETED","people":[{"status":"NOT_FOUND","firstName":"Anna"}]}`}
+	rec := &recorder{status: http.StatusOK, body: `{"status":"COMPLETED","contacts":[{"status":"NOT_FOUND","firstName":"Anna"}]}`}
 	status, err := testAdapter(rec).Poll(context.Background(), provider.Credential("k"), "enr-9")
 	if err != nil {
 		t.Fatal(err)
@@ -385,10 +385,10 @@ func TestAnUnreadablePollReadsAsPendingRatherThanFailingTheSweep(t *testing.T) {
 }
 
 // Surfe returns EVERY address it found from the one lookup the run paid for.
-// Charging per value would bill a well-documented person more than a thinly
+// Charging per value would bill a well-documented contact more than a thinly
 // documented one for the same question, and would exceed the reservation.
 func TestSpendIsOnePerPoolHoweverManyValuesComeBack(t *testing.T) {
-	body := `{"status":"COMPLETED","people":[{
+	body := `{"status":"COMPLETED","contacts":[{
 		"emails":[{"email":"a@example.com"},{"email":"anna@example.com"},{"email":"a.muster@example.com"}],
 		"mobilePhones":[{"mobilePhone":"+49 1"},{"mobilePhone":"+49 2"}]}]}`
 	rec := &recorder{status: http.StatusOK, body: body}

@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
@@ -122,7 +122,7 @@ describe("the agenda on the screen", () => {
 
     await screen.findByText("Asked for help on 2 commitments");
     const names = [
-      ...container.querySelectorAll(".teamweekly-agenda-name"),
+      ...container.querySelectorAll(".teamweekly-agenda-name > a"),
     ].map((node) => node.textContent);
     expect(names).toEqual(["Noah Berger", "Lena Fischer"]);
     // The header summary and the list are one derivation, so the summary names
@@ -167,7 +167,7 @@ describe("the agenda on the screen", () => {
         [
           en["teamweekly.agenda.title"],
           "1. Noah Berger — Asked for help on 2 commitments",
-          "2. Lena Fischer — A quiet week",
+          `2. Lena Fischer — ${en["teamweekly.noPriority"]}`,
         ].join("\n"),
       ]),
     );

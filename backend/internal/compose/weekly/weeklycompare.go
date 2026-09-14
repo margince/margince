@@ -235,7 +235,7 @@ func priorReview(
 // readPriorWeek loads the frozen figures of the week this one is compared to.
 //
 // Scoped to the same rep, so a prior_review_id that somehow named another
-// person's review reads as no prior week rather than as a comparison against
+// contact's review reads as no prior week rather than as a comparison against
 // somebody else's numbers. Nothing writes such a row — the pointer is set from
 // the rep's own history — and that is exactly why the read states it rather
 // than relying on it.

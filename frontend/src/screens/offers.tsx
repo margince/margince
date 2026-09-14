@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Check, PenLine, RefreshCw, Send, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -14,7 +15,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { MoneyInput } from "../design-system/moneyinput";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -28,12 +29,19 @@ import {
   QueryGate,
   throwProblem,
 } from "./common";
+import {
+  EMPTY_LINE_BILLING,
+  type LineBilling,
+  lineBillingBody,
+  OfferLineBillingFields,
+} from "./offerlinebilling";
+import { NewLineRates } from "./offerlinerates";
+import { OfferTotalsPanel } from "./offerrecurring";
 import { searchProductCandidates } from "./products";
 
-// The offer 360: header, read-only totals, and a draft-only header edit.
-// buyer_org_id needs the shared RecordPicker and template_id is a
-// server-sourced select, neither of which the field-driven EditAction /
-// CreateField machinery has a slot for — so the edit surface is its own.
+// The offer 360: header, read-only totals, and a draft-only header edit whose
+// surface is its own because buyer_company_id needs the shared RecordPicker and
+// template_id a server-sourced select — EditAction/CreateField fits neither.
 
 type Offer = components["schemas"]["Offer"];
 type OfferTemplate = components["schemas"]["OfferTemplate"];
@@ -42,16 +50,19 @@ type OfferLineItemInput = components["schemas"]["OfferLineItemInput"];
 type UpdateOfferLineItemRequest =
   components["schemas"]["UpdateOfferLineItemRequest"];
 
-async function searchOrganizationCandidates(
+async function searchCompanyCandidates(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/organizations", {
+  const { data, error } = await api.GET("/companies", {
     params: { query: { q, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((org) => ({ id: org.id, name: org.display_name }));
+  return data.data.map((company) => ({
+    id: company.id,
+    name: company.display_name,
+  }));
 }
 
 function useOfferTemplates() {
@@ -71,7 +82,7 @@ function useOfferTemplates() {
 
 type HeaderEditValues = {
   currency: string;
-  buyer_org_id: string | null;
+  buyer_company_id: string | null;
   valid_until: string;
   template_id: string | null;
   intro_text: string;
@@ -80,34 +91,34 @@ type HeaderEditValues = {
 
 // RecordPicker only highlights a selection among candidates its OWN search
 // turned up — it has no way to preview a value set outside its session. A
-// freshly reopened header-edit modal only has `offer.buyer_org_id` (a bare
-// id), so the picker would otherwise render empty even though a buyer org
-// IS set. This resolves that id to a name (the same GET /organizations/{id}
+// freshly reopened header-edit modal only has `offer.buyer_company_id` (a bare
+// id), so the picker would otherwise render empty even though a buyer company
+// IS set. This resolves that id to a name (the same GET /companies/{id}
 // lookup entityref.tsx uses for the same bare-id-to-name problem), and
 // prefers the caller's own override — set once the user actively picks a
-// different org — over the resolved incumbent.
-function useBuyerOrgPreview(buyerOrgId: string | null, open: boolean) {
+// different company — over the resolved incumbent.
+function useBuyerCompanyPreview(buyerCompanyId: string | null, open: boolean) {
   const [override, setOverride] = useState<RecordPickerCandidate | null>(null);
   const existingQuery = useQuery({
-    queryKey: ["organization", "ref", buyerOrgId],
+    queryKey: ["company", "ref", buyerCompanyId],
     queryFn: async () => {
-      const { data, error } = await api.GET("/organizations/{id}", {
-        params: { path: { id: buyerOrgId ?? "" } },
+      const { data, error } = await api.GET("/companies/{id}", {
+        params: { path: { id: buyerCompanyId ?? "" } },
       });
       if (error) {
         throwProblem(error);
       }
       return {
-        id: buyerOrgId ?? "",
+        id: buyerCompanyId ?? "",
         name: data.display_name ?? "",
       } satisfies RecordPickerCandidate;
     },
-    enabled: Boolean(buyerOrgId) && open,
+    enabled: Boolean(buyerCompanyId) && open,
     staleTime: 60_000,
   });
-  const buyerOrg =
-    override ?? (buyerOrgId ? (existingQuery.data ?? null) : null);
-  return { buyerOrg, setBuyerOrgOverride: setOverride };
+  const buyerCompany =
+    override ?? (buyerCompanyId ? (existingQuery.data ?? null) : null);
+  return { buyerCompany, setBuyerCompanyOverride: setOverride };
 }
 
 function EditOfferHeaderModal({
@@ -121,14 +132,14 @@ function EditOfferHeaderModal({
   const templatesQuery = useOfferTemplates();
   const [values, setValues] = useState<HeaderEditValues>({
     currency: offer.currency,
-    buyer_org_id: offer.buyer_org_id ?? null,
+    buyer_company_id: offer.buyer_company_id ?? null,
     valid_until: offer.valid_until ?? "",
     template_id: offer.template_id ?? null,
     intro_text: offer.intro_text ?? "",
     terms_text: offer.terms_text ?? "",
   });
-  const { buyerOrg, setBuyerOrgOverride } = useBuyerOrgPreview(
-    offer.buyer_org_id ?? null,
+  const { buyerCompany, setBuyerCompanyOverride } = useBuyerCompanyPreview(
+    offer.buyer_company_id ?? null,
     open,
   );
   // Only the closed→open transition reprimes the form — a background
@@ -140,16 +151,16 @@ function EditOfferHeaderModal({
     if (open && !wasOpen.current) {
       setValues({
         currency: offer.currency,
-        buyer_org_id: offer.buyer_org_id ?? null,
+        buyer_company_id: offer.buyer_company_id ?? null,
         valid_until: offer.valid_until ?? "",
         template_id: offer.template_id ?? null,
         intro_text: offer.intro_text ?? "",
         terms_text: offer.terms_text ?? "",
       });
-      setBuyerOrgOverride(null);
+      setBuyerCompanyOverride(null);
     }
     wasOpen.current = open;
-  }, [open, offer, setBuyerOrgOverride]);
+  }, [open, offer, setBuyerCompanyOverride]);
 
   const mutation = useMutation({
     mutationFn: async (input: HeaderEditValues) => {
@@ -160,7 +171,7 @@ function EditOfferHeaderModal({
         },
         body: {
           currency: input.currency,
-          buyer_org_id: input.buyer_org_id,
+          buyer_company_id: input.buyer_company_id,
           valid_until: input.valid_until || null,
           template_id: input.template_id,
           intro_text: input.intro_text || null,
@@ -225,19 +236,22 @@ function EditOfferHeaderModal({
           />
         </div>
         <div className="field">
-          <span className="t-label">{t("offer.buyerOrg")}</span>
+          <span className="t-label">{t("offer.buyerCompany")}</span>
           <RecordPicker
-            label={t("offer.buyerOrg")}
-            searchTargets={searchOrganizationCandidates}
-            selected={buyerOrg}
+            label={t("offer.buyerCompany")}
+            searchTargets={searchCompanyCandidates}
+            selected={buyerCompany}
             onPick={(candidate) => {
-              setBuyerOrgOverride(candidate);
-              setValues((prev) => ({ ...prev, buyer_org_id: candidate.id }));
+              setBuyerCompanyOverride(candidate);
+              setValues((prev) => ({
+                ...prev,
+                buyer_company_id: candidate.id,
+              }));
             }}
           />
-          {buyerOrg && (
+          {buyerCompany && (
             <p className="t-caption">
-              {t("offer.buyerOrgConfirm", { name: buyerOrg.name })}
+              {t("offer.buyerCompanyConfirm", { name: buyerCompany.name })}
             </p>
           )}
         </div>
@@ -460,6 +474,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [newLine, setNewLine] = useState<NewLineState>(EMPTY_NEW_LINE);
+  const [billing, setBilling] = useState<LineBilling>(EMPTY_LINE_BILLING);
   const [priceTouched, setPriceTouched] = useState(false);
   const [product, setProduct] = useState<RecordPickerCandidate | null>(null);
 
@@ -735,44 +750,8 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               />
             )}
           </Field>
-          <Field label={t("offer.discountPct")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-discount"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.discount_pct}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    discount_pct: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
-          <Field label={t("offer.taxRate")}>
-            {(control) => (
-              <input
-                {...control}
-                data-testid="new-line-tax"
-                type="number"
-                step="0.01"
-                className="input"
-                style={{ width: 90 }}
-                value={newLine.tax_rate}
-                onChange={(event) =>
-                  setNewLine((prev) => ({
-                    ...prev,
-                    tax_rate: event.target.value,
-                  }))
-                }
-              />
-            )}
-          </Field>
+          <NewLineRates value={newLine} onChange={setNewLine} />
+          <OfferLineBillingFields value={billing} onChange={setBilling} />
         </div>
         <div
           style={{
@@ -818,6 +797,7 @@ function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
                   newLine.tax_rate === ""
                     ? undefined
                     : Number(newLine.tax_rate),
+                ...lineBillingBody(billing),
               })
             }
           >
@@ -883,7 +863,7 @@ function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="send-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.send")}
+        <Send aria-hidden /> {t("offer.send")}
       </Button>
       <ConfirmModal
         open={open}
@@ -955,7 +935,7 @@ function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="accept-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.accept")}
+        <Check aria-hidden /> {t("offer.accept")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1026,7 +1006,7 @@ function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         data-testid="reject-offer"
         onClick={() => setOpen(true)}
       >
-        {t("offer.reject")}
+        <X aria-hidden /> {t("offer.reject")}
       </Button>
       <ConfirmModal
         open={open}
@@ -1099,7 +1079,7 @@ function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         disabled={mutation.isPending}
         onClick={() => mutation.mutate()}
       >
-        {t("offer.regenerate")}
+        <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && (
         <p
@@ -1312,7 +1292,6 @@ function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
 
 export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const { locale } = useLocale();
   const [editing, setEditing] = useState(false);
   const offerQuery = useQuery({
     queryKey: ["offer", id],
@@ -1354,7 +1333,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                       navigate({ screen: "deals", id: offer.deal_id })
                     }
                   >
-                    {t("offer.backToDeal")}
+                    <ArrowLeft aria-hidden /> {t("offer.backToDeal")}
                   </Button>
                   {offer.status === "draft" && (
                     <Button
@@ -1362,7 +1341,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                       data-testid="edit-offer-header"
                       onClick={() => setEditing(true)}
                     >
-                      {t("offer.edit")}
+                      <PenLine aria-hidden /> {t("offer.edit")}
                     </Button>
                   )}
                   {offer.status === "draft" && (
@@ -1381,26 +1360,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
               {null}
             </Panel>
             <AiDisclosureBanner offer={offer} />
-            <Panel title={t("offer.totals")}>
-              <PanelRow>
-                <span className="t-label">{t("offer.net")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.net_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-              <PanelRow>
-                <span className="t-label">{t("offer.tax")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.tax_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-              <PanelRow>
-                <span className="t-label">{t("offer.gross")}</span>
-                <div className="t-mono">
-                  {formatMoney(offer.gross_minor, offer.currency, locale)}
-                </div>
-              </PanelRow>
-            </Panel>
+            <OfferTotalsPanel offer={offer} />
             <RenderOfferPdfAction offer={offer} />
             {offer.status === "draft" && <OfferLineEditor offer={offer} />}
             {offer.status === "draft" && (

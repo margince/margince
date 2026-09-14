@@ -31,7 +31,7 @@ func roleFixture(t *testing.T) json.RawMessage {
 	return json.RawMessage(`{
 		"deal": "Retrofit 2026",
 		"candidates": [{
-			"PersonID": "p-1", "FullName": "Dietmar Rietsch", "Title": "Managing Director",
+			"ContactID": "p-1", "FullName": "Dietmar Rietsch", "Title": "Managing Director",
 			"Messages": [{"ActivityID": "a-1", "Subject": "Re: Retrofit",
 			              "Body": "I sign off the budget for this, so send it to me directly."}]
 		}]
@@ -62,7 +62,7 @@ func TestProposeRolesCertCaseFailsARoleTheEvidenceDoesNotSupport(t *testing.T) {
 		t.Fatalf("refused a scorable scenario: %v", err)
 	}
 	outcome := prepared.Evaluate(aitasksTrace(`{"proposals":[{
-		"person_id":"p-1","role":"economic_buyer",
+		"contact_id":"p-1","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send it",
 		"source_id":"a-1","confidence":0.9}]}`))
 	if outcome.Result != "wrong_answer" {
@@ -82,7 +82,7 @@ func TestProposeRolesCertCaseAcceptsAWellEvidencedRole(t *testing.T) {
 		t.Fatalf("refused a scorable scenario: %v", err)
 	}
 	outcome := prepared.Evaluate(aitasksTrace(`{"proposals":[{
-		"person_id":"p-1","role":"economic_buyer",
+		"contact_id":"p-1","role":"economic_buyer",
 		"evidence_snippet":"I sign off the budget for this, so send it",
 		"source_id":"a-1","confidence":0.9}]}`))
 	if outcome.Result != "accepted" {
@@ -98,7 +98,7 @@ func TestProposeRolesCertCaseRefusesACandidateWithNoWords(t *testing.T) {
 	t.Parallel()
 	_, err := proposeRolesCases{}.Prepare(json.RawMessage(`{
 		"deal": "Retrofit 2026",
-		"candidates": [{"PersonID": "p-2", "FullName": "Ute Sommer",
+		"candidates": [{"ContactID": "p-2", "FullName": "Ute Sommer",
 		                "Title": "Chief Financial Officer", "Messages": []}]}`),
 		json.RawMessage(`{}`))
 	if err == nil {

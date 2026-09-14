@@ -133,7 +133,7 @@
    and a floating rule with daylight above and below reads as a third band
    nobody put there. Most visible mid-scroll, where the gap showed a strip of
    bare column between a cut-off sentence and the row. */
-.mw-conversation > .mw-person {
+.mw-conversation > .mw-contact {
   margin-block-start: calc(-1 * var(--space-5));
 }
 
@@ -222,7 +222,7 @@
  */
 .mw-brand,
 .mw-shell.is-rail .mw-aifooter,
-.mw-shell.is-rail .mw-person {
+.mw-shell.is-rail .mw-contact {
   margin-inline: calc(-1 * var(--mw-gutter));
   padding-inline: var(--mw-gutter);
 }
@@ -695,7 +695,7 @@
 }
 
 /* Who is signed in, at the rail's very foot. */
-.mw-shell.is-rail .mw-person {
+.mw-shell.is-rail .mw-contact {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -704,13 +704,13 @@
   border-top: 1px solid var(--borderSubtle);
 }
 
-.mw-shell.is-rail .mw-person-id {
+.mw-shell.is-rail .mw-contact-id {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.mw-shell.is-rail .mw-person-id b {
+.mw-shell.is-rail .mw-contact-id b {
   color: var(--textPrimary);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
@@ -722,14 +722,14 @@
 /* Pushed to the row's right-hand end, the way the runtime chip's caret is. The
    `auto` margin also holds the control against the right edge when the identity
    beside it has not resolved yet and the row is otherwise empty. */
-.mw-shell.is-rail .mw-person-action {
+.mw-shell.is-rail .mw-contact-action {
   display: flex;
   align-items: center;
   flex: none;
   margin-left: auto;
 }
 
-.mw-shell.is-rail .mw-person-id small {
+.mw-shell.is-rail .mw-contact-id small {
   color: var(--textMeta);
   font-family: var(--f-body);
   font-size: var(--fs-meta);

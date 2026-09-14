@@ -35,10 +35,10 @@ export default meta;
 type Story = StoryObj<typeof RecordCard>;
 
 /** A contact on the account that lists them: what they do, and how to write. */
-export const Person: Story = {
+export const Contact: Story = {
   render: () => (
     <RecordCard
-      kind="person"
+      kind="contact"
       name="Anna Brandt"
       identity="p-1"
       href="#/contacts/p-1"
@@ -53,10 +53,10 @@ export const Person: Story = {
  * shapes are the reason `kind` exists: on a page carrying both, the square is
  * what tells a reader which chips are companies before they read a word.
  */
-export const Organization: Story = {
+export const Company: Story = {
   render: () => (
     <RecordCard
-      kind="organization"
+      kind="company"
       name="Nordwind Logistik GmbH"
       identity="o-1"
       href="#/companies/o-1"
@@ -73,7 +73,7 @@ export const Organization: Story = {
 export const NameOnly: Story = {
   render: () => (
     <RecordCard
-      kind="person"
+      kind="contact"
       name="Jonas Weiß"
       identity="p-2"
       href="#/contacts/p-2"
@@ -92,7 +92,7 @@ export const NameOnly: Story = {
 export const RefusedAddress: Story = {
   render: () => (
     <RecordCard
-      kind="person"
+      kind="contact"
       name="Anna Brandt"
       identity="p-1"
       href="#/contacts/p-1"
@@ -112,7 +112,7 @@ export const WithAside: Story = {
     <ul className="record-card-list">
       <li>
         <RecordCard
-          kind="person"
+          kind="contact"
           name="Anna Brandt"
           identity="p-1"
           href="#/contacts/p-1"
@@ -120,14 +120,14 @@ export const WithAside: Story = {
           email="anna.brandt@nordwind-logistik.de"
           aside={
             <AvatarStack
-              people={[{ name: "Tim Rasche" }, { name: "Lena Ott" }]}
+              contacts={[{ name: "Tim Rasche" }, { name: "Lena Ott" }]}
             />
           }
         />
       </li>
       <li>
         <RecordCard
-          kind="person"
+          kind="contact"
           name="Maximilian von Hohenlohe-Schillingsfürst"
           identity="p-3"
           href="#/contacts/p-3"

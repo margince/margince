@@ -60,7 +60,7 @@ const mixedRuns: AutomationRun[] = [
     id: "r-blocked",
     outcome: "blocked",
     tier: "confirmation_required",
-    target_ref: "person:Anna Weber",
+    target_ref: "contact:Anna Weber",
     reason: "Passport no longer permits send",
   }),
   run({

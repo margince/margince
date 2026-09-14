@@ -54,5 +54,10 @@ export const BadClientDark: Story = {
 /**
  * An address carrying no outcome draws nothing. The segment is server-defined,
  * so an unknown one is ignored rather than printed back at the reader.
+ *
+ * The sharp half of that rule is the segment naming an inherited member of
+ * Object.prototype, which a bare index would answer with a function. A frame
+ * can only show that nothing is drawn; connectors.notices.test.tsx asserts it,
+ * and is what fails if the guard goes.
  */
-export const NoOutcome: Story = { render: landing("constructor") };
+export const NoOutcome: Story = { render: landing("unrecognised") };

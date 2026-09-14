@@ -11,7 +11,7 @@
 #
 # MARGINCE_ENV=dev relaxes the production-only postures (an unlicensed install
 # warns rather than refuses, the data reset is reachable). It does NOT switch on
-# a workspace header: one installation serves one organization (ADR-0061), the
+# a workspace header: one installation serves one company (ADR-0061), the
 # server resolves it itself, and no request selects a tenant. localhost is a
 # browser secure-context, so the Secure session cookie survives over plain
 # http — no TLS front door needed.
@@ -654,13 +654,10 @@ dev_app_url="$(with_database "$APP_DSN" "$db")"
 
 # The owner DSN reaches cmd/migrate through the environment rather than argv (it
 # carries a password, and argv is world-readable), but it is assigned PER COMMAND
-# below — never exported here. An export would hand the superuser credential to
-# every child this script starts, and the api and worker have no use for it: the
-# api connects as margince_app precisely because it is UNPRIVILEGED: it owns no
-# table, cannot alter the schema, and cannot bypass a grant, none of which is
-# true of the superuser margince_owner is in the compose stack. Core carries no
-# row-level security, so the role separation is the boundary rather than a
-# backstop behind one.
+# below — never exported here. Only migrations and the api's separate
+# custom-field schema pool need it; the worker and frontend do not. The api's
+# ordinary pool still connects as margince_app: runtime DDL belongs to the
+# governed custom-field engine, not to ordinary record writes.
 
 # psql is NOT a host requirement (hosts need Go + Docker only): every ad-hoc
 # SQL statement runs inside the compose postgres container, the same way
@@ -1175,7 +1172,7 @@ up)
   # Exported unconditionally, and it used to be exported only inside the branch
   # below. A dev stack with no Gmail app in .env.local therefore mounted no
   # transport, so a stored app could never run its consent flow — and the
-  # connect step reported "your organization has not registered its Google app
+  # connect step reported "your company has not registered its Google app
   # yet" to somebody who had just registered one, because the roster could not
   # tell an unregistered app from an unusable deployment. Not a secret: a fixed
   # dev constant, overridden by .env.local where one is set.
@@ -1203,10 +1200,10 @@ up)
   fi
 
   # The deployment configuration (A107/ADR-0061): the api bootstraps the demo
-  # organization itself at boot — no public provisioning endpoint exists. Seeded
+  # company itself at boot — no public provisioning endpoint exists. Seeded
   # ONCE into a gitignored config/margince.yaml from config/margince.example.yaml
   # and then LEFT ALONE (create-if-missing / leave-if-exists) — so an engineer
-  # can edit org details or runtime
+  # can edit company details or runtime
   # posture (e.g. ai.capture_payloads for Layer-3 capture) and it persists across
   # restarts (it lives in config/, not the scratch rundir dev-stop clears).
   deploy_cfg="config/margince.yaml"
@@ -1224,7 +1221,7 @@ up)
   fi
   if [[ ! -f "$deploy_cfg" ]]; then
     cp config/margince.example.yaml "$deploy_cfg"
-    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change org/admin or AI posture (e.g. ai.capture_payloads)"
+    echo "dev: seeded $deploy_cfg from config/margince.example.yaml — edit it to change company/admin or AI posture (e.g. ai.capture_payloads)"
   fi
   # The dev posture's own differences — the Reset data button among them — live
   # in the TRACKED config/margince.dev.yaml, which MARGINCE_ENV=dev selects on
@@ -1288,6 +1285,7 @@ up)
   # outbox rows are claimed FOR UPDATE SKIP LOCKED, so two relays never
   # double-ship.
   MARGINCE_ENV=dev \
+    MARGINCE_SCHEMA_DSN="$dev_owner_url" \
     MARGINCE_BLOBSTORE_ENDPOINT="localhost:${MINIO_PORT}" \
     MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
     MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
@@ -1307,7 +1305,7 @@ up)
     exit 1
   fi
   # No demo records: `make dev` brings up a COLD START — the installation the
-  # api bootstrapped from the deployment config (one organization, one admin
+  # api bootstrapped from the deployment config (one company, one admin
   # seat) and nothing else, so onboarding, empty states, and first-run flows are
   # what a developer sees by default. Demo data is an explicit opt-in step:
   # `make seed-dev` (API records + the FX/RBAC fixture) jumps over the cold

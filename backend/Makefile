@@ -369,7 +369,7 @@ ai-probe: composition ## Probe one AI task site against real input (free except 
 test-db-up: composition ## (Re)build the migrated margince_test template the parallel lane clones from
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && build_template && echo "test-db-up: template $$TEMPLATE_NAME migrated to head"'
 
-test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/people [RUN=TestName]
+test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
 	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
 
 # The lane's connection ceiling and budget, for a lane that runs ONE package at a
@@ -410,7 +410,7 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6
 #
 # SMB ONLY, and the omission is the honest half of this target. Mid-market is
 # where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
-# used to rule it out was the seed: 250k persons, 500k activities and 50k
+# used to rule it out was the seed: 250k contacts, 500k activities and 50k
 # relationships did not finish inside `go test`'s budget at all. That was the
 # seed planning its denormalisation triggers against an unanalysed database,
 # not the volume, and it is fixed in seedBenchTier — measured on a fast laptop
@@ -428,7 +428,7 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6
 #
 # So the alarm watches SMB, which is what most installations look like, and
 # drift there is real drift. Mid-market stays with `bench-perf`, by hand, where
-# a person is watching the numbers — and a PERF-7 row measured below
+# a contact is watching the numbers — and a PERF-7 row measured below
 # mid-market renders `inconclusive` in the published page rather than claiming
 # a bound it did not test.
 #

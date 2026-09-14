@@ -32,7 +32,7 @@ import (
 // commandBody decodes the buffered body into one decoder's view of it.
 //
 // An ABSENT body answers the zero value rather than an error. The two enrich
-// routes declare their body optional in crm.yaml ("With no body the org's own
+// routes declare their body optional in crm.yaml ("With no body the company's own
 // domain is read") and are the pair that reaches this branch legitimately;
 // everywhere else it hands the resolver a command with empty operands and lets
 // the resolver decide.

@@ -38,7 +38,7 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "person", "label": "Loyalty Tier HTTP", "type": "text", "source": "ui",
+		"object": "contact", "label": "Loyalty Tier HTTP", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
@@ -48,27 +48,27 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 	}
 
 	var matching integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Match", "source": "ui",
 	}, nil, &matching); status != http.StatusCreated {
-		t.Fatalf("create matching person: status=%d body=%v", status, matching)
+		t.Fatalf("create matching contact: status=%d body=%v", status, matching)
 	}
 	matchID, ok := matching["id"].(string)
 	if !ok || matchID == "" {
-		t.Fatalf("created matching person carries no id: %v", matching)
+		t.Fatalf("created matching contact carries no id: %v", matching)
 	}
 
 	var other integration.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
+	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
 		"full_name": "Other", "source": "ui",
 	}, nil, &other); status != http.StatusCreated {
-		t.Fatalf("create non-matching person: status=%d body=%v", status, other)
+		t.Fatalf("create non-matching contact: status=%d body=%v", status, other)
 	}
 
 	// Set through the update path, exactly like the store-level scenario:
 	// a value a customer fills in after the fact must filter the same way.
 	var updated integration.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/people/"+matchID, integration.AnyMap{column: "gold"}, nil, &updated); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+matchID, integration.AnyMap{column: "gold"}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("set the custom field through the update path: status=%d body=%v", status, updated)
 	}
 
@@ -79,13 +79,13 @@ func TestAFilterOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T) {
 		Rows       []integration.AnyMap `json:"rows"`
 	}
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person",
+		"resource": "contact",
 		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("a filter on a custom field was refused over HTTP: status=%d body=%v", status, preview)
 	}
 
-	// It EVALUATES, not merely parses: the person whose value was set through
+	// It EVALUATES, not merely parses: the contact whose value was set through
 	// the update path is the one row it selects.
 	if preview.MatchCount != 1 || len(preview.Rows) != 1 || preview.Rows[0]["id"] != matchID {
 		t.Fatalf("preview = %d match(es) %v, want exactly [%s]", preview.MatchCount, preview.Rows, matchID)
@@ -112,7 +112,7 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "person", "label": "Vocabulary Probe", "type": "picklist", "source": "ui",
+		"object": "contact", "label": "Vocabulary Probe", "type": "picklist", "source": "ui",
 		"options": []string{"gold", "silver"},
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
@@ -139,14 +139,14 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 			Options *[]string `json:"options,omitempty"`
 		} `json:"fields"`
 	}
-	status := e.Call(t, "GET", "/v1/filters/vocabulary?resource=person", nil, nil, &vocab)
+	status := e.Call(t, "GET", "/v1/filters/vocabulary?resource=contact", nil, nil, &vocab)
 	if status == http.StatusNotImplemented {
 		t.Fatal("the operation answered 501: the generated stub is being served, so the module handler is not shadowing it")
 	}
 	if status != http.StatusOK {
 		t.Fatalf("read the filter vocabulary: status=%d body=%v", status, vocab)
 	}
-	if vocab.Resource != "person" {
+	if vocab.Resource != "contact" {
 		t.Errorf("resource = %q, want the one asked for", vocab.Resource)
 	}
 
@@ -206,13 +206,13 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 		t.Fatalf("the vocabulary omits %s, a column a filter may name", column)
 	}
 	if !reported["owner_id"] {
-		t.Error("the vocabulary omits owner_id, a core field every person filter may name")
+		t.Error("the vocabulary omits owner_id, a core field every contact filter may name")
 	}
 
 	// The equivalence, forwards: a listed field is one a filter accepts.
 	var accepted integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person",
+		"resource": "contact",
 		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &accepted); status != http.StatusOK {
 		t.Fatalf("the vocabulary listed %s but a filter on it was refused: status=%d body=%v", column, status, accepted)
@@ -226,7 +226,7 @@ func TestTheFilterVocabularyOverHTTPOffersWhatAFilterAccepts(t *testing.T) {
 		t.Fatalf("%s was meant to be absent from the vocabulary", unlisted)
 	}
 	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
-		"resource": "person",
+		"resource": "contact",
 		"filter":   integration.AnyMap{"field": unlisted, "op": "eq", "value": "gold"},
 	}, nil, &refused); status != http.StatusUnprocessableEntity {
 		t.Fatalf("the vocabulary omits %s but a filter on it was not refused 422: status=%d body=%v", unlisted, status, refused)
@@ -258,7 +258,7 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 
 	var field integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
-		"object": "person", "label": "Retiring Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Retiring Tier", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
 	}
@@ -272,7 +272,7 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 	// working after the field leaves the vocabulary.
 	var view integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/views", integration.AnyMap{
-		"resource": "people", "name": "Built before retirement",
+		"resource": "contacts", "name": "Built before retirement",
 		"query": integration.AnyMap{
 			"filter": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 		},
@@ -312,8 +312,8 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 	// It resolved rather than erroring, and it resolved to the RIGHT object:
 	// a filter that silently evaluated against the wrong resource would also
 	// answer 200.
-	if exported.Object != "person" {
-		t.Errorf("the stored filter exported %q, want person", exported.Object)
+	if exported.Object != "contact" {
+		t.Errorf("the stored filter exported %q, want contact", exported.Object)
 	}
 }
 
@@ -325,7 +325,7 @@ func vocabularyOffers(t *testing.T, e *apptest.AppEnv, name string) bool {
 			Name string `json:"name"`
 		} `json:"fields"`
 	}
-	if status := e.Call(t, "GET", "/v1/filters/vocabulary?resource=person", nil, nil, &vocab); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/filters/vocabulary?resource=contact", nil, nil, &vocab); status != http.StatusOK {
 		t.Fatalf("read the filter vocabulary: status=%d", status)
 	}
 	for _, f := range vocab.Fields {

@@ -9,9 +9,9 @@ package gates
 //
 // `platform/mailrole` exists because two modules ask the same question from
 // opposite ends of the capture path: the tier ladder decides whether an address
-// may become a contact, and people's name parser decides whether a local part
+// may become a contact, and contacts's name parser decides whether a local part
 // may become somebody's name. Before it there were two lists, and they
-// disagreed in front of a user — `people.roleLocalParts` knew `billing` and
+// disagreed in front of a user — `contacts.roleLocalParts` knew `billing` and
 // `support`, capture knew neither, so the ladder created a contact the name
 // parser then refused to name. A founder found departments in his CRM called
 // "Billing" and "support".
@@ -95,7 +95,7 @@ func TestOnlyOnePackageDeclaresRoleMailboxes(t *testing.T) {
 
 // The gate's own defect test. A census of zero cannot tell a clean tree from a
 // blind detector, and this one is written over the exact shape that shipped:
-// the map that used to sit in people/personname.go.
+// the map that used to sit in contacts/contactname.go.
 func TestRoleMailboxCensusSeesTheShapeThatShipped(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
@@ -104,7 +104,7 @@ func TestRoleMailboxCensusSeesTheShapeThatShipped(t *testing.T) {
 		want int
 	}{
 		{
-			name: "the map people/personname.go really carried",
+			name: "the map contacts/contactname.go really carried",
 			code: `package p
 var roleLocalParts = map[string]bool{
 	"admin": true, "billing": true, "support": true, "info": true,

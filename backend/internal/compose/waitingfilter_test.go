@@ -27,7 +27,7 @@ func TestAMachineSenderIsNotACustomerWaiting(t *testing.T) {
 	kept := keepWaitingCustomers(rows)
 
 	if len(kept) != 1 {
-		t.Fatalf("kept %d of three rows, wanted only the person", len(kept))
+		t.Fatalf("kept %d of three rows, wanted only the contact", len(kept))
 	}
 	if kept[0].Subject != "Re: the retrofit quote" {
 		t.Fatalf("kept %q, wanted the customer", kept[0].Subject)

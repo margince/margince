@@ -104,12 +104,12 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 // customer into colleagues nobody may answer. A workspace with nothing
 // registered has no colleagues this can name.
 //
-// Gated as a person read, not a settings read: whether somebody is a
+// Gated as a contact read, not a settings read: whether somebody is a
 // colleague is a fact about them, asked by a caller who already holds their
 // address, and the same grant that let them reach the address answers it. A
 // rep composing a reply holds no settings authority and must not need one.
 func (s *OwnDomainStore) Colleagues(ctx context.Context) (InternalDomains, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return InternalDomains{}, err
 	}
 	var own InternalDomains
@@ -287,7 +287,7 @@ func ValidOwnDomain(raw string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s is not a usable domain name", domain)
 	}
-	// A public suffix is refused here so the person typing it is told why.
+	// A public suffix is refused here so the contact typing it is told why.
 	// NewInternalDomains drops one anyway, whichever writer it came from — this
 	// is the readable error, not the guarantee.
 	if !ownableDomain(ascii) {
@@ -305,9 +305,9 @@ func ValidOwnDomain(raw string) (string, error) {
 // rule sees ONE snapshot of the domains. Colleagues opens its own, which is
 // right for a single question asked once.
 //
-// Gated as an activity read, not a person read. The caller is judging
+// Gated as an activity read, not a contact read. The caller is judging
 // correspondence — which messages are a colleague's — and the grant that let
-// them read the message is the grant that answers it. Requiring person:read
+// them read the message is the grant that answers it. Requiring contact:read
 // would refuse a reader who may see the mail but not the contact, which is a
 // narrowing that has nothing to do with the question.
 //

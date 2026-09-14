@@ -65,11 +65,11 @@ type entry struct {
 // serving a row this read cannot prove the reader may see, and the failure would
 // be invisible: the row looks like every other row.
 var scopedTypes = map[string]string{
-	"deal":         "deal",
-	"organization": "organization",
-	"person":       "person",
-	"lead":         "lead",
-	"project":      "project",
+	"deal":    "deal",
+	"company": "company",
+	"contact": "contact",
+	"lead":    "lead",
+	"project": "project",
 }
 
 // doneSince reads the admitted machine actions in the window, for the records
@@ -101,7 +101,7 @@ func doneSince(
 		return nil, nil, err
 	}
 	if unplaceable > 0 {
-		notShown[string(crmcontracts.MagicNotShownUnknownEntityType)] = unplaceable
+		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
 	return found, notShown, nil
 }
@@ -124,7 +124,7 @@ func doneForType(
 	//
 	// A refused grant narrows this arm to nothing and leaves the rest of the
 	// page alone: a seat that may not read deals has no business seeing what a
-	// machine did to one, and its people and projects are still its own.
+	// machine did to one, and its contacts and projects are still its own.
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return nil, nil
@@ -187,7 +187,7 @@ func doneForActivities(
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		// A DENIAL narrows this arm to nothing and leaves the rest of the page
 		// alone: a seat that may not read messages sees no message receipts, and
-		// its deals and people are still its own.
+		// its deals and contacts are still its own.
 		//
 		// Any OTHER error is real and reaches the caller. Swallowing it would
 		// report an honest-looking receipt over a read that never ran, which is

@@ -196,10 +196,10 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	var version int64
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`INSERT INTO person (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
+			`INSERT INTO contact (full_name, source, captured_by) VALUES ('Vera', 'test', 'human:test') RETURNING id, version`,
 		).Scan(&id, &version)
 	}); err != nil {
-		t.Fatalf("inserting person: %v", err)
+		t.Fatalf("inserting contact: %v", err)
 	}
 	if version != 1 {
 		t.Fatalf("fresh row version = %d, want 1", version)
@@ -208,9 +208,9 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	// The trigger bumps version on every UPDATE (data-model §1.3a).
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`UPDATE person SET title = 'CTO' WHERE id = $1 RETURNING version`, id).Scan(&version)
+			`UPDATE contact SET title = 'CTO' WHERE id = $1 RETURNING version`, id).Scan(&version)
 	}); err != nil {
-		t.Fatalf("updating person: %v", err)
+		t.Fatalf("updating contact: %v", err)
 	}
 	if version != 2 {
 		t.Fatalf("version after update = %d, want 2", version)
@@ -219,7 +219,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 	// The If-Match write shape: a stale version matches zero rows.
 	if err := inTx(t, app, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx,
-			`UPDATE person SET title = 'CEO' WHERE id = $1 AND version = $2`, id, int64(1))
+			`UPDATE contact SET title = 'CEO' WHERE id = $1 AND version = $2`, id, int64(1))
 		if err != nil {
 			t.Fatalf("stale update: %v", err)
 		}
@@ -248,7 +248,7 @@ func TestAuditLogIsAppendOnly(t *testing.T) {
 		return tx.QueryRow(ctx,
 			// entity_id is NOT NULL since 0075 (audit_log is record-mutations-only).
 			`INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
-			 VALUES ('human', 'human:test', 'create', 'person', uuidv7()) RETURNING id`).Scan(&id)
+			 VALUES ('human', 'human:test', 'create', 'contact', uuidv7()) RETURNING id`).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding an audit row: %v", err)
 	}

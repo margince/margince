@@ -25,7 +25,7 @@ import (
 func reserveOneRun(t *testing.T, e *runsEnv) string {
 	t.Helper()
 	run, err := e.store.QueueRun(e.ctx, provider.QueueInput{
-		PersonID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
+		ContactID: e.mine.String(), Provider: "surfe", Trigger: provider.TriggerManual,
 	})
 	if err != nil {
 		t.Fatal(err)

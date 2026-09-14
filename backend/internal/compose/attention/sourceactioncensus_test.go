@@ -34,12 +34,14 @@ import (
 // source, and it is a claim about frontend/src/screens/worklist.rowverbs.tsx.
 //
 // Keyed by source rather than by verb alone, because the endpoint a verb posts
-// to depends on the row it sits on: `dismiss` is the person's nudge dismissal
+// to depends on the row it sits on: `dismiss` is the contact's nudge dismissal
 // on a decay row and the brief's own mark on a brief item, and the client
 // dispatches on `item.source` for exactly that reason. A verb-only entry would
 // admit a source the client has no route for — which is the shape of the defect
 // this gate exists to catch, so it must not be the shape of the gate.
 var performedBySource = map[string][]crmcontracts.AttentionItemActions{
+	// Weekly plans use their own state endpoint through PlanWorkActions, not activity verbs.
+	"weekly_commitment": {},
 	// Routed to the record the row is about, through VERB_DESTINATION.
 	// `reply` opens the composer over the row, through ChannelReplyAction. Sent
 	// only where the wait IS mail (email_summary present) and names a record to
@@ -64,7 +66,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"notice": {"acknowledge", "open"},
 	// The briefing queue's three, posted to /brief/items/{id}/… by BriefVerbs.
 	"brief_item": {"act", "set_aside", "dismiss", "open"},
-	// The person's nudge dismissal, drawn by NudgeDismiss.
+	// The contact's nudge dismissal, drawn by NudgeDismiss.
 	"relationship_decay": {"dismiss", "open"},
 	// Health and delivery rows navigate and nothing more: what fixes them lives
 	// on another screen, and a verb here would promise a repair this queue
@@ -80,7 +82,7 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"failed_approval": {"open"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
-	// The disclosure duty, read here and discharged on the person's own screen
+	// The disclosure duty, read here and discharged on the contact's own screen
 	// — the send that meets it is a mail, not a verb this queue can perform.
 	"notice_case": {"open"},
 }
@@ -116,6 +118,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 	// deliberate act somebody has to write down rather than an omission nothing
 	// notices. The map only shrinks.
 	notYetAssembled := map[string]string{
+		"weekly_commitment": "request-scoped plan lane is read beside Assemble; briefclaims_test exercises the actual worklist path",
 		"customer_waiting": "the waiting lane is a positional seam Assemble does not read; " +
 			"reaching it needs a stub this fixture has no argument slot for",
 		"lead_response": "the same lane shape as customer_waiting, and unreachable for the same reason",
@@ -264,12 +267,12 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// with nothing to press — is one of them.
 		stubApprovals{rows: []crmcontracts.Approval{approval("a staged send")}},
 		stubDuplicates{pairs: []DuplicatePair{{
-			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
+			ID: ids.NewV7(), EntityType: "contact", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
 		&stubTasks{rows: []Task{{
 			ID: ids.NewV7(), Subject: "send the quote",
-			LinkType: "person", LinkID: ids.NewV7(),
+			LinkType: "contact", LinkID: ids.NewV7(),
 		}}},
 		stubReceipts{},
 		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
@@ -280,13 +283,13 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "person", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubSyncHealth{rows: []SyncConcern{{Kind: "sync_failing", ErrorClass: "auth"}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
 		&stubAIWork{rows: []TroubledRun{{ID: ids.NewV7(), State: "failed", OccurredAt: readInstant}}},
-		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, PersonID: ids.NewV7()}}},
+		&stubBounces{rows: []BouncedSend{{ID: ids.NewV7(), Subject: "a bounced send", BouncedAt: readInstant, ContactID: ids.NewV7()}}},
 		&stubAutomations{rows: []TroubledAutomationRun{{ID: ids.NewV7(), Name: "a broken rule", Outcome: "failed", OccurredAt: readInstant}}},
 		&stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Kind: "automation", Subject: "a notice", CreatedAt: readInstant}}},
 		nil,
@@ -308,10 +311,10 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",
 			Reason: "the address bounced twice", ParkedAt: readInstant,
-			PersonID: ids.NewV7(),
+			ContactID: ids.NewV7(),
 		}}}).
 		WithIntroductions(&stubIntroductions{rows: []PendingIntroduction{{
-			ID: ids.NewV7(), PersonID: ids.NewV7(),
+			ID: ids.NewV7(), ContactID: ids.NewV7(),
 			Reason: "they know the buyer", RequestedAt: readInstant, DueAt: readInstant,
 		}}})
 	out, err := svc.Assemble(pageReader())

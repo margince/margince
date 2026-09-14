@@ -166,7 +166,7 @@ func TestReconcileConnectionPerPhaseFailurePolicy(t *testing.T) {
 			inc := &phaseFailingIncumbent{Adapter: fake.New()}
 			inc.SeedOwner("owner-1", "a@authz.test")
 			rec := fake.Rec("c-1", map[string]any{"firstname": "Ada"})
-			rec.ObjectClass, rec.OwnerExternalID = "person", "owner-1"
+			rec.ObjectClass, rec.OwnerExternalID = "contact", "owner-1"
 			rec.ModifiedAt = time.Now().Add(-24 * time.Hour)
 			inc.Seed(overlay.IncumbentClassContacts, rec)
 			tc.inject(inc)
@@ -183,7 +183,7 @@ func TestReconcileConnectionPerPhaseFailurePolicy(t *testing.T) {
 				t.Fatalf("reconcileConnection = %v, want %v — a connection-level failure must abort so the poller backs off", err, tc.wantErr)
 			}
 
-			_, getErr := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "person", "c-1")
+			_, getErr := ms.Get(overlayReaderCtx(e.WS, e.Rep1), "contact", "c-1")
 			if tc.wantMirrored && getErr != nil {
 				t.Errorf("the record must still be mirrored by the phases that ran, got: %v", getErr)
 			}

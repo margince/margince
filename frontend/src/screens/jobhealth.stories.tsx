@@ -93,7 +93,7 @@ export const Healthy: Story = { render: story(HEALTHY) };
 
 // Two of the three readings with nothing to report, which the stacked rows have
 // to say one at a time: no fleet dispatcher is registered and no failure was
-// recorded, while this organization's own queue is busy. The card's own idle
+// recorded, while this company's own queue is busy. The card's own idle
 // state does NOT apply here — something is queued — so the empty branches must
 // stand inside their rows, each naming what it found none of. What to check is
 // that an EmptyState given a row's full width still reads as a finding rather

@@ -13,7 +13,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 
 /**
- * What the agent surface knows about the person using the app, as opposed to
+ * What the agent surface knows about the contact using the app, as opposed to
  * what it knows about the database.
  *
  * The taskbar's right half reports the workspace, which arrives from reads. Its

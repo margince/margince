@@ -62,7 +62,7 @@ func TestAnAutomaticRunBuysOnlyWhatCostsNothing(t *testing.T) {
 	}
 }
 
-func TestAHumanCanBuyAPricedCategoryForOnePerson(t *testing.T) {
+func TestAHumanCanBuyAPricedCategoryForOneContact(t *testing.T) {
 	conn := connectionBuying("linkedin_profile", "professional_email")
 
 	got, err := runCategories(pricedDescriptor(), conn, provider.QueueInput{

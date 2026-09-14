@@ -27,8 +27,9 @@ var focusPriority = []string{
 	FocusHelpRequested,
 	FocusLeadsBreached,
 	FocusCommitmentsMissed,
-	FocusMeetingsWithoutNextStep,
+	FocusDealsAtRisk,
 	FocusStrongWeek,
+	FocusMeetingsWithoutNextStep,
 	FocusQuietWeek,
 }
 

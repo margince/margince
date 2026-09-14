@@ -42,14 +42,14 @@ func link(t *testing.T, entity, digit string) activitySubject {
 
 func attendee(t *testing.T, role, digit string) activitySubject {
 	t.Helper()
-	person := string(datasource.EntityPerson)
+	contact := string(datasource.EntityContact)
 	rank, ok := participantRoleRank[role]
 	if !ok {
 		rank = unrankedRole
 	}
 	return activitySubject{
-		entityType: person, id: idOf(t, digit), title: role + digit,
-		tier: subjectTier[person], named: namedByParticipant, role: rank,
+		entityType: contact, id: idOf(t, digit), title: role + digit,
+		tier: subjectTier[contact], named: namedByParticipant, role: rank,
 	}
 }
 
@@ -57,14 +57,14 @@ func attendee(t *testing.T, role, digit string) activitySubject {
 // currently works for, inferred rather than asserted.
 func employer(t *testing.T, role, digit string) activitySubject {
 	t.Helper()
-	organization := string(datasource.EntityOrganization)
+	company := string(datasource.EntityCompany)
 	rank, ok := participantRoleRank[role]
 	if !ok {
 		rank = unrankedRole
 	}
 	return activitySubject{
-		entityType: organization, id: idOf(t, digit), title: "employer" + digit,
-		tier: subjectTier[organization], named: namedByEmployer, role: rank,
+		entityType: company, id: idOf(t, digit), title: "employer" + digit,
+		tier: subjectTier[company], named: namedByEmployer, role: rank,
 	}
 }
 
@@ -93,25 +93,25 @@ func assertOrder(t *testing.T, got []activitySubject, want ...string) {
 // meeting that names all three is prepared against the deal.
 func TestTheWorkOutranksTheAccountOutranksTheContact(t *testing.T) {
 	got := foldSubjects([]activitySubject{
-		link(t, string(datasource.EntityPerson), "1"),
-		link(t, string(datasource.EntityOrganization), "2"),
+		link(t, string(datasource.EntityContact), "1"),
+		link(t, string(datasource.EntityCompany), "2"),
 		link(t, string(datasource.EntityProject), "3"),
 		link(t, string(datasource.EntityDeal), "4"),
 	})
-	assertOrder(t, got, "deal4", "project3", "organization2", "person1")
+	assertOrder(t, got, "deal4", "project3", "company2", "contact1")
 }
 
 // A link is something capture ASSERTED about the record; a participant is
 // something it matched from an address. Within one tier the assertion wins.
-func TestALinkedPersonOutranksAMatchedAttendee(t *testing.T) {
+func TestALinkedContactOutranksAMatchedAttendee(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		attendee(t, "organizer", "1"),
-		link(t, string(datasource.EntityPerson), "2"),
+		link(t, string(datasource.EntityContact), "2"),
 	})
-	assertOrder(t, got, "person2", "organizer1")
+	assertOrder(t, got, "contact2", "organizer1")
 }
 
-// Among the people the event merely matched, the party who convened it comes
+// Among the contacts the event merely matched, the party who convened it comes
 // first — a prep built around whoever happens to sort first by id is a prep
 // built around nobody in particular.
 func TestTheOrganizerComesBeforeTheAttendees(t *testing.T) {
@@ -144,10 +144,10 @@ func TestARoleNobodyRankedSortsAfterEveryRankedOne(t *testing.T) {
 // One record reached twice is ONE subject, at its best rank. A prep that lists
 // the same account beside itself reads as two accounts.
 func TestOneRecordNamedTwiceIsOneSubjectAtItsBestRank(t *testing.T) {
-	person := string(datasource.EntityPerson)
-	linked := link(t, person, "1")
+	contact := string(datasource.EntityContact)
+	linked := link(t, contact, "1")
 	matched := attendee(t, "attendee", "1")
-	matched.title = "same-person-as-attendee"
+	matched.title = "same-contact-as-attendee"
 
 	for name, candidates := range map[string][]activitySubject{
 		"link first":  {linked, matched},
@@ -162,10 +162,10 @@ func TestOneRecordNamedTwiceIsOneSubjectAtItsBestRank(t *testing.T) {
 // Two records the precedence cannot separate still come back in one order, so
 // the same event prepares against the same record every time it is asked.
 func TestSubjectsTiedOnEveryRankFallBackToTheId(t *testing.T) {
-	organization := string(datasource.EntityOrganization)
-	first, second := link(t, organization, "1"), link(t, organization, "2")
-	assertOrder(t, foldSubjects([]activitySubject{second, first}), "organization1", "organization2")
-	assertOrder(t, foldSubjects([]activitySubject{first, second}), "organization1", "organization2")
+	company := string(datasource.EntityCompany)
+	first, second := link(t, company, "1"), link(t, company, "2")
+	assertOrder(t, foldSubjects([]activitySubject{second, first}), "company1", "company2")
+	assertOrder(t, foldSubjects([]activitySubject{first, second}), "company1", "company2")
 }
 
 // The company reached through the attendee is still the account: it outranks
@@ -184,8 +184,8 @@ func TestAnAttendeesEmployerOutranksTheAttendee(t *testing.T) {
 // job. Reached both ways the company is one subject at the asserted rank, so a
 // directly-linked account is never displaced by the same account inferred.
 func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
-	organization := string(datasource.EntityOrganization)
-	linked := link(t, organization, "1")
+	company := string(datasource.EntityCompany)
+	linked := link(t, company, "1")
 	inferred := employer(t, "organizer", "1")
 
 	for name, candidates := range map[string][]activitySubject{
@@ -199,17 +199,17 @@ func TestALinkedCompanyOutranksAnInferredEmployer(t *testing.T) {
 	// Two DIFFERENT companies, so nothing folds and the ordering itself is
 	// what is being read.
 	assertOrder(t, foldSubjects([]activitySubject{
-		employer(t, "organizer", "2"), link(t, organization, "3"),
-	}), "organization3", "employer2")
+		employer(t, "organizer", "2"), link(t, company, "3"),
+	}), "company3", "employer2")
 }
 
 // Among the inferred companies, the party who convened the meeting decides
-// which comes first — the same rule the people themselves are ordered by, since
-// the company is only as relevant as the person it was reached through.
+// which comes first — the same rule the contacts themselves are ordered by, since
+// the company is only as relevant as the contact it was reached through.
 //
 // Which company a meeting is WITH follows from who was in the room, so the role
 // outranks anything the SQL knows about the job itself: is_current_primary is a
-// fact about a person, and it decides only between two jobs of the same party.
+// fact about a contact, and it decides only between two jobs of the same party.
 func TestTheOrganizersEmployerComesBeforeAnAttendees(t *testing.T) {
 	got := foldSubjects([]activitySubject{
 		employer(t, "attendee", "1"),
@@ -259,6 +259,41 @@ func TestEverySubjectLinkArmIsRanked(t *testing.T) {
 		if !armed[entity] {
 			t.Errorf("subjectTier ranks %q, which no activityLinkArms arm produces — "+
 				"the precedence names a subject an event cannot name", entity)
+		}
+	}
+}
+
+// Every record type an activity can be linked to must be readable as a context
+// ANCHOR, because an anchor the walk does not follow answers its profile and
+// nothing else — and the tool that serves that walk tells its caller "what
+// cannot be evidenced is absent rather than inferred". The two sentences
+// together turn a leg nobody wrote into a report that nothing happened.
+//
+// That is not hypothetical. activity_link admitted a lead arm and this walk did
+// not follow it, so a lead's whole timeline was invisible; a model asked to
+// close off the dead ends in a lead queue was shown three empty records and
+// correctly declined to act on any of them.
+//
+// READ OFF THE DDL, not off activityLinkArms, even though anchorLinkColumn is
+// now derived from that list. A census whose expected side is the thing under
+// test passes by construction and would go on passing if both fell behind the
+// table together.
+//
+// WHAT IT PROVES IS THAT THE MAP HAS THE KEY, which is the thing that silently
+// fell behind — not that the walk returns anything. A leg with the column and
+// an empty answer still passes here. The behaviour is held in the integration
+// lane by TestALeadAnchorWalksItsOwnTimeline, which asserts the activity comes
+// back by name; do not read this cheap census as covering that.
+func TestEveryLinkableRecordIsWalkableAsAnAnchor(t *testing.T) {
+	declared := activityLinkEntityTypes(t)
+	if len(declared) == 0 {
+		t.Fatal("the migrations declared no activity_link entity type, so this census read nothing")
+	}
+	for _, entity := range declared {
+		if _, walkable := anchorLinkColumn[entity]; !walkable {
+			t.Errorf("activity_link admits entity_type %q and no anchor walk follows it — a %s "+
+				"anchor answers its profile alone, which a caller reads as a record nothing "+
+				"has happened to", entity, entity)
 		}
 	}
 }

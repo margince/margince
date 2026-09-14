@@ -3,7 +3,7 @@
 
 package worklistsnap
 
-// A snapshot binds ONE reader, so readerOf answers a person and refuses
+// A snapshot binds ONE reader, so readerOf answers a contact and refuses
 // everything else. Both halves of that are load-bearing and only one of them
 // is auth.RequireHuman's: it refuses a buyer and an agent, and ADMITS the
 // system and connector principals, whose zero user id would key the shared row
@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestOnlyAPersonHoldsAWalk(t *testing.T) {
+func TestOnlyAContactHoldsAWalk(t *testing.T) {
 	me := ids.NewV7()
 	for _, tc := range []struct {
 		name    string

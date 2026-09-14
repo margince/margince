@@ -146,7 +146,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 	// The crash records what the attempt had already landed, not just its
 	// cause: the resumed leg reports only its own work, so this is the
 	// only place the pre-crash dispositions are kept.
-	partial := Report{Imported: 3, Objects: []ObjectReport{{Object: "person", Created: 3}}}
+	partial := Report{Imported: 3, Objects: []ObjectReport{{Object: "contact", Created: 3}}}
 	if err := s.failRun(ctx, run.ID, partial, errors.New("incumbent went away")); err != nil {
 		t.Fatalf("failRun: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 	if err := s.Resume(ctx, run.ID); err != nil {
 		t.Fatalf("Resume: %v", err)
 	}
-	rep := Report{Imported: 7, Objects: []ObjectReport{{Object: "person", Created: 7}}}
+	rep := Report{Imported: 7, Objects: []ObjectReport{{Object: "contact", Created: 7}}}
 	if err := s.complete(ctx, run.ID, rep); err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 		t.Errorf("recorded imported = %d, want 10 — the pre-crash 3 folded into the resumed 7", got.Report.Imported)
 	}
 	if len(got.Report.Objects) != 1 || got.Report.Objects[0].Created != 10 {
-		t.Errorf("recorded objects = %+v, want one person entry crediting all 10", got.Report.Objects)
+		t.Errorf("recorded objects = %+v, want one contact entry crediting all 10", got.Report.Objects)
 	}
 
 	// Completion is terminal — a second transition is refused.
@@ -210,22 +210,22 @@ func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 	native := ids.NewV7()
-	if err := s.RecordIdentity(ctxA, run.ID, "hubspot", "person", "p-1", native); err != nil {
+	if err := s.RecordIdentity(ctxA, run.ID, "hubspot", "contact", "p-1", native); err != nil {
 		t.Fatalf("RecordIdentity: %v", err)
 	}
 	// A resumed run replays its last page: re-recording the same tuple
 	// converges instead of failing.
-	if err := s.RecordIdentity(ctxA, run.ID, "hubspot", "person", "p-1", native); err != nil {
+	if err := s.RecordIdentity(ctxA, run.ID, "hubspot", "contact", "p-1", native); err != nil {
 		t.Fatalf("re-recording the same identity: %v", err)
 	}
-	got, found, err := s.LookupIdentity(ctxA, "hubspot", "person", "p-1")
+	got, found, err := s.LookupIdentity(ctxA, "hubspot", "contact", "p-1")
 	if err != nil || !found || got != native {
 		t.Fatalf("LookupIdentity = (%v, %v, %v), want the recorded native id", got, found, err)
 	}
 	// The identity is namespaced by source system and object: a
 	// same-id record of another class is a different row.
 	if _, found, err := s.LookupIdentity(ctxA, "hubspot", "deal", "p-1"); err != nil || found {
-		t.Fatalf("a same-id DEAL resolved to the person's identity (found=%v, err=%v)", found, err)
+		t.Fatalf("a same-id DEAL resolved to the contact's identity (found=%v, err=%v)", found, err)
 	}
 
 	// A run id that names no run is refused, and refused as not-found. The
@@ -233,7 +233,7 @@ func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 	// the path a caller with a stale or invented id takes — and it must not come
 	// back as a foreign-key error, which would answer with the name of a table
 	// the caller has no business hearing about.
-	err = s.RecordIdentity(ctxA, RunID(ids.NewV7()), "hubspot", "person", "p-9", ids.NewV7())
+	err = s.RecordIdentity(ctxA, RunID(ids.NewV7()), "hubspot", "contact", "p-9", ids.NewV7())
 	if err == nil {
 		t.Fatal("recording an identity against a run that does not exist must be refused")
 	}

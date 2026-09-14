@@ -18,12 +18,12 @@ import { NAMED, SAID, WROTE } from "./agentrail-copy";
  *
  * It is THIS READER'S work and nobody else's. Everything here comes out of the
  * query cache of the tab it is running in, so it cannot report what another
- * person's session is doing even by accident. That is not a side effect of the
+ * contact's session is doing even by accident. That is not a side effect of the
  * implementation, it is the reason for it: a status line that quietly narrated a
  * colleague's afternoon would be surveillance wearing a status light.
  *
  * It never invents a line. A cache key with no entry in `SAID` produces NOTHING
- * rather than a guess spelled out of its own key: "reading person-360" is not
+ * rather than a guess spelled out of its own key: "reading contact-360" is not
  * language, and a surface whose job is to be believed cannot afford a sentence
  * nobody wrote.
  *

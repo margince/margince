@@ -40,6 +40,15 @@ type recordingStager struct {
 	calls int
 	seen  ConfirmationSend
 	fail  error
+	// stage writes a real comms_outbound row and answers its id. Nil means
+	// answer a bare uuid, which is right for the tests that only count calls
+	// and never let the id reach a foreign key.
+	//
+	// It exists because privacy_notice_case.delivery_id REFERENCES the ledger:
+	// a stager inventing an id is a fixture claiming a message that does not
+	// exist, and the database refuses it — correctly, since "show me the mail
+	// you say discharged this duty" is the whole reason the column is there.
+	stage func() ids.UUID
 }
 
 func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in ConfirmationSend) (ids.UUID, error) {
@@ -48,6 +57,9 @@ func (r *recordingStager) QueueConfirmationTx(_ context.Context, _ pgx.Tx, in Co
 		return ids.UUID{}, r.fail
 	}
 	r.seen = in
+	if r.stage != nil {
+		return r.stage(), nil
+	}
 	return ids.NewV7(), nil
 }
 
@@ -71,9 +83,9 @@ func (v *recordingVault) Put(_ context.Context, secret string) (string, error) {
 func confirmRequest(t *testing.T, e *channelConsentEnv, h Handlers) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/people/x/consent/confirm-request", nil).
+	req := httptest.NewRequest(http.MethodPost, "/contacts/x/consent/confirm-request", nil).
 		WithContext(e.ctx)
-	h.RequestDetailsConfirmation(rec, req, crmcontracts.Id(e.person.UUID))
+	h.RequestDetailsConfirmation(rec, req, crmcontracts.Id(e.contact.UUID))
 	return rec
 }
 
@@ -102,7 +114,7 @@ func TestAConfirmRequestQueuesTheSubjectTheirOwnLink(t *testing.T) {
 		t.Fatalf("decode the issue response: %v", err)
 	}
 
-	want := "subject-" + e.person.String() + "@example.test"
+	want := "subject-" + e.contact.String() + "@example.test"
 	if got.DeliveredTo != want {
 		t.Fatalf("delivered_to = %q, want the subject's own address %q", got.DeliveredTo, want)
 	}
@@ -120,7 +132,7 @@ func TestAConfirmRequestQueuesTheSubjectTheirOwnLink(t *testing.T) {
 		t.Fatalf("queued to %q, want the subject's own address %q", stager.seen.Recipient, want)
 	}
 	// The link has to be built on the CANONICAL origin, not on a request Host:
-	// it opens one person's record to whoever holds it.
+	// it opens one contact's record to whoever holds it.
 	if !strings.Contains(vault.sealed, "https://crm.example.test/#/confirm/") {
 		t.Fatalf("the sealed link is not on the canonical origin: %q", vault.sealed)
 	}
@@ -163,7 +175,7 @@ func TestAContactWithNoAddressIsRefusedRatherThanSilentlyNotMailed(t *testing.T)
 	e := setupChannelConsent(t)
 	stager := &recordingStager{}
 
-	// No seedSubjectAddress: this person has no live mailbox.
+	// No seedSubjectAddress: this contact has no live mailbox.
 	rec := confirmRequest(t, e, withLane(e, stager, &recordingVault{}))
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422 (body: %s)", rec.Code, rec.Body.String())
@@ -228,7 +240,7 @@ func TestAStagingFailureFailsTheRequestRatherThanMintingASilentToken(t *testing.
 	var tokens int
 	if err := e.store.db.Tx(context.Background(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&tokens)
+			`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&tokens)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -256,11 +268,11 @@ func TestAMintedLinkOpensTheSubjectsOwnRecord(t *testing.T) {
 	}
 	token = strings.Fields(token)[0]
 
-	ref, err := e.store.ResolveConfirmToken(context.Background(), token)
+	ref, err := e.store.ResolveConfirmToken(context.Background(), token, FetchByAHuman)
 	if err != nil {
 		t.Fatalf("resolve the token that was actually sealed: %v", err)
 	}
-	if ref.PersonID != e.person {
-		t.Fatalf("the sealed link opens person %s, want the subject %s", ref.PersonID, e.person)
+	if ref.ContactID != e.contact {
+		t.Fatalf("the sealed link opens contact %s, want the subject %s", ref.ContactID, e.contact)
 	}
 }

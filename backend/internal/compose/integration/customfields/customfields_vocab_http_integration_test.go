@@ -24,15 +24,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// listPeopleNames GETs /v1/people with the given query string and
+// listContactsNames GETs /v1/contacts with the given query string and
 // returns the page's full_name column in order.
-func listPeopleNames(t *testing.T, e *apptest.AppEnv, query string) []string {
+func listContactsNames(t *testing.T, e *apptest.AppEnv, query string) []string {
 	t.Helper()
 	var list struct {
 		Data []integration.AnyMap `json:"data"`
 	}
-	if status := e.Call(t, "GET", "/v1/people"+query, nil, nil, &list); status != http.StatusOK {
-		t.Fatalf("GET /v1/people%s status = %d", query, status)
+	if status := e.Call(t, "GET", "/v1/contacts"+query, nil, nil, &list); status != http.StatusOK {
+		t.Fatalf("GET /v1/contacts%s status = %d", query, status)
 	}
 	names := make([]string, len(list.Data))
 	for i, row := range list.Data {
@@ -45,7 +45,7 @@ func listPeopleNames(t *testing.T, e *apptest.AppEnv, query string) []string {
 	return names
 }
 
-// walkCFSortedPagesOverWire walks /v1/people one row per page under a
+// walkCFSortedPagesOverWire walks /v1/contacts one row per page under a
 // cf_-sorted query, following next_cursor until has_more goes false, and
 // returns the full_name column in the order visited — the wire-level
 // twin of TestCustomFieldVocab_SortPaginatesStably, proving the cursor
@@ -66,8 +66,8 @@ func walkCFSortedPagesOverWire(t *testing.T, e *apptest.AppEnv, col string) []st
 				NextCursor *string `json:"next_cursor"`
 			} `json:"page"`
 		}
-		if status := e.Call(t, "GET", "/v1/people"+query, nil, nil, &list); status != http.StatusOK {
-			t.Fatalf("GET /v1/people%s status = %d", query, status)
+		if status := e.Call(t, "GET", "/v1/contacts"+query, nil, nil, &list); status != http.StatusOK {
+			t.Fatalf("GET /v1/contacts%s status = %d", query, status)
 		}
 		for _, row := range list.Data {
 			name, ok := row["full_name"].(string)
@@ -107,10 +107,10 @@ func assert422Code(t *testing.T, e *apptest.AppEnv, path, wantCode string) {
 func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	status, score, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "person", "label": "Score", "type": "number", "source": "ui",
+		"object": "contact", "label": "Score", "type": "number", "source": "ui",
 	})
 	if status != http.StatusCreated {
-		t.Fatalf("create person number field status = %d: %+v", status, problem)
+		t.Fatalf("create contact number field status = %d: %+v", status, problem)
 	}
 
 	t.Run("crafted cursor sort key answers 422 malformed_cursor, never 500", func(t *testing.T) {
@@ -120,7 +120,7 @@ func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 			SortField: score.ColumnName, SortKey: &badKey,
 		})
 		assert422Code(t, e,
-			"/v1/people?sort="+score.ColumnName+"&cursor="+url.QueryEscape(crafted),
+			"/v1/contacts?sort="+score.ColumnName+"&cursor="+url.QueryEscape(crafted),
 			"malformed_cursor")
 	})
 
@@ -131,14 +131,14 @@ func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 				HasMore    bool   `json:"has_more"`
 			} `json:"page"`
 		}
-		path := "/v1/people?sort=" + score.ColumnName + "&limit=1"
+		path := "/v1/contacts?sort=" + score.ColumnName + "&limit=1"
 		if status := e.Call(t, "GET", path, nil, nil, &list); status != http.StatusOK {
 			t.Fatalf("GET %s status = %d", path, status)
 		}
 		if !list.Page.HasMore || list.Page.NextCursor == "" {
 			t.Fatalf("expected a sorted next-page cursor, got %+v", list.Page)
 		}
-		assert422Code(t, e, "/v1/people?cursor="+url.QueryEscape(list.Page.NextCursor), "cursor_param_mismatch")
+		assert422Code(t, e, "/v1/contacts?cursor="+url.QueryEscape(list.Page.NextCursor), "cursor_param_mismatch")
 	})
 }
 
@@ -146,20 +146,20 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	e := schemaWiredEnv(t)
 
 	status, tier, problem := createCustomField(t, e, integration.AnyMap{
-		"object": "person", "label": "Tier", "type": "text", "source": "ui",
+		"object": "contact", "label": "Tier", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
-		t.Fatalf("create person field status = %d: %+v", status, problem)
+		t.Fatalf("create contact field status = %d: %+v", status, problem)
 	}
 	col := tier.ColumnName
 
-	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person B", "source": "ui", col: "beta"})
-	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person A", "source": "ui", col: "alpha"})
-	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person N", "source": "ui"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact B", "source": "ui", col: "beta"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact A", "source": "ui", col: "alpha"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact N", "source": "ui"})
 
 	t.Run("cf_ sort orders the page, NULL last", func(t *testing.T) {
-		got := listPeopleNames(t, e, "?sort="+col)
-		want := []string{"Person A", "Person B", "Person N"}
+		got := listContactsNames(t, e, "?sort="+col)
+		want := []string{"Contact A", "Contact B", "Contact N"}
 		for i := range want {
 			if i >= len(got) || got[i] != want[i] {
 				t.Fatalf("sorted names = %v, want %v", got, want)
@@ -168,15 +168,15 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	})
 
 	t.Run("cf_ filter narrows to the equality match", func(t *testing.T) {
-		got := listPeopleNames(t, e, "?"+col+"=alpha")
-		if len(got) != 1 || got[0] != "Person A" {
-			t.Fatalf("filtered names = %v, want [Person A]", got)
+		got := listContactsNames(t, e, "?"+col+"=alpha")
+		if len(got) != 1 || got[0] != "Contact A" {
+			t.Fatalf("filtered names = %v, want [Contact A]", got)
 		}
 	})
 
 	t.Run("cf_ sort paginates stably one row per page over the wire", func(t *testing.T) {
 		got := walkCFSortedPagesOverWire(t, e, col)
-		want := []string{"Person A", "Person B", "Person N"}
+		want := []string{"Contact A", "Contact B", "Contact N"}
 		if len(got) != len(want) {
 			t.Fatalf("walked %v, want %v", got, want)
 		}
@@ -188,15 +188,15 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	})
 
 	t.Run("unknown cf_ sort answers 422 sort_field_not_allowed", func(t *testing.T) {
-		assert422Code(t, e, "/v1/people?sort=cf_never_defined", "sort_field_not_allowed")
+		assert422Code(t, e, "/v1/contacts?sort=cf_never_defined", "sort_field_not_allowed")
 	})
 
 	t.Run("unknown cf_ filter answers 422 filter_field_not_allowed", func(t *testing.T) {
-		assert422Code(t, e, "/v1/people?cf_never_defined=x", "filter_field_not_allowed")
+		assert422Code(t, e, "/v1/contacts?cf_never_defined=x", "filter_field_not_allowed")
 	})
 
 	t.Run("multi-field sort answers 422 sort_unsupported", func(t *testing.T) {
-		assert422Code(t, e, "/v1/people?sort=-created_at,full_name", "sort_unsupported")
+		assert422Code(t, e, "/v1/contacts?sort=-created_at,full_name", "sort_unsupported")
 	})
 
 	assertCursorSortRefusals(t, e)

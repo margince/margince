@@ -29,7 +29,7 @@ type Story = StoryObj;
 
 const CONTRACT = {
   id: "c-1",
-  organization_id: "o-1",
+  company_id: "o-1",
   title: "valantic GmbH — Rahmenvertrag",
   contract_number: "V-5253-VALA",
   value_minor: 17_740_000,
@@ -57,7 +57,7 @@ const PAPER = {
   doc_state: "current",
   pinned: false,
   created_at: "2026-01-02T09:00:00Z",
-  entity_type: "organization",
+  entity_type: "company",
   entity_id: "o-1",
   contract_id: "c-1",
   source: "upload",
@@ -76,7 +76,7 @@ const SESSION = () =>
     }),
   );
 
-const DOCUMENTS = "GET /organizations/o-1/documents";
+const DOCUMENTS = "GET /companies/o-1/documents";
 
 // The FIELD alone, not the whole modal.
 //
@@ -88,7 +88,7 @@ const DOCUMENTS = "GET /organizations/o-1/documents";
 function field() {
   return (
     <StoryProviders>
-      <SignedFileField orgId="o-1" contractID="c-1" onPick={() => {}} />
+      <SignedFileField companyId="o-1" contractID="c-1" onPick={() => {}} />
     </StoryProviders>
   );
 }
@@ -111,7 +111,7 @@ export const WithFiledPaper: Story = {
 // Its own story because a focus ring is invisible in every other capture, and
 // this one regressed silently: the link moved to .link-button for its colour
 // and inherited that class's 9%-opacity shadow ring, which on the modal's
-// elevated surface is not a focus state a person can see. A tab stop nobody
+// elevated surface is not a focus state a contact can see. A tab stop nobody
 // can locate is the whole defect, and a screenshot is the only thing that
 // shows it.
 export const DownloadFocused: Story = {
@@ -238,7 +238,7 @@ export const CreatingANewAgreement: Story = {
     installFetchStub({ "GET /me": SESSION });
     return (
       <StoryProviders>
-        <SignedFileField orgId="o-1" onPick={() => {}} />
+        <SignedFileField companyId="o-1" onPick={() => {}} />
       </StoryProviders>
     );
   },
@@ -256,7 +256,7 @@ export const TheWholeForm: Story = {
     return (
       <StoryProviders>
         <ContractForm
-          orgId="o-1"
+          companyId="o-1"
           contract={CONTRACT as never}
           open
           onClose={() => {}}

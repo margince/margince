@@ -28,7 +28,7 @@ type Store struct {
 	// duration folding is deterministic in tests.
 	clock func() time.Time
 
-	// The company edges (companyseam.go), injected because `people` owns the
+	// The company edges (companyseam.go), injected because `contacts` owns the
 	// relationship table a project's companies ride on.
 	attachCompany    AttachCompany
 	projectCompanies ProjectCompanies
@@ -48,7 +48,7 @@ func NewStore(db *database.DB) *Store {
 }
 
 // WithCompanyEdges wires the seams that put a company on a project and read the
-// companies back. Compose binds them to modules/people, which owns the table.
+// companies back. Compose binds them to modules/contacts, which owns the table.
 func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies) *Store {
 	if attach != nil {
 		s.attachCompany = attach

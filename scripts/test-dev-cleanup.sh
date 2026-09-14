@@ -19,7 +19,7 @@ failures=0
 # The fixtures this run started, torn down whatever happens. Two of them are
 # `sleep 60` and one deliberately IGNORES TERM: an abort before the explicit
 # teardown would leave the first pair for a minute and the third forever, and a
-# gate that litters the machine it runs on is one people stop running.
+# gate that litters the machine it runs on is one contacts stop running.
 # Recorded as `pid:signature`, and the signature is re-read before the KILL.
 # A fixture torn down mid-run frees its pid, the kernel reissues numbers, and
 # by the time the trap fires that number can belong to anything on the machine
@@ -608,7 +608,7 @@ restart_probe
 
 # AND A SLUG WITH NOTHING RUNNING SAYS NOTHING. The line is for a surprise; a
 # `make dev` on an empty slug is not one, and a restart notice on every ordinary
-# run is a line people stop reading.
+# run is a line contacts stop reading.
 quiet_probe() {
     local rundir out
     rundir="$(mktemp -d)"

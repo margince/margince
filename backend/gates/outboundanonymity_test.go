@@ -65,17 +65,17 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/ai/modellist.go:func getListBody": "carries the customer's own provider key, which is the identity that provider bills and throttles — a local runner aside, where the operator already knows what is calling the host they configured",
 
 	// The capture connectors. Every one of these is an OAuth or token session
-	// the person themselves granted, so the provider knows the grant, the app
+	// the contact themselves granted, so the provider knows the grant, the app
 	// it was granted to, and the account it was granted on.
-	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/transport.go:func writeJSON":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
-	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the person made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func Watch":           "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/client.go:func get":             "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/gmail/send.go:func postJSON":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/googleconn/googleconn.go:func Get":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/client.go:func GetMIME":         "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/transport.go:func writeJSON":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graph/sendclient.go:func SendMIME":    "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
+	"internal/modules/capture/graphcal/client.go:func get":          "runs inside an OAuth grant the contact made to this app, which names the caller to the provider more precisely than an agent could",
 	"internal/modules/capture/oauthflow/oauthflow.go:func token":    "exchanges a code against a token endpoint using this app's registered client id, which is the identity that endpoint checks",
 	"internal/modules/capture/telegram/api.go:func request":         "calls a bot API under the bot's own token, and the bot IS the identity there",
 	"internal/modules/capture/telegram/sendfiles.go:func SendFiles": "calls a bot API under the bot's own token, and the bot IS the identity there",

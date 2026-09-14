@@ -449,29 +449,13 @@ func schemaPoolOptions(ctx context.Context, schemaDSN string, stdout io.Writer) 
 	// more than one DDL statement per table at a time; a handful of
 	// connections is a deliberately small footprint for a rare admin path,
 	// next to the app pool's MaxConns=16 default (database.NewPool).
-	pool, err := database.NewPool(ctx, withPoolMaxConns(schemaDSN, 3))
+	// No request ceiling: this pool runs ALTERs, and an index or constraint
+	// added to a populated table is not request-shaped work.
+	pool, err := database.NewPool(ctx,
+		database.WithoutRequestCeilings(database.WithDSNParam(schemaDSN, "pool_max_conns", "3")))
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("api: schema pool: %w", err)
 	}
 	_, _ = fmt.Fprintln(stdout, "api custom-field schema changes enabled (schema pool configured)")
 	return []compose.Option{compose.WithSchemaPool(pool)}, pool, pool.Close, nil
-}
-
-// withPoolMaxConns appends a pool_max_conns limit to dsn unless the
-// operator already sized the pool themselves (database.NewPool's own
-// DSN-wins-over-default rule) — the URL and keyword/value DSN forms take
-// the query-parameter and space-separated keyword spellings respectively.
-func withPoolMaxConns(dsn string, n int) string {
-	if strings.Contains(dsn, "pool_max_conns") {
-		return dsn
-	}
-	param := fmt.Sprintf("pool_max_conns=%d", n)
-	if strings.HasPrefix(dsn, "postgres://") || strings.HasPrefix(dsn, "postgresql://") {
-		sep := "?"
-		if strings.Contains(dsn, "?") {
-			sep = "&"
-		}
-		return dsn + sep + param
-	}
-	return dsn + " " + param
 }

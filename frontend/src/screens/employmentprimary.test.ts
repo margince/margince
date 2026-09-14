@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // `is_current_primary` is the SERVER's to decide when a request omits it — a
-// person's only current employment becomes their current primary one. A screen
+// contact's only current employment becomes their current primary one. A screen
 // that states the field by hand takes that decision away, and the two screens
-// that did it were the ones a real user reaches: the person rail, which sent an
+// that did it were the ones a real user reaches: the contact rail, which sent an
 // untouched checkbox's `false`, and the generic relationship modal, which sent a
 // literal for every kind while offering no primary control at all. Between them
-// the rule could not fire from anywhere a person actually works.
+// the rule could not fire from anywhere a contact actually works.
 //
 // Derived from the tree rather than from a list of the two known offenders: the
 // literal is one line and trivial to reintroduce on a screen that does not exist
@@ -28,7 +28,7 @@ describe("is_current_primary is not stated by hand", () => {
   }
 
   it("finds no screen sending a literal", () => {
-    // A LITERAL only. `is_current_primary: isCurrent ?? undefined` is the person
+    // A LITERAL only. `is_current_primary: isCurrent ?? undefined` is the contact
     // rail passing on what the reader actually did, which is the whole point —
     // a gate that banned the key outright would ban saying "yes" too.
     const literal = /is_current_primary:\s*(true|false)\b/;

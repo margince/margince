@@ -5,7 +5,7 @@ package capture
 
 // Pre-capture exclusions: the addresses and domains whose mail the CRM must
 // not store at all. A workspace exclusion is the installation's rule and takes
-// admin/ops to change; a user exclusion is one person's boundary for the
+// admin/ops to change; a user exclusion is one colleague's boundary for the
 // mailbox they connected, theirs alone to set and to lift, and binds only the
 // connections they granted. Both are read by the sink before any write
 // (excludedTx), so a matching message leaves a breadcrumb and a trace that
@@ -42,7 +42,7 @@ const (
 
 // containerProviders are the provider prefixes a container rule may carry, and
 // the namespaces its value belongs to. Named rather than open-ended: an
-// unrecognised prefix is a rule that can never match anything, and a person who
+// unrecognised prefix is a rule that can never match anything, and a contact who
 // typed one would see mail keep arriving with nothing saying why.
 var containerProviders = []string{"gmail", "graph", "imap"}
 
@@ -128,7 +128,7 @@ func (s *ExclusionStore) Add(ctx context.Context, scope, kind, raw string) (Excl
 		return Exclusion{}, &InvalidExclusionError{Field: "scope", Reason: "scope is workspace or user"}
 	}
 	// The database refuses this too, and a constraint violation is a 500. A
-	// container lives in ONE person's mailbox: a workspace rule naming a label
+	// container lives in ONE contact's mailbox: a workspace rule naming a label
 	// id would bind every colleague's connection to a place that does not exist
 	// there, and silently match nothing forever.
 	if kind == ExclusionKindContainer && scope != ExclusionScopeUser {
@@ -203,7 +203,7 @@ func (s *ExclusionStore) Remove(ctx context.Context, id ids.UUID) error {
 
 // exclusionAuditImage is what the trail records about a rule. A workspace
 // rule is installation configuration and its value is the fact an auditor
-// asks for; a user's own rule is that person's boundary, and the address they
+// asks for; a user's own rule is that contact's boundary, and the address they
 // keep out of the CRM must not enter it through the audit log — the trail
 // carries the rule's id, scope and kind, which answers "who set a rule, when"
 // without repeating what it names.

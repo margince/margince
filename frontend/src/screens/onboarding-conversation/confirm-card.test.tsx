@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { readFileSync } from "node:fs";
@@ -64,7 +64,7 @@ function read(over: Partial<CompanySiteRead> = {}): CompanySiteRead {
     profile_fields: [],
     facts: [],
     comparisons: [],
-    people: [],
+    contacts: [],
     warnings: [],
     draft_version: 1,
     proposal_hash: "hash",
@@ -121,7 +121,7 @@ function renderCard(site: CompanySiteRead | null) {
         authorizing={false}
         error={null}
       />
-      {/* The same mark the organizations list and the connections graph draw
+      {/* The same mark the companies list and the connections graph draw
           for this company, rendered beside the board so the claim under test
           is "the two agree" rather than a hash recomputed in the test. */}
       <span data-testid="reference-mark">

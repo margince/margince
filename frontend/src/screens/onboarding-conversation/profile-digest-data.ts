@@ -13,7 +13,7 @@ import type { ReviewRow } from "./company-review-state";
 // layout rather than about renumbering the same list twice.
 
 export type Fact = components["schemas"]["CompanySiteReadFact"];
-export type Person = components["schemas"]["CompanySiteReadPerson"];
+export type Contact = components["schemas"]["CompanySiteReadContact"];
 export type LegalEntity = components["schemas"]["CompanySiteReadLegalEntity"];
 export type Page = components["schemas"]["CompanySiteReadPage"];
 
@@ -29,7 +29,7 @@ export type Citation = Readonly<{ url: string; n: number }>;
  * would look like pages were missing.
  *
  * `extra` carries the citing URLs of everything the record rows do not cover
- * — a legal entity, a fact, a person — in the order the article renders them,
+ * — a legal entity, a fact, a contact — in the order the article renders them,
  * so a page backing both a profile line and one of these still earns exactly
  * one number.
  */
@@ -54,7 +54,7 @@ export function citationsOf(
 }
 
 /**
- * The number a record line prints, or none: a row typed by a person or carried
+ * The number a record line prints, or none: a row typed by a contact or carried
  * in from an existing profile has no page behind it. One spelling, because the
  * companion, the article and the sidebar all print the same superscript.
  */

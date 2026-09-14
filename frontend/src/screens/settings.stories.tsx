@@ -5,12 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
-import {
-  AuditLogCard,
-  PipelinesCard,
-  SettingsScreen,
-  settingsAddress,
-} from "./settings";
+import { AuditLogCard, SettingsScreen, settingsAddress } from "./settings";
+import { PipelinesCard } from "./settings.pipelines";
 import {
   installFetchStub,
   jsonResponse,
@@ -22,7 +18,7 @@ import {
 // fetch stub those cards read through, so the render is deterministic and
 // network-free — the same fixture shapes the settings.test.tsx cases use.
 //
-// An organization entry is only reachable when the principal holds what its
+// A company entry is only reachable when the principal holds what its
 // cards ask for, and SettingsScreen falls back to Account for anything else. So
 // a story about such an entry has to name its grants: `me({...})` builds the
 // /me body that opens the entry the story is capturing.
@@ -71,7 +67,7 @@ const tools = () =>
         name: "search_records",
         title: "Search records",
         description:
-          'Find people, organizations, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
+          'Find contacts, companies, deals, leads and projects by name. (Governance: runs immediately; requires passport scope "read".)',
         required_scope: "read",
         tier: "auto_execute",
         egress: false,
@@ -80,7 +76,7 @@ const tools = () =>
         name: "send_email",
         title: "Send an email",
         description:
-          'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a person approves every call before it runs; requires passport scope "send".)',
+          'Put a mail on the wire to a real recipient, exactly as it is given. (Governance: a human approves every call before it runs; requires passport scope "send".)',
         required_scope: "send",
         tier: "confirmation_required",
         egress: true,
@@ -99,7 +95,7 @@ const connectorOn = () =>
 const connectorOff = () =>
   jsonResponse({ title: "no MCP connector on this installation" }, 404);
 
-// Attribution names the PERSON and says a machine did the typing second
+// Attribution names the CONTACT and says a machine did the typing second
 // (PD-002), so the fixture carries the resolved names the read path returns and
 // spells actor_id the way storekit stamps it — "human:<uuid>", not a bare id.
 // A fixture that skipped the prefix is what let the "You" branch look covered
@@ -158,9 +154,9 @@ const auditLog = () =>
         id: "a5",
         occurred_at: "2026-07-10T06:00:00Z",
         actor_type: "agent",
-        actor_id: "agent:org_name_promotion",
+        actor_id: "agent:company_name_promotion",
         action: "update",
-        entity_type: "organization",
+        entity_type: "company",
         entity_id: "o-1",
       },
       {
@@ -169,7 +165,7 @@ const auditLog = () =>
         actor_type: "system",
         actor_id: "system",
         action: "erase",
-        entity_type: "person",
+        entity_type: "contact",
         entity_id: "p-9",
       },
     ],
@@ -237,7 +233,7 @@ export const AccountTabDark: Story = {
   render: tab("account", { "GET /me": me() }),
 };
 
-// Language belongs to the person, not to the sidebar. The play() opens the
+// Language belongs to the contact, not to the sidebar. The play() opens the
 // listbox so the capture carries the options rather than only the control's
 // closed face.
 export const AccountPreferences: Story = {
@@ -268,7 +264,7 @@ export const AccountSignatureDialog: Story = {
   },
 };
 
-// The person's own agent authority, and the one page the founder reads for
+// The contact's own agent authority, and the one page the founder reads for
 // whether the four cards on it space alike: the passports minted, the clients
 // holding one (with the connect guide open, because nothing is connected), the
 // governed tools those credentials reach, and the autonomy tiers they run under.
@@ -405,20 +401,20 @@ export const DataModelTab: Story = {
 // The consent registry and the audit trail on one page: the trail is what proves
 // the surfaces above it were honoured, so it moved here from a tab of its own.
 export const PrivacyTab: Story = {
-  // `person:read` is what opens this entry — the consent registry is gated on it
+  // `contact:read` is what opens this entry — the consent registry is gated on it
   // server-side (consent/store.go), not on a role. Without it the entry is not
   // visible, useVisibleSettingsTabs falls back to Account, and this story
   // captured the Account tab: byte-identical to AccountTab, under the name of a
   // page it never rendered. The comment two stories up describes this exact
   // failure; it happened again here.
   render: tab("privacy", {
-    "GET /me": me({ person: ["read"] }),
+    "GET /me": me({ contact: ["read"] }),
     "GET /audit-log": auditLog,
   }),
 };
 
 const privacyRoutes = {
-  "GET /me": me({ person: ["read"] }),
+  "GET /me": me({ contact: ["read"] }),
   "GET /audit-log": auditLog,
 };
 
@@ -578,7 +574,7 @@ const auditLogPage = {
       on_behalf_of: "u-1",
       on_behalf_of_name: "Me",
       action: "update",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       before: { stage: "new" },
       after: { stage: "qualified" },
@@ -608,7 +604,7 @@ function auditLogCard() {
     installFetchStub({
       "GET /me": auditLogMe,
       "GET /audit-log": () => jsonResponse(auditLogPage),
-      "GET /people/p-1": () =>
+      "GET /contacts/p-1": () =>
         jsonResponse({ id: "p-1", full_name: "Priya Shah" }),
     });
     return (

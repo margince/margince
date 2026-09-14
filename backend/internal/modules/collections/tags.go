@@ -322,13 +322,25 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var archived *time.Time
-		err := tx.QueryRow(ctx, `SELECT archived_at FROM tag WHERE id = $1`, tagID).Scan(&archived)
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && archived != nil) {
-			return apperrors.ErrNotFound
-		}
-		if err != nil {
+		// A RETIRED WORD IS STILL REMOVABLE, which is the one place this differs
+		// from applyTagTx and the reason the archived_at read is not shared with
+		// it. Applying a retired word is coining it again and is refused. Taking
+		// one OFF a record is the cleanup retiring the word left behind, and
+		// refusing it strands the record: recordTagRows returns archived
+		// assignments deliberately — flagged, sorted after the live ones,
+		// "history that belongs after what is current" — so the surface hands a
+		// caller a retired tag and then answered not-found when they tried to
+		// take it off. Nothing else could take it off either, since retiring the
+		// tag is what put it in that state.
+		//
+		// Only a tag that never existed is not-found here.
+		var exists bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS (SELECT 1 FROM tag WHERE id = $1)`, tagID).Scan(&exists); err != nil {
 			return err
+		}
+		if !exists {
+			return apperrors.ErrNotFound
 		}
 		// Same reasoning as applyTagTx: removing a tag CHANGES the record too,
 		// so the gate is write authority, not merely visibility.
@@ -379,7 +391,7 @@ func (s *Store) EnsureTaggable(ctx context.Context, entityType string, entityID 
 }
 
 // maxTagNameRunes bounds a tag name. Counted in RUNES, not bytes: the limit is
-// about what a person can read on a badge, and a byte cap would let an English
+// about what a human can read on a badge, and a byte cap would let an English
 // name run half again as long as a German one.
 const maxTagNameRunes = 64
 

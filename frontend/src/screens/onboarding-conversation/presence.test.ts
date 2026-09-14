@@ -68,7 +68,7 @@ describe("presenceFor: welcome and company act", () => {
   });
 
   it("rests at review and once confirmed", () => {
-    // Review is proposals in front of a person: the agent has stopped, so the orb
+    // Review is proposals in front of a contact: the agent has stopped, so the orb
     // must not claim work nobody asked it to keep doing.
     expect(
       presenceFor(state({ act: "company", phase: "co.review" })).core,

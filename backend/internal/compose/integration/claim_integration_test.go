@@ -9,7 +9,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,66 +25,66 @@ func TestAManualCreateIsOwnedByItsCreatorAndAnOwnerlessRecordMustBeClaimed(t *te
 	stranger := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
 
 	// The create stamps the creator.
-	mine, err := e.People.CreatePerson(rep, people.CreatePersonInput{FullName: "Mine Byhand", Source: "manual"})
+	mine, err := e.Contacts.CreateContact(rep, contacts.CreateContactInput{FullName: "Mine Byhand", Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if mine.OwnerId == nil || ids.UUID(*mine.OwnerId) != e.Rep1 {
-		t.Fatalf("a person created by Rep1 without naming an owner is owned by %v, want Rep1", mine.OwnerId)
+		t.Fatalf("a contact created by Rep1 without naming an owner is owned by %v, want Rep1", mine.OwnerId)
 	}
 
 	// An ownerless row: readable by the stranger, not writable, claimable.
-	orphan := e.SeedPerson(t, "Orphan Contact", nil)
-	e.WsExec(t, `UPDATE person SET owner_id = NULL WHERE id = $1`, orphan)
-	orphanID := ids.From[ids.PersonKind](orphan)
-	if _, err := e.People.GetPerson(stranger, orphanID, 0); err != nil {
-		t.Fatalf("an ownerless person is not readable by a stranger: %v", err)
+	orphan := e.SeedContact(t, "Orphan Contact", nil)
+	e.WsExec(t, `UPDATE contact SET owner_id = NULL WHERE id = $1`, orphan)
+	orphanID := ids.From[ids.ContactKind](orphan)
+	if _, err := e.Contacts.GetContact(stranger, orphanID, 0); err != nil {
+		t.Fatalf("an ownerless contact is not readable by a stranger: %v", err)
 	}
 	title := "CTO"
-	if _, err := e.People.UpdatePerson(stranger, orphanID, people.UpdatePersonInput{Title: &title}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("editing an ownerless person without claiming it → %v, want ErrPermissionDenied", err)
+	if _, err := e.Contacts.UpdateContact(stranger, orphanID, contacts.UpdateContactInput{Title: &title}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("editing an ownerless contact without claiming it → %v, want ErrPermissionDenied", err)
 	}
-	claim, err := e.People.ClaimRecord(stranger, "person", orphan, nil)
+	claim, err := e.Contacts.ClaimRecord(stranger, "contact", orphan, nil)
 	if err != nil {
-		t.Fatalf("claiming an ownerless person: %v", err)
+		t.Fatalf("claiming an ownerless contact: %v", err)
 	}
 	if claim.OwnerID != e.Rep3 {
 		t.Errorf("claimed owner = %v, want Rep3", claim.OwnerID)
 	}
-	if _, err := e.People.UpdatePerson(stranger, orphanID, people.UpdatePersonInput{Title: &title}); err != nil {
-		t.Errorf("editing a person one just claimed → %v, want allowed", err)
+	if _, err := e.Contacts.UpdateContact(stranger, orphanID, contacts.UpdateContactInput{Title: &title}); err != nil {
+		t.Errorf("editing a contact one just claimed → %v, want allowed", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE action = 'assign' AND entity_id = $1`, orphan); n != 1 {
 		t.Errorf("%d assign audit rows for the claim, want 1", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'person.updated' AND envelope->'entity'->>'id' = $1::text`, orphan); n < 1 {
-		t.Errorf("no person.updated event for the claim")
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'contact.updated' AND envelope->'entity'->>'id' = $1::text`, orphan); n < 1 {
+		t.Errorf("no contact.updated event for the claim")
 	}
 
 	// Claiming again is a no-op; claiming a colleague's record is refused;
 	// a write grant makes it claimable (a reassignment to oneself).
-	if _, err := e.People.ClaimRecord(stranger, "person", orphan, nil); err != nil {
+	if _, err := e.Contacts.ClaimRecord(stranger, "contact", orphan, nil); err != nil {
 		t.Errorf("re-claiming one's own record → %v, want a no-op", err)
 	}
-	if _, err := e.People.ClaimRecord(rep, "person", orphan, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := e.Contacts.ClaimRecord(rep, "contact", orphan, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("claiming a colleague's record → %v, want ErrPermissionDenied", err)
 	}
 	e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
-		VALUES ('person', $1, 'user', $2, 'write', $3)`, orphan, e.Rep1, e.Rep3)
-	if _, err := e.People.ClaimRecord(rep, "person", orphan, nil); err != nil {
+		VALUES ('contact', $1, 'user', $2, 'write', $3)`, orphan, e.Rep1, e.Rep3)
+	if _, err := e.Contacts.ClaimRecord(rep, "contact", orphan, nil); err != nil {
 		t.Errorf("claiming a record one holds a write share on → %v, want allowed", err)
 	}
 
 	// An agent cannot claim; a version mismatch is skew; an unknown type is refused.
-	if _, err := e.People.ClaimRecord(e.AgentCtx(), "person", orphan, nil); err == nil {
+	if _, err := e.Contacts.ClaimRecord(e.AgentCtx(), "contact", orphan, nil); err == nil {
 		t.Error("an agent claimed a record")
 	}
 	stale := int64(1)
-	if _, err := e.People.ClaimRecord(rep, "person", orphan, &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+	if _, err := e.Contacts.ClaimRecord(rep, "contact", orphan, &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Errorf("claim with a stale If-Match → %v, want ErrVersionSkew", err)
 	}
-	var unknown *people.InvalidRecordTypeError
-	if _, err := e.People.ClaimRecord(rep, "project", orphan, nil); !errors.As(err, &unknown) {
-		t.Errorf("claiming a project through the people door → %v, want InvalidRecordTypeError", err)
+	var unknown *contacts.InvalidRecordTypeError
+	if _, err := e.Contacts.ClaimRecord(rep, "project", orphan, nil); !errors.As(err, &unknown) {
+		t.Errorf("claiming a project through the contacts door → %v, want InvalidRecordTypeError", err)
 	}
 }

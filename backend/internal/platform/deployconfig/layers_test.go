@@ -164,7 +164,7 @@ func TestOverlayPathInsertsThePostureBeforeTheExtension(t *testing.T) {
 }
 
 // Neither file is required. This is how an already-bootstrapped installation
-// runs: the ADR permits deleting the file once the organization exists.
+// runs: the ADR permits deleting the file once the company exists.
 func TestNeitherLayerHasToExist(t *testing.T) {
 	cfg, err := Load(filepath.Join(t.TempDir(), "absent.yaml"), runtimeenv.Development)
 	if err != nil {

@@ -11,7 +11,7 @@ package consent
 // insert takes ON CONFLICT DO NOTHING on
 // (decision_set_id, recipient_address, phase), so one address reached twice in
 // a single set is one row — counting per loop iteration would report a Cc to
-// the same person as a second decision. And AuthorizeTransmit can fail after
+// the same contact as a second decision. And AuthorizeTransmit can fail after
 // the rows are written, rolling them back, so counting inside the transaction
 // would report decisions no row holds.
 //
@@ -69,12 +69,12 @@ func TestARecipientNamedTwiceIsCountedOnce(t *testing.T) {
 	delivery := e.plantDelivery(t)
 	before := countedNow(t, allowedRecordConfirmation)
 
-	// The same address twice, which is what a To and a Cc to one person is.
+	// The same address twice, which is what a To and a Cc to one contact is.
 	transmitTo(t, e, delivery, []connector.Recipient{{Email: e.address}, {Email: e.address}})
 
 	if got := countedNow(t, allowedRecordConfirmation) - before; got != 1 {
 		t.Fatalf("one address named twice moved the counter by %d, want 1 — the count is taken "+
-			"per recipient rather than per inserted row, so a Cc to the same person reads as "+
+			"per recipient rather than per inserted row, so a Cc to the same contact reads as "+
 			"a second decision", got)
 	}
 }

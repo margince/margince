@@ -14,9 +14,9 @@ import (
 // owner's own decision and before any model call.
 //
 // `support@`, `billing@` and a helpdesk vendor's ticket address name a queue
-// rather than a person. The correspondence is real — somebody answers, and the
+// rather than a contact. The correspondence is real — somebody answers, and the
 // mail stays visible — but there is no human to name, and the small local model
-// this lane runs on answered `person` for exactly these often enough to put
+// this lane runs on answered `contact` for exactly these often enough to put
 // contacts called "Billing" and "support" in a founder's CRM.
 //
 // Deterministic on purpose. A question with a right answer that can be read off
@@ -24,12 +24,12 @@ import (
 // ledger then settles the address so later mail from the same queue costs
 // nothing either.
 //
-// It sits BELOW the owner's override in judgeOne: a person who tells this
+// It sits BELOW the owner's override in judgeOne: a contact who tells this
 // product that a shared mailbox is a contact they want has answered the
 // question, and a rule that overruled them would make the correction temporary.
 //
 // The vocabulary is platform/mailrole, shared with the tier ladder and with
-// people's name parser, so the three doors give one answer for one address.
+// contacts's name parser, so the three doors give one answer for one address.
 //
 // Held by: TestOnlyOnePackageDeclaresRoleMailboxes (backend/gates/rolemailboxonelist_test.go)
 func addressIsARoleMailbox(email string) bool {
@@ -37,7 +37,7 @@ func addressIsARoleMailbox(email string) bool {
 	return role
 }
 
-// askAHumanInstead retires a sender no model can judge, so a person decides.
+// askAHumanInstead retires a sender no model can judge, so a human decides.
 //
 // An installation with AI turned off must not simply leave the row where it is.
 // Nothing else advances a pending disposition: `unsure` is what the review queue
@@ -64,10 +64,10 @@ func (e *CounterpartyVerdictEngine) askAHumanInstead(
 //
 // A creating answer needs more, because the two mistakes are not the same size.
 // Refusing a contact leaves the mail visible and the question answerable by a
-// person; creating one puts a record in a shared CRM, and that is the failure
+// contact; creating one puts a record in a shared CRM, and that is the failure
 // this lane exists over — a founder found departments, a language teacher and
-// his own address filed as business contacts, and a barely-above-floor `person`
-// was indistinguishable from a confident one. So `person` and `advisor` need
+// his own address filed as business contacts, and a barely-above-floor `contact`
+// was indistinguishable from a confident one. So `contact` and `advisor` need
 // verdictCreateFloor and everything else needs verdictConfidenceFloor.
 //
 // The sibling confidentiality lane is asymmetric for the mirror reason: an
@@ -75,7 +75,7 @@ func (e *CounterpartyVerdictEngine) askAHumanInstead(
 // direction. Here creating is.
 //
 // Below its floor the answer is not refused, it is re-asked once and then made a
-// question for a person — an `unsure` sender is escalated rather than dismissed.
+// question for a contact — an `unsure` sender is escalated rather than dismissed.
 func clearsItsFloor(answer verdictResult) bool {
 	floor := verdictConfidenceFloor
 	if createsARecord(answer.Verdict) {
@@ -84,7 +84,7 @@ func clearsItsFloor(answer verdictResult) bool {
 	return float64(answer.Confidence) >= floor
 }
 
-// createsARecord reports whether this kind puts a person in the CRM.
+// createsARecord reports whether this kind puts a contact in the CRM.
 //
 // It is a second statement of what apply's effect switch does, because that
 // switch is control flow and cannot be read as data. A kind added there that
@@ -93,5 +93,5 @@ func clearsItsFloor(answer verdictResult) bool {
 //
 // Held by: TestEveryCreatingKindNeedsTheHigherFloor (backend/internal/compose/captureverdictkinds_test.go)
 func createsARecord(kind string) bool {
-	return kind == capture.KindPerson || kind == capture.KindAdvisor
+	return kind == capture.KindContact || kind == capture.KindAdvisor
 }

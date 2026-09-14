@@ -4,12 +4,6 @@
 // The account's work in flight: one line per open deal, written from that
 // record's own facts.
 //
-// This replaced a written account brief. On an account carrying several
-// engagements the brief blended them — correspondence about one deal became a
-// sentence about another, and a figure read out of the blend had nowhere to be
-// checked. So every line is one record's own story, and the header above them
-// counts and nothing else.
-//
 // Deals only. The account's projects have exactly one home on the record —
 // the ProjectLinks section, which also holds attach and detach — and a second
 // list of them here was a second answer to "which bodies of work is this part
@@ -32,6 +26,7 @@ import {
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
+import { middayInstant } from "../format/calendarday";
 import {
   formatDate,
   formatMoneyOrAbsent,
@@ -47,14 +42,14 @@ import { Citations } from "./record360";
 import "./company360.css";
 import "./companywork.css";
 
-type Organization360 = components["schemas"]["Organization360"];
-type WorkDeal = components["schemas"]["Organization360Deal"];
-type WorkProject = components["schemas"]["Organization360Project"];
-type Attention = components["schemas"]["Organization360WorkAttention"];
+type Company360 = components["schemas"]["Company360"];
+type WorkDeal = components["schemas"]["Company360Deal"];
+type WorkProject = components["schemas"]["Company360Project"];
+type Attention = components["schemas"]["Company360WorkAttention"];
 
 /**
  * CompanyWorkCard is the overview's lead: what is moving on this account, and
- * for each piece of it, the one reason it wants a person today.
+ * for each piece of it, the one reason it wants a contact today.
  *
  * A withheld deals section says so where its rows would have been — never a
  * count over rows this reader may not see, and never the fit panel in this
@@ -69,7 +64,7 @@ export function CompanyWorkCard({
   bare = false,
   verbs,
 }: Readonly<{
-  view?: Organization360;
+  view?: Company360;
   // The composite read's own pending flag — see sectionState's own doc.
   loading?: boolean;
   // Where a cited conversation opens. The page owns it, because the same
@@ -158,7 +153,7 @@ export function CompanyWorkCard({
  * Withheld sections are named ONCE, about the whole page, rather than as a
  * refusal beside each line a reader did not get.
  */
-function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
+function SinceLastVisit({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -194,9 +189,7 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
 // `<SinceLastVisit/>` on an account with nothing to report costs the record a
 // blank row. Both mounts call this; passing the component straight into a
 // footer is the defect it exists to make unavailable.
-export function sinceLastVisitFooter(
-  view?: Organization360,
-): ReactNode | undefined {
+export function sinceLastVisitFooter(view?: Company360): ReactNode | undefined {
   return speaksSinceLastVisit(view) ? (
     <SinceLastVisit view={view} />
   ) : undefined;
@@ -205,7 +198,7 @@ export function sinceLastVisitFooter(
 // Whether there is a sentence to say at all — read by the component's own
 // guard and by the footer helper above, so the band and the sentence cannot
 // disagree about whether there is one.
-function speaksSinceLastVisit(view?: Organization360): boolean {
+function speaksSinceLastVisit(view?: Company360): boolean {
   return (
     firstVisit(view) ||
     newActivities(view) > 0 ||
@@ -222,7 +215,7 @@ function speaksSinceLastVisit(view?: Organization360): boolean {
 // Zero and "not counted" are different answers and neither earns a line: a
 // withheld section means nobody counted, and a counted zero means nothing
 // happened — reporting either as news would be a claim the page cannot make.
-function newActivities(view?: Organization360): number {
+function newActivities(view?: Company360): number {
   if (!view || omitted(view, "since_last_visit")) {
     return 0;
   }
@@ -232,7 +225,7 @@ function newActivities(view?: Organization360): number {
 // firstVisit is true only when the account HAS a baseline section and it is
 // empty. Read off an absent section it would turn data a reader's grants
 // withheld into a claim about their own history.
-function firstVisit(view?: Organization360): boolean {
+function firstVisit(view?: Company360): boolean {
   if (!view || omitted(view, "since_last_visit")) {
     return false;
   }
@@ -247,7 +240,7 @@ function firstVisit(view?: Organization360): boolean {
  * not been told this account has none, and swapping in the fit panel would
  * tell them exactly that.
  */
-export function hasWorkInFlight(view?: Organization360): boolean {
+export function hasWorkInFlight(view?: Company360): boolean {
   if (!view) {
     return false;
   }
@@ -348,7 +341,7 @@ function WorkGroup({
  * when that half is withheld: "0 in flight" to a reader who may not see the
  * deals is a false statement about the account, not a partial one.
  */
-function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
+function WorkCount({ view }: Readonly<{ view?: Company360 }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!view?.deals) {
@@ -410,7 +403,11 @@ function DealLine({
         {deal.expected_close_date && (
           <span>
             {t("co.work.closes", {
-              date: formatDate(deal.expected_close_date, locale, zone),
+              date: formatDate(
+                middayInstant(deal.expected_close_date, zone),
+                locale,
+                zone,
+              ),
             })}
           </span>
         )}

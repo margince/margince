@@ -48,6 +48,13 @@ const noticeRouteReply = "reply"
 // exists as a controller-sent message and already names the installation.
 const noticeRouteRecordConfirmation = "record_confirmation"
 
+// noticeRoutePrivacyNotice — the notice mail itself, which tells the subject
+// what is held and asks nothing. It is the route that reaches a contact who has
+// asked us to stop: the disclosure duty survives that stop and the engine lets
+// CategoryPrivacyNotice through, while the record confirmation's category is
+// refused.
+const noticeRoutePrivacyNotice = "privacy_notice"
+
 // DutyFor answers what the installation owes a contact obtained this way.
 //
 // The four kinds that owe nothing all share one property: the subject handed us
@@ -101,7 +108,11 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 func strictNotice() NoticeDuty {
 	return NoticeDuty{
 		Rule: RuleArt14, State: NoticeOpen,
-		Routes: []string{noticeRouteRecordConfirmation},
+		// BOTH routes, with the notice first. An Art. 14 duty can be
+		// discharged by either mail, and an installation that has stopped
+		// writing to this contact can only use the notice — so listing it
+		// makes the duty dischargeable where it previously was not.
+		Routes: []string{noticeRoutePrivacyNotice, noticeRouteRecordConfirmation},
 		Months: art14Months,
 	}
 }

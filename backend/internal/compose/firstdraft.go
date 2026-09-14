@@ -79,8 +79,8 @@ func (d replyDrafter) DraftFirstEmail(ctx context.Context, intent string) (strin
 		Thread: threadFlag(false),
 		Intent: boundedRunes(intent, replyActivityMaxRunes),
 	}
-	// The message goes out under a person's name, so it is written in that
-	// person's voice — the same rule the reply path obeys, and the reason this
+	// The message goes out under a contact's name, so it is written in that
+	// contact's voice — the same rule the reply path obeys, and the reason this
 	// surface may not opt out of it: one rep, one mailbox, two writers is
 	// exactly the split Voice DNA exists to close.
 	//

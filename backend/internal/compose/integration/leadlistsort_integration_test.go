@@ -15,7 +15,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // leadName reads the row's display name, which the contract carries as an
@@ -40,11 +40,11 @@ func TestLeadListSortsByScoreAndPagesUnderIt(t *testing.T) {
 	e.SeedID(t, `INSERT INTO lead (id, full_name, status, source, score, captured_by)
 	           VALUES ($1, 'Coldest', 'contacted', 'inbound', 10, 'human:x')`)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	sortField := "-score"
 	one := 1
 
-	page1, info1, err := store.ListLeads(ctx, people.ListLeadsInput{Sort: &sortField, Limit: &one})
+	page1, info1, err := store.ListLeads(ctx, contacts.ListLeadsInput{Sort: &sortField, Limit: &one})
 	if err != nil {
 		t.Fatalf("ListLeads sort=-score page 1: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestLeadListSortsByScoreAndPagesUnderIt(t *testing.T) {
 		t.Fatalf("page 1 = %+v (more=%v), want [Warmest] with more", page1, info1.HasMore)
 	}
 
-	page2, info2, err := store.ListLeads(ctx, people.ListLeadsInput{
+	page2, info2, err := store.ListLeads(ctx, contacts.ListLeadsInput{
 		Sort: &sortField, Limit: &one, Cursor: &info1.NextCursor,
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestLeadListSortsByScoreAndPagesUnderIt(t *testing.T) {
 		t.Fatalf("page 2 = %+v (more=%v), want [Middle] with more", page2, info2.HasMore)
 	}
 
-	page3, info3, err := store.ListLeads(ctx, people.ListLeadsInput{
+	page3, info3, err := store.ListLeads(ctx, contacts.ListLeadsInput{
 		Sort: &sortField, Limit: &one, Cursor: &info2.NextCursor,
 	})
 	if err != nil {
@@ -87,11 +87,11 @@ func TestLeadListNarrowsToTheRequestedMinimumScore(t *testing.T) {
 	e.SeedID(t, `INSERT INTO lead (id, full_name, status, source, score, captured_by)
 	           VALUES ($1, 'Coldest', 'contacted', 'inbound', 10, 'human:x')`)
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	sortField := "-score"
 	floor := 50
 
-	page, _, err := store.ListLeads(ctx, people.ListLeadsInput{Sort: &sortField, MinScore: &floor})
+	page, _, err := store.ListLeads(ctx, contacts.ListLeadsInput{Sort: &sortField, MinScore: &floor})
 	if err != nil {
 		t.Fatalf("ListLeads min_score=50: %v", err)
 	}
@@ -108,9 +108,9 @@ func TestLeadListRefusesAnUnknownSortField(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := e.AsFullUser()
 
-	store := people.NewStore(e.DB())
+	store := contacts.NewStore(e.DB())
 	sortField := "not_a_column"
-	if _, _, err := store.ListLeads(ctx, people.ListLeadsInput{Sort: &sortField}); err == nil {
+	if _, _, err := store.ListLeads(ctx, contacts.ListLeadsInput{Sort: &sortField}); err == nil {
 		t.Fatal("ListLeads sort=not_a_column: want a refusal, got none")
 	}
 }

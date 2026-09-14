@@ -328,7 +328,7 @@ func anyLiteralTen(exprs []ast.Expr) bool {
 	return false
 }
 
-// handWrittenGoFiles walks the module for source a person maintains. Generated
+// handWrittenGoFiles walks the module for source a contact maintains. Generated
 // files are excluded because nobody edits them and a generator that emitted
 // this shape would be the generator's defect, not a call site's.
 func handWrittenGoFiles(t *testing.T) []string {

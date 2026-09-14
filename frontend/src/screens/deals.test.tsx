@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -26,11 +26,6 @@ import {
   mapDealCreate,
   mapDealUpdate,
 } from "./deals";
-
-// B-EP09.11 acceptance: board renders per-column sub-lines from the fetched
-// set, mixed-currency columns refuse a sum, the board↔table control keeps
-// the SAME deal set with no reload, terminal drop opens the 🟡 confirm and
-// nothing posts until confirmed, and an open-stage drop posts the advance.
 
 afterEach(() => {
   cleanup();
@@ -69,7 +64,7 @@ const render = (ui: ReactNode) => {
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write SAYS mounts it the same way. */}
         <ToastProvider>
-          {ui}
+          <RecordShell>{ui}</RecordShell>
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -539,13 +534,13 @@ function stubBackend(
         authorization: meFixture({ allow: REP_GRANTS }).authorization,
       });
     }
-    if (url.includes("/organizations")) {
+    if (url.includes("/companies")) {
       return jsonResponse({
         data: [{ id: "o1", display_name: "Acme" }],
         page: { next_cursor: null },
       });
     }
-    if (url.includes("/deals")) {
+    if (url.includes("/deals") && !url.includes("/outcome-reviews")) {
       opts.onDealsUrl?.(url);
       if (opts.nextPage) {
         return url.includes("cursor=")
@@ -565,7 +560,7 @@ function stubBackend(
 }
 
 describe("mapDealUpdate", () => {
-  // The form's controls as a person who changed nothing left them. Every value
+  // The form's controls as a contact who changed nothing left them. Every value
   // here is exactly what dealEditRecord seeded, so a key reaching the body is
   // the form reporting a change nobody made.
   const untouched = {
@@ -573,8 +568,8 @@ describe("mapDealUpdate", () => {
     amount: "2120",
     currency: "EUR",
     owner_id: "u-me",
-    organization_id: "",
-    partner_org_id: "",
+    company_id: "",
+    partner_company_id: "",
     partner_attribution: "",
     forecast_category: "",
     expected_close_date: "",
@@ -582,7 +577,7 @@ describe("mapDealUpdate", () => {
     project_id: "",
   };
 
-  it("rebuilds amount_minor from major units for the fields the person moved", () => {
+  it("rebuilds amount_minor from major units for the fields the contact moved", () => {
     const body = mapDealUpdate(
       {
         ...untouched,
@@ -605,24 +600,24 @@ describe("mapDealUpdate", () => {
   });
 
   // The reported defect. The body used to carry every field on every save, so a
-  // deal with no company resubmitted `organization_id: null` — and the API,
-  // correctly, refused to clear a field the person never touched. On an
+  // deal with no company resubmitted `company_id: null` — and the API,
+  // correctly, refused to clear a field the contact never touched. On an
   // installation with no partners the refusal named `partner_attribution`, a
   // field the form does not even render.
-  it("sends nothing at all when the person changed nothing", () => {
+  it("sends nothing at all when the contact changed nothing", () => {
     const body = mapDealUpdate(untouched, untouched);
 
     expect(Object.keys(body)).toEqual([]);
   });
 
-  it("names only the field the person moved, on a deal missing every optional value", () => {
+  it("names only the field the contact moved, on a deal missing every optional value", () => {
     const bare = {
       name: "Any Deal",
       amount: "",
       currency: "",
       owner_id: "",
-      organization_id: "",
-      partner_org_id: "",
+      company_id: "",
+      partner_company_id: "",
       partner_attribution: "",
       forecast_category: "",
       expected_close_date: "",
@@ -643,15 +638,19 @@ describe("mapDealUpdate", () => {
   // unchanged, which is the only honest patch for a field nobody was shown.
   it("does not clear a partner it was never allowed to see", () => {
     const body = mapDealUpdate(
-      { name: "Fleet retrofit", partner_org_id: "", partner_attribution: "" },
       {
         name: "Fleet retrofit",
-        partner_org_id: "p-1",
+        partner_company_id: "",
+        partner_attribution: "",
+      },
+      {
+        name: "Fleet retrofit",
+        partner_company_id: "p-1",
         partner_attribution: "sourced",
       },
-      ["partner_org_id"],
+      ["partner_company_id"],
     );
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     // The attribution is withheld WITH its partner, so it goes too — returning
     // half the pair would decide what a partner nobody could see is owed.
     expect("partner_attribution" in body).toBe(false);
@@ -659,10 +658,14 @@ describe("mapDealUpdate", () => {
 
   it("still clears a partner the reader could see and chose to remove", () => {
     const body = mapDealUpdate(
-      { ...untouched, partner_org_id: "" },
-      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+      { ...untouched, partner_company_id: "" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
-    expect(body.partner_org_id).toBeNull();
+    expect(body.partner_company_id).toBeNull();
     // The claim goes with the partner, server-side, as one fact. Naming its own
     // null here would state a claim with nobody left to attribute it to, which
     // is the one shape the API refuses.
@@ -696,10 +699,14 @@ describe("mapDealUpdate", () => {
     const body = mapDealUpdate(
       {
         ...untouched,
-        partner_org_id: "p-1",
+        partner_company_id: "p-1",
         partner_attribution: "influenced",
       },
-      { ...untouched, partner_org_id: "p-1", partner_attribution: "sourced" },
+      {
+        ...untouched,
+        partner_company_id: "p-1",
+        partner_attribution: "sourced",
+      },
     );
     expect(Object.keys(body)).toEqual(["partner_attribution"]);
     expect(body.partner_attribution).toBe("influenced");
@@ -717,15 +724,15 @@ describe("mapDealCreate", () => {
         stage_id: "s-1",
         amount: "480",
         currency: "EUR",
-        organization_id: "cust-1",
-        partner_org_id: "partner-1",
+        company_id: "cust-1",
+        partner_company_id: "partner-1",
         partner_attribution: "influenced",
       },
       "p-1",
     );
-    expect(body.partner_org_id).toBe("partner-1");
+    expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBe("influenced");
-    expect(body.organization_id).toBe("cust-1");
+    expect(body.company_id).toBe("cust-1");
     expect(body.pipeline_id).toBe("p-1");
     expect(body.amount_minor).toBe(48_000);
   });
@@ -735,16 +742,16 @@ describe("mapDealCreate", () => {
   // says it does — the form must not invent a different claim here.
   it("sends no attribution when the caller made no claim", () => {
     const body = mapDealCreate(
-      { name: "x", stage_id: "s-1", partner_org_id: "partner-1" },
+      { name: "x", stage_id: "s-1", partner_company_id: "partner-1" },
       "p-1",
     );
-    expect(body.partner_org_id).toBe("partner-1");
+    expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBeNull();
   });
 
   it("names no partner when none was picked", () => {
     const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1");
-    expect(body.partner_org_id).toBeNull();
+    expect(body.partner_company_id).toBeNull();
     expect(body.partner_attribution).toBeNull();
   });
 });
@@ -768,7 +775,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     const dealFetches = () =>
       fetchMock.mock.calls.filter((call) =>
@@ -780,7 +787,7 @@ describe("DealsScreen", () => {
       ).length;
     const before = dealFetches();
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
-    expect(screen.getByText("Fleet retrofit")).toBeTruthy(); // same set, table view
+    expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(); // same set, table view
     expect(dealFetches()).toBe(before); // no reload
   });
 
@@ -1061,7 +1068,7 @@ describe("DealsScreen", () => {
       </QueryClientProvider>,
     );
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     for (const query of client.getQueryCache().getAll()) {
@@ -1136,7 +1143,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     expect(totalsAsked).toBe(false);
@@ -1157,7 +1164,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({ id: "a", stage_id: "s1" })]));
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     expect(
@@ -1181,7 +1188,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     expect(sentBody).toMatchObject({
       group_by: ["stage_id", "currency"],
@@ -1196,7 +1203,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     // simulate the drop on the Won column via the drop handler path
@@ -1233,7 +1240,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1287,7 +1294,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1362,7 +1369,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1387,7 +1394,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1432,7 +1439,7 @@ describe("DealsScreen", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     dropOnStage("s3");
@@ -1463,7 +1470,7 @@ describe("DealsScreen", () => {
             name: "progress_deal",
             title: "Progress a deal with a note",
             description:
-              'Move a deal to a new stage and leave a note on its timeline saying why. (Governance: some calls run immediately and others a person approves first, decided per call from its arguments; requires passport scope "write".)',
+              'Move a deal to a new stage and leave a note on its timeline saying why. (Governance: some calls run immediately and others a human approves first, decided per call from its arguments; requires passport scope "write".)',
             required_scope: "write",
             tier: "auto_execute",
             egress: false,
@@ -1473,7 +1480,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     const wonColumn = document.querySelector(
@@ -1502,7 +1509,7 @@ describe("DealsScreen", () => {
     );
     render(<DealsScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
     const proposalColumn = document.querySelector(
@@ -1554,7 +1561,7 @@ describe("DealsScreen", () => {
           page: { next_cursor: "cursor-2", has_more: true },
         });
       }
-      // pipelines / agent-tools / organizations / context — all empty here.
+      // pipelines / agent-tools / companies / context — all empty here.
       return jsonResponse({ data: [], page: { next_cursor: null } });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -1764,13 +1771,16 @@ describe("DealsScreen filters", () => {
 });
 
 /**
- * Open the header's overflow, which is where archiving, sharing and reopening
- * live: verbs whose consequence a reader has to read before pressing get a
- * whole line rather than a place in the verb row. Edit stays in the row.
+ * The header's overflow, where every verb but the mail lives: edit, share,
+ * reopen and archive each get a whole line rather than a place in a row, so
+ * reaching any of them is two presses — the menu, then the row.
  */
-async function openHeaderMenu(): Promise<void> {
-  await userEvent.click(
-    await screen.findByRole("button", { name: "More actions" }),
+async function openHeaderMenu(user: UserEvent | typeof userEvent = userEvent) {
+  await user.click(await screen.findByRole("button", { name: "More actions" }));
+}
+async function openEditForm(user: UserEvent | typeof userEvent = userEvent) {
+  await user.click(
+    await screen.findByRole("button", { name: "Change Deal name" }),
   );
 }
 
@@ -1788,8 +1798,11 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
       }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await openEditForm();
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
     await waitFor(() => expect(patches.length).toBe(1));
     expect(patches[0].ifMatch).toBe("4");
   });
@@ -1800,8 +1813,8 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("names the partner that brought the deal, and links to it", async () => {
     const d = deal({
       id: "x",
-      organization_id: "o1",
-      partner_org_id: "p1",
+      company_id: "o1",
+      partner_company_id: "p1",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
@@ -1810,7 +1823,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
         const url = request.url;
         // EntityRef resolves each reference by its own id read; a reference it
         // cannot name is deliberately not a link.
-        if (url.includes("/organizations/p1")) {
+        if (url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "VietnamPartner JSC" });
         }
         return stubBackend([d], { single: d })(request);
@@ -1828,7 +1841,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   // A form offers nothing the record already carries as a blank. The partner
   // picker offers one capped page of partners, so a deal's own partner can be
   // missing from it — and a select whose stored value is not an option shows
-  // blank, which the patch then reads as the person having chosen "Unset" and
+  // blank, which the patch then reads as the contact having chosen "Unset" and
   // sends as a real null, clearing the partner and its commission attribution.
   //
   // The save says nothing about the partner at all, which is what makes it
@@ -1836,11 +1849,11 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("keeps a partner the picker cannot reach, rather than clearing it on save", async () => {
     const user = userEvent.setup();
     const patches: { body: unknown }[] = [];
-    // Neither the org list ("Acme") nor the partner list holds p-offpage.
+    // Neither the company list ("Acme") nor the partner list holds p-offpage.
     const d = deal({
       id: "x",
       version: 4,
-      partner_org_id: "p-offpage",
+      partner_company_id: "p-offpage",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
@@ -1852,12 +1865,15 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
-    await user.click(await screen.findByTestId("edit-record"));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await openEditForm(user);
+    await user.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     expect("partner_attribution" in body).toBe(false);
   });
 
@@ -1869,7 +1885,7 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     const d = deal({
       id: "x",
       version: 4,
-      partner_org_id: "p-offpage",
+      partner_company_id: "p-offpage",
       partner_attribution: "influenced",
     });
     vi.stubGlobal(
@@ -1886,12 +1902,15 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
     );
 
     render(<DealScreen id="x" />);
-    await user.click(await screen.findByTestId("edit-record"));
-    await user.click(screen.getByRole("button", { name: "Save" }));
+    await openEditForm(user);
+    await user.type(
+      screen.getByRole("textbox", { name: "Deal name" }),
+      " updated{Enter}",
+    );
 
     await waitFor(() => expect(patches.length).toBe(1));
     const body = patches[0].body as Record<string, unknown>;
-    expect("partner_org_id" in body).toBe(false);
+    expect("partner_company_id" in body).toBe(false);
     expect("partner_attribution" in body).toBe(false);
   });
 
@@ -1903,18 +1922,18 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
       id: "x",
       amount_minor: 4_800_000,
       currency: "EUR",
-      organization_id: "o1",
-      partner_org_id: "p1",
+      company_id: "o1",
+      partner_company_id: "p1",
       partner_attribution: "sourced",
     });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
         const url = request.url;
-        if (url.includes("/organizations/p1")) {
+        if (url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "Northgate" });
         }
-        if (url.includes("/organizations/o1")) {
+        if (url.includes("/companies/o1")) {
           return jsonResponse({ id: "o1", display_name: "Acme Corp" });
         }
         return stubBackend([d], { single: d })(request);
@@ -1933,13 +1952,13 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
   it("says a partner only helped when the deal was influenced, not sourced", async () => {
     const d = deal({
       id: "x",
-      partner_org_id: "p1",
+      partner_company_id: "p1",
       partner_attribution: "influenced",
     });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/organizations/p1")) {
+        if (request.url.includes("/companies/p1")) {
           return jsonResponse({ id: "p1", display_name: "Xentral" });
         }
         return stubBackend([d], { single: d })(request);
@@ -2031,7 +2050,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
   // A control that can only fail is worse than none: an archived deal is not
   // moved through the pipeline, it is restored first.
   // The deal's tags ride in the CONTEXT rail, beside the seats, the deal room
-  // and the mail card — the same column a person and a company draw theirs in.
+  // and the mail card — the same column a contact and a company draw theirs in.
   // They sat in the overview pane once, full-width between the readings and the
   // stage stepper, on the belief that this page had no side column; it has the
   // details pane every record page draws.
@@ -2203,10 +2222,9 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
 
     await openHeaderMenu();
     // Each WAITED for — see the note on the same list in
-    // organizations.header.test.tsx: only the first was, and the rest were
+    // companies.header.test.tsx: only the first was, and the rest were
     // read in the tick it arrived in.
     const refused = [
-      await screen.findByTestId("edit-record"),
       await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
@@ -2244,14 +2262,6 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
       "You cannot change this deal. Ask its owner to share it with you, or your administrator for the right to edit it.";
     expect(await screen.findByText(sentence)).toBeTruthy();
 
-    // Edit is refused in place, and the id it describes itself by resolves to
-    // the sentence in the band from the FIRST render — a reason minted inside
-    // the menu would name no element until the menu was opened.
-    const edit = await screen.findByTestId("edit-record");
-    expect(edit.hasAttribute("disabled")).toBe(true);
-    const describedBy = edit.getAttribute("aria-describedby") ?? "";
-    expect(document.getElementById(describedBy)?.textContent).toBe(sentence);
-
     // The offer is hung off the deal through the deal's own write gate, so it
     // is refused by the same fact — and points at the same sentence.
     const newOffer = await screen.findByRole("button", { name: "New offer" });
@@ -2261,6 +2271,9 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
         ?.textContent,
     ).toBe(sentence);
 
+    // Every verb in the menu describes itself by an id minted in the page's
+    // band on the FIRST render — one minted inside the menu would name no
+    // element until the menu had been opened.
     await openHeaderMenu();
     for (const testId of ["archive-record", "share-record"]) {
       const control = await screen.findByTestId(testId);
@@ -2282,8 +2295,10 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     render(<DealScreen id="x" />);
 
     expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
-    const edit = await screen.findByTestId("edit-record");
-    expect(edit.hasAttribute("disabled")).toBe(true);
+    await openHeaderMenu();
+    expect(
+      screen.queryByRole("button", { name: "Change Deal name" }),
+    ).toBeNull();
   });
 });
 
@@ -2345,8 +2360,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x", version: 3 });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    expect(await screen.findByTestId("edit-record")).toBeTruthy();
     await openHeaderMenu();
+    expect(screen.queryByTestId("edit-record")).toBeNull();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
     // The mirror owns the deal's mail, so the header offers no Email verb.
     expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
@@ -2360,14 +2375,16 @@ describe("DealScreen — overlay mode write affordances", () => {
       overlayBackend(d, { onPatch: (body) => patches.push(body) }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
-    const nameInput = screen.getByLabelText("Deal name *");
+    await openEditForm();
+    const nameInput = screen.getByRole("textbox", { name: "Deal name" });
     await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Fleet retrofit — expanded scope");
-    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await userEvent.type(nameInput, "Fleet retrofit — expanded scope{Enter}");
     await waitFor(() => expect(patches).toHaveLength(1));
     expect(
-      await screen.findByText("Fleet retrofit — expanded scope"),
+      await screen.findByRole("heading", {
+        name: "Fleet retrofit — expanded scope",
+        level: 1,
+      }),
     ).toBeTruthy();
   });
 
@@ -2375,7 +2392,7 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x" });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("edit-record"));
+    await openEditForm();
     expect(
       screen.getByText(/Only the fields HubSpot accepts are written back/),
     ).toBeTruthy();
@@ -2385,7 +2402,8 @@ describe("DealScreen — overlay mode write affordances", () => {
     const d = deal({ id: "x", status: "won", stage_id: "s3" });
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
-    await screen.findByTestId("edit-record");
+    await openHeaderMenu();
+    await screen.findByTestId("archive-record");
     expect(screen.queryByTestId("reopen-open")).toBeNull();
     expect(screen.queryByTestId("share-record")).toBeNull();
   });
@@ -2414,7 +2432,8 @@ describe("DealScreen reopen", () => {
     const d = deal({ id: "y", status: "open" });
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
     render(<DealScreen id="y" />);
-    await screen.findByTestId("edit-record"); // 360 rendered
+    await openHeaderMenu();
+    await screen.findByTestId("archive-record");
     expect(screen.queryByTestId("reopen-open")).toBeNull();
   });
 });
@@ -2450,7 +2469,7 @@ describe("DealScreen offers panel", () => {
     );
     render(<DealScreen id="d1" />);
     await waitFor(() =>
-      expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
+      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: "New offer" }));
     await waitFor(() => expect(creates).toHaveLength(1));
@@ -2475,11 +2494,6 @@ describe("DealScreen pending approvals", () => {
     evidence: [],
   } as Approval;
 
-  // The panel states the same two facts the approvals inbox states, in the same
-  // words: the kind through the shared catalog map, the proposer through the
-  // provenance tag. Off the wire those facts read `advance_deal` and
-  // `agent:capture` — the API's vocabulary on a page whose reader never sees
-  // the API.
   it("names the staged kind and its proposer in the product's words, not the wire's", async () => {
     vi.stubGlobal("fetch", stubDealBackend(deal({}), [], undefined, [staged]));
     render(<DealScreen id="d1" />);
@@ -2509,13 +2523,8 @@ describe("DealScreen — History tab", () => {
   });
 });
 
-// Which partner, not just whether there is one.
-//
-// The boolean partner_sourced chip could say "these came from some partner"
-// and never say which — the same gap the deals-by-stage report had before it
-// gained the dimension. The picker's options come from usePartnerOptions, so
-// a partner whose company this reader cannot open is not offered: picking it
-// would name a company the screen could not then show them.
+// Partner choices are limited to companies this reader may open.
+
 describe("the partner filter", () => {
   it("narrows the list to one named partner", async () => {
     const urls: string[] = [];
@@ -2525,7 +2534,7 @@ describe("the partner filter", () => {
       if (request.url.includes("/partners")) {
         return Promise.resolve(
           jsonResponse({
-            data: [{ organization_id: "o1", cert_status: "certified" }],
+            data: [{ company_id: "o1", cert_status: "certified" }],
             page: { next_cursor: null },
           }),
         );
@@ -2542,12 +2551,12 @@ describe("the partner filter", () => {
     await userEvent.click(
       within(menu).getByRole("button", { name: "Partner" }),
     );
-    // The option is the company's NAME, resolved from the organization list —
+    // The option is the company's NAME, resolved from the company list —
     // never the bare id, which names nothing to a reader.
     await userEvent.click(within(menu).getByRole("button", { name: "Acme" }));
 
     await waitFor(() =>
-      expect(urls.some((u) => u.includes("partner_org_id=o1"))).toBe(true),
+      expect(urls.some((u) => u.includes("partner_company_id=o1"))).toBe(true),
     );
   });
 
@@ -2561,7 +2570,7 @@ describe("the partner filter", () => {
     vi.stubGlobal("fetch", async (request: Request) => {
       if (request.url.includes("/partners")) {
         return jsonResponse({
-          data: [{ organization_id: "o1", cert_status: "certified" }],
+          data: [{ company_id: "o1", cert_status: "certified" }],
           page: { next_cursor: null },
         });
       }
@@ -2593,7 +2602,7 @@ describe("the partner filter", () => {
         bodies.some(
           (b) =>
             (b as { filters?: Record<string, unknown> }).filters
-              ?.partner_org_id === "o1",
+              ?.partner_company_id === "o1",
         ),
       ).toBe(true),
     );

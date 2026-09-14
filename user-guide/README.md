@@ -1,10 +1,10 @@
 # Using Margince
 
-Guides for the person **working in** Margince — a rep, a delivery lead, an
+Guides for the colleague **working in** Margince — a rep, a delivery lead, an
 account owner. No code, no API: a sign-in and the app.
 
 They live here rather than under [`docs/`](../docs/README.md) because that tree is
-mostly for the person **changing** the code: how a module is shaped, which gate
+mostly for the contact **changing** the code: how a module is shaped, which gate
 holds which invariant, how to add an endpoint.
 
 The split is by document TYPE, not strictly by tree, and it is worth being exact

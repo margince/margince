@@ -126,7 +126,7 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 	}
 	// Provenance names the connector AND the mailbox owner behind it
 	// (ADR-0078 §4b). The connector alone identified the software rather than
-	// the person, so two colleagues who had both connected Gmail produced
+	// the contact, so two colleagues who had both connected Gmail produced
 	// identical stamps and nothing downstream could say whose mailbox a
 	// message came from.
 	if capturedBy != "connector:gmail:"+e.Rep1.String() || sourceID != "m1@acme.com" {

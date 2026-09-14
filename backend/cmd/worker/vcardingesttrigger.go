@@ -26,7 +26,7 @@ import (
 // gated on the enrich lane because River discards a job whose kind no worker
 // claims — so a queued pass with no model behind it would be discarded rather
 // than held. This trigger's worker is registered unconditionally for the reason
-// the org-name promotion is: a card is parsed, not inferred, so there is no
+// the company-name promotion is: a card is parsed, not inferred, so there is no
 // model to be missing and nothing to gate on.
 func startVCardIngestTrigger(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, background *sync.WaitGroup, logger *slog.Logger, stdout io.Writer) error {
 	inserter, err := jobs.NewInserter(pool, logger)

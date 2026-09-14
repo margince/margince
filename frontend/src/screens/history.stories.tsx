@@ -379,8 +379,8 @@ const linked = {
   after: { role: "cto", started_at: "2026-01-01", is_primary: true },
   edge: {
     kind: "employment",
-    other_entity_type: "organization",
-    other_entity_id: "org-9",
+    other_entity_type: "company",
+    other_entity_id: "company-9",
     other_label: "Northwind Logistics",
   },
   undoable: { undoable: true },

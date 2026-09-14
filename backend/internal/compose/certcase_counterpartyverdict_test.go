@@ -120,8 +120,8 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 	}{
 		{
 			name:       "the expected verdict, well formed",
-			expected:   capture.KindPerson,
-			answer:     func(id string) string { return verdictReply(id, capture.KindPerson) },
+			expected:   capture.KindContact,
+			answer:     func(id string) string { return verdictReply(id, capture.KindContact) },
 			wantResult: aitasks.OutcomeAccepted,
 		},
 		{
@@ -129,23 +129,23 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// answer about an address nobody asked about is the shape a talked-into
 			// model takes, and the record has to be able to say so.
 			name:     "an answer about a sender nobody asked about",
-			expected: capture.KindPerson,
+			expected: capture.KindContact,
 			answer: func(string) string {
-				return verdictReply(ids.NewV7().String(), capture.KindPerson)
+				return verdictReply(ids.NewV7().String(), capture.KindContact)
 			},
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "was not requested",
 		},
 		{
 			name:       "a verdict outside the closed vocabulary",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(id string) string { return verdictReply(id, capture.PendingStatusUnsure) },
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "is not one of " + strings.Join(verdictKindNames(), "|"),
 		},
 		{
 			name:       "a reply that is not the required JSON",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(string) string { return "I decline to answer." },
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "unparseable",
@@ -154,7 +154,7 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// Well formed and wrong is a measurement of the model, not a defect in
 			// the reply — the opposite fix from every case above it.
 			name:       "a well-formed answer the scenario disagrees with",
-			expected:   capture.KindPerson,
+			expected:   capture.KindContact,
 			answer:     func(id string) string { return verdictReply(id, capture.KindSpam) },
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: capture.KindSpam,
@@ -227,12 +227,12 @@ func TestVerdictCaseMintsTheRowIDRatherThanReadingIt(t *testing.T) {
 
 	ask := func() string {
 		t.Helper()
-		prepared, err := counterpartyVerdictCases{}.Prepare(fixture, verdictExpectation(t, capture.KindPerson))
+		prepared, err := counterpartyVerdictCases{}.Prepare(fixture, verdictExpectation(t, capture.KindContact))
 		if err != nil {
 			t.Fatalf("preparing the case: %v", err)
 		}
 		stub := &verdictCompleterStub{answer: func(id string) string {
-			return verdictReply(id, capture.KindPerson)
+			return verdictReply(id, capture.KindContact)
 		}}
 		if _, err := prepared.Run(context.Background(), stub); err != nil {
 			t.Fatalf("running the case: %v", err)
@@ -257,8 +257,8 @@ func TestVerdictCaseMintsTheRowIDRatherThanReadingIt(t *testing.T) {
 // production request but recorded nothing would certify a request nobody can
 // inspect.
 func TestVerdictCaseTraceCarriesTheRequestItIssued(t *testing.T) {
-	outcome, trace := runVerdictCase(t, capture.KindPerson,
-		func(id string) string { return verdictReply(id, capture.KindPerson) })
+	outcome, trace := runVerdictCase(t, capture.KindContact,
+		func(id string) string { return verdictReply(id, capture.KindContact) })
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want accepted", outcome.Result, outcome.Detail)
@@ -296,7 +296,7 @@ func TestVerdictCaseRefusesAnUnreachableExpectedVerdict(t *testing.T) {
 // nothing about the reply — and a case that ran it anyway would report a number
 // nobody wrote a claim for.
 func TestVerdictCaseRefusesAnExpectationItCannotRead(t *testing.T) {
-	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"verdict":"person"}`), json.RawMessage(`7`)} {
+	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"verdict":"contact"}`), json.RawMessage(`7`)} {
 		_, err := counterpartyVerdictCases{}.Prepare(verdictFixture(t), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)

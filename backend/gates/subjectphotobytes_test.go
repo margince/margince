@@ -7,11 +7,11 @@ package gates
 
 // A subject's photo may not be STORED until erasure can destroy the bytes.
 //
-// `person.photo_object_key` names an object in the blob store. The Art. 17
+// `contact.photo_object_key` names an object in the blob store. The Art. 17
 // cascade clears the column, because a pointer to a subject's photograph is a
 // record of the subject — but clearing a pointer is not destroying what it
 // points at, and the attachment arm purges only rows in `attachment`. Erasing
-// a person today therefore forgets where their photograph is while the
+// a contact today therefore forgets where their photograph is while the
 // photograph stays where it was.
 //
 // That is not a live defect: nothing in this tree writes the column, so no key
@@ -39,11 +39,11 @@ import (
 // `photo_object_key = <something>` in an UPDATE.
 var photoKeyAssignment = regexp.MustCompile(`photo_object_key\s*=\s*([^,)\s]+)`)
 
-// photoKeyInsert finds where an INSERT into person begins. The two lists after
+// photoKeyInsert finds where an INSERT into contact begins. The two lists after
 // it are read with a paren-aware scan rather than by regex: a call or a cast in
 // the VALUES row carries its own parentheses, and `[^)]*` would stop at the
 // first of them and shift every position after it.
-var photoKeyInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+person\s*\(`)
+var photoKeyInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+contact\s*\(`)
 
 // namesTheSubjectPhotoKey reports whether a file sends SQL mentioning the
 // column at all — read or write. The write is judged below; the read is what
@@ -67,7 +67,7 @@ func TestTheSubjectPhotoIsNeverStoredWhereErasureCannotFollow(t *testing.T) {
 		Subject: namesTheSubjectPhotoKey,
 	}).Files(t) {
 		for _, statement := range gatekit.SQLStatementsOf(parsed.File) {
-			// A SELECT reading the column is fine and common — person360 draws
+			// A SELECT reading the column is fine and common — contact360 draws
 			// the avatar from it. Only a statement that puts a value there owes
 			// the erasure a purge.
 			if !storesAValue(statement) || !strings.Contains(statement, "photo_object_key") {
@@ -78,7 +78,7 @@ func TestTheSubjectPhotoIsNeverStoredWhereErasureCannotFollow(t *testing.T) {
 					continue
 				}
 				writes++
-				t.Errorf("%s gives person.photo_object_key a value (%q).\n"+
+				t.Errorf("%s gives contact.photo_object_key a value (%q).\n"+
 					"\tThe Art. 17 cascade clears this column, and clearing a pointer does not destroy "+
 					"the object it names — the attachment arm purges only rows in `attachment`, so an "+
 					"erased subject's photograph would stay in the store with nothing left naming it.\n"+
@@ -176,27 +176,27 @@ func TestThePhotoKeyReaderSeesWhatAStatementStores(t *testing.T) {
 		want      []string
 	}{
 		"an explicit nothing": {
-			`INSERT INTO person (id, photo_object_key) VALUES ($1, NULL)`,
+			`INSERT INTO contact (id, photo_object_key) VALUES ($1, NULL)`,
 			[]string{"NULL"},
 		},
 		"a cast nothing": {
-			`INSERT INTO person (id, photo_object_key) VALUES ($1, NULL::text)`,
+			`INSERT INTO contact (id, photo_object_key) VALUES ($1, NULL::text)`,
 			[]string{"NULL::text"},
 		},
 		"a real key": {
-			`INSERT INTO person (id, full_name, photo_object_key) VALUES ($1, $2, $3)`,
+			`INSERT INTO contact (id, full_name, photo_object_key) VALUES ($1, $2, $3)`,
 			[]string{"$3"},
 		},
 		"a cast in an earlier column": {
-			`INSERT INTO person (id, source, photo_object_key) VALUES (gen_random_uuid(), $1::text, $2)`,
+			`INSERT INTO contact (id, source, photo_object_key) VALUES (gen_random_uuid(), $1::text, $2)`,
 			[]string{"$2"},
 		},
 		"an update": {
-			`UPDATE person SET photo_object_key = $2 WHERE id = $1`,
+			`UPDATE contact SET photo_object_key = $2 WHERE id = $1`,
 			[]string{"$2"},
 		},
 		"a read": {
-			`SELECT photo_object_key FROM person WHERE id = $1`,
+			`SELECT photo_object_key FROM contact WHERE id = $1`,
 			nil,
 		},
 	} {
@@ -219,7 +219,7 @@ func TestAnExplicitNothingIsNotAStoredKey(t *testing.T) {
 				"the nothing was spelled", nothing)
 		}
 	}
-	for _, value := range []string{"$1", "'people/x.jpg'", "nullify(x)"} {
+	for _, value := range []string{"$1", "'contacts/x.jpg'", "nullify(x)"} {
 		if isNull(value) {
 			t.Errorf("%q read as nothing", value)
 		}

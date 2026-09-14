@@ -1,6 +1,6 @@
 # Custom fields — the governed add-field engine
 
-How a workspace admin adds a field to `person` at runtime without anyone shipping code, and why that
+How a workspace admin adds a field to `contact` at runtime without anyone shipping code, and why that
 power is fenced in as tightly as it is. `customfields` is the **single chokepoint in the system
 allowed to run a runtime `ALTER TABLE`** — every other module is forbidden it. A custom field is a
 real, typed, physical column (`cf_<slug>`) on the core object's own table; the `custom_field` catalog
@@ -20,8 +20,8 @@ jsonb column — that is field *metadata*, not a value store.
 
 ## What a custom field may be — the closed sets
 
-Six types (`text`, `number`, `date`, `currency`, `picklist`, `boolean`) on five objects (`person`,
-`organization`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
+Six types (`text`, `number`, `date`, `currency`, `picklist`, `boolean`) on five objects (`contact`,
+`company`, `deal`, `lead`, `activity`). **No cap on how many, no widening of what** — the
 surface itself is the knob. Each type maps to one storage type: `number` → `numeric` (round-tripped
 as a string, never a float, so precision survives), `currency` → `bigint` minor units with the
 ISO-4217 code held in the catalog row rather than the column, `picklist` → `text` plus a generated
@@ -131,7 +131,7 @@ from inside a store's own gated `Get`/`List`/`Create`/`Update`. What it exposes 
 schema shape — the same thing the admin list already answers — not row data. The store's row-level
 gate is what protects the values.
 
-One rule surprises people: custom-field values convert **drop-on-mismatch**. A request body's
+One rule surprises contacts: custom-field values convert **drop-on-mismatch**. A request body's
 `additionalProperties` carries no per-key shape contract, so a value whose shape does not match its
 column's type is silently excluded rather than answered with a 422.
 
@@ -153,8 +153,8 @@ as a core column", names "static schema → real indexes → correct, fast repor
 honesty bet, and its worked example creates one alongside the column:
 
 ```sql
-CREATE INDEX idx_org_renewal_risk
-  ON organization (workspace_id, renewal_risk)
+CREATE INDEX idx_company_renewal_risk
+  ON company (workspace_id, renewal_risk)
   WHERE renewal_risk IS NOT NULL AND archived_at IS NULL;
 ```
 

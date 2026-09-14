@@ -48,6 +48,10 @@ type Store struct {
 	// calls the store directly — deliverability on one transport only is
 	// deliverability the other transport silently drops.
 	unsubscribe UnsubscribeLinker
+	// disclosures answers which legally required disclosures a message must
+	// carry. Nil means none are appended, which is what every send did before
+	// the seam existed (WithDisclosures).
+	disclosures DisclosureResolver
 	// publicBaseURL is the canonical scheme+host the tokenized unsubscribe
 	// link resolves to — configured at boot, never taken from the request
 	// (WithPublicBaseURL wires it).
@@ -71,7 +75,7 @@ type Store struct {
 	// about to use; nil skips the pre-flight (WithSendAuthority wires it) and
 	// the delivery path still refuses at transmission.
 	sendAuthority SendAuthority
-	// reachability answers which channel account the person behind a
+	// reachability answers which channel account the contact behind a
 	// conversation can be reached at; nil fails the channel send path CLOSED
 	// (WithChannelReachability wires it), because a surface that cannot ask
 	// must not send to a recipient it never resolved.
@@ -82,7 +86,7 @@ type Store struct {
 	// directly, and a signal closed on one transport only is a corpus built
 	// from half the sends.
 	draftOutcome DraftOutcomeRecorder
-	// recipients resolves an account-started send's addressees to people the
+	// recipients resolves an account-started send's addressees to contacts the
 	// sender may read; nil fails that path CLOSED
 	// (WithRecipientDirectory wires it). A reply never consults it — its
 	// addressees come from the captured conversation it answers.
@@ -90,6 +94,13 @@ type Store struct {
 	// heldNotifier puts a stopped scheduled message in the rep's approval
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
+	// reviewCloser closes the review a cancelled message leaves behind.
+	// Injected because consent is a sibling; nil on a composition with no
+	// review surface, and a cancel then proceeds as it always did.
+	reviewCloser ReviewCloser
+	// reviewLookup answers which review stands over a held message, so a row
+	// can offer a route to the work that would unstop it.
+	reviewLookup ReviewLookup
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
@@ -106,6 +117,14 @@ func NewStore(db *database.DB) *Store {
 func (s *Store) WithHeldNotifier(notifier HeldNotifier) *Store {
 	clone := *s
 	clone.heldNotifier = notifier
+	return &clone
+}
+
+// WithReviewCloser wires the consent-side seam a cancelled message reaches, so
+// the review it leaves behind is closed with it.
+func (s *Store) WithReviewCloser(closer ReviewCloser) *Store {
+	clone := *s
+	clone.reviewCloser = closer
 	return &clone
 }
 

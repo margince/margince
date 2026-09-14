@@ -19,7 +19,7 @@ const (
 	// TargetColumn is a 1:1 property → mirror column mapping.
 	TargetColumn TargetKind = iota
 	// TargetChild is a 1:N mapping into a child collection (e.g.
-	// person_email): To is "<parent>.<child column>" and the field's ChildRow
+	// contact_email): To is "<parent>.<child column>" and the field's ChildRow
 	// says which row of that collection it lands on. The parent key always
 	// holds a collection, one row per declared ChildRow the incumbent
 	// populated.
@@ -63,7 +63,7 @@ type FieldMapping struct {
 	// AlwaysEmit forces a TargetAssembler field to run its Transform even
 	// when the incumbent record carried NONE of its From properties, so the
 	// transform can synthesize a value from nothing — the shape a required,
-	// always-present display field with a fallback needs (person.full_name,
+	// always-present display field with a fallback needs (contact.full_name,
 	// OVA-MAP-3: never left empty). It is meaningless on the other kinds,
 	// whose absence-is-a-no-op behavior is exactly right.
 	AlwaysEmit bool
@@ -87,7 +87,7 @@ type ChildRow struct {
 }
 
 // ObjectMapping is the code-declared, test-guarded field map for one
-// incumbent object class (e.g. HubSpot "contacts" → Margince "person").
+// incumbent object class (e.g. HubSpot "contacts" → Margince "contact").
 //
 // ExternalKey and Baseline are structural, not members of Fields: every
 // mapped object carries them, so Apply handles them once rather than
@@ -174,7 +174,7 @@ func Apply(m ObjectMapping, raw map[string]any) (map[string]any, []string, error
 		for _, k := range f.From {
 			consumed[k] = true
 		}
-		// A TargetChild writes its PARENT key (out["person_email"]), not the
+		// A TargetChild writes its PARENT key (out["contact_email"]), not the
 		// dotted To — check the parent so a Const at that key is caught.
 		constTarget := f.To
 		if f.Kind == TargetChild {

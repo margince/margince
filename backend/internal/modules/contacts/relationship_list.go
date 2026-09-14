@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"context"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+type ListRelationshipsInput struct {
+	Kind            *string
+	ContactID       *ids.ContactID
+	CompanyID       *ids.CompanyID
+	DealID          *ids.DealID
+	ProjectID       *ids.ProjectID
+	IncludeArchived bool
+	Limit           *int
+	Cursor          string
+}
+
+func (s *Store) ListRelationships(ctx context.Context, in ListRelationshipsInput) ([]relationshipRow, storekit.Page, error) {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	var out []relationshipRow
+	var page storekit.Page
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		out, page, err = listRelationshipsInTx(ctx, tx, in)
+		return err
+	})
+	return out, page, err
+}
+
+// ListRelationshipsTx is ListRelationships inside a caller-opened
+// transaction — the composite record read. Same gate, borrowed transaction.
+func (s *Store) ListRelationshipsTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsInput) ([]relationshipRow, storekit.Page, error) {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	return listRelationshipsInTx(ctx, tx, in)
+}
+
+// listRelationshipsInTx is the shared body of the store-opened and
+// caller-opened relationship list reads.
+func listRelationshipsInTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsInput) ([]relationshipRow, storekit.Page, error) {
+	limit := storekit.ClampLimit(in.Limit)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	where, err := relationshipListWhere(ctx, in, arg)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	rows, err := tx.Query(ctx, storekit.SQLf(
+		`SELECT %s FROM relationship r WHERE %s ORDER BY r.id LIMIT $%d`,
+		aliased(relationshipColumns, "r"), strings.Join(where, " AND "), arg(limit+1)), args...)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	defer rows.Close()
+	out, err := scanRelationships(rows)
+	if err != nil {
+		return nil, storekit.Page{}, err
+	}
+	var page storekit.Page
+	if len(out) > limit {
+		out = out[:limit]
+		page = storekit.Page{HasMore: true, NextCursor: out[limit-1].ID.String()}
+	}
+	return out, page, nil
+}
+
+// relationshipListWhere renders the list filters (kind/contact/company/deal,
+// archived, cursor) plus the endpoint-visibility scope into WHERE clauses,
+// binding each value through arg.
+func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg func(any) int) ([]string, error) {
+	where := []string{"true"}
+	if in.Kind != nil {
+		where = append(where, storekit.SQLf("r.kind = $%d", arg(*in.Kind)))
+	}
+	if in.ContactID != nil {
+		// EITHER end, the same rule the company filter keeps below: a works_with
+		// edge names a contact in whichever column, and a tab that read one
+		// column would show the pair on one page and not the other.
+		pos := arg(*in.ContactID)
+		where = append(where, storekit.SQLf("(r.contact_id = $%d OR r.counterparty_contact_id = $%d)", pos, pos))
+	}
+	if in.CompanyID != nil {
+		pos := arg(*in.CompanyID)
+		where = append(where, storekit.SQLf("(r.company_id = $%d OR r.counterparty_company_id = $%d)", pos, pos))
+	}
+	if in.DealID != nil {
+		where = append(where, storekit.SQLf("r.deal_id = $%d", arg(*in.DealID)))
+	}
+	if in.ProjectID != nil {
+		where = append(where, storekit.SQLf("r.project_id = $%d", arg(*in.ProjectID)))
+	}
+	if !in.IncludeArchived {
+		where = append(where, "r.archived_at IS NULL")
+	}
+	if in.Cursor != "" {
+		after, err := ids.Parse(in.Cursor)
+		if err != nil {
+			return nil, &storekit.MalformedCursorError{}
+		}
+		where = append(where, storekit.SQLf("r.id > $%d", arg(after)))
+	}
+	scope, err := auth.RelationshipEndpointScope(ctx, "r", arg)
+	if err != nil {
+		return nil, err
+	}
+	if scope != "" {
+		where = append(where, scope)
+	}
+	return where, nil
+}
+
+// scanRelationships drains a relationship result set into rows.
+func scanRelationships(rows pgx.Rows) ([]relationshipRow, error) {
+	var out []relationshipRow
+	for rows.Next() {
+		rel, err := scanRelationship(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rel)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

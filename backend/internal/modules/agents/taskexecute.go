@@ -22,7 +22,7 @@ package agents
 // both proposed_change and diff_hash — "the original hash no longer opens
 // anything", in the approvals module's own words. Replaying the arguments the
 // agent sent would therefore perform what the agent asked for rather than what
-// the person allowed, and would fail redemption for saying so.
+// the contact allowed, and would fail redemption for saying so.
 
 import (
 	"context"
@@ -56,7 +56,7 @@ func (s *Dispatcher) advance(ctx context.Context, task Task) map[string]any {
 	case ApprovalApproved:
 		return s.runReleased(ctx, task)
 	case ApprovalRejected:
-		// A person said no. That is a RESULT — the surface answered the call —
+		// A contact said no. That is a RESULT — the surface answered the call —
 		// so it completes with an isError result rather than failing, which the
 		// specification reserves for a protocol fault.
 		return s.settle(ctx, task, Settlement{
@@ -126,7 +126,7 @@ func (s *Dispatcher) interrupted() Settlement {
 // surface answered, and the specification is explicit that a result carrying
 // isError belongs to a completed task. That covers the two refusals a released
 // call most often meets — the fifteen-minute redemption window having closed,
-// and the target row having changed since the person saw it — and both of them
+// and the target row having changed since the contact saw it — and both of them
 // reach the agent as the same actionable sentence a direct retry would get.
 //
 // `failed` is kept for the one case where no call was made at all.

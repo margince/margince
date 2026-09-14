@@ -64,11 +64,11 @@ func moved(before, after HiddenBacklog) HiddenBacklog {
 // read is broken" — which is the failure this whole file exists to catch.
 func TestAQueueHidingNothingReportsAClearBacklog(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Question about pricing", "person_id", person)
+	e.seedWait(t, "Question about pricing", "contact_id", contact)
 
 	got := moved(before, hiddenNow(t, e))
 
@@ -87,12 +87,12 @@ func TestAQueueHidingNothingReportsAClearBacklog(t *testing.T) {
 // The rep's page cannot show that; this is what does.
 func TestAMessageSetAsideIsCountedAsHidden(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Still waiting", "person_id", person)
-	aside := e.seedWait(t, "Set aside", "person_id", person)
+	e.seedWait(t, "Still waiting", "contact_id", contact)
+	aside := e.seedWait(t, "Set aside", "contact_id", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
 
@@ -115,12 +115,12 @@ func TestAMessageSetAsideIsCountedAsHidden(t *testing.T) {
 // it hides the conversation from the WHOLE workspace and never lifts.
 func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Still waiting", "person_id", person)
-	judged := e.seedWait(t, "Newsletter", "person_id", person)
+	e.seedWait(t, "Still waiting", "contact_id", contact)
+	judged := e.seedWait(t, "Newsletter", "contact_id", contact)
 	// Keyed on the THREAD, the way SetThreadNotSales writes it — an activity id
 	// here would be judged by a rule that reads thread_key and match nothing.
 	// The table has no state column: a ROW is the judgement, which is why the
@@ -149,12 +149,12 @@ func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
 // and the customer is still waiting.
 func TestAWaitPastTheHorizonIsCountedAsHidden(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "Recent question", "person_id", person)
-	old := e.seedWait(t, "Asked in the spring", "person_id", person)
+	e.seedWait(t, "Recent question", "contact_id", contact)
+	old := e.seedWait(t, "Asked in the spring", "contact_id", contact)
 	// Past waitingHorizonDays and inside hiddenHorizonDays, so it is work the
 	// queue drops and the guardrail still reaches.
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '150 days' WHERE id = $1`, old)
@@ -178,11 +178,11 @@ func TestAWaitPastTheHorizonIsCountedAsHidden(t *testing.T) {
 // number somebody can move without noticing what it stops answering.
 func TestAWaitPastTheGuardrailsOwnReachIsNotCounted(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	ancient := e.seedWait(t, "Two years ago", "person_id", person)
+	ancient := e.seedWait(t, "Two years ago", "contact_id", contact)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '800 days' WHERE id = $1`, ancient)
 
 	got := moved(before, hiddenNow(t, e))
@@ -197,11 +197,11 @@ func TestAWaitPastTheGuardrailsOwnReachIsNotCounted(t *testing.T) {
 // capture failed to link. Its own figure for exactly that reason.
 func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	e.seedWait(t, "A real customer", "person_id", person)
+	e.seedWait(t, "A real customer", "contact_id", contact)
 	// The same shape minus the sales link — every other rule still satisfied.
 	loose := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, source, captured_by)
@@ -232,10 +232,10 @@ func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 // stay still when another rule does the hiding.
 func TestMailFromOurOwnDomainIsCountedSeparately(t *testing.T) {
 	e := setupLoad(t)
-	person := e.buyer(t)
+	contact := e.buyer(t)
 	before := hiddenKnowing(t, e, "ourco.test")
-	e.waitingFrom(t, "A real customer", "buyer@customer.test", person)
-	e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", person)
+	e.waitingFrom(t, "A real customer", "buyer@customer.test", contact)
+	e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
 
 	got := moved(before, hiddenKnowing(t, e, "ourco.test"))
 
@@ -270,26 +270,26 @@ func hiddenKnowing(t *testing.T, e *loadEnv, domains ...string) HiddenBacklog {
 // property directly instead of trusting the clamp.
 func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
 	for _, subject := range []string{"One", "Two", "Three"} {
-		e.seedWait(t, subject, "person_id", person)
+		e.seedWait(t, subject, "contact_id", contact)
 	}
 	// One message hidden by EACH rule, so every relaxation has something of its
 	// own to find and a wiring that answers the wrong hole cannot pass by
 	// finding somebody else's row.
-	aside := e.seedWait(t, "Set aside", "person_id", person)
+	aside := e.seedWait(t, "Set aside", "contact_id", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)
 		VALUES ($1, $2, 'not_mine', 'system')`, aside, e.rep)
-	judged := e.seedWait(t, "Judged", "person_id", person)
+	judged := e.seedWait(t, "Judged", "contact_id", contact)
 	// The table has no state column: a ROW is the judgement, which is why the
 	// query anti-joins on its existence rather than on a value.
 	e.exec(t, `INSERT INTO activity_sales_state (thread_key, kind, channel_provider, set_by)
 		SELECT a.thread_key, a.kind, coalesce(a.channel_provider, ''), 'system'
 		  FROM activity a WHERE a.id = $1`, judged)
-	old := e.seedWait(t, "Old", "person_id", person)
+	old := e.seedWait(t, "Old", "contact_id", contact)
 	e.exec(t, `UPDATE activity SET occurred_at = now() - interval '150 days' WHERE id = $1`, old)
 
 	got := moved(before, hiddenNow(t, e))
@@ -327,12 +327,12 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 // and a fake would prove only that the flag can be set.
 func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	// One past the cap, so the read is genuinely cut rather than exactly filled.
 	for i := 0; i <= WaitingScanCap; i++ {
-		e.seedWait(t, "Waiting", "person_id", person)
+		e.seedWait(t, "Waiting", "contact_id", contact)
 	}
 
 	got := hiddenNow(t, e)
@@ -377,13 +377,13 @@ func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
 // of what happened.
 func TestShownCountsWhatTheQueryFoundRatherThanWhatThePageDraws(t *testing.T) {
 	e := setupLoad(t)
-	person := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Buyer Person', $2, 'seed', 'system')`, person, e.rep)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	// A wait seeded the way every other case here seeds one — so it satisfies
 	// every eligibility rule — with only the SENDER changed to a relay domain.
 	// The seam drops it downstream; this query has no way to.
-	machine := e.seedWait(t, "Your receipt", "person_id", person)
+	machine := e.seedWait(t, "Your receipt", "contact_id", contact)
 	e.exec(t, `UPDATE activity_participant SET address = 'receipts@mail.sendgrid.net'
 		WHERE activity_id = $1 AND role = 'from'`, machine)
 

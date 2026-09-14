@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // theMenu is the shared opening a real site carries on every page: long enough
@@ -51,7 +51,7 @@ func TestAFindingCitedOnlyToTheMenuIsDropped(t *testing.T) {
 	)
 	results := []pageFactsResult{{
 		url: pages[0].URL,
-		facts: []people.DeepReadFact{
+		facts: []contacts.DeepReadFact{
 			// The switcher's own labels, cited to the block that carries them.
 			{
 				Category: "language", Field: "language", Value: "Tiếng Việt",
@@ -143,7 +143,7 @@ func TestACrawlWithNoMeasurableChromeKeepsEveryFinding(t *testing.T) {
 	}
 	results := []pageFactsResult{{
 		url:   pages[0].URL,
-		facts: []people.DeepReadFact{{Field: "language", Value: "Tiếng Việt", EvidenceSnippet: "Tiếng Việt"}},
+		facts: []contacts.DeepReadFact{{Field: "language", Value: "Tiếng Việt", EvidenceSnippet: "Tiếng Việt"}},
 	}}
 
 	kept, dropped := suppressChromeEvidence(pages, results)
@@ -168,7 +168,7 @@ func TestAFindingWithNoEvidenceIsNotChrome(t *testing.T) {
 	)
 	results := []pageFactsResult{{
 		url:   pages[0].URL,
-		facts: []people.DeepReadFact{{Field: "industry", Value: "software", EvidenceSnippet: ""}},
+		facts: []contacts.DeepReadFact{{Field: "industry", Value: "software", EvidenceSnippet: ""}},
 	}}
 
 	kept, dropped := suppressChromeEvidence(pages, results)

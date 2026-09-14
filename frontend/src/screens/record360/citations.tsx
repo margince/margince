@@ -21,11 +21,11 @@ import type { MessageKey } from "../../i18n/en";
  * One sentence of grounded prose, with what it rests on.
  *
  * Typed against the contract's own shared sentence — which the contract
- * spells `OrganizationBriefSentence` and uses for the org brief, the deal
- * status card, Person360 and the growth-fit panel alike. The name is the
+ * spells `CompanyBriefSentence` and uses for the company brief, the deal
+ * status card, Contact360 and the growth-fit panel alike. The name is the
  * contract's; the shape has never been a company's.
  */
-export type BriefSentence = components["schemas"]["OrganizationBriefSentence"];
+export type BriefSentence = components["schemas"]["CompanyBriefSentence"];
 
 /** One record a sentence was written from. */
 export type Cited = BriefSentence["evidence"][number];
@@ -99,7 +99,7 @@ function hasReceipt(cited: Cited): boolean {
  * the first and stepping through the rest — rendered one per record they
  * became the same run under a different reason: a receipt has no name of its
  * own, so ten profile fields all read "profile field", ten times, with nothing
- * to tell them apart. `deal`/`person` stay one chip per record: each opens its
+ * to tell them apart. `deal`/`contact` stay one chip per record: each opens its
  * OWN screen rather than a shared stepper, so collapsing them would silently
  * drop every record after the first.
  *
@@ -209,15 +209,20 @@ function ownChip(cited: Cited, isOpenable: boolean): CitationChip {
 // can be stepped through, because only these render in the drawer.
 const RECEIPT_CITATIONS = new Set(["fact", "profile_field"]);
 
-// The citation kinds that route to a record of their own. `deal` and `person`
+// The citation kinds that route to a record of their own. `deal` and `contact`
 // open their screens; `fact` and `profile_field` open their receipt instead —
 // where the value came from, when it was read, and what could not be recorded.
 //
-// `activity` is not here, and `organization` is not either, for two different
+// `activity` is not here, and `company` is not either, for two different
 // reasons. An activity lives in a timeline and has no route; what it CAN open
-// is the message itself, decided per row by `emailOf` below. An organization
+// is the message itself, decided per row by `emailOf` below. A company
 // citation is usually the page the reader is already on.
-const ROUTABLE_CITATIONS = new Set(["deal", "person", "fact", "profile_field"]);
+const ROUTABLE_CITATIONS = new Set([
+  "deal",
+  "contact",
+  "fact",
+  "profile_field",
+]);
 
 /**
  * The message behind a citation, when there is one this reader may open.
@@ -338,7 +343,7 @@ export function Citations({
   //
   // The server names a citation when the writer had the name at hand and
   // leaves it out otherwise, and this file invents nothing — but a page
-  // showing an account's own 360 is HOLDING the names of that account's people
+  // showing an account's own 360 is HOLDING the names of that account's contacts
   // and deals, and printing "contact" beside a reason while the roster three
   // sections down says "Frédéric de Gombert" is the page failing to read
   // itself. Answers undefined for a record it does not know, which falls back

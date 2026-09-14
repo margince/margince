@@ -24,7 +24,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		Status string `json:"status"`
 	}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
-		"kind": "erasure", "subject_ref": c.personID, "due_at": due,
+		"kind": "erasure", "subject_ref": c.contactID, "due_at": due,
 	}, nil, &dsr); status != http.StatusCreated || dsr.Status != "open" {
 		t.Fatalf("create DSR → %d %+v", status, dsr)
 	}
@@ -41,7 +41,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("start → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased person + activities per retention policy",
+		"status": "fulfilled", "resolution": "erased contact + activities per retention policy",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill → %d", status)
 	}

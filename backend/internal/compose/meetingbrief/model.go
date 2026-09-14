@@ -18,7 +18,7 @@ package meetingbrief
 //
 // The language is the READER's. A brief about a German conversation, read by a
 // German rep, that answers in English is a translation task handed back to the
-// person who asked for a summary.
+// contact who asked for a summary.
 
 import (
 	"context"
@@ -47,7 +47,7 @@ type Completer interface {
 // one idea per sentence, and never performs enthusiasm. The banned openers are
 // the ones that make a brief read as generated.
 const briefSystem = `You write a pre-meeting brief for a salesperson, from a JSON summary of one meeting in their CRM.
-Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|person","entity_id":"..."}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|contact","entity_id":"..."}]}]}]}.
 Write every sentence from the summary and from nothing else. Never invent a fact, a name, a date or a number. If the summary does not say it, do not write it.
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
 Cite the ids the summary gave you, in evidence only. An id must never appear in the text a reader sees.
@@ -86,7 +86,7 @@ var natureAllowed = map[crmcontracts.MeetingBriefSectionKind]map[string]bool{
 
 // natureFact is the contract's default: an unlabelled claim is read as a fact,
 // which is the strictest reading — it must be grounded and it may not judge.
-const natureFact = string(crmcontracts.OrganizationBriefSentenceNatureFact)
+const natureFact = string(crmcontracts.CompanyBriefSentenceNatureFact)
 
 // Write produces the brief's sections. lane may be nil, which is not an error:
 // it is the deployment saying this role runs no model, and the deterministic
@@ -94,7 +94,7 @@ const natureFact = string(crmcontracts.OrganizationBriefSentenceNatureFact)
 func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy) {
 	floor := Deterministic(in)
 	if lane == nil {
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
@@ -102,14 +102,14 @@ func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Sectio
 		// unavailable, over budget or answering unparseable JSON must not take
 		// the brief down with it: the reader gets the floor, and generated_by
 		// tells them which of the two they are reading.
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	// A rewrite that dropped a section the floor had is not a rewrite, it is a
 	// shorter brief: a model returning one harmless sentence would otherwise
 	// take a revised offer or an open risk off the page and look like it
 	// worked. Anything the reply left out is restored from the floor, so the
 	// model can change how the brief READS and never what it COVERS.
-	return withFloorCoverage(written, floor), crmcontracts.Model
+	return withFloorCoverage(written, floor), crmcontracts.WrittenByModel
 }
 
 // withFloorCoverage puts back any section the model did not answer.
@@ -174,7 +174,7 @@ func writeWithModel(ctx context.Context, lane Completer, in Input, lang string) 
 // that breaks the original.
 //
 // The summary carries meeting subjects, contact names and quoted commitments —
-// text written by people outside this workspace. It is fenced with a nonce the
+// text written by contacts outside this workspace. It is fenced with a nonce the
 // writer has never seen, so no subject line can close the span and be read as
 // instruction.
 func BriefRequest(in Input, lang string) model.Request {
@@ -316,7 +316,7 @@ func knownRecords(in Input) map[Evidence]string {
 		known[Evidence{EntityType: citeDeal, EntityID: in.Deal.ID}] = claims.Source(in.Deal)
 	}
 	for _, attendee := range in.Attendees {
-		known[Evidence{EntityType: citePerson, EntityID: attendee.PersonID}] = claims.Source(attendee)
+		known[Evidence{EntityType: citeContact, EntityID: attendee.ContactID}] = claims.Source(attendee)
 	}
 	for _, claim := range in.Commitments {
 		known[Evidence{EntityType: citeActivity, EntityID: claim.SourceID}] += claims.Source(claim)

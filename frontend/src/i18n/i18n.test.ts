@@ -23,7 +23,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The name of the network, offered as a profile field in the research drawer.
   // "LinkedIn" is the brand and is written the same in every catalog; the other
   // six field labels beside it are translated normally.
-  "person.research.field.linkedin",
+  "contact.research.field.linkedin",
   // The product name of the buyer surface.
   "room.card.title",
   // Two sales nouns Vietnamese borrows rather than translates, on the
@@ -98,7 +98,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
-  "persondealrooms.title",
+  "contactdealrooms.title",
   "room.create.defaultTitle",
   "buyer.poweredBy",
   "buyer.poweredByMargince",
@@ -143,7 +143,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The same proper noun as connectors.provGmail and its neighbours, one
   // surface over.
   "provider.profile.linkedin",
-  "person.page.linkedin",
+  "contact.page.linkedin",
   "overlay.userMap.principal.hubspot",
   "overlay.regionEu1",
   "overlay.budgetSources",
@@ -181,16 +181,16 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "locale.name.vi",
 
   // Field labels where the English word is also the Vietnamese usage.
-  "people.email",
+  "contacts.email",
   "create.email",
   "restricted.kind.email",
   "timeline.filters.kind.email",
   "auth.email",
-  "person.identity.email",
-  "person.action.email",
-  "person.memory.email",
-  "person.memory.channelEmail",
-  "person.rail.email",
+  "contact.identity.email",
+  "contact.action.email",
+  "contact.memory.email",
+  "contact.memory.channelEmail",
+  "contact.rail.email",
   "history.field.email",
   "settings.voice.register.email",
   "product.sku",
@@ -216,7 +216,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
-  "person.enriched.field.linkedin",
+  "contact.enriched.field.linkedin",
 
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
@@ -370,8 +370,8 @@ describe("i18n catalogs", () => {
     // it is the kind of type that gets widened back by the next author who
     // meets it as an inconvenience, and nothing else would notice.
     // @ts-expect-error a magnitude must be formatted (format/format.ts) first
-    translate("en", "person.strip.days", { count: 96 });
-    expect(translate("en", "person.strip.days", { count: "96" })).toContain(
+    translate("en", "contact.strip.days", { count: 96 });
+    expect(translate("en", "contact.strip.days", { count: "96" })).toContain(
       "96",
     );
   });
@@ -476,7 +476,7 @@ const QUOTED_LITERAL = /["'`]([A-Za-z0-9_.:+-]+)["'`]/g;
 
 // The stem of a key built at runtime — t(`ob.readStatus.${status}`). Whatever
 // follows the stem is a value this file cannot see, so every key under it
-// counts as rendered: the alternative is a guard that tells the next person to
+// counts as rendered: the alternative is a guard that tells the next contact to
 // delete a string a screen is displaying.
 const TEMPLATE_STEM = /`([A-Za-z0-9_.]*)\$\{/g;
 
@@ -512,7 +512,7 @@ function renderedStems(): string[] {
  * A plural base is a key stem like any other, reached the same way a template
  * stem is — `plural("share.teamMembers", n)` renders `share.teamMembers_one` or
  * `_other` and writes neither in full. Without this, every arm of every plural
- * pair reads as an orphan and this gate tells the next person to delete
+ * pair reads as an orphan and this gate tells the next contact to delete
  * ninety-four strings the product is displaying.
  *
  * DERIVED from the catalog rather than listed, and derived from the PAIR rather
@@ -569,8 +569,8 @@ describe("catalog keys against the surfaces that render them", () => {
 });
 
 /*
- * The tenant is called "organization" to a reader (ADR-0061): one
- * installation serves one organization, and "workspace" is the internal
+ * The tenant is called "company" to a reader (ADR-0061): one
+ * installation serves one company, and "workspace" is the internal
  * boundary the schema and the RBAC code use. A second noun for one thing reads
  * as two concepts the product does not have.
  *
@@ -585,12 +585,12 @@ const TENANT_MISNOMER = /workspace|arbeitsbereich|không gian làm việc/i;
 const PRODUCT_NAME = /Google Workspace/g;
 
 describe("the product's word for the tenant", () => {
-  it("no catalog calls the organization a workspace", () => {
+  it("no catalog calls the company a workspace", () => {
     for (const [locale, catalog] of Object.entries(catalogs)) {
       for (const [key, value] of Object.entries(catalog)) {
         expect(
           TENANT_MISNOMER.test(value.replace(PRODUCT_NAME, "")),
-          `${locale}: ${key} — "${value}" says workspace where the product says organization`,
+          `${locale}: ${key} — "${value}" says workspace where the product says company`,
         ).toBe(false);
       }
     }

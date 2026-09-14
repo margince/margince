@@ -19,10 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/integrations"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -53,7 +53,7 @@ var settingsDefinitions = sync.OnceValue(func() []settings.Definition {
 	defs = append(defs, deals.Definitions()...)
 	defs = append(defs, identity.Definitions()...)
 	defs = append(defs, integrations.Definitions()...)
-	defs = append(defs, people.Definitions()...)
+	defs = append(defs, contacts.Definitions()...)
 	defs = append(defs, privacy.Definitions()...)
 	return defs
 })

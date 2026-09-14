@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
-import { useCan, useRecordWriteRefusal } from "../app/capability";
+import { useCan } from "../app/capability";
 import { usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -19,16 +19,23 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDate } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import { ArchiveAction } from "./archive";
 import { QueryGate, throwProblem, useMe, useSorMode } from "./common";
 import { NewDealAction } from "./companyactions";
+import { CustomFieldsPanel } from "./customfields.card";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "./customfields.form";
 import { EditAction } from "./edit";
-import { EntityRef, OwnerName } from "./entityref";
 import { useOpenEmail } from "./openemail";
+import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
+import { ProjectHealth } from "./projecthealth";
+import type { ProjectHealthAssessment } from "./projecthealth.queries";
+import { ProjectHealthModal } from "./projecthealthmodal";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
 import {
@@ -54,6 +61,7 @@ import {
   ProjectDocumentsCard,
   StakeholdersCard,
 } from "./projectsections";
+import { ProjectSubtitle } from "./projectsubtitle";
 import { ProjectTabs } from "./projecttabs";
 import {
   ChronologyFilter,
@@ -63,6 +71,7 @@ import {
   useRecordChronology,
 } from "./recordchronology";
 import { RecordEmailVerb } from "./recordemail";
+import { RecordTeam } from "./recordteam";
 import { ShareAction } from "./share";
 import { TaskDetailModal, useTaskUpdate } from "./taskactions";
 import { TimelineActions } from "./timelineactions";
@@ -71,7 +80,7 @@ import "./projects.css";
 
 // The project page: one composite read (GET /projects/{id}/360) drawn in the
 // company page's three zones — what the project IS on the left (its phase
-// history, its people, its paper), what is HAPPENING in the middle (deals,
+// history, its contacts, its paper), what is HAPPENING in the middle (deals,
 // open commitments), and the chronology underneath. `sections_omitted` is
 // what keeps every card honest: a section the reader's role cannot read says
 // so instead of drawing an empty list.
@@ -128,6 +137,11 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // one modal per page, so two cards cannot both put a dialog on the screen.
   // The same arrangement the account page uses for its own step rows.
   const [openTask, setOpenTask] = useState<string | null>(null);
+  // The health card's dialog, owned here for the same reason the task detail
+  // is: one modal per page. "new" records a reading; a row corrects that one.
+  const [healthEdit, setHealthEdit] = useState<
+    ProjectHealthAssessment | "new" | null
+  >(null);
   const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
   // The TASK's own permission, not the project's. They are different questions
   // with different answers: the modal's verbs PATCH /activities/{id}, which
@@ -137,6 +151,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // may write the project and not its activities, and hide valid ones from a
   // task's own author whenever the project is read-only.
   const canUpdateTask = useCan("activity", "update");
+  // Read here and handed down: the schema request then runs BESIDE the
+  // project's rather than after it.
+  const cf = useObjectCustomFields("project");
   return (
     <RecordView
       // WHO is on this work comes first, then the paperwork. The column used
@@ -156,7 +173,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <>
             <ProjectCompanies
               projectId={project.id}
-              companies={project.organizations}
+              companies={project.companies}
+              readOnly={readOnly}
+            />
+            <RecordTeam
+              recordType="project"
+              recordId={project.id}
               readOnly={readOnly}
             />
             <StakeholdersCard
@@ -167,6 +189,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             <ProjectContractsCard view={view} />
             <ProjectDocumentsCard view={view} />
             <PhaseHistoryCard view={view} />
+            <CustomFieldsPanel object="project" record={project} />
           </>
         ) : undefined
       }
@@ -188,6 +211,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <ProjectActions
           project={project}
           refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          cf={cf}
         />
       }
       // In the header row, where a reader looks for a record's verbs — as the
@@ -222,6 +246,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           onMove={setMoveTo}
         />
         <RollupsStrip view={view} />
+        <ProjectHealth
+          projectId={project.id}
+          readOnly={readOnly}
+          onRecord={() => setHealthEdit("new")}
+          onCorrect={setHealthEdit}
+        />
         <div id={PROJECT_DEALS_ANCHOR}>
           <ProjectDealsCard
             view={view}
@@ -234,10 +264,10 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
               // but not write it can still work deals — just not born into it.
               !overlay &&
               !readOnly &&
-              project.organization_id && (
+              project.company_id && (
                 <NewDealAction
-                  orgId={project.organization_id}
-                  orgName={project.name}
+                  companyId={project.company_id}
+                  companyName={project.name}
                   projectId={project.id}
                 />
               )
@@ -254,6 +284,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         to={moveTo}
         onClose={() => setMoveTo(null)}
       />
+      <ProjectHealthModal
+        open={healthEdit !== null}
+        onClose={() => setHealthEdit(null)}
+        projectId={project.id}
+        correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
+      />
       {openTask && (
         <TaskDetailModal
           activityId={openTask}
@@ -266,50 +302,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   );
 }
 
-/** The company and the owner, under the name. */
-function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const project = view.project;
-  const company = view.organization;
-  const companyState = sectionState(
-    view,
-    "organization",
-    Boolean(company),
-    company ? 1 : 0,
-  );
-  return (
-    <span className="project-subtitle">
-      {companyState === "withheld" ? (
-        // The grant refused the company: say so rather than leave the name
-        // out, which would read as a project with no company.
-        <span data-testid="project-company-withheld">
-          {t("state.withheld")}
-        </span>
-      ) : (
-        <EntityRef
-          kind="organization"
-          id={project.organization_id}
-          name={company?.name}
-        />
-      )}
-      <span aria-hidden="true">·</span>
-      <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
-      {project.target_end_date && (
-        <>
-          <span aria-hidden="true">·</span>
-          <span>
-            {t("project.targetEndShort", {
-              date: formatDate(project.target_end_date, locale, recordZone),
-            })}
-          </span>
-        </>
-      )}
-    </span>
-  );
-}
-
 /**
  * Edit, archive, assign an owner and share — the record's rare verbs, beside
  * its identity.
@@ -319,15 +311,7 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
  * verb as the loudest control on the page: it draws in the danger colour, and
  * with nothing green beside it the eye went there first.
  */
-// useProjectVerbRefusal answers why this project's own verbs — edit, archive,
-// assign, share, the phase stepper, the rail cards — are refused, or undefined
-// when they are not.
-//
-// `writable` is what the server's write gate would answer on a mutation, and
-// the contract asks a client to draw or withhold affordances by it so a reader
-// is never offered a control the save refuses. Absent reads as NOT writable:
-// a response from a server too old to send the field fails closed.
-//
+
 // Archived comes first because it is the reason a reader can act on, by
 // restoring the record.
 //
@@ -338,41 +322,35 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
 // `writeAuthorityPredicate` treats an ownerless row as nobody's to change. So
 // here `writable` is the whole answer, and second-guessing it would offer
 // controls the save refuses with nothing a reader could do about it.
-function useProjectVerbRefusal(project: Project): string | undefined {
-  const t = useT();
-  return useRecordWriteRefusal("project", project, {
-    archived: t("project.archivedReadOnly"),
-    notYours: t("project.notYoursToChange"),
-  });
-}
 
 // refusedReasonId is the id of the sentence the BAND renders, passed in rather
-// than minted here. The verbs describe themselves by pointing at that one
-// sentence: a second copy inside the OverflowMenu would not exist until the
-// menu was first opened, so the header's Edit control would spend its first
-// render describing itself by an id naming no element at all.
+// than minted here: every verb but Email lives inside the OverflowMenu, and a
+// sentence minted in that panel would not exist until the menu was first
+// opened — so until somebody pressed the trigger, each refused item would
+// describe itself by an id naming no element at all.
 function ProjectActions({
   project,
   refusedReasonId,
-}: Readonly<{ project: Project; refusedReasonId?: string }>) {
+  cf,
+}: Readonly<{
+  project: Project;
+  refusedReasonId?: string;
+  cf: ObjectCustomFields;
+}>) {
   const t = useT();
   const me = useMe();
   const companies = useCompanyOptions();
   const overlay = useSorMode() === "overlay";
   return (
     <>
-      {/* Writing from the record, on the record page — the verb every other
-          record already carries, and the one this page did not. A project's
-          mail is a NEW conversation with somebody on the account behind it: the
-          composer offers that roster in To and files the send under this
-          project, which is the filing a message written from here can only
-          mean. Off in overlay for the reason the other verbs are: a mirrored
-          workspace has no send of its own.
-
-          No `recordAddress`: a project is not a person and has no address of its
-          own to open with. A deal offers its champion's; here the reader picks
-          from the account's people, which is an honest ask rather than a guess
-          at which of them a project-wide message is to. */}
+      {/* A project's mail is a NEW conversation with somebody on the account
+          behind it: the composer offers that roster in To and files the send
+          under this project, which is the filing a message written from here
+          can only mean. Off in overlay for the reason the other verbs are: a
+          mirrored workspace has no send of its own. No `recordAddress` — a
+          project is not a contact and has no address of its own to open with,
+          so the reader picks from the account's contacts rather than the page
+          guessing which of them a project-wide message is to. */}
       {!overlay && (
         <RecordEmailVerb
           entityType="project"
@@ -380,34 +358,58 @@ function ProjectActions({
           disabledReasonId={refusedReasonId}
         />
       )}
-      <EditAction<Project>
-        disabledReasonId={refusedReasonId}
-        label={t("project.edit")}
-        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-        fields={projectFields(t, {
-          companies,
-          me: me.data?.user.id ?? "",
-          currentOwner: project.owner_id ?? null,
-          mode: "edit",
-        })}
-        record={projectEditRecord(project)}
-        update={async (values, _rows, opened) => {
-          const { data, error } = await api.PATCH("/projects/{id}", {
-            params: {
-              path: { id: project.id },
-              ...ifMatch(requireVersion(opened?.version)),
-            },
-            body: mapProjectUpdate(values),
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="projects"
-        recordKey="project"
-      />
       <OverflowMenu label={t("record.moreActions")}>
+        {/* Worded — a bare pencil among sentences names nothing to a reader. */}
+        <EditAction<Project>
+          labelled
+          disabledReasonId={refusedReasonId}
+          label={t("project.edit")}
+          savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
+          fields={[
+            ...projectFields(t, {
+              companies,
+              me: me.data?.user.id ?? "",
+              currentOwner: project.owner_id ?? null,
+              mode: "edit",
+            }),
+            ...cf.formFields,
+          ]}
+          record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
+          update={async (values, _rows, opened) => {
+            const { data, error } = await api.PATCH("/projects/{id}", {
+              params: {
+                path: { id: project.id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              // Diffed against what the form OPENED on: no cf_ column is
+              // clearable, so a snapshot diff sends every untouched empty one
+              // as a clear and the save is refused outright.
+              body: {
+                ...mapProjectUpdate(values),
+                ...cf.toPatch(values, opened ?? {}),
+              },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="projects"
+          recordKey="project"
+        />
+        {!overlay && (
+          <ShareAction
+            recordType="project"
+            recordId={project.id}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
+        <AssignProjectOwnerAction
+          project={project}
+          disabledReasonId={refusedReasonId}
+        />
+        {/* Last, and set apart by the panel's own seam (atoms.css): the one
+            verb a reader cannot walk back does not sit in the routine run. */}
         <ArchiveAction
           disabledReasonId={refusedReasonId}
           label={t("project.archive")}
@@ -431,17 +433,6 @@ function ProjectActions({
           recordKey="project"
           onArchived={() => navigate({ screen: "projects" })}
         />
-        <AssignProjectOwnerAction
-          project={project}
-          disabledReasonId={refusedReasonId}
-        />
-        {!overlay && (
-          <ShareAction
-            recordType="project"
-            recordId={project.id}
-            disabledReasonId={refusedReasonId}
-          />
-        )}
       </OverflowMenu>
     </>
   );

@@ -21,18 +21,18 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// RecipientDirectory answers whether an address belongs to a person the
-// caller may read. The people capability implements it and compose injects
+// RecipientDirectory answers whether an address belongs to a contact the
+// caller may read. The contacts capability implements it and compose injects
 // it, because a module never imports a sibling.
 //
-// It answers about VISIBILITY, not existence: an address on a person the
+// It answers about VISIBILITY, not existence: an address on a contact the
 // caller's row scope excludes is answered the same as one on nobody at all.
 // Telling the two apart would leak the existence of a record through a
 // composer field, which is the disclosure the row-scope gate exists to
 // prevent everywhere else.
 type RecipientDirectory interface {
 	// VisibleAddresses returns the subset of addresses that belong to a
-	// person this caller can read, normalized lowercase.
+	// contact this caller can read, normalized lowercase.
 	VisibleAddresses(ctx context.Context, tx pgx.Tx, addresses []string) (map[string]bool, error)
 }
 
@@ -46,7 +46,7 @@ func (s *Store) WithRecipientDirectory(dir RecipientDirectory) *Store {
 }
 
 // UnresolvedRecipientError refuses an account-started send that names an
-// address belonging to no person the sender can see.
+// address belonging to no contact the sender can see.
 //
 // It carries ONE address even when several failed, because the composer
 // fixes them one at a time and the first unresolved address is the one the
@@ -60,7 +60,7 @@ type UnresolvedRecipientError struct {
 
 func (e *UnresolvedRecipientError) Error() string {
 	msg := "no contact you can see has the address " + e.Address +
-		" — add it to a person's record, or pick a different recipient"
+		" — add it to a contact's record, or pick a different recipient"
 	switch {
 	case e.More == 1:
 		msg += " (and 1 other address like it)"

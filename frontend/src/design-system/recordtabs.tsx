@@ -32,7 +32,7 @@ type RecordTabsCommon<Option extends string> = Readonly<{
   // about the section and does not.
   //
   // Inside the tab, so the figure joins its accessible name and a screen
-  // reader announces "People 10" rather than leaving it to a sighted reader
+  // reader announces "Contacts 10" rather than leaving it to a sighted reader
   // alone.
   counts?: Partial<Record<Option, number>>;
   // Something waits behind this tab that nobody has taken up — a lookup never

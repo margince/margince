@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"math"
+	"testing"
+)
+
+// closeEnough compares against the 4-decimal figures the spec prints.
+func closeEnough(got, want float64) bool { return math.Abs(got-want) < 0.0001 }
+
+// closeToPrinted compares against a figure the spec rounds to 3 decimals
+// (e.g. it prints 0.982 for 0.981666…), so the tolerance is the
+// rounding, not slack in the formula.
+func closeToPrinted(got, want float64) bool { return math.Abs(got-want) < 0.0005 }
+
+// The spec pins Jaro-Winkler so its worked examples reproduce against
+// this code; these assert the exact arithmetic it shows, not a range.
+func TestNameSimilarityReproducesTheSpecWorkedExample(t *testing.T) {
+	// PO-F-1 worked example: Jaro("jon doe","john doe") = (7/7 + 7/8 + 7/7)/3
+	// = 0.9583; Winkler prefix l=2, p=0.1 → name_sim = 0.9667.
+	got := nameSimilarity("Jon Doe", "John Doe")
+	if !closeEnough(got, 0.9667) {
+		t.Fatalf("name_sim(Jon Doe, John Doe) = %.4f, spec pins 0.9667", got)
+	}
+	if raw := jaro("jon doe", "john doe"); !closeEnough(raw, 0.9583) {
+		t.Fatalf("jaro(jon doe, john doe) = %.4f, spec pins 0.9583", raw)
+	}
+}
+
+func TestNameSimilarityIsCaseAndAccentInsensitive(t *testing.T) {
+	// PO-PARAM-JW-2 pins casefold + unaccent preprocessing: the German
+	// market's daily friction is that "Jürgen Müller" and "Jurgen Muller"
+	// are the same contact.
+	if got := nameSimilarity("Jürgen Müller", "Jurgen Muller"); got != 1 {
+		t.Fatalf("accented and unaccented spellings scored %.4f, want an exact 1", got)
+	}
+	if got := nameSimilarity("ACME Corp", "acme corp"); got != 1 {
+		t.Fatalf("case variants scored %.4f, want an exact 1", got)
+	}
+	// Full Unicode folding, not ToLower: ß folds to ss, so the pair every
+	// German address book contains compares equal.
+	if got := nameSimilarity("Straße", "STRASSE"); got != 1 {
+		t.Fatalf("Straße vs STRASSE scored %.4f, want an exact 1 under full case folding", got)
+	}
+}
+
+func TestNameSimilarityBounds(t *testing.T) {
+	if got := nameSimilarity("", ""); got != 1 {
+		t.Fatalf("two empty names scored %.4f, want 1", got)
+	}
+	if got := nameSimilarity("Jane Doe", ""); got != 0 {
+		t.Fatalf("empty against non-empty scored %.4f, want 0", got)
+	}
+	if got := nameSimilarity("Jane Doe", "Zbigniew Xu"); got >= dedupeReviewThreshold {
+		t.Fatalf("unrelated names scored %.4f, at or above the %.2f review threshold", got, dedupeReviewThreshold)
+	}
+}
+
+func TestNameSimilarityIsSymmetric(t *testing.T) {
+	// An asymmetric metric would make the decision depend on which row
+	// happened to be the candidate — the same pair must score alike from
+	// either side.
+	forward := nameSimilarity("Jon Doe", "John Doe")
+	reverse := nameSimilarity("John Doe", "Jon Doe")
+	if !closeEnough(forward, reverse) {
+		t.Fatalf("asymmetric: %.4f forward vs %.4f reverse", forward, reverse)
+	}
+}
+
+func TestJaroCountsTranspositions(t *testing.T) {
+	// The reference pair: 6 matches with one transposed adjacent pair →
+	// (6/6 + 6/6 + 5/6)/3 = 0.9444. Names shorter than 4 runes have a
+	// zero-width match window, so a transposition in them is invisible to
+	// Jaro by construction — this pair is long enough to show the term.
+	if got := jaro("martha", "marhta"); !closeEnough(got, 0.9444) {
+		t.Fatalf("jaro(martha, marhta) = %.4f, want 0.9444", got)
+	}
+}
+
+func TestNormalizeCompanyNameStripsTrailingLegalSuffixes(t *testing.T) {
+	// PO-F-2 worked example: "Acme Inc" and "Acme GmbH" normalize to
+	// "acme" and meet at name_sim = 1.0 → 🟡 review, because different
+	// legal entities are a human's call.
+	for _, spelling := range []string{"Acme Inc", "Acme GmbH", "Acme, Inc.", "ACME AG"} {
+		if got := NormalizeCompanyName(spelling); got != "acme" {
+			t.Fatalf("NormalizeCompanyName(%q) = %q, want %q", spelling, got, "acme")
+		}
+	}
+	if got := nameSimilarity(NormalizeCompanyName("Acme Inc"), NormalizeCompanyName("Acme GmbH")); got != 1 {
+		t.Fatalf("Acme Inc vs Acme GmbH scored %.4f, spec pins an exact 1.0", got)
+	}
+}
+
+func TestNormalizeCompanyNameKeepsASuffixThatIsTheName(t *testing.T) {
+	// Stripping every occurrence rather than the trailing token would
+	// erase the company: a firm called "Co" or "AG Systems" is not a
+	// suffix.
+	if got := NormalizeCompanyName("AG Systems"); got != "ag systems" {
+		t.Fatalf("NormalizeCompanyName(AG Systems) = %q, want %q", got, "ag systems")
+	}
+	if got := NormalizeCompanyName("Co"); got != "co" {
+		t.Fatalf("a lone suffix-shaped name was stripped to %q, want %q", got, "co")
+	}
+}
+
+// A compound German legal form is one suffix, not two tokens and a
+// connective. Before the ampersand was part of the strip this key came out as
+// "basecom gmbh &", which matches no account anybody stores.
+func TestNormalizeCompanyNameStripsCompoundLegalForms(t *testing.T) {
+	for _, spelling := range []string{
+		"Basecom GmbH & Co. KG",
+		"Basecom GmbH und Co KG",
+		"Basecom GmbH",
+		"Basecom",
+	} {
+		if got := NormalizeCompanyName(spelling); got != "basecom" {
+			t.Errorf("NormalizeCompanyName(%q) = %q, want %q", spelling, got, "basecom")
+		}
+	}
+}
+
+// The strip must never eat the entire name. A company called "Co" keeps its
+// key; an empty one would collide with every other empty key and place
+// connections against an arbitrary account.
+func TestNormalizeCompanyNameNeverStripsAwayTheWholeName(t *testing.T) {
+	for _, spelling := range []string{"Co", "GmbH", "& Co. KG"} {
+		if got := NormalizeCompanyName(spelling); got == "" {
+			t.Errorf("NormalizeCompanyName(%q) reduced the whole name to an empty key", spelling)
+		}
+	}
+}
+
+func TestAConnectiveIsOnlyStrippedInsideACompoundLegalForm(t *testing.T) {
+	// "GmbH & Co. KG" is ONE legal form, so the whole tail goes and the key is
+	// the company's actual name.
+	if got := NormalizeCompanyName("SIMIO GmbH & Co. KG"); got != "simio" {
+		t.Errorf("NormalizeCompanyName(compound legal form) = %q, want %q", got, "simio")
+	}
+	// But a connective is not a suffix in its own right. Collapsing these would
+	// let two unrelated accounts meet at one key, and PO-PARAM-1 strips legal
+	// forms, not English and German words.
+	for name, want := range map[string]string{
+		"Research and":         "research and",
+		"Miller und":           "miller und",
+		"Smith and Sons":       "smith and sons",
+		"Ben and Jerry's":      "ben and jerry's",
+		"Acme GmbH":            "acme",
+		"Basecom GmbH & Co KG": "basecom",
+	} {
+		if got := NormalizeCompanyName(name); got != want {
+			t.Errorf("NormalizeCompanyName(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+// NormalizeContactName is the key the create lane locks on and the key the
+// same-name comparison reads, so the two halves it folds are both part of the
+// contract — and each of them was, until this test, held by only one of the
+// two normalizers a contact name used to run through.
+func TestNormalizeContactNameFoldsAndCollapses(t *testing.T) {
+	for _, c := range []struct{ left, right, lost string }{
+		{"Straße Müller", "STRASSE MULLER", "the full Unicode fold — ToLower leaves ß alone"},
+		{"Anna Muster", "Anna  Muster", "the internal-whitespace collapse"},
+		{" Anna Muster ", "anna muster", "the trim"},
+	} {
+		if got, want := NormalizeContactName(c.left), NormalizeContactName(c.right); got != want {
+			t.Errorf("NormalizeContactName(%q) = %q, NormalizeContactName(%q) = %q — the key lost %s",
+				c.left, got, c.right, want, c.lost)
+		}
+	}
+	// Two contacts are still two contacts: folding is not collapsing everybody.
+	if NormalizeContactName("Anna Muster") == NormalizeContactName("Bernd Beispiel") {
+		t.Error("two different names share one key")
+	}
+}

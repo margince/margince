@@ -43,7 +43,9 @@ func activityCapturedPayload(kind, channelProvider string) crmcontracts.PublicEv
 }
 
 type LogActivityInput struct {
-	Kind string
+	// Internal creation policy; public activity input cannot set an audience.
+	audienceMembers []AudienceMember
+	Kind            string
 	// ChannelProvider names the messaging transport that carried this activity —
 	// a channel_provider row — and is empty for anything that did not travel on
 	// one. Separate from Kind because they answer separate questions: what sort
@@ -95,7 +97,7 @@ type LogActivityInput struct {
 
 // The origins an activity can have.
 //
-// Two of them are the system writing rather than a person, and neither counts
+// Two of them are the system writing rather than a contact, and neither counts
 // as the record being touched: OriginSystemRemediation marks work the product
 // files about a record — a forecast-assurance review task — and OriginSystemNotice
 // marks a message the installation owes somebody, such as the confirm-details
@@ -266,19 +268,13 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	// Who was in it (ACT-DDL-3). After the links, because the counterparty is
-	// whichever person they name — and they have just been through the
+	// whichever contact they name — and they have just been through the
 	// row-scope gate, so nothing here needs to re-check them.
 	if err := stampLoggedParticipants(ctx, tx, id, in.Kind, in.Direction, in.Links); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, "create", "activity", id.UUID, nil, map[string]any{fieldKind: in.Kind, fieldSubject: in.Subject})
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
-	// activity.captured is the first-class verb — emitted instead of a
-	// generic activity.created, never in addition (events.md §1).
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(in.Kind, in.ChannelProvider)); err != nil {
+	if err := recordInitialActivity(ctx, tx, id, in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)

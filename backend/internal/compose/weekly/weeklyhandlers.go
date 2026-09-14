@@ -232,7 +232,7 @@ func movementToWire(bars []Movement) []crmcontracts.WeeklyReviewMovement {
 
 func countsToWire(c Counts) crmcontracts.WeeklyReviewCounts {
 	return crmcontracts.WeeklyReviewCounts{
-		TasksDue: c.TasksDue, TasksDone: c.TasksDone,
+		TasksDue: c.TasksDue, TasksDone: c.TasksDone, TasksCompleted: c.TasksCompleted,
 		TasksCarriedOver: c.TasksCarriedOver,
 		DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
 		ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,

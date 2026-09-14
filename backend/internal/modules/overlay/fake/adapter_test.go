@@ -59,12 +59,12 @@ func TestFakeBackfillPagesAllRecords(t *testing.T) {
 	for i := 0; i < 250; i++ {
 		rec := fake.Rec(fmt.Sprint(i), map[string]any{"full_name": fmt.Sprint(i)})
 		rec.ModifiedAt = fixedModified
-		f.Seed("person", rec)
+		f.Seed("contact", rec)
 	}
 
 	seen, cur := 0, ""
 	for {
-		p, err := f.Backfill(context.Background(), "person", cur)
+		p, err := f.Backfill(context.Background(), "contact", cur)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -202,13 +202,13 @@ func TestFakeWriteBackRoundTrip(t *testing.T) {
 	f := fake.New()
 	ctx := context.Background()
 
-	createRes, err := f.Create(ctx, "person", map[string]any{"first_name": "Ada"})
+	createRes, err := f.Create(ctx, "contact", map[string]any{"first_name": "Ada"})
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
 	created := createRes.Record
-	if created.ExternalID == "" || created.ObjectClass != "person" {
-		t.Fatalf("Create returned %+v, want a stamped person record", created)
+	if created.ExternalID == "" || created.ObjectClass != "contact" {
+		t.Fatalf("Create returned %+v, want a stamped contact record", created)
 	}
 	if created.Fields["first_name"] != "Ada" {
 		t.Errorf("Create fields = %+v, want first_name=Ada", created.Fields)
@@ -220,12 +220,12 @@ func TestFakeWriteBackRoundTrip(t *testing.T) {
 
 	// A patch older than the stored record's ModifiedAt is refused
 	// (incumbent-wins drift check).
-	if _, err := f.Update(ctx, "person", created.ExternalID, map[string]any{"first_name": "Ada2"}, created.ModifiedAt.Add(-time.Hour)); err == nil {
+	if _, err := f.Update(ctx, "contact", created.ExternalID, map[string]any{"first_name": "Ada2"}, created.ModifiedAt.Add(-time.Hour)); err == nil {
 		t.Error("Update with a stale baseline must be refused (version skew)")
 	}
 
 	// A patch at or after the record's baseline merges and re-stamps.
-	updateRes, err := f.Update(ctx, "person", created.ExternalID, map[string]any{"first_name": "Ada2"}, created.ModifiedAt)
+	updateRes, err := f.Update(ctx, "contact", created.ExternalID, map[string]any{"first_name": "Ada2"}, created.ModifiedAt)
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestFakeWriteBackRoundTrip(t *testing.T) {
 	}
 
 	// An empty patch returns the record unchanged and writes nothing (no ledger).
-	sameRes, err := f.Update(ctx, "person", created.ExternalID, nil, updated.ModifiedAt)
+	sameRes, err := f.Update(ctx, "contact", created.ExternalID, nil, updated.ModifiedAt)
 	if err != nil {
 		t.Fatalf("no-op Update: %v", err)
 	}
@@ -252,18 +252,18 @@ func TestFakeWriteBackRoundTrip(t *testing.T) {
 
 	// Archiving with a baseline older than the record is refused (drift).
 	stale := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
-	if err := f.Archive(ctx, "person", created.ExternalID, stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+	if err := f.Archive(ctx, "contact", created.ExternalID, stale); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Errorf("Archive with a stale baseline: err = %v, want ErrVersionSkew", err)
 	}
-	if err := f.Archive(ctx, "person", created.ExternalID, same.ModifiedAt); err != nil {
+	if err := f.Archive(ctx, "contact", created.ExternalID, same.ModifiedAt); err != nil {
 		t.Fatalf("Archive: %v", err)
 	}
 	// Archiving a now-absent record is an error, never a silent no-op.
-	if err := f.Archive(ctx, "person", created.ExternalID, same.ModifiedAt); err == nil {
+	if err := f.Archive(ctx, "contact", created.ExternalID, same.ModifiedAt); err == nil {
 		t.Error("Archive of an already-removed record must error")
 	}
 	// Updating an unknown record is an error too.
-	if _, err := f.Update(ctx, "person", "nope", map[string]any{"first_name": "x"}, fixedModified); err == nil {
+	if _, err := f.Update(ctx, "contact", "nope", map[string]any{"first_name": "x"}, fixedModified); err == nil {
 		t.Error("Update of an unknown record must error")
 	}
 }

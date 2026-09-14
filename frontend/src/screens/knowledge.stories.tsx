@@ -62,7 +62,7 @@ const handbook: Corpus = {
   id: SET_ID,
   name: "Operator handbook",
   topic_statement:
-    "How this installation is run, and what it promises the people who use it.",
+    "How this installation is run, and what it promises the contacts who use it.",
   min_similarity: 0.35,
   default_ask: true,
   coverage: {

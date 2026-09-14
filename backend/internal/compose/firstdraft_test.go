@@ -139,7 +139,7 @@ func (d *firstSeamDrafter) DraftFirstEmail(_ context.Context, intent string) (st
 // adapter that never calls it reads exactly like the deterministic path it
 // replaced, and every other test here would stay green.
 func TestTheAccountDraftAsksTheFirstMessageSeamWhenTheDrafterHasOne(t *testing.T) {
-	links := []agents.RecordLink{{EntityType: "person", EntityID: ids.NewV7()}}
+	links := []agents.RecordLink{{EntityType: "contact", EntityID: ids.NewV7()}}
 	intent := "introduce ourselves after meeting at K5"
 
 	drafter := &firstSeamDrafter{}

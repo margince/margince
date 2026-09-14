@@ -42,7 +42,7 @@ import type { Route, Screen } from "./router";
 // A screen here is a screen that passes `title`, and the two must move together
 // or the page is named twice at heading level.
 export const SELF_HEADED_SCREENS: ReadonlySet<string> = new Set([
-  "brief",
+  "home",
   "tags",
   "contacts",
   "companies",
@@ -62,7 +62,7 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
   // test a page-level subtitle has to pass.
   filters: "filters.subtitle",
   // Whose messages these are is the fact the page most needs to state, and it
-  // is true of the whole page: a scheduled send is readable only by the person
+  // is true of the whole page: a scheduled send is readable only by the contact
   // who scheduled it, so nothing here is a queue somebody else can work.
   scheduled: "sched.sub",
 };
@@ -71,13 +71,14 @@ export const PAGE_SUB_KEYS: Record<string, MessageKey> = {
 // thing, not the NAV rail) carry their own title key. Every authenticated route
 // resolves to real copy — a raw screen slug is never shown as a page title.
 export const OFF_RAIL_TITLE_KEYS: Record<string, MessageKey> = {
+  worklist: "nav.brief",
   settings: "nav.settings",
   offers: "nav.offers",
   partners: "nav.partners",
   share: "nav.share",
   search: "nav.search",
   // Off the rail deliberately. The rail carries the product's ten destinations
-  // and a queue of one person's own unsent mail is not an eleventh; it is
+  // and a queue of one contact's own unsent mail is not an eleventh; it is
   // reached from the composer that put a message in it and from Today, which is
   // where the same rep's other waiting work already lives.
   scheduled: "nav.scheduled",
@@ -182,7 +183,7 @@ export function useRouteSubject(route: Route): string {
   // the page.
   const recordKind = route.id ? SCREEN_ENTITY[route.screen] : undefined;
   const { name, reading } = useEntityName(
-    recordKind ?? "person",
+    recordKind ?? "contact",
     recordKind && route.id,
   );
   if (recordKind && route.id) {

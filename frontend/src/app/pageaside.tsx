@@ -8,10 +8,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { useHasUnsavedChanges } from "./unsaved";
 
 /**
  * The record's details pane: what stands AROUND the thing being read.
@@ -37,6 +39,8 @@ type PageAsideState = {
   setFilled: (filled: boolean) => void;
   collapsed: boolean;
   toggle: () => void;
+  focusField: string | null;
+  setFocusField: (field: string | null) => void;
 };
 
 const PageAsideContext = createContext<PageAsideState | null>(null);
@@ -69,6 +73,7 @@ export function PageAsideProvider({
   open?: boolean;
 }>) {
   const [filled, setFilled] = useState(false);
+  const [focusField, setFocusField] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(() =>
     open === undefined ? readCollapsed() : !open,
   );
@@ -86,7 +91,16 @@ export function PageAsideProvider({
     });
   }, []);
   return (
-    <PageAsideContext.Provider value={{ filled, setFilled, collapsed, toggle }}>
+    <PageAsideContext.Provider
+      value={{
+        filled,
+        setFilled,
+        collapsed,
+        toggle,
+        focusField,
+        setFocusField,
+      }}
+    >
       {children}
     </PageAsideContext.Provider>
   );
@@ -102,10 +116,36 @@ const NO_SHELL: PageAsideState = {
   setFilled: () => undefined,
   collapsed: true,
   toggle: () => undefined,
+  focusField: null,
+  setFocusField: () => undefined,
 };
 
 function usePageAsideState(): PageAsideState {
   return useContext(PageAsideContext) ?? NO_SHELL;
+}
+
+export function useShowDetails(field: string): (() => void) | undefined {
+  const state = useContext(PageAsideContext);
+  if (!state?.filled) return undefined;
+  return () => {
+    if (state.collapsed) state.toggle();
+    state.setFocusField(field);
+  };
+}
+
+export function useDetailsFieldTarget(field: string) {
+  const state = useContext(PageAsideContext);
+  const target = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (state?.focusField !== field || !target.current) return;
+    target.current.scrollIntoView?.({ block: "center" });
+    const control = target.current.querySelector<HTMLElement>(
+      "input,textarea,button",
+    );
+    (control ?? target.current).focus();
+    state.setFocusField(null);
+  }, [state, field]);
+  return target;
 }
 
 /**
@@ -139,10 +179,15 @@ export function usePageAside(available = true): { open: boolean } {
  * finds it in the same place on every record. Renders nothing when no screen
  * supplies a pane.
  */
-export function PageAsideToggle() {
+export function PageAsideToggle({
+  controlled,
+}: Readonly<{
+  controlled?: { open: boolean; label: string; onToggle: () => void };
+}> = {}) {
   const t = useT();
+  const dirty = useHasUnsavedChanges("details");
   const { filled, collapsed, toggle } = usePageAsideState();
-  if (!filled) {
+  if (!filled && !controlled) {
     return null;
   }
   // Named, not a bare glyph: this control ends a row of words and a lone
@@ -153,11 +198,16 @@ export function PageAsideToggle() {
   return (
     <Button
       className="record-details-toggle"
-      aria-pressed={!collapsed}
-      onClick={toggle}
+      reason={
+        !controlled && !collapsed && dirty
+          ? t("record.finishFieldEdit")
+          : undefined
+      }
+      aria-pressed={controlled?.open ?? !collapsed}
+      onClick={controlled?.onToggle ?? toggle}
     >
       <PanelRight aria-hidden="true" />
-      {t("record.panel.details")}
+      {controlled?.label ?? t("record.panel.details")}
     </Button>
   );
 }

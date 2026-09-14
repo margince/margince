@@ -67,13 +67,13 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
+		Object: "contact", Label: "Preferred greeting", Type: customfieldsmod.TypeText, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	person := e.SeedPerson(t, "Ada", &e.Rep1)
-	e.WsExec(t, `UPDATE person SET cf_preferred_greeting = 'Servus' WHERE id = $1`, person)
+	contact := e.SeedContact(t, "Ada", &e.Rep1)
+	e.WsExec(t, `UPDATE contact SET cf_preferred_greeting = 'Servus' WHERE id = $1`, contact)
 
 	retired, err := svc.Retire(ctx, ids.UUID(created.Id))
 	if err != nil {
@@ -83,10 +83,10 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 		t.Fatalf("retire is a status flip with archived_at untouched, got status=%s archived_at=%v",
 			retired.Status, retired.ArchivedAt)
 	}
-	if !columnOnTable(t, owner, "person", "cf_preferred_greeting") {
+	if !columnOnTable(t, owner, "contact", "cf_preferred_greeting") {
 		t.Fatal("retire must never drop the physical column")
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person WHERE cf_preferred_greeting = 'Servus'`); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE cf_preferred_greeting = 'Servus'`); n != 1 {
 		t.Fatal("retire must preserve every stored value")
 	}
 
@@ -120,14 +120,14 @@ func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	created, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
+		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
 		Options: []string{"direct", "reseller"}, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	person := e.SeedPerson(t, "Ada", &e.Rep1)
-	e.WsExec(t, `UPDATE person SET cf_procurement_route = 'direct' WHERE id = $1`, person)
+	contact := e.SeedContact(t, "Ada", &e.Rep1)
+	e.WsExec(t, `UPDATE contact SET cf_procurement_route = 'direct' WHERE id = $1`, contact)
 
 	updated, err := svc.SetOptions(ctx, ids.UUID(created.Id), []string{"direct", "marketplace"})
 	if err != nil {
@@ -137,10 +137,10 @@ func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 		t.Fatalf("catalog options = %v, want the replacement set", updated.Options)
 	}
 	// The regenerated CHECK admits the new value and refuses the removed one.
-	if err := wsExecErr(e, e.WS, `UPDATE person SET cf_procurement_route = 'marketplace' WHERE id = $1`, person); err != nil {
+	if err := wsExecErr(e, e.WS, `UPDATE contact SET cf_procurement_route = 'marketplace' WHERE id = $1`, contact); err != nil {
 		t.Fatalf("a newly allowed option must be writable, got %v", err)
 	}
-	if err := wsExecErr(e, e.WS, `UPDATE person SET cf_procurement_route = 'reseller' WHERE id = $1`, person); err == nil {
+	if err := wsExecErr(e, e.WS, `UPDATE contact SET cf_procurement_route = 'reseller' WHERE id = $1`, contact); err == nil {
 		t.Fatal("a removed option must be rejected by the regenerated CHECK")
 	}
 	if n := e.WsCount(t,
@@ -156,14 +156,14 @@ func TestCustomFieldSetOptions_Refusals(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
 	picklist, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
+		Object: "contact", Label: "Procurement route", Type: customfieldsmod.TypePicklist,
 		Options: []string{"direct", "reseller"}, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	date, err := svc.Create(ctx, customfieldsmod.FieldSpec{
-		Object: "person", Label: "Onboarding date", Type: customfieldsmod.TypeDate, Source: "ui",
+		Object: "contact", Label: "Onboarding date", Type: customfieldsmod.TypeDate, Source: "ui",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -181,12 +181,12 @@ func TestCustomFieldSetOptions_Refusals(t *testing.T) {
 
 	// Removing an option that stored values still use refuses honestly:
 	// ADD CONSTRAINT validates existing rows.
-	person := e.SeedPerson(t, "Ada", &e.Rep1)
-	e.WsExec(t, `UPDATE person SET cf_procurement_route = 'reseller' WHERE id = $1`, person)
+	contact := e.SeedContact(t, "Ada", &e.Rep1)
+	e.WsExec(t, `UPDATE contact SET cf_procurement_route = 'reseller' WHERE id = $1`, contact)
 	if _, err := svc.SetOptions(ctx, ids.UUID(picklist.Id), []string{"direct"}); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("removing an in-use option must answer the conflict sentinel, got %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM person WHERE cf_procurement_route = 'reseller'`); n != 1 {
+	if n := e.WsCount(t, `SELECT count(*) FROM contact WHERE cf_procurement_route = 'reseller'`); n != 1 {
 		t.Fatal("the refused edit must leave stored values untouched")
 	}
 

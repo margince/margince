@@ -93,9 +93,9 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 	svc := NewService(db, keyvault.NewMemory(), store).
 		WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
 			switch canonical {
-			case "person":
+			case "contact":
 				return []string{IncumbentClassContacts}, true
-			case "organization":
+			case "company":
 				return []string{IncumbentClassCompanies}, true
 			default:
 				return nil, false
@@ -105,10 +105,10 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 
 	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
 	for _, row := range []struct{ objectClass, ext, fingerprint string }{
-		{"person", "p-legacy", "contacts-declaration-superseded"},
+		{"contact", "p-legacy", "contacts-declaration-superseded"},
 		// companies has no current declaration injected, and widget has no
 		// mapping at all — neither class can be judged, so neither is stale.
-		{"organization", "org-1", "companies-declaration-retired"},
+		{"company", "company-1", "companies-declaration-retired"},
 		{"widget", "w-1", "widget-declaration-retired"},
 	} {
 		if err := store.Ingest(ctx, Record{
@@ -130,14 +130,79 @@ func TestSyncStatusShowsWhichClassHoldsAnOlderProjection(t *testing.T) {
 		states[s.Object] = s.State
 	}
 	want := map[string]string{
-		"person":       syncStateStale,
-		"organization": syncStateFresh,
-		"widget":       syncStateFresh,
+		"contact": syncStateStale,
+		"company": syncStateFresh,
+		"widget":  syncStateFresh,
 	}
 	for object, wantState := range want {
 		if states[object] != wantState {
 			t.Errorf("sync state for %s = %q, want %q (all states: %v)", object, states[object], wantState, states)
 		}
+	}
+}
+
+// `stale` collapses two situations that want opposite responses, and the count
+// is what tells them apart: rows the sweep has not reached converge on their
+// own, while rows the current declaration cannot project never do — they hold
+// force_fresh_incomplete shut until somebody repairs the mapping. Zero means
+// wait; non-zero means look.
+//
+// Both arms, because a count that was always non-zero would pass the stuck half
+// on its own: the class that cannot be judged at all reports zero, and reporting
+// its rows as stuck would send an operator hunting for a mapping nobody has.
+func TestSyncStatusCountsTheRowsNoDeclarationCanProject(t *testing.T) {
+	ctx, pool, ws := testWorkspaceCtx(t)
+	seedOverlayWorkspace(ctx, t, pool)
+	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))
+	store := NewMirrorStore(db, noOwnerEmails{})
+	svc := NewService(db, keyvault.NewMemory(), store).
+		WithIncumbentClassesTranslator(func(canonical string) ([]string, bool) {
+			switch canonical {
+			case "contact":
+				return []string{IncumbentClassContacts}, true
+			case "company":
+				return []string{IncumbentClassCompanies}, true
+			default:
+				return nil, false
+			}
+		}).
+		WithProjectionFingerprints(map[string]string{IncumbentClassContacts: "contacts-declaration-current"})
+
+	baseline := time.Date(2026, 5, 13, 6, 44, 38, 0, time.UTC)
+	for _, row := range []struct{ objectClass, ext, fingerprint string }{
+		// Two contacts the current declaration cannot project, and one it can.
+		{"contact", "p-legacy-1", "contacts-declaration-superseded"},
+		{"contact", "p-legacy-2", "contacts-declaration-superseded"},
+		{"contact", "p-current", "contacts-declaration-current"},
+		// No current declaration for companies, so the class cannot be judged.
+		{"company", "company-1", "companies-declaration-retired"},
+	} {
+		if err := store.Ingest(ctx, Record{
+			ObjectClass: row.objectClass, ExternalID: row.ext,
+			Fields:                map[string]any{"full_name": "Ingested Row"},
+			ModifiedAt:            baseline,
+			ProjectionFingerprint: row.fingerprint,
+		}); err != nil {
+			t.Fatalf("ingesting %s/%s: %v", row.objectClass, row.ext, err)
+		}
+	}
+
+	statuses, err := svc.SyncStatus(ctx)
+	if err != nil {
+		t.Fatalf("SyncStatus: %v", err)
+	}
+	stuck := make(map[string]int, len(statuses))
+	for _, s := range statuses {
+		stuck[s.Object] = s.Unprojectable
+	}
+	if stuck["contact"] != 2 {
+		t.Errorf("contact reports %d un-projectable rows, want 2 — an operator reading a stale class "+
+			"cannot tell whether waiting will fix it (all counts: %v)", stuck["contact"], stuck)
+	}
+	if stuck["company"] != 0 {
+		t.Errorf("company reports %d un-projectable rows, want 0: this deployment has no declaration "+
+			"for the class at all, so its rows are unjudged rather than stuck, and calling them stuck "+
+			"sends an operator after a mapping nobody has", stuck["company"])
 	}
 }
 

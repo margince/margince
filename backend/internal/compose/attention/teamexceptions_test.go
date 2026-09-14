@@ -53,12 +53,12 @@ func TestABreachedReplyIsJudgedByThePolicysOwnState(t *testing.T) {
 	if len(found) != 1 {
 		t.Fatalf("a breached lead raised %d exceptions, want one", len(found))
 	}
-	if found[0].Kind != crmcontracts.TeamExceptionResponseBreached {
+	if found[0].Kind != crmcontracts.TeamExceptionKindTeamExceptionResponseBreached {
 		t.Errorf("a breached lead raised %q", found[0].Kind)
 	}
-	if found[0].Threshold != string(crmcontracts.LeadSlaStateBreached) {
+	if found[0].Threshold != string(crmcontracts.LeadSlaStateLeadSlaStateBreached) {
 		t.Errorf("the breach is judged against %q, want the policy's own state %q",
-			found[0].Threshold, crmcontracts.LeadSlaStateBreached)
+			found[0].Threshold, crmcontracts.LeadSlaStateLeadSlaStateBreached)
 	}
 }
 
@@ -93,7 +93,7 @@ func TestTheWorstKindLeads(t *testing.T) {
 		t.Fatalf("raised %d exceptions, want two", len(found))
 	}
 
-	if found[0].Kind != crmcontracts.TeamExceptionResponseBreached {
+	if found[0].Kind != crmcontracts.TeamExceptionKindTeamExceptionResponseBreached {
 		t.Errorf("the page leads with %q, want the breached reply", found[0].Kind)
 	}
 }
@@ -106,10 +106,10 @@ func TestTheWorstKindLeads(t *testing.T) {
 func TestNoExceptionClaimsARepIsOverloaded(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []crmcontracts.TeamExceptionKind{
-		crmcontracts.TeamExceptionResponseBreached,
-		crmcontracts.TeamExceptionRevenueAtRisk,
-		crmcontracts.TeamExceptionUnassigned,
-		crmcontracts.TeamExceptionRepeatedFailure,
+		crmcontracts.TeamExceptionKindTeamExceptionResponseBreached,
+		crmcontracts.TeamExceptionKindTeamExceptionRevenueAtRisk,
+		crmcontracts.TeamExceptionKindTeamExceptionUnassigned,
+		crmcontracts.TeamExceptionKindTeamExceptionRepeatedFailure,
 	} {
 		if !kind.Valid() {
 			t.Errorf("%q is not a kind the contract declares", kind)
@@ -132,7 +132,7 @@ func lateLead() ranked {
 		ID:         leadOwed,
 		Name:       "Kirsten at LOXXESS",
 		DeadlineAt: rankInstant.Add(-2 * time.Hour),
-		State:      string(crmcontracts.LeadSlaStateBreached),
+		State:      string(crmcontracts.LeadSlaStateLeadSlaStateBreached),
 	}, rankInstant)
 }
 
@@ -149,4 +149,22 @@ func materialDeal() ranked {
 		rankInstant,
 		materialBar{minor: 100_000_00, known: true},
 		dayMoney{})
+}
+
+func TestTeamExceptionsExcludeReadableDealsOutsideTheLiveRoster(t *testing.T) {
+	svc := unboundService()
+	member, stranger := ids.NewV7(), ids.NewV7()
+	due := rankInstant.Add(-24 * time.Hour)
+	svc.teammates = roster{{UserID: member, DisplayName: "The teammate"}}
+	svc.atRisk = stubAtRisk{rows: []RiskyDeal{
+		{DealID: ids.NewV7(), Name: "Team deal", OwnerID: &member, ExpectedCloseDate: &due, CloseOverdue: true},
+		{DealID: ids.NewV7(), Name: "Other team deal", OwnerID: &stranger, ExpectedCloseDate: &due, CloseOverdue: true},
+	}}
+	got, err := svc.TeamExceptions(aLead())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Exceptions) != 1 || got.Exceptions[0].Owner.Id == nil || ids.UUID(*got.Exceptions[0].Owner.Id) != member {
+		t.Fatalf("team exceptions escaped the live roster: %+v", got)
+	}
 }

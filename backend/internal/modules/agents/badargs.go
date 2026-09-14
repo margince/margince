@@ -140,6 +140,15 @@ type BadArgsError struct {
 	// branching on the structured list got nothing to branch on, and the
 	// coverage gate had to match a substring instead of a field code.
 	Field string
+	// Code is the per-field machine code, empty for the validation_error every
+	// BadArgsError answers by default.
+	//
+	// It exists for the refusals a REST door answers more precisely. `links`
+	// missing is `required` on activities' own store, and a client branching on
+	// details.errors must not have to know which door refused it to recognise
+	// the same mistake — which is the property ADR-0055 is about, arriving at
+	// the field level rather than the status one.
+	Code string
 	// Guidance is server-authored text appended after the echo, and it is NOT
 	// bounded. Bounding it with the echo is what made the accepted-field list
 	// truncate mid-word on a long unknown key — cutting away the list the
@@ -184,15 +193,26 @@ func (e *BadArgsError) FieldFaults() []apperrors.FieldRefusal {
 	if e.Field == "" {
 		return nil
 	}
-	// The code REUSES validation_error rather than minting one: crm.yaml
+	// The default REUSES validation_error rather than minting one: crm.yaml
 	// already declares it for exactly this class of caller mistake, and
 	// inventing a second would put an undocumented code in front of a client
-	// that branches on the documented one (P3 — the contract wins).
-	return []apperrors.FieldRefusal{{Field: e.Field, Code: "validation_error", Message: e.Error()}}
+	// that branches on the documented one (P3 — the contract wins). A refusal
+	// that names a MORE precise code says so through Code, and those are
+	// codes crm.yaml already declares too — `required` is what every REST door
+	// answers for a value that was absent.
+	code := e.Code
+	if code == "" {
+		code = "validation_error"
+	}
+	return []apperrors.FieldRefusal{{Field: e.Field, Code: code, Message: e.Error()}}
 }
 
 // boundDetail caps a message at n bytes, cutting on a rune boundary so the
 // result stays valid UTF-8 rather than ending mid-sequence.
+//
+// It is the bound for text this package did not render. echoSafe bounds its own
+// output while writing instead, because a cut measured after escaping cannot
+// know where an escape began.
 func boundDetail(s string, n int) string {
 	if len(s) <= n {
 		return s
@@ -240,22 +260,40 @@ func invalidByteAt(s string, i int) bool {
 // httperr.QuoteCaller bounds a caller's token with `%q` before it ever reaches
 // here, and two spellings of "safe to echo" that disagreed would mean the
 // protection depended on which door the text came through.
+// THE BOUND IS APPLIED WHILE WRITING, not to the finished string, and that is
+// the difference between a cut and a mangled escape. Escaping expands: one
+// escape byte becomes six characters as `\u001b`, so a message legally inside
+// the budget when its producer wrote it crosses the bound here. Cutting the
+// result at a byte position — corrected only to a rune boundary, which every
+// character of an escape already is — lands inside `\u001b` and leaves `\u001`,
+// which reads as a bug in this function rather than as a truncated name.
+//
+// Writing unit by unit against the remaining budget makes that unrepresentable:
+// a unit that does not fit is not written, so the answer ends between escapes
+// or it ends at the end.
 func echoSafe(s string, n int) string {
 	var b strings.Builder
 	b.Grow(len(s))
+	// cut is the longest prefix written so far that still leaves room for the
+	// ellipsis. Tracked rather than subtracted up front, because a message that
+	// fits WHOLE must come back whole: reserving the ellipsis unconditionally
+	// would truncate a remedy of exactly the budget, and explain() sizes its own
+	// arithmetic on that case.
+	cut := 0
 	for i, r := range s {
+		var unit string
 		switch {
 		case r == '\n':
-			b.WriteString(`\n`)
+			unit = `\n`
 		case r == '\r':
-			b.WriteString(`\r`)
+			unit = `\r`
 		case r == '\t':
-			b.WriteString(`\t`)
+			unit = `\t`
 		case r == utf8.RuneError && invalidByteAt(s, i):
 			// A byte that is not UTF-8 at all. Ranging yields RuneError for it,
 			// which IS printable, so writing the rune back would replace the
 			// caller's byte with U+FFFD and report a name they did not send.
-			fmt.Fprintf(&b, `\x%02x`, s[i])
+			unit = fmt.Sprintf(`\x%02x`, s[i])
 		case !unicode.IsPrint(r) && r > 0xFFFF:
 			// An UNPRINTABLE rune above the BMP, and the printability test comes
 			// first for a reason: an emoji and a CJK extension character are
@@ -264,12 +302,19 @@ func echoSafe(s string, n int) string {
 			// `\ue0020` for U+E0020 is not a legal escape anywhere and reads as
 			// `\ue002` followed by a `0` — and U+E0000..U+E007F is the tag block
 			// used to smuggle invisible text.
-			fmt.Fprintf(&b, `\U%08x`, r)
+			unit = fmt.Sprintf(`\U%08x`, r)
 		case !unicode.IsPrint(r):
-			fmt.Fprintf(&b, `\u%04x`, r)
+			unit = fmt.Sprintf(`\u%04x`, r)
 		default:
-			b.WriteRune(r)
+			unit = string(r)
+		}
+		if b.Len()+len(unit) > n {
+			return b.String()[:cut] + "…"
+		}
+		b.WriteString(unit)
+		if b.Len()+len("…") <= n {
+			cut = b.Len()
 		}
 	}
-	return boundDetail(b.String(), n)
+	return b.String()
 }

@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { ComposeModal, RelinkModal } from "./compose";
-import type { Transport } from "./persontransports";
+import type { Transport } from "./contacttransports";
 import {
   installFetchStub,
   jsonResponse,
@@ -113,15 +113,22 @@ function composeStory(routes: RouteMap) {
       // for.
       "GET /me": meRoute({}),
       "GET /consent-purposes": () => jsonResponse(PURPOSES),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          subject: "Q3 numbers",
+          occurred_at: "2026-09-01T09:00:00Z",
+        }),
       ...routes,
     });
     return (
       <StoryProviders>
         <ComposeModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           open
           onClose={() => {}}
         />
@@ -166,6 +173,8 @@ async function fillAndSend() {
   await composerOnScreen();
   await userEvent.type(screen.getByLabelText("To"), "buyer@acme.test");
   await userEvent.tab();
+  await screen.findByDisplayValue("Re: Q3 numbers");
+  await userEvent.clear(screen.getByLabelText("Subject"));
   await userEvent.type(screen.getByLabelText("Subject"), "Following up");
   await userEvent.type(
     screen.getByRole("textbox", { name: "Body" }),
@@ -213,9 +222,11 @@ export const Drafted: Story = {
   }),
   play: async () => {
     await composerOnScreen();
+    await screen.findByDisplayValue("Re: Q3 numbers");
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
+      screen.getByRole("button", { name: "Draft reply with AI" }),
     );
+    await screen.findByText(DRAFT.body);
   },
 };
 
@@ -224,7 +235,7 @@ export const Drafted: Story = {
 // conversation this is before they commit to answering it.
 //
 // A plain info callout rather than the indigo band: the band claims machine
-// provenance, and this is one person's mail landing in another's screen.
+// provenance, and this is one contact's mail landing in another's screen.
 export const ColleaguesMailbox: Story = {
   render: composeStory({
     "GET /users": () =>
@@ -255,7 +266,8 @@ export const ColleaguesMailbox: Story = {
 
 // The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
 // back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error.
+// "Review consent" copy instead of a raw server error, and the action the
+// server says this rep may take.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -264,6 +276,38 @@ export const ConsentBlocked: Story = {
           code: "consent_not_granted",
           title: "Conflict",
           detail: "suppressed",
+          // WHAT THE SERVER ACTUALLY ANSWERS. Without the details this story
+          // showed only the explanation, and the action beside it — the whole
+          // point of the refusal now — was never rendered in Storybook.
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
+            available_actions: ["request_decision"],
+          },
+        },
+        409,
+      ),
+  }),
+  play: async () => {
+    await fillAndSend();
+  },
+};
+
+// A SERVER NEWER THAN THIS CLIENT names an action whose label this build does
+// not have. The action is dropped rather than rendered as a raw wire enum — and
+// what the rep keeps is the reference, which is the whole reason dropping it is
+// safe. Without this story that fallback was never looked at.
+export const ConsentBlockedUnknownAction: Story = {
+  render: composeStory({
+    "POST /activities/act-1/send-email": () =>
+      jsonResponse(
+        {
+          code: "consent_not_granted",
+          title: "Conflict",
+          detail: "suppressed",
+          details: {
+            review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0002",
+            available_actions: ["send_anyway_somehow"],
+          },
         },
         409,
       ),
@@ -346,9 +390,9 @@ function channelReplyStory(conversation: RouteMap[string]) {
       <StoryProviders>
         <ComposeModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           kind="message"
           open
           onClose={() => {}}
@@ -372,7 +416,7 @@ export const ChannelReplyFiled: Story = {
     jsonResponse({
       ...CHANNEL_CONVERSATION,
       links: [
-        { entity_type: "person", entity_id: "p-1" },
+        { entity_type: "contact", entity_id: "p-1" },
         { entity_type: "project", entity_id: "proj-1" },
       ],
     }),
@@ -408,8 +452,8 @@ export const Default: Story = {
         jsonResponse({
           data: [
             { type: "deal", id: "d-9", title: "Acme renewal" },
-            { type: "organization", id: "o-2", title: "Acme GmbH" },
-            { type: "person", id: "pp-1", title: "Jane Doe" },
+            { type: "company", id: "o-2", title: "Acme GmbH" },
+            { type: "contact", id: "pp-1", title: "Jane Doe" },
           ],
           page: { has_more: false },
         }),
@@ -418,7 +462,7 @@ export const Default: Story = {
       <StoryProviders>
         <RelinkModal
           activityId="act-1"
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
           open
           onClose={() => {}}
@@ -440,7 +484,7 @@ export const Default: Story = {
 // record's own library.
 const CONTACT_360 = {
   as_of: "2026-08-15T09:00:00Z",
-  person: {
+  contact: {
     id: "p-1",
     full_name: "Dana Brandt",
     emails: [
@@ -455,21 +499,21 @@ const RECORD_FILES = {
   data: [
     {
       id: "att-1",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Offer_Nordwand_v3.pdf",
       byte_size: 412_000,
     },
     {
       id: "att-2",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Site_survey.jpg",
       byte_size: 2_100_000,
     },
     {
       id: "att-3",
-      entity_type: "person",
+      entity_type: "contact",
       entity_id: "p-1",
       filename: "Retrofit_timeline.xlsx",
       byte_size: 88_000,
@@ -481,7 +525,7 @@ const RECORD_FILES = {
 const HEAD_ROUTES: RouteMap = {
   "GET /me": meRoute({}),
   "GET /consent-purposes": () => jsonResponse(PURPOSES),
-  "GET /people/p-1/360": () => jsonResponse(CONTACT_360),
+  "GET /contacts/p-1/360": () => jsonResponse(CONTACT_360),
   "GET /attachments": () => jsonResponse(RECORD_FILES),
 };
 
@@ -492,9 +536,9 @@ function headStory(transports?: readonly Transport[], extra: RouteMap = {}) {
     return (
       <StoryProviders>
         <ComposeModal
-          entityType="person"
+          entityType="contact"
           entityId="p-1"
-          personId="p-1"
+          contactId="p-1"
           recordAddress="dana@brandt.example"
           transports={transports}
           open
@@ -524,7 +568,7 @@ export const Head: Story = {
 
 /**
  * The recipient offer. A reader remembers a colleague's NAME and not their
- * address, so the person is the label and the address is the value — and the
+ * address, so the contact is the label and the address is the value — and the
  * one already standing in the To line is not offered back.
  */
 export const RecipientOffer: Story = {

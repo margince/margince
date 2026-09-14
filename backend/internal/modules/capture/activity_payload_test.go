@@ -60,11 +60,11 @@ func TestActivityCaptureEventPayload(t *testing.T) {
 }
 
 // TestEngagementReplyPayload_WithContact proves the reply payload carries
-// the resolved contact_id when the counterparty is already a known person.
+// the resolved contact_id when the counterparty is already a known contact.
 func TestEngagementReplyPayload_WithContact(t *testing.T) {
 	matched := ids.NewV7()
 	occurredAt := time.Date(2026, 7, 22, 9, 30, 0, 0, time.UTC)
-	contact := ids.From[ids.PersonKind](ids.NewV7())
+	contact := ids.From[ids.ContactKind](ids.NewV7())
 
 	payload := engagementReplyPayload(matched,
 		replyOrigin{channel: channelEmail, contactID: &contact}, occurredAt, "gmail:msg-42")
@@ -135,7 +135,7 @@ func TestEngagementReplyPayload_NoContact(t *testing.T) {
 func TestEngagementReplyPayload_ChannelReply(t *testing.T) {
 	matched := ids.NewV7()
 	occurredAt := time.Date(2026, 7, 22, 9, 30, 0, 0, time.UTC)
-	contact := ids.From[ids.PersonKind](ids.NewV7())
+	contact := ids.From[ids.ContactKind](ids.NewV7())
 
 	payload := engagementReplyPayload(matched,
 		replyOrigin{channel: "telegram", contactID: &contact}, occurredAt, "telegram:7:42:9")

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -102,7 +102,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("the facts a person can state and take away", () => {
+describe("the facts a contact can state and take away", () => {
   it("draws every stored row a reader may remove, past the preview cap", async () => {
     // Two rules could each uncover a row after a delete, and both have to be
     // off where the verb is offered: the COLLAPSE (these two spellings of one
@@ -131,7 +131,7 @@ describe("the facts a person can state and take away", () => {
         }),
       ),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     expect(await screen.findByText("Fleet Manager — telematics")).toBeTruthy();
     // Counted rather than sampled: an assertion on one row passes whenever the
@@ -160,7 +160,7 @@ describe("the facts a person can state and take away", () => {
         version: 7,
       }),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     await user.click(await screen.findByRole("button", { name: /Remove ISO/ }));
     const dialog = await screen.findByRole("dialog");
@@ -187,7 +187,7 @@ describe("the facts a person can state and take away", () => {
   it("states a new fact with the category its field belongs to", async () => {
     const user = userEvent.setup();
     const calls = stub([]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit />);
 
     await user.click(await screen.findByRole("button", { name: "Add fact" }));
     await user.click(screen.getByRole("combobox"));
@@ -217,7 +217,7 @@ describe("the facts a person can state and take away", () => {
         value: "1998",
       }),
     ]);
-    mount(<CompanyFactsPanel orgId="o-1" canEdit={false} reasonId="why" />);
+    mount(<CompanyFactsPanel companyId="o-1" canEdit={false} reasonId="why" />);
 
     expect(await screen.findByText("1998")).toBeTruthy();
     // No remove control at all: a viewer who may not change a set is not a

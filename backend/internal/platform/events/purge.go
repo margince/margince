@@ -22,7 +22,7 @@ const scanBatch = 500
 // nothing).
 //
 // The cut is installation-wide rather than per-workspace, which is exact under
-// A107/ADR-0061 — one installation serves one organization, so every entry in
+// ADR-0061 — one installation serves one company, so every entry in
 // these streams belongs to the workspace being reset — and O(1) instead of
 // scanning up to 131072 entries per stream.
 //
@@ -53,7 +53,7 @@ func PurgeStreams(ctx context.Context, rdb *redis.Client, groups []kevents.Group
 
 // PurgeDedupe removes every processed-event mark, returning the number of keys
 // unlinked. The marks carry no workspace segment, so the whole namespace goes:
-// under one-installation-one-organization that IS this tenant's set, and a
+// under one-installation-one-company that IS this tenant's set, and a
 // stale mark left behind would swallow a redelivery the reseeded install
 // should see.
 //

@@ -22,7 +22,7 @@ import (
 //
 // It is portRefusal's MIRROR, and the direction is why it is a second function
 // rather than an inverse table. Inbound, a core error is stripped to its class
-// because a unit is other people's code. Outbound, the unit is answering its
+// because a unit is other contacts's code. Outbound, the unit is answering its
 // OWN caller about its OWN contract, so the sentence travels: a member told
 // "connecting needs the personal access token from your Dispact profile" can
 // act on it.

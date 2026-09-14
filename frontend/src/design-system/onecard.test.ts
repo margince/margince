@@ -19,7 +19,7 @@ import { withoutComments } from "../testing/css";
 // beside the real one is the same defect and harder to notice.
 //
 // WHAT IT DELIBERATELY DOES NOT CATCH, because a gate that fires on correct code
-// teaches people to skip its output. "A border, a radius and a padded
+// teaches contacts to skip its output. "A border, a radius and a padded
 // background" describes 64 rules in this tree — chips, search fields, plates,
 // callouts — and almost none of them is a card. So this asks the narrow
 // question it can answer: is this the card surface, copied. A VARIANT of it

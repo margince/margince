@@ -119,7 +119,7 @@ func TestSyncHealthReportsRecentlyOverwrittenClassesAndThenForgetsThem(t *testin
 		t.Fatalf("Connect: %v", err)
 	}
 
-	const objectClass = "organization"
+	const objectClass = "company"
 	oldBaseline := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	// Two rows of the same class, so the reading proves the aggregation and
 	// not merely that one conflict arrives.
@@ -148,7 +148,7 @@ func TestSyncHealthReportsRecentlyOverwrittenClassesAndThenForgetsThem(t *testin
 	// is under test here is the READ's horizon, not the writer.
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO system_log (actor_type, actor_id, action, detail, occurred_at)
-		VALUES ('system', 'system:reconcile', $1, jsonb_build_object('object_class', 'person'),
+		VALUES ('system', 'system:reconcile', $1, jsonb_build_object('object_class', 'contact'),
 		        now() - $2::interval)`,
 		mirrorConflictAction, overwriteWindow+time.Hour); err != nil {
 		t.Fatalf("planting the aged overwrite: %v", err)

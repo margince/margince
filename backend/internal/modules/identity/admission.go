@@ -78,7 +78,7 @@ func (h Handlers) serveAsHuman(ctx context.Context, w http.ResponseWriter, r *ht
 	// requirement, not a hint to the UI.
 	//
 	// Reads are refused too. The account is authenticated but not yet the
-	// person's own: until they choose a credential, everything it can see is
+	// colleague's own: until they choose a credential, everything it can see is
 	// still visible to whoever holds the one the operator typed into a file.
 	if id.MustChangePassword && !isOwnCredentialRequest(r) {
 		httperr.Write(w, r, forcedRotationRefusal())

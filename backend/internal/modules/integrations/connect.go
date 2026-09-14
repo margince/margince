@@ -18,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
-// defaultMode is what an omitted configuration resolves to: enrich a person
+// defaultMode is what an omitted configuration resolves to: enrich a contact
 // as they are created. It is the mode a customer who connected a provider
 // almost certainly wanted, and PI-PARAM-2 pins it.
 const defaultMode = provider.Trigger("automatic_on_create")

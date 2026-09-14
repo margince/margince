@@ -17,14 +17,14 @@ can verify.
 
 ## In order
 
-1. **Tell the people whose mail will be read** —
+1. **Tell the contacts whose mail will be read** —
    [Mitarbeiterinformation](../compliance/de/mitarbeiterinformation.md)
    (Art. 13 GDPR). Before a mailbox is connected, not after.
 2. **Settle private use** —
    [Einwilligung](../compliance/de/einwilligung-email-erfassung.md)
    (§26(2) BDSG, Art. 7 GDPR). If private use of work mail is permitted or
    tolerated, you are a telecommunications provider to your own staff and the
-   ordinary employment basis does not carry you. Get consent, per person, per
+   ordinary employment basis does not carry you. Get consent, per contact, per
    version — or ban private use in writing and enforce it.
 3. **Agree it with the works council** —
    [Betriebsvereinbarung](../compliance/de/betriebsvereinbarung-vorlage.md)
@@ -54,5 +54,5 @@ and for internal circulation; the German versions are the ones to execute.
 Margince does not verify that you executed any of it, does not remind you, and
 will not stop working if you have not. It also cannot tell you whether your
 particular arrangement is lawful: these are templates with placeholders, not
-advice, and the person who signs them needs to be somebody who can answer for
+advice, and whoever signs them needs to be somebody who can answer for
 them.

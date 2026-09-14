@@ -25,8 +25,8 @@ function searchOf(url: string): string | null {
   return new URL(url).searchParams.get("q");
 }
 
-const organizations = (url: string) =>
-  url.includes("/v1/organizations") && !url.includes("/v1/organizations/");
+const companies = (url: string) =>
+  url.includes("/v1/companies") && !url.includes("/v1/companies/");
 
 test("a filtered list is what Back returns to", async ({ page }) => {
   await page.goto("/#/companies");
@@ -36,7 +36,7 @@ test("a filtered list is what Back returns to", async ({ page }) => {
   // proof it can be returned to.
   await page.waitForRequest(
     (request) =>
-      organizations(request.url()) && searchOf(request.url()) === "brandt",
+      companies(request.url()) && searchOf(request.url()) === "brandt",
   );
   await expect(page).toHaveURL(/[?&]q=brandt/);
 
@@ -65,7 +65,7 @@ test("a link opens the list it was copied from", async ({ page }) => {
   // Nobody typed here: this is somebody else's address, pasted cold.
   const asked = page.waitForRequest(
     (request) =>
-      organizations(request.url()) && searchOf(request.url()) === "brandt",
+      companies(request.url()) && searchOf(request.url()) === "brandt",
   );
   await page.goto("/#/companies?q=brandt&sort=name");
 
@@ -79,22 +79,22 @@ test("turning several dials does not bury the way out", async ({ page }) => {
   // Each dial REPLACES the entry rather than pushing one. Back is the one key
   // that exists for getting out of things, and a reader who narrowed a list
   // four ways must not have to press it five times to leave.
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await page.goto("/#/companies");
 
   await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
   await page.waitForRequest(
     (request) =>
-      organizations(request.url()) && searchOf(request.url()) === "brandt",
+      companies(request.url()) && searchOf(request.url()) === "brandt",
   );
   await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt gmbh");
   await page.waitForRequest(
     (request) =>
-      organizations(request.url()) && searchOf(request.url()) === "brandt gmbh",
+      companies(request.url()) && searchOf(request.url()) === "brandt gmbh",
   );
 
   await page.goBack();
-  await expect(page).toHaveURL(/#\/brief$/);
+  await expect(page).toHaveURL(/#\/home$/);
 });
 
 test("Forward returns to the list Back left", async ({ page }) => {
@@ -102,7 +102,7 @@ test("Forward returns to the list Back left", async ({ page }) => {
   await page.getByRole("searchbox", { name: "Suchen" }).fill("brandt");
   await page.waitForRequest(
     (request) =>
-      organizations(request.url()) && searchOf(request.url()) === "brandt",
+      companies(request.url()) && searchOf(request.url()) === "brandt",
   );
 
   await page

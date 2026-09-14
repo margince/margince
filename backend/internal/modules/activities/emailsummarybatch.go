@@ -105,7 +105,7 @@ func EmailSummariesByIDBatch(
 	// Collected first: the count runs a second statement on this transaction,
 	// which needs the cursor above already closed.
 	rows.Close()
-	if err := WithAttachmentCounts(ctx, tx, admitted); err != nil {
+	if err := WithEmailRowFacts(ctx, tx, admitted); err != nil {
 		return nil, err
 	}
 

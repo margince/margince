@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -32,7 +32,7 @@ import {
   currentAgentEdge,
 } from "./agent-edge-signal";
 import { AgentRail } from "./agentrail";
-import { LABELS, TASK_SAID, VOCABULARY } from "./agentrail-copy";
+import { LABELS, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
 import { stubPhoneViewport } from "./testing/shellharness";
@@ -75,7 +75,7 @@ const CONNECTED: Connector = {
 
 const CANDIDATE = (id: string): Candidate => ({
   id,
-  entity_type: "organization",
+  entity_type: "company",
   left_id: "o-1",
   right_id: "o-2",
   confidence: 0.91,
@@ -169,9 +169,9 @@ const EMPTY_USAGE = {
   budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" as const },
 };
 
-const ORG_360_VIEW = {
+const COMPANY_360_VIEW = {
   as_of: "2026-08-01T09:00:00Z",
-  organization: {
+  company: {
     id: "o-1",
     display_name: "Brandt Automotive GmbH",
     captured_by: "human:u1",
@@ -181,7 +181,7 @@ const ORG_360_VIEW = {
     updated_at: "2026-06-01T08:00:00Z",
   },
   sections_omitted: [],
-  people: { data: [], page: emptyPage },
+  contacts: { data: [], page: emptyPage },
   deals: {
     data: [],
     page: emptyPage,
@@ -270,7 +270,7 @@ function stubAgentRailApi(routes: FetchRoutes = {}) {
       return routes.license ? routes.license() : jsonResponse(LICENSE("valid"));
     }
     if (pathname.endsWith("/360")) {
-      return jsonResponse({ state: "ready", view: ORG_360_VIEW });
+      return jsonResponse({ state: "ready", view: COMPANY_360_VIEW });
     }
     return jsonResponse({ data: [], page: emptyPage });
   });
@@ -908,52 +908,6 @@ describe("AgentRail", () => {
     ).toBe(false);
   });
 
-  // The wire carries the invocation-site token (`capture_classify`); the
-  // recap owes the reader the plain-language line, never the token itself —
-  // a recap that leaked the token would tell a salesperson something ran five
-  // times and nothing about what.
-  it("recaps a call in plain words, not the raw task token", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [AI_CALL],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: [AI_CALL.task],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() =>
-      expect(screen.getByText(TASK_SAID.capture_classify)).toBeTruthy(),
-    );
-    expect(panel().textContent).not.toContain("capture_classify");
-    expect(
-      screen.getByRole("link", { name: LABELS.fullLog }).getAttribute("href"),
-    ).toBe("#/settings/ai");
-  });
-
-  // A task named `constructor` is a plain string off the wire, but a bare
-  // lookup into an object answers it from `Object.prototype` with a function
-  // React then tries to render — `saidFor` guards with `Object.hasOwn`
-  // precisely so the recap still shows the humanised token.
-  it("shows the humanised token, not a function, for a task named constructor", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      aiCalls: () =>
-        jsonResponse({
-          data: [{ ...AI_CALL, task: "constructor" }],
-          page: emptyPage,
-          payload_capture_enabled: false,
-          tasks: ["constructor"],
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    await waitFor(() => expect(screen.getByText("constructor")).toBeTruthy());
-  });
-
   // Only a company record serves a 360 read; every other screen must not ask
   // for one at all, not just decline to show it.
   it("never asks for the 360 read when the route is not a company record", async () => {
@@ -1061,7 +1015,7 @@ describe("AgentRail", () => {
   const runLines = () =>
     [...panel().querySelectorAll(".arrunline")].map((el) => el.textContent);
 
-  // The work a person ASKS for, which is the case the rail was silent on until
+  // The work a contact ASKS for, which is the case the rail was silent on until
   // the router could say `running`. Asserted at RENDER and not against the map:
   // the copy existing is not the claim — the claim is that a live summarize
   // reaches the reader's own line, in their own words, through the same feed
@@ -1070,7 +1024,7 @@ describe("AgentRail", () => {
   // NAMED, because that is the line that answers the reader: the server sends
   // the record the summary is about as `subject_label`, and the rail says
   // "about Acme" rather than "about this company" — which was wrong for a
-  // person or a meeting and told a rep nothing for a company.
+  // contact or a meeting and told a rep nothing for a company.
   it("names the record a summary is about while it is still being written", async () => {
     withRuns(RUN({ kind: "summarize", subject_label: "Acme" }));
     const { container } = render(ROUTE);
@@ -1081,12 +1035,12 @@ describe("AgentRail", () => {
   });
 
   // The name is the way to the record. A company's name goes to the company,
-  // a person's to the contact, through the same address every other link in
+  // a contact's to the contact, through the same address every other link in
   // the app uses for that record — and following it is leaving for the
   // record, not opening the panel.
   it.each([
-    ["organization", "Acme", "#/companies/"],
-    ["person", "Ana Roth", "#/contacts/"],
+    ["company", "Acme", "#/companies/"],
+    ["contact", "Ana Roth", "#/contacts/"],
   ])(
     "links the %s a summary is about to its record",
     async (subjectType, name, page) => {
@@ -1148,7 +1102,7 @@ describe("AgentRail", () => {
       RUN({
         kind: "account_scan",
         subject_label: "Brandt Automotive",
-        subject_type: "organization",
+        subject_type: "company",
         subject_id: id,
       }),
     );
@@ -1339,7 +1293,7 @@ describe("AgentRail", () => {
     );
   });
 
-  // The crawl a person starts from a company page, reported by the dossier row
+  // The crawl a contact starts from a company page, reported by the dossier row
   // itself rather than by the settled model calls it makes — which is what lets
   // the orb hold `ingest` for the whole read instead of resting between calls.
   // The line names the company, because the source sent its name.
@@ -1365,7 +1319,7 @@ describe("AgentRail", () => {
   });
 
   // The overnight case, which is the whole reason a fault is acknowledged rather
-  // than decayed: a run fails at four in the morning and the person it ran for
+  // than decayed: a run fails at four in the morning and the contact it ran for
   // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
   // until the panel has actually been opened.
   it("holds a failed run on the Core until the panel has been opened", async () => {
@@ -1467,22 +1421,22 @@ describe("AgentRail", () => {
     expect(panel().textContent).not.toContain("telepathic_prospecting");
   });
 
-  // A settled run reaches the reader through the RESTING ROTATION on the card
-  // and nowhere else: the panel lists live work only, so a day of finished
-  // runs draws no list there. `recent` is bounded to today, so the rotation
-  // never pins a "ready" that would still be announcing this morning at six
-  // in the evening.
-  it("reads a run that finished today in the resting line, not as a panel list", async () => {
+  // A settled run reaches the reader twice, answering two questions: the
+  // RESTING ROTATION on the card says the one true thing this installation has
+  // to say now, and the recap lists what got done. It reaches the RUNNING
+  // section in neither case. `recent` is bounded to today, so the rotation
+  // never pins a "ready" still announcing this morning at six in the evening.
+  it("reads a run that finished today in the resting line and in the recap, never as live work", async () => {
     withSettled(RUN({ state: "done" }));
     const user = userEvent.setup();
     const { container } = render(ROUTE);
-    // Nothing is live, so the orb rests — and the line is the settled run,
-    // which is the only true thing this installation has to say.
     await settlesOnLine(container, "Your morning brief is ready.");
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
     await openPanel(user, container);
     expect(runLines()).toEqual([]);
-    expect(panel().textContent).not.toContain("Finished today");
     expect(panel().textContent).not.toContain("Running now");
+    expect(
+      panel().querySelector(".aritem:not(.arempty)")?.textContent,
+    ).toContain("Your morning brief is ready.");
   });
 });

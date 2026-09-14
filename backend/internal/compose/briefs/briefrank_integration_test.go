@@ -70,7 +70,7 @@ func setupBrief(t *testing.T) *briefEnv {
 
 	b := &briefEnv{
 		Env:      e,
-		engine:   NewBriefEngine(e.Pool, e.People),
+		engine:   NewBriefEngine(e.Pool, e.Contacts),
 		pipeline: pipeline,
 		stageA:   stages[0],
 		repCtx:   e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
@@ -180,7 +180,7 @@ func TestBriefRankReproducesAKnownQueueOnAFixedSeedAndClock(t *testing.T) {
 	}
 }
 
-// Warmth rides the injected people §4 seam: with an engaged stakeholder
+// Warmth rides the injected contacts §4 seam: with an engaged stakeholder
 // the factor equals the seam's own answer and the contributing
 // interactions join the evidence.
 func TestBriefWarmthComesFromTheStrengthSeam(t *testing.T) {
@@ -188,7 +188,7 @@ func TestBriefWarmthComesFromTheStrengthSeam(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	stakeholder := integration.SeedStakeholder(t, b.Env, owner, b.dealA, "inbound", "outbound")
 
-	strength, err := b.People.PersonStrength(b.repCtx, ids.From[ids.PersonKind](stakeholder), briefClock)
+	strength, err := b.Contacts.ContactStrength(b.repCtx, ids.From[ids.ContactKind](stakeholder), briefClock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -346,7 +346,7 @@ func TestBriefActedAndDismissedItemsLeaveTheNextQueue(t *testing.T) {
 	// were made in — and for another user not at all.
 	//
 	// Rep2 needs a REASON to carry these deals, not merely permission to read
-	// them: the queue is scoped to the person's own responsibility, so an open
+	// them: the queue is scoped to the contact's own responsibility, so an open
 	// task assigned to them is what puts somebody else's deal in their morning.
 	// That is the assist case the scope admits, and it is exactly what makes
 	// this a test about marks rather than about ownership.
@@ -431,7 +431,7 @@ func TestTheQueueRanksTheReadersOwnWorkRatherThanEverythingVisible(t *testing.T)
 	}
 }
 
-// assignTaskTo gives one person an open task on a deal — the assist that makes
+// assignTaskTo gives one contact an open task on a deal — the assist that makes
 // somebody else's deal their responsibility for the morning.
 func assignTaskTo(t *testing.T, owner *pgx.Conn, dealID, assignee ids.UUID) {
 	t.Helper()

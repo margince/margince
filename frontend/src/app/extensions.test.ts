@@ -143,7 +143,7 @@ describe("placing a unit by its declared secret scope", () => {
     ]);
   });
 
-  it("offers a workspace-scoped unit on the organization page only", () => {
+  it("offers a workspace-scoped unit on the company page only", () => {
     expect(
       unitsForSecretScope("workspace", REGISTRY).map((u) => u.name),
     ).toEqual(["notes"]);

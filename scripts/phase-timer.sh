@@ -3,7 +3,7 @@
 #
 # The numbers in a comment go stale the first time somebody changes a gate, and
 # nobody re-measures a lane that is merely slow. So the gate measures itself and
-# says so on every green run: the next person to optimize it starts from a
+# says so on every green run: whoever optimizes it next starts from a
 # reading of THEIR machine rather than from a sentence written on someone else's.
 #
 # start <label> stamps the clock; stop closes the open phase; report prints the

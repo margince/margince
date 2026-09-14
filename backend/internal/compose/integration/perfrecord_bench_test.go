@@ -15,7 +15,7 @@ package integration
 //   - It measures through the BOOTED APPLICATION, not the store. PERF-3 and
 //     PERF-7 are query budgets ("search", "context-graph assembly") and a store
 //     call is the honest unit for them. PERF-1 and PERF-4 are budgets on an
-//     OPERATION a person performs, and their column says "server" — routing,
+//     OPERATION a contact performs, and their column says "server" — routing,
 //     admission, the RLS transaction and serialization are all inside the number
 //     a customer is quoted, so measuring underneath them would report a figure
 //     nobody promised.
@@ -45,7 +45,7 @@ import (
 // budgets). They are calibration values per ADR-0021 §5: changing one is a
 // noted budget revision, never a silent bump to make a red run green.
 const (
-	// perf1RecordOpenBudget bounds opening a person, organization or deal.
+	// perf1RecordOpenBudget bounds opening a contact, company or deal.
 	// PERF-1's other half — 300 ms PERCEIVED — is a browser measurement and
 	// belongs to the throttled mobile profile (MOBILE-AC-2), not here.
 	perf1RecordOpenBudget = 100 * time.Millisecond
@@ -68,9 +68,9 @@ var recordBenchSpec = benchTierSpec{tier: search.BenchTierSMB, warmups: 5, sampl
 // different paths at three rows than at ten thousand, and an index that is never
 // exercised looks exactly as fast as one that does not exist.
 const (
-	recordBenchPersons       = 10_000
-	recordBenchOrganizations = 1_000
-	recordBenchActivities    = 20_000
+	recordBenchContacts   = 10_000
+	recordBenchCompanies  = 1_000
+	recordBenchActivities = 20_000
 )
 
 func TestRecordOpenAndSaveBudgets(t *testing.T) {
@@ -78,14 +78,14 @@ func TestRecordOpenAndSaveBudgets(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	seedRecordBenchVolume(t, e)
 
-	person := createBenchPerson(t, e)
-	organization, deal := createBenchOrganizationAndDeal(t, e)
+	contact := createBenchContact(t, e)
+	company, deal := createBenchCompanyAndDeal(t, e)
 
 	report := search.BenchReport{Tier: recordBenchSpec.tier, Queries: []search.QueryStats{
-		benchRecordOpen(t, e, "record_open_person", "/v1/people/"+person),
-		benchRecordOpen(t, e, "record_open_organization", "/v1/organizations/"+organization),
+		benchRecordOpen(t, e, "record_open_contact", "/v1/contacts/"+contact),
+		benchRecordOpen(t, e, "record_open_company", "/v1/companies/"+company),
 		benchRecordOpen(t, e, "record_open_deal", "/v1/deals/"+deal),
-		benchRecordSave(t, e, person),
+		benchRecordSave(t, e, contact),
 	}}
 
 	for _, q := range report.Queries {
@@ -110,7 +110,7 @@ func writeRecordBenchRecord(t *testing.T, e *apptest.AppEnv, queries []search.Qu
 	measurements := make([]BudgetMeasurement, 0, len(queries))
 	for _, q := range queries {
 		id := "PERF-1"
-		if q.Query == "record_save_person" {
+		if q.Query == "record_save_contact" {
 			id = "PERF-4"
 		}
 		measurements = append(measurements,
@@ -148,12 +148,12 @@ func benchRecordOpen(t *testing.T, e *apptest.AppEnv, name, path string) search.
 // benchRecordSave measures the PATCH a record edit issues (PERF-4). The body
 // changes the title on every run so no run can be answered by a no-op write —
 // a save that stores nothing is not the operation the budget is about.
-func benchRecordSave(t *testing.T, e *apptest.AppEnv, personID string) search.QueryStats {
+func benchRecordSave(t *testing.T, e *apptest.AppEnv, contactID string) search.QueryStats {
 	t.Helper()
 	edit := 0
-	stats, err := benchRuns("record_save_person", perf4RecordSaveBudget, recordBenchSpec, func() error {
+	stats, err := benchRuns("record_save_contact", perf4RecordSaveBudget, recordBenchSpec, func() error {
 		edit++
-		return benchExpectOK(t, e, http.MethodPatch, "/v1/people/"+personID,
+		return benchExpectOK(t, e, http.MethodPatch, "/v1/contacts/"+contactID,
 			AnyMap{"title": "Rear Admiral " + strconv.Itoa(edit)})
 	})
 	if err != nil {
@@ -163,7 +163,7 @@ func benchRecordSave(t *testing.T, e *apptest.AppEnv, personID string) search.Qu
 }
 
 // seedRecordBenchVolume bulk-loads background rows into the bootstrapped
-// organization's workspace through the owner connection, set-based.
+// company's workspace through the owner connection, set-based.
 //
 // The GUC is set inside the transaction because the seeded rows take their
 // workspace from it — an unbound INSERT here does not fail loudly, it writes
@@ -205,12 +205,12 @@ func recordBenchSeeds(workspace string) []struct {
 		sql  string
 		args []any
 	}{
-		{"persons", `INSERT INTO person (full_name, source, captured_by)
-		   SELECT 'Bench Person ' || i, 'manual', 'human:bench'
-		   FROM generate_series(1, $1) AS i`, []any{recordBenchPersons}},
-		{"organizations", `INSERT INTO organization (display_name, source, captured_by)
-		   SELECT 'Bench Org ' || i, 'manual', 'human:bench'
-		   FROM generate_series(1, $1) AS i`, []any{recordBenchOrganizations}},
+		{"contacts", `INSERT INTO contact (full_name, source, captured_by)
+		   SELECT 'Bench Contact ' || i, 'manual', 'human:bench'
+		   FROM generate_series(1, $1) AS i`, []any{recordBenchContacts}},
+		{"companies", `INSERT INTO company (display_name, source, captured_by)
+		   SELECT 'Bench Company ' || i, 'manual', 'human:bench'
+		   FROM generate_series(1, $1) AS i`, []any{recordBenchCompanies}},
 		{"activities", `INSERT INTO activity (kind, subject, body, occurred_at, source, captured_by)
 		   SELECT 'email', 'Bench subject ' || i, 'Bench body ' || i,
 		          now() - (i % 720 || ' hours')::interval, 'manual', 'human:bench'
@@ -218,51 +218,51 @@ func recordBenchSeeds(workspace string) []struct {
 		// The planner chooses differently against stale statistics, and a
 		// benchmark that measures the plan for an empty table is measuring the
 		// fixture rather than the product.
-		{"statistics", `ANALYZE person, organization, activity`, nil},
+		{"statistics", `ANALYZE contact, company, activity`, nil},
 	}
 }
 
-// createBenchPerson creates the measured person through the real endpoint, so
+// createBenchContact creates the measured contact through the real endpoint, so
 // the row the benchmark opens is one the product's own writer produced.
-func createBenchPerson(t *testing.T, e *apptest.AppEnv) string {
+func createBenchContact(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var person AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/people", AnyMap{
+	var contact AnyMap
+	if status := e.Call(t, http.MethodPost, "/v1/contacts", AnyMap{
 		"full_name": "Grace Hopper",
 		"source":    "ui",
 		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
-	}, nil, &person); status != http.StatusCreated {
-		t.Fatalf("create person = %d %v", status, person)
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact = %d %v", status, contact)
 	}
-	return benchID(t, person, "person")
+	return benchID(t, contact, "contact")
 }
 
-// createBenchOrganizationAndDeal creates the other two records PERF-1 names.
-// The deal needs the organization, so the two are made together rather than
+// createBenchCompanyAndDeal creates the other two records PERF-1 names.
+// The deal needs the company, so the two are made together rather than
 // through two fixtures that would each have to make one.
-func createBenchOrganizationAndDeal(t *testing.T, e *apptest.AppEnv) (string, string) {
+func createBenchCompanyAndDeal(t *testing.T, e *apptest.AppEnv) (string, string) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
 
-	var org AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/organizations", AnyMap{
+	var company AnyMap
+	if status := e.Call(t, http.MethodPost, "/v1/companies", AnyMap{
 		"display_name": "Acme GmbH",
 		"source":       "ui",
 		"domains":      []AnyMap{{"domain": "acme.example", "is_primary": true}},
-	}, nil, &org); status != http.StatusCreated {
-		t.Fatalf("create organization = %d %v", status, org)
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("create company = %d %v", status, company)
 	}
-	orgID := benchID(t, org, "organization")
+	companyID := benchID(t, company, "company")
 
 	var deal AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/deals", AnyMap{
 		"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR",
 		"pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"organization_id": orgID, "source": "ui",
+		"company_id": companyID, "source": "ui",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)
 	}
-	return orgID, benchID(t, deal, "deal")
+	return companyID, benchID(t, deal, "deal")
 }
 
 // benchID reads the created record's id, failing on a payload that carries none

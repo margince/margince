@@ -77,7 +77,7 @@ type MonthlySpend struct {
 //
 // Gated on the integrations READ grant, which is broad: a rep may see what
 // enrichment costs. It is the installation's spend, not any subject's — the
-// rows name no person, and an erasure detaches them from the one they used to
+// rows name no contact, and an erasure detaches them from the one they used to
 // name (PI-AC-8), which is what makes this series stable across an Art. 17
 // request by construction.
 func (s *Store) SpendByMonth(ctx context.Context, name string) ([]MonthlySpend, error) {

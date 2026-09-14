@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 
 import { act, cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,7 +15,7 @@ import {
 
 // The margins are decoration with a job: they are the only place on a screen
 // that says the agent is working, and the only place that says something has
-// stopped for a person. What these cases hold is the difference between those
+// stopped for a contact. What these cases hold is the difference between those
 // two and silence, because silence is the default and a mark drawn by mistake
 // would be the surface claiming work nobody asked for.
 

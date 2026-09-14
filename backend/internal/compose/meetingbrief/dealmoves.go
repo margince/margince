@@ -5,7 +5,7 @@ package meetingbrief
 
 // What happened to the DEAL since the reader last spoke to this room.
 //
-// "Since you last spoke" used to read only what people SAID — captured claims
+// "Since you last spoke" used to read only what contacts SAID — captured claims
 // and conversations. The three things that most often changed while nobody was
 // talking are not sentences: the deal moved stage, the offer was revised, and
 // the buyer worked the Deal Room. A rep who walks into a meeting not knowing
@@ -67,7 +67,7 @@ func (s *Service) readDealMoves(
 		return nil, false, nil
 	}
 	// The deal gate, before a single statement. The brief's own gates cover the
-	// activity and the people in the room; nothing until now asked whether this
+	// activity and the contacts in the room; nothing until now asked whether this
 	// reader may read the DEAL these sentences are about.
 	if err := auth.Require(ctx, dealObject, principal.ActionRead); err != nil {
 		return nil, false, err

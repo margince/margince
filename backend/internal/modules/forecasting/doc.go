@@ -19,7 +19,7 @@
 // contribution stores its own base amount, rate and rate date, and every later
 // read serves the stored integer.
 //
-// The current call is an assertion by a person, not a derivation: a manager
+// The current call is an assertion by a contact, not a derivation: a manager
 // saying what they believe will close. It supersedes rather than overwrites, so
 // the chain of what was believed when survives, and it writes no deal row —
 // calling a number is not editing the pipeline.

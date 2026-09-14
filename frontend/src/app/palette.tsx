@@ -60,7 +60,7 @@ const SETTINGS_ALIASES: Readonly<
   "capture-activity": ["capture log", "trace"],
   company: ["general", "currency", "workspace", "fx"],
   authentication: ["sign-in", "sso", "oauth app", "login"],
-  members: ["users", "people", "roster", "invite"],
+  members: ["users", "contacts", "roster", "invite"],
   teams: ["team"],
   seats: ["license", "billing", "plan", "subscription"],
   pipelines: ["stages", "deal stages"],
@@ -156,7 +156,7 @@ export function useBuiltinCommands(): Command[] {
       route: settingsHref(page.id),
     }));
     // The scheduled queue, which is off the rail deliberately — a queue of one
-    // person's own unsent mail is not an eleventh destination (pagemeta.ts says
+    // contact's own unsent mail is not an eleventh destination (pagemeta.ts says
     // so) — and was therefore reachable only by typing the address. The
     // composer that queued a message is one door; this is the other, for the
     // rep who closed that toast an hour ago and now wants the message back.
@@ -261,7 +261,7 @@ function useSearchCommands(query: string): SearchArm {
       // called "Rollout" are told apart by the key a rep already types into
       // subject lines. Every other kind names the kind — TRANSLATED, because
       // this line used to print the wire word and showed a German reader
-      // "organization" where the rest of the product says Firma.
+      // "company" where the rest of the product says Firma.
       subtitle:
         hit.type === "project"
           ? (projectLines.get(hit.id) ??
@@ -303,17 +303,17 @@ function useProjectHitLines(projectIds: string[]): Map<string, string> {
     })),
   });
   const companyIds = projects.flatMap((query) =>
-    query.data && !query.data.key && query.data.organization_id
-      ? [query.data.organization_id]
+    query.data && !query.data.key && query.data.company_id
+      ? [query.data.company_id]
       : [],
   );
   const companies = useQueries({
     queries: companyIds.map((id) => ({
       // The same entry EntityRef fills for a company reference.
-      queryKey: ["organization", "ref", id],
+      queryKey: ["company", "ref", id],
       staleTime: 60_000,
       queryFn: async () => {
-        const { data, error } = await api.GET("/organizations/{id}", {
+        const { data, error } = await api.GET("/companies/{id}", {
           params: { path: { id } },
         });
         if (error) {
@@ -334,9 +334,7 @@ function useProjectHitLines(projectIds: string[]): Map<string, string> {
     }
     const line =
       project.key ??
-      (project.organization_id
-        ? companyName.get(project.organization_id)
-        : null);
+      (project.company_id ? companyName.get(project.company_id) : null);
     if (line) {
       lines.set(projectIds[index], line);
     }

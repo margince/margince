@@ -105,6 +105,16 @@ type SendEmailInput struct {
 	// Evidence names records the caller offers in support. Each is read and
 	// checked against the category; naming one widens nothing.
 	Evidence commsauthz.Evidence
+	// ResumingIntentID names the held scheduled_send this message is being
+	// resumed from, when it is one. It travels to the staging path so that
+	// path can find the review naming this intent, and through the review the
+	// recorded decision standing over it.
+	//
+	// Empty for every ordinary send, which is every send that was never
+	// refused. A named intent does not by itself authorize anything — it is
+	// where to look, not permission — and a message with no live decision
+	// behind it is refused exactly as it would have been.
+	ResumingIntentID ids.UUID
 	// DraftRef names the voice draft this message came from, so the send can
 	// close the learning signal that draft opened. Empty is the ordinary case:
 	// mail the human composed independently resolves no draft.
@@ -121,54 +131,6 @@ type SendEmailInput struct {
 // for it.
 type DeliveryStager interface {
 	StageTx(ctx context.Context, tx pgx.Tx, in DeliveryRequest) error
-}
-
-// RefusalRecorder turns a refusal the staging call carried out of its
-// transaction into whatever durable record the installation keeps of it.
-//
-// A SECOND, OPTIONAL SEAM rather than a wider StageTx, because it runs at a
-// different MOMENT and that is the whole point: staging runs inside the
-// caller's transaction, and this runs after that transaction has unwound and
-// returned its pool connection. A recorder called from inside would either be
-// rolled back with the refusal it records, or hold a second connection while
-// the first is still checked out — and enough concurrent refusals would then
-// wait on a connection none of them can release.
-//
-// A stager that does not implement it is a composition that keeps no record,
-// which is what every fixture is and what the product was before this existed.
-type RefusalRecorder interface {
-	RecordPendingReview(ctx context.Context, err error) error
-}
-
-// recordRefusal gives a stager that keeps records the chance to keep this one,
-// once the transaction is done with. It answers the error either way, so a
-// composition with no recorder refuses exactly as it did before.
-func recordRefusal(ctx context.Context, stager DeliveryStager, err error) error {
-	recorder, ok := stager.(RefusalRecorder)
-	if !ok {
-		return err
-	}
-	return recordRefusalOn(ctx, recorder, err)
-}
-
-// recordChannelRefusal is the same offer to the channel stager, which is a
-// different interface carrying the same optional seam.
-func recordChannelRefusal(ctx context.Context, stager ChannelDeliveryStager, err error) error {
-	recorder, ok := stager.(RefusalRecorder)
-	if !ok {
-		return err
-	}
-	return recordRefusalOn(ctx, recorder, err)
-}
-
-// recordRefusalOn is the shared body both transports call once they hold a
-// recorder. A refusal recorded on mail and one recorded on a channel answer
-// the same rule because they run the same code.
-func recordRefusalOn(ctx context.Context, recorder RefusalRecorder, err error) error {
-	if err == nil {
-		return nil
-	}
-	return recorder.RecordPendingReview(ctx, err)
 }
 
 // DeliveryRequest is one message handed to the delivery machinery. Message
@@ -200,11 +162,36 @@ type DeliveryRequest struct {
 	// request rather than rebuilt by the stager: the recipients, the anchor and
 	// the content are all known HERE, and a stager that re-derived them would
 	// be a second reading of the same message.
-	Authorization  commsauthz.Request
-	ConsentPurpose string
-	InReplyTo      string   // unbracketed; empty starts a conversation
-	References     []string // unbracketed ancestry, oldest first
-	ThreadKey      string
+	Authorization commsauthz.Request
+	// ResumingIntentID names the held scheduled_send this message is being
+	// resumed from, when it is one. It exists so the staging path can find the
+	// recorded decision standing over that held message: an instruction is
+	// given against a review, and a review names the intent.
+	//
+	// Empty for every ordinary send, which is every send that was never
+	// refused. A named intent does not by itself authorize anything — it is
+	// where to look, not permission — and a message with no live instruction
+	// behind it is refused exactly as it would have been.
+	ResumingIntentID ids.UUID
+	// AuthoredSubject, AuthoredBody and AuthoredHTML are the text the HUMAN
+	// wrote, carried beside the rendered Subject/Body/HTMLBody above.
+	//
+	// THE TWO DIFFER AND THE DIFFERENCE MATTERS HERE. Body is what goes on the
+	// wire, with the signature and the unsubscribe footer already applied; a
+	// footer carries a withdrawal link minted for this send, so the rendered
+	// text is never the same twice. What a human acknowledged when they
+	// decided to send a refused message is the text they read, and comparing
+	// their decision against a freshly rendered body would find every message
+	// changed.
+	//
+	// Empty on an ordinary send, which needs no such comparison.
+	AuthoredSubject string
+	AuthoredBody    string
+	AuthoredHTML    string
+	ConsentPurpose  string
+	InReplyTo       string   // unbracketed; empty starts a conversation
+	References      []string // unbracketed ancestry, oldest first
+	ThreadKey       string
 	// ListUnsubscribe is the RFC 8058 header VALUE (bracketed URL). The
 	// companion List-Unsubscribe-Post value is fixed by the RFC at
 	// "List-Unsubscribe=One-Click", so it is rendered at the wire from this
@@ -228,7 +215,7 @@ func MintMessageID(domain string) string {
 // AUTHORIZATION REFUSES BEFORE CONSENT ANSWERS. A caller with no rights over
 // the anchor must get the row-scope answer and nothing else — a 500 that names
 // the delivery wiring, or a consent verdict, both tell them something about a
-// record and a person they may not read. Every guard is fail-closed; only
+// record and a contact they may not read. Every guard is fail-closed; only
 // their order carries this rule, which is why they are one function and not
 // scattered through the send.
 // It RETURNS the provider it resolved, so the send that follows uses the very
@@ -246,7 +233,7 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// and an empty addressee line.
 	//
 	// The consent gate does refuse a wholly empty list, but with
-	// ErrConsentNotGranted — which reads as "this person opted out" for a call
+	// ErrConsentNotGranted — which reads as "this contact opted out" for a call
 	// that named nobody at all. A FieldFault pointing at `to` is the difference
 	// between a caller who can fix their argument and one who goes looking for
 	// a consent record that was never the problem.
@@ -340,7 +327,7 @@ func (s *Store) messageIDDomain() string {
 // toRecipients returns the To: addresses: the merged consent list with the
 // Cc addresses taken out. SendEmailInput.Recipients is the merged superset
 // (consent is owed to every addressee), so rendering it as To: would copy
-// every cc'd person twice. Addresses are matched case- and space-
+// every cc'd contact twice. Addresses are matched case- and space-
 // insensitively, the way a mail server treats them.
 func toRecipients(recipients, cc, bcc []string) []string {
 	if len(cc) == 0 && len(bcc) == 0 {

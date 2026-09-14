@@ -83,7 +83,7 @@ func TestTheHolderOfATaskReachesTheRow(t *testing.T) {
 }
 
 // An unheld task carries no holder rather than a zero uuid. A zero id is a
-// value a client would try to resolve to a person, and it names nobody.
+// value a client would try to resolve to a contact, and it names nobody.
 func TestAnUnheldTaskCarriesNoHolderRatherThanAZeroOne(t *testing.T) {
 	item := taskItem(Task{
 		ID:      ids.NewV7(),

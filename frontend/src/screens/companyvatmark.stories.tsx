@@ -30,20 +30,20 @@ const meta: Meta<typeof VatMark> = {
 export default meta;
 
 type Story = StoryObj<typeof VatMark>;
-type VatCheck = components["schemas"]["OrganizationVatCheck"];
+type VatCheck = components["schemas"]["CompanyVatCheck"];
 
-const ORG_ID = "00000000-0000-7000-8000-0000000000a1";
+const COMPANY_ID = "00000000-0000-7000-8000-0000000000a1";
 const NUMBER = "DE811907980";
-const ROUTE = `GET /organizations/${ORG_ID}/vat-check`;
-const ASK = `POST /organizations/${ORG_ID}/vat-check`;
+const ROUTE = `GET /companies/${COMPANY_ID}/vat-check`;
+const ASK = `POST /companies/${COMPANY_ID}/vat-check`;
 
 // The grant the ask gates on. Without it every story renders as a viewer who
 // may not write, and the button is absent for the correct reason — the
 // omission story-utils' own comment warns is invisible.
-const CAN_WRITE = meRoute({ organization: ["read", "update"] });
+const CAN_WRITE = meRoute({ company: ["read", "update"] });
 
 const CHECKED: VatCheck = {
-  organization_id: ORG_ID,
+  company_id: COMPANY_ID,
   vat_number: NUMBER,
   status: "valid",
   consultation_number: "WAPIAAAAXk3rN2p9",
@@ -62,7 +62,7 @@ function inRow(stated: string, canAsk = true) {
         <span className="t-label">Register / USt-IdNr.</span>
         <div>
           {stated}
-          <VatMark orgId={ORG_ID} stated={stated} canAsk={canAsk} />
+          <VatMark companyId={COMPANY_ID} stated={stated} canAsk={canAsk} />
         </div>
       </div>
     </StoryProviders>
@@ -192,7 +192,7 @@ export const AskedAndWaiting: Story = {
 export const WithoutTheGrantToAsk: Story = {
   render: () => {
     installFetchStub({
-      "GET /me": meRoute({ organization: ["read"] }),
+      "GET /me": meRoute({ company: ["read"] }),
       [ROUTE]: () => jsonResponse(CHECKED),
     });
     return inRow(NUMBER);

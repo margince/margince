@@ -68,6 +68,29 @@ func TestThePublishedDocumentCarriesASectionPerWrite(t *testing.T) {
 	}
 }
 
+// The resource and the tool seam serve the SAME bytes.
+//
+// Two doors onto one document is the point of publishing it at all: a client
+// that reads resources and a tools-only caller must be told the same write
+// vocabulary. Two renderings would agree today and drift the first time one
+// grew a note.
+func TestTheRecordFieldsResourceAndTheSeamServeTheSameBytes(t *testing.T) {
+	ctx := context.Background()
+
+	viaSeam, err := RecordFieldsResource{}.RecordFieldsDocument(ctx)
+	if err != nil {
+		t.Fatalf("composing through the seam: %v", err)
+	}
+	viaResource, err := RecordFieldsResource{}.ReadResource(ctx, RecordFieldsURI)
+	if err != nil {
+		t.Fatalf("reading through the resource: %v", err)
+	}
+	if viaResource.Text != string(viaSeam) {
+		t.Errorf("the two doors serve different bytes.\nresource: %s\nseam:     %s",
+			viaResource.Text, viaSeam)
+	}
+}
+
 // Every other URI is not found — the same answer a URI the caller cannot see
 // gets, so this resource hides existence exactly as the rest of the surface
 // does.
@@ -203,7 +226,7 @@ func TestTheCustomFieldNoteNamesTheTypesThatTakeNone(t *testing.T) {
 	}
 }
 
-// Both writes say what an organization's description is FOR.
+// Both writes say what a company's description is FOR.
 //
 // The field's shape says "string" and nothing else, so a caller holding a
 // meeting transcript writes a summary of the MEETING into the company header —

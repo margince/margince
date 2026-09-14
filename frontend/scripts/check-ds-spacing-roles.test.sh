@@ -12,7 +12,7 @@
 #   2. the exempt shapes stay silent — a zero reset, a role token spelled
 #      correctly, an element inside a named surface, a screen's own class
 #      nested in a primitive, a waiver. A gate that fires on correct code
-#      teaches people to stop reading it, which costs more than the misses it
+#      teaches contacts to stop reading it, which costs more than the misses it
 #      prevents;
 #   3. the primitive corpus is DERIVED from the design system rather than
 #      listed in the gate. A primitive invented inside the fixture — a name

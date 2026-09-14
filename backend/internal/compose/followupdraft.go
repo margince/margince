@@ -7,7 +7,7 @@ package compose
 // email, propose the reply itself rather than a task to write one.
 //
 // A task says "follow up on this". A drafted reply says it in words the rep
-// reads and sends. Only the second is something a person can finish in the
+// reads and sends. Only the second is something a contact can finish in the
 // morning inbox, and only an email thread makes it possible — a call or a
 // meeting has no thread to answer and no address to answer it at, so those
 // keep the task proposal.
@@ -79,7 +79,7 @@ type followUpReplySeam interface {
 //
 // A thread with no resolvable counterparty is the honest failure here, and it
 // is not an error: an internal note, a message whose sender never became a
-// person, or a thread the pass may read but whose address it may not. The
+// contact, or a thread the pass may read but whose address it may not. The
 // caller falls back to the task proposal, so the rep is still told about the
 // deal — they simply get "write a follow-up" instead of a draft to send.
 func draftFollowUpReply(

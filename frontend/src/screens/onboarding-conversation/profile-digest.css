@@ -2,7 +2,7 @@
    document a reader reads it as when they ask for the whole record. Reading
    matter either way, so it is set as prose rather than as a table of rows: a
    record somebody is about to stand behind should read like something a
-   person wrote. */
+   contact wrote. */
 
 /* ---- the companion ---- */
 
@@ -85,7 +85,7 @@
   font-size: var(--fs-eyebrow);
 }
 
-/* No page behind it: typed by a person, or carried in from a profile that was
+/* No page behind it: typed by a contact, or carried in from a profile that was
    already there. Named rather than left blank, because "everything here is
    sourced" is only true if the exceptions say so. */
 .pdigest-yours {

@@ -15,7 +15,7 @@ var draftEmailCopy = toolCopy{
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
 		"sends a reply, send_account_email a first message.",
 	Retain: "Keep what comes back — subject, body, and the activity_id or links echoed with it; " +
-		"the send takes them. Re-writing the text in between means a person approves one " +
+		"the send takes them. Re-writing the text in between means a human approves one " +
 		"message and another goes out.",
 }
 
@@ -28,7 +28,7 @@ var draftFollowUpsForCopy = toolCopy{
 	Instead: "Use draft_email for one specific conversation; this tool answers \"chase everything " +
 		"that is slipping\", not \"reply to this\".",
 	Retain: "Each draft comes back with its deal_id and draft_activity_id — those are how a " +
-		"person finds the drafts to review.",
+		"contact finds the drafts to review.",
 }
 
 var sendEmailCopy = toolCopy{
@@ -76,7 +76,12 @@ var sendMessageCopy = toolCopy{
 var checkAvailabilityCopy = toolCopy{
 	Purpose: "Find when a host is free, so a time can be proposed to someone.",
 	Limits: "It reads free/busy over the window you ask for and books nothing. It answers for one " +
-		"host — the acting user unless another is named — not for the invitees.",
+		"host — the acting user unless another is named — not for the invitees. `calendar_backing` says " +
+		"what the window rests on: with no calendar connected the slots are only what meetings " +
+		"recorded in this CRM leave open, and for a host who is NOT the acting seat it is `unknown`, " +
+		"because another colleague's connector state is theirs. Unless it says `calendar`, a free window " +
+		"is no evidence the host is free, and none at all that a meeting they told you about is " +
+		"missing from their diary.",
 	Instead: "Use book_meeting once a time is chosen, and prep_for_meeting when a meeting already " +
 		"exists and the goal is walking in ready.",
 	Retain: "Keep the exact start and end of the slot you intend to take; book_meeting takes " +
@@ -98,8 +103,8 @@ var bookMeetingCopy = toolCopy{
 }
 
 var enrichCopy = toolCopy{
-	Purpose: "Learn about an organization by reading its public website, and propose what was " +
-		"found for a person to accept onto the record.",
+	Purpose: "Learn about a company by reading its public website, and propose what was " +
+		"found for a contact to accept onto the record.",
 	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing " +
 		"lands on the record until someone accepts it, which is the review that guards this, not " +
 		"an approval on the call. " +
@@ -108,6 +113,6 @@ var enrichCopy = toolCopy{
 		"a fact this workspace has verified.",
 	Instead: "Use qualify_lead when the missing values are already derivable from the record " +
 		"itself, which costs no external read and needs no approval.",
-	Retain: "Keep the organization_id you enriched, and the read id when a whole-site read was " +
+	Retain: "Keep the company_id you enriched, and the read id when a whole-site read was " +
 		"queued — the result is collected against it later.",
 }

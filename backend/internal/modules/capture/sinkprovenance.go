@@ -40,7 +40,7 @@ func connectorPrincipalID(name string) string {
 // The connector alone was not enough to say anything useful. Two colleagues
 // who have both connected Gmail produce rows stamped identically, so nothing
 // downstream could tell whose mailbox a message came from — the provenance
-// named the software rather than the person, and any later attempt to
+// named the software rather than the contact, and any later attempt to
 // attribute history had to guess or decline.
 //
 // It is derived from the authenticated principal, never from the record the

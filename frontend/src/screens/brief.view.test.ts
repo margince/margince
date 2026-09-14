@@ -37,7 +37,7 @@ describe("the Brief's address", () => {
     }
   });
 
-  // An address is something a person types, a link carries from an older build,
+  // An address is something a human types, a link carries from an older build,
   // and a colleague sends from a seat with wider reach. None of those may
   // produce a broken page.
   it("falls back rather than breaking on a value it does not know", () => {
@@ -89,4 +89,21 @@ describe("the Brief's address", () => {
       }
     }
   });
+});
+
+it("changing Brief views preserves the queue's independent address", () => {
+  const queue = new Map([
+    ["queue_scope", "unassigned"],
+    ["owner", "colleague"],
+    ["filter", "tasks"],
+    ["selected", "task-123"],
+  ]);
+  const weekly = paramsFor(
+    { view: "weekly", scope: "team", week: "2026-09-07" },
+    queue,
+  );
+  const morning = paramsFor(DEFAULT_ADDRESS, weekly);
+  expect(morning).toEqual(queue);
+  expect(weekly.get("view")).toBe("weekly");
+  expect(weekly.get("scope")).toBe("team");
 });

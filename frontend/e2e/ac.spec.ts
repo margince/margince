@@ -93,7 +93,7 @@ test.beforeEach(async ({ page }) => {
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
 
 const CORE_SCREENS = [
-  "brief",
+  "home",
   "contacts",
   "companies",
   "deals",
@@ -227,12 +227,12 @@ async function pageOverflow(page: Page): Promise<string[]> {
  * The one account affordance, at the foot of the sidebar.
  *
  * Scoped to the top bar's trailing cluster rather than found by name alone:
- * WHERE it is is half of what the restructure promises — the person sits at the
+ * WHERE it is is half of what the restructure promises — the contact sits at the
  * end of the session strip, opposite the trail that says where you are — and a
  * second account control appearing anywhere else would still satisfy a bare
  * name lookup. The name itself is deliberately a substring: the trigger carries
  * who is signed in into its accessible name (WCAG 2.5.3), so it reads
- * "<person> — Konto".
+ * "<contact> — Konto".
  */
 function accountTrigger(page: Page) {
   return page.locator(".topbar .topbar-trail").getByRole("button", {
@@ -240,47 +240,40 @@ function accountTrigger(page: Page) {
   });
 }
 
-// The canonical ten, in order: Brief alone, then records / work / intelligence.
-// Not upstream's set: Automations is not a destination here (it is set-and-forget
-// configuration on Settings → AI). These are the TRANSLATED words a person
-// reads rather than the route ids the router matches — `home` presents as
-// Briefing, and no row here may be satisfied by its slug.
-//
-// The count and the list are both spelled out on purpose. NAV_GROUPS in
-// src/app/nav.ts is the source of the rail; deriving this from it would assert
-// only that the rail renders itself, so a destination added there is meant to
-// fail here until somebody says what a person now reads and where.
-//
-// Arbeitsliste LEADS the work group and is the only door to the work that waits
-// on a person: decisions to answer, tasks to finish and duplicates to merge are
-// lanes inside it rather than rows of their own.
-test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
+// The translated destinations are an acceptance expectation, independent of
+// NAV_GROUPS: importing production's list would only prove it renders itself.
+// Home owns the work queue; the queue opens in a drawer rather than occupying
+// a second sidebar destination.
+const primaryDestinations = [
+  "Startseite",
+  "Kontakte",
+  "Firmen",
+  "Leads",
+  "Deals",
+  "Projekte",
+  "Filter & Ansichten",
+  "Analytics",
+  "Margince fragen",
+];
+
+test("AC-shell-1: the rail renders the primary destinations in order", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   // evaluateAll never waits — anchor on the rendered count first, or the
   // read races the auth splash and sees an empty rail.
   // Scoped to the level the panel is showing: the DESTINATIONS are its rows,
   // while the foot's Settings door rides the same `.navitem` geometry without
   // being one of them.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
   const labels = await page
     .locator("nav.rail .navlevel a.navitem")
     .evaluateAll((links) =>
       links.map((link) => link.getAttribute("aria-label")),
     );
-  expect(labels).toEqual([
-    "Briefing",
-    "Kontakte",
-    "Firmen",
-    "Leads",
-    "Deals",
-    "Arbeitsliste",
-    "Projekte",
-    "Filter & Ansichten",
-    "Analytics",
-    "Margince fragen",
-  ]);
+  expect(labels).toEqual(primaryDestinations);
 });
 
 test("AC-shell-2: exactly one rail item is active and tracks the route", async ({
@@ -341,7 +334,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await page.locator("body").click();
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
@@ -355,7 +348,7 @@ test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async
 });
 
 test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   const topbar = page.locator(".topbar");
   // One search affordance in the product, and it is the centre of the session
   // strip. A BUTTON, never a field: the palette owns the query, and a second
@@ -367,10 +360,12 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
   ).toBeVisible();
   // And it is not a destination of its own — the links AC-shell-1 counts are
   // unchanged by search leaving the sidebar.
-  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(10);
+  await expect(page.locator("nav.rail .navlevel a.navitem")).toHaveCount(
+    primaryDestinations.length,
+  );
 });
 
-// The account menu carries what belongs to the PERSON rather than to the page:
+// The account menu carries what belongs to the CONTACT rather than to the page:
 // the one door into Settings, the appearance they read in, and the way out. It
 // is the product's only settings door now — the sidebar carries destinations and
 // nothing else — so a second one appearing anywhere is the regression, not a
@@ -382,7 +377,7 @@ test("AC-shell-7: the top bar's search opens the palette", async ({ page }) => {
 test("features/10 §7: the account menu holds the settings door, the appearance choice and the way out", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await accountTrigger(page).click();
   const menu = page.locator(".topbar [role='menu']").first();
   await expect(
@@ -411,9 +406,9 @@ test("features/10 §7: the account menu holds the settings door, the appearance 
 test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   page,
 }) => {
-  await page.goto("/#/brief");
+  await page.goto("/#/home");
   await expect(page.locator('nav.rail a[aria-label="Kontakte"]')).toBeVisible();
-  // The language is a preference of this person rather than a destination, so it
+  // The language is a preference of this contact rather than a destination, so it
   // lives on Settings → Account; the account block at the sidebar foot carries
   // the three places it can take you and nothing that changes a setting. Three
   // locales ship, so the control is a list rather than a toggle — a toggle
@@ -927,8 +922,8 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
 
 // The decision queue lives on Today now, one decision at a time: the focus lane
 // draws the staged proposal through the same ApprovalRow the retired Decisions
-// screen used, so the verb a person presses is unchanged and this asserts it
-// where a person now finds it.
+// screen used, so the verb a contact presses is unchanged and this asserts it
+// where a contact now finds it.
 test("AC-inbox: the staged decision is on the day's queue", async ({
   page,
 }) => {
@@ -1031,9 +1026,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
   // The audit log is the trail that proves the consent, retention and DSR
   // surfaces were honoured, on its own page because it answers to `audit_log`
   // where those answer to the consent registry and the retention policy. It
-  // names the PERSON behind each entry (AuditEntryLine, PD-002): the
+  // names the CONTACT behind each entry (AuditEntryLine, PD-002): the
   // signed-in human reads "Du", and a machine acting under someone's authority
-  // reads as THAT PERSON with the tool as a qualifier. An agent's own id is
+  // reads as THAT CONTACT with the tool as a qualifier. An agent's own id is
   // never the label — attribution exists so somebody can be asked about a
   // change, and an identifier cannot be asked anything.
   await page.goto("/#/settings/audit");
@@ -1072,9 +1067,9 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({
   page,
 }) => {
-  // Agent passports are a credential the PERSON holds, so they live on the
+  // Agent passports are a credential the COLLEAGUE holds, so they live on the
   // "Your agents" entry beside autonomy and the tool catalog — not on the
-  // organization's AI page, which is spend, model prices and automations.
+  // company's AI page, which is spend, model prices and automations.
   await page.goto("/#/settings/agents");
   await expect(page.getByText("Marcus' Claude", { exact: true })).toBeVisible();
   const revoked = page.locator('[data-passport="pp-2"]');
@@ -1232,7 +1227,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     page,
   }) => {
     // The native seed (this file's global beforeEach) never renders it.
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await expect(page.locator(".badge-accent")).toHaveCount(0);
 
     // Same route both times, so a plain goto would be a same-document hash
@@ -1258,10 +1253,10 @@ test.describe("B-EP09.23: overlay mode", () => {
     await page.goto("/#/settings/integrations");
     await expect(page.getByText("Verbunden", { exact: true })).toBeVisible();
     await expect(page.getByText(/eu1/)).toBeVisible();
-    // Per-object sync rows: person + organization landed fresh; deal is still
+    // Per-object sync rows: contact + company landed fresh; deal is still
     // catching up — three distinct rows, not a collapsed summary.
-    await expect(page.getByText("person", { exact: true })).toBeVisible();
-    await expect(page.getByText("organization", { exact: true })).toBeVisible();
+    await expect(page.getByText("contact", { exact: true })).toBeVisible();
+    await expect(page.getByText("company", { exact: true })).toBeVisible();
     await expect(page.getByText("deal", { exact: true })).toBeVisible();
     await expect(page.getByText("Aktuell")).toHaveCount(2);
     await expect(page.getByText("Sync ausstehend")).toBeVisible();
@@ -1276,22 +1271,17 @@ test.describe("B-EP09.23: overlay mode", () => {
   test("AC-overlay-3: an ordinary edit succeeds in overlay mode — the mirror write-back seam accepts it", async ({
     page,
   }) => {
-    // Update writes back through the incumbent seam and succeeds
-    // (overlay/provider_writes.go) — so the deal 360's Edit affordance
-    // renders in overlay too (deals.tsx's DealBadges) and this drives it for
-    // real: click Edit, change the name, save, and see the 360 render the
-    // saved value — the same click path AC-deal-* exercises in native mode.
+    // Inline edits use the same write-back seam in overlay mode.
     await mockApi(page, { sor: "overlay" });
     await page.goto("/#/deals/d-fleet");
-    await page.getByTestId("edit-record").click();
-    const name = page.getByLabel("Deal-Name *");
-    // Wait for the modal's own prefill to land before typing over it — the
-    // form seeds its fields from the fetched record on open, and typing
-    // into it before that commits races the prefill, not the write-back
-    // this test is about.
+    await page.getByRole("button", { name: "Details", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Deal-Name ändern", exact: true })
+      .click();
+    const name = page.getByRole("textbox", { name: "Deal-Name", exact: true });
     await expect(name).toHaveValue("Fleet retrofit");
     await name.fill("Fleet retrofit — expanded scope");
-    await page.getByRole("button", { name: "Speichern" }).click();
+    await name.press("Enter");
     // The record's own heading, by ROLE — which is what "the edit landed"
     // means, and what stays true when a panel, a toast or a breadcrumb also
     // carries the name. The agent line in the rail already does: it says what
@@ -1418,7 +1408,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     await page.getByRole("button", { name: "Trennen" }).click();
     await expect(
       page.getByText(
-        "Dies löscht die gespiegelten Daten und schaltet die Organisation zurück auf native Datensätze.",
+        "Dies löscht die gespiegelten Daten und schaltet die Firma zurück auf native Datensätze.",
         { exact: false },
       ),
     ).toBeVisible();
@@ -1484,7 +1474,7 @@ test.describe("B-EP09.23: overlay mode", () => {
     const unavailable = "In der HubSpot-Ansicht nicht verfügbar";
     const errorBox = "Konnten diese Ansicht nicht laden.";
 
-    // Person 360 (overview tab, the default): timeline, relationship
+    // Contact 360 (overview tab, the default): timeline, relationship
     // strength, the who-knows-them card, and the related-records context panel
     // each read a native capability the mirror doesn't hold. The interaction
     // projection is folded from natively captured participants, so an overlay
@@ -1499,12 +1489,12 @@ test.describe("B-EP09.23: overlay mode", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
     ).toBeVisible();
-    // The person page V2 states a withheld section in its own vocabulary rather
+    // The contact page V2 states a withheld section in its own vocabulary rather
     // than the SoR-specific copy the other 360s use, so what is asserted here is
     // what it actually promises today: the page renders, and no panel degrades
     // into an error box. That it cannot yet say "HubSpot does not carry this" —
     // a different fact from "you may not see this" — is issue #882.
-    await expect(page.getByTestId("person-readings")).toBeVisible();
+    await expect(page.getByTestId("contact-readings")).toBeVisible();
     await expect(page.getByText(errorBox)).toHaveCount(0);
 
     // Deal 360: timeline, coverage, offers, the context panel, and the buying
@@ -1574,7 +1564,7 @@ test.describe("§3.8: 390px mobile", () => {
   // 12vh with a 320px list had about two rows left under a software keyboard.
   // Its rows are thumb targets, which is the half a screenshot cannot assert.
   test("the palette is a workable sheet at 390px", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -1690,17 +1680,20 @@ test.describe("§3.8: 390px mobile", () => {
     await expect(page.locator(".worklist-list li").first()).toBeVisible();
 
     // Nothing to answer until it is opened: the queue draws no verdict button.
-    await expect(page.getByRole("button", { name: "Übernehmen" })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: "E-Mail freigeben", exact: true }),
+    ).toHaveCount(0);
 
     await page.getByRole("button", { name: "Entscheiden" }).first().click();
 
-    const decision = page.getByRole("dialog");
+    const decision = page.getByRole("dialog", {
+      name: "Deine Entscheidung",
+      exact: true,
+    });
     await expect(decision).toBeVisible();
     // The same card the record page draws, with its verdicts on it.
     await expect(
-      decision.getByRole("button", { name: "Übernehmen" }),
+      decision.getByRole("button", { name: "E-Mail freigeben", exact: true }),
     ).toBeVisible();
   });
 
@@ -1851,7 +1844,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel opens clear of the bar and fits 390px", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1886,7 +1879,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("AC-shell-8: the agent's panel states what the agent can reach", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1905,7 +1898,7 @@ test.describe("§3.8: 390px mobile", () => {
   test("the agent's panel closes on Escape and hands focus back to the orb", async ({
     page,
   }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
@@ -1929,7 +1922,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
   test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
 
   test("no AA violations with the agent's panel open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.getByRole("button", { name: "Expand the agent panel" }).click();
@@ -2213,7 +2206,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // every axe pass above measures a page with the dialog closed, so the
   // surface a reader reaches from any screen in the product was unmeasured.
   test("no AA violations with the command palette open", async ({ page }) => {
-    await page.goto("/#/brief");
+    await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
     await page.keyboard.press("ControlOrMeta+k");
@@ -2297,7 +2290,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // the fixed nav surface — so it gets its own test rather than reshaping that
   // list for one parameterised route.
   //
-  // This mock harness has no /organizations/{id}/360 route, and its fallback
+  // This mock harness has no /companies/{id}/360 route, and its fallback
   // answers an empty PAGE with 200 rather than 404 — so the read the record
   // depends on for its strip, tabs bodies and rail succeeds with a body that
   // carries none of the fields a 360 promises. The page renders in its own
@@ -2643,8 +2636,8 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // means the same thing on an idle laptop and on a CI box running six other jobs,
 // which no reading of a clock does.
 //
-// This case bounds `GET /people/{id}`, and the title says so because that is the
-// read it holds. The heading itself comes from `/people/{id}/360` — a record
+// This case bounds `GET /contacts/{id}`, and the title says so because that is the
+// read it holds. The heading itself comes from `/contacts/{id}/360` — a record
 // head that draws before ITS own read returns is the wider claim, and #2864
 // carries it, product half first.
 //
@@ -2653,7 +2646,7 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 // shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
 // a throttled Fast-3G profile — the harder of the two conditions, so a budget
 // that holds there holds unthrottled by construction.
-test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
+test("PERF-1: a record's heading does not wait on GET /contacts/{id}", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
@@ -2669,7 +2662,7 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   // itself. `readStarted` is what tells the two apart.
   let readStarted = false;
   let readAnswered = false;
-  await page.route("**/people/p-anna", async (route) => {
+  await page.route("**/contacts/p-anna", async (route) => {
     readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;
@@ -2682,10 +2675,10 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   // and the assertion times out as a phantom failure (twice-seen CI flake).
   await page.waitForLoadState("networkidle");
   // The list row that carries the name, by ROLE: the contacts list draws a
-  // person as a table row, and a bare text match would also take any other
+  // contact as a table row, and a bare text match would also take any other
   // element that legitimately repeats the name (the agent panel's spoken line,
   // a bulk-select label) without saying which one it clicked. Substring on
-  // purpose — a row's accessible name is every cell of it joined, so the person's
+  // purpose — a row's accessible name is every cell of it joined, so the contact's
   // name is a fragment of it by construction and `exact` could never match.
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
@@ -2715,7 +2708,7 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
 // naming a criterion whose text nobody here can read would assert whatever I
 // guessed it said.
 test.describe("filters and views", () => {
-  // Every clause below is authored the way a person authors one — through the
+  // Every clause below is authored the way a contact authors one — through the
   // picker — rather than by seeding a tree in code. "A human can build this" is
   // the claim, and a tree set in code is one no human went through.
   async function authorIndustryIs(page: Page) {
@@ -2742,7 +2735,7 @@ test.describe("filters and views", () => {
     await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
 
     // The field picker is the SERVER's vocabulary, not a list this screen keeps:
-    // `industry` and `lifecycle` are organization fields, `tag` is the leaf that
+    // `industry` and `lifecycle` are company fields, `tag` is the leaf that
     // is an EXISTS over a join rather than a column, and none of them is
     // spelled anywhere in the frontend.
     await page.getByRole("combobox", { name: "Feld" }).click();
@@ -3044,7 +3037,7 @@ test.describe("stage automation, in German", () => {
     await page.goto("/#/settings/stageautomation");
     await page.waitForLoadState("networkidle");
 
-    // "Rückgängig", with the window a person actually has. A screen that
+    // "Rückgängig", with the window a contact actually has. A screen that
     // offered undo without saying how long it lasts leaves somebody to find
     // out by trying it too late.
     await expect(page.getByText(/Rückgängig für 72 h/)).toBeVisible();

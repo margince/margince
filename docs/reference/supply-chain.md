@@ -245,7 +245,7 @@ is no automatic trigger at all. The runner needs only Docker, which
 There is no path filter, because there is no filtered trigger to apply it to.
 
 **Why the `main` push trigger went away.** It fired on every dependency-set
-change that landed, about 48 runs a week, each drawing on the same org-wide
+change that landed, about 48 runs a week, each drawing on the same company-wide
 ceiling of 20 concurrent runners that the PR gates queue in — where a starved
 lane delays a verdict somebody is waiting on. Nothing consumed the output at that
 cadence: this repository has no releases yet, so every run published bundles for

@@ -53,7 +53,7 @@ func TestAnEntryDistinguishesAbsentFromEmpty(t *testing.T) {
 		Outcome:    string(TraceDeferred),
 		Reason:     "",
 		ActivityID: &activityID,
-		Resolution: &TraceResolution{Status: "real", Kind: "person", ResolvedAt: &resolvedAt},
+		Resolution: &TraceResolution{Status: "real", Kind: "contact", ResolvedAt: &resolvedAt},
 		OccurredAt: time.Now().UTC(),
 	})
 

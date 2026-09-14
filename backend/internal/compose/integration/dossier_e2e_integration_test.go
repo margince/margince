@@ -23,10 +23,10 @@ import (
 )
 
 type dossierResponse struct {
-	OrganizationID string `json:"organization_id"`
-	GeneratedBy    string `json:"generated_by"`
-	NeedsRefresh   *bool  `json:"needs_refresh"`
-	Sections       []struct {
+	CompanyID    string `json:"company_id"`
+	GeneratedBy  string `json:"generated_by"`
+	NeedsRefresh *bool  `json:"needs_refresh"`
+	Sections     []struct {
 		Kind      string `json:"kind"`
 		Sentences []struct {
 			Text     string `json:"text"`
@@ -57,11 +57,11 @@ type receiptResponse struct {
 func TestEverySentenceTheDossierWritesCanBeOpened(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
-	seedRequiredProfileFields(t, e, orgID)
+	companyID := createBareCompany(t, e)
+	seedRequiredProfileFields(t, e, companyID)
 
 	var dossier dossierResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/dossier", nil, nil, &dossier); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/dossier", nil, nil, &dossier); status != http.StatusOK {
 		t.Fatalf("GET dossier = %d, want 200", status)
 	}
 	if dossier.GeneratedBy != "deterministic" {
@@ -79,7 +79,7 @@ func TestEverySentenceTheDossierWritesCanBeOpened(t *testing.T) {
 			}
 			for _, cited := range sentence.Evidence {
 				var receipt receiptResponse
-				path := "/v1/organizations/" + orgID + "/evidence/" + cited.EntityType + "/" + cited.EntityID
+				path := "/v1/companies/" + companyID + "/evidence/" + cited.EntityType + "/" + cited.EntityID
 				if status := e.Call(t, "GET", path, nil, nil, &receipt); status != http.StatusOK {
 					t.Errorf("the dossier cited %s %s and the receipt answered %d",
 						cited.EntityType, cited.EntityID, status)
@@ -104,12 +104,12 @@ func TestEverySentenceTheDossierWritesCanBeOpened(t *testing.T) {
 func TestAReceiptForARecordThisCompanyDoesNotHoldIsNotFound(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
-	seedRequiredProfileFields(t, e, orgID)
-	other := createBareOrganization(t, e)
+	companyID := createBareCompany(t, e)
+	seedRequiredProfileFields(t, e, companyID)
+	other := createBareCompany(t, e)
 
 	var mine dossierResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/dossier", nil, nil, &mine); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/dossier", nil, nil, &mine); status != http.StatusOK {
 		t.Fatalf("GET dossier = %d, want 200", status)
 	}
 	// Named rather than indexed into: an empty dossier here means the setup
@@ -122,15 +122,15 @@ func TestAReceiptForARecordThisCompanyDoesNotHoldIsNotFound(t *testing.T) {
 	cited := mine.Sections[0].Sentences[0].Evidence[0]
 
 	// The SAME record id, asked for under a company that does not hold it.
-	path := "/v1/organizations/" + other + "/evidence/" + cited.EntityType + "/" + cited.EntityID
+	path := "/v1/companies/" + other + "/evidence/" + cited.EntityType + "/" + cited.EntityID
 	if status := e.Call(t, "GET", path, nil, nil, nil); status != http.StatusNotFound {
 		t.Errorf("a record of another company answered %d, want 404", status)
 	}
 
 	// And a kind that has no receipt to write.
-	orgPath := "/v1/organizations/" + orgID + "/evidence/organization/" + orgID
-	if status := e.Call(t, "GET", orgPath, nil, nil, nil); status != http.StatusNotFound {
-		t.Errorf("the organization citation answered %d, want 404 — it carries no provenance", status)
+	companyPath := "/v1/companies/" + companyID + "/evidence/company/" + companyID
+	if status := e.Call(t, "GET", companyPath, nil, nil, nil); status != http.StatusNotFound {
+		t.Errorf("the company citation answered %d, want 404 — it carries no provenance", status)
 	}
 }
 
@@ -139,12 +139,12 @@ func TestAReceiptForARecordThisCompanyDoesNotHoldIsNotFound(t *testing.T) {
 func TestADossierOverOldSourcesRendersAndSaysItIsStale(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
-	seedProfileFieldWrittenAt(t, e, orgID, "offer_summary",
+	companyID := createBareCompany(t, e)
+	seedProfileFieldWrittenAt(t, e, companyID, "offer_summary",
 		"Load-shifting software", time.Now().UTC().Add(-400*24*time.Hour))
 
 	var dossier dossierResponse
-	if status := e.Call(t, "GET", "/v1/organizations/"+orgID+"/dossier", nil, nil, &dossier); status != http.StatusOK {
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/dossier", nil, nil, &dossier); status != http.StatusOK {
 		t.Fatalf("GET dossier = %d, want 200", status)
 	}
 
@@ -161,10 +161,10 @@ func TestADossierOverOldSourcesRendersAndSaysItIsStale(t *testing.T) {
 func TestARefreshOverACompanyWithNothingRecordedStillAnswers(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	orgID := createBareOrganization(t, e)
+	companyID := createBareCompany(t, e)
 
 	var refreshed dossierResponse
-	if status := e.Call(t, "POST", "/v1/organizations/"+orgID+"/dossier", nil, nil, &refreshed); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/companies/"+companyID+"/dossier", nil, nil, &refreshed); status != http.StatusOK {
 		t.Fatalf("POST dossier = %d, want 200", status)
 	}
 	if len(refreshed.Sections) != 0 {
@@ -178,14 +178,14 @@ func TestARefreshOverACompanyWithNothingRecordedStillAnswers(t *testing.T) {
 // seedProfileFieldWrittenAt records one machine-read value with an explicit
 // write time, which is what freshness is measured from today.
 func seedProfileFieldWrittenAt(
-	t *testing.T, e *apptest.AppEnv, orgID, field, value string, written time.Time,
+	t *testing.T, e *apptest.AppEnv, companyID, field, value string, written time.Time,
 ) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO organization_profile_field (id, organization_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
+		INSERT INTO company_profile_field (id, company_id, field, value, source, evidence_snippet, source_url, confidence, captured_by, updated_at)
 		VALUES ($1, $2, $3, $4, 'site_read', $5, 'https://voltaq.example/about', 0.9,
 		        'site_read:seed', $6)`,
-		ids.NewV7(), orgID, field, value, value, written); err != nil {
+		ids.NewV7(), companyID, field, value, value, written); err != nil {
 		t.Fatalf("seed profile field %s: %v", field, err)
 	}
 }

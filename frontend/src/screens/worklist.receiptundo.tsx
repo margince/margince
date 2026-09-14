@@ -15,7 +15,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { isEntityKind } from "../app/entity";
+import { useCanWrite } from "../app/capability";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { problemCodeOf, problemMessageOf } from "./common";
@@ -25,6 +25,7 @@ import { type Receipt, worklistKey } from "./worklist.queries";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();
+  const writable = useCanWrite("deal", "update");
   const client = useQueryClient();
   // What the server said when it refused the press. A greyed control with no
   // sentence tells the reader nothing about why their undo did not happen.
@@ -38,6 +39,8 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
       // deals. Refetching only the receipt would leave the page agreeing with
       // itself about a date that had just moved.
       client.invalidateQueries({ queryKey: worklistKey });
+      client.invalidateQueries({ queryKey: ["brief"] });
+      client.invalidateQueries({ queryKey: ["deals"] });
     },
     onError: (error) => {
       const code = problemCodeOf(error);
@@ -64,17 +67,11 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
       <span className="t-caption">{t("worklist.handled.putBackDone")}</span>
     );
   }
-  // Every correction this panel shows is a deal's close date. The subject is
-  // what says WHICH deal, and a receipt that lost it has no record to restore
-  // against — the control is not offered rather than guessing at one.
-  //
-  // The kind is CHECKED rather than cast. The wire's subject union is wider
-  // than the records this app has screens for — `activity` is on it and is the
-  // timeline rather than a 360 record — and the restore route is addressed by
-  // record. A subject naming something else gets no control instead of a
-  // request built on a path that does not exist.
+  // This receipt restores a deal correction; other subject kinds have no
+  // correction engine and cannot borrow its permission or restore route.
+  if (!writable) return null;
   const subject = receipt.subject;
-  if (!subject || !isEntityKind(subject.type)) {
+  if (subject?.type !== "deal") {
     return null;
   }
   const kind = subject.type;
@@ -94,7 +91,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
           })
         }
       >
-        {t("history.undo.action")}
+        {t("common.undo")}
       </Button>
       {refused && <p className="t-caption">{refused}</p>}
     </>

@@ -11,7 +11,7 @@ package capture_test
 // which is right for the table and wrong for the screen above it: a mailbox
 // whose forty-nine strangers all came back noise went on reporting forty-nine
 // messages sent for a verdict and no records not made — the exact opposite of
-// what happened, on the surface a person opens to find out.
+// what happened, on the surface a human opens to find out.
 
 import (
 	"context"
@@ -59,7 +59,7 @@ func TestASettledVerdictMovesTheMessageOutOfTheWaitingCount(t *testing.T) {
 	}
 
 	// And the rows say what the tiles do, which is the half a reader sees first:
-	// a list under a tile reading "no person created" must not be full of rows
+	// a list under a tile reading "no contact created" must not be full of rows
 	// still labelled as sent for a verdict.
 	rows := map[string]int{}
 	for _, entry := range window.Entries {

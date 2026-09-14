@@ -96,7 +96,7 @@ Hand-rolled runner for the ownership namespaces (core, custom, packs), each with
 - **Reach for it when:** applying/rolling back migrations in tooling (usually you just run `cmd/migrate`).
 
 ### `platform/deployconfig` — the installation config (`margince.yaml`)
-Loads the operator's deployment file: the singleton organization, the bootstrap admin,
+Loads the operator's deployment file: the singleton company, the bootstrap admin,
 auth/email/AI/capture posture, and the ordered `company_context.rollout` capability
 (`off < read < tasks < onboarding`; empty resolves to `onboarding`).
 - `Load(path)`, the typed `Config` tree, `EffectiveRollout()`.
@@ -132,7 +132,7 @@ new error string a handler must parse — extend this registry (with the contrac
 ### `shared/kernel/ids` — UUIDv7 identifiers
 Dependency-free so seam signatures don't drag in a UUID library.
 - `type UUID [16]byte`, `Nil`, `NewV7()` (time-ordered), `Parse`, `MustParse`, `String()`, `IsZero()`.
-- Typed ids: `type ID[K]`, `New[K]()`, `From[K](u)`, `ParseAs[K](s)`, and aliases `WorkspaceID`, `UserID`, `PersonID`, `DealID`, … (per-entity phantom types).
+- Typed ids: `type ID[K]`, `New[K]()`, `From[K](u)`, `ParseAs[K](s)`, and aliases `WorkspaceID`, `UserID`, `ContactID`, `DealID`, … (per-entity phantom types).
 - **Reach for it when:** minting or parsing any entity id.
 
 ### `shared/kernel/principal` — per-request identity
@@ -182,7 +182,7 @@ module.**
 | Port | Interface | Role |
 |---|---|---|
 | `authz` | `Resolver { EffectiveRBAC; SeatType }` | live RBAC/seat resolver the auth gate re-derives an agent's authority through (impl: identity) |
-| `datasource` | `SystemOfRecordProvider { Read/Search/Create/Update/Archive/Merge/AdvanceDeal/PromoteLead/StageSemantic/RunReport/Freshness/ListObjects/ListFields }` | the system-of-record seam AI/MCP/UI bind to (impl: the compose `Provider` over people/deals/activities/reports) |
+| `datasource` | `SystemOfRecordProvider { Read/Search/Create/Update/Archive/Merge/AdvanceDeal/PromoteLead/StageSemantic/RunReport/Freshness/ListObjects/ListFields }` | the system-of-record seam AI/MCP/UI bind to (impl: the compose `Provider` over contacts/deals/activities/reports) |
 | `mcp` | `Tool { Spec; Handle }`, `Registry { Register; Invoke; Specs }` | the governed tool contract (`ToolSpec`, `RiskTier` auto_execute/confirmation_required/dynamic, tier resolver) — admission runs before `Handle` |
 | `connector` | `Connector { Descriptor/Authenticate/Sync/Normalize/HealthCheck }`, `Sink { Upsert }` | the capture/integration seam; a connector normalizes, the capture module writes |
 | `model` | `Client { Complete/Stream/Embed/Caps }`, `SecretStripper` | the provider-agnostic LLM seam (model choice is config, not architecture) |

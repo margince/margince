@@ -9,7 +9,7 @@ import "fmt"
 //
 // The repo's lint baseline forbids fmt.Print* in favour of slog, and it is right
 // to everywhere else: structured output is what a log collector reads. This is
-// the one place that rule does not fit. A person double-clicks a starter and
+// the one place that rule does not fit. A contact double-clicks a starter and
 // watches a console window; what they need to read is
 //
 //	Margince is running at  http://127.0.0.1:8800

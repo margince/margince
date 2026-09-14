@@ -194,12 +194,19 @@ func (s *Store) advanceOnTx(
 		// trajectory view must say what the odds WERE (the amount_at_change
 		// rationale). Won/lost stages carry their semantic 100/0 in the same
 		// column, so terminal moves snapshot too.
+		//
+		// semantic_at_change freezes what the move MEANT, for the same reason
+		// and one the probability cannot carry: an open stage may also sit at
+		// 0 or 100, so the number alone cannot say whether a deal closed. An
+		// administrator may edit a stage's semantic afterwards, and a reader
+		// joining the live stage would then report an old closing as something
+		// it was not.
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id, reversal_of)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			`INSERT INTO deal_stage_history (deal_id, from_stage_id, to_stage_id, changed_by, amount_minor_at_change, currency_at_change, win_probability_at_change, approval_id, reversal_of, semantic_at_change)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			id, ids.UUID(*current.StageId), in.ToStageID, by,
 			current.AmountMinor, current.Currency, winProbability, in.ApprovalID,
-			in.ReversalOf); err != nil {
+			in.ReversalOf, semantic); err != nil {
 			return fmt.Errorf("record stage history: %w", err)
 		}
 
@@ -244,7 +251,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 		AmountMinorAtChange: current.AmountMinor,
 		CurrencyAtChange:    current.Currency,
 		WinProbability:      winProbability,
-		PartnerOrgId:        current.PartnerOrgId,
+		PartnerCompanyId:    current.PartnerCompanyId,
 		FxRateToBase:        frozenFx,
 	}
 	if current.PartnerAttribution != nil {
@@ -268,9 +275,12 @@ func announceStageAdvance(
 	if err != nil {
 		return fmt.Errorf("audit stage advance: %w", err)
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-		dealStageChangedPayload(current, in.ToStageID, status, winProbability,
-			frozenFxFromPatch(p, current))); err != nil {
+	payload := dealStageChangedPayload(current, in.ToStageID, status, winProbability, frozenFxFromPatch(p, current))
+	args := []any{current.StageId, in.ToStageID}
+	if err := tx.QueryRow(ctx, storekit.SQLf(`SELECT (SELECT name FROM stage WHERE id = $%d), (SELECT name FROM stage WHERE id = $%d)`, len(args)-1, len(args)), args...).Scan(&payload.FromStageName, &payload.ToStageName); err != nil {
+		return fmt.Errorf("read the stage names for the change: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload); err != nil {
 		return fmt.Errorf("emit deal.stage_changed: %w", err)
 	}
 	return nil

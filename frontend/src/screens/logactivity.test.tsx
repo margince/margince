@@ -1,4 +1,14 @@
 /** @vitest-environment jsdom */
+// jsdom, alone in this suite, and for one case: "refuses a future day for a
+// note" asserts that a date past the input's `max` does not submit, which is
+// the BROWSER's range validation and not the app's. happy-dom implements
+// neither half of it — `checkValidity()` answers true and `validity.
+// rangeOverflow` is false for a value years past the max — so under it the form
+// posts and the case fails against an environment rather than against the code.
+//
+// The app's half is asserted either way (`max` is today), and rewriting the
+// case to assert only that would drop the half that catches a form submitting
+// around its own rule. One file on the slower environment is the smaller cost.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -13,11 +23,11 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { meFixture } from "../app/mefixture";
 import { RecordZoneProvider } from "../app/recordzone";
+import { useRecordTimeline } from "../design-system/recordtimeline";
 import { pickOption } from "../design-system/select-testing";
 import { calendarDay, middayInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { LocaleProvider } from "../i18n";
-import { PersonScreen } from "./contacts";
 import { LogActivity } from "./logactivity";
 import { groupTask } from "./taskgroup";
 
@@ -78,7 +88,7 @@ const emptyPage = { data: [], page: { next_cursor: null } };
 
 // The dormant/no-interactions strength response — the default backstop for
 // any test below that doesn't itself register a "GET .../strength" route:
-// the Person Overview now fires this GET unconditionally (P-4).
+// the Contact Overview now fires this GET unconditionally (P-4).
 const dormantStrength = {
   score: 0,
   bucket: "none",
@@ -190,7 +200,7 @@ function stubApi(
       // form requires — a spec that needs to withhold it names its own /me.
       if (key === "GET /me") {
         return jsonResponse(
-          meFixture({ allow: { activity: ["create"], person: ["read"] } }),
+          meFixture({ allow: { activity: ["create"], contact: ["read"] } }),
         );
       }
       if (url.pathname.endsWith("/strength")) {
@@ -198,7 +208,7 @@ function stubApi(
       }
       if (url.pathname.endsWith("/context")) {
         return jsonResponse({
-          anchor: { type: "person", id: "p1" },
+          anchor: { type: "contact", id: "p1" },
           sections: [],
         });
       }
@@ -207,7 +217,7 @@ function stubApi(
   );
 }
 
-const person = {
+const contact = {
   id: "p1",
   full_name: "Petra Muster",
   captured_by: "human:u1",
@@ -234,16 +244,16 @@ const createdActivity = (body: unknown) =>
   );
 
 describe("log activity from a 360", () => {
-  it("posts a note linked to the viewed person and refetches the timeline", async () => {
+  it("posts a note linked to the viewed contact and refetches the timeline", async () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "GET /people/p1": () => jsonResponse(person),
+        "GET /contacts/p1": () => jsonResponse(contact),
         "POST /activities": createdActivity,
       },
       captured,
     );
-    render(<PersonScreen id="p1" />);
+    render(<ContactActivity />);
     await userEvent.type(
       await screen.findByLabelText("Subject *"),
       "Call recap",
@@ -261,7 +271,7 @@ describe("log activity from a 360", () => {
       kind: "note",
       subject: "Call recap",
       body: "Agreed next step",
-      links: [{ entity_type: "person", entity_id: "p1" }],
+      links: [{ entity_type: "contact", entity_id: "p1" }],
       source: "manual",
     });
     if (!post) throw new Error("expected a POST /activities to be captured");
@@ -286,7 +296,7 @@ describe("log activity from a 360", () => {
     const captured: Captured[] = [];
     stubApi(
       {
-        "GET /people/p1": () => jsonResponse(person),
+        "GET /contacts/p1": () => jsonResponse(contact),
         "POST /activities": createdActivity,
       },
       captured,
@@ -319,7 +329,7 @@ describe("log activity from a 360", () => {
   // A caller that already knows which verb the reader came to perform hands it
   // over, rather than opening on a note they have to change.
   it("opens on the kind the caller named", async () => {
-    stubApi({ "GET /people/p1": () => jsonResponse(person) });
+    stubApi({ "GET /contacts/p1": () => jsonResponse(contact) });
     render(<LogActivity entityType="lead" entityId="l1" askedKind="call" />);
 
     expect(screen.getByLabelText("Type").textContent).toContain("Call");
@@ -351,7 +361,7 @@ describe("log activity from a 360", () => {
     // zone is the installation's record zone because a note's day is the timeline heading it will
     // file under, and the timeline groups there.
     const dayBeforeRender = calendarDay(new Date(), INSTALLATION_ZONE);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const dayAfterRender = calendarDay(new Date(), INSTALLATION_ZONE);
     // A note's date is the day it happened, live from the start and showing
     // the today that would otherwise be assumed invisibly at submit.
@@ -373,7 +383,7 @@ describe("log activity from a 360", () => {
   it("posts a backdated note's occurred_at inside the picked day", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: PICKED_DAY },
     });
@@ -418,7 +428,7 @@ describe("log activity from a 360", () => {
     const user = userEvent.setup();
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const noteDay = screen.getByLabelText<HTMLInputElement>("Date");
     expect(noteDay.value).toBe("2026-08-22");
     // The ceiling moves with the offer, so the box does not refuse the day it
@@ -438,17 +448,17 @@ describe("log activity from a 360", () => {
     expect(calendarDay(occurred, INSTALLATION_ZONE)).toBe(noteDay.value);
   });
 
-  // A meeting and a call are WITH A PERSON, and the server refuses either one
-  // linked to a company — per link, so naming the company alongside the person
+  // A meeting and a call are WITH A CONTACT, and the server refuses either one
+  // linked to a company — per link, so naming the company alongside the contact
   // is refused too. Opened on a company the form offered no way to say who was
   // there, and the reader met a 422 with no field to correct.
   describe("a meeting logged from a company", () => {
     const contacts = {
-      // full_name, the field the contract sends — a fixture naming a person by
+      // full_name, the field the contract sends — a fixture naming a contact by
       // display_name would pass here and find nothing against the real API.
       data: [
-        { ...person, id: "p1", full_name: "Frédéric de Gombert" },
-        { ...person, id: "p2", full_name: "Marie Lefevre" },
+        { ...contact, id: "p1", full_name: "Frédéric de Gombert" },
+        { ...contact, id: "p2", full_name: "Marie Lefevre" },
       ],
       page: { next_cursor: null },
     };
@@ -457,9 +467,9 @@ describe("log activity from a 360", () => {
       const user = userEvent.setup();
       stubApi({
         "POST /activities": createdActivity,
-        "GET /people": () => jsonResponse(contacts),
+        "GET /contacts": () => jsonResponse(contacts),
       });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
 
@@ -474,17 +484,17 @@ describe("log activity from a 360", () => {
       await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
     });
 
-    it("links the person and NOT the company, which the server refuses", async () => {
+    it("links the contact and NOT the company, which the server refuses", async () => {
       const user = userEvent.setup();
       const captured: Captured[] = [];
       stubApi(
         {
           "POST /activities": createdActivity,
-          "GET /people": () => jsonResponse(contacts),
+          "GET /contacts": () => jsonResponse(contacts),
         },
         captured,
       );
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Subject *"), "Kickoff");
       await user.type(screen.getByLabelText("Who was there"), "Fré");
@@ -503,11 +513,11 @@ describe("log activity from a 360", () => {
       const links = (
         post.body as { links: { entity_type: string; entity_id: string }[] }
       ).links;
-      // One link, the person. An organization link alongside it is refused by
+      // One link, the contact. A company link alongside it is refused by
       // the database trigger whatever else is present, and a frontend test
       // whose POST is stubbed cannot see that refusal — so the shape is
       // asserted here rather than trusted to a green submit.
-      expect(links).toEqual([{ entity_type: "person", entity_id: "p1" }]);
+      expect(links).toEqual([{ entity_type: "contact", entity_id: "p1" }]);
     });
 
     it("files a note on the company after a meeting's attendee was picked", async () => {
@@ -516,18 +526,18 @@ describe("log activity from a 360", () => {
       stubApi(
         {
           "POST /activities": createdActivity,
-          "GET /people": () => jsonResponse(contacts),
+          "GET /contacts": () => jsonResponse(contacts),
         },
         captured,
       );
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Who was there"), "Fré");
       await user.click(
         await screen.findByRole("button", { name: "Frédéric de Gombert" }),
       );
 
-      // Switching kind hides the picker but does not forget the person: the
+      // Switching kind hides the picker but does not forget the contact: the
       // reader answered a question the form stopped asking.
       await pickOption(user, screen.getByLabelText("Type"), "Note");
       expect(screen.queryByLabelText("Who was there")).toBeNull();
@@ -544,15 +554,15 @@ describe("log activity from a 360", () => {
       const links = (
         post.body as { links: { entity_type: string; entity_id: string }[] }
       ).links;
-      // The company, not the contact. A note carries no person rule, so a
+      // The company, not the contact. A note carries no contact rule, so a
       // stale attendee would file it against the contact and take it off the
       // company screen the reader wrote it on.
-      expect(links).toEqual([{ entity_type: "organization", entity_id: "o1" }]);
+      expect(links).toEqual([{ entity_type: "company", entity_id: "o1" }]);
     });
 
     it("asks nobody for a note, which a company can hold on its own", async () => {
       stubApi({ "POST /activities": createdActivity });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       expect(screen.queryByLabelText("Who was there")).toBeNull();
     });
 
@@ -560,10 +570,10 @@ describe("log activity from a 360", () => {
       const user = userEvent.setup();
       stubApi({
         "POST /activities": createdActivity,
-        "GET /people": () =>
+        "GET /contacts": () =>
           jsonResponse({ data: [], page: { next_cursor: null } }),
       });
-      render(<LogActivity entityType="organization" entityId="o1" />);
+      render(<LogActivity entityType="company" entityId="o1" />);
       await pickOption(user, screen.getByLabelText("Type"), "Meeting");
       await user.type(screen.getByLabelText("Who was there"), "any");
       // The picker's own empty-search wording, so a company with nobody on it
@@ -584,7 +594,7 @@ describe("log activity from a 360", () => {
     const user = userEvent.setup();
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     const writersOwnToday = "2026-08-21";
     fireEvent.change(screen.getByLabelText("Date"), {
       target: { value: writersOwnToday },
@@ -605,7 +615,7 @@ describe("log activity from a 360", () => {
   it("refuses a future day for a note but not for a task's due date", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     // Nothing has occurred in the future: for a note the input is capped at
     // today, and a value forced past the cap fails the form's own validation,
     // so the POST never leaves.
@@ -625,7 +635,7 @@ describe("log activity from a 360", () => {
   it("posts a task's due_at as the END of the picked day in the record's zone", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
     fireEvent.change(screen.getByLabelText("Due date"), {
       target: { value: PICKED_DAY },
@@ -641,7 +651,7 @@ describe("log activity from a 360", () => {
     expect(post?.body).toMatchObject({
       kind: "task",
       subject: "Send proposal",
-      links: [{ entity_type: "organization", entity_id: "o1" }],
+      links: [{ entity_type: "company", entity_id: "o1" }],
       source: "manual",
     });
     if (!post) throw new Error("expected a POST /activities to be captured");
@@ -663,7 +673,7 @@ describe("log activity from a 360", () => {
   it("posts a due date the tasks list then buckets as today, not as overdue", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
-    render(<LogActivity entityType="organization" entityId="o1" />);
+    render(<LogActivity entityType="company" entityId="o1" />);
     await pickOption(userEvent.setup(), screen.getByLabelText("Type"), "Task");
     fireEvent.change(screen.getByLabelText("Due date"), {
       target: { value: PICKED_DAY },
@@ -891,7 +901,7 @@ describe("log activity from a 360", () => {
 });
 
 describe("assigning a task at create time", () => {
-  // Two people and an agent seat, so the picker's eligibility is a real filter
+  // Two contacts and an agent seat, so the picker's eligibility is a real filter
   // rather than an empty list agreeing with itself. The agent is who the server
   // refuses as an assignee, so it is the one the picker must not offer.
   const rosterUsers = {
@@ -906,13 +916,13 @@ describe("assigning a task at create time", () => {
   function renderTaskComposer(captured?: Captured[]) {
     stubApi(
       {
-        "GET /people/p1": () => jsonResponse(person),
+        "GET /contacts/p1": () => jsonResponse(contact),
         "GET /users": () => jsonResponse(rosterUsers),
         "POST /activities": createdActivity,
       },
       captured,
     );
-    render(<LogActivity entityType="person" entityId="p1" askedKind="task" />);
+    render(<LogActivity entityType="contact" entityId="p1" askedKind="task" />);
   }
 
   it("carries the chosen assignee on the posted task", async () => {
@@ -948,10 +958,10 @@ describe("assigning a task at create time", () => {
 
   it("offers no assignee on a note, which has nobody to hold it", async () => {
     stubApi({
-      "GET /people/p1": () => jsonResponse(person),
+      "GET /contacts/p1": () => jsonResponse(contact),
       "GET /users": () => jsonResponse(rosterUsers),
     });
-    render(<LogActivity entityType="person" entityId="p1" />);
+    render(<LogActivity entityType="contact" entityId="p1" />);
     await screen.findByLabelText("Subject *");
     expect(screen.queryByLabelText("Assignee")).toBeNull();
   });
@@ -969,3 +979,8 @@ describe("assigning a task at create time", () => {
     ).toBeNull();
   });
 });
+
+function ContactActivity() {
+  useRecordTimeline("contact", "p1");
+  return <LogActivity entityType="contact" entityId="p1" />;
+}

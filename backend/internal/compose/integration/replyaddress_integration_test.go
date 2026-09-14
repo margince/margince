@@ -26,9 +26,9 @@ import (
 type replyParty struct {
 	role    string
 	address string
-	person  *ids.UUID
+	contact *ids.UUID
 	// ours marks a participant as one of this installation's own users, which
-	// is what activity_participant.user_id records and what tells "the person
+	// is what activity_participant.user_id records and what tells "the contact
 	// we are answering" apart from "the colleague who sent it".
 	ours bool
 }
@@ -46,9 +46,9 @@ func seedReplyThread(t *testing.T, e *Env, direction string, parties ...replyPar
 			userID = &id
 		}
 		e.WsExec(t, `
-			INSERT INTO activity_participant (id, activity_id, role, person_id, user_id, address)
+			INSERT INTO activity_participant (id, activity_id, role, contact_id, user_id, address)
 			VALUES ($1, $2, $3, $4, $5, $6)`,
-			ids.NewV7(), activity, p.role, p.person, userID, p.address)
+			ids.NewV7(), activity, p.role, p.contact, userID, p.address)
 	}
 	return ids.From[ids.ActivityKind](activity)
 }
@@ -70,7 +70,7 @@ func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
 }
 
 // The case a `from`-first rank gets wrong. On our own outbound message the
-// sender is us, and the person to answer is the ADDRESSEE.
+// sender is us, and the contact to answer is the ADDRESSEE.
 func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
 	e := Setup(t)
 	anchor := seedReplyThread(t, e, "outbound",
@@ -83,31 +83,31 @@ func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
 		t.Fatalf("ReplyAddressFor → %v, want the addressee", err)
 	}
 	if got == "rep@ourcompany.test" {
-		t.Fatal("the reply was addressed to our own sender — this message would have gone back to the person who wrote it")
+		t.Fatal("the reply was addressed to our own sender — this message would have gone back to the contact who wrote it")
 	}
 	if got != "anna@example.com" {
 		t.Errorf("reply address = %q, want the counterparty %q", got, "anna@example.com")
 	}
 }
 
-// A participant recorded by identity alone falls back to the person's PRIMARY
+// A participant recorded by identity alone falls back to the contact's PRIMARY
 // email, and "primary" has to mean the flag rather than whichever row the
 // planner emitted first. A contact with a personal address on file and a work
 // one marked primary must be answered at work.
 func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
 	e := Setup(t)
-	person := e.SeedPerson(t, "Anna Weber", nil)
+	contact := e.SeedContact(t, "Anna Weber", nil)
 	// Inserted with the NON-primary first, so a query that ignores the flag
 	// returns this one on insertion order and the test fails loudly.
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, position, source, captured_by)
-		VALUES ($1, 'anna.private@example.com', false, 0, 'test', 'human:seed')`, person)
+		INSERT INTO contact_email (contact_id, email, is_primary, position, source, captured_by)
+		VALUES ($1, 'anna.private@example.com', false, 0, 'test', 'human:seed')`, contact)
 	e.WsExec(t, `
-		INSERT INTO person_email (person_id, email, is_primary, position, source, captured_by)
-		VALUES ($1, 'anna@work.example.com', true, 1, 'test', 'human:seed')`, person)
+		INSERT INTO contact_email (contact_id, email, is_primary, position, source, captured_by)
+		VALUES ($1, 'anna@work.example.com', true, 1, 'test', 'human:seed')`, contact)
 
 	anchor := seedReplyThread(t, e, "inbound",
-		replyParty{role: "from", person: &person},
+		replyParty{role: "from", contact: &contact},
 	)
 
 	got, err := e.Activities.ReplyAddressFor(e.Admin(), anchor, nil)

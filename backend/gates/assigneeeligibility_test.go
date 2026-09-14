@@ -18,7 +18,7 @@ import (
 // A seat's fitness to receive work has ONE spelling, wherever it is asked.
 //
 // eligibilityColumns are the user columns that decide it. A second reader of
-// this SET is a second answer to "may this person receive a record", and the
+// this SET is a second answer to "may this contact receive a record", and the
 // two drift until a manager is refused a colleague the router happily assigns.
 //
 // The set, not any one column, is the subject. Plenty of SQL in the tree reads
@@ -36,8 +36,8 @@ var eligibilityColumns = []string{"is_agent", "seat_type", "archived_at"}
 // assigneeEligibilityWriters are the two places allowed to ask whether a seat
 // may RECEIVE work, each with why it is not the other.
 //
-// auth.assigneeEligible is the rule itself, asked of a destination a caller
-// named. people/leadrouting.go asks the same question of a configured pool
+// auth.AssigneeEligibleSQL is the rule itself, asked of a destination a caller
+// named. contacts/leadrouting.go asks the same question of a configured pool
 // under the system principal, where the caller-scope half of the rule has no
 // meaning — routing has no caller to be scoped to. They are kept in step by
 // this gate rather than by a shared helper because the platform package cannot
@@ -45,17 +45,17 @@ var eligibilityColumns = []string{"is_agent", "seat_type", "archived_at"}
 // half.
 var assigneeEligibilityWriters = map[string]string{
 	"internal/platform/auth/assignscope.go": "the rule itself: an active human seat inside the caller's own write scope",
-	"internal/modules/people/leadrouting.go": "the routing pool's own eligibility, system-principal so the scope half " +
+	"internal/modules/contacts/leadrouting.go": "the routing pool's own eligibility, system-principal so the scope half " +
 		"does not apply; kept in step with the rule by this gate",
 }
 
 // A seat's fitness to receive work is spelled in exactly two places, and both
 // ask the same thing.
 //
-// The claim in auth.assigneeEligible's comment is what this holds: the rule has
+// The claim in auth.AssigneeEligibleSQL's comment is what this holds: the rule has
 // one spelling. Before it, routing checked status and archival while
 // the manual path checked status, archival, agent and seat type, so the
-// machine could place a lead on a seat a person was forbidden to assign to.
+// machine could place a lead on a seat a colleague was forbidden to assign to.
 // That divergence passed every gate in the tree.
 func TestSeatEligibilityIsAskedTheSameWayEverywhereItIsAsked(t *testing.T) {
 	t.Parallel()
@@ -140,7 +140,7 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 	var body string
 	ast.Inspect(file, func(n ast.Node) bool {
 		fn, ok := n.(*ast.FuncDecl)
-		if !ok || fn.Name.Name != "assigneeEligible" {
+		if !ok || fn.Name.Name != "AssigneeEligibleSQL" {
 			return true
 		}
 		src, readErr := os.ReadFile(path)
@@ -151,14 +151,14 @@ func TestTheAssigneePredicateKeepsBothHalvesOfTheRule(t *testing.T) {
 		return false
 	})
 	if body == "" {
-		t.Fatal("assigneeEligible is gone from assignscope.go: the rule it holds has moved and this gate has not")
+		t.Fatal("AssigneeEligibleSQL is gone from assignscope.go: the rule it holds has moved and this gate has not")
 	}
 	for _, half := range []string{
 		"status = 'active'", "archived_at IS NULL", "NOT %[1]s.is_agent",
 		"seat_type <> 'read'", "ownerPredicate",
 	} {
 		if !strings.Contains(body, half) {
-			t.Errorf("assigneeEligible no longer asks %q. Each clause refuses a seat that cannot do the "+
+			t.Errorf("AssigneeEligibleSQL no longer asks %q. Each clause refuses a seat that cannot do the "+
 				"work, or scopes the destination to the assigner's own reach; dropping one widens who may "+
 				"be handed a record without any test naming what was widened.", half)
 		}

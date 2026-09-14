@@ -53,7 +53,7 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 	var out crmcontracts.AnalyticsContext
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The same gate the rest of the analytics surface takes: this route
-		// discloses which teams and people a caller may measure, which is not
+		// discloses which teams and contacts a caller may measure, which is not
 		// a thing to hand somebody who may not read a forecast at all.
 		if err := auth.Require(ctx, objectForecast, principal.ActionRead); err != nil {
 			return err

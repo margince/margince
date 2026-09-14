@@ -5,7 +5,7 @@
 
 package integration
 
-// A buyer's audit row names the PERSON, not their kind.
+// A buyer's audit row names the CONTACT, not their kind.
 //
 // audit_log records a buyer's action with actor_type='buyer' and
 // actor_id='buyer:<participant uuid>'. The read path resolved actor_name from

@@ -6,7 +6,7 @@
 //
 // The rule the whole package exists for: a number a reader sees is
 // dereferenced from a saved run's cell, never carried in the document. A
-// composer — a person building a report, or a model drafting one — supplies
+// composer — a contact building a report, or a model drafting one — supplies
 // the STRUCTURE and the WORDS. It never supplies a figure.
 //
 // That is why a numeric literal is refused even when a valid handle sits

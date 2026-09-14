@@ -106,7 +106,7 @@ func mappingFrom(object string, req crmcontracts.CreateImportRunRequest) (migrat
 		return migration.RunMapping{}, httperr.Validation("source_key", "unmapped_column",
 			fmt.Sprintf("%q is not one of the mapped columns.", sourceKey))
 	}
-	onDuplicate := string(crmcontracts.Create)
+	onDuplicate := string(crmcontracts.ImportOnDuplicateCreate)
 	if req.OnDuplicate != nil {
 		if !req.OnDuplicate.Valid() {
 			return migration.RunMapping{}, httperr.Validation("on_duplicate", "invalid_enum",
@@ -275,7 +275,7 @@ func readImportUpload(w http.ResponseWriter, r *http.Request, limit int64) (stri
 	object := strings.TrimSpace(r.FormValue("object"))
 	if _, ok := csvTargets[object]; !ok {
 		return "", nil, httperr.Validation("object", "unsupported",
-			"An import lands organizations, people or leads; name one of them.")
+			"An import lands companies, contacts or leads; name one of them.")
 	}
 
 	file, _, err := r.FormFile("file")

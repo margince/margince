@@ -125,7 +125,7 @@ func forecastAsOf(req agents.ForecastRequest, now func() time.Time) (time.Time, 
 // table's own CHECK and names the field.
 func forecastToolScope(req agents.ForecastRequest) forecasting.Scope {
 	// An agent that named no scope is asking about ITS OWN population, the same
-	// as a person who named none. Starting at the workspace made the omission
+	// as a contact who named none. Starting at the workspace made the omission
 	// an explicit request for the installation, which a rep- or team-lens
 	// passport is now refused outright — so the default answered nothing.
 	var scope forecasting.Scope
@@ -171,7 +171,7 @@ func forecastToolResult(
 
 // forecastCallToTool renders the standing call for a model. The note rides
 // along here, unlike on the event: a reader asking what the forecast is wants
-// the reason a person gave for it, and this answer is not a subscription
+// the reason a contact gave for it, and this answer is not a subscription
 // somebody acts on unattended.
 func forecastCallToTool(call forecasting.Call) map[string]any {
 	out := map[string]any{

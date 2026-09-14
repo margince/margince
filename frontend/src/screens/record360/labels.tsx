@@ -79,7 +79,7 @@ const DEAL_ROLE_LABELS: Record<string, MessageKey> = {
  * dealRoleLabel names a stakeholder's role on a deal.
  *
  * It lives in the kit rather than on the company page because a deal role is
- * not a company's fact: person360, the coverage card and the project sections
+ * not a company's fact: contact360, the coverage card and the project sections
  * all name the same roles, and all three used to import this from a screen
  * about companies.
  */

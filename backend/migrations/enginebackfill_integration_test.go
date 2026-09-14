@@ -8,7 +8,7 @@ package migrations_test
 // Carrying the consent record the engine was never given.
 //
 // The rows under test are the ones the OLD writers produced — a
-// consent_qualifying_event, a withdrawn person_consent — because that is the
+// consent_qualifying_event, a withdrawn contact_consent — because that is the
 // only shape a deployed database holds. Seeding the NEW tables and checking they
 // are still there would pass against a migration that does nothing.
 //
@@ -46,9 +46,50 @@ func asTheSchemaWasWhenTheBackfillShipped(t *testing.T, conn *pgx.Conn) {
 	}
 }
 
-// backfillFixture is one person and the pre-engine rows recorded about them.
+// asShipped is the vocabulary this backfill was written in. The record it
+// carries was called a person then and is called a contact now, and a shipped
+// migration is never edited — so the names go back for the length of the
+// replay and come forward again, which is how the test still runs the real
+// file rather than a retyped copy of it.
+var asShipped = []struct{ now, then string }{
+	{"ALTER TABLE contact RENAME TO person", "ALTER TABLE person RENAME TO contact"},
+	{"ALTER TABLE contact_consent RENAME TO person_consent", "ALTER TABLE person_consent RENAME TO contact_consent"},
+	{"ALTER TABLE communication_basis RENAME COLUMN contact_id TO person_id", "ALTER TABLE communication_basis RENAME COLUMN person_id TO contact_id"},
+	{"ALTER TABLE communication_suppression RENAME COLUMN contact_id TO person_id", "ALTER TABLE communication_suppression RENAME COLUMN person_id TO contact_id"},
+	{"ALTER TABLE consent_event RENAME COLUMN contact_id TO person_id", "ALTER TABLE consent_event RENAME COLUMN person_id TO contact_id"},
+	{"ALTER TABLE consent_qualifying_event RENAME COLUMN contact_id TO person_id", "ALTER TABLE consent_qualifying_event RENAME COLUMN person_id TO contact_id"},
+	{"ALTER TABLE person_consent RENAME COLUMN contact_id TO person_id", "ALTER TABLE person_consent RENAME COLUMN person_id TO contact_id"},
+}
+
+// replayAsShipped runs the backfill under the names it was authored against,
+// then puts the schema and the one value it writes back where head has them,
+// so every seed and assertion around it stays in the current vocabulary.
+func replayAsShipped(t *testing.T, conn *pgx.Conn) {
+	t.Helper()
+	ctx := context.Background()
+	for _, r := range asShipped {
+		if _, err := conn.Exec(ctx, r.now); err != nil {
+			t.Fatalf("naming the schema as the backfill was written: %v", err)
+		}
+	}
+	applyMigrationFile(t, conn, engineBackfillMigration)
+	for i := len(asShipped) - 1; i >= 0; i-- {
+		if _, err := conn.Exec(ctx, asShipped[i].then); err != nil {
+			t.Fatalf("naming the schema back: %v", err)
+		}
+	}
+	// The provenance string moved with the record, in section 8 of the rename
+	// migration. Replaying the backfill writes the word it was written with.
+	if _, err := conn.Exec(ctx,
+		`UPDATE communication_suppression SET source = 'carried_from_contact_consent'
+		  WHERE source = 'carried_from_person_consent'`); err != nil {
+		t.Fatalf("moving the carried provenance the way the rename did: %v", err)
+	}
+}
+
+// backfillFixture is one contact and the pre-engine rows recorded about them.
 type backfillFixture struct {
-	person      string
+	contact     string
 	marketing   string
 	operational string
 }
@@ -59,9 +100,9 @@ func seedPreEngineRecord(t *testing.T, conn *pgx.Conn) backfillFixture {
 	ctx := context.Background()
 	var f backfillFixture
 	if err := conn.QueryRow(ctx,
-		`INSERT INTO person (full_name, source, captured_by)
-		 VALUES ('Backfill Subject', 'manual', 'human:seed') RETURNING id`).Scan(&f.person); err != nil {
-		t.Fatalf("seeding the person: %v", err)
+		`INSERT INTO contact (full_name, source, captured_by)
+		 VALUES ('Backfill Subject', 'manual', 'human:seed') RETURNING id`).Scan(&f.contact); err != nil {
+		t.Fatalf("seeding the contact: %v", err)
 	}
 	if err := conn.QueryRow(ctx,
 		`INSERT INTO consent_purpose (key, label, class, requires_double_opt_in)
@@ -95,23 +136,23 @@ func TestTheEngineInheritsAQualifyingEvent(t *testing.T) {
 	occurred := time.Now().Add(-30 * 24 * time.Hour)
 	if _, err := conn.Exec(ctx,
 		`INSERT INTO consent_qualifying_event
-		   (person_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
+		   (contact_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
 		 VALUES ($1, 'inbound_message', 'activity', $2, $3, 'derived', 'human:seed')`,
-		f.person, anchor, occurred); err != nil {
+		f.contact, anchor, occurred); err != nil {
 		t.Fatalf("seeding the qualifying event: %v", err)
 	}
 
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 
 	var kind, note string
 	var source *string
 	var validUntil time.Time
 	if err := conn.QueryRow(ctx,
 		`SELECT kind, note, source_activity_id::text, valid_until
-		   FROM communication_basis WHERE person_id = $1`, f.person).
+		   FROM communication_basis WHERE contact_id = $1`, f.contact).
 		Scan(&kind, &note, &source, &validUntil); err != nil {
-		t.Fatalf("the engine inherited no basis for a person who has one on file: %v", err)
+		t.Fatalf("the engine inherited no basis for a contact who has one on file: %v", err)
 	}
 	if kind != "subject_initiated_correspondence" {
 		t.Errorf("carried kind = %q, want subject_initiated_correspondence — a qualifying event IS the subject having started something", kind)
@@ -142,18 +183,18 @@ func TestACarriedGroundWithNoRecordBehindItIsNotCarried(t *testing.T) {
 	// source_entity_id is exactly how a deployed database ends up holding one.
 	if _, err := conn.Exec(ctx,
 		`INSERT INTO consent_qualifying_event
-		   (person_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
+		   (contact_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
 		 VALUES ($1, 'inbound_message', 'activity', gen_random_uuid(), now() - interval '10 days', 'derived', 'human:seed')`,
-		f.person); err != nil {
+		f.contact); err != nil {
 		t.Fatalf("seeding the orphaned qualifying event: %v", err)
 	}
 
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 
 	var n int
 	if err := conn.QueryRow(ctx,
-		`SELECT count(*) FROM communication_basis WHERE person_id = $1`, f.person).Scan(&n); err != nil {
+		`SELECT count(*) FROM communication_basis WHERE contact_id = $1`, f.contact).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {
@@ -169,21 +210,21 @@ func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
 	ctx := context.Background()
 	f := seedPreEngineRecord(t, conn)
 
-	withdrawn(t, conn, f.person, f.marketing)
+	withdrawn(t, conn, f.contact, f.marketing)
 
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 
 	var kind, source string
 	if err := conn.QueryRow(ctx,
-		`SELECT kind, source FROM communication_suppression WHERE person_id = $1`, f.person).
+		`SELECT kind, source FROM communication_suppression WHERE contact_id = $1`, f.contact).
 		Scan(&kind, &source); err != nil {
 		t.Fatalf("a marketing withdrawal carried no objection: %v", err)
 	}
 	if kind != "marketing_objection" {
 		t.Errorf("carried kind = %q, want marketing_objection", kind)
 	}
-	if source != "carried_from_person_consent" {
+	if source != "carried_from_contact_consent" {
 		t.Errorf("carried source = %q — the down migration identifies this row by it", source)
 	}
 }
@@ -192,9 +233,9 @@ func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
 // migration is shaped around, and the one a careless version fails.
 //
 // communication_suppression is NOT purpose-scoped: liveSuppression takes the
-// strongest live row for a person and applies it to EVERY category, and
+// strongest live row for a contact and applies it to EVERY category, and
 // marketing_objection is in commsauthz.Absolute — no rollout mode softens it.
-// So carrying every withdrawn person_consent row across would take somebody who
+// So carrying every withdrawn contact_consent row across would take somebody who
 // unsubscribed from one newsletter and block their invoices, their contract
 // notices and their security mail, permanently.
 //
@@ -202,7 +243,7 @@ func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
 // a withdrawal against a non-marketing purpose when the migration was written.
 //
 // Mutation: drop `AND cp.class = 'marketing'` from the second INSERT and this
-// fails with a suppression this person should never have carried.
+// fails with a suppression this contact should never have carried.
 func TestANonMarketingWithdrawalIsNotAnObjection(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -210,14 +251,14 @@ func TestANonMarketingWithdrawalIsNotAnObjection(t *testing.T) {
 	ctx := context.Background()
 	f := seedPreEngineRecord(t, conn)
 
-	withdrawn(t, conn, f.person, f.operational)
+	withdrawn(t, conn, f.contact, f.operational)
 
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 
 	var n int
 	if err := conn.QueryRow(ctx,
-		`SELECT count(*) FROM communication_suppression WHERE person_id = $1`, f.person).Scan(&n); err != nil {
+		`SELECT count(*) FROM communication_suppression WHERE contact_id = $1`, f.contact).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {
@@ -244,27 +285,27 @@ func TestTheCarryIsIdempotent(t *testing.T) {
 	}
 	if _, err := conn.Exec(ctx,
 		`INSERT INTO consent_qualifying_event
-		   (person_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
+		   (contact_id, kind, source_entity_type, source_entity_id, occurred_at, source, captured_by)
 		 VALUES ($1, 'inbound_message', 'activity', $2, now() - interval '5 days', 'derived', 'human:seed')`,
-		f.person, anchor); err != nil {
+		f.contact, anchor); err != nil {
 		t.Fatalf("seeding the qualifying event: %v", err)
 	}
-	withdrawn(t, conn, f.person, f.marketing)
+	withdrawn(t, conn, f.contact, f.marketing)
 
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 	asTheSchemaWasWhenTheBackfillShipped(t, conn)
-	applyMigrationFile(t, conn, engineBackfillMigration)
+	replayAsShipped(t, conn)
 
 	for _, c := range []struct {
 		table string
 		sql   string
 	}{
-		{"communication_basis", `SELECT count(*) FROM communication_basis WHERE person_id = $1`},
-		{"communication_suppression", `SELECT count(*) FROM communication_suppression WHERE person_id = $1`},
+		{"communication_basis", `SELECT count(*) FROM communication_basis WHERE contact_id = $1`},
+		{"communication_suppression", `SELECT count(*) FROM communication_suppression WHERE contact_id = $1`},
 	} {
 		var n int
-		if err := conn.QueryRow(ctx, c.sql, f.person).Scan(&n); err != nil {
+		if err := conn.QueryRow(ctx, c.sql, f.contact).Scan(&n); err != nil {
 			t.Fatal(err)
 		}
 		if n != 1 {
@@ -274,21 +315,21 @@ func TestTheCarryIsIdempotent(t *testing.T) {
 }
 
 // withdrawn records a withdrawal the way the pre-engine product recorded one:
-// the person_consent state plus the consent_event proof behind it.
-func withdrawn(t *testing.T, conn *pgx.Conn, person, purpose string) {
+// the contact_consent state plus the consent_event proof behind it.
+func withdrawn(t *testing.T, conn *pgx.Conn, contact, purpose string) {
 	t.Helper()
 	ctx := context.Background()
 	if _, err := conn.Exec(ctx,
-		`INSERT INTO person_consent (person_id, purpose_id, state, source, captured_at)
-		 VALUES ($1, $2, 'withdrawn', 'preference_center', now() - interval '2 days')`, person, purpose); err != nil {
+		`INSERT INTO contact_consent (contact_id, purpose_id, state, source, captured_at)
+		 VALUES ($1, $2, 'withdrawn', 'preference_center', now() - interval '2 days')`, contact, purpose); err != nil {
 		t.Fatalf("seeding the withdrawal: %v", err)
 	}
 	if _, err := conn.Exec(ctx,
 		`INSERT INTO consent_event
-		   (person_id, purpose_id, new_state, source, captured_by, captured_at, policy_text, policy_version)
+		   (contact_id, purpose_id, new_state, source, captured_by, captured_at, policy_text, policy_version)
 		 VALUES ($1, $2, 'withdrawn', 'preference_center', 'human:subject',
 		         now() - interval '2 days', 'You asked us to stop emailing you.', 'v1')`,
-		person, purpose); err != nil {
+		contact, purpose); err != nil {
 		t.Fatalf("seeding the withdrawal proof: %v", err)
 	}
 }

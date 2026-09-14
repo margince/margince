@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -23,7 +23,7 @@ import { newGroup, newLeaf } from "./segmentpredicate";
 afterEach(cleanup);
 
 const VOCAB_BODY = {
-  resource: "person",
+  resource: "contact",
   fields: [
     {
       name: "full_name",
@@ -64,14 +64,12 @@ function harness() {
 describe("the vocabulary read", () => {
   it("asks for the resource it was given", async () => {
     const { seen, wrapper } = harness();
-    const { result } = renderHook(() => useFilterVocabulary("organization"), {
+    const { result } = renderHook(() => useFilterVocabulary("company"), {
       wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(seen.some((url) => url.includes("resource=organization"))).toBe(
-      true,
-    );
+    expect(seen.some((url) => url.includes("resource=company"))).toBe(true);
   });
 
   it("serves a second reader of the same resource from cache", async () => {
@@ -79,8 +77,8 @@ describe("the vocabulary read", () => {
     const { result } = renderHook(
       () => {
         // Two hooks, one resource — a builder and a picker on the same screen.
-        useFilterVocabulary("person");
-        return useFilterVocabulary("person");
+        useFilterVocabulary("contact");
+        return useFilterVocabulary("contact");
       },
       { wrapper },
     );
@@ -95,7 +93,7 @@ describe("the vocabulary read", () => {
 describe("the preview read", () => {
   it("does not ask about an empty group", async () => {
     const { seen, wrapper } = harness();
-    renderHook(() => useFilterPreview("person", newGroup("and")), { wrapper });
+    renderHook(() => useFilterPreview("contact", newGroup("and")), { wrapper });
 
     // An empty group is refused as filter_shape_invalid, so asking spends a
     // request to be told what isComplete already knows.
@@ -107,7 +105,7 @@ describe("the preview read", () => {
     renderHook(
       () =>
         useFilterPreview(
-          "person",
+          "contact",
           newGroup("and", [newLeaf("full_name", "contains", "")]),
         ),
       { wrapper },
@@ -123,7 +121,7 @@ describe("the preview read", () => {
     const { result } = renderHook(
       () =>
         useFilterPreview(
-          "person",
+          "contact",
           newGroup("and", [newLeaf("full_name", "contains", "ann")]),
         ),
       { wrapper },
@@ -148,7 +146,7 @@ describe("the preview read", () => {
 
     const { result, rerender } = renderHook(
       ({ tree }: { tree: ReturnType<typeof newGroup> }) =>
-        useFilterPreview("person", tree),
+        useFilterPreview("contact", tree),
       { wrapper, initialProps: { tree: first } },
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));

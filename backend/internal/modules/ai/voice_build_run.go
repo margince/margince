@@ -90,7 +90,12 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 		build, err := scanVoiceBuild(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE voice_build
 			SET status = 'running', stage = 'snapshot', status_code = NULL, status_detail = NULL,
-			    next_attempt_at = NULL, started_at = $3, version = version + 1, updated_at = $3
+			    next_attempt_at = NULL, started_at = $3, version = version + 1, updated_at = $3,
+			    -- Taking a QUEUED build is the attempt that was already
+			    -- queued; taking a deferred one back, or reclaiming one whose
+			    -- worker died, starts a new attempt at the same build.
+			    attempt    = attempt + CASE WHEN status = 'queued' THEN 0 ELSE 1 END,
+			    attempt_at = CASE WHEN status = 'queued' THEN attempt_at ELSE $3 END
 			WHERE id = $1 AND voice_profile_id = $2 AND archived_at IS NULL
 			  AND (status = 'queued'
 			       OR (status = 'deferred' AND next_attempt_at <= $3)
@@ -133,6 +138,23 @@ func (s *VoiceStore) ClaimBuild(ctx context.Context, profileID, buildID ids.UUID
 		}
 		samples, err := loadVoiceSamples(ctx, tx, profileID)
 		if err != nil {
+			return err
+		}
+		// The claim is the only transition that makes the rail say `running`,
+		// and it publishes from inside the claiming transaction: a worker that
+		// takes the row and dies before announcing would leave a build the rail
+		// still calls queued until its lease ran out.
+		//
+		// The lease is the caller's reclaim window — the instant a replacement
+		// may take this row — which is exactly when the claim stops being
+		// believable.
+		auditID, err := storekit.Audit(ctx, tx, "update", "voice_build", build.ID,
+			map[string]any{voiceKeyStatus: voiceBuildStatusRunning},
+			map[string]any{voiceKeyStatus: build.Status, "attempt": build.Attempt})
+		if err != nil {
+			return err
+		}
+		if err := emitVoiceBuild(ctx, tx, auditID, build, reclaimAfter); err != nil {
 			return err
 		}
 		input = VoiceBuildInput{Build: build, Profile: profile, Personality: profile.PersonalityMD, Samples: samples}
@@ -209,7 +231,9 @@ func (s *VoiceStore) DeferBuild(ctx context.Context, buildID ids.UUID, claimedAt
 		if err != nil {
 			return err
 		}
-		return emitVoiceBuild(ctx, tx, auditID, build)
+		// The deferral is SETTLED on the rail: the build is not being
+		// worked and the window may reopen hours later.
+		return emitVoiceBuild(ctx, tx, auditID, build, 0)
 	})
 }
 
@@ -255,7 +279,7 @@ func (s *VoiceStore) finishBuildTx(ctx context.Context, tx pgx.Tx, build VoiceBu
 	if err != nil {
 		return err
 	}
-	return emitVoiceBuild(ctx, tx, auditID, finished)
+	return emitVoiceBuild(ctx, tx, auditID, finished, 0)
 }
 
 func nullIfEmpty(s string) *string {

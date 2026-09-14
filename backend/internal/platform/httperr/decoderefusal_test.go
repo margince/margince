@@ -286,7 +286,7 @@ func TestClassify_seamFieldDecodeIsRestatedButNeverOverwritten(t *testing.T) {
 			// of objects was an array of objects, so the refusal says what it
 			// takes rather than contradicting what arrived.
 			name:   "an activity's links with guessed keys says what an item takes",
-			fields: `{"kind":"email","links":[{"organization_id":"019fcb8a-1e77-72ad-a2ad-5bc1b335a8f9"}]}`,
+			fields: `{"kind":"email","links":[{"company_id":"019fcb8a-1e77-72ad-a2ad-5bc1b335a8f9"}]}`,
 			wantDetail: "`links` must be an array of objects but the value sent was not accepted; " +
 				`each item is {entity_id: uuid, entity_type: string}`,
 		},
@@ -373,19 +373,19 @@ func TestUnmarshalTypeDetail_survivesAnErrorCarryingNoType(t *testing.T) {
 	assertNoInternals(t, detail)
 }
 
-// The reported organization patch, through the REST body decode as well as the
+// The reported company patch, through the REST body decode as well as the
 // seam. A body reaches the same contract structs by either route, and a client
 // told two different things about one mistake has to learn which surface it is
 // on before it can read either answer.
-func TestDecode_theReportedOrganizationPatchNamesItsField(t *testing.T) {
-	intoUpdateOrg := func(w http.ResponseWriter, r *http.Request) bool {
-		var req crmcontracts.UpdateOrganizationRequest
+func TestDecode_theReportedCompanyPatchNamesItsField(t *testing.T) {
+	intoUpdateCompany := func(w http.ResponseWriter, r *http.Request) bool {
+		var req crmcontracts.UpdateCompanyRequest
 		return Decode(w, r, &req)
 	}
 	const want = "`domains` must be an array of objects, not an array of strings; " +
 		`each item is {domain: string, is_primary?: boolean}`
 
-	status, detail := decodeBody(t, `{"domains":["openrouter.ai"]}`, intoUpdateOrg)
+	status, detail := decodeBody(t, `{"domains":["openrouter.ai"]}`, intoUpdateCompany)
 	if status != http.StatusUnprocessableEntity {
 		t.Errorf("status = %d, want 422", status)
 	}
@@ -393,7 +393,7 @@ func TestDecode_theReportedOrganizationPatchNamesItsField(t *testing.T) {
 		t.Errorf("REST detail = %q, want it to say %q", detail, want)
 	}
 
-	var req crmcontracts.UpdateOrganizationRequest
+	var req crmcontracts.UpdateCompanyRequest
 	err := datasource.StrictDecode(json.RawMessage(`{"domains":["openrouter.ai"]}`), &req)
 	if err == nil {
 		t.Fatal("the seam accepted an array of strings")
@@ -409,7 +409,7 @@ func TestDecode_theReportedOrganizationPatchNamesItsField(t *testing.T) {
 // structure the decoder then rejects would cost a caller the round trip it was
 // written to save.
 func TestDecode_theShapeTheRefusalNamesIsAccepted(t *testing.T) {
-	var req crmcontracts.UpdateOrganizationRequest
+	var req crmcontracts.UpdateCompanyRequest
 	raw := json.RawMessage(`{"domains":[{"domain":"openrouter.ai","is_primary":true}]}`)
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		t.Fatalf("the shape the refusal names was refused: %v", err)

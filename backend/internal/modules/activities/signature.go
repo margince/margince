@@ -108,6 +108,14 @@ func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDel
 	if sign != "" {
 		out += "\n<p>" + htmlLines(sign) + "</p>"
 	}
+	// The DISCLOSURES before the unsubscribe footer, matching the plain-text
+	// order: what the law requires the message to say, then the capability it
+	// offers. A markup alternative that omitted them would disclose nothing to
+	// every recipient whose client prefers HTML, while the recorded text copy
+	// looked compliant.
+	if disclosures := htmlDisclosures(derived.disclosures); disclosures != "" {
+		out += "\n" + disclosures
+	}
 	if footer := derived.htmlFooter(); footer != "" {
 		out += "\n" + footer
 	}
@@ -116,7 +124,7 @@ func (s *Store) signedHTML(ctx context.Context, htmlBody string, derived sendDel
 
 // htmlLines escapes plain text for a markup document and keeps its line breaks,
 // which a signature depends on: a name, a company and a phone number written on
-// three lines are three lines to the person who wrote them.
+// three lines are three lines to the contact who wrote them.
 func htmlLines(text string) string {
 	return strings.ReplaceAll(html.EscapeString(text), "\n", "<br>")
 }

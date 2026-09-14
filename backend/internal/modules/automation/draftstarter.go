@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// claimDraftStarter gives an unowned draft template the enabling person's
+// claimDraftStarter gives an unowned draft template the enabling contact's
 // authority. Existing owners never change when somebody toggles the template.
 func claimDraftStarter(ctx context.Context, tx pgx.Tx, before Automation) (ids.UUID, error) {
 	entry, ok := CatalogEntryByKey(before.Key)

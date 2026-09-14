@@ -43,11 +43,19 @@ import { useT } from "../i18n";
 type UnsavedRegistry = Readonly<{
   /** Whether anything inside this scope has an edit that has not been written. */
   dirty: boolean;
-  claim: (token: string, dirty: boolean) => void;
+  dirtyScopes: ReadonlySet<string>;
+  claim: (token: string, dirty: boolean, scope?: string) => void;
   release: (token: string) => void;
 }>;
 
 const UnsavedContext = createContext<UnsavedRegistry | null>(null);
+
+export function useHasUnsavedChanges(scope?: string): boolean {
+  const registry = useContext(UnsavedContext);
+  return scope
+    ? (registry?.dirtyScopes.has(scope) ?? false)
+    : (registry?.dirty ?? false);
+}
 
 /**
  * Declare that this component holds an unsaved edit, or no longer does.
@@ -62,20 +70,20 @@ const UnsavedContext = createContext<UnsavedRegistry | null>(null);
  * test, a record page). A hook that threw there would make the provider a
  * requirement of every caller rather than of the surfaces that want guarding.
  */
-export function useUnsavedGuard(dirty: boolean): void {
-  const registry = useContext(UnsavedContext);
+export function useUnsavedGuard(dirty: boolean, scope?: string): void {
+  const { claim, release } = useContext(UnsavedContext) ?? {};
   // A stable identity per mounting, so two instances of the same card — two
   // rows, two panels — are two claims rather than one that the second overwrites.
   const token = useId();
 
   useEffect(() => {
-    registry?.claim(token, dirty);
-  }, [registry, token, dirty]);
+    claim?.(token, dirty, scope);
+  }, [claim, token, dirty, scope]);
 
   // Released on unmount, and this is the one that has to be right: a card that
   // left the tree still holding a claim would guard the surface against a draft
   // that no longer exists, and nothing the reader can do would clear it.
-  useEffect(() => () => registry?.release(token), [registry, token]);
+  useEffect(() => () => release?.(token), [release, token]);
 }
 
 /**
@@ -121,21 +129,23 @@ export function UnsavedGuard<Address extends string>({
   children: (address: Address) => ReactNode;
 }>) {
   const t = useT();
-  const [claims, setClaims] = useState<ReadonlyMap<string, boolean>>(new Map());
+  const [claims, setClaims] = useState<
+    ReadonlyMap<string, { dirty: boolean; scope?: string }>
+  >(new Map());
   // The address whose content is on screen. It follows `address` freely until a
   // draft is at stake, and then stops until the question is answered.
   const [shown, setShown] = useState(address);
 
-  const dirty = [...claims.values()].some(Boolean);
+  const dirty = [...claims.values()].some((claim) => claim.dirty);
   useBeforeUnload(dirty);
 
-  const claim = useCallback((token: string, next: boolean) => {
+  const claim = useCallback((token: string, next: boolean, scope?: string) => {
     setClaims((held) => {
-      if (held.get(token) === next) {
+      if (held.get(token)?.dirty === next && held.get(token)?.scope === scope) {
         return held;
       }
       const grown = new Map(held);
-      grown.set(token, next);
+      grown.set(token, { dirty: next, scope });
       return grown;
     });
   }, []);
@@ -152,8 +162,17 @@ export function UnsavedGuard<Address extends string>({
   }, []);
 
   const registry = useMemo<UnsavedRegistry>(
-    () => ({ dirty, claim, release }),
-    [dirty, claim, release],
+    () => ({
+      dirty,
+      claim,
+      release,
+      dirtyScopes: new Set(
+        [...claims.values()].flatMap((entry) =>
+          entry.dirty && entry.scope ? [entry.scope] : [],
+        ),
+      ),
+    }),
+    [dirty, claims, claim, release],
   );
 
   // Catching up is not a state change, so it happens during render rather than

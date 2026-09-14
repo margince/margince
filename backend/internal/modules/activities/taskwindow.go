@@ -24,8 +24,11 @@ func openTaskWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 		// what this clause replaced. The bound the caller passes is the END of
 		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
 		// today's list — a promise reported late a day early.
-		clauses = append(clauses,
-			sprintf(openTask+" AND a.due_at < $%d", arg(*in.OpenAndDueBy)))
+		deadline := sprintf("a.due_at < $%d", arg(*in.OpenAndDueBy))
+		if in.IncludeEmailRequests && in.OpenAndDueAfter == nil {
+			deadline = "(" + deadline + sprintf(" OR (a.due_at IS NULL AND a.source_system = $%d))", arg(EmailRequestTaskSource))
+		}
+		clauses = append(clauses, "a.kind = 'task' AND NOT a.is_done AND "+deadline)
 	}
 	if in.OpenAndDueAfter != nil {
 		// The open end of the same window, INCLUSIVE of the instant, so it

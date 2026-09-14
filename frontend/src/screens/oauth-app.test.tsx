@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -296,7 +296,7 @@ describe("the Microsoft app card", () => {
 
   // Rotating a secret is not a decision about which directory may authorize.
   // A field that started blank would send no tenant and widen the app to every
-  // organization — the one change on this card nobody would see happen.
+  // company — the one change on this card nobody would see happen.
   it("carries a pinned directory through a rotation nobody retyped", async () => {
     const user = userEvent.setup();
     const { calls } = mount(microsoft(), "microsoft");

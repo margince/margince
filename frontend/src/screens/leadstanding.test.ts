@@ -31,6 +31,30 @@ function lead(extra: Partial<Lead>): Lead {
 }
 
 describe("leadStanding", () => {
+  // The merge leaves the ladder alone, so the pointer is the only thing that
+  // says this lead ended. Read from `status` instead, a lead merged away mid
+  // conversation is open work forever — and the terminal reading it would
+  // eventually get is "disqualified", which says a human judged the prospect
+  // not worth pursuing rather than that two records were one prospect.
+  it("says a merged-away lead was merged, whatever its ladder still says", () => {
+    const merged = leadStanding(
+      lead({
+        status: "contacted",
+        first_response_at: "2026-08-19T09:00:00Z",
+        merged_into_id: "l2",
+        archived_at: "2026-08-20T10:00:00Z",
+      }),
+      t,
+      "en",
+      zone,
+    );
+    expect(merged.label).toBe("lead.standing.merged");
+    expect(merged.because).toBe("lead.standing.mergedBecause");
+    expect(merged.restsOn.map((r) => r.quote)).toContain(
+      "lead.standing.rests.merged",
+    );
+  });
+
   it("is our move on an unanswered lead, as loud as the first-response clock", () => {
     const breached = leadStanding(
       lead({ sla_state: "breached", sla_deadline_at: "2026-08-19T08:14:00Z" }),

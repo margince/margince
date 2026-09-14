@@ -20,7 +20,7 @@
  * document is already showing.
  *
  * Two values, not one, and the distinction is the whole point of "system":
- * a CHOICE is what the person picked (`ThemeChoice`, including "system"), a
+ * a CHOICE is what the contact picked (`ThemeChoice`, including "system"), a
  * THEME is what the document is painted in (`Theme`, only ever light or dark).
  * "system" resolves to a theme and keeps resolving: while it is the choice this
  * module follows `prefers-color-scheme` live, so an OS switch reaches an open
@@ -31,7 +31,7 @@ import { useSyncExternalStore } from "react";
 
 export type Theme = "light" | "dark";
 
-/** What a person can pick. "system" is a standing instruction to follow the
+/** What a contact can pick. "system" is a standing instruction to follow the
  *  operating system rather than a third appearance. */
 export type ThemeChoice = Theme | "system";
 
@@ -211,7 +211,7 @@ function subscribeToTheme(listener: () => void): () => void {
  * a machine that is already light is the first time the reader has said the
  * appearance is theirs rather than their machine's, and swallowing that write
  * would let the next OS change take it away again. The mirror holds for
- * "system", which is a person handing that authority BACK — so the subscription
+ * "system", which is a contact handing that authority BACK — so the subscription
  * is re-armed here and dropped the moment the choice becomes explicit again.
  */
 export function setThemeChoice(choice: ThemeChoice): void {

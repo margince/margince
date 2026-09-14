@@ -29,7 +29,7 @@ operations:
   # The QC-only fake mailbox connector: no real network, no real send,
   # reachable only via POST /connectors/test_mailbox/connect once this is
   # set. Safe here for the same reason allow_data_reset is: a dev stack's
-  # sends never reach a real person, and every other posture gets the
+  # sends never reach a real contact, and every other posture gets the
   # compiled default, which is off.
   allow_test_mailbox: true
 

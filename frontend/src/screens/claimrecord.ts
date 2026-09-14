@@ -4,19 +4,19 @@ import { ifMatch, requireVersion } from "../api/version";
 import { throwProblem } from "./common";
 
 /** The record kinds the claim endpoint accepts. */
-export type ClaimableRecordType = "organization" | "person" | "lead" | "deal";
+export type ClaimableRecordType = "company" | "contact" | "lead" | "deal";
 
 // The list each kind is filed under. Spelled out rather than derived, because
 // one of the four is not the type with an "s" on the end: contacts are filed
-// under "people", and `${recordType}s` asks for "persons", which nothing reads.
+// under "contacts", and `${recordType}s` asks for "contacts", which nothing reads.
 //
 // A key that matches no cache is not an error anywhere — invalidateQueries
 // simply finds nothing to invalidate. So the claim succeeded, the button
 // settled, and the list the reader was looking at went on showing the record
 // as unowned until something else happened to refetch it.
 const LIST_KEY: Record<ClaimableRecordType, string> = {
-  organization: "organizations",
-  person: "people",
+  company: "companies",
+  contact: "contacts",
   lead: "leads",
   deal: "deals",
 };

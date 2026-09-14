@@ -6,7 +6,7 @@ package identity
 // What a rep wants DELIVERED, as opposed to what they can open.
 //
 // The morning brief and the weekly review are both on the screen already; the
-// mail is a nudge toward them. So this is one person's setting about their own
+// mail is a nudge toward them. So this is one contact's setting about their own
 // inbox, self-scoped from the principal exactly as their display language is,
 // and for the same reason: holding a seat is the whole authority needed to
 // decide how often the product may interrupt you.
@@ -225,7 +225,7 @@ func deliveryImage(d Delivery) map[string]any {
 
 // deliveryChanges names what moved, for the event.
 //
-// The NAMES rather than the values: what a person chose about their own inbox
+// The NAMES rather than the values: what a contact chose about their own inbox
 // is theirs, and a fan-out carrying the values would tell every subscription
 // owner who had switched their mail off.
 func deliveryChanges(before, after Delivery) []string {

@@ -18,10 +18,10 @@ package gates
 // exactly the sentence a dropped field makes false.
 //
 // The PRIMARY ADDRESS: the preference centre and the confirm card both
-// show a person their own address, and they must agree on which one that
+// show a contact their own address, and they must agree on which one that
 // is. The ordering (is_primary DESC, created_at) is the whole rule, and a
 // hand-copied second spelling that dropped the tiebreak would show two
-// surfaces two different addresses for the same person — each looking
+// surfaces two different addresses for the same contact — each looking
 // correct on its own screen.
 //
 // WHAT THIS GATE CAN AND CANNOT SEE. It matches the call, by name, in the
@@ -76,7 +76,7 @@ func TestThePreferenceCentreResolvesOnePrimaryAddress(t *testing.T) {
 	// The ORDERING is the rule, so the ordering is what is counted. A
 	// copy that named the helper but re-spelled the ORDER BY is the
 	// defect; a copy that omitted the tiebreak would show a different
-	// address on a person carrying two.
+	// address on a contact carrying two.
 	const key = "pe.is_primary DESC, pe.created_at"
 	scope := gatekit.Scope{
 		Roots:   []string{consentRoot},
@@ -85,8 +85,8 @@ func TestThePreferenceCentreResolvesOnePrimaryAddress(t *testing.T) {
 	}
 	total, where := countAcross(t, scope, key)
 	if total != 1 {
-		t.Errorf("the person's primary address is resolved %d time(s) in consent, want exactly 1: %s\n\n"+
-			"The preference centre and the confirm card show a person their own address and must "+
+		t.Errorf("the contact's primary address is resolved %d time(s) in consent, want exactly 1: %s\n\n"+
+			"The preference centre and the confirm card show a contact their own address and must "+
 			"agree which one it is; a second spelling that drops the tiebreak shows two surfaces "+
 			"two different addresses.", total, strings.Join(where, ", "))
 	}

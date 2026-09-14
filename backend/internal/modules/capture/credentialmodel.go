@@ -4,7 +4,7 @@
 package capture
 
 // Whose credential carried this record, which is what decides whether it is one
-// person's correspondence or the company's.
+// contact's correspondence or the company's.
 //
 // A transport that spends ONE MEMBER's credential is that member's own account,
 // so their chats are correspondence and the rules mail is under reach them. A

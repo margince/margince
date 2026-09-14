@@ -38,7 +38,7 @@ func readerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
 		SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
-			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "person": {Read: true}},
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "contact": {Read: true}},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -119,7 +119,7 @@ func TestAHandLoggedMessageNamesNoMailbox(t *testing.T) {
 		},
 	})
 	logged, _, err := store.LogActivity(writeCtx, activities.LogActivityInput{
-		Kind: "email", Subject: strptr("Typed by a person"), Body: strptr("Not delivered anywhere."),
+		Kind: "email", Subject: strptr("Typed by a contact"), Body: strptr("Not delivered anywhere."),
 	})
 	if err != nil {
 		t.Fatalf("logging an activity by hand: %v", err)

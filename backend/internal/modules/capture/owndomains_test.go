@@ -69,7 +69,7 @@ func TestAllInternalNeedsEveryPartyAndOneOutsiderIsEnoughToKeepTheMessage(t *tes
 
 // CAP-AC1.3d — an empty own-domain set makes nothing internal, so everything
 // captures. An installation that has registered no domain is making no claim
-// about its people's mail, and inventing one would be wrong in most workspaces.
+// about its contacts's mail, and inventing one would be wrong in most workspaces.
 func TestAnEmptyOwnDomainSetMakesNothingInternal(t *testing.T) {
 	own := NewInternalDomains(nil)
 	if !own.empty() {

@@ -2,7 +2,7 @@
 // finding out precisely why it could not be read.
 //
 // WHY THIS EXISTS AT ALL. A rep hands over a business card at a conference. The
-// useful thing is not the card, it is that the person filing it is standing in
+// useful thing is not the card, it is that the contact filing it is standing in
 // the hall: the venue is the tag, and nobody should have to type it. Every other
 // route to that fact either asks the user (which makes it a form, not a
 // convenience) or guesses from an IP address (which on conference wifi names the
@@ -45,7 +45,7 @@ export const READ_OPTIONS: Readonly<PositionOptions> = {
 /**
  * Why a position could not be read, distinguished by what a reader can DO about
  * it. The browser's own numeric codes do not separate the two cases that matter
- * most: a host that never allowed the frame to ask, and a person who was asked
+ * most: a host that never allowed the frame to ask, and a contact who was asked
  * and said no. Both arrive as code 1.
  */
 export type GeoRefusal =
@@ -57,7 +57,7 @@ export type GeoRefusal =
    * Refused with a code-1 message this code does not recognise.
    *
    * It is a state of its own rather than a default, and that is the point. Code
-   * 1 covers a permissions-policy block, an insecure context, a person
+   * 1 covers a permissions-policy block, an insecure context, a contact
    * declining, AND a persistent OS-level denial, and the messages are not
    * standardised — every engine words them differently. Folding an unfamiliar
    * message into "user-declined" would tell a tester the permission got through
@@ -88,7 +88,7 @@ export type GeoResult =
        *
        * This is the field the whole module exists to produce. "Geolocation has
        * been disabled in this document by permissions policy" is a finding about
-       * the HOST; "User denied Geolocation" is a finding about a person. They
+       * the HOST; "User denied Geolocation" is a finding about a contact. They
        * are the same numeric code and they mean opposite things, so the string
        * is the evidence and paraphrasing it destroys it.
        */
@@ -101,7 +101,7 @@ export type GeoResult =
 const HOST_BLOCKED =
   /permissions?\s+policy|feature\s+policy|disabled in this document/i;
 
-/** Engine wordings that mean a person was asked and refused. */
+/** Engine wordings that mean a contact was asked and refused. */
 const USER_DECLINED = /user\s+denied|denied by (the )?user|user\s+declined/i;
 
 /**
@@ -109,7 +109,7 @@ const USER_DECLINED = /user\s+denied|denied by (the )?user|user\s+declined/i;
  *
  * BOTH sides are matched, and anything else is "refused-unclassified" rather
  * than a guess. Code 1 is PERMISSION_DENIED for four different reasons — a
- * permissions-policy block, an insecure context, a person declining, a
+ * permissions-policy block, an insecure context, a contact declining, a
  * persistent OS denial — and the messages are not standardised. An earlier
  * version defaulted an unmatched message to "user-declined", which would have
  * told a tester "the permission got through, try again and accept" for a host

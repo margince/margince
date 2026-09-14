@@ -66,7 +66,7 @@ func TestAnOwnerKeepsAThreadPrivateAgainstTheClassifier(t *testing.T) {
 		t.Fatalf("a thread the owner kept private is %q, want participants", got)
 	}
 	if got := importVerdictFor(t, e, id, e.Rep1); got != "held_by_owner" {
-		t.Fatalf("the owner's contribution says %q, want held_by_owner — a person's answer is not a classifier's", got)
+		t.Fatalf("the owner's contribution says %q, want held_by_owner — a contact's answer is not a classifier's", got)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestTheLastOwnersShareReportsTheMessageOpen(t *testing.T) {
 	// a posture is what the mailbox asked of mail in general, and a seat's
 	// explicit shared_by_owner ends its say. The recompute already opens the
 	// message here; an answer still counting the posture as a hold tells the
-	// person who just published a conversation that it stayed private.
+	// contact who just published a conversation that it stayed private.
 	e := integration.Setup(t)
 	id := seedHeldThreadOn(t, e, "thread-last-holder", "kunde@example.test", e.Rep1)
 	addImportRowFor(t, e, id, e.Rep2)

@@ -22,7 +22,7 @@ import (
 // decoded from JSON.
 func unencodableDeclaration() ObjectMapping {
 	return ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Const: map[string]any{"unencodable": make(chan int)},
 	}
 }
@@ -34,9 +34,9 @@ func unencodableDeclaration() ObjectMapping {
 // whose Child.Attrs does not would pass the first check and reach the second.
 func TestAnUnencodableChildAttributeIsRefused(t *testing.T) {
 	m := ObjectMapping{
-		Source: "contacts", Target: "person", ExternalKey: "hs_object_id",
+		Source: "contacts", Target: "contact", ExternalKey: "hs_object_id",
 		Fields: []FieldMapping{{
-			From: []string{"email"}, To: "person_email.email", Kind: TargetChild,
+			From: []string{"email"}, To: "contact_email.email", Kind: TargetChild,
 			Child: &ChildRow{Attrs: map[string]any{"unencodable": make(chan int)}},
 		}},
 	}

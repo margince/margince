@@ -57,11 +57,11 @@ func (e *OfferEmptyError) FieldFault() (field, code, message string) {
 }
 
 type CreateOfferInput struct {
-	Currency   string
-	BuyerOrgID *ids.OrganizationID
-	ValidUntil *string // ISO date
-	IntroText  *string
-	TermsText  *string
+	Currency       string
+	BuyerCompanyID *ids.CompanyID
+	ValidUntil     *string // ISO date
+	IntroText      *string
+	TermsText      *string
 	// TemplateID picks the offer_template render.go's PrepareRender
 	// resolves into a locale; unset falls back to de-DE (the
 	// offer_template package default), never a blank column.
@@ -88,7 +88,7 @@ func (s *Store) CreateOffer(ctx context.Context, dealID ids.DealID, in CreateOff
 	return out, err
 }
 
-// createOfferTx resolves the buyer org, mints the offer number, inserts
+// createOfferTx resolves the buyer company, mints the offer number, inserts
 // the offer and its lines, derives the totals, and runs the write shape —
 // all inside the caller's transaction.
 func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateOfferInput, by string) (crmcontracts.Offer, error) {
@@ -98,7 +98,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	buyerOrg, err := resolveBuyerOrg(ctx, tx, dealID, in.BuyerOrgID)
+	buyerCompany, err := resolveBuyerCompany(ctx, tx, dealID, in.BuyerCompanyID)
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
@@ -113,9 +113,9 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	id := ids.New[ids.OfferKind]()
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
-		                    buyer_org_id, valid_until, intro_text, terms_text, template_id, source, captured_by)
+		                    buyer_company_id, valid_until, intro_text, terms_text, template_id, source, captured_by)
 		 VALUES ($1, $2, $3, 1, 'draft', $4, $5, $6, $7, $8, $9, $10, $11)`,
-		id, dealID, number, in.Currency, buyerOrg, in.ValidUntil, in.IntroText, in.TermsText,
+		id, dealID, number, in.Currency, buyerCompany, in.ValidUntil, in.IntroText, in.TermsText,
 		in.TemplateID, in.Source, by); err != nil {
 		return crmcontracts.Offer{}, fmt.Errorf("insert offer: %w", err)
 	}
@@ -144,22 +144,22 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	return out, nil
 }
 
-// resolveBuyerOrg picks the offer's buyer org: an explicit org is
+// resolveBuyerCompany picks the offer's buyer company: an explicit company is
 // row-scope probed (a client-supplied FK, H1); absent one, the offer
-// inherits the deal's organization.
-func resolveBuyerOrg(ctx context.Context, tx pgx.Tx, dealID ids.DealID, buyerOrgID *ids.OrganizationID) (*ids.OrganizationID, error) {
-	if buyerOrgID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "organization", buyerOrgID.UUID); err != nil {
+// inherits the deal's company.
+func resolveBuyerCompany(ctx context.Context, tx pgx.Tx, dealID ids.DealID, buyerCompanyID *ids.CompanyID) (*ids.CompanyID, error) {
+	if buyerCompanyID != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, "company", buyerCompanyID.UUID); err != nil {
 			return nil, err
 		}
-		return buyerOrgID, nil
+		return buyerCompanyID, nil
 	}
-	var dealOrg *ids.OrganizationID
+	var dealCompany *ids.CompanyID
 	if err := tx.QueryRow(ctx,
-		`SELECT organization_id FROM deal WHERE id = $1`, dealID).Scan(&dealOrg); err != nil {
-		return nil, fmt.Errorf("read deal organization: %w", err)
+		`SELECT company_id FROM deal WHERE id = $1`, dealID).Scan(&dealCompany); err != nil {
+		return nil, fmt.Errorf("read deal company: %w", err)
 	}
-	return dealOrg, nil
+	return dealCompany, nil
 }
 
 // resolveOfferTemplateRef validates a client-supplied template_id refers
@@ -362,13 +362,13 @@ func ensureDraft(offer crmcontracts.Offer) error {
 }
 
 type UpdateOfferInput struct {
-	Currency   *string
-	BuyerOrgID *ids.OrganizationID
-	ValidUntil *string // ISO date
-	IntroText  *string
-	TermsText  *string
-	TemplateID *ids.OfferTemplateID
-	IfVersion  *int64
+	Currency       *string
+	BuyerCompanyID *ids.CompanyID
+	ValidUntil     *string // ISO date
+	IntroText      *string
+	TermsText      *string
+	TemplateID     *ids.OfferTemplateID
+	IfVersion      *int64
 }
 
 func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferInput) (crmcontracts.Offer, error) {
@@ -389,11 +389,11 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		if in.Currency != nil {
 			p.Set("currency", current.Currency, *in.Currency)
 		}
-		if in.BuyerOrgID != nil {
-			if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.BuyerOrgID.UUID); err != nil {
+		if in.BuyerCompanyID != nil {
+			if err := auth.EnsureLinkTarget(ctx, tx, "company", in.BuyerCompanyID.UUID); err != nil {
 				return err
 			}
-			p.Set("buyer_org_id", current.BuyerOrgId, *in.BuyerOrgID)
+			p.Set("buyer_company_id", current.BuyerCompanyId, *in.BuyerCompanyID)
 		}
 		if in.ValidUntil != nil {
 			p.Set("valid_until", current.ValidUntil, *in.ValidUntil)

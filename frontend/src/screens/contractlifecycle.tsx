@@ -13,13 +13,9 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
-import {
-  type ContractDraft,
-  ContractTermsFields,
-  contractTermsBody,
-  draftProblem,
-  pricedIn,
-} from "./contractform";
+import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
+import { contractTermsBody, renewDraftOf } from "./contracttermsbody";
+import { ContractTermsFields } from "./contracttermsfields";
 
 // margince#3286: the three transitions a signed agreement actually goes
 // through after it is first recorded — renew, assert a status, record a
@@ -29,7 +25,6 @@ import {
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
-type ValueBasis = ContractDraft["valueBasis"];
 
 // A status a contract can only ARRIVE at through renewal — the server sets it
 // on the predecessor, in the same transaction that creates the successor
@@ -60,28 +55,6 @@ export function isTerminalContractStatus(status: Contract["status"]): boolean {
   return (
     status === "expired" || status === "cancelled" || status === "superseded"
   );
-}
-
-function renewDraftOf(predecessor: Contract): ContractDraft {
-  return {
-    // Title and basis are the two fields the successor is likeliest to keep,
-    // and both are required by the wire request — prefilled so renewing an
-    // unchanged agreement does not mean retyping what it was already called.
-    // Everything else the predecessor does NOT hand down: RenewContractRequest
-    // inherits only the counterparty (the server derives that), because a
-    // renewal is usually a fresh negotiation and an inherited amount or term
-    // would be a number nobody actually agreed to this time.
-    title: predecessor.title,
-    contractNumber: "",
-    valueMinor: 0,
-    currency: "",
-    valueBasis: (predecessor.value_basis as ValueBasis) ?? "total",
-    startsOn: "",
-    endsOn: "",
-    renewalOn: "",
-    noticePeriodDays: "",
-    signedOn: "",
-  };
 }
 
 function renewalBody(
@@ -130,16 +103,16 @@ async function renewContract(
   return data?.id ?? "";
 }
 
-// The organization's own deals, for the picker below — every status, not only
+// The company's own deals, for the picker below — every status, not only
 // `open`: a renewal is usually recorded after the opportunity that won it has
 // already closed, so filtering to `open` would hide the one deal a renewal is
 // most often actually tied to.
-function dealsForOrg(organizationId: string) {
+function dealsForCompany(companyId: string) {
   return {
-    queryKey: ["orgDeals", organizationId],
+    queryKey: ["companyDeals", companyId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals", {
-        params: { query: { organization_id: organizationId, limit: 100 } },
+        params: { query: { company_id: companyId, limit: 100 } },
       });
       if (error) {
         throwProblem(error);
@@ -172,9 +145,9 @@ export function ContractRenewModal({
   // write authority follows the deal — so the modal keeps working and the deal
   // picker, which can only be filled by listing that company's deals, says why
   // it is not there rather than showing an empty list that reads as "no deals".
-  const anchor = contract.organization_id;
+  const anchor = contract.company_id;
   const deals = useQuery({
-    ...dealsForOrg(anchor ?? ""),
+    ...dealsForCompany(anchor ?? ""),
     enabled: open && anchor != null,
   });
 
@@ -202,10 +175,10 @@ export function ContractRenewModal({
       renewContract(submitted.predecessor, submitted.draft, submitted.dealId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -334,10 +307,10 @@ export function ContractStatusModal({
     }) => changeContractStatus(submitted.contract, submitted.status),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },
@@ -453,10 +426,10 @@ export function ContractCancelModal({
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["orgContracts", contract.organization_id],
+        queryKey: ["companyContracts", contract.company_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["organization360", contract.organization_id],
+        queryKey: ["company360", contract.company_id],
       });
       onClose();
     },

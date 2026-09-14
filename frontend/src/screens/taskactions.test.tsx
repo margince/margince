@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -68,11 +68,12 @@ function openTask() {
 }
 
 test("a task read out of a meeting opens that meeting", async () => {
+  const user = userEvent.setup();
   stubTask("meeting-9");
   openTask();
 
-  const open = await screen.findByRole("button", { name: "Open the meeting" });
-  await userEvent.click(open);
+  const open = await screen.findByRole("button", { name: "Open original" });
+  await user.click(open);
 
   // The meeting itself, not another copy of the sentence naming it.
   await waitFor(() => {
@@ -87,5 +88,66 @@ test("a task nobody read out of a meeting offers no way back", async () => {
   // The positive control is the test above: without it a build that never
   // rendered the button would pass this one for the wrong reason.
   await screen.findByText(/committed to this in the meeting transcript/);
-  expect(screen.queryByRole("button", { name: "Open the meeting" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
+});
+
+test("an email request opens the canonical message reader", async () => {
+  const user = userEvent.setup();
+  installFetchStub({
+    "GET /activities/task-1": () =>
+      jsonResponse({
+        id: "task-1",
+        kind: "task",
+        subject: "Report requested",
+        source_activity_id: "email-1",
+        occurred_at: "2026-09-01T09:00:00Z",
+        is_done: false,
+      }),
+    "GET /activities/email-1": () =>
+      jsonResponse({
+        id: "email-1",
+        kind: "email",
+        body: "Unparsed body must not be displayed",
+      }),
+    "GET /activities/email-1/email-presentation": () =>
+      jsonResponse({
+        id: "email-1",
+        lifecycle: "delivered",
+        occurred_at: "2026-09-01T09:00:00Z",
+        version: 1,
+        summary: {
+          activity_id: "email-1",
+          occurred_at: "2026-09-01T09:00:00Z",
+          version: 1,
+          subject: "The original request",
+          display_status: "team",
+          move: "needs_reply",
+          attachment_count: 0,
+        },
+        body: "Please send the report.",
+        from: [],
+        to: [],
+        cc: [],
+        bcc: [],
+        bcc_withheld: false,
+        attachments: [],
+        links: [],
+        thread: { members: [], next_cursor: null },
+        can_reply: false,
+        can_relink: false,
+        access: {
+          content_state: "available",
+          display_status: "team",
+          audience: "workspace",
+          can_change: false,
+          change_mode: "none",
+        },
+      }),
+  });
+  openTask();
+  await user.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+  expect(await screen.findByText("Please send the report.")).toBeTruthy();
+  expect(screen.queryByText("Unparsed body must not be displayed")).toBeNull();
 });

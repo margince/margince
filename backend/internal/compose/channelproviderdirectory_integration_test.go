@@ -188,7 +188,7 @@ func TestTheDirectoryLoadsFromTheRegistryAndNotFromTheCaptureBoot(t *testing.T) 
 // case has to be planted, because it is the shape the census cannot reach.
 //
 // It matters where an operator reads it: credential_model is what says whether a
-// transport's messages are the company's correspondence or one person's, and a
+// transport's messages are the company's correspondence or one contact's, and a
 // per-member account published as a workspace bot invites exactly the wrong
 // answer to that question.
 func TestTheDirectoryPublishesAUnitsOwnCredentialModel(t *testing.T) {

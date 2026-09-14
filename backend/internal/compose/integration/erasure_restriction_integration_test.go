@@ -40,22 +40,22 @@ import (
 // (a Handelsbrief) and a same-age note (ordinary), plus the delivery behind
 // the email — the second copy of its addressing and substance.
 type restrictionFixture struct {
-	person, email, note, delivery, deal ids.UUID
+	contact, email, note, delivery, deal ids.UUID
 }
 
 func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 	t.Helper()
-	f := restrictionFixture{person: ids.NewV7(), email: ids.NewV7(), note: ids.NewV7(), delivery: ids.NewV7()}
+	f := restrictionFixture{contact: ids.NewV7(), email: ids.NewV7(), note: ids.NewV7(), delivery: ids.NewV7()}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, first_name, source, captured_by)
-			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact (id, full_name, first_name, source, captured_by)
+			 VALUES ($1, 'Held Subject', 'Held', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person_email (person_id, email, source, captured_by)
-			 VALUES ($1, 'held@example.test', 'manual', 'human:x')`, f.person); err != nil {
+			`INSERT INTO contact_email (contact_id, email, source, captured_by)
+			 VALUES ($1, 'held@example.test', 'manual', 'human:x')`, f.contact); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
@@ -72,8 +72,8 @@ func seedRestrictionFixture(t *testing.T, e *Env) restrictionFixture {
 		}
 		for _, a := range []ids.UUID{f.email, f.note} {
 			if _, err := tx.Exec(ctx,
-				`INSERT INTO activity_link (activity_id, entity_type, person_id)
-				 VALUES ($1, 'person', $2)`, a, f.person); err != nil {
+				`INSERT INTO activity_link (activity_id, entity_type, contact_id)
+				 VALUES ($1, 'contact', $2)`, a, f.contact); err != nil {
 				return err
 			}
 		}
@@ -104,7 +104,7 @@ func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
@@ -264,7 +264,7 @@ func assertRestrictedListOverTheWire(t *testing.T, e *Env, f restrictionFixture)
 func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -358,7 +358,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -372,7 +372,7 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	// Erasing the subject again is idempotent over the held row: the restrict
 	// step selects only unrestricted rows, so nothing is written twice and
 	// nothing fails on the guard.
-	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(), f.person, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a second erasure over a held record failed: %v", err)
 	}
 }
@@ -392,7 +392,7 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	admin := e.Admin()
-	if err := privacy.NewEraser(e.DB()).ErasePerson(admin, f.person, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
@@ -451,7 +451,7 @@ func restrictedRowHolds(t *testing.T, e *Env, id ids.UUID) bool {
 
 // controllerCtx is a named administrator holding the retention authority —
 // the principal both overrides require. It uses a SEEDED user rather than a
-// fresh id because a decision is attributed to a person the installation can
+// fresh id because a decision is attributed to a contact the installation can
 // name, and an id with no app_user row behind it is refused by design.
 func controllerCtx(e *Env, grant principal.ObjectGrant) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -474,7 +474,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
-	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	const stated = "reviewed: a marketing enquiry, no transaction behind it"
@@ -559,7 +559,7 @@ func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
-	if err := eraser.ErasePerson(e.Admin(), f.person, "test"); err != nil {
+	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	// Counsel places the hold on the deal the correspondence hangs off, after
@@ -799,7 +799,7 @@ func TestAFloorExpiringDestroysTheProviderOriginalToo(t *testing.T) {
 }
 
 // TestAControllerReleaseDestroysTheProviderOriginalToo — the same gap on the
-// path a person takes rather than the clock.
+// path a contact takes rather than the clock.
 //
 // The file's invariant runs both ways: a release is the controller completing
 // the erasure the restriction suspended, so it must reach everything the sweep
@@ -825,7 +825,7 @@ func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
 // optional, and the refusal is what says so.
 //
 // There is no second path that ages raw_capture out: the Art. 17 cascade's
-// purge is scoped to a PERSON where a retention window is scoped to time. So an
+// purge is scoped to a CONTACT where a retention window is scoped to time. So an
 // unwired purger is not a degraded mode that something else corrects later — it
 // is an erasure that reports success over an intact original, which is the one
 // outcome worse than refusing.

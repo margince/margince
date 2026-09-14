@@ -70,7 +70,7 @@ const GLANCE = '[data-testid="brief-glance"]';
  * passed through rather than where it rests.
  */
 async function openBrief(page: Page) {
-  await page.goto("/#/brief", { waitUntil: "networkidle" });
+  await page.goto("/#/home", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
   await expect(page.locator(".brief-main section").first()).toBeVisible();
   await settled(page);
@@ -86,7 +86,7 @@ async function openBrief(page: Page) {
  */
 /** Open the Brief on its weekly view, settled the same way the morning is. */
 async function openWeekly(page: Page) {
-  await page.goto("/#/brief?view=weekly", { waitUntil: "networkidle" });
+  await page.goto("/#/home?view=weekly", { waitUntil: "networkidle" });
   await expect(page.locator(GLANCE)).toBeVisible();
   await expect(page.locator("#brief-weekly")).toBeVisible();
   await settled(page);

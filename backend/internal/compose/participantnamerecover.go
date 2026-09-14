@@ -29,7 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,7 +45,7 @@ type nameRecoveryCandidate struct {
 }
 
 // recoverAttendeeNamesBatch fills in the names on up to limit calendar
-// activities' participant rows, and names the people those rows resolved to.
+// activities' participant rows, and names the contacts those rows resolved to.
 func recoverAttendeeNamesBatch(ctx context.Context, pool *pgxpool.Pool, limit int, log *slog.Logger) (int, error) {
 	if limit <= 0 {
 		return 0, fmt.Errorf("compose: the attendee name recovery needs a positive batch limit, got %d", limit)
@@ -123,9 +123,9 @@ func recoverOneMeetingsNames(ctx context.Context, tx pgx.Tx, c nameRecoveryCandi
 	if err := capture.RecordAttendeeNames(ctx, tx, c.activityID, namedPartiesOf(c)); err != nil {
 		return err
 	}
-	// The rows now carry what the invitation said, so the people they resolved
+	// The rows now carry what the invitation said, so the contacts they resolved
 	// to can be named from it — the same call the live capture path makes.
-	return people.FillParticipantNamesTx(ctx, tx, c.activityID)
+	return contacts.FillParticipantNamesTx(ctx, tx, c.activityID)
 }
 
 // namedPartiesOf reads the parties one stored invitation names, lowercased to

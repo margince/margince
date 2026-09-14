@@ -85,7 +85,7 @@ export function VoiceCorpusIntake({
               // Keyed by the source: when the queue advances to the next file
               // the panel is a NEW panel, so the previous file's chosen
               // speaker cannot survive into a question about different
-              // people.
+              // contacts.
               <SpeakerPanel
                 key={intake.pendingAsk.ref}
                 ask={intake.pendingAsk}

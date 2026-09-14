@@ -3,10 +3,10 @@
 
 package compose
 
-// The lead lane's seam over the people store's own work queue.
+// The lead lane's seam over the contacts store's own work queue.
 //
 // A binding rather than an implementation, and deliberately so: the first-
-// response clock, its target, and the state a lead is in are the people
+// response clock, its target, and the state a lead is in are the contacts
 // module's to derive — sla_state and sla_deadline_at come back on every lead
 // read. Re-deriving any of it here would be a second opinion about when a reply
 // is late, and the lead screen and the Worklist would eventually disagree in
@@ -18,17 +18,17 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type attentionLeadResponses struct {
-	store *people.Store
+	store *contacts.Store
 	// teammates answers whether a lead's owner shares a live team with the
 	// reader. Required rather than optional: a lead is workspace-readable, so
 	// without this the team scope cannot be narrowed at all and would show the
-	// whole organization's inbound under a page headed `team`.
+	// whole company's inbound under a page headed `team`.
 	teammates attention.Teammates
 }
 
@@ -60,7 +60,7 @@ func (l attentionLeadResponses) Owed(
 	// the page is bounded, so cutting answered leads out of it afterwards loses
 	// the unanswered ones behind them and reports the shortfall as none owed.
 	owed := true
-	in := people.ListLeadsInput{Limit: &limit, OwedAReply: &owed}
+	in := contacts.ListLeadsInput{Limit: &limit, OwedAReply: &owed}
 	// Narrowed in the QUERY, the way the task lane is: filtering afterwards
 	// would let a colleague's leads fill the bound and hide the reader's own
 	// overdue one behind a cut that had already happened.
@@ -87,7 +87,7 @@ func (l attentionLeadResponses) Owed(
 		// not have. A lead is an IDENTITY record, so its read predicate is TRUE
 		// for every seat holding the grant (auth.identityTables): the store
 		// hands back every lead in the workspace, and a page headed `team`
-		// would be the whole organization's inbound.
+		// would be the whole company's inbound.
 		//
 		// The store's own dial cannot express it either — OwnerTeamID names ONE
 		// team and a reader may be in several — so the narrowing happens on the
@@ -114,6 +114,13 @@ func (l attentionLeadResponses) Owed(
 			ID:      ids.UUID(row.Id),
 			Name:    leadDisplayName(row),
 			OwnerID: ownerOfLead(row),
+			Facts: &crmcontracts.WorklistLeadFacts{
+				CompanyName:           row.CompanyName,
+				Status:                leadStatus(row.Status),
+				Source:                row.SourceLabel,
+				LastActivityAt:        row.LastActivityAt,
+				ResponseTargetTracked: &tracked,
+			},
 		}
 		// A deadline and its state exist only where a policy states one: with
 		// the target off leadSLAFields returns nil for every lead. Left zero
@@ -217,4 +224,9 @@ func (l attentionLeadResponses) narrowToTeam(
 		}
 	}
 	return kept, nil
+}
+
+func leadStatus(status crmcontracts.LeadStatus) *string {
+	value := string(status)
+	return &value
 }

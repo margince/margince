@@ -30,7 +30,7 @@ func TestACustomerWaitingIsAnsweredFirst(t *testing.T) {
 		Category: crmcontracts.WorklistItemCategoryCustomerWaiting,
 	})
 
-	if got != crmcontracts.BriefSectionRespondNow {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow {
 		t.Errorf("section = %q, want respond_now", got)
 	}
 }
@@ -46,7 +46,7 @@ func TestALeadOwedAReplyIsSomebodyWaitingNotPipelineToBuild(t *testing.T) {
 		},
 	})
 
-	if got != crmcontracts.BriefSectionRespondNow {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow {
 		t.Errorf("section = %q, want respond_now for a lead past its reply clock", got)
 	}
 }
@@ -57,7 +57,7 @@ func TestALeadWithNoReplyClockIsPipelineToBuild(t *testing.T) {
 		Category: crmcontracts.WorklistItemCategoryLeads,
 	})
 
-	if got != crmcontracts.BriefSectionBuildPipeline {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline {
 		t.Errorf("section = %q, want build_pipeline", got)
 	}
 }
@@ -72,7 +72,7 @@ func TestABouncedMessageIsSomebodyWaiting(t *testing.T) {
 		got := sectioned(crmcontracts.WorklistItem{
 			Source: source, Category: crmcontracts.WorklistItemCategorySystem,
 		})
-		if got != crmcontracts.BriefSectionRespondNow {
+		if got != crmcontracts.WorklistItemBriefSectionBriefSectionRespondNow {
 			t.Errorf("%s: section = %q, want respond_now", source, got)
 		}
 	}
@@ -89,7 +89,7 @@ func TestADealWhoseNextStepIsAMeetingBriefIsPreparation(t *testing.T) {
 		},
 	})
 
-	if got != crmcontracts.BriefSectionPrepareConversations {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations {
 		t.Errorf("section = %q, want prepare_conversations", got)
 	}
 }
@@ -100,7 +100,7 @@ func TestAMeetingIsAConversationToPrepare(t *testing.T) {
 		Category: crmcontracts.WorklistItemCategoryMeetings,
 	})
 
-	if got != crmcontracts.BriefSectionPrepareConversations {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionPrepareConversations {
 		t.Errorf("section = %q, want prepare_conversations", got)
 	}
 }
@@ -113,7 +113,7 @@ func TestADecisionAndASystemFailureAreBothReviewAndRepair(t *testing.T) {
 		got := sectioned(crmcontracts.WorklistItem{
 			Source: crmcontracts.WorklistItemSourceApproval, Category: category,
 		})
-		if got != crmcontracts.BriefSectionReviewAndRepair {
+		if got != crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair {
 			t.Errorf("%s: section = %q, want review_and_repair", category, got)
 		}
 	}
@@ -128,7 +128,7 @@ func TestARelationshipWorthRevivingIsPipelineToBuild(t *testing.T) {
 		Level:    levelAgreed,
 	})
 
-	if got != crmcontracts.BriefSectionBuildPipeline {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline {
 		t.Errorf("section = %q, want build_pipeline", got)
 	}
 }
@@ -145,7 +145,7 @@ func TestARoutineSilenceIsReviewAndRepair(t *testing.T) {
 		Level:    levelRoutine,
 	})
 
-	if got != crmcontracts.BriefSectionReviewAndRepair {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair {
 		t.Errorf("section = %q, want review_and_repair", got)
 	}
 }
@@ -156,7 +156,7 @@ func TestADriftingDealIsRevenueToMove(t *testing.T) {
 		Category: crmcontracts.WorklistItemCategoryDealsAtRisk,
 	})
 
-	if got != crmcontracts.BriefSectionMoveRevenue {
+	if got != crmcontracts.WorklistItemBriefSectionBriefSectionMoveRevenue {
 		t.Errorf("section = %q, want move_revenue", got)
 	}
 }
@@ -203,7 +203,7 @@ func TestAPlaceableRowStillCarriesItsSection(t *testing.T) {
 	if drawn[0].BriefSection == nil {
 		t.Fatal("a placeable row carries no section — the guard is drawing nothing at all")
 	}
-	if *drawn[0].BriefSection != crmcontracts.BriefSectionMoveRevenue {
+	if *drawn[0].BriefSection != crmcontracts.WorklistItemBriefSectionBriefSectionMoveRevenue {
 		t.Errorf("section = %q, want move_revenue", *drawn[0].BriefSection)
 	}
 }

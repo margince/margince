@@ -27,17 +27,17 @@ import (
 // A limited message takes its whole conversation out of the pass, and it does
 // NOT fall back to the mailbox owner the way a capture-private RECORD does.
 //
-// The two look alike and are not. A record's owner visibility says one person is
-// the reader, so a summary addressed to that person discloses nothing new. A
+// The two look alike and are not. A record's owner visibility says one contact is
+// the reader, so a summary addressed to that contact discloses nothing new. A
 // limited audience says the content is withheld from readers who can still see
 // the records the message is filed against, and an owner-scoped signal is a
 // durable, searchable restatement of that content which outlives the message's
 // own limit. There is no owner for whom extracting it is free.
 func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	// Two messages on one conversation: one ordinary, one limited. The pass
 	// reads a whole thread at once, so what it writes is as private as the most
@@ -80,9 +80,9 @@ func TestAThreadWithALimitedMessageIsNotOfferedToTheModel(t *testing.T) {
 // compose/signalextractwindow_integration_test.go.
 func TestAConversationIsNotReReadAfterOneOfItsMessagesIsLimited(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	seedMessage(t, e, contact, "thread-mid", "Renewal", "Happy to continue.", "inbound", at)
 	late := seedMessage(t, e, contact, "thread-mid", "Renewal",
@@ -144,9 +144,9 @@ type recordingBrain struct {
 // with nothing on the summary to say a part is missing.
 func TestAHandLoggedLimitedMessageTakesItsThreadOutOfThePass(t *testing.T) {
 	e := Setup(t)
-	org := e.SeedOrg(t, "Acme", &e.Rep1)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	at := extractClock.Add(-48 * time.Hour)
-	contact := employeeOf(t, e, org, "Ada at Acme")
+	contact := employeeOf(t, e, company, "Ada at Acme")
 
 	seedMessage(t, e, contact, "thread-mixed", "Renewal", "Happy to continue.", "inbound", at)
 
@@ -161,7 +161,7 @@ func TestAHandLoggedLimitedMessageTakesItsThreadOutOfThePass(t *testing.T) {
 		INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, created_at, source, captured_by, audience)
 		VALUES ($1, 'email', 'outbound', 'Renewal', 'internal note: we are preparing to terminate', 'thread-mixed',
 		        '`+handLoggedAt+`', '`+handLoggedAt+`', 'manual', 'human:someone', 'participants')`)
-	LinkActivity(t, OwnerConn(t), handLogged, "person", contact)
+	LinkActivity(t, OwnerConn(t), handLogged, "contact", contact)
 
 	brain := &scriptedBrain{reply: `{"events": []}`}
 	if raised := extractPass(t, e, brain); raised != 0 {

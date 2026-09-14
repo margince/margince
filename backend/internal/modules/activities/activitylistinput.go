@@ -9,7 +9,7 @@ package activities
 // Apart from the readers that execute it because it is the surface callers
 // write against — a reader adding a filter needs this file and not the SQL, and
 // the SQL's own file stays about how a page is fetched. What each dial renders
-// to lives in orgscope.go, beside the other scope clauses.
+// to lives in companyscope.go, beside the other scope clauses.
 
 import (
 	"time"
@@ -42,13 +42,13 @@ type ListActivitiesInput struct {
 	// account that has no long thread.
 	ThreadKey       *string
 	IncludeArchived bool
-	// AssigneeID is the work queue's narrowing: the OPEN tasks one person
+	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
 
-	// OwnQueueOf narrows to the open work one person is answerable for.
+	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
 	// what the task screen filters by; this one is the day's queue and carries
 	// open-ness with it.
@@ -68,13 +68,13 @@ type ListActivitiesInput struct {
 	// capture provenance, imports and participants — never host_user_id. These
 	// only choose which of the rows a reader already passes the lane is about.
 	//
-	// OnMeetingOf is "mine": the meetings this person is genuinely on — their own
+	// OnMeetingOf is "mine": the meetings this contact is genuinely on — their own
 	// calendar hosted it, their seat imported it, or they are stamped as a
-	// participant. Three sources because a meeting reaches a person three ways,
+	// participant. Three sources because a meeting reaches a contact three ways,
 	// and asking about the host alone would drop every meeting a colleague was
 	// invited to.
 	OnMeetingOf *ids.UserID
-	// MeetingHost is one NAMED person's own calendar — a manager opening the day
+	// MeetingHost is one NAMED contact's own calendar — a manager opening the day
 	// of the rep an exception named. Exact, unlike OnMeetingOf: asking for a
 	// rep's day means the rep's calendar, not every meeting they were invited to.
 	MeetingHost *ids.UserID
@@ -101,7 +101,7 @@ type ListActivitiesInput struct {
 	// It is not a second spelling of EntityType="project"+EntityID, and the
 	// difference is the whole point. That pair asks "what is filed under this
 	// project"; this asks "what is on this account, minus the other
-	// engagement" — the anchor stays the person or company, and the general
+	// engagement" — the anchor stays the contact or company, and the general
 	// correspondence that carries no project at all stays with it. A reader
 	// preparing for an ERP meeting still wants the relationship's history;
 	// they do not want the datacentre migration.
@@ -172,6 +172,8 @@ type ListActivitiesInput struct {
 	// work for a given instant, and a queue that promised today's list would be
 	// lying if it carried the undated backlog too.
 	OpenAndDueBy *time.Time
+	// IncludeEmailRequests adds undated captured requests to the execution queue, not overdue counts.
+	IncludeEmailRequests bool
 	// OpenAndDueAfter narrows the same read to work due LATER than an instant,
 	// and is paired with OpenAndDueBy to ask for one window.
 	//

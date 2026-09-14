@@ -25,15 +25,15 @@ import (
 
 func TestBlockingContains(t *testing.T) {
 	blocking := []crmcontracts.OverlayFlipPreflightBlocking{
-		crmcontracts.ForceFreshIncomplete, crmcontracts.ExportMissing,
+		crmcontracts.OverlayFlipPreflightBlockingForceFreshIncomplete, crmcontracts.OverlayFlipPreflightBlockingExportMissing,
 	}
-	if !blockingContains(blocking, crmcontracts.ExportMissing) {
+	if !blockingContains(blocking, crmcontracts.OverlayFlipPreflightBlockingExportMissing) {
 		t.Error("a present reason was not found; the emergency block and the export gate both branch on this")
 	}
-	if blockingContains(blocking, crmcontracts.IncumbentUnreachable) {
+	if blockingContains(blocking, crmcontracts.OverlayFlipPreflightBlockingIncumbentUnreachable) {
 		t.Error("an absent reason was reported present — the emergency cutover would be offered while the incumbent is reachable")
 	}
-	if blockingContains(nil, crmcontracts.ExportMissing) {
+	if blockingContains(nil, crmcontracts.OverlayFlipPreflightBlockingExportMissing) {
 		t.Error("a green verdict must contain no reason at all")
 	}
 }
@@ -115,12 +115,12 @@ func TestBundleSourceImportsTheEstateInDependencyOrder(t *testing.T) {
 	for i, object := range order {
 		position[object] = i
 	}
-	// Parents before dependents: an organization must exist before the
-	// person or deal that references it, and activities land last so
+	// Parents before dependents: a company must exist before the
+	// contact or deal that references it, and activities land last so
 	// every link target is already there.
-	if position[flipObjectOrganization] > position[flipObjectPerson] ||
-		position[flipObjectOrganization] > position[flipObjectDeal] {
-		t.Errorf("order %v puts organizations after their dependents", order)
+	if position[flipObjectCompany] > position[flipObjectContact] ||
+		position[flipObjectCompany] > position[flipObjectDeal] {
+		t.Errorf("order %v puts companies after their dependents", order)
 	}
 	if position[flipObjectActivity] != len(order)-1 {
 		t.Errorf("order %v does not import activities last", order)
@@ -170,30 +170,30 @@ func TestTheFlipStampsProvenanceInsideTheReservedNamespace(t *testing.T) {
 	// only the prefix makes that safe — every client create wire refuses
 	// it, so a row carrying it cannot have been planted.
 	w := &flipWriters{incumbent: "hubspot"}
-	stamp := w.provenance(flipObjectPerson, "p-1")
+	stamp := w.provenance(flipObjectContact, "p-1")
 	if !provenance.ReservedSourceSystem(stamp) {
 		t.Fatalf("provenance = %q, want the reserved prefix; without it a planted row would be adopted as the importer's own", stamp)
 	}
-	if stamp != provenance.ReservedSourceSystemPrefix+"hubspot:person:p-1" {
+	if stamp != provenance.ReservedSourceSystemPrefix+"hubspot:contact:p-1" {
 		t.Errorf("provenance = %q, want incumbent:object:external_id inside the namespace", stamp)
 	}
 	// The empty external id is the LIKE prefix the repair scans on, so it
 	// must be a strict prefix of a real row's stamp — otherwise the scan
 	// matches nothing and the repair silently adopts nobody.
-	if prefix := w.provenance(flipObjectPerson, ""); !strings.HasPrefix(stamp, prefix) || prefix == stamp {
+	if prefix := w.provenance(flipObjectContact, ""); !strings.HasPrefix(stamp, prefix) || prefix == stamp {
 		t.Errorf("scan prefix %q is not a strict prefix of %q", prefix, stamp)
 	}
 	// Distinct classes never share a prefix, or the repair would bind an
-	// organization's external id to a person.
-	if strings.HasPrefix(w.provenance(flipObjectDeal, "x"), w.provenance(flipObjectPerson, "")) {
-		t.Error("a deal's provenance matched the person scan prefix")
+	// company's external id to a contact.
+	if strings.HasPrefix(w.provenance(flipObjectDeal, "x"), w.provenance(flipObjectContact, "")) {
+		t.Error("a deal's provenance matched the contact scan prefix")
 	}
 }
 
 func TestReconcileRefusesAnObjectOutsideTheAllowlist(t *testing.T) {
 	// The class is interpolated into the scan's FROM clause, so the
 	// allowlist — not the caller — is what keeps a table name out of it.
-	if _, err := (&flipWriters{incumbent: "hubspot"}).orphanedIdentities(t.Context(), "person; DROP TABLE person"); err == nil {
+	if _, err := (&flipWriters{incumbent: "hubspot"}).orphanedIdentities(t.Context(), "contact; DROP TABLE contact"); err == nil {
 		t.Fatal("an unlisted object must be refused before any query is built")
 	}
 }

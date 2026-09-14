@@ -42,10 +42,10 @@ func (e *forecastEnv) explainStatus(ctx context.Context, report, handleURL strin
 
 func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 	e := setupForecast(t)
-	org := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Drill Co', 'manual', 'human:x')`)
-	project := e.seedID(t, `INSERT INTO project (id, name, organization_id, source, captured_by)
-		VALUES ($1, 'Secret rollout', $2, 'manual', 'human:x')`, org)
+	project := e.seedID(t, `INSERT INTO project (id, name, company_id, source, captured_by)
+		VALUES ($1, 'Secret rollout', $2, 'manual', 'human:x')`, company)
 	activity := e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'kickoff', now() - interval '1 hour', 'manual', 'human:x')`)
 	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, project_id) VALUES ($1, $2, 'project', $3)`, activity, project)
@@ -91,10 +91,10 @@ func TestActivityDrillThroughTakesTheProjectGrant(t *testing.T) {
 // site instead.
 func TestFilteringByAGrantedFieldTakesItsGrant(t *testing.T) {
 	e := setupForecast(t)
-	org := e.seedID(t, `INSERT INTO organization (id, display_name, source, captured_by)
+	company := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Filter Co', 'manual', 'human:x')`)
-	project := e.seedID(t, `INSERT INTO project (id, name, organization_id, source, captured_by)
-		VALUES ($1, 'Unlistable rollout', $2, 'manual', 'human:x')`, org)
+	project := e.seedID(t, `INSERT INTO project (id, name, company_id, source, captured_by)
+		VALUES ($1, 'Unlistable rollout', $2, 'manual', 'human:x')`, company)
 	activity := e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'kickoff', now() - interval '1 hour', 'manual', 'human:x')`)
 	e.seedID(t, `INSERT INTO activity_link (id, activity_id, entity_type, project_id) VALUES ($1, $2, 'project', $3)`,

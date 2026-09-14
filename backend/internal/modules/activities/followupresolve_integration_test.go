@@ -85,7 +85,7 @@ func (e *resolveEnv) exec(t *testing.T, sql string, args ...any) {
 
 // seedTask writes one open task linked to the lead, with the given
 // provenance pair — source 'system' + captured_by 'system' is the
-// engine's own shape; anything else is a person's row, whatever its
+// engine's own shape; anything else is a contact's row, whatever its
 // source claims.
 func (e *resolveEnv) seedTask(t *testing.T, source, capturedBy string) ids.UUID {
 	t.Helper()
@@ -97,58 +97,58 @@ func (e *resolveEnv) seedTask(t *testing.T, source, capturedBy string) ids.UUID 
 	return id
 }
 
-// seedPerson writes a bare person row, the target a promotion carries the
+// seedContact writes a bare contact row, the target a promotion carries the
 // lead's activities onto.
-func (e *resolveEnv) seedPerson(t *testing.T) ids.UUID {
+func (e *resolveEnv) seedContact(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	e.exec(t, `INSERT INTO person (id, full_name, owner_id, source, captured_by)
-		VALUES ($1, 'Resolve Person', $2, 'manual', $3)`, id, e.rep, "human:"+e.rep.String())
+	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
+		VALUES ($1, 'Resolve Contact', $2, 'manual', $3)`, id, e.rep, "human:"+e.rep.String())
 	return id
 }
 
-// seedTaskLinkedToPerson writes one open task linked to a person — the shape
-// carryLeadActivities (people/promote.go) leaves a lead's follow-up task in,
-// inside the SAME transaction that promotes the lead: entity_type 'person',
-// person_id set, lead_id NULL. A resolver that still looks this task up by
+// seedTaskLinkedToContact writes one open task linked to a contact — the shape
+// carryLeadActivities (contacts/promote.go) leaves a lead's follow-up task in,
+// inside the SAME transaction that promotes the lead: entity_type 'contact',
+// contact_id set, lead_id NULL. A resolver that still looks this task up by
 // the lead id finds nothing.
-func (e *resolveEnv) seedTaskLinkedToPerson(t *testing.T, source, capturedBy string, person ids.UUID) ids.UUID {
+func (e *resolveEnv) seedTaskLinkedToContact(t *testing.T, source, capturedBy string, contact ids.UUID) ids.UUID {
 	t.Helper()
-	return e.seedTaskLinkedToPersonAt(t, source, capturedBy, person, -time.Hour)
+	return e.seedTaskLinkedToContactAt(t, source, capturedBy, contact, -time.Hour)
 }
 
-// seedTaskLinkedToPersonAt is seedTaskLinkedToPerson with the task's created_at
-// placed explicitly relative to the PERSON's own, which is the offset the
+// seedTaskLinkedToContactAt is seedTaskLinkedToContact with the task's created_at
+// placed explicitly relative to the CONTACT's own, which is the offset the
 // resolver's bound actually reads. Expressed as an offset rather than an
-// absolute instant, and computed by Postgres from the person row, so the
+// absolute instant, and computed by Postgres from the contact row, so the
 // fixture is written by the same clock the assertion is about — a test that
 // stamped these from the test host would be proving something about its own
 // machine.
-func (e *resolveEnv) seedTaskLinkedToPersonAt(t *testing.T, source, capturedBy string, person ids.UUID, fromPersonCreation time.Duration) ids.UUID {
+func (e *resolveEnv) seedTaskLinkedToContactAt(t *testing.T, source, capturedBy string, contact ids.UUID, fromContactCreation time.Duration) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by, created_at)
 		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3,
-			(SELECT p.created_at FROM person p WHERE p.id = $4) + make_interval(secs => $5))`,
-		id, source, capturedBy, person, fromPersonCreation.Seconds())
-	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, id, person)
+			(SELECT p.created_at FROM contact p WHERE p.id = $4) + make_interval(secs => $5))`,
+		id, source, capturedBy, contact, fromContactCreation.Seconds())
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, id, contact)
 	return id
 }
 
-// leadPromotedEvent is the real shape people.QualifyLead emits — the payload
-// names the person the lead became, which is the only place, once
+// leadPromotedEvent is the real shape contacts.QualifyLead emits — the payload
+// names the contact the lead became, which is the only place, once
 // carryLeadActivities has run, that a caller can still learn where the lead's
-// tasks went. dedupeOutcome is "created" for a fresh person, "merged" for an
+// tasks went. dedupeOutcome is "created" for a fresh contact, "merged" for an
 // existing survivor — see decodeLeadPromoted's doc for why the resolver reads
 // it. OccurredAt is the API host's own stamp and the resolver's bound no
 // longer reads it — TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails
 // is the test that holds that, by moving this field and expecting no effect.
 func leadPromotedEvent(
-	t *testing.T, lead, person ids.UUID, dedupeOutcome string, carried ...ids.UUID,
+	t *testing.T, lead, contact ids.UUID, dedupeOutcome string, carried ...ids.UUID,
 ) workflow.Event {
 	t.Helper()
 	body := map[string]any{
-		"promoted_person_id": person.String(), "dedupe_outcome": dedupeOutcome, "trigger": "human_qualify",
+		"promoted_contact_id": contact.String(), "dedupe_outcome": dedupeOutcome, "trigger": "human_qualify",
 	}
 	// Absent rather than empty when a case names none, because that is what a
 	// payload written before the field existed looks like — and the two
@@ -245,7 +245,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 	systemTask := e.seedTask(t, "system", "system")
 	humanTask := e.seedTask(t, "web", "human:"+e.rep.String())
 	// A task a caller PLANTED with source "system": captured_by names the
-	// person, because no client write can spell the system principal — and
+	// contact, because no client write can spell the system principal — and
 	// that is exactly why the resolver must leave it open.
 	forgedTask := e.seedTask(t, "system", "human:"+e.rep.String())
 
@@ -265,7 +265,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 		t.Error("the system follow-up task is still open after the follow-up happened")
 	}
 	if e.isDone(t, humanTask) {
-		t.Error("the HUMAN's task was completed — the system claimed work a person may not consider done")
+		t.Error("the HUMAN's task was completed — the system claimed work a colleague may not consider done")
 	}
 	if e.isDone(t, forgedTask) {
 		t.Error("a task with a forged source 'system' was completed — captured_by, not source, decides what the system minted")
@@ -293,7 +293,7 @@ func TestACapturedTaskResolvesNothing(t *testing.T) {
 }
 
 // A lead DISQUALIFIED leaves the open pool without moving anything: it never
-// becomes a person, so its follow-up task's link keeps its lead_id, and the
+// becomes a contact, so its follow-up task's link keeps its lead_id, and the
 // resolver's original lead-keyed lookup still finds it.
 func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
 	e := setupResolve(t)
@@ -314,78 +314,78 @@ func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
 }
 
 // A lead PROMOTED is a different shape. carryLeadActivities
-// (people/promote.go) moves the follow-up task's link from the lead onto the
-// person it became — entity_type 'person', person_id set, lead_id NULL —
+// (contacts/promote.go) moves the follow-up task's link from the lead onto the
+// contact it became — entity_type 'contact', contact_id set, lead_id NULL —
 // inside the SAME transaction that emits lead.promoted, so the resolver never
 // sees a lead-linked row for a genuinely promoted lead. It has to complete the
-// task through the person the event names instead.
-func TestAPromotedLeadCompletesItsSystemTasksCarriedToThePerson(t *testing.T) {
+// task through the contact the event names instead.
+func TestAPromotedLeadCompletesItsSystemTasksCarriedToTheContact(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
-	systemTask := e.seedTaskLinkedToPerson(t, "system", "system", person)
-	humanTask := e.seedTaskLinkedToPerson(t, "web", "human:"+e.rep.String(), person)
+	contact := e.seedContact(t)
+	systemTask := e.seedTaskLinkedToContact(t, "system", "system", contact)
+	humanTask := e.seedTaskLinkedToContact(t, "web", "human:"+e.rep.String(), contact)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	result := fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
+	result := fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "created"))
 
 	if len(result.Applied) == 0 {
 		t.Fatal("a promoted lead resolved nothing — the follow-up loop stays open forever")
 	}
 	if !e.isDone(t, systemTask) {
-		t.Error("the promoted lead's system follow-up is still open — its task carried to the person, and the resolver looked it up by the lead id promotion just nulled")
+		t.Error("the promoted lead's system follow-up is still open — its task carried to the contact, and the resolver looked it up by the lead id promotion just nulled")
 	}
 	if e.isDone(t, humanTask) {
-		t.Error("the HUMAN's task was completed — the system claimed work a person may not consider done")
+		t.Error("the HUMAN's task was completed — the system claimed work a colleague may not consider done")
 	}
 }
 
-// A lead promoted into an EXISTING person (dedupe_outcome "merged") must not
-// claim work the person's own history already carries. promoteTarget only
+// A lead promoted into an EXISTING contact (dedupe_outcome "merged") must not
+// claim work the contact's own history already carries. promoteTarget only
 // merges into a survivor that could easily have its own open system-minted
-// reminder already (no_activity_reminder/check_in_cadence anchor on a person
-// the same way) — completing every open system task on the person, rather
+// reminder already (no_activity_reminder/check_in_cadence anchor on a contact
+// the same way) — completing every open system task on the contact, rather
 // than only the one this promotion carried, would tick off a reminder this
 // promotion has nothing to do with, with an audit row claiming the follow-up
 // happened. The resolver only completes the carried task on a genuinely NEW
-// person, where nothing else could exist to collide with yet.
-func TestAMergedPromotionDoesNotClaimThePersonsUnrelatedTasks(t *testing.T) {
+// contact, where nothing else could exist to collide with yet.
+func TestAMergedPromotionDoesNotClaimTheContactsUnrelatedTasks(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
+	contact := e.seedContact(t)
 	// Pre-existing, unrelated to this promotion: a check-in reminder the
 	// system minted against the SURVIVOR long before this lead ever promoted.
-	unrelatedReminder := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	unrelatedReminder := e.seedTaskLinkedToContact(t, "system", "system", contact)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged"))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "merged"))
 
 	if e.isDone(t, unrelatedReminder) {
-		t.Error("a merge completed a person's pre-existing system reminder that this promotion never touched")
+		t.Error("a merge completed a contact's pre-existing system reminder that this promotion never touched")
 	}
 }
 
-// A person created by THIS promotion is not immune to the same collision:
+// A contact created by THIS promotion is not immune to the same collision:
 // the resolver runs off the outbox, asynchronously, and anything that mints
-// a system task against the freshly-created person in the window between the
+// a system task against the freshly-created contact in the window between the
 // promotion committing and this handler actually running — no_activity_reminder,
 // check_in_cadence — is not the follow-up this promotion carried. Bounding
-// completion to the tasks that existed when the person did is what keeps "a
-// fresh person cannot yet carry anything else" true instead of merely assumed.
+// completion to the tasks that existed when the contact did is what keeps "a
+// fresh contact cannot yet carry anything else" true instead of merely assumed.
 func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotion(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
-	carried := e.seedTaskLinkedToPerson(t, "system", "system", person)
-	// A task minted a second AFTER the person the promotion created — the
+	contact := e.seedContact(t)
+	carried := e.seedTaskLinkedToContact(t, "system", "system", contact)
+	// A task minted a second AFTER the contact the promotion created — the
 	// exact shape of a sibling automation catching up before this handler runs.
-	lateTask := e.seedTaskLinkedToPersonAt(t, "system", "system", person, time.Second)
+	lateTask := e.seedTaskLinkedToContactAt(t, "system", "system", contact, time.Second)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "created"))
 
 	if !e.isDone(t, carried) {
 		t.Error("the task actually carried by the promotion is still open")
@@ -410,12 +410,12 @@ func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotion(t *testing.T) 
 func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
+	contact := e.seedContact(t)
 	// Carried by the promotion: minted against the lead a minute before the
-	// person existed, well inside an hour of skew.
-	carried := e.seedTaskLinkedToPersonAt(t, "system", "system", person, -time.Minute)
+	// contact existed, well inside an hour of skew.
+	carried := e.seedTaskLinkedToContactAt(t, "system", "system", contact, -time.Minute)
 
-	ev := leadPromotedEvent(t, e.lead, person, "created")
+	ev := leadPromotedEvent(t, e.lead, contact, "created")
 	ev.OccurredAt = ev.OccurredAt.Add(-time.Hour)
 
 	ctx := e.systemCtx()
@@ -427,9 +427,9 @@ func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T
 }
 
 // THE case this arm could not answer: a lead that promoted by MERGING into an
-// existing person. The survivor can already carry its own open system-minted
-// reminders, so "every open system task on this person" is the wrong set —
-// which is why the person-keyed reading is gated on a freshly created person,
+// existing contact. The survivor can already carry its own open system-minted
+// reminders, so "every open system task on this contact" is the wrong set —
+// which is why the contact-keyed reading is gated on a freshly created contact,
 // and why a merged promotion's carried follow-up stayed open.
 //
 // The payload names what the promotion MOVED, so the answer is exact for both
@@ -438,16 +438,16 @@ func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T
 func TestAMergedPromotionCompletesTheTaskItCarriedAndNothingElse(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
+	contact := e.seedContact(t)
 	// The survivor's own reminder, minted long before this promotion and
 	// nothing to do with it.
-	unrelated := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	unrelated := e.seedTaskLinkedToContact(t, "system", "system", contact)
 	// The lead's follow-up, carried onto the survivor by this promotion.
-	carried := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	carried := e.seedTaskLinkedToContact(t, "system", "system", contact)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged", carried))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "merged", carried))
 
 	if !e.isDone(t, carried) {
 		t.Error("the task the merge carried is still open — the loop the system " +
@@ -465,46 +465,46 @@ func TestAMergedPromotionCompletesTheTaskItCarriedAndNothingElse(t *testing.T) {
 func TestACarriedHumanTaskIsNotCompletedByThePromotion(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
-	human := e.seedTaskLinkedToPerson(t, "web", "human:"+e.rep.String(), person)
+	contact := e.seedContact(t)
+	human := e.seedTaskLinkedToContact(t, "web", "human:"+e.rep.String(), contact)
 	// A task a caller PLANTED with source "system": captured_by names the
-	// person, because no client write can spell the system principal.
-	forged := e.seedTaskLinkedToPerson(t, "system", "human:"+e.rep.String(), person)
+	// contact, because no client write can spell the system principal.
+	forged := e.seedTaskLinkedToContact(t, "system", "human:"+e.rep.String(), contact)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged", human, forged))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "merged", human, forged))
 
 	if e.isDone(t, human) {
 		t.Error("the HUMAN's carried task was completed — being moved by a promotion " +
-			"does not make a person's own work the system's to finish")
+			"does not make a contact's own work the system's to finish")
 	}
 	if e.isDone(t, forged) {
 		t.Error("a task carrying a planted source was completed: captured_by is the " +
-			"unforgeable half of the predicate and it names a person here")
+			"unforgeable half of the predicate and it names a contact here")
 	}
 }
 
 // A payload written before the ids were carried keeps the behaviour it had.
 // A replayed old event is then no worse than it was, and a MERGED one still
-// completes nothing rather than guessing at the person's whole task list.
-func TestAnOldPayloadStillCompletesOnlyForAFreshPerson(t *testing.T) {
+// completes nothing rather than guessing at the contact's whole task list.
+func TestAnOldPayloadStillCompletesOnlyForAFreshContact(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	person := e.seedPerson(t)
-	task := e.seedTaskLinkedToPerson(t, "system", "system", person)
+	contact := e.seedContact(t)
+	task := e.seedTaskLinkedToContact(t, "system", "system", contact)
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")
-	// No carried ids, and a merge: the reading that remains is the person-keyed
+	// No carried ids, and a merge: the reading that remains is the contact-keyed
 	// one, which this outcome has always refused.
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "merged"))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "merged"))
 	if e.isDone(t, task) {
-		t.Error("an old merged payload completed by person id, which is the " +
+		t.Error("an old merged payload completed by contact id, which is the " +
 			"over-completion the outcome gate exists to refuse")
 	}
 
-	fire(ctx, t, h, leadPromotedEvent(t, e.lead, person, "created"))
+	fire(ctx, t, h, leadPromotedEvent(t, e.lead, contact, "created"))
 	if !e.isDone(t, task) {
 		t.Error("an old created payload stopped completing, so the fallback lost " +
 			"the one case it was already answering")

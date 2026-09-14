@@ -46,7 +46,7 @@ func parseMembershipUpdate(t *testing.T, update string) (Membership, bool) {
 
 // The identity a my_chat_member names is the CHAT's, never
 // new_chat_member.user's: that user is the bot. Reading it there keys the
-// reachability write on the bot's id, which no Person carries, so
+// reachability write on the bot's id, which no Contact carries, so
 // SetChannelIdentityBlocked updates zero rows and reports success — the
 // customer keeps rendering as reachable and every reply is accepted only to
 // fail at Telegram.

@@ -24,7 +24,7 @@ package gates
 //
 // WHAT THIS CANNOT SEE, stated so the next reader does not trust it further
 // than it goes: the SQL spellings of the same rule. There are THREE, not one —
-// organization_open_pipeline_rollup, compose.BaseValueSQL and its
+// company_open_pipeline_rollup, compose.BaseValueSQL and its
 // character-identical twin briefs.briefBaseValueSQL. All three read
 // currency_minor_digits, the database mirror of the Go digit table.
 //

@@ -11,6 +11,7 @@ import {
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
+import { PrivacyNotice } from "./confirmprivacy";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
 import { SubscriptionConfirm } from "./confirmsubscription";
 import {
@@ -34,7 +35,7 @@ import "./confirm.css";
 // Art. 4(11) and Recital 32, settled in Planet49.
 
 // The fields the page shows, in the order it shows them. `company` is
-// deliberately absent from the correctable set: which organization employs
+// deliberately absent from the correctable set: which company employs
 // somebody is a relationship the workspace maintains, and correcting it would
 // mean creating or merging a company record.
 const CORRECTABLE = ["full_name", "title", "email", "phone"] as const;
@@ -85,7 +86,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
     },
   });
 
-  // Edits are held against what the server sent, so a field the person did not
+  // Edits are held against what the server sent, so a field the contact did not
   // touch is never submitted as a correction. Submitting an untouched field
   // would stage a proposal nobody made, and a rep would have to read it.
   const [edits, setEdits] = useState<Partial<Record<CorrectableField, string>>>(
@@ -196,6 +197,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // subscription, and rendering a refusal nowhere.
   if (card.kind === "subscription_confirmation") {
     return <SubscriptionConfirm token={token} card={card} />;
+  }
+  // A privacy notice has its own page and NO form. It discharges a duty to tell
+  // somebody something, so it takes no answer — and falling through to the
+  // record page below would show them their file and offer a subscription box,
+  // neither of which the mail that carried this link described.
+  if (card.kind === "privacy_notice") {
+    return <PrivacyNotice card={card} />;
   }
   if (done) {
     return (

@@ -28,9 +28,9 @@ Every page carries a badge beside its heading saying who a change there affects:
 | Badge | What it means |
 |---|---|
 | **Only you** | Your own seat. Nobody else sees the difference. |
-| **Your team** | The people on your team. |
-| **Company** | Everyone in this organization. |
-| **Installation** | Every organization on this deployment. |
+| **Your team** | The contacts on your team. |
+| **Company** | Everyone in this company. |
+| **Installation** | Every company on this deployment. |
 | **Mixed** | The page holds settings of more than one kind. Read the card. |
 
 Three pages are **Mixed**, and each for a named reason: *Connections* and
@@ -70,7 +70,7 @@ Word document is read to its text in the browser before anything is sent; a
 scanned PDF with no text layer counts as empty, and one that is
 password-protected is named so you can paste its text instead. The card says
 beside the zone what teaches the voice (sent emails first, then proposals and posts, then call
-transcripts) and what to leave out (other people's writing, AI drafts). A file
+transcripts) and what to leave out (other contacts's writing, AI drafts). A file
 whose words are at least half attributed to named speakers is a conversation:
 the card asks "Which speaker is you?" and keeps only that speaker's turns. Below
 that share the file is prose and is taken whole, so an email that opens a line
@@ -83,7 +83,7 @@ version exists and "Rebuild Voice DNA" after.
 Where you mint and revoke **passports** — the credentials that let an AI agent
 work as you.
 
-Every member gets this page, ungated. A passport is minted by a person for
+Every member gets this page, ungated. A passport is minted by a contact for
 their own use, so making it administrator-only would mean only administrators
 could mint one.
 
@@ -109,7 +109,7 @@ Two things on one page: the senders you keep out, and what the last 24 hours of
 your mail turned into.
 
 **Keep out of capture.** Addresses and domains whose messages never enter the
-CRM. Rules you set bind only your own mailboxes; the organization's rules bind
+CRM. Rules you set bind only your own mailboxes; the company's rules bind
 everyone (and only an administrator may add or remove one of those). Takes
 effect from the next message; what is already captured stays.
 
@@ -134,7 +134,7 @@ rather than only read them, follows your role — see the table at the end.
 *Group: Company.* Sign-in methods and OAuth applications moved to their own
 **Sign-in & apps** page in the same group.
 
-**Installation settings** — the organization's name, timezone and base currency.
+**Installation settings** — the company's name, timezone and base currency.
 
 **Currency rates** — "Exchange rates that convert foreign-currency amounts to
 your base currency. New rates take effect today or later; past rates are never
@@ -146,7 +146,7 @@ read it from. You can also tell it directly.
 
 ## Members, Teams, and Seats & license
 
-*Group: People.* One page each now — the roster, the team list, and the seat
+*Group: Contacts.* One page each now — the roster, the team list, and the seat
 count with the licence beside it. **Roles & permissions** is not built yet, and
 is deliberately absent from the navigation rather than present and empty.
 
@@ -166,7 +166,7 @@ See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 *Group: Data.*
 
-What the installation is wired to, as opposed to what one person connected.
+What the installation is wired to, as opposed to what one contact connected.
 
 - **Contact data** — a licensed provider of contact data, and its budget and
   refresh policy.
@@ -220,7 +220,7 @@ any mailbox.
 a consumer mailbox still creates the contact — it just never creates a company."
 
 **Refused domains.** Which domains this installation refuses a company, and what
-decided each one — a model verdict, a heuristic, or a person. "Letting a domain
+decided each one — a model verdict, a heuristic, or a contact. "Letting a domain
 back in re-opens the company question rather than merely clearing a flag."
 
 ## Pipelines, Lead handling, Fields, Tags, and Products & offers
@@ -229,7 +229,7 @@ back in re-opens the company question rather than merely clearing a flag."
 tab strip.
 
 Every seat can READ all five. Four of them — pipelines, lead handling, fields and
-tags — are an operator's to change, so for most people they appear under *What
+tags — are an operator's to change, so for most contacts they appear under *What
 you can look up* on the settings home rather than in the sidebar. **Products &
 offers** is the exception: a sales seat authors both, so it stays in their
 sidebar.
@@ -263,7 +263,7 @@ also run entirely against a local model with no cloud key at all.
 
 *Group: Data.* **Data import** is its own page in the same group.
 
-**Document sets**: "Bodies of text this organization can be asked questions of.
+**Document sets**: "Bodies of text this company can be asked questions of.
 An answer comes only from what is filed here, and a question they do not cover is
 refused rather than guessed at."
 
@@ -287,14 +287,14 @@ Five things, and they are the heart of the compliance story:
 
 Retention and Restricted records are visible to Admin and Ops. The audit log and
 the privacy inbox are **Admin only**, because they name every actor and every
-person who asked.
+contact who asked.
 
 Full detail in
 [What is kept, what is destroyed](retention-exports-and-deletion.md).
 
 ## Seats & license
 
-*Group: People.*
+*Group: Contacts.*
 
 **License and seats.** How many seats are in use, how many are granted, and
 whether the licence is present and valid.
@@ -342,7 +342,7 @@ about your browser, not about anyone's records.
 | Ops | Most of the operational catalog, including the model rates and the extension inventory | The rest |
 | Admin | Everything the deployment has armed | — |
 
-That first row surprises people, so it is worth saying plainly: a sales seat can
+That first row surprises contacts, so it is worth saying plainly: a sales seat can
 edit **Capture rules** and the **company profile**, because those cards ask for a
 permission every sales role holds. If that is not what you want, the fix is the
 permission, not the page.
@@ -361,5 +361,5 @@ the deployment-level resets.
 **Your own email domains.** Get these right before you connect mailboxes. They
 decide what counts as internal, and the decision is not fully reversible.
 
-**Your retention posture.** Your organization already has six retention rules
+**Your retention posture.** Your company already has six retention rules
 running. Read them before your first deletion happens rather than after.

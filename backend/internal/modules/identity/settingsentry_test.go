@@ -30,13 +30,13 @@ func TestEnabledOidcProvidersRefusesABlankKey(t *testing.T) {
 	}
 }
 
-// The organization name's bounds: non-empty, and at most the entry's ceiling.
+// The company name's bounds: non-empty, and at most the entry's ceiling.
 //
 // Counted in RUNES, so a name of CJK characters is measured in characters rather
 // than in the bytes they encode to.
 func TestInstallationNameIsBoundedInCharacters(t *testing.T) {
 	if err := Name.ValidateJSON([]byte(`"Acme GmbH"`)); err != nil {
-		t.Errorf("an ordinary organization name was refused: %v", err)
+		t.Errorf("an ordinary company name was refused: %v", err)
 	}
 	if err := Name.ValidateJSON([]byte(`"   "`)); err == nil {
 		t.Error("a blank name was accepted; an installation with no name renders as nothing everywhere")

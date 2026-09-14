@@ -169,7 +169,7 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 
 // leadOwner reads who answers for the lead, reporting whether anybody does.
 //
-// A direct read of the lead table rather than a call into people: a module
+// A direct read of the lead table rather than a call into contacts: a module
 // never imports a sibling, and this is one column of one row. The write that
 // follows is on this module's own table.
 func (s *Store) leadOwner(ctx context.Context, leadID ids.LeadID) (ids.UserID, bool, error) {
@@ -210,7 +210,7 @@ const assignmentAttempts = 3
 //
 // A task that has come to disagree with the lead about its owner is left alone.
 // That is the case where somebody did decide, and re-reading the lead's owner
-// over their decision is how an automation takes work back off the person it
+// over their decision is how an automation takes work back off the contact it
 // was just handed to.
 func (s *Store) assignSystemTask(
 	ctx context.Context, id ids.ActivityID, version int64, owner ids.UserID,
@@ -240,7 +240,7 @@ func (s *Store) assignSystemTask(
 			return false, err
 		}
 		if current.AssigneeId != nil && ids.UUID(*current.AssigneeId) != owner.UUID {
-			// Somebody assigned it to a different person while this call was in
+			// Somebody assigned it to a different contact while this call was in
 			// flight. Their decision is newer than the one this call is
 			// carrying, so it stands.
 			return false, nil

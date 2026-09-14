@@ -204,8 +204,8 @@ func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasour
 // unsupported-by-SoR sentinel (requireSupportedWrite) rather than
 // UnsupportedEntityError.
 var knownEntityTypes = []datasource.EntityType{
-	datasource.EntityPerson,
-	datasource.EntityOrganization,
+	datasource.EntityContact,
+	datasource.EntityCompany,
 	datasource.EntityDeal,
 	datasource.EntityLead,
 	datasource.EntityActivity,

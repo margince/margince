@@ -83,7 +83,7 @@ const OAUTH_PROVIDERS = new Set<Provider>([
 // The full connector roster the "Add a connection" affordance offers from —
 // the empty state shows every one, the row shows whichever aren't already
 // present in GET /connectors. Mail and calendar are separate entries on both
-// vendors because they are separate CONNECTIONS: one consent each, so a person
+// vendors because they are separate CONNECTIONS: one consent each, so a contact
 // can bring one without the other and disconnect either.
 const ALL_PROVIDERS: Provider[] = [
   "gmail",
@@ -678,7 +678,7 @@ function ConnectorRow({
 // nightly pass may mine out of it.
 //
 // A Select rather than a Switch, because the three answers are not one thing
-// turned on and off. `held` and `classified` both hold a message to the people
+// turned on and off. `held` and `classified` both hold a message to the contacts
 // on it; what separates them is whether a classifier is ever allowed to open it
 // later. A two-position control would have to drop one of the three, and the one
 // it would drop is the default.
@@ -824,10 +824,10 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
 //
 // Tri-state on the wire, two states on screen. A Switch has no third position,
 // so what a reader sees is on or off and what they are told beside it is
-// whether that answer is this mailbox's own or the organization's — the
+// whether that answer is this mailbox's own or the company's — the
 // description says which. Turning the switch makes it the mailbox's own; there
 // is no control for handing the question back, because a reader who wants that
-// wants "follow the organization", and no product surface has ever needed to
+// wants "follow the company", and no product surface has ever needed to
 // say it twice.
 function SignatureEnrichmentRow({
   conn,

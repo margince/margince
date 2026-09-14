@@ -59,31 +59,31 @@ describe("relativeDays", () => {
   const now = new Date("2026-08-24T12:00:00Z");
 
   it("says never for an absent timestamp", () => {
-    expect(relativeDays(null, t, "en", now)).toBe("person.strip.never");
-    expect(relativeDays(undefined, t, "en", now)).toBe("person.strip.never");
+    expect(relativeDays(null, t, "en", now)).toBe("contact.strip.never");
+    expect(relativeDays(undefined, t, "en", now)).toBe("contact.strip.never");
   });
 
   it("says today for the same calendar day", () => {
     expect(relativeDays("2026-08-24T01:00:00Z", t, "en", now)).toBe(
-      "person.strip.today",
+      "contact.strip.today",
     );
   });
 
   it("says today for a future timestamp rather than a negative count", () => {
     expect(relativeDays("2026-09-01T00:00:00Z", t, "en", now)).toBe(
-      "person.strip.today",
+      "contact.strip.today",
     );
   });
 
   it("says yesterday for the previous calendar day", () => {
     expect(relativeDays("2026-08-23T22:00:00Z", t, "en", now)).toBe(
-      "person.strip.yesterday",
+      "contact.strip.yesterday",
     );
   });
 
   it("counts the days for anything older", () => {
     expect(relativeDays("2026-05-20T09:00:00Z", t, "en", now)).toBe(
-      'person.strip.days:{"count":"96"}',
+      'contact.strip.days:{"count":"96"}',
     );
   });
 
@@ -92,10 +92,10 @@ describe("relativeDays", () => {
     // reads "1.200" and an English one "1,200", and a raw number would have
     // reached the sentence as "1200" for both.
     expect(relativeDays("2023-05-12T09:00:00Z", t, "en", now)).toBe(
-      'person.strip.days:{"count":"1,200"}',
+      'contact.strip.days:{"count":"1,200"}',
     );
     expect(relativeDays("2023-05-12T09:00:00Z", t, "de", now)).toBe(
-      'person.strip.days:{"count":"1.200"}',
+      'contact.strip.days:{"count":"1.200"}',
     );
   });
 
@@ -103,7 +103,7 @@ describe("relativeDays", () => {
     // The boundary the millisecond spelling gets wrong: 13 hours earlier but a
     // different date, which a reader calls yesterday and a duration calls today.
     expect(relativeDays("2026-08-23T23:00:00Z", t, "en", now)).toBe(
-      "person.strip.yesterday",
+      "contact.strip.yesterday",
     );
   });
 });

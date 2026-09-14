@@ -33,7 +33,7 @@ import (
 // agentOfferDraftCtx binds the acting principal the compose orchestrator
 // uses when it calls AddStagedOfferLines: a system-type actor carrying
 // the agent:offer-drafting identity, exactly like deals' own overnight
-// reconciler (reconcile.go) and people's coldstart/enrich approval
+// reconciler (reconcile.go) and contacts's coldstart/enrich approval
 // effects (compose/coldstartaccept.go) — auth.Require's RBAC check is a
 // no-op for a system principal, and storekit.Audit/Emit stamp this
 // identity onto the audit_log row automatically, which is the only place

@@ -60,7 +60,7 @@ func (s *Store) mirrorLedger(
 	for _, invoice := range ledger.Invoices {
 		out.InvoicesSeen++
 		id, outcome, err := s.mirrorInvoice(ctx, tx, mirrorArgs{
-			connectionID: connectionID, organizationID: mapped.organizationID,
+			connectionID: connectionID, companyID: mapped.companyID,
 			invoice: invoice, capturedBy: by, rowIDs: rowIDs, source: source,
 			creditedAgainst: credited[invoice.ExternalID], baseCurrency: base,
 		})
@@ -73,7 +73,7 @@ func (s *Store) mirrorLedger(
 	for _, payment := range ledger.Payments {
 		out.PaymentsSeen++
 		outcome, err := s.mirrorPayment(ctx, tx, paymentArgs{
-			connectionID: connectionID, organizationID: mapped.organizationID,
+			connectionID: connectionID, companyID: mapped.companyID,
 			payment: payment, capturedBy: by, rowIDs: rowIDs, source: source,
 		})
 		if err != nil {
@@ -138,10 +138,10 @@ const (
 )
 
 type mirrorArgs struct {
-	connectionID   ids.UUID
-	organizationID ids.OrganizationID
-	invoice        SourceInvoice
-	capturedBy     string
+	connectionID ids.UUID
+	companyID    ids.CompanyID
+	invoice      SourceInvoice
+	capturedBy   string
 	// source is the provider's own name, stamped on every row it produced so a
 	// reader can tell whose ledger a figure came from.
 	source string
@@ -226,7 +226,7 @@ func findInvoice(
 	// reason it writes: the change key covers them, so a narrower read would
 	// produce a before image that cannot explain the update beside it.
 	err = tx.QueryRow(ctx, `
-		SELECT id, sync_hash, fx_rate_to_base, organization_id, number,
+		SELECT id, sync_hash, fx_rate_to_base, company_id, number,
 		       issued_at, due_at, status, currency, net_minor, tax_minor,
 		       gross_minor, open_minor, credited_minor,
 		       fully_paid_at, disputed_at, void_at
@@ -234,7 +234,7 @@ func findInvoice(
 		 WHERE connection_id = $1 AND external_id = $2
 		   FOR UPDATE`,
 		connectionID, externalID).Scan(&row.id, &row.hash, &row.fxRate,
-		&row.image.OrganizationID, &row.image.Number,
+		&row.image.CompanyID, &row.image.Number,
 		&row.image.IssuedAt, &row.image.DueAt, &row.image.Status,
 		&row.image.Currency, &row.image.NetMinor, &row.image.TaxMinor,
 		&row.image.GrossMinor, &row.image.OpenMinor, &row.image.CreditedMinor,
@@ -255,7 +255,7 @@ func findInvoice(
 func invoiceImageOf(args mirrorArgs, values invoiceValues, hash string) invoiceImage {
 	inv := args.invoice
 	return invoiceImage{
-		OrganizationID: args.organizationID, Number: nullable(inv.Number),
+		CompanyID: args.companyID, Number: nullable(inv.Number),
 		IssuedAt: inv.IssuedOn, DueAt: inv.DueOn, Status: values.status,
 		Currency: inv.Currency, NetMinor: inv.NetMinor, TaxMinor: inv.TaxMinor,
 		GrossMinor: inv.GrossMinor, OpenMinor: values.openMinor,
@@ -321,14 +321,14 @@ func insertInvoice(
 	inv := args.invoice
 	_, err := tx.Exec(ctx, `
 		INSERT INTO finance_invoice
-		       (id, connection_id, organization_id, external_id, number,
+		       (id, connection_id, company_id, external_id, number,
 		        issued_at, due_at, status, currency, net_minor, tax_minor, gross_minor,
 		        open_minor, credited_minor, fully_paid_at, disputed_at, void_at,
 		        credits_invoice_id, source_updated_at, sync_hash, fx_rate_to_base,
 		        fx_rate_date, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
 		        $16, $17, $18, $19, $20, $21, $22, $23, $24)`,
-		id, args.connectionID, args.organizationID,
+		id, args.connectionID, args.companyID,
 		inv.ExternalID, nullable(inv.Number), inv.IssuedOn, inv.DueOn, values.status,
 		inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor, values.openMinor,
 		values.credited, inv.FullyPaidAt, values.disputedAt, values.voidAt,
@@ -351,7 +351,7 @@ func insertInvoice(
 // leaving the old gross stored would leave the mirror internally inconsistent
 // and the hash claiming it was current.
 //
-// `organization_id` is written too: remapping an accounting customer onto a
+// `company_id` is written too: remapping an accounting customer onto a
 // different company must move its invoices, or the money stays on the account
 // the live link no longer names.
 func updateInvoice(
@@ -368,14 +368,14 @@ func updateInvoice(
 	inv := args.invoice
 	_, err := tx.Exec(ctx, `
 		UPDATE finance_invoice
-		   SET organization_id = $2, number = $3, issued_at = $4, due_at = $5,
+		   SET company_id = $2, number = $3, issued_at = $4, due_at = $5,
 		       status = $6, currency = $7, net_minor = $8, tax_minor = $9,
 		       gross_minor = $10, open_minor = $11, credited_minor = $12,
 		       fully_paid_at = $13, disputed_at = $14, void_at = $15,
 		       credits_invoice_id = $16, source_updated_at = $17, sync_hash = $18,
 		       fx_rate_to_base = $19, fx_rate_date = $20
 		 WHERE id = $1`,
-		id, args.organizationID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
+		id, args.companyID, nullable(inv.Number), inv.IssuedOn, inv.DueOn,
 		values.status, inv.Currency, inv.NetMinor, inv.TaxMinor, inv.GrossMinor,
 		values.openMinor, values.credited, inv.FullyPaidAt, values.disputedAt,
 		values.voidAt, values.creditsID, inv.UpdatedAt, hash,

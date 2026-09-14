@@ -28,6 +28,9 @@ export function RecordPicker({
   onPick,
   selected,
   disabled = false,
+  id,
+  "aria-describedby": describedBy,
+  "aria-invalid": invalid,
 }: Readonly<{
   // Doubles as the search field's placeholder and aria-label — the caller
   // supplies already-translated copy, because only the caller knows WHICH
@@ -35,6 +38,9 @@ export function RecordPicker({
   // failed lookup puts on screen — is this component's own state and is
   // written here, in the reader's language.
   label: string;
+  id?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
   onPick: (candidate: RecordPickerCandidate) => void;
   selected?: RecordPickerCandidate | null;
@@ -82,7 +88,7 @@ export function RecordPicker({
   //
   // The TERM survives on purpose: the same words usually mean the same search
   // in the new space, and the effect below re-runs on searchTargets anyway, so
-  // the list refills without the person retyping.
+  // the list refills without the contact retyping.
   // Both halves take the FUNCTIONAL form because the value is a function:
   // useState(fn) reads fn as a lazy initializer and calls it, and
   // setState(fn) reads it as an updater — so the plain spellings store the
@@ -145,6 +151,9 @@ export function RecordPicker({
     // itself, which sits in toolbar rows where shrink-to-fit is what is wanted.
     <div className="recordpicker">
       <SearchField
+        id={id}
+        aria-describedby={describedBy}
+        aria-invalid={invalid}
         placeholder={label}
         aria-label={label}
         value={term}

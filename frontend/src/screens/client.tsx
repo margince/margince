@@ -31,14 +31,14 @@ export function ClientSurfaceScreen() {
       if (error) {
         throwProblem(error);
       }
-      return data.data.filter((hit) => hit.type === "person");
+      return data.data.filter((hit) => hit.type === "contact");
     },
   });
 
   return (
     <div className="client-chrome">
       <header className="client-bar">
-        <a href="#/brief" className="client-back">
+        <a href="#/home" className="client-back">
           <ArrowLeft aria-hidden size={15} />
           {t("client.back")}
         </a>

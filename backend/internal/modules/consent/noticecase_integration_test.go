@@ -21,14 +21,14 @@ import (
 )
 
 // seedAcquisition writes one acquisition row through SQL and returns its id.
-// The people module owns the writer, and consent may not import a sibling — so
+// The contacts module owns the writer, and consent may not import a sibling — so
 // the fixture states the row the writer produces rather than reaching for it.
 func seedAcquisition(t *testing.T, e *channelConsentEnv, kind string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(context.Background(), `
-		INSERT INTO person_acquisition_evidence (person_id, kind, captured_by)
-		VALUES ($1, $2, 'test') RETURNING id`, e.person, kind).Scan(&id); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, captured_by)
+		VALUES ($1, $2, 'test') RETURNING id`, e.contact, kind).Scan(&id); err != nil {
 		t.Fatalf("seeding the acquisition: %v", err)
 	}
 	return id
@@ -37,7 +37,7 @@ func seedAcquisition(t *testing.T, e *channelConsentEnv, kind string) ids.UUID {
 // TestADutyIsRecordedOncePerAcquisition holds the idempotence the at-least-once
 // consumer depends on.
 //
-// A redelivered person.created reaches the writer a second time. Were the
+// A redelivered contact.created reaches the writer a second time. Were the
 // duplicate accepted, one acquisition would owe two duties and discharging one
 // would leave the other standing forever on the queue.
 func TestADutyIsRecordedOncePerAcquisition(t *testing.T) {
@@ -48,7 +48,7 @@ func TestADutyIsRecordedOncePerAcquisition(t *testing.T) {
 	for i := range 2 {
 		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 			return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
-				PersonID: e.person, AcquisitionID: acq, Rule: RuleArt14, DueAt: due,
+				ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14, DueAt: due,
 			})
 		}); err != nil {
 			t.Fatalf("recording the duty (attempt %d): %v", i+1, err)
@@ -61,17 +61,17 @@ func TestADutyIsRecordedOncePerAcquisition(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cases != 1 {
-		t.Errorf("one acquisition owes %d notice cases, want 1: a redelivered person.created "+
+		t.Errorf("one acquisition owes %d notice cases, want 1: a redelivered contact.created "+
 			"must not mint a second duty for the same acquisition", cases)
 	}
 }
 
 // TestTwoAcquisitionsOweTwoDuties is the other half, and the reason the case is
-// keyed on the acquisition rather than the person.
+// keyed on the acquisition rather than the contact.
 //
 // A contact acquired twice — a form today, an import next month — incurs the
 // duty twice, and the second is a fresh disclosure with its own deadline. Keyed
-// on the person, the second would collapse into the first and read as
+// on the contact, the second would collapse into the first and read as
 // discharged by it.
 func TestTwoAcquisitionsOweTwoDuties(t *testing.T) {
 	e := setupChannelConsent(t)
@@ -82,7 +82,7 @@ func TestTwoAcquisitionsOweTwoDuties(t *testing.T) {
 	for _, acq := range []ids.UUID{first, second} {
 		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 			return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
-				PersonID: e.person, AcquisitionID: acq, Rule: RuleArt14, DueAt: due,
+				ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14, DueAt: due,
 			})
 		}); err != nil {
 			t.Fatalf("recording the duty: %v", err)
@@ -91,7 +91,7 @@ func TestTwoAcquisitionsOweTwoDuties(t *testing.T) {
 
 	var cases int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM privacy_notice_case WHERE person_id = $1`, e.person).Scan(&cases); err != nil {
+		`SELECT count(*) FROM privacy_notice_case WHERE contact_id = $1`, e.contact).Scan(&cases); err != nil {
 		t.Fatal(err)
 	}
 	if cases != 2 {
@@ -114,7 +114,7 @@ func TestTheQueueOrdersByTheClock(t *testing.T) {
 		t.Helper()
 		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 			return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
-				PersonID: e.person, AcquisitionID: acq, Rule: RuleArt14,
+				ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14,
 				DueAt: due, State: state, CompletedAt: at,
 			})
 		}); err != nil {
@@ -126,8 +126,8 @@ func TestTheQueueOrdersByTheClock(t *testing.T) {
 	write(done, now.Add(-99*time.Hour), NoticeCompleted, &completedAt)
 
 	// The queue is gated on privacy_request, the object the subject-request
-	// queue moved onto: reading it says how named people were obtained and
-	// whether we have told them. The shared fixture's actor holds people
+	// queue moved onto: reading it says how named contacts were obtained and
+	// whether we have told them. The shared fixture's actor holds contacts
 	// grants, not the privacy inbox, so the grant is added HERE rather than
 	// widened for every test that shares the fixture.
 	got, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), 10)
@@ -150,7 +150,7 @@ func TestATerminalCaseSaysWhenItBecameOne(t *testing.T) {
 
 	err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
-			PersonID: e.person, AcquisitionID: acq, Rule: RuleArt14,
+			ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14,
 			DueAt: time.Now(), State: NoticeCompleted,
 		})
 	})

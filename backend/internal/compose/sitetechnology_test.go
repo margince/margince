@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
@@ -33,7 +33,7 @@ func TestATechnologyIsFoundOnThePageThatRunsIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("matching the crawl: %v", err)
 	}
-	if !observedIn(got, people.FactTechnology, "shopware") {
+	if !observedIn(got, contacts.FactTechnology, "shopware") {
 		t.Errorf("the shop system on /shop was not read; read %v", got)
 	}
 }
@@ -100,7 +100,7 @@ func TestAPageWithNoFetchedResponseIsSkipped(t *testing.T) {
 	}
 }
 
-func observedIn(in []people.TechnicalObservation, field, key string) bool {
+func observedIn(in []contacts.TechnicalObservation, field, key string) bool {
 	for _, observation := range in {
 		if observation.Field == field && observation.ValueKey == key {
 			return true

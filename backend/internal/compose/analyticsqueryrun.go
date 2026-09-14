@@ -183,8 +183,8 @@ func analyticsScope(
 // the spec's dimensions and measures (analyticsqueryseam.go), NOT spec.filters
 // — those are the report engine's own filter vocabulary and a different map.
 // Resolving a filter through spec.filters therefore missed wherever the two
-// disagree, and open-deals-per-company is that spec: organization_id is a
-// dimension there and not a filter, so `filter organization_id eq <id>` bound
+// disagree, and open-deals-per-company is that spec: company_id is a
+// dimension there and not a filter, so `filter company_id eq <id>` bound
 // with no reference scope and answered whether a capture-private company
 // exists and how many deals point at it.
 //

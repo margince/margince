@@ -38,6 +38,7 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 		writeStoreErr(w, r, &RequiredFieldError{Field: "name"})
 		return
 	}
+	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
 	in := CreateProductInput{
 		Name:           req.Name,
 		SKU:            req.Sku,
@@ -48,6 +49,9 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 		DefaultTaxRate: req.DefaultTaxRate,
 		Active:         req.Active,
 		Source:         req.Source,
+
+		BillingModel:          billingModel,
+		BillingIntervalMonths: billingMonths,
 	}
 	product, err := h.store.CreateProduct(r.Context(), in)
 	if err != nil {
@@ -76,6 +80,15 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
+	// `not_specified` is how a caller says "nobody has classified this",
+	// because a JSON null cannot: the generated field is a pointer, so a null
+	// and an omitted field both arrive as nil and an omitted field has to keep
+	// meaning "leave it alone". Translated to the pair of nulls the column
+	// holds, here at the edge, so the store speaks in stored values only.
+	if billingModel != nil && *billingModel == string(crmcontracts.UpdateProductRequestBillingModelNotSpecified) {
+		billingModel, billingMonths = nil, nil
+	}
 	in := UpdateProductInput{
 		Name:           req.Name,
 		SKU:            req.Sku,
@@ -86,6 +99,11 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 		DefaultTaxRate: req.DefaultTaxRate,
 		Active:         req.Active,
 		IfVersion:      ifVersion,
+
+		// A PATCH addresses the classification when it names either half.
+		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,
+		BillingModel:          billingModel,
+		BillingIntervalMonths: billingMonths,
 	}
 	product, err := h.store.UpdateProduct(r.Context(), pathID[ids.ProductKind](id), in)
 	if err != nil {
@@ -102,4 +120,27 @@ func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmc
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, product)
+}
+
+// billingClassificationOf turns the contract's generated enum types back into
+// the plain pair the store validates.
+//
+// Generic over both because the generator gives EVERY schema its own named
+// type for an enumerated field — CreateProductRequestBillingModel is a
+// different type from UpdateProductRequestBillingModel and from
+// ProductBillingModel, though all three hold the same four words. The store
+// speaks in strings and ints so one shape rule serves products and offer lines
+// alike, and this is the one place that conversion happens.
+func billingClassificationOf[M ~string, I ~int](model *M, months *I) (*string, *int) {
+	var outModel *string
+	if model != nil {
+		m := string(*model)
+		outModel = &m
+	}
+	var outMonths *int
+	if months != nil {
+		v := int(*months)
+		outMonths = &v
+	}
+	return outModel, outMonths
 }

@@ -3,15 +3,14 @@
 
 // The address a first message from the deal page is offered.
 //
-// Two steps, because a deal reaches an address through a person: pick the seat
-// (dealRecipientSeat), then read that person for the address the rest of the
-// product writes to (format/primaryEmail). Neither half decides anything on its
-// own — the seat rule is the deal's, the address rule is shared with the
-// drafter and every screen.
+// Two steps, because a deal reaches an address through a contact: pick the seat
+// (dealRecipientSeat), then read that contact for the address the rest of the
+// product writes to. Neither half decides anything on its own — the seat rule
+// is the deal's, and the address is the server's `primary_email`, which every
+// screen and the drafter read rather than choose again.
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { primaryEmail } from "../../format/primaryemail";
 import { throwProblem } from "../common";
 import { dealRecipientSeat } from "./dealrecipient";
 import type { useDealCoverage } from "./usedealcoverage";
@@ -20,7 +19,7 @@ import type { useDealCoverage } from "./usedealcoverage";
  * useDealRecipientAddress answers who a fresh mail on this deal is addressed
  * to, or undefined when there is nobody to offer.
  *
- * It rides the `["person", id]` cache the person page and the composer already
+ * It rides the `["contact", id]` cache the contact page and the composer already
  * fetch under, so a reader who has opened that contact pays nothing here and
  * one who has not pays a single read — and only once the coverage answered with
  * a seat worth reading.
@@ -39,18 +38,18 @@ export function useDealRecipientAddress(
   const seat = coverage.withheld
     ? undefined
     : dealRecipientSeat(coverage.coverage?.stakeholders);
-  const person = useQuery({
-    queryKey: ["person", seat?.person_id],
+  const contact = useQuery({
+    queryKey: ["contact", seat?.contact_id],
     queryFn: async () => {
-      const { data, error } = await api.GET("/people/{id}", {
-        params: { path: { id: seat?.person_id as string } },
+      const { data, error } = await api.GET("/contacts/{id}", {
+        params: { path: { id: seat?.contact_id as string } },
       });
       if (error) {
         throwProblem(error);
       }
       return data;
     },
-    enabled: seat?.person_id != null,
+    enabled: seat?.contact_id != null,
   });
-  return primaryEmail(person.data?.emails);
+  return contact.data?.primary_email ?? undefined;
 }

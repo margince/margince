@@ -8,7 +8,7 @@ package identity
 // SeatNames beside this answers "what is this id called" for ids a caller
 // already holds. This answers the question that comes first — WHICH id — and
 // nothing could ask it before: app_user appeared nowhere on the tool surface,
-// so an assistant asked to assign work searched `person`, found a customer
+// so an assistant asked to assign work searched `contact`, found a customer
 // contact with a similar name, and offered that. The distinction between a
 // colleague and a contact was missing as a concept, not merely as a lookup.
 
@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// colleagueCap bounds one answer. A roster is tens of people, not thousands,
+// colleagueCap bounds one answer. A roster is tens of contacts, not thousands,
 // and a caller wanting a particular one narrows with q rather than paging —
 // so this is a ceiling that says "narrow it", never a page boundary a reader
 // has to walk.
@@ -46,14 +46,14 @@ type Colleague struct {
 	// IsAgent marks a machine seat (the installation's own agent account). Named
 	// rather than filtered out, because an assistant listing colleagues should
 	// not silently pretend the agent seat does not exist — and must not offer
-	// it as a person to give work to either.
+	// it as a contact to give work to either.
 	IsAgent bool
 }
 
 // Colleagues lists the installation's seats, newest-relevant first by name, with
 // an optional case-insensitive filter over display name and email.
 //
-// Archived seats are absent: a person who has left is not a colleague, and
+// Archived seats are absent: a seat holder who has left is not a colleague, and
 // naming one would offer work to an account that cannot receive it.
 func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, error) {
 	// Membership is the whole boundary, so it is asked for here and not left to
@@ -111,7 +111,7 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 // For a writer that must decide whether to assign work to somebody a machine
 // read out of a document. The bar is deliberately higher than the roster
 // filter's, because the two answer different questions: Colleagues narrows a
-// list a person is about to look at, and a near-miss there costs them a glance.
+// list a contact is about to look at, and a near-miss there costs them a glance.
 // This one hands a task to a seat, and a near-miss there gives somebody else's
 // work to the wrong colleague — who then does not do it, because it was never
 // theirs.
@@ -126,8 +126,8 @@ func (s *Service) Colleagues(ctx context.Context, q string) ([]Colleague, bool, 
 // row would make the outcome depend on an ORDER BY nobody chose for this.
 //
 // An AGENT seat never resolves. The installation's own machine account can be
-// named in a transcript like anyone else, and giving it a person's promise
-// would file the work where no person will see it.
+// named in a transcript like anyone else, and giving it a contact's promise
+// would file the work where no contact will see it.
 //
 // The truncation flag is honoured: a filter that hit the roster cap has not
 // been shown its whole answer, so a "unique" match inside it is not known to be

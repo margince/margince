@@ -5,7 +5,7 @@ package attention
 
 // Which address is dead, on the row that reports the failure.
 //
-// The card names a person and a subject. A rep opening a contact who carries
+// The card names a contact and a subject. A rep opening a contact who carries
 // three addresses cannot tell from that which mailbox refused, so the row
 // reports a failure and leaves the fix to guesswork — the defect this lane was
 // built to remove, one step further along.

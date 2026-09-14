@@ -112,6 +112,7 @@ func TestSchedulingRefusalsNameARealArgumentAndAnHonestCode(t *testing.T) {
 		{"window too wide", errAvailabilityWindowTooWide, "to", "window_too_wide"},
 		{"duration out of range", errAvailabilityDurationOutOfRange, "duration_minutes", "out_of_range"},
 		{"booking end before start", errBookingEndNotAfterStart, "end", "invalid_date_range"},
+		{"booking attached to nothing", errBookingLinksEmpty, "links", "required"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fault, ok := httperr.Classify(tc.err)
@@ -161,6 +162,30 @@ func TestABookingRefusesAnEndThatDoesNotFollowItsStart(t *testing.T) {
 		if sched.Field != "end" {
 			t.Errorf("the refusal names %q, want end — that is the argument to move", sched.Field)
 		}
+	}
+}
+
+func TestABookingRefusesALinkListWithNothingInIt(t *testing.T) {
+	// Driven through BookMeeting, like the window refusal beside it, because
+	// the store is the only place the contract's `minItems: 1` becomes true:
+	// the generated decoder fills the slice and asks nothing about its length,
+	// so a check read off the package variable would pass with the guard gone.
+	//
+	// The window is valid here on purpose. The two refusals are ordered, and a
+	// test that sent a bad slot as well would pass on the wrong one.
+	host := ids.NewV7()
+	store := &Store{}
+	start := monday(10)
+	_, err := store.BookMeeting(bookingActorCtx(host), BookMeetingInput{
+		Host: ids.From[ids.UserKind](host), Start: start, End: start.Add(time.Hour),
+	})
+	var sched *SchedulingArgumentError
+	if !errors.As(err, &sched) {
+		t.Fatalf("a booking attached to nothing → %T (%v), want *SchedulingArgumentError — it would "+
+			"otherwise land on no timeline and be a meeting nobody finds again", err, err)
+	}
+	if sched.Field != "links" {
+		t.Errorf("the refusal names %q, want links — that is the argument to supply", sched.Field)
 	}
 }
 

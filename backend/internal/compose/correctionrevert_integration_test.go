@@ -9,7 +9,7 @@ package compose
 //
 // Kept apart from the sweep's own suite because it tests the opposite
 // direction: that one proves the machine corrects the right deals, this one
-// proves a person can undo one of those corrections, that the undo restores
+// proves a contact can undo one of those corrections, that the undo restores
 // every field the correction moved, and that neither the next pass nor a staged
 // card puts it back afterwards.
 
@@ -139,7 +139,7 @@ func TestAReversedCorrectionIsNotReappliedTomorrow(t *testing.T) {
 	}
 }
 
-// A person's later edit is not overwritten by an undo, and the check is per
+// A contact's later edit is not overwritten by an undo, and the check is per
 // FIELD: renaming the deal leaves the undo available, re-dating it does not.
 func TestATakenBackCorrectionRefusesToOverwriteALaterEdit(t *testing.T) {
 	e := setupCloseDate(t)

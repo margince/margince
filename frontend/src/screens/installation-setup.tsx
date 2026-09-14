@@ -89,7 +89,7 @@ export function useInstallationSetup() {
 
 /**
  * The steps this screen has a panel for, in the order the server reports
- * them: the model binding, which blocks, and the organisation's OAuth app,
+ * them: the model binding, which blocks, and the company's OAuth app,
  * which does not — held by TestOnlyTheModelBindingBlocksFirstRun.
  *
  * It is read by `outstandingStep` rather than only by the render, and that is
@@ -103,7 +103,7 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
 /**
  * Where "Not now" on the platform question is remembered.
  *
- * The app step is asked of the person running the cold start, once. The server
+ * The app step is asked of the contact running the cold start, once. The server
  * has no word for "asked and declined" — the step is simply unconfigured until
  * an app is stored, from here or from Settings — so the decline lives in this
  * browser.
@@ -112,9 +112,9 @@ const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
  * the installation it was about: a machine that had run one cold start carried
  * that answer into the next, and the second installation's setup skipped the
  * platform question with nothing on screen to say why — the one step that asks
- * for the organization's OAuth app, silently gone, on the run that most needed
+ * for the company's OAuth app, silently gone, on the run that most needed
  * it. A re-claimed installation mints its own administrator, so its cold start
- * asks again; the same person on the same installation is still asked once.
+ * asks again; the same contact on the same installation is still asked once.
  */
 const PLATFORM_DECLINED_KEY = "margince.first-run.platform-declined";
 
@@ -577,11 +577,11 @@ function AiStep({
 }
 
 /**
- * What the organization runs on — ONE answer covering mail and sign-in.
+ * What the company runs on — ONE answer covering mail and sign-in.
  *
  * They are separate mechanisms in the server and the same fact about a
- * company: an organization on Workspace reads mail through a Google app and
- * signs its people in with Google accounts, through that same app and the same
+ * company: a company on Workspace reads mail through a Google app and
+ * signs its contacts in with Google accounts, through that same app and the same
  * console entry. Two questions would ask somebody to state one fact twice and
  * then keep the two answers agreeing.
  */
@@ -837,7 +837,7 @@ function StepNeeds({
 
 /**
  * The platform step: which vendor's app mailboxes and calendars connect
- * through, asked once, of the person running the cold start. IMAP is an
+ * through, asked once, of the contact running the cold start. IMAP is an
  * answer too — each mailbox carries its own credentials — and so is
  * "not now": the step does not block, and Settings keeps the same form.
  */
@@ -878,7 +878,7 @@ function PlatformStep({
               <p className="ob-fr-help-note t-sub">
                 {t("firstRun.platform.imapNote")}
               </p>
-              {/* The same standing connect Settings makes, for the person on
+              {/* The same standing connect Settings makes, for the contact on
                   screen. There is no installation-wide IMAP app to store, so a
                   confirmed mailbox and "not now" both answer the question. */}
               <ImapMailboxForm

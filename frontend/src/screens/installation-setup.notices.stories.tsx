@@ -61,7 +61,7 @@ export const BindRefused: Story = {
   ),
 };
 
-/** The organisation's OAuth app was not stored. */
+/** The installation's OAuth app was not stored. */
 export const AppRefused: Story = {
   render: () => (
     <Frame>

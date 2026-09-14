@@ -17,7 +17,7 @@ package ai
 // the router can observe (it is about to serve it) and an end it already
 // observes (the flush), so the pair needs no scope, no teardown at whatever
 // mints a correlation id, and no attempt that must survive a process. For the
-// tasks a person triggers and then waits on — summarize, draft_reply,
+// tasks a contact triggers and then waits on — summarize, draft_reply,
 // offer_draft, all registered oneShot — the logical call IS the unit of work,
 // and framing it is the whole feature.
 //

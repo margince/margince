@@ -8,12 +8,12 @@ package relstrength
 // The score is a pure function recomputed on every read, and the interaction
 // projection stores only the present state. So the system can say "warm, 73"
 // and cannot say "it went warm on Tuesday" — nothing anywhere remembers
-// yesterday's number. That missing sentence is what a person view actually
+// yesterday's number. That missing sentence is what a contact view actually
 // opens on: "replied after 41 quiet days" is a reason to act, and "warm" is a
 // description.
 //
 // Nothing is stored to fix that. Every change below is recovered from data the
-// system keeps permanently — the person's own interactions — by folding the
+// system keeps permanently — the contact's own interactions — by folding the
 // SAME §4 curve over a window that ends in the past. Two consequences worth
 // stating, because both are why this is a computation and not a table:
 // erasing a source activity makes the derived change disappear with it, and a
@@ -21,7 +21,7 @@ package relstrength
 // next.
 //
 // What it deliberately cannot do is answer "everyone who went cold this week"
-// without walking every person. That feed is ADR-0078's GRAPH-RISK-1 and has
+// without walking every contact. That feed is ADR-0078's GRAPH-RISK-1 and has
 // its own design; if it is built, this is worth revisiting with a real
 // workload behind it.
 

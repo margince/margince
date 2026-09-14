@@ -3,7 +3,7 @@
 
 // The verbs on a project's stakeholders card.
 //
-// The card read the seats and offered nothing: a person putting a sponsor on a
+// The card read the seats and offered nothing: a rep putting a sponsor on a
 // project, or taking a departed one off, had no control anywhere in the app and
 // had to reach the endpoint through an agent tool. The read was on three
 // surfaces and the write on none.
@@ -12,10 +12,10 @@
 // contract puts them on the project's OWN endpoints — /projects/{id}/stakeholders
 // — which is also why `project_stakeholder` is the one stakeholder kind that
 // panel does not create. The endpoint carries two rules the generic surface
-// cannot: write authority over the project row, and one seat per person.
+// cannot: write authority over the project row, and one seat per contact.
 //
 // That last rule is what makes a role CHANGE the same act as an add: the PUT is
-// idempotent per person, so naming somebody already seated re-roles them rather
+// idempotent per contact, so naming somebody already seated re-roles them rather
 // than seating them twice, and the dialog says so.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -63,16 +63,16 @@ function invalidateProject(
   queryClient.invalidateQueries({ queryKey: ["project", projectId, "360"] });
 }
 
-async function searchPeople(query: string): Promise<RecordPickerCandidate[]> {
-  const { data, error } = await api.GET("/people", {
+async function searchContacts(query: string): Promise<RecordPickerCandidate[]> {
+  const { data, error } = await api.GET("/contacts", {
     params: { query: { q: query, limit: 10 } },
   });
   if (error) {
     throwProblem(error);
   }
-  return data.data.map((person) => ({
-    id: person.id,
-    name: person.full_name,
+  return data.data.map((contact) => ({
+    id: contact.id,
+    name: contact.full_name,
   }));
 }
 
@@ -86,7 +86,7 @@ export function AddProjectStakeholder({
   const t = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [person, setPerson] = useState<RecordPickerCandidate | null>(null);
+  const [contact, setContact] = useState<RecordPickerCandidate | null>(null);
   const [role, setRole] = useState<ProjectStakeholderRole>(
     PROJECT_STAKEHOLDER_ROLES[0],
   );
@@ -98,12 +98,12 @@ export function AddProjectStakeholder({
   // picked yet.
   const seat = useMutation({
     mutationFn: async (chosen: {
-      personId: string;
+      contactId: string;
       role: ProjectStakeholderRole;
     }) => {
       const { error } = await api.PUT("/projects/{id}/stakeholders", {
         params: { path: { id: projectId } },
-        body: { person_id: chosen.personId, role: chosen.role },
+        body: { contact_id: chosen.contactId, role: chosen.role },
       });
       if (error) {
         throwProblem(error);
@@ -117,7 +117,7 @@ export function AddProjectStakeholder({
 
   function close() {
     setOpen(false);
-    setPerson(null);
+    setContact(null);
     setRole(PROJECT_STAKEHOLDER_ROLES[0]);
     seat.reset();
   }
@@ -139,10 +139,10 @@ export function AddProjectStakeholder({
         // pressed "Add stakeholder" should not have to work out whether "Save"
         // means the same thing.
         confirmLabel={t("project.stakeholders.addConfirm")}
-        confirmDisabled={person === null}
+        confirmDisabled={contact === null}
         onConfirm={() => {
-          if (person) {
-            seat.mutate({ personId: person.id, role });
+          if (contact) {
+            seat.mutate({ contactId: contact.id, role });
           }
         }}
         pending={seat.isPending}
@@ -156,13 +156,13 @@ export function AddProjectStakeholder({
           }}
         >
           {/* Says what a second seating does before anybody tries it: the same
-              person named again is a re-role, not a duplicate row. */}
+              contact named again is a re-role, not a duplicate row. */}
           <p className="t-caption">{t("project.stakeholders.addHint")}</p>
           <RecordPicker
             label={t("project.stakeholders.searchLabel")}
-            searchTargets={searchPeople}
-            onPick={setPerson}
-            selected={person}
+            searchTargets={searchContacts}
+            onPick={setContact}
+            selected={contact}
             disabled={seat.isPending}
           />
           <Field label={t("rel.role")}>
@@ -196,23 +196,23 @@ function isStakeholderRole(value: string): value is ProjectStakeholderRole {
 }
 
 /**
- * Take a person off the project.
+ * Take a contact off the project.
  *
  * Two steps, like every other remove on a record page: the endpoint archives
  * the edge, and the card gives no way back.
  */
 export function RemoveProjectStakeholder({
   projectId,
-  personId,
-  personName,
+  contactId,
+  contactName,
   returnFocusTo,
 }: Readonly<{
   projectId: string;
-  personId: string;
-  // Absent when the caller may not read that person — the seat is still
+  contactId: string;
+  // Absent when the caller may not read that contact — the seat is still
   // reported, and still removable, so the dialog names the seat rather than
   // pretending to a name it was not given.
-  personName: string | null | undefined;
+  contactName: string | null | undefined;
   // Where focus lands once the dialog closes. A successful removal unmounts the
   // row this button sits in, so restoring focus to the trigger would hand a
   // keyboard reader a detached node and drop them on document.body. The card
@@ -225,10 +225,10 @@ export function RemoveProjectStakeholder({
   const [open, setOpen] = useState(false);
 
   const detach = useMutation({
-    mutationFn: async (person: string) => {
+    mutationFn: async (contact: string) => {
       const { error } = await api.DELETE(
-        "/projects/{id}/stakeholders/{person_id}",
-        { params: { path: { id: projectId, person_id: person } } },
+        "/projects/{id}/stakeholders/{contact_id}",
+        { params: { path: { id: projectId, contact_id: contact } } },
       );
       if (error) {
         throwProblem(error);
@@ -248,7 +248,7 @@ export function RemoveProjectStakeholder({
         onClick={() => setOpen(true)}
         data-testid="remove-project-stakeholder"
         aria-label={t("project.stakeholders.removeOne", {
-          name: personName ?? t("coverage.seatWithheld"),
+          name: contactName ?? t("coverage.seatWithheld"),
         })}
       >
         {t("rel.remove")}
@@ -263,13 +263,13 @@ export function RemoveProjectStakeholder({
         confirmLabel={t("rel.remove")}
         confirmVariant="danger"
         returnFocusTo={returnFocusTo}
-        onConfirm={() => detach.mutate(personId)}
+        onConfirm={() => detach.mutate(contactId)}
         pending={detach.isPending}
         error={detach.isError ? problemMessageOf(detach.error, t) : null}
       >
         <p>
           {t("project.stakeholders.removeConfirm", {
-            name: personName ?? t("coverage.seatWithheld"),
+            name: contactName ?? t("coverage.seatWithheld"),
           })}
         </p>
       </ConfirmModal>

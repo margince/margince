@@ -44,7 +44,7 @@ export const Lit: Story = {
     progress: { steps: ["The model", "Your platform"], at: 1 },
     eyebrow: "First run · 2 of 2",
     title: "Connect a Google app",
-    sub: "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials.",
+    sub: "Mailboxes are connected through a Google OAuth app you own, so mail is read with your company’s own credentials.",
     children: <Button variant="primary">Continue</Button>,
   },
 };

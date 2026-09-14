@@ -13,14 +13,14 @@ import (
 // company they cannot open and reads the binding off which rows come back —
 // masking the id afterwards makes the answer quieter, not different.
 func TestAPredicateOnAReferenceCarriesTheReferencedRecordsScope(t *testing.T) {
-	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityOrganization), t, `{
+	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"where": [{"field": "organization_id", "op": "eq",
+		"where": [{"field": "company_id", "op": "eq",
 		           "value": "01a08485-fac3-7543-b543-59cc991bbdd7"}]}`)
-	if !strings.Contains(sql, "EXISTS (SELECT 1 FROM organization ref0") {
-		t.Fatalf("the predicate carries no organization scope: %s", sql)
+	if !strings.Contains(sql, "EXISTS (SELECT 1 FROM company ref0") {
+		t.Fatalf("the predicate carries no company scope: %s", sql)
 	}
-	// Decided about the ORGANIZATION row, under the guard's own alias. Rendered
+	// Decided about the COMPANY row, under the guard's own alias. Rendered
 	// against `t` it would decide about the deal — a visibility rule answering
 	// about a different record, which is the defect and not the fix.
 	if !strings.Contains(sql, "ref0.owner_id") {
@@ -58,31 +58,31 @@ func TestAPredicateOnAReferenceEverySeatReadsCarriesNoGuard(t *testing.T) {
 // without the null arm would drop them, which is a WRONG answer rather than a
 // narrower one: the rows it removes disclose nothing about X.
 func TestAReferenceThatNamesNothingSurvivesTheGuard(t *testing.T) {
-	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityOrganization), t, `{
+	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"where": [{"field": "organization_id", "op": "neq",
+		"where": [{"field": "company_id", "op": "neq",
 		           "value": "01a08485-fac3-7543-b543-59cc991bbdd7"}]}`)
 	if !strings.Contains(sql, `IS DISTINCT FROM`) {
 		t.Fatalf("neq no longer renders IS DISTINCT FROM, so this case no longer asks what it was written to ask: %s", sql)
 	}
-	if !strings.Contains(sql, `t."organization_id" IS NULL OR EXISTS`) {
+	if !strings.Contains(sql, `t."company_id" IS NULL OR EXISTS`) {
 		t.Fatalf("the guard has no null arm, so a deal with no company is dropped from an answer it belongs in: %s", sql)
 	}
 }
 
 // Object RBAC refusing the record type outright is one gate earlier than the
 // row scope and answers the same way: only the rows naming nothing survive. A
-// caller who may not read organizations at all must not learn which deals have
+// caller who may not read companies at all must not learn which deals have
 // one.
 func TestAReferenceToARecordTypeTheCallerCannotReadAdmitsOnlyNulls(t *testing.T) {
 	sql, _ := compilePlanDoc(teamReaderFor(entityDeal), t, `{
 		"version": "v1", "target": "deal",
-		"where": [{"field": "organization_id", "op": "eq",
+		"where": [{"field": "company_id", "op": "eq",
 		           "value": "01a08485-fac3-7543-b543-59cc991bbdd7"}]}`)
-	if strings.Contains(sql, "EXISTS (SELECT 1 FROM organization") {
-		t.Fatalf("a caller with no organization grant got a row-scope guard rather than a refusal: %s", sql)
+	if strings.Contains(sql, "EXISTS (SELECT 1 FROM company") {
+		t.Fatalf("a caller with no company grant got a row-scope guard rather than a refusal: %s", sql)
 	}
-	if !strings.Contains(sql, `t."organization_id" IS NULL`) {
+	if !strings.Contains(sql, `t."company_id" IS NULL`) {
 		t.Fatalf("the predicate still answers about the reference: %s", sql)
 	}
 }
@@ -91,19 +91,19 @@ func TestAReferenceToARecordTypeTheCallerCannotReadAdmitsOnlyNulls(t *testing.T)
 // EXISTS read the first's row, so the guard would answer about the wrong record
 // while looking present — the failure that reads as a passing fix.
 func TestTwoReferenceGuardsInOnePlanDoNotShareAnAlias(t *testing.T) {
-	// Both references are organizations — the customer and the partner — which
+	// Both references are companies — the customer and the partner — which
 	// is the case that would go unnoticed: one alias, one table, and an EXISTS
 	// that reads as correct while answering about the customer twice.
-	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityOrganization), t, `{
+	sql, _ := compilePlanDoc(teamReaderFor(entityDeal, entityCompany), t, `{
 		"version": "v1", "target": "deal",
-		"where": [{"field": "organization_id", "op": "eq",
+		"where": [{"field": "company_id", "op": "eq",
 		           "value": "01a08485-fac3-7543-b543-59cc991bbdd7"},
-		          {"field": "partner_org_id", "op": "eq",
+		          {"field": "partner_company_id", "op": "eq",
 		           "value": "01a08485-fac3-7543-b543-59cc991bbdd8"}]}`)
-	if !strings.Contains(sql, "organization ref0") || !strings.Contains(sql, "organization ref1") {
+	if !strings.Contains(sql, "company ref0") || !strings.Contains(sql, "company ref1") {
 		t.Fatalf("the two guards do not carry distinct aliases: %s", sql)
 	}
-	if !strings.Contains(sql, `ref1.id = t."partner_org_id"`) {
+	if !strings.Contains(sql, `ref1.id = t."partner_company_id"`) {
 		t.Fatalf("the second guard does not ask about the partner: %s", sql)
 	}
 }

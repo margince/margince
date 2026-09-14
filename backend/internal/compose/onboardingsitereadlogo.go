@@ -7,7 +7,7 @@ package compose
 // where the report says to fetch it, and the route that streams it. Its own
 // file beside the transport because it is the one part of the dossier that
 // is bytes rather than a report, and it reads and answers like the
-// organization's own logo route rather than like the rest of the read.
+// company's own logo route rather than like the rest of the read.
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/imagenorm"
@@ -25,9 +25,9 @@ import (
 
 // siteReadLogoURL is where a client fetches the mark a read resolved, or nil
 // while it resolved none. The storage key never reaches the wire, for the
-// reason people.LogoURL gives: it names a bucket path, and a client's business
+// reason contacts.LogoURL gives: it names a bucket path, and a client's business
 // is the endpoint that streams the object.
-func siteReadLogoURL(read people.SiteRead) *string {
+func siteReadLogoURL(read contacts.SiteRead) *string {
 	if read.LogoObjectKey == nil || *read.LogoObjectKey == "" {
 		return nil
 	}
@@ -37,11 +37,11 @@ func siteReadLogoURL(read people.SiteRead) *string {
 
 // getCompanySiteReadLogo streams the mark a read parked on its dossier, so
 // the review shows the company it is about before the record exists. The
-// same response discipline as the organization's own logo route: the type is
+// same response discipline as the company's own logo route: the type is
 // fixed to the server's own PNG re-encode rather than read back from the
 // object, so nothing a site influenced decides how its bytes are interpreted.
 func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
-	key, err := e.people.SiteReadLogoKey(r.Context(), ids.UUID(readID))
+	key, err := e.contacts.SiteReadLogoKey(r.Context(), ids.UUID(readID))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -73,7 +73,7 @@ func (e *deepReadEngine) getCompanySiteReadLogo(w http.ResponseWriter, r *http.R
 	}, "site read logo "+readID.String())
 }
 
-func (h siteReadHandlers) GetCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
+func (h siteReadHandlers) GetAnchorCompanySiteReadLogo(w http.ResponseWriter, r *http.Request, readID openapi_types.UUID) {
 	if !companyContextReadEnabled(h.companyContextRollout) {
 		httperr.NotImplemented(w, r, "getCompanySiteReadLogo (company context read rollout is disabled)")
 		return

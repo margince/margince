@@ -70,7 +70,7 @@ func TestCreateRecordStageInfoRefusesARecordTypeItCannotWrite(t *testing.T) {
 // A `fields` key the record type does not accept is refused by name, not
 // silently dropped.
 func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {
-	call := NewCreateCall(CreateCommand{RecordType: "person", Fields: json.RawMessage(`{"nickname":"Bob"}`)})
+	call := NewCreateCall(CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"nickname":"Bob"}`)})
 
 	err := call.Guards(context.Background())
 	var badArgs *BadArgsError
@@ -85,14 +85,14 @@ func TestCreateGuardsRefuseAnUnknownField(t *testing.T) {
 // A served create stages the record TYPE with no id and no pin: the row does
 // not exist yet, so there is nothing for either to describe.
 func TestCreateStagesAServedTypeWithNoTargetID(t *testing.T) {
-	call := NewCreateCall(CreateCommand{RecordType: "person", Fields: json.RawMessage(`{"full_name":"Ada"}`)})
+	call := NewCreateCall(CreateCommand{RecordType: "contact", Fields: json.RawMessage(`{"full_name":"Ada"}`)})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
 		t.Fatalf("staging a served create answered %v, want it staged", err)
 	}
-	if info.TargetType != "person" {
-		t.Errorf("staged target_type = %q, want \"person\"", info.TargetType)
+	if info.TargetType != "contact" {
+		t.Errorf("staged target_type = %q, want \"contact\"", info.TargetType)
 	}
 	if !info.TargetID.IsZero() {
 		t.Errorf("staged target_id = %s, want zero — a create names no existing row an approval could pin",
@@ -107,7 +107,7 @@ func TestCreateStagesAServedTypeWithNoTargetID(t *testing.T) {
 // target is ever read — the same order updateRecord.StageInfo always used.
 func TestPatchGuardsRefuseAnUnknownField(t *testing.T) {
 	call := NewPatchCall(unreadableProvider{}, PatchCommand{
-		RecordType: "person", ID: ids.NewV7(), Fields: json.RawMessage(`{"nickname":"Bob"}`),
+		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"nickname":"Bob"}`),
 	})
 
 	err := call.Guards(context.Background())
@@ -124,11 +124,11 @@ func TestPatchGuardsRefuseAnUnknownField(t *testing.T) {
 // same row-scope answer archive's own Guards gives.
 func TestPatchGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
 	call := NewPatchCall(unreadableProvider{}, PatchCommand{
-		RecordType: "person", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
+		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("guarding an unreadable person answered %v, want the row-scope miss", err)
+		t.Fatalf("guarding an unreadable contact answered %v, want the row-scope miss", err)
 	}
 }
 
@@ -136,11 +136,11 @@ func TestPatchGuardsRefuseATargetTheCallerCannotSee(t *testing.T) {
 // an approval released for it.
 func TestPatchGuardsRefuseATargetHeldElsewhere(t *testing.T) {
 	call := NewPatchCall(elsewhereProvider{}, PatchCommand{
-		RecordType: "person", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
+		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 
 	if err := call.Guards(context.Background()); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
-		t.Fatalf("guarding a mirrored person answered %v, want the unsupported-by-SoR refusal", err)
+		t.Fatalf("guarding a mirrored contact answered %v, want the unsupported-by-SoR refusal", err)
 	}
 }
 
@@ -148,17 +148,17 @@ func TestPatchGuardsRefuseATargetHeldElsewhere(t *testing.T) {
 // is taken server-side inside the staging transaction.
 func TestPatchStagesAServedRecordAndID(t *testing.T) {
 	id := ids.NewV7()
-	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityPerson, id, true)}
+	provider := stubRecordProvider{rec: stagedRecord(datasource.EntityContact, id, true)}
 	call := NewPatchCall(provider, PatchCommand{
-		RecordType: "person", ID: id, Fields: json.RawMessage(`{"full_name":"Ada"}`),
+		RecordType: "contact", ID: id, Fields: json.RawMessage(`{"full_name":"Ada"}`),
 	})
 
 	info, err := StageSubject(context.Background(), call)
 	if err != nil {
 		t.Fatalf("staging a readable patch answered %v, want it staged", err)
 	}
-	if info.TargetType != "person" || info.TargetID != id {
-		t.Errorf("staged target = (%s,%s), want (person,%s)", info.TargetType, info.TargetID, id)
+	if info.TargetType != "contact" || info.TargetID != id {
+		t.Errorf("staged target = (%s,%s), want (contact,%s)", info.TargetType, info.TargetID, id)
 	}
 	if info.TargetVersion != nil {
 		t.Errorf("the resolver supplied target_version %d — the pin comes from inside the staging transaction",
@@ -197,7 +197,7 @@ func TestPatchStagesATypeTheRecordSeamDoesNotServe(t *testing.T) {
 func TestPatchReadsItsTargetOnceAcrossGuardsAndSubject(t *testing.T) {
 	provider := &countingProvider{}
 	call := NewPatchCall(provider, PatchCommand{
-		RecordType: "person", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
+		RecordType: "contact", ID: ids.NewV7(), Fields: json.RawMessage(`{"full_name":"X"}`),
 	})
 
 	if _, err := StageSubject(context.Background(), call); err != nil {

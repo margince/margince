@@ -169,7 +169,7 @@ func TestOneRepsAutonomyIsInvisibleToAnother(t *testing.T) {
 	// auto by inheriting the first rep's row. Close-date corrections default to
 	// auto — the sweep applies them and reports itself — so a colleague reading
 	// auto there proves nothing about isolation.
-	const kind = "org_name_promotion"
+	const kind = "company_name_promotion"
 
 	if _, err := svc.SetAutoApply(first, kind, true); err != nil {
 		t.Fatalf("switching the first rep's kind on: %v", err)
@@ -269,6 +269,6 @@ func TestAKindSwitchedOnIsTheKindThatThenApplies(t *testing.T) {
 	// The receipt has to say the machine did it, or the day's lane puts the
 	// rep's name on a click they never made.
 	if !bySystem {
-		t.Fatal("an automatic apply is recorded as a person's decision")
+		t.Fatal("an automatic apply is recorded as a contact's decision")
 	}
 }

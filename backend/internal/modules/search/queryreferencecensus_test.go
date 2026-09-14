@@ -9,7 +9,7 @@ package search
 // not a failure anywhere: referenceGuard returns "", the predicate compiles to
 // a bare comparison, and the answer is a well-formed page that says which rows
 // name a record the caller may not open. There is nothing to notice, which is
-// exactly how `partner_org_id` stayed open while `organization_id` beside it
+// exactly how `partner_company_id` stayed open while `company_id` beside it
 // was closed — one is spelled for its target and the other for its role.
 //
 // So the expectation is read off the catalog rather than kept as a list beside

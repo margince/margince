@@ -341,7 +341,7 @@ func (p *TranscriptProposer) stage(
 		// saying the other existed. The owner is safe to key on for the same
 		// reason the quotation is — it is the party AS THE TRANSCRIPT NAMES
 		// THEM, carved out of the translation rule precisely because a
-		// translated name is a different person.
+		// translated name is a different contact.
 		identity, err := json.Marshal(map[string]string{
 			transcriptIdentityCited: proposal.Cited,
 			transcriptIdentityOwner: proposal.Owner,

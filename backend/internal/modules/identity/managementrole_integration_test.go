@@ -8,7 +8,7 @@ package identity
 // The obligation (ADR-0110): management is unbounded in row scope and holds
 // NO governance authority. Every admin action in this module gates on the
 // literal admin role key rather than on any grant or scope, so a management
-// seat — whose document reads every row in the organization — is refused on
+// seat — whose document reads every row in the company — is refused on
 // each of them exactly like a team lead. This test proves it against the real
 // seeded role, resolved through the real invite → set-password → login path,
 // because a hand-built Identity carrying the key would prove only that the

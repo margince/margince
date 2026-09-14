@@ -25,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
-type sentence = crmcontracts.OrganizationBriefSentence
+type sentence = crmcontracts.CompanyBriefSentence
 
 // composeDeterministic builds the card from the facts alone.
 //
@@ -37,7 +37,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 	out := crmcontracts.DealStatusCard{
 		DealId:      f.deal.Id,
 		GeneratedAt: f.now,
-		GeneratedBy: crmcontracts.Deterministic,
+		GeneratedBy: crmcontracts.WrittenByDeterministic,
 		Story:       crmcontracts.DealStatusCardSection{Sentences: storyLines(f)},
 	}
 	if blocker := blockerLines(f); len(blocker) > 0 {
@@ -117,21 +117,21 @@ const atRiskFactor = 0.5
 // reader is already looking at. It carries no citation because there is no
 // second record to open.
 func plain(text string) sentence {
-	return sentence{Text: text, Evidence: []crmcontracts.OrganizationBriefEvidence{}}
+	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{}}
 }
 
 // cited is a sentence resting on one activity the reader can open.
 func cited(text string, a crmcontracts.Activity) sentence {
-	return sentence{Text: text, Evidence: []crmcontracts.OrganizationBriefEvidence{activityEvidence(a)}}
+	return sentence{Text: text, Evidence: []crmcontracts.CompanyBriefEvidence{activityEvidence(a)}}
 }
 
 // activityEvidence points at one activity, named by its subject where the
 // reader may read it. A withheld row is cited by kind: the citation says
 // contact happened without repeating words the reader may not see.
-func activityEvidence(a crmcontracts.Activity) crmcontracts.OrganizationBriefEvidence {
+func activityEvidence(a crmcontracts.Activity) crmcontracts.CompanyBriefEvidence {
 	name := subjectOf(a)
-	return crmcontracts.OrganizationBriefEvidence{
-		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeActivity,
+	return crmcontracts.CompanyBriefEvidence{
+		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeActivity,
 		EntityId:   a.Id,
 		Name:       &name,
 	}
@@ -144,7 +144,7 @@ func foldWritten(
 	floor crmcontracts.DealStatusCard, w WrittenStatus, f facts, mv crmcontracts.DealStatusCardMove,
 ) crmcontracts.DealStatusCard {
 	out := floor
-	out.GeneratedBy = crmcontracts.Model
+	out.GeneratedBy = crmcontracts.WrittenByModel
 	out.Story = crmcontracts.DealStatusCardSection{Sentences: wire(w.Story, f)}
 	out.Blocker = optionalSection(w.Blocker, f)
 	out.Buyer = optionalSection(w.Buyer, f)
@@ -238,7 +238,7 @@ func moveEvidence(reason WrittenLine, f facts) []crmcontracts.DealNextBestAction
 func wire(lines []WrittenLine, f facts) []sentence {
 	out := make([]sentence, 0, len(lines))
 	for _, line := range lines {
-		evidence := make([]crmcontracts.OrganizationBriefEvidence, 0, len(line.Evidence))
+		evidence := make([]crmcontracts.CompanyBriefEvidence, 0, len(line.Evidence))
 		for _, id := range line.Evidence {
 			if a, ok := citedRecord(f, id); ok {
 				evidence = append(evidence, activityEvidence(a))

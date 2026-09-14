@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-/** @vitest-environment jsdom */
+/** @vitest-environment happy-dom */
 import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -45,7 +45,7 @@ beforeEach(() => {
     "fetch",
     vi.fn(async (input: Request | string | URL) => {
       const url = String(input instanceof Request ? input.url : input);
-      if (url.includes("/worklist")) {
+      if (new URL(url, "https://test.local").pathname.endsWith("/worklist")) {
         READS.push(url.replace(/^.*\/v1/, ""));
       }
       return session(input);
@@ -77,7 +77,7 @@ describe("the worklist's routed identity", () => {
     );
   });
 
-  it("re-reads for a colleague's queue when the address names a person", async () => {
+  it("re-reads for a colleague's queue when the address names a contact", async () => {
     window.location.hash = "#/worklist";
     renderApp();
     await waitFor(() => expect(READS.length).toBeGreaterThan(0), {

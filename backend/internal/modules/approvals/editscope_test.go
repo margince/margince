@@ -29,8 +29,8 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 	}{
 		{
 			name:     "editing the content a human is meant to correct is allowed",
-			original: `{"organization_id":"` + mine + `","proposed_name":"Acme","persons":["` + alice + `"]}`,
-			edited:   `{"organization_id":"` + mine + `","proposed_name":"Acme GmbH","persons":["` + alice + `"]}`,
+			original: `{"company_id":"` + mine + `","proposed_name":"Acme","contacts":["` + alice + `"]}`,
+			edited:   `{"company_id":"` + mine + `","proposed_name":"Acme GmbH","contacts":["` + alice + `"]}`,
 		},
 		{
 			name:     "a payload naming no record at all is entirely editable",
@@ -39,15 +39,15 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		},
 		{
 			name:        "repointing the target at another record is refused",
-			original:    `{"organization_id":"` + mine + `","proposed_name":"Acme"}`,
-			edited:      `{"organization_id":"` + theirs + `","proposed_name":"Acme"}`,
-			wantChanged: []string{"/organization_id"},
+			original:    `{"company_id":"` + mine + `","proposed_name":"Acme"}`,
+			edited:      `{"company_id":"` + theirs + `","proposed_name":"Acme"}`,
+			wantChanged: []string{"/company_id"},
 		},
 		{
 			name:        "dropping the reference is refused too — an absent id resolves to nothing the gate checked",
-			original:    `{"organization_id":"` + mine + `","proposed_name":"Acme"}`,
+			original:    `{"company_id":"` + mine + `","proposed_name":"Acme"}`,
 			edited:      `{"proposed_name":"Acme"}`,
-			wantChanged: []string{"/organization_id"},
+			wantChanged: []string{"/company_id"},
 		},
 		{
 			name:        "introducing a reference the staging never carried is refused",
@@ -57,9 +57,9 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		},
 		{
 			name:        "a reference nested in a list is pinned like a top-level one",
-			original:    `{"persons":["` + alice + `"]}`,
-			edited:      `{"persons":["` + theirs + `"]}`,
-			wantChanged: []string{"/persons/[0]"},
+			original:    `{"contacts":["` + alice + `"]}`,
+			edited:      `{"contacts":["` + theirs + `"]}`,
+			wantChanged: []string{"/contacts/[0]"},
 		},
 		{
 			name:        "a reference nested in an object is pinned like a top-level one",
@@ -91,9 +91,9 @@ func TestAssertSameEntityRefsPinsEveryRecordTheProposalNames(t *testing.T) {
 		},
 		{
 			name:        "an object key spelling an array index does not collide with it",
-			original:    `{"persons":["` + alice + `"]}`,
-			edited:      `{"persons":{"[0]":"` + alice + `"}}`,
-			wantChanged: []string{"/persons/[0]", "/persons/~20]"},
+			original:    `{"contacts":["` + alice + `"]}`,
+			edited:      `{"contacts":{"[0]":"` + alice + `"}}`,
+			wantChanged: []string{"/contacts/[0]", "/contacts/~20]"},
 		},
 	}
 
@@ -252,9 +252,9 @@ func TestAssertSameCallIdentityPinsEveryMemberOfTheStagedCallExceptBody(t *testi
 // The refusal message names the field, so an operator reading a 422 can tell a
 // typo from an attempt to re-aim the approval.
 func TestRetargetedEditErrorNamesTheOffendingPaths(t *testing.T) {
-	err := &RetargetedEditError{Paths: []string{"/organization_id", "/owner_id"}}
+	err := &RetargetedEditError{Paths: []string{"/company_id", "/owner_id"}}
 	msg := err.Error()
-	for _, want := range []string{"/organization_id", "/owner_id"} {
+	for _, want := range []string{"/company_id", "/owner_id"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("message %q does not name %q", msg, want)
 		}

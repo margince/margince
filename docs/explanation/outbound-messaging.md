@@ -83,7 +83,7 @@ chain the deployment assembles.
 
 The order is load-bearing rather than stylistic: **authority must refuse before consent answers**, or
 the difference between "you may not" and "they said no" tells a caller with no rights at all something
-about a person's consent state.
+about a contact's consent state.
 
 ### Authority — what the provider says about the credential
 
@@ -183,7 +183,7 @@ workspace), but the seat check does not move at all.
 ### Authorization — per recipient, per phase, on evidence
 
 The engine is asked about **every subject the delivery reaches**, not just the To line: a Cc'd
-person is owed the same answer, and a recipient list that only counted the visible ones would leave
+contact is owed the same answer, and a recipient list that only counted the visible ones would leave
 a blind copy unasked.
 
 It is asked **twice**, and the second time is the one that matters here. `AuthorizeStagingTx` runs
@@ -202,19 +202,19 @@ is". That is what somebody pressing unsubscribe believes they answered.
 a subject's request to stop, a hard bounce. Neither a withdrawal nor a suppression expires on its
 own, and no rollout mode softens either. A restriction is not total, though — `security_notice`,
 `privacy_notice` and `optout_confirmation` still reach a restricted subject through a registered
-template, because a person is not better off for being unable to hear that their account was
+template, because a contact is not better off for being unable to hear that their account was
 breached. A hard bounce stops even those.
 
 ### The three destinations one message offers
 
 A tokenized send derives **three** links from one token, and they are not interchangeable — collapsing
-them is what put a POST-only endpoint behind a link people click:
+them is what put a POST-only endpoint behind a link contacts click:
 
 | Surface | URL | Who presses it |
 |---|---|---|
 | `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe?purpose=` | a mailbox provider, by POST, with no browser |
-| Visible "Unsubscribe" | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | a person, who gets a page that asks before it acts |
-| Visible "Manage preferences" | `{base}/#/preferences/{token}?lang=` | a person, who gets every purpose |
+| Visible "Unsubscribe" | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | a contact, who gets a page that asks before it acts |
+| Visible "Manage preferences" | `{base}/#/preferences/{token}?lang=` | a contact, who gets every purpose |
 
 `activities.unsubscribeLinksFor` builds all three, so the header, both visible links and the redacted
 timeline copy cannot name different tokens, purposes or languages. The two visible ones are hash routes:
@@ -359,20 +359,20 @@ What differs is only the vocabulary of the transport:
 - **The recipient is resolved, never named by the caller.** `SendMessageRequest` carries the body, the
   attachments and the context the engine is asked about — and no recipient at all. A channel identity is an opaque
   third-party account id, so a caller able to name one could message a human this conversation is
-  not with, and the reply surface has no legitimate use for that. The server reads the anchor's `activity_link` rows, asks the people
-  module which of those people are **reachable** on the provider, and refuses unless the answer is
+  not with, and the reply surface has no legitimate use for that. The server reads the anchor's `activity_link` rows, asks the contacts
+  module which of those contacts are **reachable** on the provider, and refuses unless the answer is
   exactly one.
 - **Reachability replaces address validity.** `ReachableChannelIdentities` returns live identities with
-  `blocked_at IS NULL`. It returns a **list**, because the unique key binds an account to one person and
-  not a person to one account — handing back the first row would reply to whichever account the planner
+  `blocked_at IS NULL`. It returns a **list**, because the unique key binds an account to one contact and
+  not a contact to one account — handing back the first row would reply to whichever account the planner
   returned.
 
 Three refusals, all `422`, all before anything is staged:
 
 | Case | Code |
 |---|---|
-| A person with no live channel identity — they never messaged the workspace's bot, or they blocked it | `person_unreachable` |
-| The conversation reaches more than one person | `ambiguous_channel_recipient` |
+| A contact with no live channel identity — they never messaged the workspace's bot, or they blocked it | `contact_unreachable` |
+| The conversation reaches more than one contact | `ambiguous_channel_recipient` |
 | No live bot is bound for the provider at all | `channel_not_send_capable` |
 
 The outbound activity carries **no subject and no natural key**: a channel has no subject line, and a
@@ -397,14 +397,14 @@ arrived on, because an automation answering a reply routes on that value alone.
 `replyOriginOf` resolves **both halves in one switch** over `counterpartyShapeOf` — the single place
 capture asks how a record names its human:
 
-- **`shapeMail`** → channel `"email"`, and the person resolved from `person_email`. The medium and not
+- **`shapeMail`** → channel `"email"`, and the contact resolved from `contact_email`. The medium and not
   the source system, on purpose: `gmail`, `imap` and `graph` are three ways of reaching one inbox, and a
   consumer routing a reply back has the same job for all three.
-- **`shapeChannel`** → channel = the identity's own **provider** (`telegram`), and the person resolved
-  from `person_channel_identity`. The provider *is* the medium there.
+- **`shapeChannel`** → channel = the identity's own **provider** (`telegram`), and the contact resolved
+  from `contact_channel_identity`. The provider *is* the medium there.
 
-A missing person is not a fault — the ensure that creates them runs after the capture transaction
-commits, so a first-ever sender simply has no person yet on either medium. The malformed shapes
+A missing contact is not a fault — the ensure that creates them runs after the capture transaction
+commits, so a first-ever sender simply has no contact yet on either medium. The malformed shapes
 (a record naming its human both by an address and by a channel identity; half a channel identity) return
 their sentinels rather than a silent miss: the Sink refuses both at the edge, so reaching them here means
 that guard was bypassed, and the reply path states the invariant break instead of absorbing it.
@@ -453,9 +453,9 @@ recorder refuses a non-human principal anyway; naming a reference on the agent p
 refusal look like an accident of wiring. The channel reply carries none either — `SendMessageInput` has
 no such field.
 
-The signal row deliberately keeps **no** `final_text`, and carries no person, activity or subject
+The signal row deliberately keeps **no** `final_text`, and carries no contact, activity or subject
 linkage: Art. 17 erasure structurally could not find it, so persisting the sent correspondence there
-would keep an erased person's mail alive for the retention window.
+would keep an erased contact's mail alive for the retention window.
 
 ## Provider seams
 
@@ -485,7 +485,7 @@ looking live and never sending.
   belongs on the timeline row.
 - **A gate says never, a policy says not yet.** Gates are fixed and inline; policies are a configured
   chain. Never mix the two.
-- **Authority refuses before consent answers.** A caller with no rights learns nothing about a person's
+- **Authority refuses before consent answers.** A caller with no rights learns nothing about a contact's
   consent state.
 - **The staging human's seat is re-read at transmit time**, on both transports.
 - **Authorization is default-deny, per recipient, over every subject the delivery reaches** —
@@ -515,7 +515,7 @@ looking live and never sending.
 | The channel reply — recipient resolution, reachability, the outbound row | `backend/internal/modules/activities/channelsend.go`, `handlers_channelsend.go` |
 | The send-capability refusals shared by both transports | `backend/internal/modules/activities/sendauthority.go` |
 | Reply detection and the reply origin switch | `backend/internal/modules/capture/sinkreply.go` |
-| Channel reachability (`blocked_at`) | `backend/internal/modules/people/channelidentity.go` |
+| Channel reachability (`blocked_at`) | `backend/internal/modules/contacts/channelidentity.go` |
 | The consent gate the dispatcher calls | `backend/internal/modules/consent/gate.go` |
 | The voice learning loop's send half | `backend/internal/modules/ai/voice_sendoutcome.go` |
 | Composition — the stager, the transmit job, the resolver, the Gmail scope pair | `backend/internal/compose/commsjobs.go`, `comms.go`, `capture.go` |

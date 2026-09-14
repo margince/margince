@@ -64,7 +64,7 @@ func TestTheDoubleOptInDoorMintsALinkForTheNamedPurpose(t *testing.T) {
 	var storedPurpose ids.PurposeID
 	if err := e.owner.QueryRow(e.ctx,
 		`SELECT kind, purpose_id FROM confirm_token
-		 WHERE person_id = $1 AND consumed_at IS NULL`, e.person).Scan(&kind, &storedPurpose); err != nil {
+		 WHERE contact_id = $1 AND consumed_at IS NULL`, e.contact).Scan(&kind, &storedPurpose); err != nil {
 		t.Fatalf("reading the minted link: %v", err)
 	}
 	if kind != LinkConsentConfirmation {
@@ -104,7 +104,7 @@ func TestTheDoubleOptInDoorReturnsNoPlaintext(t *testing.T) {
 	}
 }
 
-// A person with no live address has no mailbox to prove, so there is nothing
+// A contact with no live address has no mailbox to prove, so there is nothing
 // the link could evidence. The door must say so rather than mint against an
 // address nobody holds.
 func TestTheDoubleOptInDoorRefusesWhenThereIsNoMailbox(t *testing.T) {
@@ -114,15 +114,15 @@ func TestTheDoubleOptInDoorRefusesWhenThereIsNoMailbox(t *testing.T) {
 
 	rec := postDoubleOptIn(t, e, marketingPurposeID(t, e))
 	if rec.Code == http.StatusCreated {
-		t.Fatalf("the door minted a link for a person with no address: %s", rec.Body.String())
+		t.Fatalf("the door minted a link for a contact with no address: %s", rec.Body.String())
 	}
 	var minted int
 	if err := e.owner.QueryRow(e.ctx,
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&minted); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&minted); err != nil {
 		t.Fatalf("counting minted links: %v", err)
 	}
 	if minted != 0 {
-		t.Errorf("%d links were minted for a person with no mailbox", minted)
+		t.Errorf("%d links were minted for a contact with no mailbox", minted)
 	}
 }
 
@@ -189,7 +189,7 @@ func TestTheDoubleOptInDoorRefusesAnArchivedPurpose(t *testing.T) {
 	}
 	var minted int
 	if err := e.owner.QueryRow(e.ctx,
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&minted); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&minted); err != nil {
 		t.Fatalf("counting minted links: %v", err)
 	}
 	if minted != 0 {
@@ -221,7 +221,7 @@ func TestTheDoubleOptInDoorRefusesAPurposeThatNeedsNoConfirmation(t *testing.T) 
 	}
 	var minted int
 	if err := e.owner.QueryRow(e.ctx,
-		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&minted); err != nil {
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&minted); err != nil {
 		t.Fatalf("counting minted links: %v", err)
 	}
 	if minted != 0 {
@@ -255,8 +255,8 @@ func postDoubleOptInWith(
 	t.Helper()
 	rec := httptest.NewRecorder()
 	body := strings.NewReader(`{"purpose_id":"` + purpose.String() + `"}`)
-	req := httptest.NewRequest(http.MethodPost, "/v1/people/x/consent/double-opt-in", body).WithContext(e.ctx)
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in", body).WithContext(e.ctx)
 	req.Header.Set("Content-Type", "application/json")
-	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(e.person.UUID))
+	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(e.contact.UUID))
 	return rec
 }

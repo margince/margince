@@ -40,12 +40,14 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 		-- A reply is anything the counterparty sent us on a conversation
 		-- linked to this deal after the rep set it down.
 		--
-		-- NO CONTENT GATE on the activity, which is deliberate and matches the
-		-- dismissal filter this sits beside in briefCandidates: the brief's
-		-- queue is scoped by DEAL, and a rep who may read the deal is told
-		-- that it moved without being shown what moved it. The waiting-message
-		-- lane is scoped by activity instead, so its own predicate does gate
-		-- the reply — the two differ because the thing being protected does. Bounded at the
+		-- NO CONTENT GATE on the activity, which is deliberate: the brief's
+		-- queue is scoped by DEAL, and lifting a snooze tells a rep who may
+		-- read the deal that it moved without naming what moved it or when.
+		-- The dismissal return beside it in briefCandidates IS gated, because a
+		-- returning deal is dated by its activity and that date is a disclosure
+		-- (briefactivityscope.go). The waiting-message lane is scoped by
+		-- activity, so its own predicate gates the reply too — each differs
+		-- because the thing being protected does. Bounded at the
 		-- judging instant for the reason the dismissal filter is: a
 		-- future-dated inbound has not arrived, and lifting a snooze for it
 		-- puts the item back for something still to come.

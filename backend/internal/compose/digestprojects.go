@@ -37,11 +37,11 @@ func digestProjectsSource(ctx context.Context, tx pgx.Tx, since, now time.Time) 
 		}
 		return nil, err
 	}
-	changes, err := digestPhaseChanges(ctx, tx, since)
+	changes, err := digestPhaseChanges(ctx, tx, since, now)
 	if err != nil {
 		return nil, err
 	}
-	commitments, err := digestNewCommitments(ctx, tx, since)
+	commitments, err := digestNewCommitments(ctx, tx, since, now)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +52,8 @@ func digestProjectsSource(ctx context.Context, tx pgx.Tx, since, now time.Time) 
 	return &capture.DigestProjects{PhaseChanges: changes, NewCommitments: commitments, GoneQuiet: quiet}, nil
 }
 
-// projectScope renders the reader's project row scope over alias p, or TRUE
-// for an unbounded reader, binding through arg.
+// projectScope intersects readable projects with personal responsibility. A
+// manager's broader read grant does not turn colleagues' projects into their day.
 func projectScope(ctx context.Context, arg func(any) int) (string, error) {
 	scope, err := auth.ScopeClauseFor(ctx, tableProject, "p", arg)
 	if err != nil {
@@ -62,14 +62,18 @@ func projectScope(ctx context.Context, arg func(any) int) (string, error) {
 	if scope == "" {
 		scope = sqlUnnarrowed
 	}
-	return scope, nil
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return "FALSE", nil
+	}
+	return fmt.Sprintf("(%s) AND p.owner_id = $%d", scope, arg(actor.UserID)), nil
 }
 
 // digestPhaseChanges reads the ladder moves recorded in the window off
 // project_phase_history — the writer's record, never re-derived from the
 // row's current phase, which would miss a project that moved twice.
-func digestPhaseChanges(ctx context.Context, tx pgx.Tx, since time.Time) ([]capture.DigestProjectPhaseChange, error) {
-	args := []any{since}
+func digestPhaseChanges(ctx context.Context, tx pgx.Tx, since, until time.Time) ([]capture.DigestProjectPhaseChange, error) {
+	args := []any{since, until}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	scope, err := projectScope(ctx, arg)
 	if err != nil {
@@ -79,7 +83,7 @@ func digestPhaseChanges(ctx context.Context, tx pgx.Tx, since time.Time) ([]capt
 		SELECT p.id, p.name, p.key, h.from_phase, h.to_phase, h.occurred_at
 		  FROM project_phase_history h
 		  JOIN project p ON p.id = h.project_id AND p.archived_at IS NULL
-		 WHERE h.occurred_at >= $1 AND `+scope+`
+		 WHERE h.occurred_at >= $1 AND h.occurred_at <= $2 AND `+scope+`
 		 ORDER BY h.occurred_at DESC, h.id DESC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("digest phase changes: %w", err)
@@ -94,8 +98,8 @@ func digestPhaseChanges(ctx context.Context, tx pgx.Tx, since time.Time) ([]capt
 // digestNewCommitments counts, per project, the tasks filed under it in the
 // window that are still open — a promise made overnight and already kept is
 // not something the morning reader has to act on.
-func digestNewCommitments(ctx context.Context, tx pgx.Tx, since time.Time) ([]capture.DigestProjectCommitments, error) {
-	args := []any{since}
+func digestNewCommitments(ctx context.Context, tx pgx.Tx, since, until time.Time) ([]capture.DigestProjectCommitments, error) {
+	args := []any{since, until}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	scope, err := projectScope(ctx, arg)
 	if err != nil {
@@ -117,7 +121,7 @@ func digestNewCommitments(ctx context.Context, tx pgx.Tx, since time.Time) ([]ca
 		  JOIN activity_link al ON al.activity_id = a.id AND al.entity_type = 'project'
 		  JOIN project p ON p.id = al.project_id AND p.archived_at IS NULL
 		 WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		   AND a.created_at >= $1 AND `+scope+` AND `+content+`
+		   AND a.created_at >= $1 AND a.created_at <= $2 AND `+scope+` AND `+content+`
 		 GROUP BY p.id, p.name, p.key
 		 ORDER BY count(*) DESC, p.name, p.id`, args...)
 	if err != nil {

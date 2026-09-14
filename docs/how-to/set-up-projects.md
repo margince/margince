@@ -1,6 +1,6 @@
 # Set up projects
 
-This guide is for the person who decides how projects are used in the team — no
+This guide is for whoever decides how projects are used in the team — no
 code, no API. It says who can do what with a project, how to choose keys, when
 to create a project, how visibility and sharing work, and what the fixed
 vocabularies are. The things you *cannot* do from the UI are listed at the end.
@@ -163,7 +163,7 @@ project moves into **Delivering** by itself — but only from **Initiative** or
 project is never reopened silently by a win; reopening is a human move with a
 reason.
 
-## Putting companies and people on a project
+## Putting companies and contacts on a project
 
 The same section appears on three pages, with the same two verbs, so the flow
 is learned once:
@@ -172,7 +172,7 @@ is learned once:
 |---|---|---|
 | A project | **Companies** | companies onto this project |
 | A company | **Projects** | this company onto a project |
-| A contact | **Projects** | this person onto a project |
+| A contact | **Projects** | this contact onto a project |
 
 A deal is the exception, and deliberately so — see below.
 
@@ -221,13 +221,13 @@ lets somebody **edit** a project their row scope does not reach — a delivery
 lead on another team who has to move the phase or seat stakeholders — and it
 reaches a seat whose role carries no project grant at all. Open the project
 and press **Share**. The sharing page grants **Read** or **Write** on exactly
-this one record, to a person or a team, with an optional expiry and a reason.
+this one record, to a contact or a team, with an optional expiry and a reason.
 A share is capped at your own access and never widens anything else about
-that person's scope.
+that contact's scope.
 
 **Ownership** is set on the project form (**Owner**: *Me*, *Unassign*, or
 keep the current owner). Reassigning one project at a time is an edit. Moving
-*every* live project one person owns to another — a handover or a leaver —
+*every* live project one contact owns to another — a handover or a leaver —
 exists only in the API today: `POST /projects/transfer-ownership`, which a
 signed-in person calls (agents may not). Each moved project gets its own
 audit entry with the owner before and after.
@@ -253,7 +253,7 @@ a project keeps at least one company at all times.
 | **Partner** | they are delivering part of it alongside you, on their own commercial footing. |
 | **Subcontractor** | they are delivering part of it under you. |
 
-**Stakeholder role** — what a person is to this project. Seat somebody from the
+**Stakeholder role** — what a contact is to this project. Seat somebody from the
 **contact's** page, in its **Projects** section; the project page's
 **Stakeholders** card shows the result and is read-only.
 
@@ -272,7 +272,7 @@ value is a small code change plus a migration, not a workaround.
 
 ## Agents and MCP
 
-An agent connected over MCP works under the same grants as the person whose
+An agent connected over MCP works under the same grants as the contact whose
 passport it carries. It can read a project (`read_project_360`, `read_record`
 with record type `project`), create or update one through the generic record
 tools, move a phase with `advance_project_phase`, and archive one through
@@ -287,7 +287,7 @@ ownership; that endpoint is human-only.
 
 - **Legal hold.** A project can be placed under legal hold, which freezes the
   correspondence filed under it against erasure and retention sweeps. The hold
-  is set by an operator directly in the database, the same as for a person,
+  is set by an operator directly in the database, the same as for a contact,
   company or deal; there is no switch in the app.
 - **Bulk owner transfer** — API only, as above.
 - **Un-archiving.** Archiving is final from the UI.

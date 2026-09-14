@@ -10,7 +10,7 @@
 # makes the right one.
 #
 # The record is right. The prose is wrong. An answer that says October has
-# repeated a human's faulty memory back to the person about to walk into the
+# repeated a human's faulty memory back to the contact about to walk into the
 # meeting.
 name: case6_ask_the_company
 criteria: [1, 3, 5]
@@ -23,7 +23,7 @@ writes: false
 
 prompt: |
   We are about to change the account manager on one of our major accounts, and
-  in the past customers complained if we swapped the responsible people too
+  in the past customers complained if we swapped the responsible contacts too
   much. Did we have it in the past, what happened, how did we react, what should
   I be prepared for? Is there something we can learn? Check in our CRM.
 
@@ -62,7 +62,7 @@ may_call:
 # Criterion 3, MECHANICAL: the record wins. September is what the email says.
 #
 # "Sep" is in the alternation because a real answer writes the date the way a
-# person does — every run of 2026-08-27 said "18 Sep 2025" and the pattern,
+# contact does — every run of 2026-08-27 said "18 Sep 2025" and the pattern,
 # which demanded the month spelled out or a numeric 09, called all three a
 # failure. That was a bug in this file, not in the answer.
 must_mention:

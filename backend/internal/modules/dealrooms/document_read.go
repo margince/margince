@@ -58,7 +58,7 @@ const documentFrom = `deal_room_document d
 // the next release and out of the buyer's download, rather than riding on the
 // strength of a check that was true when it was added. The seller's own list
 // does not carry the predicate, so the stale entry stays visible to the one
-// person who can remove it.
+// contact who can remove it.
 //
 // It needs the room aliased `r` and the attachment aliased `a`, and carries no
 // principal: the public download has none. The caller-bound half — may THIS

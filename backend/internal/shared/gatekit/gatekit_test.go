@@ -36,7 +36,7 @@ func TestWaivedRatifiesAKnownSubjectAndRefusesAnUnknownOne(t *testing.T) {
 	if !w.Waived(rec, "record_grant") {
 		t.Error("a ratified subject was not waived")
 	}
-	if w.Waived(rec, "person") {
+	if w.Waived(rec, "contact") {
 		t.Error("an unratified subject was waived")
 	}
 	if len(rec.errs) != 0 {
@@ -59,7 +59,7 @@ func TestAReasonlessWaiverFailsWhereItIsReliedOn(t *testing.T) {
 // is not an argument, and a subject long enough to clear the byte count is still
 // only the subject.
 func TestAReasonThatStatesNoCostIsRefusedHoweverLongItIs(t *testing.T) {
-	const subject = "internal/modules/people/store.go"
+	const subject = "internal/modules/contacts/store.go"
 	for _, probe := range []struct{ name, reason string }{
 		{"blank padding", strings.Repeat(" ", 25)},
 		{"mixed whitespace padding", "  \t\n   \n\t     \n            "},
@@ -159,7 +159,7 @@ func TestSubjectsEnumeratesInADeterministicOrder(t *testing.T) {
 	})
 	for range 8 {
 		if got := w.Subjects(); strings.Join(got, ",") != "a,b,c" {
-			t.Fatalf("Subjects() = %v, want a,b,c in every call", got)
+			t.Fatalf("Subjects() = %v, want company,contact,deal in every call", got)
 		}
 	}
 }
@@ -170,14 +170,14 @@ func TestSubjectsEnumeratesInADeterministicOrder(t *testing.T) {
 func TestSubjectsOfAWaiverSetKeyedByANamedStringTypeAreOrderedToo(t *testing.T) {
 	type recordType string
 	w := Waive(map[recordType]string{
-		"organization": "the third subject, ratified for the reason stated right here",
-		"deal":         "the first subject, ratified for the reason stated right here",
-		"person":       "the second subject, ratified for the reason stated right here",
+		"company": "the first subject, ratified for the reason stated right here",
+		"deal":    "the second subject, ratified for the reason stated right here",
+		"contact": "the third subject, ratified for the reason stated right here",
 	})
 	for range 8 {
 		got := w.Subjects()
-		if len(got) != 3 || got[0] != "deal" || got[1] != "organization" || got[2] != "person" {
-			t.Fatalf("Subjects() = %v, want deal,organization,person in every call", got)
+		if len(got) != 3 || got[0] != "company" || got[1] != "contact" || got[2] != "deal" {
+			t.Fatalf("Subjects() = %v, want company,contact,deal in every call", got)
 		}
 	}
 }

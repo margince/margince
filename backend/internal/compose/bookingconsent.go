@@ -37,7 +37,7 @@ const bookingScopedPurposeKey = "transactional"
 
 // ValidatePurpose confirms the purpose exists AND is the booking-scoped
 // `transactional` purpose BEFORE the surface writes anything — a public
-// capture may not create a person it cannot attach a recordable consent
+// capture may not create a contact it cannot attach a recordable consent
 // to, and may not reach beyond its own consent lane.
 func (a bookingConsentAdapter) ValidatePurpose(ctx context.Context, purposeID ids.UUID) error {
 	purposes, err := a.store.ListPurposes(ctx)
@@ -83,8 +83,8 @@ func admitBookingPurpose(purposes []consent.Purpose, purposeID ids.UUID) error {
 // exactly what an anonymous door may not reach.
 //
 // The store re-checks the same property inside the minting transaction. This is
-// not that check repeated for its own sake: it runs before EnsurePersonByEmail
-// commits a person row, so a form naming a bad purpose refuses without leaving
+// not that check repeated for its own sake: it runs before EnsureContactByEmail
+// commits a contact row, so a form naming a bad purpose refuses without leaving
 // one behind.
 func (a bookingConsentAdapter) ValidateMarketingPurpose(ctx context.Context, purposeID ids.UUID) error {
 	purposes, err := a.store.ListPurposes(ctx)
@@ -111,10 +111,10 @@ func admitBookingMarketingPurpose(purposes []consent.Purpose, purposeID ids.UUID
 	return httperr.Validation("consent.marketing.purpose_id", "invalid", "not a tracked consent purpose")
 }
 
-func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, personID ids.UUID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
+func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, contactID ids.UUID, c activities.BookingConsent) (activities.MarketingOutcome, error) {
 	source := "public_booking"
 	_, err := a.store.Record(ctx, consent.RecordInput{
-		PersonID:      ids.From[ids.PersonKind](personID),
+		ContactID:     ids.From[ids.ContactKind](contactID),
 		PurposeID:     ids.From[ids.PurposeKind](c.PurposeID),
 		NewState:      "granted",
 		Source:        &source,
@@ -134,7 +134,7 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, person
 	if err != nil {
 		return activities.MarketingNotRequested, err
 	}
-	outcome, err := a.askMarketing(ctx, personID, c.Marketing)
+	outcome, err := a.askMarketing(ctx, contactID, c.Marketing)
 	return outcome, err
 }
 
@@ -143,13 +143,13 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, person
 // booked must not fail because a newsletter question could not be asked.
 //
 // What it mails is a question, not a subscription. IssueConsentLink mints
-// against the person's OWN live primary address — read from the record, never
+// against the contact's OWN live primary address — read from the record, never
 // taken from the request — so the mail cannot be aimed at a third party, and
 // the grant that follows exists only if that mailbox answers.
 //
 // TickedFrom is passed so the mint can refuse a mismatch. A booking email
-// resolves to any existing person holding it, including on a NON-primary
-// address, and the link would then go to that person's primary — asking them to
+// resolves to any existing contact holding it, including on a NON-primary
+// address, and the link would then go to that contact's primary — asking them to
 // confirm a subscription requested from an address they did not use.
 //
 // The wording and version the subject was shown on the FORM reach no row, and
@@ -163,14 +163,14 @@ func (a bookingConsentAdapter) CaptureBookingConsent(ctx context.Context, person
 // installation that has not wired that text has a consent problem whether or
 // not this code reads it. Carrying both through to the grant needs columns on
 // confirm_token, which is its own change.
-func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UUID,
+func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.UUID,
 	m *activities.BookingMarketing,
 ) (activities.MarketingOutcome, error) {
 	if m == nil {
 		return activities.MarketingNotRequested, nil
 	}
 	issued, err := a.store.IssueConsentLink(ctx,
-		ids.From[ids.PersonKind](personID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
+		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
 	if err == nil {
 		// STAGED, not merely minted. issueLink answers a token it could not
 		// send rather than failing — an installation with no relay gets a link
@@ -217,11 +217,11 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, personID ids.UU
 	// AN AUTHORIZATION REFUSAL IS NOT A MAIL FAILURE either, and it is the one
 	// remaining refusal that says something about the CALLER rather than about
 	// this installation's ability to ask. The mint takes auth.Require before it
-	// opens a transaction, and the person probe inside it can answer a denial
+	// opens a transaction, and the contact probe inside it can answer a denial
 	// or a not-found for a subject the caller may not write.
 	//
 	// In the booking path the operational grant one call earlier runs
-	// EnsureWritableLive on the same person and is fatal, so a refusal here
+	// EnsureWritableLive on the same contact and is fatal, so a refusal here
 	// means authority changed between two consecutive writes. That is rare and
 	// it is exactly why it must not be reported as "we could not ask": a
 	// booking form is not the place to discover a permission failure silently.

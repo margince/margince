@@ -179,7 +179,7 @@ func checkPin(
 // every entity type a staging can target whose own table both carries a
 // version column and BUMPS it on every write (storekit's guarded patch),
 // under its own table name. A type outside this set (e.g. the partner
-// extension, which audits on its organization row) cannot be
+// extension, which audits on its company row) cannot be
 // version-pinned — stagers must leave TargetVersion nil for it rather
 // than mint a pin redemption could never verify.
 //
@@ -191,7 +191,7 @@ func checkPin(
 // short-circuits silently — the human approves a row that anyone may then
 // change before the authorized call lands.
 var versionTables = map[string]bool{
-	tablePerson: true, tableOrganization: true, tableDeal: true, tableLead: true, objectActivity: true,
+	tableContact: true, tableCompany: true, tableDeal: true, tableLead: true, objectActivity: true,
 	targetOffer: true, targetProduct: true, tableList: true, targetTag: true, targetRelationship: true,
 	tableProject: true, targetSavedView: true, targetOfferTemplate: true, targetWebhookSubscription: true,
 }
@@ -227,7 +227,7 @@ var contextTargetKinds = map[string]string{
 		"had just approved.",
 	"capture_counterparty": "The proposal is filed under the ACTIVITY that carried the " +
 		"unrecognized sender, because that message is the evidence a human judges it on. " +
-		"The effect creates a person and an organization and closes the capture " +
+		"The effect creates a contact and a company and closes the capture " +
 		"disposition; it never writes the activity. Pinning bound the answer to a row " +
 		"that relinking, a participant correction or a subject fix bumps — every one of " +
 		"which is ordinary inbox work on the very message the question is about.",
@@ -266,10 +266,10 @@ var unpinnedKinds = map[string]string{
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +
-		"decided. The write it authorizes is an additive, idempotent person_social insert " +
+		"decided. The write it authorizes is an additive, idempotent contact_social insert " +
 		"rather than a patch of any field a human could have seen, so there is no content " +
 		"state for a pin to protect. Pinning also broke the second of two matches onto one " +
-		"contact, because applying the first bumps that person's version.",
+		"contact, because applying the first bumps that contact's version.",
 }
 
 // TargetIsContextOnly reports whether this kind's target names context rather

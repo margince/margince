@@ -6,7 +6,7 @@ package compose
 // Reaching a company's site when the one URL we derived from its domain does
 // not answer.
 //
-// A domain becomes a seed as `https://<domain>` and nothing else (people's
+// A domain becomes a seed as `https://<domain>` and nothing else (contacts's
 // EnrichTargetURL, capture's auto-enrich). That is the right first guess and
 // the wrong only guess: a site can serve TLS on www but not on the apex, or
 // have no TLS at all. On a real import of 162 companies, 37 site reads died on
@@ -14,7 +14,7 @@ package compose
 // well on another host or scheme — so half the companies with no logo, no
 // facts and no profile had a reachable website the whole time.
 //
-// This is the ladder a browser walks when a person types a bare domain, and
+// This is the ladder a browser walks when a human types a bare domain, and
 // nothing more: the same site, named the way that site actually publishes it.
 
 import (

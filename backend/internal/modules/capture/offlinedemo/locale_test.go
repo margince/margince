@@ -28,12 +28,12 @@ func testMailbox() Mailbox {
 // TestEveryLanguageAnswersEveryThreadKey instead, which reads the maps directly.
 func testAccount(domain, name string) Account {
 	return Account{
-		OrganizationID: "01a00000-0000-7000-8000-000000000001",
+		CompanyID:      "01a00000-0000-7000-8000-000000000001",
 		Name:           name,
 		Domain:         domain,
 		Lifecycle:      "customer",
 		ContractNumber: "GR-2026-0402",
-		People:         []Person{{Name: "Seo Min-ji", Email: "minji.seo@example.com"}},
+		Contacts:       []Contact{{Name: "Seo Min-ji", Email: "minji.seo@example.com"}},
 		Now:            time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC),
 	}
 }
@@ -232,7 +232,7 @@ func TestEveryLanguageNamesEverySubject(t *testing.T) {
 // An addressee with no name must not produce " 님께," or "Hallo ,".
 func TestANamelessAddresseeGetsNoSalutationRatherThanABrokenOne(t *testing.T) {
 	account := testAccount("tipa.or.kr", "중소기업기술정보진흥원")
-	account.People = []Person{{Name: "", Email: "nobody@example.com"}}
+	account.Contacts = []Contact{{Name: "", Email: "nobody@example.com"}}
 	for _, msg := range generate(testMailbox(), account) {
 		if strings.HasPrefix(msg.Body, " ") || strings.Contains(msg.Body, "Hallo ,") {
 			t.Errorf("a nameless addressee produced a broken salutation: %q", msg.Body)

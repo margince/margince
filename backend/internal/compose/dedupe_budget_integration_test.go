@@ -157,7 +157,7 @@ func TestAcceptingACaptureCollisionFillsTheLeadsEmptyFields(t *testing.T) {
 		t.Fatalf("capturing the incumbent: %v", err)
 	}
 
-	// A second message about the same person, carrying what the first lacked.
+	// A second message about the same contact, carrying what the first lacked.
 	if _, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
 		NaturalKey: connector.NaturalKey{SourceSystem: "apollo", SourceID: "c-2"},
@@ -217,7 +217,7 @@ func pendingCollisionFor(t *testing.T, e *integration.Env, target ids.UUID) ids.
 
 // A captured value never overwrites one that is already there.
 //
-// The incumbent's value may have been typed by a person, and an inbound message
+// The incumbent's value may have been typed by a contact, and an inbound message
 // carries no evidence that it knows better. Without this rule the card would be
 // a way for a connector to quietly rewrite a human's work, which is the reason
 // it is gated behind a human decision in the first place.
@@ -239,7 +239,7 @@ func TestAcceptingACaptureCollisionNeverOverwritesWhatIsAlreadyThere(t *testing.
 	if err != nil {
 		t.Fatalf("capturing the incumbent: %v", err)
 	}
-	// The same person, described differently by a second source.
+	// The same contact, described differently by a second source.
 	if _, err := sink.Upsert(ctx, connector.NormalizedRecord{
 		EntityType: "lead",
 		NaturalKey: connector.NaturalKey{SourceSystem: "apollo", SourceID: "o-2"},

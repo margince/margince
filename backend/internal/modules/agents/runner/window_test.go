@@ -29,7 +29,7 @@ func TestTheTriggerReferenceIsNeverPrintedWithoutSayingWhatItIs(t *testing.T) {
 		Goal:       "what do I need to know before the Acme meeting?",
 		TriggerRef: triggerRef,
 		Grounding: []Grounding{
-			{SourceID: "org:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e10", TrustTier: "T1", Content: "Acme GmbH"},
+			{SourceID: "company:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e10", TrustTier: "T1", Content: "Acme GmbH"},
 		},
 	}, nil, nil)
 

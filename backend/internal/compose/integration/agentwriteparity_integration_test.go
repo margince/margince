@@ -27,9 +27,9 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -75,37 +75,37 @@ func parityCases(t *testing.T, e *Env) []parityCase {
 	pipeline, open, _ := DealFixture(t, e)
 	title := "Changed by the parity suite"
 
-	// AccountRepPerms reads organizations but does not update them, and no
+	// AccountRepPerms reads companies but does not update them, and no
 	// shipped rep fixture does — several suites read those fixtures as a rep who
 	// CANNOT write a company, so widening one there would make them pass while
 	// proving nothing. This case needs the object verb before row scope is even
 	// consulted (auth.Require runs first and refuses everyone without it), so it
 	// carries its own copy rather than reaching for a shared one.
-	orgWriterPerms := AccountRepPerms
-	orgWriterPerms.Objects = map[string]principal.ObjectGrant{}
+	companyWriterPerms := AccountRepPerms
+	companyWriterPerms.Objects = map[string]principal.ObjectGrant{}
 	for object, grant := range AccountRepPerms.Objects {
-		orgWriterPerms.Objects[object] = grant
+		companyWriterPerms.Objects[object] = grant
 	}
-	orgWriterPerms.Objects[objOrg] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	companyWriterPerms.Objects[objCompany] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 
 	return []parityCase{
 		{
-			table: "person",
+			table: "contact",
 			perms: AccountRepPerms,
-			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedPerson(t, "Parity person", owner) },
+			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedContact(t, "Parity contact", owner) },
 			write: func(ctx context.Context, e *Env, id ids.UUID) error {
-				_, err := e.People.UpdatePerson(ctx, ids.From[ids.PersonKind](id),
-					people.UpdatePersonInput{Title: &title})
+				_, err := e.Contacts.UpdateContact(ctx, ids.From[ids.ContactKind](id),
+					contacts.UpdateContactInput{Title: &title})
 				return err
 			},
 		},
 		{
-			table: "organization",
-			perms: orgWriterPerms,
-			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedOrg(t, "Parity company", owner) },
+			table: "company",
+			perms: companyWriterPerms,
+			seed:  func(t *testing.T, e *Env, owner *ids.UUID) ids.UUID { return e.SeedCompany(t, "Parity company", owner) },
 			write: func(ctx context.Context, e *Env, id ids.UUID) error {
-				_, err := e.People.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](id),
-					people.UpdateOrganizationInput{Description: &title})
+				_, err := e.Contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id),
+					contacts.UpdateCompanyInput{Description: &title})
 				return err
 			},
 		},

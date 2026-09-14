@@ -5,8 +5,8 @@
 
 package identity
 
-// A person choosing when they are bookable. The properties worth a real
-// database: the fallback a person who has chosen nothing is answered with, that
+// A contact choosing when they are bookable. The properties worth a real
+// database: the fallback a contact who has chosen nothing is answered with, that
 // a choice is read back as their own, and that the refusals reach the control
 // the reader used.
 
@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestAPersonWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing.T) {
+func TestAContactWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing.T) {
 	svc, ctx, _ := seatChoosingALanguage(t)
 
 	hours, chosen, err := svc.MyWorkingHours(ctx)
@@ -33,7 +33,7 @@ func TestAPersonWhoHasChosenNothingIsBookableOnTheInstallationsClock(t *testing.
 			"fallback as a decision somebody made")
 	}
 	// Not UTC. The bootstrap put this installation in Europe/Berlin, and a
-	// person who has never chosen is read on the installation's clock — which
+	// contact who has never chosen is read on the installation's clock — which
 	// is what makes the UTC defect disappear before anybody touches a setting.
 	if hours.Timezone != "Europe/Berlin" {
 		t.Errorf("the fallback zone is %q, want the installation's", hours.Timezone)
@@ -66,7 +66,7 @@ func TestChoosingWorkingHoursIsReadBackAsTheirOwn(t *testing.T) {
 		t.Fatalf("reading them back: %v", err)
 	}
 	if !chosen {
-		t.Error("a person who chose their hours is reported as having chosen nothing")
+		t.Error("a contact who chose their hours is reported as having chosen nothing")
 	}
 	if read.StartMinute != 8*60 || read.EndMinute != 13*60 || read.Timezone != "Asia/Ho_Chi_Minh" {
 		t.Errorf("read back %+v, want what was saved", read)

@@ -24,7 +24,7 @@ const SWEEP_TRUNCATED = "sweep_truncated";
 
 type Gap = { message: string; source: string };
 type Deal = { name: string; status: string; amount: string };
-type Seat = { person: string; role: string };
+type Seat = { contact: string; role: string };
 type Promise_ = { subject: string; state: string; dueAt: string };
 
 /** The gaps, and how many were unreadable.
@@ -65,14 +65,14 @@ function seatsOf(data: Record<string, unknown>): Seat[] {
     .map((entry) => asRecord(entry))
     .map((seat) => ({
       // The name where the answer has one, the id where it does not — a seat
-      // whose person the caller may not read comes back unnamed, and an id is
+      // whose contact the caller may not read comes back unnamed, and an id is
       // a worse answer than a name but a much better one than a blank.
-      person: asText(seat.name) || asText(seat.person_id),
+      contact: asText(seat.name) || asText(seat.contact_id),
       // "no recorded part", not an empty cell: an untitled seat is a gap the
       // panel above names, and the row has to agree with it.
       role: asText(seat.role) || "no recorded part",
     }))
-    .filter((seat) => seat.person !== "");
+    .filter((seat) => seat.contact !== "");
 }
 
 function promisesOf(data: Record<string, unknown>): Promise_[] {
@@ -261,7 +261,7 @@ export function render(
     section("What was sold", dealsOf(answer).map(dealRow)),
     section(
       "Who to call",
-      seatsOf(answer).map((seat) => twoLineRow(seat.person, [seat.role])),
+      seatsOf(answer).map((seat) => twoLineRow(seat.contact, [seat.role])),
     ),
     section("Already promised", promisesOf(answer).map(promiseRow)),
   ]) {

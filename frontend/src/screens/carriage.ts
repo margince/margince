@@ -93,7 +93,7 @@ export function carriageViolations(
   // The caption bound applies to the body only once a file is attached, which
   // the length check above already established. Runes, not UTF-16 units, to
   // agree with the server's `utf8.RuneCountInString`: an emoji is one character
-  // to the person counting and one rune to the gate.
+  // to the contact counting and one rune to the gate.
   const length = [...body].length;
   if (
     carriage.max_body_with_files > 0 &&

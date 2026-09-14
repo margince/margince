@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
+import { useDateTimePreferences } from "../format/preferences";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
 import { vi } from "./vi";
@@ -25,7 +26,7 @@ import { vi } from "./vi";
 // signed-out page renders from.
 //
 // The installation's `base_language` is a different setting and does not appear
-// here: it governs what AI writes for the whole team, not what any one person
+// here: it governs what AI writes for the whole team, not what any one contact
 // reads the interface in.
 
 // The catalog registry is what we ship, and `Locale` is written above it
@@ -296,7 +297,7 @@ export function LocaleProvider({
   children: ReactNode;
 }>) {
   // Three sources, in falling order of authority: the server's answer for this
-  // person (`/v1/me` carries their chosen locale), then the reader's own stored
+  // contact (`/v1/me` carries their chosen locale), then the reader's own stored
   // pick, then the browser's preference. The stored pick outranks detection
   // because it is the more specific statement of the same intent — this reader,
   // on this machine, asked for this language.
@@ -330,7 +331,7 @@ export function LocaleProvider({
       // whole application rather than just their language.
       // An unshipped value FALLS BACK rather than being ignored. Ignoring it
       // would keep whatever is on screen, and after a sign-out the provider
-      // outlives the account — so the previous person's server-chosen language
+      // outlives the account — so the previous contact's server-chosen language
       // would stay up for the next one.
       //
       // It falls back to the SAME resolution the mount path uses: this
@@ -380,11 +381,12 @@ export function LocaleProvider({
 }
 
 export function useLocale(): LocaleContextValue {
+  useDateTimePreferences();
   return useContext(LocaleContext);
 }
 
 export function useT() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   // NARROW on purpose: a core key, and a typo in one is a compile error. The
   // union a unit needs is added at the published surface (src/surface/index.ts)
   // rather than here, because `ReturnType<typeof useT>` is the parameter type
@@ -414,7 +416,7 @@ export type Translator = ReturnType<typeof useT>;
  * and a base is not a key — `t("share.teamMembers")` names nothing.
  */
 export function usePlural() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   return (base: PluralBase, count: number, params?: Record<string, string>) =>
     translatePlural(locale, base, count, params);
 }
@@ -423,6 +425,6 @@ export type PluralTranslator = ReturnType<typeof usePlural>;
 
 /** `pluralKey` bound to the reader's locale, for a caller that carries keys. */
 export function usePluralKey() {
-  const { locale } = useContext(LocaleContext);
+  const { locale } = useLocale();
   return (base: PluralBase, count: number) => pluralKey(locale, base, count);
 }

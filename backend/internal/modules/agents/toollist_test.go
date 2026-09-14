@@ -53,7 +53,7 @@ func TestAWriteOnlyPassportIsStillOfferedItsOwnIdentity(t *testing.T) {
 // TestTheLinksArgumentSaysWhatAMeetingIsAbout holds the fact that decides
 // whether a logged meeting lands on a timeline anybody reads.
 //
-// A meeting is with a PERSON and reaches their company through them. Linked to
+// A meeting is with a CONTACT and reaches their company through them. Linked to
 // the deal alone it sits on no attendee's timeline and the company sees
 // nothing, and putting it right afterwards is a second write. The schema is
 // where that is decided, because it is what the caller reads before choosing —
@@ -64,22 +64,22 @@ func TestTheLinksArgumentSaysWhatAMeetingIsAbout(t *testing.T) {
 	for _, want := range []string{
 		// All of them, in this call.
 		"ALL OF THEM in this call",
-		// A meeting is with a PERSON, and the company follows from that.
-		"with a PERSON",
+		// A meeting is with a CONTACT, and the company follows from that.
+		"with a CONTACT",
 		"reaches their company through them",
 		// And that the direct link is not merely worse but REFUSED, said as
 		// what happens rather than as advice. A caller told only that the
-		// person is the better link will still try the company and get back a
+		// contact is the better link will still try the company and get back a
 		// check violation with no field on it.
 		"linking one to a company is REFUSED",
-		"name the person who was there",
+		"name the contact who was there",
 		// What a deal-only link actually costs, which is the mistake this copy
-		// exists to stop — on both sides, because the person's timeline and the
+		// exists to stop — on both sides, because the contact's timeline and the
 		// company's are two facts and losing either leaves the copy half true.
 		"no attendee's timeline",
 		"the company sees nothing",
 		// And what doing it in two calls costs instead, including the one
-		// destination that still waits on a person — said as what it does to
+		// destination that still waits on a contact — said as what it does to
 		// the link, not only that somebody is asked.
 		"a second write",
 		"stages an approval a human must decide before it takes effect",

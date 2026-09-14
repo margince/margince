@@ -12,7 +12,7 @@ package compose
 // It runs through the real ingress rather than the conversion alone, because the
 // two things worth pinning happen at opposite ends of it: the roster crosses the
 // published surface at the top, and the account resolves against
-// person_channel_identity in the sink's own transaction at the bottom.
+// contact_channel_identity in the sink's own transaction at the bottom.
 
 import (
 	"context"
@@ -58,23 +58,23 @@ func aGroupChatRecord(key string, roster ...extension.Participant) extension.Rec
 // one channel account — the state the resolution below reads.
 //
 // It runs through the same workspace-bound transaction the reads do (it commits
-// either way), because person_channel_identity is a tenant table and a seed
+// either way), because contact_channel_identity is a tenant table and a seed
 // outside one lands nowhere while looking exactly like a seed that worked.
 func seedContactBoundToAccount(t *testing.T, e *ingressEnv, account string) ids.UUID {
 	t.Helper()
-	person := ids.NewV7()
+	contact := ids.NewV7()
 	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO person (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Priya Raman', $2, 'manual', 'human:test')`,
-			person, e.member); err != nil {
+			`INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Priya Raman', $2, 'manual', 'human:test')`,
+			contact, e.member); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
-			INSERT INTO person_channel_identity (person_id, provider, channel_user_id, source, captured_by)
-			VALUES ($1, $2, $3, 'capture', 'human:test')`, person, ingressProbeProvider, account)
+			INSERT INTO contact_channel_identity (contact_id, provider, channel_user_id, source, captured_by)
+			VALUES ($1, $2, $3, 'capture', 'human:test')`, contact, ingressProbeProvider, account)
 		return err
 	})
-	return person
+	return contact
 }
 
 func anAttendee(account, email, name string) extension.Participant {
@@ -108,12 +108,12 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 		account string
 		address *string
 		user    *ids.UUID
-		person  *ids.UUID
+		contact *ids.UUID
 	}
 	var landed []party
 	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT channel_user_id, address, user_id, person_id
+			SELECT channel_user_id, address, user_id, contact_id
 			  FROM activity_participant
 			 WHERE activity_id = $1 AND channel_user_id IS NOT NULL AND role NOT IN ('from', 'to')
 			 ORDER BY channel_user_id`, activityID)
@@ -123,7 +123,7 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 		defer rows.Close()
 		for rows.Next() {
 			var p party
-			if err := rows.Scan(&p.account, &p.address, &p.user, &p.person); err != nil {
+			if err := rows.Scan(&p.account, &p.address, &p.user, &p.contact); err != nil {
 				return err
 			}
 			landed = append(landed, p)
@@ -152,11 +152,11 @@ func TestAUnitsGroupRosterLandsAsParticipants(t *testing.T) {
 
 // The resolution an account CAN do, taken in the sink's own transaction against
 // the binding the installation already holds. This is what puts a group chat on
-// the right contact's timeline and into "who on our team knows this person".
+// the right contact's timeline and into "who on our team knows this contact".
 func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 	e := setupIngress(t)
 	registerProbeTransport(t, e)
-	person := seedContactBoundToAccount(t, e, "acct-77")
+	contact := seedContactBoundToAccount(t, e, "acct-77")
 
 	result, err := e.ingestingRuntime().Ingest(context.Background(), extension.UserID(e.member.String()),
 		aGroupChatRecord("ws-7:2049", anAttendee("acct-77", "", "Priya Raman")))
@@ -164,15 +164,15 @@ func TestARosterAccountResolvesToTheContactItIsBoundTo(t *testing.T) {
 		t.Fatalf("Ingest: %v", err)
 	}
 
-	var personID *ids.UUID
+	var contactID *ids.UUID
 	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT person_id FROM activity_participant
+			`SELECT contact_id FROM activity_participant
 			  WHERE activity_id = $1 AND channel_user_id = 'acct-77'`,
-			ids.MustParse(result.Ref.ID)).Scan(&personID)
+			ids.MustParse(result.Ref.ID)).Scan(&contactID)
 	})
-	if personID == nil || *personID != person {
-		t.Fatalf("the roster row resolved to %v, want the contact the account is bound to (%s)", personID, person)
+	if contactID == nil || *contactID != contact {
+		t.Fatalf("the roster row resolved to %v, want the contact the account is bound to (%s)", contactID, contact)
 	}
 }
 

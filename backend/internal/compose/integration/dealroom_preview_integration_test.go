@@ -203,7 +203,7 @@ func TestADeactivatedSellersPreviewEndsWithTheirSeat(t *testing.T) {
 
 // A room created before this change sits in `draft`, and nothing promotes it
 // any more: publish is gone. The migration turns those rooms live, because a
-// draft room would otherwise be permanently unreadable by the people invited
+// draft room would otherwise be permanently unreadable by the contacts invited
 // to it, with no control anywhere to fix it.
 //
 // The check is on the SCHEMA the migrations build, not on a row this test

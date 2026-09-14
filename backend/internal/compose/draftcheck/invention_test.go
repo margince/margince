@@ -38,10 +38,10 @@ func TestTheServedInventedDraftIsRefusedAtEveryBand(t *testing.T) {
 			if len(findings) == 0 {
 				t.Fatalf("the served draft passed clean at band %s", band)
 			}
-			if !hasRule(findings, "invented-conversation") {
+			if !hasRule(findings, RuleInventedConversation) {
 				t.Errorf("the invented call was not caught at band %s: %+v", band, findings)
 			}
-			if !hasRule(findings, "attributed-claim") {
+			if !hasRule(findings, RuleAttributedClaim) {
 				t.Errorf("the invented attribution was not caught at band %s: %+v", band, findings)
 			}
 		})
@@ -112,7 +112,7 @@ func TestForwardLookingAndUnrelatedTextIsNotAnInventedCall(t *testing.T) {
 		// unscheduled-arrangement, which is a different rule and a real defect
 		// — a customer reads it as an appointment they agreed to.
 		"names a call still to come": {"We can cover that on a call.", textlang.English},
-		"connects two people":        {"Good to connect you with Anna, who runs delivery.", textlang.English},
+		"connects two contacts":      {"Good to connect you with Anna, who runs delivery.", textlang.English},
 		"asks for a call":            {"Shall we set up a call?", textlang.English},
 		"proposes a German call":     {"Es freut mich, dass wir nächste Woche sprechen können.", textlang.German},
 		"a German call to come":      {"Unser Telefonat nächsten Dienstag passt mir gut.", textlang.German},
@@ -142,7 +142,7 @@ func TestGermanInventionIsCaught(t *testing.T) {
 	}
 }
 
-func hasRule(findings []Finding, rule string) bool {
+func hasRule(findings []Finding, rule Rule) bool {
 	for _, f := range findings {
 		if f.Rule == rule {
 			return true
