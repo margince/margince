@@ -72,6 +72,15 @@ export function sentenceParts(template: string): readonly SentencePart[] {
 /** How many rows the sentence is allowed to name. */
 const NAMED = 1;
 
+/**
+ * A title that is itself a sentence loses its own full stop before it fills
+ * the hole: the template supplies one, and a task captured from an email
+ * ("Prepare both variants.") printed "…variants.. Then 5 more."
+ */
+function withoutTerminalStop(title: string): string {
+  return title.replace(/[.。]+$/u, "");
+}
+
 /** The agenda includes approvals, using the worklist's existing review action. */
 export function waitingRows(
   day: Worklist | undefined,
@@ -115,7 +124,7 @@ export function briefSentence(
   // with: a second phrasing here would be a second answer to "what is this row
   // about", and the two drift the first time either moves.
   const values: Record<string, string> = {
-    lead: itemTitle(lead, t, locale),
+    lead: withoutTerminalStop(itemTitle(lead, t, locale)),
     rest: String(waiting.length - NAMED),
   };
   // The row's OWN destination, through the helper the feed's rows are linked

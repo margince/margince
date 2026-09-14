@@ -20,6 +20,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
+import { decidable } from "./worklist.rowdecision";
 
 import "./worklist.css";
 import "./brief.feed.css";
@@ -167,25 +168,28 @@ function AgendaRows({
   focus?: boolean;
   onContext?: (item: WorklistItem) => void;
 }>) {
-  const t = useT();
   // A list of nothing is only its own padding: under the sentence saying the
   // read was incomplete it stood as a blank band the height of two gutters.
   if (rows.length === 0) return null;
   const draw = (item: WorklistItem) => (
     <li key={`${item.source}-${item.id}`}>
+      {/* A DECISION IS STAGED, NOT DONE: the dashed indigo edge is the
+          design system's one mark for a value an agent proposed and nobody has
+          accepted yet, and it goes solid when the reader decides. Nothing else
+          on a card is coloured for being a card. */}
       <Panel
-        footer={
-          focus && onContext && (hasPane(item) || item.source === "task") ? (
-            <Button small variant="ghost" onClick={() => onContext(item)}>
-              {t("brief.focus.context")}
-            </Button>
-          ) : undefined
-        }
+        className={focus && decidable(item) ? "brief-focus-staged" : undefined}
       >
         <WorklistRow
           allowPin={!focus}
           item={item}
           density="compact"
+          card={focus}
+          onOpen={
+            focus && onContext && (hasPane(item) || item.source === "task")
+              ? () => onContext(item)
+              : undefined
+          }
           owner=""
           onOpenEmail={onOpenEmail}
           onReview={() =>

@@ -79,6 +79,19 @@ describe("the opening sentence", () => {
   // THE PROPERTY THE WHOLE COMPOSITION RESTS ON. The sentence names the row the
   // section below draws first, through the same helper that row prints its own
   // title with — so the two cannot describe the same work differently.
+  // A captured task is often a sentence of its own. Its full stop and the
+  // template's would otherwise meet: "…both variants.. Then 5 more."
+  it("drops the lead's own full stop so the template's is the only one", () => {
+    const first = item({
+      id: "a",
+      title: "Prepare both translation variants.",
+    });
+    const rows = day([first, item({ id: "b", title: "Weber" })]);
+
+    const sentence = briefSentence(rows, t, "en");
+    expect(sentence?.values.lead).toBe("Prepare both translation variants");
+  });
+
   it("names the same lead the section below draws first, in its own words", () => {
     const first = item({ id: "a", title: "Aster Handel" });
     const rows = day([first, item({ id: "b", title: "Weber" })]);

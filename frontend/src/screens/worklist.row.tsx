@@ -2,15 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Modal } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { PanelRow } from "../design-system/panel";
 import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { translatePlural, useLocale, useT } from "../i18n";
-import { ApprovalRow } from "./approvalrow";
 import { useMe } from "./common";
 import { ChannelReplyAction, RELINK_KINDS, type RelinkKind } from "./compose";
 import { hasMoveControl, MoveButton } from "./movebutton";
@@ -27,7 +26,6 @@ import {
   BriefSetAsides,
   useBriefAnswer,
 } from "./worklist.briefverbs";
-import { ApprovalBundleReview } from "./worklist.bundle";
 import {
   comparisonText,
   consequenceText,
@@ -46,13 +44,13 @@ import { leadFactsText } from "./worklist.leadfacts";
 import { PairDecision } from "./worklist.pair";
 import { PlanWorkActions } from "./worklist.plan";
 import {
-  useApproval,
   useNudgeDismissal,
   type WorklistItem,
   worklistKey,
 } from "./worklist.queries";
 import { noticeDetail, readerTask } from "./worklist.reader";
 import { CompactRowLine, type RowReadings } from "./worklist.row.compact";
+import { decidable, RowDecision } from "./worklist.rowdecision";
 import { RowActs } from "./worklist.rowverbs";
 import { syncHealthDetail } from "./worklist.synchealth";
 import { VerdictLine } from "./worklist.verdict";
@@ -89,6 +87,21 @@ type RowDensity =
       position?: undefined;
     }>;
 
+/**
+ * Which density the verbs are drawn at.
+ *
+ * A card whose lane asks for nothing still needs a verb: the reach verb the
+ * compact row withholds (its name is the link) comes back on such a card, so
+ * a meeting card is not a card with nothing to press.
+ */
+function actsDensity(
+  density: "compact" | undefined,
+  card: boolean,
+  answer: RowPlacement,
+): "compact" | undefined {
+  return card && answer.primary === undefined ? undefined : density;
+}
+
 export function WorklistRow({
   item,
   position,
@@ -99,6 +112,8 @@ export function WorklistRow({
   onSelect,
   onReview,
   onOpenEmail,
+  card = false,
+  onOpen,
 }: Readonly<{
   item: WorklistItem;
   // Whose queue this row is on, empty for the reader's own. It names the
@@ -128,6 +143,10 @@ export function WorklistRow({
   // message and refuses to open it teaches them the product does not work.
   // Optional only for a caller that draws no waiting row at all.
   onOpenEmail?: (activityId: string) => void;
+  /** Drawn as a Focus card: see `CompactRowLine`. Only at compact density. */
+  card?: boolean;
+  /** The card's own door where the row has no address — see `CompactRowLine`. */
+  onOpen?: () => void;
 }> &
   RowDensity) {
   const t = useT();
@@ -273,7 +292,12 @@ export function WorklistRow({
           {density === "compact" ? (
             // ONE LINE, off the same readings the default column prints. The
             // name is withheld where the message above already carries it.
-            <CompactRowLine readings={readings} named={!emailOpener} />
+            <CompactRowLine
+              readings={readings}
+              named={!emailOpener}
+              card={card}
+              onOpen={onOpen}
+            />
           ) : (
             <RowText
               readings={readings}
@@ -292,7 +316,7 @@ export function WorklistRow({
           onOpenEmail={onOpenEmail}
           item={item}
           href={href}
-          density={density}
+          density={actsDensity(density, card, answer)}
           owner={owner}
           primary={answer.primary}
           equals={answer.equals}
@@ -824,84 +848,6 @@ function Rank({
     >
       {digit}
     </button>
-  );
-}
-
-// Whether this row is a decision a contact answers HERE.
-//
-// The queue holds no authority of its own — the card below is the same one the
-// record page draws, posting to the same endpoint. What the queue adds is that
-// the decision is answerable where it was ranked, instead of sending a reader
-// to a second screen to do what the row already described.
-function decidable(item: WorklistItem): boolean {
-  return item.actions.includes("decide") && item.source === "approval";
-}
-
-// The decision itself, fetched whole because a row cannot carry it — and
-// answered in a DRAWER rather than in the row.
-//
-// It used to render inline, and that is what made the queue unusable on a
-// phone. The card carries evidence, a draft and three answers; measured at
-// 390x844 it stood 440px tall inside a row whose ceiling is 208, which pushed
-// the first primary action of the whole page to 920px down an 844px screen.
-// The reader had to scroll past one decision to reach the work.
-//
-// The row keeps the decision's SUMMARY and one button. The drawer holds the
-// card — the same ApprovalRow the record page draws, posting to the same
-// endpoint — so the queue still adds no authority of its own. What it adds is
-// that the decision is answerable where it was ranked.
-//
-// Held by: AC-WORKLIST-SDR-01 and AC-WORKLIST-SDR-07 (frontend/e2e/ac.spec.ts),
-// which measure the closed row and the first action against the phone fold.
-function RowDecision({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const opener = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
-  // Fetched only once the reader asks. A queue of decisions would otherwise
-  // fire one read per row on arrival to fill cards nobody has opened, and the
-  // row above needs none of it to draw its button.
-  const approval = useApproval(item.id, open);
-  const usable = approval.data?.kind ? approval.data : undefined;
-  return (
-    <div className="worklist-row-decision">
-      <Button
-        ref={opener}
-        variant="primary"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-      >
-        {t("worklist.verb.decide")}
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        labelledBy={titleId}
-        placement="right"
-        size="wide"
-        returnFocusTo={() => opener.current}
-      >
-        <h2 id={titleId}>{t("worklist.decision.title")}</h2>
-        {usable?.bundle_id ? (
-          <ApprovalBundleReview approval={usable} />
-        ) : usable ? (
-          <ApprovalRow
-            approval={usable}
-            extraInvalidateKeys={[worklistKey]}
-            onAlreadyDecided={() => setOpen(false)}
-          />
-        ) : (
-          // The read has not landed, or landed unusable. Said rather than left
-          // blank: a drawer that opens onto nothing reads as a broken button,
-          // and the reader has already committed a tap to get here.
-          <p>
-            {approval.isPending
-              ? t("worklist.decision.loading")
-              : t("worklist.decision.unavailable")}
-          </p>
-        )}
-      </Modal>
-    </div>
   );
 }
 

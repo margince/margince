@@ -19,10 +19,23 @@ export function BriefChanges() {
   const recordZone = useRecordZone();
   const query = useHandledForYou();
   const receipts = query.data?.receipts;
+  const state = listReadState(query, receipts);
+  // Nothing to report takes one line, not a card: a panel drawn to say nothing
+  // stood in the widest slot under the readings and pushed the rail's live
+  // panels a screen down.
+  if (state === "empty") {
+    return (
+      <p className="t-body brief-receipts-line" role="status">
+        <strong>{t("brief.changes.title")}</strong>
+        {" · "}
+        {t("brief.changes.empty")}
+      </p>
+    );
+  }
   return (
     <Panel title={t("brief.changes.title")}>
       <SurfaceState
-        state={listReadState(query, receipts)}
+        state={state}
         emptyLabel={t("brief.changes.empty")}
         loadingLabel={t("worklist.handled.loading")}
         detail={{ onRetry: () => void query.refetch() }}

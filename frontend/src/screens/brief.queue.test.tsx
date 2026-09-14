@@ -56,7 +56,10 @@ it("restores the queue opener's keyboard focus after closing", async () => {
   });
   render(<BriefScreen />);
   await screen.findByText("Call Weber");
-  const opener = screen.getByRole("button", { name: en["brief.queue.title"] });
+  // The one door to the queue is the Focus footer's link.
+  const opener = screen.getByRole("link", {
+    name: en["brief.feed.fullWorklist"],
+  });
   await user.click(opener);
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await user.click(
@@ -112,8 +115,10 @@ it("opens a task's evidence without replacing the Home overview", async () => {
   });
   render(<BriefScreen />);
   const focus = await screen.findByRole("region", { name: "Focus" });
+  // A task's name is its own door: the card has no record to link to, so
+  // pressing the name opens the evidence.
   const opener = await screen.findByRole("button", {
-    name: en["brief.focus.context"],
+    name: "Prepare the comparison",
   });
   await user.click(opener);
   expect(

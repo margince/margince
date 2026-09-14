@@ -398,20 +398,89 @@
   margin-left: auto;
 }
 
-.brief-controls {
+/* The readings as one line under Focus, and the page's stamps beside it.
+   Ink only: a figure is coloured when it is breaching (`brief-readline-warn`,
+   the warn family) and never for being large. The doors are words, not tiles. */
+.brief-overview {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-3);
-  padding-block: var(--space-6);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-5);
 }
-.brief-controls .brief-dials {
+.brief-overview > .brief-readings-line {
+  flex: 1 1 32rem;
+  min-width: 0;
   margin: 0;
 }
+.brief-overview > .brief-coverage {
+  flex-basis: 100%;
+  margin: 0;
+}
+.brief-overview > .brief-freshness {
+  margin: 0 0 0 auto;
+}
+.brief-readline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--textContent);
+}
+.brief-readline > li {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.brief-readline > li + li::before {
+  content: "\00B7";
+  color: var(--textTertiary);
+  margin-inline: var(--space-2);
+}
+.brief-readline-door {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+}
+button.brief-readline-door {
+  cursor: pointer;
+}
+button.brief-readline-door:hover .brief-readline-label {
+  color: var(--accentText);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.brief-readline strong {
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+}
+.brief-readline strong.brief-readline-warn {
+  color: var(--warn);
+}
 @media (max-width: 720px) {
-  .brief-controls {
-    flex-direction: row;
-    flex-wrap: wrap;
-    padding-block: 0 var(--space-4);
+  .brief-readline {
+    flex-direction: column;
   }
+  .brief-readline > li + li::before {
+    content: none;
+  }
+}
+
+/* Receipts with nothing to report: one line where a card stood. */
+.brief-receipts-line {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--borderStrong);
+  border-radius: var(--r-lg);
+  color: var(--textMeta);
+}
+.brief-receipts-line > strong {
+  color: var(--textPrimary);
+  font-weight: var(--fw-semibold);
 }

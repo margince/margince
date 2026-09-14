@@ -2,8 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId, useState } from "react";
-import { PageAsideToggle } from "../app/pageaside";
-import { navigate } from "../app/router";
 import { useUrlParams } from "../app/urlstate";
 import { Button, Modal } from "../design-system/atoms";
 import { PageZones } from "../design-system/pagezones";
@@ -21,7 +19,7 @@ import { PlanSection } from "./brief.plan";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue } from "./brief.queue";
 import { OvernightPanel } from "./brief.rail.overnight";
-import { BriefReadingsStrip } from "./brief.readings";
+import { BriefReadingsLine } from "./brief.readings.line";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefTeamBoard } from "./brief.teamboard";
 import { BriefTeamSelect } from "./brief.teamselect";
@@ -74,25 +72,14 @@ export function BriefScreen() {
           firstName={firstName}
           now={new Date(nowMs)}
         />
-        <div className="brief-controls">
-          <BriefDials
-            address={address}
-            offered={teamOffered}
-            onChange={(next) => setParams(paramsFor(next, params))}
-          />
-          <PageAsideToggle
-            controlled={{
-              open: params.get("queue") === "1",
-              label: t("brief.queue.title"),
-              onToggle: () => {
-                const next = new Map(params);
-                if (next.get("queue") === "1") next.delete("queue");
-                else next.set("queue", "1");
-                navigate({ screen: "home" }, next);
-              },
-            }}
-          />
-        </div>
+        {/* ONE door to the queue, and it is not here: the Focus footer names
+            the queue with what is behind it. A toggle up here was a second
+            door with a second name for the same drawer. */}
+        <BriefDials
+          address={address}
+          offered={teamOffered}
+          onChange={(next) => setParams(paramsFor(next, params))}
+        />
       </div>
       <BriefBody address={address} teamOffered={teamOffered} query={query} />
       <BriefQueue />
@@ -159,7 +146,7 @@ function PersonalMorning({
       />
       {day && (
         <div className="brief-overview">
-          <BriefReadingsStrip day={day} />
+          <BriefReadingsLine day={day} />
           <BriefCoverage day={day} onRetry={() => void query.refetch()} />
           <p className="t-caption brief-freshness">
             {t("brief.updatedAt", {

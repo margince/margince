@@ -49,10 +49,76 @@ export type RowReadings = Readonly<{
   zone: string;
 }>;
 
+/**
+ * The row's name, and where pressing it goes: the record where the row has an
+ * address, the row's own evidence where it has a door instead, and plain text
+ * where it has neither.
+ */
+function RowName({
+  title,
+  href,
+  onOpen,
+}: Readonly<{ title: string; href?: string; onOpen?: () => void }>) {
+  if (href) {
+    return (
+      <a className="entity-link" href={href}>
+        {title}
+      </a>
+    );
+  }
+  if (onOpen) {
+    return (
+      <button type="button" className="worklist-row-open" onClick={onOpen}>
+        {title}
+      </button>
+    );
+  }
+  return title;
+}
+
+/**
+ * A card that has BOTH an address and a pane keeps the pane reachable: the
+ * name goes to the record, so the evidence needs a word of its own.
+ */
+function PaneDoor({
+  href,
+  onOpen,
+}: Readonly<{ href?: string; onOpen?: () => void }>) {
+  const t = useT();
+  if (!href || !onOpen) {
+    return null;
+  }
+  return (
+    <button type="button" className="link-button" onClick={onOpen}>
+      {t("brief.focus.context")}
+    </button>
+  );
+}
+
+/**
+ * Why the card is here, in one line.
+ *
+ * The ranking's own comparison first — it names what this row beat. Failing
+ * that, what doing nothing costs, but only on a row the day put at its head:
+ * "If you do nothing, it slips" under every routine task is a sentence true
+ * of all of them, and six copies of it drown the one that names a date.
+ */
+function cardReason(readings: RowReadings): string | null {
+  if (readings.above) {
+    return readings.above;
+  }
+  return readings.item.level <= URGENT_LEVEL ? readings.consequence : null;
+}
+
+/** The levels the day treats as urgent: somebody waiting or a promise going. */
+const URGENT_LEVEL = 2;
+
 /** The linked title opens the record; optional details contain its evidence. */
 export function CompactRowLine({
   readings,
   named,
+  card = false,
+  onOpen,
 }: Readonly<{
   readings: RowReadings;
   /**
@@ -65,9 +131,23 @@ export function CompactRowLine({
    * fragments, which that reading does not answer.
    */
   named: boolean;
+  /**
+   * The line drawn as a CARD rather than a row: the name on its own line, the
+   * facts under it, and the ranking's own reason under those. A card has the
+   * height to say why the row is here; a row has to be one line.
+   */
+  card?: boolean;
+  /**
+   * The card's own door, where the row has no address of its own — a task
+   * whose evidence opens beside the page rather than on a record. The name is
+   * the control, because a card whose name is dead text and whose door is a
+   * band under it asks the reader to learn two places to press.
+   */
+  onOpen?: () => void;
 }>) {
   const { item, title, href, said, folded, zone } = readings;
   const t = useT();
+  const reason = card ? cardReason(readings) : null;
   // ONE STRING, so there is ONE truncation and one tip over it. Drawn as
   // separate fragments the line would clip whichever happened to be last and
   // leave a reader no way to see what went.
@@ -106,13 +186,7 @@ export function CompactRowLine({
   return (
     <div className="worklist-row-line">
       <p className="t-body worklist-row-title">
-        {!named ? null : href ? (
-          <a className="entity-link" href={href}>
-            {title}
-          </a>
-        ) : (
-          title
-        )}
+        {named && <RowName title={title} href={href} onOpen={onOpen} />}
         {/* The day's states ride the name at both densities: a rep scanning for
             the row to open before it starts has to see them without reading
             anything beside them. */}
@@ -134,6 +208,8 @@ export function CompactRowLine({
       {item.source === "notice" && readings.detail && (
         <p className="t-caption worklist-row-notice">{readings.detail}</p>
       )}
+      {reason && <p className="t-caption worklist-row-reason">{reason}</p>}
+      {card && <PaneDoor href={href} onOpen={onOpen} />}
       <VerdictLine verdict={item.verdict} zone={zone} />
       {rest.length > 0 && (
         <Popover

@@ -479,3 +479,12 @@
     display: inline-flex;
   }
 }
+
+/* The decision drawer's head: the heading and the way out on one line, the
+   same band the queue drawer draws (`.brief-queue-head`). */
+.worklist-decision-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}

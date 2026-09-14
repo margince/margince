@@ -142,11 +142,72 @@
   display: flex;
   flex-direction: column;
 }
-.brief-focus-grid .panel-foot {
+/* THE VERBS SIT AT THE CARD'S FOOT whatever the card says above them, so a
+   row of cards keeps one baseline for its buttons. The row is the panel's one
+   child and fills it; the verbs take the space left. */
+.brief-focus-grid > li > .panel > .panel-row {
+  flex: 1 1 auto;
+}
+.brief-focus-grid .worklist-row-acts {
   margin-top: auto;
 }
 .brief-focus-grid .worklist-row-title {
   font-weight: var(--fw-medium);
+}
+
+/* The name is the door. A task has no record to link, so its name is a button
+   that opens its evidence — drawn as the name, not as a control: the whole
+   card already told the reader what pressing it does. */
+.brief-focus-grid .worklist-row-open {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.brief-focus-grid .worklist-row-open:hover,
+.brief-focus-grid .worklist-row-title > a:hover {
+  color: var(--accentText);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.brief-focus-grid .worklist-row-reason {
+  margin: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* A decision the runner proposed and nobody has accepted. The design system's
+   one spelling of "staged": dashed indigo, going solid on acceptance. */
+.brief-focus-grid > li > .panel.brief-focus-staged {
+  border: 1.5px dashed var(--aiMed);
+  background: var(--aiLight);
+}
+
+/* On a phone the cards are rows: no card chrome, one hairline between them,
+   and the reason line folded — the name, the facts and the verb are what a
+   thumb needs, and six reasons stacked were a page before the readings. */
+@media (max-width: 640px) {
+  .brief-focus-grid {
+    gap: 0;
+    padding: 0;
+  }
+  .brief-focus-grid > li > .panel {
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+  .brief-focus-grid > li:first-child > .panel {
+    border-top-width: 0;
+  }
+  .brief-focus-grid > li > .panel.brief-focus-staged {
+    border-width: 1.5px 0;
+  }
+  .brief-focus-grid .worklist-row-reason {
+    display: none;
+  }
 }
 
 /* Swipe gestures keep a real wrapper on phones; it follows the card layout. */

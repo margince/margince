@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { announceAddressChanged } from "../app/router";
+import { Shell } from "../app/shell";
 import { en } from "../i18n/en";
 import { BriefScreen } from "./brief";
 import {
@@ -12,8 +16,11 @@ import {
   decisionRow,
   digest,
   lapsed,
+  leadRow,
+  meetingRow,
   NOT_FOUND,
   narratedWeek,
+  overnightRow,
   pipelineRows,
   readingsDay,
   report,
@@ -59,6 +66,8 @@ type Frame = {
   day?: Worklist;
   /** Extra routes a frame's own play() needs. */
   extra?: RouteMap;
+  /** What stands around the screen, inside the providers: the shell, here. */
+  frameWith?: (screen: ReactNode) => ReactNode;
 };
 
 function brief({
@@ -68,6 +77,7 @@ function brief({
   pipeline = () => report(pipelineRows),
   day,
   extra = {},
+  frameWith = (screen) => screen,
 }: Frame) {
   return () => {
     const decided = new Set<string>();
@@ -144,11 +154,7 @@ function brief({
       "POST /reports/deals-by-stage": () => pipeline(),
       ...extra,
     });
-    return (
-      <StoryProviders>
-        <BriefScreen />
-      </StoryProviders>
-    );
+    return <StoryProviders>{frameWith(<BriefScreen />)}</StoryProviders>;
   };
 }
 
@@ -339,5 +345,107 @@ export const TaskEvidence: Story = {
 };
 export const SixPrioritiesPhone: Story = {
   ...SixPriorities,
+  tags: ["uat-phone"],
+};
+
+// ── Home inside the shell ───────────────────────────────────────────────────
+//
+// Every frame above renders the screen alone. These render it where a reader
+// meets it: under the top bar, beside the rail, at the width the shell leaves
+// it — which is the only place a Focus grid's column count or a drawer's
+// scrim can be judged. The address is set to `#/home` so the shell heads and
+// grids the page as the router would.
+
+function InShell({ children }: Readonly<{ children: ReactNode }>) {
+  const client = useQueryClient();
+  if (client.getQueryData(["company"]) === undefined) {
+    client.setQueryData(["company"], {
+      company_id: "company-1",
+      display_name: "Gradion GmbH",
+    });
+  }
+  useEffect(() => {
+    const before = window.location.hash;
+    window.location.hash = "#/home";
+    announceAddressChanged();
+    return () => {
+      window.location.hash = before;
+      announceAddressChanged();
+    };
+  }, []);
+  return (
+    <Shell onOpenSearch={() => undefined} counts={{ inbox: 12, tasks: 4 }}>
+      {children}
+    </Shell>
+  );
+}
+
+/** A mixed morning: a customer waiting, a deal drifting, a meeting to prepare,
+ *  two promises and a proposal the runner staged. The cards say why each is
+ *  here; the one door to the queue is the Focus footer. */
+const mixedMorning: Frame = {
+  approvals: [singles[1]],
+  day: readingsDay(
+    { review: 1 },
+    [
+      // The product's rows name their subject, which is what gives a card its
+      // address; the bare fixtures leave it out, and a card with no address
+      // is a card with no door.
+      { ...leadRow("lead-1"), subject: { type: "lead", id: "lead-1" } },
+      overnightRow("deal-1", "d-1"),
+      meetingRow("meet-1", false),
+      promise,
+      {
+        ...decisionRow(singles[1].id, false),
+        kind: singles[1].kind,
+        title: singles[1].summary ?? singles[1].kind,
+      },
+      otherPromise,
+    ],
+    [wholeDecisions(1), wholeMeetings(2)],
+  ),
+  extra: {
+    "GET /ai/usage": () =>
+      jsonResponse({
+        days: [],
+        budget: { monthly_tokens: 100, spent_tokens: 20, band: "normal" },
+      }),
+  },
+};
+
+function inShell(frame: Frame) {
+  return brief({
+    ...frame,
+    frameWith: (screen) => <InShell>{screen}</InShell>,
+  });
+}
+
+export const InTheShell: Story = {
+  render: inShell(mixedMorning),
+};
+
+export const InTheShellQueueOpen: Story = {
+  render: inShell(mixedMorning),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("link", {
+        name: en["brief.feed.fullWorklist"],
+      }),
+    );
+    await within(canvasElement.ownerDocument.body).findByRole("dialog", {
+      name: en["brief.queue.title"],
+    });
+  },
+};
+
+export const InTheShellDecisionOpen: Story = {
+  render: inShell(mixedMorning),
+  play: async ({ canvasElement }) => {
+    await openDecision(canvasElement);
+  },
+};
+
+export const InTheShellPhone: Story = {
+  render: inShell(mixedMorning),
   tags: ["uat-phone"],
 };
