@@ -9675,6 +9675,12 @@ export interface paths {
          *     against `due_at`, not a fact anybody writes: a stored one would make a case overdue only
          *     once a sweep had run, so a job that failed to fire would leave every late case looking on
          *     time. Order is by `due_at`, and the reader compares it to now.
+         *
+         *     The queue is PAGED, and every page says whether there is another. An installation owing
+         *     more duties than one page holds is ordinary — this is a legal obligation per contact, not
+         *     a task list somebody chose to keep short — and a `limit` with no continuation made every
+         *     duty past the ceiling unreachable through this route at all, for every caller, with the
+         *     screen giving no sign a tail existed. Walk `page.next_cursor` until `has_more` is false.
          */
         get: operations["listNoticeCases"];
         put?: never;
@@ -50815,6 +50821,8 @@ export interface operations {
                 state?: components["schemas"]["NoticeCaseState"][];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /** @description Opaque keyset cursor from a prior response's `page.next_cursor`. It encodes the last row's `due_at` and id — both, because the order is by both, and an id alone cannot continue it when two duties fall due in the same second. Changing `state` mid-walk changes which rows the remaining pages see, so re-issue without the cursor when the filter changes. A token this endpoint did not mint returns `422 code: malformed_cursor`. */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -50830,6 +50838,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["NoticeCase"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };
