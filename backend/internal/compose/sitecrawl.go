@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	defaultCrawlMaxPages = 40
+	defaultCrawlMaxPages = 60
 	defaultCrawlMaxBytes = 32 << 20
 	defaultCrawlWall     = 240 * time.Second
 	// crawlSkipReportCap bounds how many left-behind candidates a cap stop
@@ -40,6 +40,8 @@ type crawlPage struct {
 	URL  string
 	Kind crmcontracts.SiteReadPageKind
 	Text string
+	// Sections preserves the fetched page's heading-delimited evidence.
+	Sections []string
 	// Bytes and FetchDur are observability for the debug report; the
 	// pipeline itself keys off Text alone.
 	Bytes    int
