@@ -831,11 +831,13 @@
    belongs with the component that names them — every record page draws these
    two columns, and a screen stylesheet spelling them again is one record's
    answer to a question the shell already answers for all of them. */
+/* The interval between the rail and whatever the page stacks under it is the
+   rail's own between its panels: one column, one gap. */
 .record-rail,
 .record-aside {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 /* The record page's zones — the grid itself is `PageZones` (pagezones.css),

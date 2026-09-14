@@ -572,7 +572,7 @@ export function SentenceList({
           )}
         </p>
       ) : null}
-      <ul className="co-brief-lines">
+      <ul className="co-brief-lines t-body">
         {(lead ? rest : sentences).map((sentence, index) => (
           // Indexed because two sentences may legitimately read the same;
           // keying on the text collapses them into one row.

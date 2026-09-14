@@ -142,12 +142,20 @@ export function ContactMemory({
           {/* The icon reads the KIND and the label reads the transport: a chat
               message drawn from its provider key alone fell through to the
               envelope, which told a contact with no email address that they
-              had been mailed. */}
-          <Badge icon={interactionGlyph(row.kind)}>{row.channelLabel}</Badge>
+              had been mailed.
+
+              Not on a retained email. `EmailEntry` already leads with the
+              envelope, who was at the other end and the time, so the chip and
+              the time column here printed two of those facts a second time on
+              the same row — the company's recent list drops them for the
+              same reason. */}
+          {!row.emailSummary && (
+            <Badge icon={interactionGlyph(row.kind)}>{row.channelLabel}</Badge>
+          )}
           {/* A retained email is the canonical row, whatever surface it is on.
-              The card keeps its own date, channel, badge and time columns —
-              those place the message in this card's reading — and hands the
-              message itself to the one component that draws one. */}
+              The card keeps its own date and standing columns — those place
+              the message in this card's reading — and hands the message
+              itself to the one component that draws one. */}
           {row.emailSummary ? (
             <EmailEntry
               summary={row.emailSummary}
@@ -160,7 +168,7 @@ export function ContactMemory({
               whyNotOpenable="noDetail"
             />
           ) : (
-            <span>
+            <span className="pe-memory-said">
               <span className="pe-memory-title">{row.title}</span>
               <span className="pe-memory-summary">{row.summary}</span>
             </span>
@@ -176,7 +184,9 @@ export function ContactMemory({
           ) : (
             <span />
           )}
-          <span className="pe-memory-time t-sub">{row.time}</span>
+          {!row.emailSummary && (
+            <span className="pe-memory-time t-sub">{row.time}</span>
+          )}
           {/* Reply, on the same terms the 360 timelines offer it: available on
               any row, and WITHHELD on a channel row whose contact cannot be
               reached on the transport that carried it. Mail behaves exactly as

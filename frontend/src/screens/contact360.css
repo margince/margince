@@ -38,28 +38,10 @@
 
    It leads the stack rather than sharing a row: the moment is the page's
    answer, and an answer beside two other cards is one of three things to read
-   rather than the thing to do. Its shape and its tint are both the design
-   system's `Panel` — `tone="accent"` for the ordinary ask, `tone="warn"` for
-   State B, where the finding itself is the bad news — so only the lead's
-   two-column interior lives here.
+   rather than the thing to do. Its shape, its tint and the move's own row are
+   the record-360 kit's (`TodayPanel`, `FoundMove`); what is here is only the
+   contact's evidence list and its column of verbs.
    --------------------------------------------------------------------------- */
-/* The ask and the verbs that answer it, side by side: the buttons sit with the
-   moment they act on rather than under everything it says. */
-.pe-today-lead {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.pe-today-headline {
-  margin: 0 0 var(--space-4);
-  font-size: var(--fs-h2);
-  font-weight: 650;
-  line-height: 1.3;
-  color: var(--textPrimary);
-}
-
 /* The evidence rows: what the rule fired on, each openable. They are the
    difference between a verdict and a claim with its receipts. */
 .pe-today-evidence {
@@ -82,16 +64,23 @@
   color: var(--textMeta);
 }
 
+/* The verbs, one under the other at the row's end, on a fixed measure. Sized
+   by their contents instead, the column was as wide as the longest sentence
+   in it — a refused verb's reason — and the buttons stretched to match. */
 .pe-today-actions {
   display: flex;
   flex-direction: column;
   gap: var(--gapActions);
   align-items: stretch;
-  min-width: 160px;
+  inline-size: 15rem;
+  max-inline-size: 100%;
 }
 
 /* A verb and what pressing it will do, as one block: the readiness belongs to
-   its own button and must not drift next to the one below it. */
+   its own button and must not drift next to the one below it. A REFUSED verb's
+   sentence is drawn by the Button itself, in its own wrapper — so that wrapper
+   takes the same shape, or the one verb the reader may not press stood at its
+   own width with its reason set against a different edge. */
 .pe-today-verb {
   display: flex;
   flex-direction: column;
@@ -99,8 +88,14 @@
   align-items: stretch;
 }
 
-.pe-today-verb-state {
-  line-height: 1.3;
+.pe-today-actions .btn-with-reason {
+  display: flex;
+  align-items: stretch;
+}
+
+.pe-today-verb-state,
+.pe-today-actions .btn-with-reason > .t-caption {
+  line-height: var(--lh-snug);
   text-align: center;
 }
 
@@ -113,12 +108,9 @@
 }
 
 @media (max-width: 900px) {
-  .pe-today-lead {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .pe-today-actions {
     flex-direction: row;
+    inline-size: auto;
   }
 }
 
@@ -150,17 +142,6 @@
   min-width: 0;
 }
 
-/* The profile row's two halves: the address as a value somebody can correct,
-   and the verb that visits it. They wrap as a pair rather than the link being
-   pushed onto a line of its own, where it would read as a row of its own. */
-.pe-linkedin {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
 /* The prose card (the relationship brief): sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);
@@ -174,36 +155,12 @@
   gap: var(--space-2);
 }
 
-/* The three-column state band under the brief's prose: a hairline reads as a
-   band closing the prose above it, rather than more prose running on. */
-.pe-brief-state {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-5);
-  border-top: 1px solid var(--borderSubtle);
-}
-
-.pe-brief-label {
-  margin-top: 0;
-  margin-bottom: var(--space-1);
-  font-size: var(--fs-eyebrow);
-  font-weight: 600;
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
-}
-
+/* One line of the brief's state on the tabs that draw it as prose. */
 .pe-brief-line {
   margin: 0;
   font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--textContent);
-}
-
-@media (max-width: 900px) {
-  .pe-brief-state {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -293,19 +250,22 @@
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   gap: var(--space-2) var(--space-3);
   align-items: center;
+  /* A cell's content keeps its own width: the standing chip sat in the wide
+     column and was stretched across it, a pill as long as the row. */
+  justify-items: start;
 }
 
-.pe-memory-row > :nth-child(3) {
+/* What the row said takes the second line whole, whichever shape says it: the
+   card's own title-over-summary, or the retained email's entry. Named rather
+   than counted, because the email row carries fewer cells before it. */
+.pe-memory-row > .pe-memory-said,
+.pe-memory-row > .emailentry {
   grid-row: 2;
   grid-column: 1 / -1;
 }
 
 .pe-memory-action {
   grid-column: 1 / -1;
-}
-
-.pe-memory-action {
-  justify-self: start;
 }
 
 /* On a phone the meta line is too long for one row: the date and the kind
@@ -319,6 +279,15 @@
 
 .pe-memory-action:empty {
   display: none;
+}
+
+/* A retained email is drawn by `EmailEntry`, which pads itself so its hover
+   plate has room — inside a row that already pays the panel's gutter, that
+   padding set the message a step in from every other row's first letter. The
+   plate keeps its room by bleeding into the gutter instead; the words sit on
+   the row's edge. */
+.pe-memory-row > .emailentry {
+  margin: calc(-1 * var(--space-3)); /* ds:ignore bleeds the entry's padding */
 }
 
 .pe-memory-date {
@@ -372,48 +341,19 @@
 }
 
 /* One question per panel, in the page's own rhythm: the gap is the account
-   rail's, so a rep who reads both records reads the same column. */
+   rail's, so a rep who reads both records reads the same column.
+
+   ONE reading size for the whole column, set here and inherited by every row
+   in it. The rail is a margin of glances beside the reading column, and the
+   design system's field grid — the Details panel at the top of it — already
+   sets its rows at the dense rung; the panels under it used to set theirs at
+   the body rung, so one column read at two sizes with no line between them.
+   Captions, titles and buttons keep their own. */
 .pe-rail {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.pe-rail .pe-sect {
-  border-top: 1px solid var(--borderSubtle);
-  padding-top: 0;
-  margin-bottom: 0;
-}
-.pe-rail .pe-sect > summary {
-  padding: var(--space-3) var(--space-5);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-medium);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--textMeta);
-  transition: background 0.15s;
-}
-.pe-rail .pe-sect > summary:hover {
-  background: var(--bgHover);
-}
-/* `t-label` (design-system/atoms.tsx) wraps the whole `summary` prop, and it
-   fills the row so the section name and the summary's own hover target are the
-   width of the line rather than the width of the words. The section verb is no
-   longer in here to be pushed anywhere: it is a sibling of the `<details>`, for
-   the reason `Disclosure.action` states. */
-.pe-rail .pe-sect > summary .t-label {
-  flex: 1;
-  min-width: 0;
-}
-/* The rail's own sections carry the padding their summaries do, so a section
-   verb lines up with the name beside it rather than with the panel's edge. */
-.pe-rail .disclosure-action {
-  top: var(--space-2);
-  right: var(--space-5);
-}
-.pe-rail .pe-sect > .disclosure-body {
-  margin-top: 0;
-  padding: 0 var(--padPanel) var(--padPanel);
+  font-size: var(--fs-sm);
 }
 
 /* A rail row is one action or one reading: label left, value right. */
@@ -427,7 +367,6 @@
   gap: var(--space-3);
   align-items: baseline;
   padding: var(--space-2) 0;
-  font-size: var(--fs-body);
 }
 
 .pe-rail-row + .pe-rail-row {
@@ -482,7 +421,6 @@
    so the name needs to be a block or the two run together. */
 .pe-colleague-name {
   display: block;
-  font-size: var(--fs-body);
   color: var(--textPrimary);
 }
 
@@ -515,7 +453,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--fs-body);
 }
 
 /* The role sits under the company name, on its own line — it is the ONE thing
@@ -523,7 +460,6 @@
    rather than fighting the company name and its badge for space. */
 .pe-employment-role {
   display: block;
-  font-size: var(--fs-sm);
   color: var(--textContent);
   margin-top: var(--space-1);
 }
@@ -561,7 +497,6 @@
   gap: var(--space-3);
   align-items: start;
   padding: var(--space-2) 0;
-  font-size: var(--fs-sm);
   color: var(--textContent);
 }
 
@@ -603,16 +538,6 @@
    own content rhythm — the frame, the sticky header and the sticky footer come
    from the drawer variant itself.
    --------------------------------------------------------------------------- */
-/* A block's heading INSIDE a drawer, under the dialog's own title. It carries
-   the panel heading's weight without the design system's `SectionHeader`,
-   which draws an h2 — the level the dialog title already occupies. */
-.pe-section-title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--fs-lead);
-  font-weight: 650;
-  color: var(--textPrimary);
-}
-
 .pe-drawer-title {
   display: flex;
   align-items: center;
@@ -627,91 +552,11 @@
   color: var(--textPrimary);
 }
 
-/* The consent verdict leads the composer: a rep about to write needs to know
-   whether they may send BEFORE they spend words on it. */
-.pe-consent-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  font-size: var(--fs-sm);
-  color: var(--successText);
-}
-
-.pe-consent-line-blocked {
-  color: var(--warnText);
-}
-
-/* The way out of a refused send. It sits under the verdict rather than beside
-   it: the verdict says what is true and this says what to do about it, and a
-   reader needs them in that order. */
-.pe-consent-wayout {
-  margin: var(--space-2) 0 0;
-  padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--danger);
-  background: var(--dangerBg);
-}
-
-.pe-consent-moves {
-  margin: var(--space-1) 0 0;
-  padding-left: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* The steering field and the button that uses it, on one line: typing what the
-   mail should be about and asking for it are one action, and splitting them
-   down the drawer would read as two unrelated controls. */
-.pe-draft-row {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.pe-draft-row > :first-child {
-  flex: 1;
-}
-
-/* A refusal the rep has to act on — a consent gate, an unsendable mailbox —
-   sits beside the control that produced it rather than replacing the drawer. */
-.pe-send-error {
-  margin: var(--space-2) 0 0;
-  font-size: var(--fs-sm);
-  color: var(--dangerText);
-}
-
-/* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
-   A body that explained itself is a body the rep has to edit before sending. */
-.pe-why {
-  margin-top: var(--space-5);
-  padding: var(--space-4);
-  background: var(--bgCard);
-  border-radius: var(--r-sm);
-}
-
-.pe-why-list {
-  margin: 0;
-  padding-left: var(--space-5);
-  font-size: var(--fs-sm);
-  line-height: 1.6;
-  color: var(--textContent);
-}
-
 .pe-disclosure {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: var(--space-4) 0 0;
-}
-
-.pe-confirm-note {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-meta);
-  line-height: 1.4;
-  color: var(--warnText);
 }
 
 .pe-drawer-actions {
@@ -775,10 +620,6 @@
 
 .pe-claim-incomplete {
   color: var(--textMuted);
-}
-
-.pe-brief-section {
-  margin-bottom: var(--space-5);
 }
 
 /* The pulse card's facts sit under the relationship line, which is prose —

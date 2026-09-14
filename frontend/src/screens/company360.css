@@ -203,28 +203,33 @@
 /* The block's leading claim: the one sentence a reader takes away, set as a
    claim rather than as the first item of a list. The hairline under it is the
    card-to-content seam this block owns — it divides the read from the working,
-   which is two pieces of CONTENT, so it stops at the body's own padding. */
+   which is two pieces of CONTENT, so it stops at the body's own padding.
+
+   At the card-title rung, the same one the lead move's ask (`.co-move-ask`)
+   is set at: the two are the one sentence each of their panels leads with,
+   and a page that set the brief's a rung above the ask's read the report as
+   louder than the thing to do. */
 .co-brief-lead {
   margin: 0 0 var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
   font-family: var(--f-display);
-  font-size: var(--fs-h2);
+  font-size: var(--fs-h3);
   font-weight: var(--fw-medium);
   line-height: 1.35;
   letter-spacing: var(--tracking-display);
   color: var(--textPrimary);
 }
 
+/* The brief's remaining sentences are the reading column's prose and wear
+   `t-body` for their size and ink; only the list's shape is spelled here. */
 .co-brief-lines {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: 0;
-  font-size: var(--fs-sm);
   line-height: 1.55;
-  color: var(--textContent);
 }
 /* A sentence's citations sit in their own wrapping row after the prose, each
    one visibly a separate chip. Run together without a gap they read as one
@@ -303,9 +308,11 @@
      hue. The tint is the same claim the card's band above it makes: this part
      was written for you, the rest was already yours.
 
-     Inset to the panel's own padding and given the pane's corner, so the tint
-     reads as a card inside the list rather than as a full-bleed band. */
-  margin: var(--space-2) var(--space-4);
+     Inset to the panel's own gutter and given the pane's corner, so the tint
+     reads as a card inside the list rather than as a full-bleed band — and
+     its edge stands where every other panel's first letter does, so the
+     column of cards keeps one left edge down the page. */
+  margin: var(--space-2) var(--padPanel);
   padding: var(--space-4);
   border-radius: var(--r-md);
   border-top-color: transparent;

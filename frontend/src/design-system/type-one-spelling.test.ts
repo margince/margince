@@ -285,7 +285,6 @@ const eyebrowBaseline: Record<string, number> = {
   "src/screens/onboarding-gate.css": 2,
   "src/screens/onboarding-live-panel.css": 2,
   "src/screens/onboarding.css": 4,
-  "src/screens/contact360.css": 2,
   "src/screens/record360/spine.css": 1,
 };
 

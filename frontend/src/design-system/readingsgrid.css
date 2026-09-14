@@ -21,3 +21,10 @@
      different importance rather than four readings of one record. */
   align-items: stretch;
 }
+
+/* Each reading is a pane of the record, so it pays the pane's gutter: on the
+   atom's own padding the labels stood a step outside the first letter of every
+   panel above and below the row. */
+.readings-grid > .stat-card {
+  padding: var(--padPanel);
+}

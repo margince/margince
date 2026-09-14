@@ -169,6 +169,20 @@ describe("the contact page's memory card", () => {
     expect(screen.getByText("Team")).toBeTruthy();
   });
 
+  it("states a retained email's transport and time once, in the entry", () => {
+    const { container } = renderCard(viewWith([emailRow(), noteRow]));
+
+    // The entry leads with the envelope and the time, so the row's own kind
+    // chip and time column would print both a second time. The note keeps
+    // them: it has no entry to say either for it.
+    expect(container.querySelectorAll(".emailentry__when")).toHaveLength(1);
+    expect(container.querySelectorAll(".pe-memory-time")).toHaveLength(1);
+    const chips = [...container.querySelectorAll(".pe-memory-row > .badge")]
+      .map((chip) => chip.textContent)
+      .filter((label) => label === "Email" || label === "Note");
+    expect(chips).toEqual(["Note"]);
+  });
+
   it("opens the page's drawer on the message the row is about", async () => {
     const user = userEvent.setup();
     const onOpenEmail = vi.fn();

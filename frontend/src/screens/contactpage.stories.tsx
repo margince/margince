@@ -637,12 +637,27 @@ const unreachable: View = {
   contact: { ...populated.contact, emails: [] },
 };
 
+// What the brief read says of the populated record: two sentences, the
+// judgement first, each citing the record it was read from.
+const populatedBrief: components["schemas"]["ContactBrief"]["sentences"] = [
+  {
+    text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
+    evidence: [{ entity_type: "contact", entity_id: "p-1" }],
+  },
+  {
+    text: "She asked to push the retrofit review back a week and has not replied since.",
+    evidence: [{ entity_type: "activity", entity_id: "a-1" }],
+  },
+];
+
 function Page({
   view = populated,
+  brief = populatedBrief,
   guardEntries = guardAllowsMail,
   tab = "overview",
 }: Readonly<{
   view?: View;
+  brief?: components["schemas"]["ContactBrief"]["sentences"];
   guardEntries?: components["schemas"]["ContactConsentGuardEntry"][];
   tab?: ContactTab;
 }>) {
@@ -658,16 +673,7 @@ function Page({
         contact_id: "p-1",
         generated_at: "2026-08-13T09:00:00Z",
         generated_by: "deterministic",
-        sentences: [
-          {
-            text: "Dana Buyer leads fleet operations at Brandt Automotive and is the champion on the retrofit work.",
-            evidence: [{ entity_type: "contact", entity_id: "p-1" }],
-          },
-          {
-            text: "She asked to push the retrofit review back a week and has not replied since.",
-            evidence: [{ entity_type: "activity", entity_id: "a-1" }],
-          },
-        ],
+        sentences: brief,
       }),
     "GET /contacts/p-1/consent/guard": () =>
       jsonResponse({ contact_id: "p-1", entries: guardEntries }),
@@ -695,6 +701,137 @@ function Page({
 }
 
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
+
+// The page at its thinnest, which is where a column of panels shows whether
+// its rows share one edge and one size: a contact captured from one sent mail
+// and never heard from. The memory is that one retained email; the moment is
+// the quiet rung with a verb the reader may not press yet, so the refused
+// verb's reason stands under it beside the ready verb's readiness; no deal,
+// no meeting, nothing promised, and a colleague with nothing to show.
+const quietContact: View = {
+  ...populated,
+  contact: {
+    ...populated.contact,
+    full_name: "Thorsten Meyer",
+    first_name: "Thorsten",
+    last_name: "Meyer",
+    title: null,
+    social: {},
+    address: undefined,
+    phones: [],
+    source: "capture",
+  },
+  last_inbound_at: undefined,
+  last_outbound_at: "2026-03-11T09:28:00Z",
+  network: {
+    colleagues: [
+      {
+        user_id: "u-1",
+        display_name: "Demo Admin",
+        strength: 0.1,
+        strength_bucket: "weak",
+        interactions_90d: 0,
+        last_at: "2026-03-11T09:28:00Z",
+        inbound_90d: 0,
+        outbound_90d: 1,
+        last_outbound_at: "2026-03-11T09:28:00Z",
+      },
+    ],
+  },
+  employments: {
+    data: [
+      {
+        relationship_id: "rel-9",
+        company_id: "o-9",
+        company_name: "atundo",
+        role: null,
+        is_current_primary: true,
+        started_at: null,
+        ended_at: null,
+      },
+    ],
+    page,
+  },
+  activities: {
+    data: [
+      {
+        id: "a-9",
+        kind: "email",
+        direction: "outbound",
+        subject: "Masterclass Follow Up",
+        body: "Hey Thorsten, besser spät als nie. Ich wollte kurz nachfassen nach der Masterclass.",
+        occurred_at: "2026-03-11T09:28:00Z",
+        links: [{ entity_type: "contact", entity_id: "p-1" }],
+        source: "gmail",
+        captured_by: "connector:gmail",
+        created_at: "2026-03-11T09:28:00Z",
+        updated_at: "2026-03-11T09:28:00Z",
+        is_done: false,
+        email_summary: {
+          activity_id: "a-9",
+          occurred_at: "2026-03-11T09:28:00Z",
+          version: 1,
+          subject: "Masterclass Follow Up",
+          preview:
+            "Hey Thorsten, besser spät als nie. Ich wollte kurz nachfassen nach der Masterclass.",
+          counterparty: "Thorsten Meyer",
+          direction: "outbound",
+          display_status: "team",
+          move: "waiting_for_them",
+          attachment_count: 0,
+        },
+      },
+    ],
+    page,
+  },
+  conversation_memory: [],
+  commercial: { role: null, committee: [] },
+  deal_roles: { data: [], page: { has_more: false } },
+  next_meeting: undefined,
+  claims: [],
+  since_last_visit: undefined,
+  moment: {
+    ...goneQuietMoment,
+    headline: "No reply for 187 days",
+    evidence: [
+      {
+        type: "activity",
+        id: "a-9",
+        label: "Masterclass Follow Up",
+        observed_at: "2026-03-11T09:28:00Z",
+      },
+    ],
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Draft a follow-up",
+      state: "will_confirm",
+    },
+    secondary_actions: [
+      {
+        kind: "ask_colleague",
+        label: "Ask for context",
+        state: "blocked",
+        blocked_reason:
+          "Sending a colleague a request for context is not available yet",
+      },
+    ],
+  },
+};
+
+export const PageQuietContact: Story = {
+  name: "Page · one sent mail, no reply",
+  render: () => (
+    <Page
+      view={quietContact}
+      brief={[
+        {
+          text: "You reached out to offer architectural advice on AI-driven workflows after a masterclass they attended.",
+          evidence: [{ entity_type: "activity", entity_id: "a-9" }],
+        },
+      ]}
+    />
+  ),
+};
 
 // A provider is connected and nobody has looked this contact up, so the tab
 // strip carries a dot on "Data & tools". The dot is decorative — the panel
