@@ -86,6 +86,7 @@ const canonical: Record<string, string> = {
   "--successText":
     "color-mix(in oklab, lab(71.4376% -59.4106 38.0321), var(--textPrimary) 49%)",
   "--successBg": "color-mix(in srgb, var(--success) 12%, transparent)",
+  "--successBorder": "color-mix(in srgb, var(--success) 45%, transparent)",
   "--warn":
     "color-mix(in oklab, lab(74.4448% 23.7172 71.6451), var(--textPrimary) 8%)",
   "--warnText":
@@ -97,6 +98,7 @@ const canonical: Record<string, string> = {
   "--dangerText":
     "color-mix(in oklab, lab(57.4234% 73.5589 48.0136), var(--textPrimary) 34%)",
   "--dangerBg": "color-mix(in srgb, var(--danger) 10%, transparent)",
+  "--dangerBorder": "color-mix(in srgb, var(--danger) 45%, transparent)",
   "--r-xs": "4px",
   "--r-sm": "8px",
   "--r-control": "12px",
@@ -449,17 +451,16 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       if (args.length !== 2) {
         throw new Error(`${value} is not a two-colour mix`);
       }
-      // color-mix(in srgb, C P%, transparent) is how a tint derives from its
-      // base. sRGB interpolation is premultiplied and transparent contributes
-      // nothing, so the result is C at alpha P/100 — the same colour the rgba()
-      // literals used to spell, now unable to drift from the hue it tints.
+      // color-mix(in srgb, C P%, transparent) is C at alpha P/100, how a tint
+      // derives from its base; over an opaque ground instead, sRGB
+      // interpolation is exactly that tint composited on the ground.
       if (mix[1] === "srgb") {
-        if (args[1] !== "transparent") {
-          throw new Error(`${value} mixes something other than transparent`);
-        }
         const [colour, alpha] = shareOf(args[0], value);
         const [r, g, b] = channels(resolve(colour, pal, seen));
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        const tint = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        return args[1] === "transparent"
+          ? tint
+          : composite(tint, resolve(args[1], pal, seen));
       }
       const [inkName, part] = shareOf(args[1], value);
       const hue = linearToOklab(linearOf(resolve(args[0], pal, seen)));
@@ -591,6 +592,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
         "--textPrimary": ["--bgPage"],
+        "--successSurface": ["--successText"],
+        "--warnSurface": ["--warnText"],
+        "--dangerSurface": ["--dangerText"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
@@ -618,13 +622,8 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     // an accent tint on the rail are a 26px figure and a glyph, which is where
     // 1.4.3's large-text allowance and 1.4.11's non-text floor apply.
     it("tinted chips clear AA over every ground they composite on", () => {
-      // Every family with a Text token, which is now every family that tints:
-      // --warn used to be measured here as its own ink, because the list was
-      // the families that HAD a *Text token and the ones whose ink was the
-      // family colour itself went unmeasured — a corpus short of its subject,
-      // which is how --success on --successBg shipped at 4.48:1 in two writers
-      // until axe caught one of them on one route. Each tone now has the ink
-      // its tint needs, and each is paired with the tint it lands on.
+      // Every family that tints, each paired with the ink its tint needs: a
+      // family left off this list is a contrast pair nothing measures.
       const pairs = [
         ["--accentText", "--accentLight"],
         ["--tealText", "--tealLight"],
@@ -632,13 +631,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         ["--successText", "--successBg"],
         ["--warnText", "--warnBg"],
         ["--dangerText", "--dangerBg"],
-        // --bgChip is the NEUTRAL member of that list, and the only one whose
-        // ink its own family does not fix: it is the fill under a badge, a
-        // key-cap, a segmented strip, so it carries whatever the chip's rule
-        // sets, and every role that lands on one is measured over it.
-        // --textChip is why that list needed a token of its own — a neutral
-        // darkening costs what a hued tint does not, and --textMeta had four
-        // per cent of headroom to pay with.
+        // --bgChip is the NEUTRAL member, whose ink its family does not fix:
+        // it carries whatever the chip's rule sets, so every role that lands
+        // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
       ] as const;
       const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
@@ -668,11 +663,22 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       expect(failures.join("\n")).toBe("");
     });
 
-    // The one place the status family repeats itself: a base token and its Text
-    // sibling each name the lab() hue, because the SHARE is what the pair is
-    // for and a share needs a colour to take it from. Two writers of one hue,
-    // so a gate holds them equal rather than a comment asking the next author
-    // to remember.
+    // A tint and its opaque Surface state one base and one share twice, so the
+    // Surface must read as the tint with the elevated ground for transparent.
+    it("lays each status Surface at its tint's own share, in every theme", () => {
+      const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
+      for (const block of [light, { ...light, ...dark }]) {
+        for (const tone of ["success", "warn", "danger"]) {
+          const tint = block[`--${tone}Bg`] ?? "";
+          expect(normalize(block[`--${tone}Surface`] ?? ""), tone).toBe(
+            normalize(tint.replace("transparent", "var(--bgElevated)")),
+          );
+        }
+      }
+    });
+
+    // The status family names its lab() hue twice, in a base and its Text
+    // sibling, because the SHARE is what the pair is for. Held equal here.
     it("declares each status Text token on the same hue as its base", () => {
       const hueOf = (value: string) => value.match(/lab\([^)]*\)/)?.[0];
       for (const tone of ["success", "warn", "danger"]) {
@@ -813,27 +819,19 @@ describe("the derived brand layer", () => {
   });
 });
 
-// The pairs above are a LIST of what the tree does, and a list of what a tree
-// does is a second copy of it. This derives the corpus instead: every rule under
-// src/ that paints --bgChip, plus every rule that draws INSIDE one of those —
-// the same element in another state, or a descendant of it — and the ink each
-// sets. An unmeasured ink is the failure that matters and the one nothing else
-// would see: --textMeta on the chip fill reads 3.99:1 over --bgCard, which is
-// the defect --textChip exists to prevent and looks like a perfectly ordinary
-// declaration.
+// The pairs above are a LIST of what the tree does, and a list is a second copy
+// of it. This derives the corpus instead: every rule under src/ that paints
+// --bgChip, plus every rule that draws INSIDE one — the same element in another
+// state, or a descendant — and the ink each sets. An unmeasured ink is the
+// failure nothing else would see: --textMeta on the chip fill reads 3.99:1 over
+// --bgCard and looks like an ordinary declaration.
 //
-// The subtree half is not a refinement, it is where the defect actually lived.
-// `.segmented` paints the track and sets no ink at all; `.segmented button`
-// sets --textMeta a rule later and renders ON that track, and a scan that read
-// only the painting rule reported PASS while axe failed two routes. So a rule
-// is in scope when ANY compound of its selector carries every class the chip's
-// SUBJECT does — its subject, because `.palette-row .type` paints the chip and
-// not the row, and reading its first compound instead swept in every sibling
-// the row has. That catches `.segmented button`, `.segmented button >
-// .segmented-count`, `.badge:hover` and `button.evidence-chip:hover`, and
-// correctly leaves `.segmented-mark` alone, since a class name is a token and
-// not a prefix. A rule that paints a ground of its OWN is skipped:
-// `[aria-pressed="true"]` stands on --bgElevated and its ink answers to that.
+// A rule is in scope when ANY compound of its selector carries every class the
+// chip's SUBJECT does: `.segmented` paints a track with no ink, and `.segmented
+// button` sets one that renders ON it. The subject, because `.palette-row
+// .type` paints the chip and not the row. A class name is a token, not a
+// prefix, so `.segmented-mark` stays out; a rule that paints a ground of its
+// OWN is skipped, its ink answering to that ground.
 //
 // What it still cannot see, stated rather than reasoned away: an ink inherited
 // from OUTSIDE the chip's subtree. A chip that declares no colour at all reads

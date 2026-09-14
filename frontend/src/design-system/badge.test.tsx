@@ -86,6 +86,44 @@ describe("Badge", () => {
     expect(label.parentElement).toHaveClass("badge");
   });
 
+  it("marks an ai badge with Sparkles in both variants, and nothing else", () => {
+    // A tone that arrives as an expression may still be ai.
+    const arriving: readonly ("ai" | "success")[] = ["ai"];
+    render(
+      <>
+        <Badge tone="ai">Drafted</Badge>
+        <Badge variant="primary" tone="ai">
+          Proposed
+        </Badge>
+        {/* @ts-expect-error an ai badge's glyph is not the caller's to choose */}
+        <Badge tone="ai" icon={Mail}>
+          Chosen
+        </Badge>
+        {/* @ts-expect-error nor may it breathe: provenance is not a live status */}
+        <Badge tone="ai" live>
+          Breathing
+        </Badge>
+        {/* @ts-expect-error a tone that may resolve to ai takes no dot either */}
+        <Badge tone={arriving[0]} live>
+          Arriving
+        </Badge>
+      </>,
+    );
+    for (const label of [
+      "Drafted",
+      "Proposed",
+      "Chosen",
+      "Breathing",
+      "Arriving",
+    ]) {
+      const [glyph, text, ...rest] = [...badgeFor(label).children];
+      expect(glyph, label).toHaveClass("lucide-sparkles");
+      expect(glyph, label).toHaveAttribute("aria-hidden", "true");
+      expect(text, label).toHaveClass("badge-label");
+      expect(rest, label).toEqual([]);
+    }
+  });
+
   it("marks a live status with a leading dot, and an ordinary one without", () => {
     render(
       <>
@@ -116,9 +154,10 @@ describe("Badge", () => {
   });
 
   // happy-dom applies no stylesheet, so the look is held where it is written.
-  // The variants are fills and nothing else — an edge on a pill reads as a
-  // control — and the type is stated rather than inherited, so an uppercase,
-  // tracked or mono parent cannot turn a badge into a kicker.
+  // A soft badge draws a hairline in its tone and a primary one reserves the
+  // same edge transparent, so mixed variants share a height; nothing else draws
+  // an edge. The type is stated rather than inherited, so an uppercase, tracked
+  // or mono parent cannot turn a badge into a kicker.
   describe("its stylesheet", () => {
     const sheet = readFileSync(join(here, "atoms.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,
@@ -135,20 +174,53 @@ describe("Badge", () => {
             .filter((pair): pair is [string, string] => pair.length === 2),
         ),
       }));
+    const declared = (selector: string, name: string) =>
+      rules.find((rule) => rule.selector === selector)?.declarations.get(name);
 
     it("reads the badge rules it is pointed at", () => {
       expect(rules.length).toBeGreaterThan(5);
     });
 
-    it("never draws an edge on any variant", () => {
-      const edged = rules.flatMap(({ selector, declarations }) =>
+    it("edges every soft tone in its own token, and primary in transparent", () => {
+      expect(declared(".badge", "border")).toBe(
+        "1px solid var(--borderSubtle)",
+      );
+      const edges = {
+        ".badge-success": "var(--successBorder)",
+        ".badge-warn": "var(--warnBorder)",
+        ".badge-danger": "var(--dangerBorder)",
+        ".badge-ai": "var(--aiMed)",
+        ".badge-accent": "var(--accentMed)",
+        ".badge-primary": "transparent",
+      };
+      for (const [selector, colour] of Object.entries(edges)) {
+        expect(declared(selector, "border-color"), selector).toBe(colour);
+      }
+      const stray = rules.flatMap(({ selector, declarations }) =>
         [...declarations.keys()]
           .filter((name) =>
             /^(border(?!-radius)|outline|box-shadow)/.test(name),
           )
+          .filter((name) =>
+            name === "border"
+              ? selector !== ".badge"
+              : !(name === "border-color" && selector in edges),
+          )
           .map((name) => `${selector} { ${name} }`),
       );
-      expect(edged).toEqual([]);
+      expect(stray).toEqual([]);
+    });
+
+    it("paints every ground as one plain colour, never a gradient", () => {
+      const layered = rules.flatMap(({ selector, declarations }) =>
+        [...declarations]
+          .filter(
+            ([name, value]) =>
+              /^background/.test(name) && /gradient|,/.test(value),
+          )
+          .map(([name, value]) => `${selector} { ${name}: ${value} }`),
+      );
+      expect(layered).toEqual([]);
     });
 
     it("sets its label in sentence case at normal tracking, and nowhere else", () => {
@@ -169,8 +241,9 @@ describe("Badge", () => {
       expect(shouted).toEqual([]);
     });
 
+    // 20px tall with a 1px edge top and bottom: the 18px line box fills what is
+    // left exactly, which is what centres the label.
     it("resets every type property a parent could hand down", () => {
-      const badge = rules.find(({ selector }) => selector === ".badge");
       expect(
         Object.fromEntries(
           [
@@ -179,14 +252,16 @@ describe("Badge", () => {
             "letter-spacing",
             "text-transform",
             "line-height",
-          ].map((name) => [name, badge?.declarations.get(name)]),
+            "min-block-size",
+          ].map((name) => [name, declared(".badge", name)]),
         ),
       ).toEqual({
         "font-family": "var(--f-body)",
         "font-style": "normal",
         "letter-spacing": "var(--tracking-normal)",
         "text-transform": "none",
-        "line-height": "var(--lh-tight)",
+        "line-height": "18px",
+        "min-block-size": "20px",
       });
     });
 

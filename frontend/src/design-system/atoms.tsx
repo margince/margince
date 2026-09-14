@@ -4,6 +4,7 @@ import {
   type LucideIcon,
   MoreHorizontal,
   Search,
+  Sparkles,
 } from "lucide-react";
 import {
   type ComponentPropsWithRef,
@@ -27,6 +28,7 @@ import { useAnchoredToTrigger } from "./anchored";
 import { useDialogFocus } from "./dialogfocus";
 import { Popover } from "./popover";
 import "./atoms.css";
+import "./evidencemark.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
 // system, no gw-ui port; atoms are added as screens need them). Copy always
@@ -367,32 +369,32 @@ function ButtonSentences({
   );
 }
 
-// The leading slot holds ONE mark: a glyph naming the kind of status, or the
-// breathing dot of `live`. Both at once would be two claims in one place, so
-// the type refuses the pair rather than a render quietly picking one.
+type BadgeTone = "default" | "accent" | "success" | "warn" | "danger" | "ai";
+// The leading slot holds ONE mark, a glyph or the `live` dot. An `ai` badge's
+// mark is always Sparkles, so that tone is given neither to choose.
 type BadgeMark =
-  | { icon?: LucideIcon; live?: never }
-  | { icon?: never; live?: boolean };
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
+  | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
+  | { tone: "ai"; icon?: never; live?: never };
 
 export function Badge({
   variant = "soft",
   tone = "default",
-  icon: Icon,
+  icon,
   live,
   children,
 }: Readonly<
   {
     // `soft` is the tint a status wears beside prose and down a column;
-    // `primary` is the solid fill for the one status a surface must not let
-    // a reader miss, and for a count.
+    // `primary` the solid fill for the one status a reader must not miss.
     variant?: "soft" | "primary";
-    tone?: "default" | "accent" | "success" | "warn" | "danger" | "ai";
     children: ReactNode;
   } & BadgeMark
 >) {
-  // `live` is a status true AS THE PAGE IS READ — a Deal Room a buyer can walk
-  // into this second — so its dot is the one place motion is a fact rather
-  // than decoration. Reduced motion keeps the dot still: the mark is the claim.
+  // `live` is true AS THE PAGE IS READ: the one place motion is a fact. The ai
+  // mark is decided here as well, for a tone that arrives untyped.
+  const provenance = tone === "ai";
+  const Icon = provenance ? Sparkles : icon;
   const classes = [
     "badge",
     variant === "primary" && "badge-primary",
@@ -400,7 +402,7 @@ export function Badge({
   ].filter(Boolean);
   return (
     <span className={classes.join(" ")}>
-      {live && <span className="badge-live-dot" aria-hidden />}
+      {live && !provenance && <span className="badge-live-dot" aria-hidden />}
       {Icon && <Icon size={12} aria-hidden="true" />}
       <span className="badge-label">{children}</span>
     </span>
@@ -990,7 +992,7 @@ export function StatCard({
           // could reach. The door lives once, in the card's foot, where a
           // reader who has just read the working finds it directly below.
           <Popover
-            className="stat-card-basis"
+            className="stat-card-basis evmark-trigger"
             onHover
             label={t("stat.evidence")}
           >

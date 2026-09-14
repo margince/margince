@@ -336,6 +336,7 @@
     var(--textPrimary) 49%
   );
   --successBg: color-mix(in srgb, var(--success) 12%, transparent);
+  --successBorder: color-mix(in srgb, var(--success) 45%, transparent);
   --warn: color-mix(
     in oklab,
     lab(74.4448% 23.7172 71.6451),
@@ -359,6 +360,14 @@
     var(--textPrimary) 34%
   );
   --dangerBg: color-mix(in srgb, var(--danger) 10%, transparent);
+  --dangerBorder: color-mix(in srgb, var(--danger) 45%, transparent);
+  /* Each tint laid over --bgElevated as ONE opaque colour, for a badge: a
+   * translucent tint takes its contrast from whatever it lands on, and this
+   * reads the same on every surface. Same share as the tint, which
+   * tokens.test.ts holds equal in every theme. */
+  --successSurface: color-mix(in srgb, var(--success) 12%, var(--bgElevated));
+  --warnSurface: color-mix(in srgb, var(--warn) 16%, var(--bgElevated));
+  --dangerSurface: color-mix(in srgb, var(--danger) 10%, var(--bgElevated));
 
   /* ===== Tag tones =====
    * The eight hues an admin picks from when naming a tag, and the ONLY colours
@@ -841,6 +850,7 @@
    * reads weaker laid on a near-black ground than on a near-white one, and at
    * 0.10 the red wash stops reading as a wash. */
   --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+  --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
 
   /* The tag tones lift on a dark ground. Each keeps its hue and its distance
    * from its neighbours — a tag that reads teal in light must not read sky in
@@ -946,6 +956,7 @@
     --warnText: var(--warn);
     --dangerText: color-mix(in oklab, var(--danger), var(--textPrimary) 14%);
     --dangerBg: color-mix(in srgb, var(--danger) 16%, transparent);
+    --dangerSurface: color-mix(in srgb, var(--danger) 16%, var(--bgElevated));
 
     --tagTeal: #2dd4bf;
     --tagAmber: #fbbf24;

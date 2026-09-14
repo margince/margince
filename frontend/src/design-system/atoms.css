@@ -28,10 +28,15 @@
   font-weight: var(--fw-medium);
   letter-spacing: var(--tracking-normal);
   text-transform: none;
-  /* Tight rather than 1, so a descender is not cut by the label's clip. */
-  line-height: var(--lh-tight);
+  /* 20px tall and the label centred in it: a 1px hairline top and bottom
+     leaves 18px, and a line box of exactly that height is centred by
+     construction. No line-height rung is a length, hence the px. */
+  line-height: 18px; /* ds:ignore the 20px pill less its two 1px edges */
   min-block-size: 20px;
   padding: 0 8px;
+  /* Every variant reserves the edge; soft draws it in its tone and primary
+     leaves it transparent, so a row of mixed variants shares one height. */
+  border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgChip);
@@ -46,43 +51,36 @@
 .badge > svg {
   flex: none;
 }
-/* The tone tints are TRANSLUCENT by canon — --successBg, --warnBg and
-   --dangerBg all carry an alpha under a fifth — so a badge painted straight
-   onto its parent composites against whatever happens
-   to be behind it — and its contrast changes with the surface it lands on.
-   Measured: --success on --successBg reads 4.54:1 over a panel's --bgElevated
-   and 4.05:1 over the recessed --bgCard of a PanelPlate. Four hundredths of
-   headroom on one surface and a WCAG AA failure on the other, for the same
-   component with the same tokens.
-
-   So each tone lays its tint over an explicit --bgElevated of its own rather
-   than over its ancestor: the badge composites the same way everywhere and its
-   contrast stops being a property of where a caller put it. The canon values
-   are untouched — this is the same colour the design intends, made
-   independent of context. */
+/* The status tints are TRANSLUCENT by canon, so a badge painted with one
+   takes its contrast from whatever it lands on: --success on --successBg read
+   4.54:1 over --bgElevated and failed AA at 4.05:1 over a PanelPlate's
+   --bgCard. So each status tone paints its *Surface token — the same tint
+   already laid over --bgElevated, as one opaque colour — and reads the same on
+   every surface. The ink is the Text token, never the base hue, which on its
+   own tint at 12px is nowhere near 4.5:1. */
 .badge-success {
-  background:
-    linear-gradient(var(--successBg), var(--successBg)), var(--bgElevated);
-  /* The Text token, not the base: the base status hue is a fill, a bar, a
-     border and a 17px figure, and on its own tint at 12px it is nowhere near
-     4.5:1. Every one of the three tones takes its Text sibling here. */
+  background: var(--successSurface);
+  border-color: var(--successBorder);
   color: var(--successText);
 }
 .badge-warn {
-  background: linear-gradient(var(--warnBg), var(--warnBg)), var(--bgElevated);
+  background: var(--warnSurface);
+  border-color: var(--warnBorder);
   color: var(--warnText);
 }
 .badge-danger {
-  background:
-    linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated);
+  background: var(--dangerSurface);
+  border-color: var(--dangerBorder);
   color: var(--dangerText);
 }
 .badge-ai {
   background: var(--aiLight);
+  border-color: var(--aiMed);
   color: var(--aiText);
 }
 .badge-accent {
   background: var(--accentLight);
+  border-color: var(--accentMed);
   color: var(--accentText);
 }
 
@@ -94,6 +92,7 @@
  * tokens.test.ts, so each rule names its ink rather than inheriting one. */
 .badge-primary {
   background: var(--textPrimary);
+  border-color: transparent;
   color: var(--bgPage);
 }
 .badge-primary.badge-success {
@@ -2063,42 +2062,19 @@
   white-space: nowrap;
 }
 
-/* The receipt is a CHIP on the reading's name line, not a line of text: what
-   it offers is a door to the working rather than a fact to read, and the one
-   thing on this card meant to be read across a row is the figure. Outlined
-   rather than filled, and at the meta size the eyebrow beside it already uses,
-   so it is legible as pressable without becoming the first thing seen.
-
-   `align-self: center` because the row is baseline-aligned for the label's
-   own sake, and a bordered box hung from a text baseline sits low against the
-   word beside it. */
-/* `:not(.btn)` is how this beats `.popover-trigger:not(.btn)` (popover.css),
-   which strips a trigger's border and ground for the callers whose face is the
-   line they sit in. At equal specificity the winner was whichever sheet the
-   bundler happened to put last, so the chip kept its outline in the app and
-   lost it in the catalog — the surface built to show what the control looks
-   like. */
+/* The receipt is TEXT on the reading's name line, drawn as the evidence mark
+   (`.evmark-trigger`, evidencemark.css): a dotted underline on words that open
+   where a value came from. Not a bordered chip: a pressable box at the meta
+   size reads as one more badge on a card whose badges are statuses. The
+   face is the popover trigger's own — it inherits the line it sits in — so
+   this rule only places it. */
 .popover-trigger.stat-card-basis:not(.btn) {
-  /* ABOVE the door's overlay: the chip is the card's second control and the
+  /* ABOVE the door's overlay: the receipt is the card's second control and the
      only one the stretched target must not swallow, or asking what a figure
      rests on would leave the page instead. */
   position: relative;
   z-index: 1;
-  align-self: center;
   flex-shrink: 0;
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-regular);
-  letter-spacing: var(--tracking-normal);
-  text-transform: none;
-  color: var(--textChip);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  padding: 1px var(--space-1);
-  background: var(--bgChip);
-}
-.popover-trigger.stat-card-basis:not(.btn):hover {
-  color: var(--textPrimary);
-  border-color: var(--borderStrong);
 }
 
 /* Inside the panel: the reading's own name over the working, then the door

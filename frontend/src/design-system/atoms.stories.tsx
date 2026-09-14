@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Lock, Mail, Plus, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Lock, Mail, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -271,10 +271,10 @@ export const BadgeVariants: Story = {
 - **Soft** is the default. **Primary** is for the one status a reader must
   not miss, and for counts. One variant per context, never mixed in a column.
 - An icon sits LEFT of the label, never right; a badge has no trailing slot.
-- Don't draw a border, uppercase or track the label, or hand-roll a pill class.
+- Soft has a tone hairline, primary none; add no border, caps or pill class.
 - Don't make a badge interactive: a pressable fact is \`Chip\`, a filter is
   \`FilterPills\`, a verb is \`Button\`.
-- No new colours. \`ai\` means an agent proposed it, and nothing else.`),
+- No new colours. \`ai\` (always with Sparkles) means an agent proposed it.`),
   render: () => (
     <div style={stack}>
       {BADGE_VARIANTS.map((variant) => (
@@ -292,7 +292,7 @@ export const BadgeVariants: Story = {
 };
 
 export const BadgeWithIcon: Story = {
-  parameters: badgeDocs("The glyph names the kind of status, left only."),
+  parameters: badgeDocs("A glyph names the kind of status; ai's is Sparkles."),
   render: () => (
     <div style={stack}>
       {BADGE_VARIANTS.map((variant) => (
@@ -303,7 +303,7 @@ export const BadgeWithIcon: Story = {
           <Badge variant={variant} tone="danger" icon={Lock}>
             Restricted
           </Badge>
-          <Badge variant={variant} tone="ai" icon={Sparkles}>
+          <Badge variant={variant} tone="ai">
             Drafted
           </Badge>
         </div>
