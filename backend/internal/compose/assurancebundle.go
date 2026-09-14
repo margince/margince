@@ -413,7 +413,17 @@ func adoptOpenTask(
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("compose: reading the subject's earlier tasks: %w", err)
 	}
-	var open []ids.UUID
+	// The id AND the version it was read at. The read and the archive below are
+	// separate statements, and a rep can complete or archive a task between
+	// them: without the version the sweep would archive a completion it never
+	// saw, which HIDES the rep's answer rather than losing work. Pinning it
+	// makes the write refuse instead — the door's own ifVersion, which is the
+	// concurrency primitive every other writer in this tree uses.
+	type openTask struct {
+		id      ids.UUID
+		version *int64
+	}
+	var open []openTask
 	for _, id := range known {
 		act, err := deps.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -434,18 +444,26 @@ func adoptOpenTask(
 		if act.IsDone != nil && *act.IsDone {
 			continue
 		}
-		open = append(open, id)
+		open = append(open, openTask{id: id, version: (*int64)(act.Version)})
 	}
 	if len(open) == 0 {
 		return ids.UUID{}, false, nil
 	}
 	// TaskIDsForSubject answers newest first, so the head is the survivor.
 	for _, extra := range open[1:] {
-		if _, err := deps.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](extra), nil); err != nil {
+		_, err := deps.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](extra.id), extra.version)
+		if errors.Is(err, apperrors.ErrVersionSkew) {
+			// Somebody wrote to this task between the read and here — most
+			// often the rep completing it. Their answer stands: the duplicate
+			// is left alone and the next cycle reads it afresh, which is the
+			// same judgement this function makes about a task already done.
+			continue
+		}
+		if err != nil {
 			return ids.UUID{}, false, fmt.Errorf("compose: settling a duplicate task: %w", err)
 		}
 	}
-	return open[0], true, nil
+	return open[0].id, true, nil
 }
 
 // linksToSubject reports whether a task still names the subject it was raised
