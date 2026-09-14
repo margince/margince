@@ -144,28 +144,28 @@ export const SlotsWithDoors: Story = {
         value="4"
         tone="warn"
         detail="somebody waiting or a promise breaking"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Meetings today"
         value="4"
         detail="1 needs prep"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Leads owed a reply"
         value="3"
         detail="owed a first answer"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Pipeline · Q3"
         value="€420k"
         detail="€168k weighted · 11 priced"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       {/* A figure the read could not finish counting: the `+` is the caveat, on
@@ -174,7 +174,7 @@ export const SlotsWithDoors: Story = {
         label="Decisions waiting"
         value="8+"
         detail="waiting on your answer"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
     </StatStrip>
@@ -182,7 +182,7 @@ export const SlotsWithDoors: Story = {
 };
 
 // THE NARROW SHAPE: one full-width ROW per reading, and only for a strip whose
-// slots are `compact`.
+// slots declared `narrow="row"`.
 //
 // Five 190px boxes two-up is 600px of readings before a phone reader reaches
 // what the page is for. As rows the same five facts are ~60px each, the eye
@@ -190,7 +190,7 @@ export const SlotsWithDoors: Story = {
 // one hairline between them rather than five borders — a column of bordered
 // panes reads as cards to swipe rather than a list to scan.
 //
-// Read off the CHILDREN with `:has(.stat-card-compact)`, not taken as a second
+// Read off the CHILDREN with `:has(.stat-card-narrow-row)`, not taken as a second
 // prop, so the plate and its slots cannot disagree about which shape this is.
 // Nineteen other strips in the product keep their 2-column fold at this width,
 // and `SixSlots` above is one of them — open both at the phone viewport and the
@@ -199,8 +199,8 @@ export const SlotsWithDoors: Story = {
 // The card's foot stacks under the figure on the trailing edge rather than
 // riding the label's line: a door beside a figure would be the widest thing on
 // the row and push the reading's own name to a second line.
-export const CompactFoldsToRows: Story = {
-  name: "Compact slots — the narrow shape",
+export const NarrowRowSlotsFold: Story = {
+  name: "Row slots — the narrow shape",
   globals: { viewport: { value: "phone" } },
   render: () => (
     <StatStrip>
@@ -209,47 +209,47 @@ export const CompactFoldsToRows: Story = {
         value="8+"
         tone="warn"
         detail="somebody waiting or a promise breaking"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Meetings today"
         value="0"
         detail="on today's calendar"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Leads owed a reply"
         value="19+"
         detail="owed a first answer"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Pipeline · Q3"
         value="€5m"
         detail="€3.7m weighted · 33 priced"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
       <StatCard
         label="Decisions waiting"
         value="4+"
         detail="waiting on your answer"
-        density="compact"
+        narrow="row"
         onOpen={() => {}}
       />
     </StatStrip>
   ),
 };
 
-export const CompactInANarrowRail: Story = {
+export const RowSlotsInANarrowRail: Story = {
   render: () => (
     <div style={{ maxWidth: 280 }}>
       <StatStrip>
         <StatCard
-          density="compact"
+          narrow="row"
           label="Leads to contact"
           value="2"
           detail="Assigned and awaiting your first reply"
@@ -257,7 +257,7 @@ export const CompactInANarrowRail: Story = {
           openLabel="Review leads owed a reply"
         />
         <StatCard
-          density="compact"
+          narrow="row"
           label="Deal value needing attention"
           value="No flagged deals"
           detail="Expected deal value; excludes unpriced deals"
