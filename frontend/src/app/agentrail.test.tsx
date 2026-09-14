@@ -511,6 +511,24 @@ describe("AgentRail", () => {
     await settlesOnLine(container, "License refused");
   });
 
+  // The pill names a fault only the seats page can repair, so it is the way
+  // there: a label that told the reader to go somewhere it would not take them
+  // is a dead end dressed as a warning.
+  it("links the missing-licence pill to the seats settings page", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi({ license: () => jsonResponse(LICENSE("absent")) });
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
+    await openPanel(user, container);
+    await waitFor(() => {
+      const pill = panel().querySelector("a.arwarn");
+      expect(pill?.textContent).toBe("No license");
+      expect(pill?.getAttribute("href")).toBe("#/settings/seats");
+    });
+  });
+
   // A seat without `license:read` gets `undefined`, not a fault: a read this
   // seat may not make is none of its business, and must not turn the orb
   // amber on every screen it opens.

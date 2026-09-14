@@ -1059,6 +1059,10 @@
 .arwarn {
   color: var(--warnText);
   font-weight: var(--fw-medium);
+  text-decoration: none;
+}
+a.arwarn:hover {
+  text-decoration: underline;
 }
 .arconn {
   display: flex;
