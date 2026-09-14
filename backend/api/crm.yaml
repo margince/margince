@@ -773,6 +773,67 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------------- /contacts ----------------------------------
+  /contacts/{id}/employment-import:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: previewContactEmploymentImport
+      summary: Read retained provider roles and their company-link outcomes without buying another lookup.
+      responses:
+        '200':
+          description: Employment evidence and resolution outcomes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentImportReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Contacts]
+      operationId: applyContactEmploymentImport
+      x-agent-access: human-only
+      summary: Apply retained employer evidence, resolve a company match, or dismiss an incorrect role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmploymentImportRequest' }
+      responses:
+        '200':
+          description: Applied employment evidence and unresolved items.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentImportReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /employment-import/backfill:
+    post:
+      tags: [Contacts]
+      operationId: backfillEmploymentImport
+      x-agent-access: human-only
+      summary: Administratively preview or apply one resumable batch of retained employment evidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apply: { type: boolean, default: false }
+                after: { type: string, format: uuid }
+                limit: { type: integer, minimum: 1, maximum: 25, default: 10 }
+      responses:
+        '200':
+          description: Batch outcomes; pass next_cursor to continue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmploymentBackfillReport' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts:
     get:
       tags: [Contacts]
@@ -29312,11 +29373,59 @@ components:
           type: [string, 'null']
           description: Why, in the human's own words, when they gave a reason.
 
+    EmploymentImportRequest:
+      type: object
+      properties:
+        resolve_group: { type: boolean, default: false, description: Apply the company choice to unresolved roles at the same employer; date and status corrections affect only the selected key. }
+        started: { type: string, description: Corrected start as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. }
+        ended: { type: string, description: Corrected end as YYYY-MM or YYYY-MM-DD; empty clears an incorrect date. }
+        action: { type: string, enum: [apply, resolve, dismiss], default: apply }
+        key: { type: string, description: Episode key returned by the preview; required for resolve or dismiss. }
+        company_id: { type: string, format: uuid, description: Existing company explicitly selected by the user. }
+        domain: { type: string, description: Company website explicitly confirmed by the user; creates a missing company only after identity resolution. }
+        employment_status: { type: string, enum: [current, former, unknown], description: Explicit user correction of this episode status. }
+
+    EmploymentImportItem:
+      type: object
+      required: [key, provider, company_name, role, employment_status, state]
+      properties:
+        key: { type: string }
+        provider: { type: string }
+        company_name: { type: string }
+        role: { type: string }
+        domain: { type: string }
+        started: { type: string, description: 'Provider date at its original precision, YYYY-MM or YYYY-MM-DD.' }
+        ended: { type: string, description: 'Provider date at its original precision, YYYY-MM or YYYY-MM-DD.' }
+        employment_status: { type: string, enum: [current, former, unknown] }
+        state: { type: string, enum: [pending, linked, needs_match, needs_review, dismissed] }
+        company_id: { type: string, format: uuid }
+        relationship_id: { type: string, format: uuid }
+        retrieved_at: { type: string, format: date-time }
+        research_state: { type: string, description: Current company research state or a reason it cannot yet run. }
+
+    EmploymentImportReport:
+      type: object
+      required: [contact_id, items]
+      properties:
+        warnings: { type: array, items: { type: string }, description: Retained evidence that requires administrator review. }
+        contact_id: { type: string, format: uuid }
+        items: { type: array, items: { $ref: '#/components/schemas/EmploymentImportItem' } }
+
+    EmploymentBackfillReport:
+      type: object
+      required: [reports, applied, has_more]
+      properties:
+        reports: { type: array, items: { $ref: '#/components/schemas/EmploymentImportReport' } }
+        applied: { type: boolean }
+        has_more: { type: boolean }
+        next_cursor: { type: string, format: uuid }
+
     Contact360Employment:
       type: object
       description: One employment edge, current primary first.
       required: [relationship_id, company_id, is_current_primary]
       properties:
+        version: { $ref: '#/components/schemas/RowVersion' }
         relationship_id: { type: string, format: uuid }
         company_id: { type: string, format: uuid }
         company_name: { type: [string, 'null'] }
@@ -29324,8 +29433,11 @@ components:
           type: [string, 'null']
           description: The title as the edge records it, which may differ from the contact's own title field.
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date-time }
-        ended_at: { type: [string, 'null'], format: date-time, description: Null means ongoing. A former employment keeps its row — history is never overwritten. }
+        ended_at: { type: [string, 'null'], format: date-time, description: Missing date; consult employment_status. Historical roles retain their own rows. }
 
     Contact360DealRole:
       type: object
@@ -31918,8 +32030,11 @@ components:
             which of the three to do with them, so the server refuses it. Every
             other kind keeps free text.
         is_current_primary: { type: boolean, default: false, description: Employment — the one current primary employer (≤1 per contact). }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
-        ended_at: { type: [string, 'null'], format: date, description: Null = current/ongoing. }
+        ended_at: { type: [string, 'null'], format: date, description: Missing date; employment_status distinguishes former and unknown from ongoing. }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         version: { $ref: '#/components/schemas/RowVersion' }
@@ -31949,6 +32064,9 @@ components:
         # primary — so declaring a default would tell every generated client to
         # materialize `false` and state a decision its caller never made.
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
         ended_at: { type: [string, 'null'], format: date }
         source: { type: string }
@@ -31956,8 +32074,13 @@ components:
     UpdateRelationshipRequest:
       type: object
       properties:
+        clear_started_at: { type: boolean, description: Remove an incorrect start date and its precision. }
+        clear_ended_at: { type: boolean, description: Remove an incorrect end date and its precision. }
         role: { type: [string, 'null'] }
         is_current_primary: { type: boolean }
+        employment_status: { type: string, enum: [current, former, unknown], description: 'Employment assertion. Omitted retains legacy date-based behavior; former and unknown never count as current merely because the end date is missing.' }
+        started_precision: { type: string, enum: [day, month] }
+        ended_precision: { type: string, enum: [day, month] }
         started_at: { type: [string, 'null'], format: date }
         ended_at: { type: [string, 'null'], format: date }
 

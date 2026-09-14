@@ -182,7 +182,13 @@ export function RepeatableRowsField({
           </Button>
         </Card>
       ))}
-      <Button small type="button" onClick={() => setRows([...rows, {}])}>
+      <Button
+        small
+        type="button"
+        onClick={() =>
+          setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}])
+        }
+      >
         {field.addLabel ? t(field.addLabel) : fieldLabel(field, t)}
       </Button>
       <p className="sr-only" role="status" aria-live="polite">

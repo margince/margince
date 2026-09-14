@@ -30,6 +30,8 @@ maps the codebase and links everything below.
 
 ## Map
 
+- [Import purchased employment history](how-to/import-employment-history.md) — contact channels, employer matching, installation and backfill.
+
 - [Editing records concurrently](how-to/concurrent-record-edits.md) — independent field changes and conflict recovery.
 
 ### Handbook — how to USE the product

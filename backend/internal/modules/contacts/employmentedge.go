@@ -194,20 +194,20 @@ func (s *Store) deferCompanyToTriage(ctx context.Context, tx pgx.Tx, in EnsureCo
 // from a statement, which is the whole difference between the two paths — and
 // it can do so without every existing consumer of contact.updated changing.
 func auditCapturedEmployment(ctx context.Context, tx pgx.Tx, edgeID ids.UUID, contactID ids.ContactID, companyID ids.CompanyID, origin string) error {
-	auditID, err := storekit.Audit(ctx, tx, actionCreate, "relationship", edgeID, nil, map[string]any{
+	auditID, err := storekit.Audit(ctx, tx, actionCreate, tableRelationship, edgeID, nil, map[string]any{
 		relationshipKindField: employmentKind, "origin": origin,
 	})
 	if err != nil {
 		return fmt.Errorf("contacts: audit the captured employment edge: %w", err)
 	}
 	delta := map[string]any{
-		eventKeyDelta: map[string]any{"relationship": map[string]any{
-			"id": edgeID, relationshipKindField: employmentKind, "action": actionCreate,
-			"company_id": companyID, "origin": origin,
+		eventKeyDelta: map[string]any{tableRelationship: map[string]any{
+			"id": edgeID, relationshipKindField: employmentKind, employmentActionField: actionCreate,
+			companyFK: companyID, "origin": origin,
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, contactID.UUID,
-		relationshipUpdatedPayload("contact", delta)); err != nil {
+		relationshipUpdatedPayload(contactEntity, delta)); err != nil {
 		return fmt.Errorf("contacts: publish the captured employment edge: %w", err)
 	}
 	return nil
@@ -224,7 +224,7 @@ const relationshipOriginCapture = "capture"
 // which inferred it from correspondence the installation already had, because
 // the two carry different weight and a reader deciding whether to trust an
 // employer must be able to tell them apart.
-const relationshipOriginProvider = "provider"
+const relationshipOriginProvider = auditKeyProvider
 
 // employmentKind is the relationship kind this file plants, spelled once so the
 // SQL, the audit row and the event delta cannot drift apart.

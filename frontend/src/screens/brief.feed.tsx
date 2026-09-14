@@ -4,9 +4,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { navigate } from "../app/router";
-import { Badge, Button, Disclosure } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
-import { Panel } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
@@ -76,13 +76,18 @@ export function BriefFeed({
         }
         footer={day ? <AgendaFoot day={day} /> : undefined}
       >
+        {/* Prose standing where the cards will stand pays the pane's inset
+            itself: the grid under it carries its own, and a sentence set
+            straight into the panel printed against the card's edge. */}
         {refreshFailed && (
-          <p role="alert">
-            {t("brief.feed.refreshFailed")}{" "}
-            <Button variant="ghost" onClick={onRetry}>
-              {t("brief.coverage.retry")}
-            </Button>
-          </p>
+          <PanelBody>
+            <p role="alert">
+              {t("brief.feed.refreshFailed")}{" "}
+              <Button variant="ghost" onClick={onRetry}>
+                {t("brief.coverage.retry")}
+              </Button>
+            </p>
+          </PanelBody>
         )}
         <SurfaceState
           state={
@@ -96,7 +101,9 @@ export function BriefFeed({
           loadingLabel={t("brief.feed.loading")}
         >
           {rows.length === 0 && partial && (
-            <p className="t-caption">{t("brief.feed.incomplete")}</p>
+            <PanelBody>
+              <p className="t-caption">{t("brief.feed.incomplete")}</p>
+            </PanelBody>
           )}
           <AgendaRows
             rows={rows}
@@ -161,14 +168,9 @@ function AgendaRows({
   onContext?: (item: WorklistItem) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const routine = rows.filter(
-    (item) =>
-      !item.overdue &&
-      item.level === 6 &&
-      (item.source === "notice_case" || item.source === "dsr"),
-  );
-  const grouped = new Set(!focus && routine.length > 1 ? routine : []);
+  // A list of nothing is only its own padding: under the sentence saying the
+  // read was incomplete it stood as a blank band the height of two gutters.
+  if (rows.length === 0) return null;
   const draw = (item: WorklistItem) => (
     <li key={`${item.source}-${item.id}`}>
       <Panel
@@ -200,24 +202,7 @@ function AgendaRows({
     <ol
       className={focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"}
     >
-      {rows.filter((item) => !grouped.has(item)).map(draw)}
-      {grouped.size > 0 && (
-        <li>
-          <Disclosure
-            summary={t("brief.feed.routine", {
-              count: formatNumber(routine.length, locale),
-            })}
-          >
-            <ol
-              className={
-                focus ? "brief-feed-list brief-focus-grid" : "brief-feed-list"
-              }
-            >
-              {routine.map(draw)}
-            </ol>
-          </Disclosure>
-        </li>
-      )}
+      {rows.map(draw)}
     </ol>
   );
 }

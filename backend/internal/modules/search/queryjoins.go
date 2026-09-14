@@ -119,6 +119,7 @@ type joinTable struct {
 // neither, which is what fails the gate. The reason is the point: a bare
 // exclusion list would read as "handled" and this reads as "decided".
 var notAnEdge = map[string]string{
+	"provider_employment_resolution": "retained provider evidence and its resolution outcome, including unresolved and dismissed entries; canonical employment traversal belongs to relationship, otherwise rejected evidence would become a search edge",
 	"record_assignment": "company_id, deal_id and project_id are alternative PARENTS of one " +
 		"assignment — the record_assignment_one_parent CHECK admits exactly one — so the three " +
 		"together are a polymorphic parent rather than a path between records. Nothing traverses " +

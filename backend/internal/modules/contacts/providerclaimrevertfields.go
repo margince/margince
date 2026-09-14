@@ -141,7 +141,11 @@ func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool
 	tag, err := tx.Exec(ctx, `
 		UPDATE relationship
 		   SET archived_at = now(), is_current_primary = false
-		 WHERE id = $1 AND contact_id = $2 AND source = $3 AND archived_at IS NULL`,
+		 WHERE id = $1 AND contact_id = $2 AND archived_at IS NULL
+       AND captured_by = 'connector:' || source
+       AND NOT EXISTS (SELECT 1 FROM provider_employment_resolution e
+         JOIN contact_provider_claim c ON c.id=e.claim_id
+         WHERE e.relationship_id=relationship.id AND e.state='linked' AND c.provider <> $3)`,
 		*f.rowID, f.subject, f.provider)
 	if err != nil {
 		return false, fmt.Errorf("contacts: retiring a bought employment: %w", err)

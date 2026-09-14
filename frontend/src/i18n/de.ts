@@ -79,8 +79,6 @@ export const de = {
   "brief.week.lostLabel": "Verloren",
   "brief.feed.refreshFailed":
     "Der Brief konnte nicht aktualisiert werden. Die zuletzt geladene Arbeit wird weiterhin angezeigt.",
-  "brief.feed.routine":
-    "Datenschutz-Nacharbeit · {count} später fällige Einträge",
   "brief.team.saveResponse": "Antwort speichern",
   "brief.team.response": "Deine Antwort auf die Bitte um Hilfe",
   "brief.team.planFor": "Aktueller Plan · {name}",
@@ -10009,4 +10007,37 @@ export const de = {
   "stageAutomation.saveFailed": "Diese Änderung wurde nicht gespeichert",
   "stageAutomation.nothingReviewed":
     "Vorgeschlagen, aber noch nicht beantwortet.",
+  "employment.importLoading": "Gekaufte Berufshistorie wird gelesen…",
+  "employment.apply": "Importierte Unternehmen verknüpfen",
+  "employment.status.current": "Aktuell",
+  "employment.status.former": "Früher",
+  "employment.status.unknown": "Status unbekannt",
+  "employment.statusLabel": "Beschäftigungsstatus",
+  "employment.review": "Diese Tätigkeit vor dem Verknüpfen prüfen.",
+  "employment.matchNeeded": "Unternehmen muss zugeordnet werden.",
+  "employment.resolve": "Unternehmen zuordnen",
+  "employment.dismiss": "Diesen Nachweis verwerfen",
+  "employment.research": "Recherche",
+  "employment.researchDeferred":
+    "Wartet auf Rechercheeinstellungen und verfügbares Budget",
+  "employment.website": "Bestätigte Unternehmenswebsite",
+  "employment.websiteHint":
+    "Ein bestehendes Unternehmen auswählen oder dessen eigene Website bestätigen, um es anzulegen.",
+  "employment.saveMatch": "Unternehmensverknüpfung speichern",
+  "employment.researchNeedsWebsite": "Website erforderlich",
+  "employment.research.queued": "Eingereiht",
+  "employment.research.running": "Wird recherchiert",
+  "employment.research.done": "Abgeschlossen",
+  "employment.research.partial": "Teilweise abgeschlossen",
+  "employment.research.failed":
+    "Fehlgeschlagen — zum Wiederholen Unternehmen öffnen",
+  "employment.research.cancelled": "Abgebrochen",
+  "employment.researchQueued":
+    "Der Recherche-Status ist auf der Unternehmensseite verfügbar.",
+  "employment.edit": "Beschäftigung bearbeiten",
+  "employment.start": "Beginn",
+  "employment.end": "Ende",
+  "employment.dateHint":
+    "JJJJ-MM oder JJJJ-MM-TT. Leer lassen, wenn unbekannt.",
+  "employment.more": "Weitere Beschäftigungen anzeigen",
 } as const satisfies Record<MessageKey, string>;

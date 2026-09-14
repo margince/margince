@@ -29,6 +29,9 @@ import (
 // reader answering "may this patch land" should not have to assemble the answer
 // from four places in a transaction that also locks, updates and reads back.
 func refusePatch(ctx context.Context, tx pgx.Tx, current relationshipRow, in UpdateRelationshipInput) error {
+	if err := validEmploymentAssertion(current.Kind, in.EmploymentStatus, in.StartedPrecision, in.EndedPrecision); err != nil {
+		return err
+	}
 	// A kind is only checked on CREATE, and this path names an existing row
 	// — so the exclusion has to be re-stated here or the generic surface
 	// becomes the side door the vocabulary closed.

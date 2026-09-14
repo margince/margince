@@ -18,7 +18,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -26,6 +25,9 @@ import (
 // CreateRelationshipInput is one edge to write: its kind, the endpoints that
 // kind anchors, and the optional facts an employment carries.
 type CreateRelationshipInput struct {
+	EmploymentStatus      *string
+	StartedPrecision      *string
+	EndedPrecision        *string
 	Kind                  string
 	ContactID             *ids.ContactID
 	CompanyID             *ids.CompanyID
@@ -127,6 +129,9 @@ func writeRelationshipInTx(
 	capturedBy string,
 ) (relationshipRow, error) {
 	var out relationshipRow
+	if err := validEmploymentAssertion(in.Kind, in.EmploymentStatus, in.StartedPrecision, in.EndedPrecision); err != nil {
+		return out, err
+	}
 	// Before the endpoints are checked, because the check is what this lock
 	// makes true: an archive in flight either commits first and LiveOnly
 	// refuses this attach, or waits and sweeps the edge this writes with
@@ -164,59 +169,11 @@ func writeRelationshipInTx(
 			return out, err
 		}
 	}
-	// One current primary employer per contact: demote the incumbent
-	// inside the same transaction rather than failing the write. An
-	// employment that arrives already OVER claims nothing, so it displaces
-	// nobody — see the insert below, which refuses it the flag. A future
-	// end date is a notice period and DOES displace: they work there.
-	//
-	// That last test is in the statement, not in Go, so it reads the same
-	// clock the insert below reads. A Go-side comparison would answer a
-	// different question on a server in a different timezone from the
-	// database, and the two would disagree about exactly one day.
-	if in.Kind == employmentKind && in.IsCurrentPrimary != nil && *in.IsCurrentPrimary &&
-		in.ContactID != nil {
-		if _, err := tx.Exec(ctx, `
-				UPDATE relationship SET is_current_primary = false
-				WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`
-				  AND `+employment.IsCurrentSQL("$2::date"),
-			*in.ContactID, in.EndedAt); err != nil {
-			return out, err
-		}
+	if err := demoteForRelationshipCreate(ctx, tx, in); err != nil {
+		return out, err
 	}
-	// Two rules about is_current_primary, spelled in the insert so the
-	// returned row is the row that landed — a follow-up UPDATE would bump
-	// the version under the caller about to read it back.
-	//
-	// A contact's ONLY current employment is their current primary one, WHEN
-	// THE CALLER SAID NOTHING ($8 IS NULL). The column defaults to false and
-	// nothing else ever promotes, so without this a contact with exactly one
-	// employer has none marked: a state no reader of the column expects and
-	// none of them can repair. A caller who sent the field keeps their
-	// answer, including an explicit false — deriving over it would invert a
-	// choice they can see themselves making. The subquery excludes an
-	// ended-but-still-primary row as well as a current one, because
-	// promoting past either would violate uq_rel_current_primary_employer.
-	//
-	// And an employment that arrives already ended never holds the flag,
-	// however it was asked for — history being backfilled is not where
-	// somebody works today. That is the same rule the UPDATE below applies,
-	// and both read it off the row rather than off the request.
-	row := tx.QueryRow(ctx, `
-			INSERT INTO relationship (kind, contact_id, company_id, counterparty_company_id, counterparty_contact_id,
-			                          deal_id, project_id, role, is_current_primary, started_at, ended_at, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-			        coalesce($9, $1 = 'employment' AND NOT EXISTS (
-			          SELECT 1 FROM relationship
-			           WHERE kind = 'employment' AND contact_id = $2 AND archived_at IS NULL
-			             AND (`+employment.IsCurrentSQL("ended_at")+` OR is_current_primary)))
-			          AND ($1 <> 'employment' OR `+employment.IsCurrentSQL("$11::date")+`),
-			        $10, $11, $12, $13)
-			RETURNING `+relationshipColumns,
-		in.Kind, in.ContactID, in.CompanyID, in.CounterpartyCompanyID, in.CounterpartyContactID, in.DealID, in.ProjectID,
-		in.Role, in.IsCurrentPrimary, in.StartedAt, in.EndedAt, in.Source, capturedBy)
 	var err error
-	if out, err = scanRelationship(row); err != nil {
+	if out, err = insertRelationshipRow(ctx, tx, in, capturedBy); err != nil {
 		return out, mapRelationshipConstraint(err, in.Kind)
 	}
 	return out, emitRelationshipChange(ctx, tx, "create", nil, out)

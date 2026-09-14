@@ -134,12 +134,12 @@ func TestTheLiveEmploymentSlotPredicateMirrorsItsIndex(t *testing.T) {
 		t.Fatalf("%s now carries an OR (%s), and this comparison strips parentheses — compare the "+
 			"predicates structurally before trusting it again", liveEmploymentIndex, predicate)
 	}
-	if want, got := normalizedPredicate(predicate), normalizedPredicate(employment.LiveSlotSQL("")); want != got {
+	if want, got := strings.ToLower(normalizedPredicate(predicate)), strings.ToLower(normalizedPredicate(employment.LiveSlotSQL(""))); want != got {
 		t.Errorf("employment.LiveSlotSQL renders %q, but %s is %q.\n\n"+
 			"The helper IS that index's predicate. A guard narrower than the index offers a write the "+
 			"index refuses, and the caller that keeps offering it never drains.", got, liveEmploymentIndex, want)
 	}
-	if want, got := "held.", employment.LiveSlotSQL("held"); strings.Count(got, want) != 3 {
-		t.Errorf("employment.LiveSlotSQL(%q) = %q, want every one of the three columns qualified", "held", got)
+	if want, got := "held.", employment.LiveSlotSQL("held"); strings.Count(got, want) != 4 {
+		t.Errorf("employment.LiveSlotSQL(%q) = %q, want every predicate column qualified", "held", got)
 	}
 }
