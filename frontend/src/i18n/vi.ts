@@ -6406,6 +6406,11 @@ export const vi = {
   "buyer.closedNote": "Phòng này hiện chỉ đọc.",
   "buyer.stewardUnknown": "người liên hệ của bạn",
   "buyer.signOut": "Đăng xuất",
+  "buyer.signedInAs": "Đã đăng nhập với tên {name}.",
+  "buyer.contactEyebrow": "Người liên hệ của bạn",
+  "buyer.contactBody":
+    "Hãy đặt câu hỏi ngay dưới tài liệu liên quan; câu hỏi sẽ đến thẳng {steward}.",
+  "buyer.closedOn": "Đã đóng vào {date}",
   "room.docs.title": "Tài liệu",
   "room.docs.sub":
     "Những gì người mua có thể đọc, kèm cuộc trao đổi về từng tài liệu bên dưới.",
@@ -6438,6 +6443,10 @@ export const vi = {
   "threads.aboutThis_other": "{count} chủ đề về tài liệu này",
   "threads.aboutThis_one": "{count} chủ đề về tài liệu này",
   "threads.askAbout": "Hỏi về tài liệu này",
+  "threads.read": "Đọc",
+  "threads.readTitle": "Đọc {title}",
+  "threads.unanswered_one": "{count} chưa trả lời",
+  "threads.unanswered_other": "{count} chưa trả lời",
   "threads.cancel": "Hủy",
   "threads.empty": "Chưa có trao đổi nào.",
   "threads.requiredChange": "Cần thay đổi",

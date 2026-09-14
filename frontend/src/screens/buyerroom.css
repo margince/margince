@@ -14,12 +14,14 @@
   background: var(--groundLit);
 }
 
+/* The spec's frame for this page: wide enough for the gallery beside the
+   contact, and the first-run and signed-out surfaces' own width. */
 .buyer-column {
   width: 100%;
-  max-width: 720px;
+  max-width: 1040px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 /* Flex items shrink by default, and this column is a flex item of a scroller
@@ -37,8 +39,7 @@
 /* The hero. This page is the one screen a client ever sees, so its first block
    reads like the front of a small, well-made site rather than the heading of a
    form: the kicker and the room's standing on one line, the name in the display
-   face at the page's largest rung, the seller's welcome at reading size, and
-   the contact on the other end under a hairline. */
+   face at the page's largest rung, and the seller's welcome at reading size. */
 .buyer-hero {
   display: flex;
   flex-direction: column;
@@ -50,6 +51,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+/* The pill and, for a closed room, the day it closed, read as one standing. */
+.buyer-hero-standing {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 /* `.t-display` on the element carries the face, the weight, the tracking and
@@ -71,21 +79,57 @@
   white-space: pre-wrap;
 }
 
-/* Who is on the other end, closing the hero. The rule above it is what
-   separates the seller's words from the fact about the seller. */
+/* Two columns under the hero: the board, and beside it the contact. The side
+   is the width of a record page's side rail and keeps it, so the gallery is
+   what flexes; under 900px the two stack, contact after documents, because on
+   a phone the paper is what the buyer came for. */
+.buyer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .buyer-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.buyer-main,
+.buyer-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+/* Who is on the other end: the mark beside the name, then the sentence. */
 .buyer-contact {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--borderSubtle);
 }
 
-.buyer-contact p {
+.buyer-contact-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.buyer-contact p,
+.buyer-contact-body {
   margin: 0;
 }
 
+.buyer-contact-body {
+  margin-top: var(--space-3);
+  color: var(--textContent);
+}
+
 .buyer-meta {
+  margin-top: var(--space-3);
   color: var(--textMeta);
 }
 
@@ -97,16 +141,23 @@
 }
 
 /* The way out, closing the page under a hairline rather than floating loose
-   after the last panel. */
+   after the last panel: who is signed in on the left, and the leaving verb. */
 .buyer-foot {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   padding-top: var(--space-4);
   border-top: 1px solid var(--borderSubtle);
 }
 
-/* The actions beside a shared document. One button today; the row exists so a
-   second never has to re-lay-out the card. */
+.buyer-foot p {
+  margin: 0;
+}
+
+/* The download beside a shared document, and the line under it when it did not
+   start. The tile's own verb row places the button; this only stacks the two. */
 .buyer-doc-actions {
   display: flex;
   gap: var(--gapActions);

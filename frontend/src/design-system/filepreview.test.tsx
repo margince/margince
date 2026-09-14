@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileChip } from "./filechip";
-import { FilePreviewProvider } from "./filepreview";
+import { FilePreviewProvider, useFilePreview } from "./filepreview";
 
 // A file a reader clicks opens HERE, over the record they are reading, and the
 // verbs over it are the ones a reader of a document has. What the cases below
@@ -56,6 +56,27 @@ function Files({ filename }: Readonly<{ filename: string }>) {
     <FilePreviewProvider>
       <FileChip href="/v1/attachments/a-1" filename={filename} />
     </FilePreviewProvider>
+  );
+}
+
+// A surface with no cookie — the Deal Room's buyer — opens the same preview
+// with the session token the bytes are read on.
+function BearerFile() {
+  const preview = useFilePreview();
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        preview?.open({
+          href: "/v1/public/rooms/documents/d-1/file",
+          filename: "DPA_v7.pdf",
+          mediaType: "application/pdf",
+          bearer: "mdrs_room",
+        })
+      }
+    >
+      Read DPA_v7.pdf
+    </button>
   );
 }
 
@@ -188,6 +209,62 @@ describe("FilePreview", () => {
     // The link the save rode on is not left in the document behind it.
     expect(document.querySelectorAll("a[download]")).toHaveLength(1);
     vi.restoreAllMocks();
+  });
+
+  // The bearer rides the read, and the saved copy is the drawn bytes: a link
+  // to the href would arrive without the token and be refused.
+  it("reads a bearer file with its token and saves what it drew", async () => {
+    const reads: RequestInit[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        reads.push(init ?? {});
+        return bytes();
+      }),
+    );
+    const user = userEvent.setup();
+    render(
+      <FilePreviewProvider>
+        <BearerFile />
+      </FilePreviewProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Read DPA_v7.pdf" }));
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByTitle("DPA_v7.pdf");
+    expect(new Headers(reads[0]?.headers).get("Authorization")).toBe(
+      "Bearer mdrs_room",
+    );
+
+    const clicked: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      function saved(this: HTMLAnchorElement) {
+        clicked.push(this);
+      },
+    );
+    await user.click(
+      await within(dialog).findByRole("button", { name: "Download" }),
+    );
+    expect(clicked[0]?.getAttribute("href")).toBe(minted[0]?.url);
+    expect(clicked[0]?.getAttribute("download")).toBe("DPA_v7.pdf");
+    vi.restoreAllMocks();
+  });
+
+  it("withholds Download on a bearer file until there are bytes to save", async () => {
+    serving(() => new Promise<Response>(() => {}));
+    const user = userEvent.setup();
+    render(
+      <FilePreviewProvider>
+        <BearerFile />
+      </FilePreviewProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "Read DPA_v7.pdf" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).queryByRole("button", { name: "Download" }),
+    ).toBeNull();
+    expect(
+      within(dialog).getByRole("button", { name: "Close preview" }),
+    ).toBeTruthy();
   });
 
   it("says a file could not be shown without saying why", async () => {
