@@ -57,9 +57,40 @@ export function customFieldToFormField(
           { value: "false", label: boolLabels.no },
         ],
       };
-    default:
+    case "text":
       return { ...base, type: "text" };
+    default:
+      // Exhaustive at COMPILE time over the contract's closed set of six scalar
+      // types (CUSTOM-FIELDS-PARAM-1): a seventh added to crm.yaml makes this
+      // call fail to typecheck, which is the point where somebody is looking at
+      // the question the form cannot answer on its own. A REPEATABLE type is
+      // the one that matters — `prefillFromRecord` and `seedMissingFields` both
+      // skip repeatable fields because their values live in the separate rows
+      // channel, and that channel has no seeding pass for a field that became
+      // known after the form opened. Such a field would draw no rows and submit
+      // none, silently.
+      //
+      // And a text control at RUNTIME all the same, because a NEWER server can
+      // send a type this build has never heard of. Version skew renders the
+      // stored value as text; it does not throw in the reader's open form.
+      return unhandledCustomFieldType(field.type, { ...base, type: "text" });
   }
+}
+
+/**
+ * The seventh custom-field type, refused by the compiler and survived at
+ * runtime.
+ *
+ * `never` is what makes the switch above exhaustive: every type the contract
+ * defines is handled by a case, so nothing reaches here, so `type` is `never`.
+ * Add one to the enum and the argument stops being assignable.
+ *
+ * The admin screen already refused one this way — `customfields.tsx` keys its
+ * label and its icon off total Records. The FORM was the half that accepted it
+ * quietly, which is the half where a repeatable type does its damage.
+ */
+function unhandledCustomFieldType<T>(_type: never, fallback: T): T {
+  return fallback;
 }
 
 // Coerce one field's form string to its stored value. Empty → null so a cleared
