@@ -121,9 +121,10 @@ function coverageRows(
   // site — the same "covered everything" impression a silent skip gives.
   //
   // Which of the two it was decides the row's KIND, not whether it appears. A
-  // page or byte cap is the size this read was configured for, reached as
-  // designed, so it is a note about coverage; budget and deadline are something
-  // that got in the way, and a later run may get further.
+  // page cap, a byte cap and a wall-clock deadline are all the size this read
+  // was configured for, reached as designed, so each is a note about coverage;
+  // `budget` is something that got in the way, and a later run gets further
+  // once somebody has topped the workspace up.
   if (stoppedReason !== undefined && stoppedReason !== null) {
     rows.push({
       id: `stopped:${stoppedReason}`,
