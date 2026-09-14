@@ -34,7 +34,7 @@ function day(): Worklist {
       review: 0,
       more_available: false,
     },
-  } as unknown as Worklist;
+  };
 }
 
 function draw(filter: WorklistFilter, onFilter = () => {}) {

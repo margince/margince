@@ -21,9 +21,15 @@ function day(changed?: number): Worklist {
   return {
     queue: [],
     as_of: "2026-09-03T06:42:00Z",
+    scope: "mine",
+    scope_options: ["mine"],
+    counts: [],
+    reach: [],
+    sources_unavailable: [],
+    summary: { total: 0, urgent: 0 },
     readings:
       changed === undefined ? undefined : { changed_since_brief: changed },
-  } as unknown as Worklist;
+  };
 }
 
 describe("changedSinceBrief", () => {
@@ -50,6 +56,9 @@ describe("changedSinceBrief", () => {
   // that draws nothing.
   it("answers nothing rather than throwing on a payload it cannot read", () => {
     expect(changedSinceBrief(day())).toBeUndefined();
+    // Cast on purpose: `{}` is not a Worklist and is not meant to be. The case
+    // is about a payload the function cannot read, which is the one shape a
+    // typed fixture cannot express.
     expect(changedSinceBrief({} as unknown as Worklist)).toBeUndefined();
     expect(changedSinceBrief(undefined)).toBeUndefined();
   });
