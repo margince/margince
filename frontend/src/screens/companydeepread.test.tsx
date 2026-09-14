@@ -264,6 +264,17 @@ describe("company-360 deep read", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
+    // On PROFILE, because an account that has been read no longer leads its
+    // Overview with the offer — offerResearchOnOverview stands it down, and
+    // the panel is on the tab holding the record's other tools.
+    await waitFor(() =>
+      expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
+    );
+    expect(screen.queryByText("Margince can fill this in")).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Profile" }),
+    );
+
     // Waits for content only the SETTLED read produces. "Website research" is
     // the panel's own title and would be there for a read still loading, so
     // waiting on it alone could pass without the report ever arriving.

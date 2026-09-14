@@ -299,18 +299,19 @@ function SiteReadPanel({
   );
 }
 
-// The whole-site deep read, the enrich verb's big sibling: one click starts
-// (or joins — idempotent per company+url) a background crawl of the company's own
-// site; findings stage as 🟡 proposals for the inbox, nothing writes to the
-// record here. 422 (no website) and 501 (crawl seam unwired) say their cause.
-export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [readId, setReadId] = useState<string | null>(null);
-  // A read id lives only in the tab that started the crawl, so a read that
-  // ended after the rep navigated away would be unfindable, and a FAILED crawl
-  // would look like one nobody tried. 404 is the honest "never read".
-  const latest = useQuery({
+/**
+ * The account's most recent website read, or null when it has never been read.
+ *
+ * A read id lives only in the tab that started the crawl, so a read that ended
+ * after the rep navigated away would be unfindable, and a FAILED crawl would
+ * look like one nobody tried. 404 is the honest "never read".
+ *
+ * Shared by the panel and by the page deciding where to PUT the panel, on one
+ * query key so the two are one request and can never disagree about whether
+ * this account has been read.
+ */
+function useLatestSiteRead(companyId: string) {
+  return useQuery({
     queryKey: ["site-read-latest", companyId],
     queryFn: async () => {
       const { data, error, response } = await api.GET(
@@ -326,6 +327,29 @@ export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
       return data ?? null;
     },
   });
+}
+
+/**
+ * Whether this account has been researched already.
+ *
+ * FALSE while the answer is unknown — still loading, or the lookup failed.
+ * The caller uses this to decide whether the Overview leads with the research
+ * offer, and an account wrongly called "read" would hide the offer from the
+ * one company that needs it. An offer shown a moment too long costs nothing.
+ */
+export function useHasSiteRead(companyId: string): boolean {
+  return useLatestSiteRead(companyId).data != null;
+}
+
+// The whole-site deep read, the enrich verb's big sibling: one click starts
+// (or joins — idempotent per company+url) a background crawl of the company's own
+// site; findings stage as 🟡 proposals for the inbox, nothing writes to the
+// record here. 422 (no website) and 501 (crawl seam unwired) say their cause.
+export function DeepReadPanel({ companyId }: Readonly<{ companyId: string }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [readId, setReadId] = useState<string | null>(null);
+  const latest = useLatestSiteRead(companyId);
   const shownReadId = readId ?? latest.data?.read_id ?? null;
   const start = useMutation({
     mutationKey: ["site-read", companyId],

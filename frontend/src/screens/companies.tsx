@@ -71,7 +71,7 @@ import { CompanyContractState, CompanyLastOffer } from "./companycommercial";
 import { CompanyContactsList } from "./companycontacts/contacts";
 import { CoverageBand } from "./companycontacts/summary";
 import { CompanyContractsCard } from "./companycontracts";
-import { DeepReadPanel } from "./companydeepread";
+import { DeepReadPanel, useHasSiteRead } from "./companydeepread";
 import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
@@ -1495,6 +1495,14 @@ function CompanyRecordBody({
   // composer on the meeting, which is a reply to a room nobody has sat in
   // yet; the brief drawer is what prepares a reader for one.
   const [preparing, setPreparing] = useState<string | null>(null);
+  // Where the research offer lives, decided ONCE for both the Overview stack
+  // and the Profile tab. Computing it twice is how the panel would come to
+  // appear in both places at once, or in neither.
+  const offerResearch = offerResearchOnOverview({
+    overlay,
+    view,
+    read: useHasSiteRead(company.id),
+  });
   return (
     <>
       {/* Overlay refuses the whole company page, not one tab of it: the
@@ -1527,6 +1535,7 @@ function CompanyRecordBody({
             onOpenTab={onTab}
             onOpenRecord={receipt.open}
             onOpenEmail={receipt.openEmail}
+            offerResearch={offerResearch}
             onOpenTasks={() => onTab("tasks")}
             onPrepareMeeting={setPreparing}
             onDraftTo={(id) => onCompose({ kind: "account", id })}
@@ -1654,7 +1663,7 @@ function CompanyRecordBody({
         <CompanyProfileTab
           active={tab === "profile"}
           company={company}
-          offerOnOverview={nothingOnFile(view)}
+          offerOnOverview={offerResearch}
           onOpenHistory={onOpenHistory}
           refusedReasonId={refusedReasonId}
         />
@@ -1693,6 +1702,35 @@ function nothingOnFile(view?: Company360View): boolean {
     empty("deals", view.deals?.data.length) &&
     empty("activities", view.activities?.data.length)
   );
+}
+
+/**
+ * Whether the research offer LEADS the Overview column, rather than sitting on
+ * Profile with the record's other tools.
+ *
+ * Two conditions, and both must hold. The account has nothing on file, so the
+ * question it poses a reader is "shall Margince go and find out who these
+ * contacts are" rather than "what should you do here". AND it has never been
+ * read, because a read already answers that question — including a read that
+ * filled nothing in, which is a fact about the site rather than an invitation
+ * to ask again.
+ *
+ * Missing the second condition is what put the offer at the top of an account
+ * with 109 staged facts behind it, telling a rep nobody had looked.
+ *
+ * Never in overlay: the whole research verb is native-only there.
+ */
+export function offerResearchOnOverview({
+  overlay,
+  view,
+  read,
+}: Readonly<{
+  overlay: boolean;
+  view?: Company360View;
+  /** Whether this account has a website read on record. */
+  read: boolean;
+}>): boolean {
+  return !overlay && !read && nothingOnFile(view);
 }
 
 // The create verb the work card carries, only where the reader may actually
@@ -1738,10 +1776,16 @@ function CompanyOverviewStack({
   onDraftTo,
   onOpenTab,
   onPerform,
+  offerResearch,
 }: Readonly<{
   company: Company;
   view?: Company360View;
   overlay: boolean;
+  /**
+   * Whether the research offer LEADS this column, decided by the page so that
+   * this stack and the Profile tab cannot both draw it — or neither.
+   */
+  offerResearch: boolean;
   // The composite read's own pending flag — see CompanyRecordBody's own doc.
   loading: boolean;
   failed: boolean;
@@ -1814,10 +1858,13 @@ function CompanyOverviewStack({
           find out who these contacts are". So the research offer LEADS the
           column on such an account, and stands down the moment there is
           anything to read: on a live account the lead is the 360 below, and
-          two leads is none. */}
-      {!overlay && nothingOnFile(view) && (
-        <DeepReadPanel companyId={company.id} />
-      )}
+          two leads is none.
+
+          An account already RESEARCHED has answered that question too, even
+          when the read filled nothing in. The offer belongs on Profile from
+          then on, with the record's other tools, where a rep goes to run it
+          again — see offerResearchOnOverview. */}
+      {offerResearch && <DeepReadPanel companyId={company.id} />}
       {/* The 360 as the first pane, at the full measure (DESIGN.md §7): the
           word, the sentence it rests on, the three dimensions, the spine, and
           the thread folded under it. What moved since this reader was last
