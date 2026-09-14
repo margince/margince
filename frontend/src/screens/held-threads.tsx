@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, Button, DataTable, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { CellStack } from "../design-system/cellstack";
 import { EmailReference } from "../design-system/emailreference";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -288,22 +289,18 @@ function WhyCell({ row }: Readonly<{ row: HeldThread }>) {
   const { locale } = useLocale();
   if (row.pending) {
     return (
-      <span className="cell-stack">
+      <CellStack>
         <Badge tone="warn">{t("heldThreads.pending")}</Badge>
         <span className="t-caption">
           {t("heldThreads.attempts", {
             count: formatNumber(row.attempts, locale),
           })}
         </span>
-      </span>
+      </CellStack>
     );
   }
   const kindKey = row.kind ? kindLabel[row.kind] : undefined;
-  return (
-    <span className="cell-stack">
-      <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>
-    </span>
-  );
+  return <Badge>{kindKey ? t(kindKey) : (row.kind ?? row.status)}</Badge>;
 }
 
 /**
