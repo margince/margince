@@ -332,9 +332,21 @@ func whyThisReviewIsNotOpenToIt(state string) string {
 // newsletter into somebody a rep could not record a phone call about, while the
 // send path would have let the ordinary letter through.
 //
-// THROUGH suppressionBinds RATHER THAN A SECOND RULE. Which categories a kind
-// reaches is the engine's judgement and lives one file over; a copy here would
-// be a second answer free to drift from the one the send actually applies.
+// THE PURPOSE IS KNOWN HERE TOO, for the identical reason: the refusal carries
+// the one the SEND resolved to (RefusedRecipient.PurposeID, threaded from
+// commsauthz.Decision.PurposeID by decideOne and decideLead). A narrow stop —
+// one purpose's own objection — binds only a send that resolved to that same
+// purpose, exactly as it does on the send path (applySuppression). Before this
+// field existed the review path had no send-purpose to compare against, so it
+// treated a narrow stop as binding every marketing refusal for the subject: a
+// LEAD refused for one purpose could not be answered because they had objected
+// to an unrelated one. That was the conservative side of a boundary this reader
+// can now read directly instead of assuming.
+//
+// THROUGH suppressionBinds RATHER THAN A SECOND RULE. Which categories and
+// purposes a kind reaches is the engine's judgement and lives one file over; a
+// copy here would be a second answer free to drift from the one the send
+// actually applies.
 //
 // KEYED THE WAY THE SEND PATH KEYS IT (authorizetransmitrecord.go): contact,
 // lead, or the address itself. A hard bounce recorded against the address alone
@@ -343,10 +355,10 @@ func whyThisReviewIsNotOpenToIt(state string) string {
 func aStopThatBindsTheMessage(
 	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
-	var kinds []string
+	var stops []liveStop
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT DISTINCT kind FROM communication_suppression
+			SELECT DISTINCT kind, purpose_id FROM communication_suppression
 			 WHERE revoked_at IS NULL
 			   AND (contact_id = $1
 			        OR lead_id = $1
@@ -358,10 +370,11 @@ func aStopThatBindsTheMessage(
 		defer rows.Close()
 		for rows.Next() {
 			var kind string
-			if err := rows.Scan(&kind); err != nil {
+			var purposeID *ids.UUID
+			if err := rows.Scan(&kind, &purposeID); err != nil {
 				return err
 			}
-			kinds = append(kinds, kind)
+			stops = append(stops, liveStop{Kind: kind, PurposeID: purposeID})
 		}
 		return rows.Err()
 	})
@@ -372,15 +385,10 @@ func aStopThatBindsTheMessage(
 	// carries. An empty one means the engine never got that far, and the safe
 	// reading is that any live stop binds — the direction suppressionBinds
 	// itself fails in for a kind it does not recognise.
-	//
-	// nil, nil for the purpose pair: this reader's own query above selects
-	// kind alone, not purpose_id, so it cannot narrow a row even were one
-	// narrow — same as asking with no send-purpose in hand, which is the
-	// conservative side of the boundary suppressionBinds documents.
 	category := commsauthz.Category(refusal.Category)
-	for _, kind := range kinds {
-		if category == "" || suppressionBinds(kind, category, nil, nil) {
-			return kind, nil
+	for _, stop := range stops {
+		if category == "" || suppressionBinds(stop.Kind, category, stop.PurposeID, refusal.PurposeID) {
+			return stop.Kind, nil
 		}
 	}
 	return "", nil

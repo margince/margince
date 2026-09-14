@@ -149,6 +149,11 @@ func (g *Gate) decideLead(ctx context.Context, tx pgx.Tx, r connector.Recipient,
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
+	// Carried onto the decision for the same reason the contact arm carries
+	// it: a review opened from this refusal needs the purpose it resolved to,
+	// once that local would otherwise be gone (aStopThatBindsTheMessage,
+	// reviewcontext.go).
+	decided.PurposeID = sendPurpose
 	decided = applySuppression(decided, stops, sendPurpose)
 	return decided, nil
 }

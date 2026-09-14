@@ -296,6 +296,11 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
+	// Carried onto the decision, not only into applySuppression's local
+	// argument: a review opened from a refused decision needs this same
+	// purpose later, to ask whether a narrow stop binds the send that refusal
+	// snapshots (aStopThatBindsTheMessage, reviewcontext.go).
+	d.PurposeID = sendPurpose
 	d = applySuppression(d, stops, sendPurpose)
 	return d, nil
 }
