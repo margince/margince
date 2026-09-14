@@ -123,6 +123,7 @@
 }
 .brief-focus-list > li {
   position: relative;
+  padding-left: var(--brief-rank-w);
   counter-increment: brief-rank;
   animation: brief-arrive var(--dur-enter) var(--ease-out) both;
 }
@@ -157,9 +158,10 @@
   color: var(--textMeta);
   font-variant-numeric: tabular-nums;
 }
+/* The rows sit on the page's own ground, and the rank margin is the LIST
+   ITEM's padding, so the row primitive keeps its own interval untouched. */
 .brief-focus-list > li > .panel-row {
-  margin-left: var(--brief-rank-w);
-  padding-inline: 0;
+  padding-inline: 0; /* ds:ignore a ranked row on the page's ground has no panel edge to inset from; the list item pays the rank margin */
 }
 /* The rule between two ranked rows spans the row, not the panel inset it
    inherits from `PanelRow`. */
@@ -179,7 +181,6 @@
   top: calc(var(--space-4) + var(--space-1));
 }
 .brief-focus-lead > .panel {
-  margin-left: var(--brief-rank-w);
   box-shadow: var(--shadow-card);
 }
 .brief-focus-lead .panel-row.worklist-row-compact {
@@ -266,11 +267,13 @@
   border: 1.5px dashed var(--aiMed);
   background: var(--aiLight);
 }
-.brief-focus-list > li.brief-focus-staged > .panel-row {
+.brief-focus-list > li.brief-focus-staged {
   background: var(--aiLight);
   box-shadow: inset 0 0 0 1.5px var(--aiMed);
   border-radius: var(--r-sm);
-  padding-inline: var(--space-3);
+}
+.brief-focus-list > li.brief-focus-staged > .panel-row::before {
+  content: none;
 }
 
 /* On a phone the rank margin is narrower and the lead's verbs wrap. */
