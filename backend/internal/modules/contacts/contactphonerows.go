@@ -147,22 +147,27 @@ func replaceContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 			return fmt.Errorf("archive contact phones: %w", err)
 		}
 	}
-	// Demotions before promotions: a swap of which same-type number is primary
-	// travels here with both rows retained, and promoting one before demoting the
-	// other is two live primaries of one type until the statement ends, which
-	// uq_contact_phone_primary refuses.
-	if err := placeContactPhones(ctx, tx, contactID, updates, false); err != nil {
+	// Every retained row lands its new type and position demoted first, then the
+	// submitted primaries are raised. A row can leave a per-type primary slot by
+	// CHANGING TYPE, not only by dropping primary — a work primary corrected to a
+	// home primary while another row takes over work — so a single demote-the-
+	// non-primaries pass would still promote the incoming work row while the
+	// outgoing one held the work slot, two live primaries of one type until the
+	// statement ends, which uq_contact_phone_primary refuses. Clearing every slot
+	// first makes the intermediate state carry no primary at all.
+	if err := landContactPhones(ctx, tx, contactID, updates); err != nil {
 		return err
 	}
-	if err := placeContactPhones(ctx, tx, contactID, updates, true); err != nil {
+	if err := promoteContactPhones(ctx, tx, contactID, updates); err != nil {
 		return err
 	}
 	return insertContactPhones(ctx, tx, contactID, source, by, fresh)
 }
 
-// placeContactPhones applies the retained-row placements whose is_primary matches
-// `primary`, each keyed on the held row's own id so two rows of one number no
-// longer overwrite each other. contact_id pins each write to this contact — the id
+// landContactPhones writes every retained row's submitted type and position with
+// is_primary cleared, so each per-type primary slot is empty before any promotion
+// runs. Keyed on the held row's own id so two rows of one number no longer
+// overwrite each other. contact_id pins each write to this contact — the id
 // already identifies the row, but the predicate is where the reach "on the SAME
 // contact row" is stated in SQL rather than left to a comment.
 //
@@ -170,20 +175,45 @@ func replaceContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 // this one, and RowsAffected turns that refusal into a CAS: a placement that
 // matches zero rows lost that race rather than silently doing nothing to a
 // number the held-set said was still live.
-func placeContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, updates []phonePlacement, primary bool) error {
+func landContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, updates []phonePlacement) error {
 	for _, u := range updates {
-		if u.row.IsPrimary != primary {
-			continue
-		}
 		tag, err := tx.Exec(ctx,
-			`UPDATE contact_phone SET phone_type = $3, is_primary = $4, position = $5
+			`UPDATE contact_phone SET phone_type = $3, is_primary = false, position = $4
 			   WHERE id = $1 AND contact_id = $2 AND archived_at IS NULL`,
-			u.id, contactID, u.row.PhoneType, u.row.IsPrimary, u.row.Position)
+			u.id, contactID, u.row.PhoneType, u.row.Position)
 		if err != nil {
 			if _, ok := storekit.UniqueViolation(err); ok {
 				return apperrors.ErrConflict
 			}
 			return fmt.Errorf("placing contact phone: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return apperrors.ErrConflict
+		}
+	}
+	return nil
+}
+
+// promoteContactPhones raises the submitted primaries once landContactPhones has
+// cleared every slot, so each is the only live row of its type wanting it —
+// parseContactContacts already refused a set naming two primaries of one type, so
+// the promotions cannot contend. The same id/contact_id/archived_at CAS as the
+// demote pass turns a row archived out from under this one into a lost-race
+// ErrConflict rather than a silent no-op.
+func promoteContactPhones(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, updates []phonePlacement) error {
+	for _, u := range updates {
+		if !u.row.IsPrimary {
+			continue
+		}
+		tag, err := tx.Exec(ctx,
+			`UPDATE contact_phone SET is_primary = true
+			   WHERE id = $1 AND contact_id = $2 AND archived_at IS NULL`,
+			u.id, contactID)
+		if err != nil {
+			if _, ok := storekit.UniqueViolation(err); ok {
+				return apperrors.ErrConflict
+			}
+			return fmt.Errorf("promoting contact phone: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrConflict

@@ -276,6 +276,56 @@ func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
 	}
 }
 
+// A work primary corrected to a home primary while a second number takes over the
+// work slot — both submitted primary, of different types. A row can leave a
+// per-type primary slot by CHANGING TYPE, not only by dropping primary, so a
+// demote-the-non-primaries-only pass promoted the incoming work row while the
+// outgoing one still held the work slot: two live work primaries for the length of
+// a statement, which uq_contact_phone_primary refused. Landing every retained row
+// demoted before raising any primary is what makes this valid change go through.
+func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	contact, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Ada Lovelace",
+		Phones: []ContactPhoneInput{
+			{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: false, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("create contact: %v", err)
+	}
+
+	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
+		Phones: []ContactPhoneInput{
+			{Phone: "+493011111111", PhoneType: "home", IsPrimary: true, Position: 0},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+		},
+		Source: "test",
+	})
+	if err != nil {
+		t.Fatalf("retyping the primary while another takes the work slot: %v", err)
+	}
+
+	rows := livePhoneRows(updated)
+	if len(rows) != 2 {
+		t.Fatalf("phones = %+v, want both numbers live", rows)
+	}
+	byNumber := map[string]crmcontracts.ContactPhone{}
+	for _, r := range rows {
+		byNumber[r.Phone] = r
+	}
+	if r := byNumber["+493011111111"]; r.PhoneType != "home" || !r.IsPrimary {
+		t.Fatalf("first number = %+v, want home + primary", r)
+	}
+	if r := byNumber["+493022222222"]; r.PhoneType != "work" || !r.IsPrimary {
+		t.Fatalf("second number = %+v, want work + primary", r)
+	}
+}
+
 func livePhoneRows(p crmcontracts.Contact) []crmcontracts.ContactPhone {
 	if p.Phones == nil {
 		return nil

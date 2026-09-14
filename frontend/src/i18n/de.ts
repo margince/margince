@@ -3434,6 +3434,7 @@ export const de = {
   "field.phoneOther": "Sonstige",
   "field.primary": "Primär",
   "field.removeRow": "Entfernen",
+  "field.removeRowLabel": "Zeile {n} entfernen",
   "field.moveRowUp": "Zeile {n} nach oben verschieben",
   "field.moveRowDown": "Zeile {n} nach unten verschieben",
   "field.rowMoved": "An Position {n} verschoben",

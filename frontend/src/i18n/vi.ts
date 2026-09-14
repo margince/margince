@@ -3394,6 +3394,7 @@ export const vi = {
   "field.phoneOther": "Khác",
   "field.primary": "Chính",
   "field.removeRow": "Gỡ",
+  "field.removeRowLabel": "Gỡ hàng {n}",
   "field.moveRowUp": "Di chuyển hàng {n} lên",
   "field.moveRowDown": "Di chuyển hàng {n} xuống",
   "field.rowMoved": "Đã chuyển đến vị trí {n}",

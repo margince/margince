@@ -170,7 +170,14 @@ export function RepeatableRowsField({
           >
             <ChevronDown aria-hidden size={16} />
           </Button>
-          <Button small type="button" onClick={() => removeRow(index)}>
+          <Button
+            small
+            type="button"
+            aria-label={t("field.removeRowLabel", {
+              n: ordinalNumber(index + 1),
+            })}
+            onClick={() => removeRow(index)}
+          >
             {t("field.removeRow")}
           </Button>
         </Card>
