@@ -477,6 +477,99 @@ func TestALiftReportsAnAddressPinnedStopAsStanding(t *testing.T) {
 	}
 }
 
+// plantNarrowSuppression writes a contact's marketing_objection scoped to ONE
+// consent_purpose, at the given level — the same bypass plantSuppression uses,
+// because no writer gives a CONTACT a narrow stop yet. Lift takes a ContactID
+// (consentSubject resolves only contact or lead, and LiftInput carries no
+// LeadID field), so the lead-only narrow writer StopForCredentialTx reaches —
+// withdrawalpress.go's named-purpose press — can never produce the row this
+// test needs. Planting it directly is the accepted way this package reaches a
+// row shape no door on this subject type writes yet.
+func plantNarrowSuppression(
+	t *testing.T, e *channelConsentEnv, contact ids.ContactID, purpose ids.UUID, level string,
+) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression
+		    (id, contact_id, purpose_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, $2, $3, $4, 'test', 'human:x', $5)`,
+		id, contact, purpose, commsauthz.ReasonObjection, level); err != nil {
+		t.Fatalf("planting a narrow-purpose suppression: %v", err)
+	}
+	return id
+}
+
+// TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose is the ROW half of
+// lift's purpose-agnostic contract: the row lookup asks for id and contact_id
+// only, so a narrow stop lifts exactly as a broad one does. The two narrow
+// rows here carry DIFFERENT purposes and the SAME kind — the shape a
+// purpose-blind bug would confuse, either by refusing to find the targeted
+// row (over-matching would not explain a miss, so this pins UNDER-matching:
+// the id alone must be enough) or, the case that matters more, by touching
+// the wrong one.
+func TestALiftTargetsANarrowStopByIdRegardlessOfItsPurpose(t *testing.T) {
+	e := setupChannelConsent(t)
+	second := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
+		t.Fatal(err)
+	}
+	targeted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID, string(commsauthz.LevelUser))
+	other := plantNarrowSuppression(t, e, e.contact, second, string(commsauthz.LevelUser))
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		ContactID: e.contact, SuppressionID: targeted, Reason: "they resubscribed to this one on a call",
+	}); err != nil {
+		t.Fatalf("lifting the targeted narrow stop: %v", err)
+	}
+
+	if stillLive(t, e, targeted) {
+		t.Error("the narrow stop named by id is still live — lift did not act on the row it was told to")
+	}
+	if !stillLive(t, e, other) {
+		t.Error("a DIFFERENT narrow stop was revoked by a lift that named the other row's id — " +
+			"the lookup is not purpose-agnostic, it is purpose-confused")
+	}
+}
+
+// TestALiftReportsARemainingNarrowStopAsStanding is the COUNT half: after
+// lifting one narrow stop, a second narrow stop on a different purpose must
+// still report still_suppressed — the subject remains stopped from that one
+// newsletter, and a consumer told otherwise would resume mail to somebody who
+// is still refused it.
+func TestALiftReportsARemainingNarrowStopAsStanding(t *testing.T) {
+	e := setupChannelConsent(t)
+	second := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_purpose (id, key, label, requires_double_opt_in)
+		VALUES ($1, 'second-newsletter', 'Second Newsletter', false)`, second); err != nil {
+		t.Fatal(err)
+	}
+	lifted := plantNarrowSuppression(t, e, e.contact, e.newsletter.UUID, string(commsauthz.LevelUser))
+	remaining := plantNarrowSuppression(t, e, e.contact, second, string(commsauthz.LevelUser))
+
+	if err := e.store.Lift(e.ctx, LiftInput{
+		ContactID: e.contact, SuppressionID: lifted, Reason: "resolved the newsletter complaint",
+	}); err != nil {
+		t.Fatalf("lifting: %v", err)
+	}
+
+	payload := lastLiftPayload(t, e)
+	if payload.RemainingSuppressions == nil || *payload.RemainingSuppressions != 1 {
+		t.Errorf("remaining_suppressions = %s, want 1 — the second-newsletter objection is still live",
+			derefInt(payload.RemainingSuppressions))
+	}
+	if payload.StillSuppressed == nil || !*payload.StillSuppressed {
+		t.Error("still_suppressed = false while a narrow objection to the second newsletter is " +
+			"still live — a consumer reading this event would treat the subject as fully clear")
+	}
+	if !stillLive(t, e, remaining) {
+		t.Error("the second narrow stop was revoked by a lift that named the other row's id")
+	}
+}
+
 // The three fields are optional on the wire so an older consumer keeps
 // validating, but this writer always sets them — so a nil in a failure message
 // is itself the news, and these print it rather than an address.
