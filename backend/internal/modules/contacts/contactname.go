@@ -450,7 +450,10 @@ func capitalizeParts(lower string) string {
 		case upcomingUpper && unicode.IsLetter(r):
 			out.WriteRune(unicode.ToUpper(r))
 			upcomingUpper = false
-		case r == '-' || r == '\'' || r == '’':
+		case r == '-' || r == '\'' || r == '’' || r == '.':
+			// A period separates initials — "j.r." is J.R., not J.r. It is not a
+			// token boundary anywhere else in the parser, so it only ever reaches
+			// here inside one word.
 			out.WriteRune(r)
 			upcomingUpper = true
 		default:

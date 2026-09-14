@@ -37,27 +37,32 @@ func unshout(tokens []string) []string {
 	return folded
 }
 
-// isShouted reports whether every cased letter is uppercase AND some token is
-// long enough for that to be a choice. A single letter says nothing — "J SMITH"
-// shouts, "J" alone is an initial — so at least one token of two or more letters
-// must be present before the name is called shouted.
+// isShouted reports whether the name was typed in capitals. That needs POSITIVE
+// evidence, not merely the absence of lowercase: a caseless script has neither
+// case, and answering "shouted" for 長谷川一郎 would let unshout rewrite it and
+// withoutSlashedUnit delete it as a unit code.
+//
+// So two things must hold. No cased letter may be lowercase, and at least one
+// token must carry two or more UPPERCASE letters — enough for the capitals to be
+// a choice rather than an initial. "J SMITH" shouts; "J" alone does not, and
+// 長谷川一郎 does not.
 func isShouted(tokens []string) bool {
-	longEnough := false
+	shouting := false
 	for _, token := range tokens {
-		letters := 0
+		uppers := 0
 		for _, r := range token {
 			if unicode.IsLower(r) {
 				return false
 			}
-			if unicode.IsLetter(r) {
-				letters++
+			if unicode.IsUpper(r) {
+				uppers++
 			}
 		}
-		if letters >= 2 {
-			longEnough = true
+		if uppers >= 2 {
+			shouting = true
 		}
 	}
-	return longEnough
+	return shouting
 }
 
 // withoutSlashedUnit cuts an office or country code written straight onto the
@@ -65,19 +70,24 @@ func isShouted(tokens []string) bool {
 // is an affiliationSeparator already; this one cannot join that list, because a
 // bare "/" would also cut a name that legitimately contains one.
 //
-// So the tail has to look like a unit code rather than a name: short, or shouted.
-// A longer mixed-case tail is left alone — "Anna/Maria Weber" keeps both halves,
-// since nothing here can tell that slash from a compound given name.
+// Being SHORT is not enough to be a unit code: "Jane Smith/Lee" is a surname
+// after a slash, and deleting it would lose half the name with full confidence.
+// The tail must also be written as a code rather than as a word — in capitals,
+// like every ISO country and office code this appears as.
+//
+// The cut is taken at the LAST slash, so a name that legitimately contains one
+// keeps it while still shedding a trailing code: "Anna/Maria Weber/DE" becomes
+// "Anna/Maria Weber", and "Anna/Maria Weber" is left entirely alone.
 func withoutSlashedUnit(name string) string {
-	before, after, found := strings.Cut(name, "/")
-	if !found {
+	cut := strings.LastIndex(name, "/")
+	if cut < 0 {
 		return name
 	}
-	head, tail := strings.TrimSpace(before), strings.TrimSpace(after)
+	head, tail := strings.TrimSpace(name[:cut]), strings.TrimSpace(name[cut+1:])
 	if head == "" || tail == "" {
 		return name
 	}
-	if len([]rune(tail)) > maxUnitCodeRunes && !isShouted(strings.Fields(tail)) {
+	if len([]rune(tail)) > maxUnitCodeRunes || !isShouted(strings.Fields(tail)) {
 		return name
 	}
 	return head

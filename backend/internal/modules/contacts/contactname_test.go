@@ -220,6 +220,29 @@ func TestParseContactNameReadsTheNameAHeaderCarries(t *testing.T) {
 			display: "Anna/Maria Weber", email: "amw2@example.com",
 			wantFull: "Anna/Maria Weber",
 		},
+		{
+			name:    "a short tail after a slash is a surname unless it is written as a code",
+			display: "Jane Smith/Lee", email: "jsl@example.com",
+			wantFull: "Jane Smith/Lee",
+		},
+		{
+			name:    "a bilingual spelling after a slash is not a unit code",
+			display: "Ichiro Hasegawa/長谷川一郎", email: "ih@example.com",
+			wantFull: "Ichiro Hasegawa/長谷川一郎",
+		},
+		{
+			name:    "a unit code is cut from the end, past a slash the name itself carries",
+			display: "Anna/Maria Weber/DE", email: "amw3@example.com",
+			wantFull: "Anna/Maria Weber",
+		},
+		{
+			// The name is not SPLIT: isWordLike refuses a token carrying a period,
+			// so initials abstain exactly as they do when already mixed-case. What
+			// this row pins is the fold — "J.r. Smith" would be a corruption.
+			name:    "shouted initials keep both capitals",
+			display: "J.R. SMITH", email: "jrs@example.com",
+			wantFull: "J.R. Smith",
+		},
 	})
 }
 
