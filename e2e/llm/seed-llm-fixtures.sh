@@ -413,13 +413,18 @@ fi
 
 # Two more accounts that lived through the same thing, so "did we have this in
 # the past" has a pattern to find rather than a single case.
-for company in "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
-  company="$(company_id_by_name "$company")"
+# The NAME and the ID are two variables, and the loop holds the name. Reading
+# the lookup back into `company` destroyed it: an account not yet seeded
+# resolved to "", the body then asked for a company with an empty display_name,
+# and the 422 arrived under "could not create :" — no name in the request and
+# none in the message either.
+for name in "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
+  company="$(company_id_by_name "$name")"
   [[ -n "$company" ]] && continue
-  body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"Managed Services"}' "$company" "$colleague")"
-  company="$(create_or_die "/companies" "$body" "$company")"
+  body="$(printf '{"display_name":"%s","owner_id":"%s","industry":"Managed Services"}' "$name" "$colleague")"
+  company="$(create_or_die "/companies" "$body" "$name")"
   body="$(printf '{"kind":"email","direction":"inbound","occurred_at":"2025-11-04T08:00:00Z","body":"Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort.","links":[{"entity_type":"company","entity_id":"%s"}]}' "$company")"
-  create_or_die "/activities" "$body" "$company's silence" >/dev/null
+  create_or_die "/activities" "$body" "$name's silence" >/dev/null
 done
 
 # --- The seat and the helpers the fixtures below share -----------------------
@@ -1016,9 +1021,9 @@ fi
 # was. With the duplicate on Vorort, the survivor's three is the same in both.
 strategic="$(seed_tag "Strategic Account" amber)"
 strategic_short="$(seed_tag "Strategic Accts" amber)"
-for company in "Reply Deutschland Betreuerwechsel" "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
-  company="$(company_id_by_name "$company")"
-  [[ -n "$company" ]] || { echo "$company is not seeded" >&2; exit 1; }
+for name in "Reply Deutschland Betreuerwechsel" "valantic AG Betreuerwechsel" "Körber Digital Betreuerwechsel"; do
+  company="$(company_id_by_name "$name")"
+  [[ -n "$company" ]] || { echo "$name is not seeded" >&2; exit 1; }
   tag_record "$strategic" company "$company"
 done
 tag_record "$strategic_short" company "$vorort"
