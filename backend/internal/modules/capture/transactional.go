@@ -77,8 +77,8 @@ var personalServiceDomains = map[string]struct{}{
 	"docusign.com":        {}, // the product's own mail; docusign.net is its relay
 	// A billing product sends under its CUSTOMER's letterhead, so the display
 	// name is a company the mailbox owner really deals with while the address
-	// belongs to the tool. Read as a contact it mints a person named after that
-	// customer — "BERATUNG JUDITH ANDRESEN" from `noreply@fastbill.com`.
+	// belongs to the tool. Read as correspondence it mints a contact named after
+	// that customer — "BERATUNG JUDITH ANDRESEN" from `noreply@fastbill.com`.
 	"fastbill.com": {},
 }
 

@@ -733,7 +733,7 @@ that reply is not a relationship. Judge the ORIGINAL sender: unsolicited commerc
 A CONFIRMATION of the mailbox owner's own arrangements is never "contact": a hotel or flight
 booking, a restaurant reservation, an itinerary, a delivery notice. Buying something does not
 make the seller's booking desk a counterparty of this business, and a decade-old mailbox is
-full of them. A system sent it — "transactional"; a person at the desk wrote it — "role_mailbox"
+full of them. A system sent it — "transactional"; somebody at the desk wrote it — "role_mailbox"
 when the desk serves this business, "personal" when the arrangement is the owner's own.
 A product the mailbox owner USES writes under its CUSTOMER's name: an invoicing tool sends
 under the letterhead of the business it bills for. That letterhead names the tool's customer,
