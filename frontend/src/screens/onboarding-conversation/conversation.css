@@ -3257,7 +3257,7 @@
   outline-offset: 1px;
 }
 
-/* ---- the basis act: the reporting basis and the autonomy switches ---- */
+/* ---- the basis act: the installation reporting basis ---- */
 
 .ob-basis-scene {
   max-width: 48rem;
@@ -3278,11 +3278,4 @@
   margin: 0;
   color: var(--textPrimary);
   font: var(--fw-semibold) var(--fs-h3) / var(--lh-tight) var(--f-display);
-}
-
-.ob-basis-lead {
-  margin: 0;
-  color: var(--textContent);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
 }

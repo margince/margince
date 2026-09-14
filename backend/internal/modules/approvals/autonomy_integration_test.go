@@ -157,11 +157,8 @@ func TestADecisionCountsTowardTheDecidingRepsRecord(t *testing.T) {
 	}
 
 	mode, clean, edited, rejected := e.policyOf(t, e.rep)
-	// The row the counter creates carries the column's default, and nothing in
-	// this package writes it. A decision that arrived carrying a mode would be
-	// the counter deciding what a rep had chosen.
-	if mode != "manual" {
-		t.Errorf("mode = %q, want manual — counting a decision must not set a policy", mode)
+	if mode != "auto" {
+		t.Errorf("mode = %q, want auto after counting the first decision", mode)
 	}
 	if clean != 1 || edited != 0 || rejected != 0 {
 		t.Errorf("clean/edited/rejected = %d/%d/%d, want 1/0/0 — an untouched approval is the one that earns promotion",
@@ -272,5 +269,21 @@ func TestOneRepsRecordIsNotAnother(t *testing.T) {
 	}
 	if _, clean, _, rejected := e.policyOf(t, other); clean != 0 || rejected != 1 {
 		t.Errorf("second rep clean/rejected = %d/%d, want 0/1", clean, rejected)
+	}
+}
+
+func TestCountingDecisionsPreservesAnOffChoice(t *testing.T) {
+	e := setupStaging(t)
+	seed := newDealSeeder(t, e)
+	ctx := e.asRep(e.rep)
+	if _, err := e.svc.SetAutoApply(ctx, countedKind, false); err != nil {
+		t.Fatalf("switching the kind off: %v", err)
+	}
+	if _, err := e.svc.Decide(ctx, seed.stageCounted(ctx, t), false, nil); err != nil {
+		t.Fatalf("rejecting: %v", err)
+	}
+	mode, _, _, rejected := e.policyOf(t, e.rep)
+	if mode != "manual" || rejected != 1 {
+		t.Fatalf("mode %q and %d rejections, want manual and one rejection", mode, rejected)
 	}
 }

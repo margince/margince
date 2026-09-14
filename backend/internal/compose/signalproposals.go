@@ -8,14 +8,14 @@ package compose
 //
 // A signal says what the correspondence stated. It changes nothing. This is
 // where the consequence is proposed: an account whose own mail ends the
-// contract is OFFERED the move to former_customer, and a human accepts, edits
-// or dismisses it. Nothing structural is written before that (GATE-AI-2) —
-// the reconciler stages, and the effect writes only once someone has said yes.
+// contract is offered the move to former_customer. The reconciler only stages
+// it. A human decision or the owner's automatic-change policy releases the
+// effect; the applier resolves the owner's current permissions before writing.
 //
 // The model never stages. This whole file is deterministic: it reads open
 // signals and open approvals, and it proposes exactly one thing per open
-// contract_ended signal. Whatever the extraction site got wrong is a card
-// somebody clears, and a card is where its influence stops.
+// contract_ended signal. With automatic changes off, the proposal waits for
+// manual review before its effect changes the account.
 //
 // The precedent is company_name_promotion, not deal_follow_up: StageUnlessDeclined
 // (durable rejection memory — StageOrJoinPendingInTx only dedupes against live
