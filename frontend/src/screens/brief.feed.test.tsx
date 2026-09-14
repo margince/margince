@@ -87,9 +87,14 @@ it("does not claim an empty agenda when a source failed", () => {
   day.sources_unavailable = [
     { source: "task", reason: "failed", category: "tasks" },
   ];
-  render(<BriefFeed day={day} state="ready" />);
+  const { container } = render(<BriefFeed day={day} state="ready" />);
   expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
-  expect(screen.getByText(en["brief.feed.incomplete"])).toBeTruthy();
+  // The sentence pays the pane's inset, and no empty grid stands under it: a
+  // list of nothing was only its own padding, a blank band under the caption.
+  expect(
+    screen.getByText(en["brief.feed.incomplete"]).closest(".panel-body"),
+  ).not.toBeNull();
+  expect(container.querySelector(".brief-feed-list")).toBeNull();
 });
 
 it("keeps approvals in the agenda and offers their review action", () => {
