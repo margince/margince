@@ -136,6 +136,14 @@ func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
 		t.Fatalf("ListContacts returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, "silver")
+
+	cleared, err := f.store.UpdateContact(f.ctx, ContactIDOf(ids.UUID(created.Id)), contacts.UpdateContactInput{
+		Clear: []string{col}, CustomFields: map[string]any{col: nil},
+	})
+	if err != nil {
+		t.Fatalf("clear custom value: %v", err)
+	}
+	assertNoCF(t, cleared.AdditionalProperties, col)
 }
 
 func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
@@ -173,6 +181,14 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 		t.Fatalf("ListCompanies returned %d rows, want 1", len(list))
 	}
 	assertCF(t, list[0].AdditionalProperties, col, "apac")
+
+	cleared, err := f.store.UpdateCompany(f.ctx, companyIDOf(ids.UUID(created.Id)), contacts.UpdateCompanyInput{
+		Clear: []string{col}, CustomFields: map[string]any{col: nil},
+	})
+	if err != nil {
+		t.Fatalf("clear custom value: %v", err)
+	}
+	assertNoCF(t, cleared.AdditionalProperties, col)
 }
 
 // Lead's custom-field round trip + the replay/disqualify read paths live in

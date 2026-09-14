@@ -5,8 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button, OverflowMenu } from "../design-system/atoms";
-import { ContactEditMergeArchive } from "./contacteditmergearchive";
-import { useObjectCustomFields } from "./customfields.form";
+import { ContactRecordActions } from "./contactrecordactions";
 import {
   installFetchStub,
   jsonResponse,
@@ -59,12 +58,10 @@ function ContactMenu({
   contact,
   disabledReasonId,
 }: Readonly<{ contact: Contact; disabledReasonId?: string }>) {
-  const cf = useObjectCustomFields("contact");
   return (
     <OverflowMenu label="More actions">
-      <ContactEditMergeArchive
+      <ContactRecordActions
         contact={contact}
-        cf={cf}
         disabledReasonId={disabledReasonId}
         overlay={false}
         beforeArchive={
@@ -96,7 +93,7 @@ export const OpenMenu: Story = {
     // The panel portals to the body, so it is reached through `screen` and
     // never through a canvas-scoped query.
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByTestId("edit-record");
+    await screen.findByTestId("archive-record");
   },
 };
 
@@ -121,6 +118,6 @@ export const RefusedByArchive: Story = {
   },
   play: async () => {
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));
-    await screen.findByTestId("edit-record");
+    await screen.findByTestId("archive-record");
   },
 };

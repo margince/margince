@@ -8,7 +8,10 @@ import { useRecordWriteRefusal } from "../app/capability";
 import { PageAsideToggle, usePageAside } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { useHasUnsavedChanges } from "../app/unsaved";
 import { useUrlParams } from "../app/urlstate";
+import { useFoldedViewport } from "../app/viewport";
+import { Button, Modal } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { ContactLink } from "../design-system/contactlink";
 import {
@@ -18,36 +21,28 @@ import {
 } from "../design-system/identityline";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { OpenEmailDrawer } from "../design-system/openemaildrawer";
+import { Popover } from "../design-system/popover";
 import { liveProjects } from "../design-system/projectpicker";
 import { RecordTabs } from "../design-system/recordtabs";
+import { ProvenanceTag } from "../design-system/trust";
+import { formatDateAbbrev } from "../format/format";
 import { linkedinUrl } from "../format/weburl";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem, useSorMode } from "./common";
+import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
 import { ComposeModal } from "./compose";
-import { ConsentSection } from "./consent";
 import { ContactAccess } from "./contactaccess";
 import { ContactActions } from "./contactactions";
-import {
-  ContactBriefCard,
-  ContactCommercialCard,
-  ContactCommitmentsCard,
-  ContactMattersCard,
-  hasCommercial,
-  hasMatters,
-} from "./contactcards";
-import { EnrichedFields } from "./contactcorrections";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { ContactFilesTab } from "./contactfiles";
-import { ContactMemory } from "./contactmemory";
 import { ContactNetworkTab } from "./contactnetwork";
+import { ContactOverview } from "./contactoverview";
 import {
   BRIEF_PARAM,
   COMPOSE_PARAM,
   THREAD_PARAM,
 } from "./contactpage.address";
 import { ContactRail } from "./contactrail";
-import { ContactReadings } from "./contactreadings";
 import { ContactResearchTab } from "./contactresearch";
 import { CONTACT_TABS, type ContactTab, contactTabRoute } from "./contacttab";
 import {
@@ -55,14 +50,11 @@ import {
   ContactMeetingsTab,
   ContactTimelineTab,
 } from "./contacttabs";
-import { ContactToday } from "./contacttoday";
 import { transportForActivity, useTransports } from "./contacttransports";
-import { useObjectCustomFields } from "./customfields.form";
 import { rosterOwnerName, useRoster, useRosterPartial } from "./entityref";
 import { LogActivityAction } from "./logactivity";
 import { ContactMeetingBrief } from "./meetingbrief";
 import { useOpenEmail } from "./openemail";
-import { RecordReading, RecordReadingPair } from "./record360";
 import { RecordEmailAside } from "./recordemail";
 import {
   useMailboxConnected,
@@ -289,10 +281,16 @@ export function ContactPageV2({
   const t = useT();
   const recordZone = useRecordZone();
   const details = usePageAside();
+  const narrow = useFoldedViewport();
+  const [mobileDetails, setMobileDetails] = useState(false);
+  const detailsTitle = useId();
+  const detailsDirty = useHasUnsavedChanges("details");
+  const closeMobileDetails = () => {
+    if (!detailsDirty) setMobileDetails(false);
+  };
   // Read at screen level and handed down, so the schema request runs BESIDE
   // the contact's rather than after it — an edit opened before this landed
   // would otherwise offer a form with no custom fields on it.
-  const cf = useObjectCustomFields("contact");
   const view = useQuery({
     queryKey: ["contact360", id],
     queryFn: async () => {
@@ -404,6 +402,28 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
+  const contactDetails = (
+    <>
+      <ContactRail
+        view={view.data}
+        guard={guard.data}
+        guardLoading={guard.isPending}
+        guardFailed={guard.isError}
+        onRetryGuard={() => {
+          void guard.refetch();
+        }}
+        firstName={firstName}
+        onExplain={() => navigate({ screen: "contacts", id })}
+      />
+      <ContactEmailPanel
+        contactId={id}
+        recordAddress={contact.primary_email ?? undefined}
+        overlay={overlay}
+        archived={Boolean(contact.archived_at)}
+      />
+    </>
+  );
+
   return (
     <div className="wrap">
       {/* Inside the gutter, not around it: the page's root is what insets it,
@@ -415,25 +435,7 @@ export function ContactPageV2({
           // true of the CONTACT does not belong to whichever part of them is open,
           // so it does not move when a tab changes. The same pane, fold and
           // memory of it as every other record page.
-          aside={
-            details.open ? (
-              <>
-                <ContactRail
-                  view={view.data}
-                  guard={guard.data}
-                  firstName={firstName}
-                  onExplain={() => navigate({ screen: "contacts", id })}
-                  onOpenEmail={setOpenEmail}
-                />
-                <ContactEmailPanel
-                  contactId={id}
-                  recordAddress={contact.primary_email ?? undefined}
-                  overlay={overlay}
-                  archived={Boolean(contact.archived_at)}
-                />
-              </>
-            ) : undefined
-          }
+          aside={!narrow && details.open ? contactDetails : undefined}
           name={contact.full_name}
           avatarSrc={null}
           subtitle={<ContactSubtitle view={view.data} />}
@@ -446,7 +448,6 @@ export function ContactPageV2({
             <ContactActions
               view={view.data}
               contactId={id}
-              cf={cf}
               overlay={overlay}
               onWrite={() => openComposer("")}
               onResearch={() => setDrawer("research")}
@@ -477,7 +478,20 @@ export function ContactPageV2({
               // The switch for the details pane, at the end of the tab row: it
               // chooses what the page shows beside the work, so it stands with
               // the controls that choose what the work column shows.
-              trailing={<PageAsideToggle />}
+              trailing={
+                <PageAsideToggle
+                  label={t("contact.overview.detailsPermissions")}
+                  controlled={
+                    narrow
+                      ? {
+                          open: mobileDetails,
+                          label: t("contact.overview.detailsPermissions"),
+                          onToggle: () => setMobileDetails((open) => !open),
+                        }
+                      : undefined
+                  }
+                />
+              }
               labels={{
                 overview: t(TAB_LABEL_KEYS.overview),
                 timeline: t(TAB_LABEL_KEYS.timeline),
@@ -501,69 +515,17 @@ export function ContactPageV2({
           }
         >
           {tab === "overview" && (
-            <div className="record-stack">
-              {/* The readings lead the overview, under the strip that chose it —
-                the same place the account page puts its own. They belong to
-                THIS body rather than to the record: the Deals tab is a list of
-                deals and the Documents tab a filing cabinet, and a row of
-                relationship readings over either is a header for a page it is
-                not describing. */}
-              <ContactReadings
-                view={view.data}
-                onOpenTab={(next) => navigate(contactTabRoute(id, next))}
-              />
-              {/* ONE READING, IN PARTS — the shape every record page reads in:
-                the call with the thread it was read from, the day's work, and
-                under them the two sections a reader consults rather than
-                reads. What was said lately and what is owed are the pair,
-                because the moment above is argued from exactly those two. */}
-              <RecordReading>
-                <ContactToday
-                  moment={view.data.moment}
-                  name={contact.full_name}
-                  view={view.data}
-                  onAction={runAction}
-                  onOpenTasks={() => navigate({ screen: "worklist" })}
-                  onOpenEmail={setOpenEmail}
-                />
-                <RecordReadingPair>
-                  <ContactMemory view={view.data} onOpenEmail={setOpenEmail} />
-                  <ContactCommitmentsCard
-                    view={view.data}
-                    firstName={firstName}
-                  />
-                </RecordReadingPair>
-              </RecordReading>
-              {/* The contact in prose, under the reading of it: the moment
-                answers what to DO, this answers who they ARE to us, in
-                sentences with their sources under them. */}
-              <ContactBriefCard
-                brief={brief.data}
-                loading={brief.isLoading}
-                view={view.data}
-                onOpenEmail={setOpenEmail}
-              />
-              {(hasCommercial(view.data) || hasMatters(view.data)) && (
-                <RecordReadingPair>
-                  {hasCommercial(view.data) && (
-                    <ContactCommercialCard view={view.data} />
-                  )}
-                  {hasMatters(view.data) && (
-                    <ContactMattersCard
-                      view={view.data}
-                      firstName={firstName}
-                    />
-                  )}
-                </RecordReadingPair>
-              )}
-              {/* What this contact has agreed to, and the one way to ask them
-                directly. It renders on a thin record too: what you may send is
-                a live fact whether or not anyone has written to them yet. */}
-              <ConsentSection contactId={id} contact={view.data.contact} />
-              {/* The fields Margince read off a signature or a card, and the
-                one place a reader can confirm or correct them. */}
-              <EnrichedFields contactId={id} view={view.data} />
-            </div>
+            <ContactOverview
+              view={view.data}
+              brief={brief.data}
+              briefLoading={brief.isLoading}
+              briefFailed={brief.isError}
+              onRetryBrief={() => {
+                brief.refetch();
+              }}
+              onAction={runAction}
+              onOpenEmail={setOpenEmail}
+            />
           )}
 
           <ContactTabPanel
@@ -611,6 +573,29 @@ export function ContactPageV2({
             onClose={() => setDrawer(null)}
           />
         </RecordView>
+        {narrow && mobileDetails && (
+          <Modal
+            open
+            onClose={closeMobileDetails}
+            labelledBy={detailsTitle}
+            placement="right"
+          >
+            <div className="pe-drawer-title">
+              <h2 id={detailsTitle}>
+                {t("contact.overview.detailsPermissions")}
+              </h2>
+              <Button
+                small
+                variant="ghost"
+                onClick={closeMobileDetails}
+                reason={detailsDirty ? t("record.finishFieldEdit") : undefined}
+              >
+                {t("common.close")}
+              </Button>
+            </div>
+            {contactDetails}
+          </Modal>
+        )}
       </ContactWriteTo>
     </div>
   );
@@ -794,6 +779,9 @@ function ContactIdentityLine({
   view,
 }: Readonly<{ view: Contact360 }>): ReactNode {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useRecordZone();
+  const viewerId = useViewerId();
   // The owner off the roster's first page, as the deal's facts read theirs.
   const roster = useRoster("user", Boolean(view.contact.owner_id));
   const rosterPartial = useRosterPartial(
@@ -876,6 +864,26 @@ function ContactIdentityLine({
             t,
             t("contact.page.ownerUnassigned"),
           )}
+        </IdentityFact>
+        <IdentityFact quiet>
+          <Popover
+            label={
+              <>
+                {t("history.field.source")}:{" "}
+                <ProvenanceTag
+                  provenance={provenanceOf(contact.captured_by, viewerId)}
+                />
+              </>
+            }
+          >
+            <p className="t-body">
+              {contact.source || t("trust.sourceUnknown")}
+            </p>
+          </Popover>
+        </IdentityFact>
+        <IdentityFact quiet>
+          {t("list.created")}:{" "}
+          {formatDateAbbrev(contact.created_at, locale, zone)}
         </IdentityFact>
         <ContactAccess key={contact.id} contact={contact} />
       </IdentityLine>

@@ -11,11 +11,10 @@ import { Button, OverflowMenu } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
 import { useMe } from "./common";
-import { ContactEditMergeArchive } from "./contacteditmergearchive";
+import { ContactRecordActions } from "./contactrecordactions";
 import { contactTabRoute } from "./contacttab";
 import type { Transport } from "./contacttransports";
 import { primaryTransportAction, useTransports } from "./contacttransports";
-import type { ObjectCustomFields } from "./customfields.form";
 import { EmailVerb } from "./recordemail";
 import { ShareAction } from "./share";
 
@@ -58,7 +57,6 @@ function writeRefusal(
 export function ContactActions({
   view,
   contactId,
-  cf,
   overlay,
   onWrite,
   onResearch,
@@ -69,8 +67,7 @@ export function ContactActions({
   view: Contact360;
   contactId: string;
   // Read at screen level and handed down so the custom-field schema request
-  // runs BESIDE the contact's. See ContactEditMergeArchive's own prop.
-  cf: ObjectCustomFields;
+  // runs BESIDE the contact's. See ContactRecordActions's own prop.
   // LogActivityAction itself renders nothing in overlay — a mirrored
   // workspace has no activity write of its own, the same fact
   // ContactEmailPanel already states for the record's email box — so a
@@ -186,9 +183,8 @@ export function ContactActions({
           is not search, and the timeline gets the honest name the product
           already uses for it everywhere else. */}
       <OverflowMenu label={t("record.moreActions")}>
-        <ContactEditMergeArchive
+        <ContactRecordActions
           contact={view.contact}
-          cf={cf}
           disabledReasonId={refusedReasonId}
           overlay={overlay}
           beforeArchive={

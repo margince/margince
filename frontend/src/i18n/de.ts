@@ -459,6 +459,25 @@ export const de = {
   "record.chronologyLoading": "Änderungsverlauf wird gelesen…",
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
+
+  "record.fieldRequired": "Dieses Feld ist erforderlich.",
+  "record.registration": "Registrierung",
+  "record.leadProfileReadOnly":
+    "LinkedIn kann bei einem Lead nicht geändert werden.",
+  "record.leadStatusAction":
+    "Ändern Sie den Status mit den Lead-Statusaktionen.",
+  "record.leadScoreAction":
+    "Ändern Sie den Score über die begründete Score-Korrektur.",
+  "record.openProfile": "Profil öffnen",
+  "record.fieldsFailed":
+    "Benutzerdefinierte Felder konnten nicht geladen werden.",
+  "record.fieldsLoading": "Benutzerdefinierte Felder werden geladen…",
+  "record.fieldsRetry": "Erneut versuchen",
+
+  "record.visibilityOwner": "Nur Eigentümer",
+  "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
+  "record.finishFieldEdit":
+    "Speichern oder verwerfen Sie die aktuelle Änderung, bevor Sie Details schließen.",
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
@@ -959,13 +978,19 @@ export const de = {
   "company.filterLifecycleAll": "Alle Phasen",
   "company.filterRelTypeAll": "Alle Typen",
   "company.filterSizeBandAll": "Alle Größen",
+  "consent.confirmRecipient": "Senden an {address}",
+  "consent.guardFailed":
+    "Kommunikationsberechtigungen konnten nicht geladen werden.",
+  "consent.permissionScope":
+    "Berechtigungen gelten für den genannten Zweck. Konto- und Servicemitteilungen erlauben keine Verkaufs- oder Marketingnachrichten; jede Nachricht wird vor dem Versand geprüft.",
+  "consent.manage": "Einwilligung und Nachweise verwalten",
   "contact.consent": "Einwilligung",
-  "consent.grant": "Erteilen",
+  "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
     "Von einem Mitarbeiter im CRM erfasst, der bestätigt hat, dass dieser Kontakt seine Einwilligung für {label} außerhalb des Produkts erteilt hat. Ihm wurde hier kein Text angezeigt.",
   "consent.withdraw": "Widerrufen",
   "consent.doiBySubject":
-    "Diesen Zweck bestätigt der Kontakt selbst – über einen Link an seine eigene Adresse. Nutzen Sie unten „Um Bestätigung der Daten bitten“.",
+    "Nur der Kontakt selbst kann diesen Zweck über einen Link an seine gespeicherte Adresse bestätigen. Nutzen Sie die Bestätigungsanfrage unter Kommunikationsberechtigungen.",
   "consent.askToConfirm": "Um Bestätigung der Daten bitten",
   "consent.askToConfirmWhat":
     "Schickt diesem Kontakt einen persönlichen Link: Er sieht, was ihr über ihn gespeichert habt, kann es korrigieren und sagen, ob er von euch hören möchte. Der Link geht an seine hinterlegte Adresse — woandershin könnt ihr ihn nicht schicken.",
@@ -976,7 +1001,7 @@ export const de = {
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes": "Diese Firma erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":
-    "Ausgehende Kommunikation ist pro Zweck standardmäßig gesperrt: ein Versand wird blockiert, sofern keine aktive, nachgewiesene Einwilligung für diesen Zweck vorliegt. Eine Einwilligung für einen Zweck berechtigt niemals einen anderen.",
+    "Dieser Verlauf dokumentiert Einwilligungen je Zweck. Andere dokumentierte Grundlagen können eine Kommunikation erlauben; jede Nachricht wird vor dem Versand erneut geprüft.",
   "consent.basis": "Grundlage: {basis}",
   "consent.proofLog": "Nachweisprotokoll",
   "consent.proofEmpty":
@@ -1038,7 +1063,7 @@ export const de = {
   "co.strip.noOpenDeals": "Keine offenen Deals",
   "co.strip.pipeline": "Offene Pipeline",
   "co.description.label": "Beschreibung",
-  "co.description.placeholder": "Beschreibung hinzufügen",
+
   "co.strip.netInvoiced": "Netto fakturiert · 12 Monate",
   "co.strip.notAssessed": "Nicht bewertet",
   "co.strip.lifetimeOf": "{amount} gesamt",
@@ -1737,7 +1762,7 @@ export const de = {
     "Noch keine Kontakte. Niemand, dem man schreiben kann.",
   "co.rail.contacts.add": "Kontakt hinzufügen",
   "co.rail.contacts.inTouch": "Bereits mit ihnen in Kontakt",
-  "co.rail.details.all": "Alle Felder",
+
   "co.commercial.title": "Kommerziell",
   "co.commercial.lostFigure": "Verlorene Deals",
   "co.commercial.allDeals": "Alle Deals",
@@ -2251,7 +2276,7 @@ export const de = {
   "lead.scoreNoSignals": "Keine qualifizierenden Signale",
   "lead.source": "Quelle",
   "lead.project": "Projekt",
-  "lead.openLinkedIn": "LinkedIn-Profil öffnen",
+
   "lead.filterSource": "Quelle",
   "lead.filterSourceAll": "Alle Quellen",
   "lead.source.manual": "Manuell angelegt",
@@ -2377,7 +2402,7 @@ export const de = {
     "Diese Leads konnten nicht gelesen werden. Der Z\u00e4hler oben gilt weiterhin.",
   "lead.boardTerminalOnly":
     "Keiner dieser Leads ist noch offen \u2014 sie z\u00e4hlen unter Qualifiziert und Disqualifiziert.",
-  "contact.fromLead": "Aus Lead übernommen",
+
   "lead.mergedTitle": "Mit einem anderen Lead zusammengeführt",
   "lead.mergedBody":
     "Dieser Lead war derselbe Interessent wie ein anderer. Verlauf, Einwilligung und Score liegen jetzt dort; dieser Datensatz bleibt als Nachweis.",
@@ -2605,7 +2630,7 @@ export const de = {
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
   "deal.pendingApprovals": "Wartet auf deine Bestätigung",
-  "deal.edit": "Deal bearbeiten",
+
   "deal.ownerKeep": "Aktuellen Inhaber behalten",
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
@@ -2698,17 +2723,7 @@ export const de = {
   "outcomeReview.noAnswer": "Nicht beantwortet",
   "outcomeReview.notes": "Sonstiges",
   "deal.commercialContext": "Kaufmännischer Kontext",
-  "deal.commercialEdit": "Bearbeiten",
-  "deal.commercialAdd": "Kontext festhalten",
-  "deal.commercialEditTitle": "Kommerzieller Kontext",
-  "deal.commercialSave": "Kontext speichern",
-  "deal.commercialEmpty": "Noch nichts festgehalten",
-  "deal.commercialEmptyDetail":
-    "Warum es diesen Deal gibt, wie wichtig er ist, woher er kam und was er pro Jahr wert ist.",
-  "deal.arrHint": "Der wiederkehrende Wert für ein Jahr, in {currency}.",
-  "deal.arrNeedsCurrency":
-    "Erwarteter ARR braucht eine Währung. Legen Sie Wert und Währung zuerst unter „Deal bearbeiten“ fest.",
-  "deal.arrClear": "Entfernen",
+
   "deal.arrFromOffer":
     "Der erwartete ARR stammt aus dem angenommenen Angebot und wird hier nicht bearbeitet.",
   "deal.brief": "Deal-Briefing",
@@ -2717,12 +2732,11 @@ export const de = {
   "deal.briefLess": "Weniger anzeigen",
   "deal.briefEdit": "Bearbeiten",
   "deal.briefAdd": "Briefing schreiben",
-  "deal.briefEditTitle": "Das Deal-Briefing",
+
   "deal.briefEmpty": "Noch kein Briefing geschrieben",
   "deal.briefEmptyDetail":
     "Halten Sie fest, was die Kundschaft braucht und wie ein Gewinn aussieht, damit der Nächste es nicht rekonstruieren muss.",
-  "deal.briefSave": "Briefing speichern",
-  "deal.briefTooLong": "Ein Briefing umfasst höchstens {max} Zeichen.",
+
   "deal.motion": "Geschäftsart",
   "deal.motionUnset": "Nicht gesetzt",
   "deal.motionNewBusiness": "Neugeschäft",
@@ -2738,7 +2752,7 @@ export const de = {
   "deal.priorityLow": "Niedrig",
   "deal.acquisitionSource": "Akquisequelle",
   "deal.expectedArr": "Erwarteter ARR",
-  "deal.monthlyEquivalent": "Monatlicher Gegenwert",
+
   "deal.monthlyApproximate": "ca.",
   "assignments.title": "Verantwortlich",
   "assignments.noAccessNote":
@@ -3387,7 +3401,7 @@ export const de = {
   "create.industry": "Branche",
   "create.sizeBand": "Unternehmensgröße",
   "co.address.summary": "Adresse",
-  "co.address.add": "Adresse hinzufügen",
+
   "create.addressLine1": "Straße und Hausnummer",
   "create.addressLine2": "Adresszusatz",
   "create.city": "Stadt",
@@ -3406,23 +3420,14 @@ export const de = {
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.addDomain": "Domain hinzufügen",
-  "field.addLegalName": "Rechtlichen Namen hinzufügen",
-  "field.addIndustry": "Branche hinzufügen",
-  "field.addLinkedinUrl": "LinkedIn-URL hinzufügen",
+
   "field.addRegisterVat": "USt-IdNr. hinzufügen",
   "field.addRegisteredAddress": "Registeranschrift hinzufügen",
-  "field.addFullName": "Namen hinzufügen",
+
   "field.addTitle": "Titel hinzufügen",
-  "field.addAddressLine1": "Straße und Hausnummer hinzufügen",
-  "field.addAddressLine2": "Adresszusatz hinzufügen",
-  "field.addPostalCode": "Postleitzahl hinzufügen",
-  "field.addCity": "Stadt hinzufügen",
-  "field.addRegion": "Bundesland / Region hinzufügen",
-  "field.addCountry": "Ländercode hinzufügen, z. B. DE",
-  "field.country": "Land",
+
   "field.domain": "Domain",
-  "field.domainRequired":
-    "Eine Domain kann hier nicht gelöscht werden — dafür den vollständigen Editor verwenden.",
+
   "field.emailType": "Typ",
   "field.emailWork": "Geschäftlich",
   "field.emailPersonal": "Privat",
@@ -8585,7 +8590,7 @@ export const de = {
   "contact.page.owner": "Zuständig",
   "contact.page.ownerUnassigned": "Nicht zugewiesen",
   "contact.page.linkedin": "LinkedIn",
-  "contact.page.openProfile": "Profil öffnen",
+
   "contact.rail.detailsTitle": "Details",
   "contact.rail.archivedReadOnly":
     "Dieser Kontakt ist archiviert. Stelle ihn wieder her, um hier etwas zu ändern.",
@@ -8654,23 +8659,26 @@ export const de = {
   "contact.moment.rule.open_promise": "Offenes Versprechen",
   "contact.moment.rule.public_signal": "Öffentlich gesagt",
   "contact.moment.rule.missing_next_step": "Nichts geplant",
-  "contact.moment.rule.thin_relationship": "Nur ein Draht",
+  "contact.moment.rule.thin_relationship": "Keine Interaktionen erfasst",
   "contact.moment.rule.nothing_needed": "Nichts zu tun",
   "contact.moment.evidence.activity": "Aus einem Austausch",
   "contact.moment.evidence.task": "Aus einer Aufgabe",
   "contact.moment.evidence.relationship_change":
     "Aus einer Änderung am Datensatz",
-  "contact.today.source_one": "{count} Beleg",
-  "contact.today.source_other": "{count} Belege",
-  "contact.today.updated": "Aktualisiert {when}",
-  "contact.today.freshToday": "heute",
-  "contact.today.freshYesterday": "gestern",
-  "contact.today.freshDaysAgo": "vor {count} Tagen",
+
+  "contact.overview.detailsPermissions": "Details & Berechtigungen",
+  "contact.overview.partial":
+    "Einige Bereiche sind für Ihre Rolle nicht verfügbar. Diese Zusammenfassung umfasst die für Sie sichtbaren Einträge.",
+  "contact.overview.coverage":
+    "Berücksichtigt werden die für Sie verfügbaren Einträge.",
+  "contact.overview.about": "Über diesen Kontakt",
+  "contact.overview.profileOnly":
+    "Aus den gespeicherten Kontaktdaten. Ergänzen Sie Kontext, sobald Sie mehr wissen.",
+  "contact.overview.briefFailed":
+    "Der Beziehungsüberblick konnte nicht geladen werden.",
 
   "contact.brief.title": "Beziehungs-Briefing",
   "contact.brief.reading": "Die Beziehung wird gelesen…",
-  "contact.brief.empty":
-    "Es wurde noch nichts erfasst, woraus dieses Briefing geschrieben werden könnte.",
   "contact.brief.sourceActivity": "Gespräch",
   "contact.brief.sourceDeal": "Deal-Notizen",
 
@@ -8727,7 +8735,10 @@ export const de = {
   "contact.rail.explain": "Erklären",
   "contact.rail.direction": "Richtung",
   "contact.rail.twoWay": "Beidseitig",
-  "contact.rail.oneSided": "Einseitig",
+  "contact.rail.noDirection": "Keine Richtung erfasst",
+  "contact.overview.unavailable": "Nicht angezeigt: {sections}.",
+  "contact.rail.inboundOnly": "Nur eingehend",
+  "contact.rail.outboundOnly": "Nur ausgehend",
   "contact.rail.lastReply": "Letzte Antwort",
   "contact.rail.coverage": "Abdeckung",
   "contact.rail.colleagues_one": "{count} Kollegin oder Kollege",
@@ -8750,15 +8761,12 @@ export const de = {
   "contact.rail.repliedDaysAgo_other": "Antwort vor {count} Tagen",
   "contact.rail.singleThreaded": "Nur ein Kontakt in diesem Deal",
   "contact.rail.noMeetingBooked": "Kein nächster Termin vereinbart",
-  "contact.rail.consentTitle": "Einwilligung & Kanäle",
+  "contact.rail.consentTitle": "Kommunikationsberechtigungen",
   "contact.rail.email": "E-Mail",
   "contact.rail.phone": "Telefon",
   "contact.rail.noEmailAddress": "Keine Adresse hinterlegt",
   "contact.rail.noPhoneNumber": "Keine Nummer hinterlegt",
   "contact.rail.channelNotDeliverable": "Nicht zustellbar",
-  "contact.rail.recentActivity": "Letzte Aktivität",
-  "contact.rail.nothingCaptured": "Noch nichts erfasst.",
-  "contact.rail.viewAllActivity": "Alle Aktivitäten ansehen",
   "contact.drawer.close": "Schließen",
   "richtext.bold": "Fett",
   "richtext.italic": "Kursiv",

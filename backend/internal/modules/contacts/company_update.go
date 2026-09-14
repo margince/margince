@@ -100,6 +100,7 @@ func (s *Store) updateCompanyInTx(
 	if err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company before update: %w", err)
 	}
+	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
 	p, err := buildCompanyPatch(ctx, tx, current, in)
 	if err != nil {
 		return crmcontracts.Company{}, err

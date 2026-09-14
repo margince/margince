@@ -447,30 +447,23 @@ const missingNextStepMoment: components["schemas"]["ContactMoment"] = {
 
 const thinRelationshipMoment: components["schemas"]["ContactMoment"] = {
   claim_key: "thin_relationship:p-1",
-  evidence_fingerprint: "fp-thin-1",
+  evidence_fingerprint: "fp-empty",
   rule: "thin_relationship",
   rule_version: "v1",
-  headline: "Dana is the only contact captured at Brandt Automotive.",
-  why_now: "One thread carries the whole account, nobody else is on record.",
+  headline: "No interactions recorded",
+  why_now:
+    "No interactions or colleague connections were found in the records available to you.",
   confidence: "observed_fact",
-  freshness_at: "2026-08-13T09:00:00Z",
-  evidence: [
-    {
-      type: "relationship_change",
-      label: "One employment edge on this account",
-      observed_at: "2026-06-01T08:00:00Z",
-    },
-  ],
+  evidence: [],
   recommended_action: {
-    kind: "ask_colleague",
-    label: "Ask who else to loop in",
+    kind: "log_activity",
+    label: "Log an interaction",
     state: "available",
   },
 };
 
 // Rung 10, the quiet-success case: nothing needs the reader today, and it
 // renders through this same component rather than an empty card
-// (contacttoday.tsx's own comment on `isQuiet`).
 const nothingNeededMoment: components["schemas"]["ContactMoment"] = {
   claim_key: "nothing_needed:p-1",
   evidence_fingerprint: "fp-nothingneeded-1",
@@ -800,7 +793,6 @@ export const LeadMoment: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <ContactToday
-          name="Anna Weber"
           view={populated}
           moment={meetingPrepMoment}
           onAction={() => {}}
@@ -815,7 +807,6 @@ export const LeadMomentWarning: Story = {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <ContactToday
-          name="Anna Weber"
           view={populated}
           moment={goneQuietMoment}
           onAction={() => {}}
@@ -853,7 +844,6 @@ export const LeadMomentLadder: Story = {
       >
         {REMAINING_MOMENTS.map((moment) => (
           <ContactToday
-            name="Anna Weber"
             view={populated}
             key={moment.claim_key}
             moment={moment}

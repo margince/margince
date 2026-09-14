@@ -33,11 +33,15 @@ type BriefEvidence = components["schemas"]["CompanyBriefEvidence"];
 export function ContactBriefCard({
   brief,
   loading,
+  failed = false,
+  onRetry,
   view,
   onOpenEmail,
 }: Readonly<{
   brief: ContactBrief | undefined;
   loading: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
   view: Contact360;
   /**
    * Opens a cited message in the record's email drawer. The page owns the
@@ -47,45 +51,64 @@ export function ContactBriefCard({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  const viewerId = useViewerId();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const firstName = view.contact.full_name.split(" ")[0];
   // Resolved from the timeline the page already read rather than fetched: a
   // chip can never name a record the page beside it is withholding.
   const citedActivities = new Map(
     (view.activities?.data ?? []).map((row) => [row.id, row]),
   );
   const written = brief && brief.sentences.length > 0;
+  if (!loading && !written && !failed) {
+    return (
+      <Panel title={t("contact.overview.about")}>
+        <PanelBody>
+          <p className="pe-prose t-body">
+            {[
+              view.contact.full_name,
+              view.contact.title,
+              view.contact.employer?.company_name,
+              view.contact.address?.city,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="t-sub">{t("contact.overview.profileOnly")}</p>
+        </PanelBody>
+      </Panel>
+    );
+  }
   return (
     <Panel
       title={t("contact.brief.title")}
       // A machine's reading in EVERY state it can be in, so the tint rides the
       // panel; which writer answered is sourcing, and sits in the foot band.
       tone="ai"
-      titleAction={
-        <>
-          {written && (
+      titleAction={<Badge tone="ai">{t("co.assistant.aiTag")}</Badge>}
+      footer={
+        written ? (
+          <>
+            <WrittenBy by={brief.generated_by} />
             <span className="t-caption">
               {t("co.brief.generatedAt", {
                 when: formatDate(brief.generated_at, locale, recordZone),
               })}
             </span>
-          )}
-          <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-        </>
+          </>
+        ) : undefined
       }
-      footer={written ? <WrittenBy by={brief.generated_by} /> : undefined}
     >
       <PanelBody>
         {loading && (
           <p className="pe-prose t-body">{t("contact.brief.reading")}</p>
         )}
-        {!loading && !written && (
-          // Honest rather than blank: a brief with nothing to say has nothing to
-          // say, and inventing prose to fill the card is the one thing the
-          // grounding rule forbids.
-          <p className="pe-prose t-body">{t("contact.brief.empty")}</p>
+        {failed && (
+          <p role="alert">
+            {t("contact.overview.briefFailed")}{" "}
+            <Button small variant="ghost" onClick={onRetry}>
+              {t("common.retry")}
+            </Button>
+          </p>
         )}
         {written && (
           <>
@@ -127,30 +150,6 @@ export function ContactBriefCard({
           </>
         )}
       </PanelBody>
-      <PanelBody className="pe-brief-state">
-        {/* The band under the prose: the three detail panels below only render
-            when they have something beyond their own empty sentence, so this
-            is the one place a reader always finds all three states named,
-            whether or not the panel that expands on them is present. */}
-        <div className="pe-brief-block">
-          <h3 className="pe-brief-label t-caption">
-            {t("contact.commercial.title")}
-          </h3>
-          <p className="pe-brief-line">{commercialLine(view, t, locale)}</p>
-        </div>
-        <div className="pe-brief-block">
-          <h3 className="pe-brief-label t-caption">
-            {t("contact.loops.title")}
-          </h3>
-          <p className="pe-brief-line">{commitmentsLine(view, viewerId, t)}</p>
-        </div>
-        <div className="pe-brief-block">
-          <h3 className="pe-brief-label t-caption">
-            {t("contact.matters.title", { name: firstName })}
-          </h3>
-          <p className="pe-brief-line">{mattersLine(view, t)}</p>
-        </div>
-      </PanelBody>
     </Panel>
   );
 }
@@ -168,32 +167,6 @@ export function hasCommercial(view: Contact360): boolean {
     commercial.role != null ||
     commercial.committee.length > 0
   );
-}
-
-function commercialLine(
-  view: Contact360,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string {
-  const commercial = view.commercial;
-  if (!commercial) {
-    return t("contact.commercial.withheld");
-  }
-  const deal = commercial.deal;
-  if (deal) {
-    const amount =
-      deal.amount_minor != null && deal.currency
-        ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
-        : null;
-    return [deal.title, amount].filter(Boolean).join(" · ");
-  }
-  if (commercial.role) {
-    return readableRole(commercial.role);
-  }
-  if (commercial.committee.length > 0) {
-    return t("contact.commercial.committee");
-  }
-  return t("contact.commercial.noDeal");
 }
 
 // One cited source, named for what it is.
@@ -308,19 +281,6 @@ export function hasMatters(view: Contact360): boolean {
       (claim) => claim.kind === row.kind && claim.status !== "dismissed",
     ),
   );
-}
-
-function mattersLine(view: Contact360, t: ReturnType<typeof useT>): string {
-  const claims = view.claims ?? [];
-  const present = MATTERS.filter((row) =>
-    claims.some(
-      (claim) => claim.kind === row.kind && claim.status !== "dismissed",
-    ),
-  );
-  if (present.length === 0) {
-    return t("contact.matters.absent");
-  }
-  return present.map((row) => t(row.labelKey)).join(", ");
 }
 
 // Absence has meaning (concept §4.7): a row nobody has said anything about
@@ -447,13 +407,10 @@ const LOOPS: ReadonlyArray<{ kind: string; prefixKey: MessageKey | null }> = [
   { kind: "open_question", prefixKey: "contact.loops.question" },
 ];
 
-// The band's commitments block: the same non-dismissed, loop-kind test the
-// card's row list runs, so an empty band block and an empty panel are always
-// the same fact rather than two independent reads of the claims.
-export function hasCommitments(view: Contact360): boolean {
-  // The band asks only WHETHER there is anything to show, which does not
-  // depend on who is reading.
-  return openLoops(view, undefined).length > 0;
+// Tasks have their own attention list; this decides whether a claim still
+// needs attention. The detail card may also retain completed claims as history.
+export function hasOpenCommitments(view: Contact360): boolean {
+  return openLoops(view, undefined, false).some((loop) => !loop.done);
 }
 
 // Everything this record owes, from BOTH places a promise is written down: a
@@ -475,9 +432,10 @@ export function hasCommitments(view: Contact360): boolean {
 function openLoops(
   view: Contact360,
   viewerId: string | undefined,
+  includeTasks = true,
 ): readonly OpenLoop[] {
   const claims = view.claims ?? [];
-  const tasks = (view.next_steps?.data ?? []).map(
+  const tasks = (includeTasks ? (view.next_steps?.data ?? []) : []).map(
     (task): OpenLoop => ({
       key: task.id,
       // A task can arrive without a subject — one filed without one, and one
@@ -545,34 +503,13 @@ function heldByReader(
   return viewerId !== undefined && assigneeId === viewerId;
 }
 
-function commitmentsLine(
-  view: Contact360,
-  viewerId: string | undefined,
-  t: ReturnType<typeof useT>,
-): string {
-  const openCount = openLoops(view, viewerId).length;
-  if (openCount === 0) {
-    return t("contact.loops.empty");
-  }
-  // The sections this counts are summaries the server caps, so the number is a
-  // floor whenever one of them ran out of room. Printing it flat said "25
-  // open" on a record holding thirty-one, and the six it did not mention are
-  // exactly the ones nobody is looking at.
-  const count = `${openCount} ${t("contact.loops.open")}`;
-  return truncated(view) ? t("contact.loops.atLeast", { count }) : count;
-}
-
-// Whether either section this card reads has more rows than it carried.
-function truncated(view: Contact360): boolean {
-  return view.next_steps?.page.has_more === true;
-}
-
 export function ContactCommitmentsCard({
   view,
   firstName,
-}: Readonly<{ view: Contact360; firstName: string }>) {
+  includeTasks = true,
+}: Readonly<{ view: Contact360; firstName: string; includeTasks?: boolean }>) {
   const t = useT();
-  const rows = openLoops(view, useViewerId());
+  const rows = openLoops(view, useViewerId(), includeTasks);
   return (
     <Panel title={t("contact.loops.title")}>
       {rows.length === 0 && (

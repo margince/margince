@@ -462,6 +462,23 @@ export const vi = {
   "record.chronologyLoading": "Đang đọc lịch sử thay đổi…",
   "record.timeline": "Lịch sử",
   "record.edit": "Sửa",
+
+  "record.fieldRequired": "Trường này là bắt buộc.",
+  "record.registration": "Thông tin đăng ký",
+  "record.leadProfileReadOnly":
+    "Không thể thay đổi LinkedIn của khách hàng tiềm năng.",
+  "record.leadStatusAction":
+    "Dùng các thao tác trạng thái để thay đổi trạng thái.",
+  "record.leadScoreAction": "Dùng chức năng điều chỉnh điểm và cung cấp lý do.",
+  "record.openProfile": "Mở hồ sơ",
+  "record.fieldsFailed": "Không thể tải trường tùy chỉnh.",
+  "record.fieldsLoading": "Đang tải trường tùy chỉnh…",
+  "record.fieldsRetry": "Thử lại",
+
+  "record.visibilityOwner": "Chỉ chủ sở hữu",
+  "record.companyRoutingKey": "Khóa định tuyến công ty",
+  "record.finishFieldEdit":
+    "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng Chi tiết.",
   "record.save": "Lưu",
   "record.saveDone": "Đã lưu “{name}”",
   "record.archiveDone": "Đã lưu trữ “{name}”",
@@ -941,13 +958,18 @@ export const vi = {
   "company.filterLifecycleAll": "Mọi giai đoạn",
   "company.filterRelTypeAll": "Mọi loại",
   "company.filterSizeBandAll": "Mọi quy mô",
+  "consent.confirmRecipient": "Gửi đến {address}",
+  "consent.guardFailed": "Không thể tải quyền liên lạc.",
+  "consent.permissionScope":
+    "Quyền áp dụng cho mục đích được nêu. Thông báo tài khoản và dịch vụ không cho phép gửi bán hàng hoặc tiếp thị; mỗi tin nhắn được kiểm tra trước khi gửi.",
+  "consent.manage": "Quản lý sự đồng ý và lịch sử bằng chứng",
   "contact.consent": "Chấp thuận",
-  "consent.grant": "Cấp chấp thuận",
+  "consent.grant": "Ghi nhận sự đồng ý",
   "consent.operatorWording":
     "Được nhân viên ghi nhận trong CRM, xác nhận rằng liên hệ này đã đồng ý cho {label} bên ngoài sản phẩm. Không có nội dung nào được hiển thị cho họ tại đây.",
   "consent.withdraw": "Rút lại",
   "consent.doiBySubject":
-    "Mục đích này do chính liên hệ đó xác nhận, qua liên kết gửi tới địa chỉ của họ. Hãy dùng “Đề nghị họ xác nhận thông tin” bên dưới.",
+    "Chỉ liên hệ này mới có thể xác nhận mục đích qua liên kết gửi đến địa chỉ đã lưu. Dùng yêu cầu xác nhận trong Quyền liên lạc.",
   "consent.askToConfirm": "Đề nghị họ xác nhận thông tin",
   "consent.askToConfirmWhat":
     "Gửi cho liên hệ này một liên kết riêng để họ xem bạn đang lưu gì về họ, sửa lại nếu sai, và cho biết họ có muốn nhận tin từ bạn không. Liên kết chỉ đến địa chỉ đã lưu của họ; bạn không thể gửi đi nơi khác.",
@@ -958,7 +980,7 @@ export const vi = {
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Tổ chức này chưa theo dõi mục đích chấp thuận nào.",
   "consent.defaultDeny":
-    "Việc gửi ra mặc định bị từ chối theo từng mục đích: một lượt gửi bị chặn trừ khi có sự chấp thuận đang hiệu lực và có bằng chứng cho đúng mục đích đó. Chấp thuận cho một mục đích không bao giờ cho phép một mục đích khác.",
+    "Lịch sử này ghi nhận sự đồng ý cho từng mục đích. Quyền liên lạc có thể dựa trên các căn cứ khác đã ghi nhận; mỗi tin nhắn được kiểm tra lại trước khi gửi.",
   "consent.basis": "Căn cứ: {basis}",
   "consent.proofLog": "Nhật ký bằng chứng",
   "consent.proofEmpty":
@@ -1021,7 +1043,7 @@ export const vi = {
   "co.strip.noOpenDeals": "Không có deal mở",
   "co.strip.pipeline": "Pipeline đang mở",
   "co.description.label": "Mô tả",
-  "co.description.placeholder": "Thêm mô tả",
+
   "co.strip.netInvoiced": "Đã xuất hóa đơn ròng · 12 tháng",
   "co.strip.notAssessed": "Chưa đánh giá",
   "co.strip.lifetimeOf": "{amount} tổng cộng",
@@ -1723,7 +1745,7 @@ export const vi = {
   "co.rail.contacts.empty": "Chưa có liên hệ nào. Không có ai để viết thư.",
   "co.rail.contacts.add": "Thêm liên hệ",
   "co.rail.contacts.inTouch": "Đã liên hệ với họ",
-  "co.rail.details.all": "Tất cả trường",
+
   "co.commercial.title": "Thương mại",
   "co.commercial.lostFigure": "Deal đã thua",
   "co.commercial.allDeals": "Tất cả deal",
@@ -2228,7 +2250,7 @@ export const vi = {
   "lead.scoreNoSignals": "Chưa có tín hiệu đủ điều kiện",
   "lead.source": "Nguồn",
   "lead.project": "Dự án",
-  "lead.openLinkedIn": "Mở hồ sơ LinkedIn",
+
   "lead.filterSource": "Nguồn",
   "lead.filterSourceAll": "Tất cả nguồn",
   "lead.source.manual": "Tạo thủ công",
@@ -2356,7 +2378,7 @@ export const vi = {
     "Không đọc được các khách hàng tiềm năng này. Số lượng ở trên vẫn đúng.",
   "lead.boardTerminalOnly":
     "Không còn mục nào đang mở — chúng được tính ở cột Đã chuyển đổi và Đã loại.",
-  "contact.fromLead": "Từ khách hàng tiềm năng",
+
   "lead.mergedTitle": "Đã gộp vào một khách hàng tiềm năng khác",
   "lead.mergedBody":
     "Khách hàng tiềm năng này hoá ra trùng với một mục khác. Dòng thời gian, chấp thuận và điểm số đã chuyển sang đó; bản ghi này ở lại làm dấu vết.",
@@ -2581,7 +2603,7 @@ export const vi = {
   "deals.cancel": "Huỷ",
   "deals.advanced": "Đã chuyển sang {stage}",
   "deal.pendingApprovals": "Đang chờ bạn xác nhận",
-  "deal.edit": "Sửa deal",
+
   "deal.ownerKeep": "Giữ người phụ trách hiện tại",
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Bỏ giao",
@@ -2670,17 +2692,7 @@ export const vi = {
   "outcomeReview.noAnswer": "Chưa trả lời",
   "outcomeReview.notes": "Nội dung khác",
   "deal.commercialContext": "Bối cảnh thương mại",
-  "deal.commercialEdit": "Sửa",
-  "deal.commercialAdd": "Ghi nhận bối cảnh",
-  "deal.commercialEditTitle": "Bối cảnh thương mại",
-  "deal.commercialSave": "Lưu bối cảnh",
-  "deal.commercialEmpty": "Chưa ghi nhận gì",
-  "deal.commercialEmptyDetail":
-    "Vì sao có thương vụ này, nó quan trọng đến đâu, đến từ đâu, và mỗi năm đáng giá bao nhiêu.",
-  "deal.arrHint": "Giá trị định kỳ cho một năm, tính bằng {currency}.",
-  "deal.arrNeedsCurrency":
-    "ARR dự kiến cần một loại tiền tệ. Hãy đặt giá trị và tiền tệ trong phần sửa thương vụ trước.",
-  "deal.arrClear": "Gỡ bỏ",
+
   "deal.arrFromOffer":
     "ARR dự kiến đến từ báo giá đã được chấp nhận và không sửa ở đây.",
   "deal.brief": "Tóm tắt thương vụ",
@@ -2689,12 +2701,11 @@ export const vi = {
   "deal.briefLess": "Thu gọn",
   "deal.briefEdit": "Sửa",
   "deal.briefAdd": "Viết tóm lược",
-  "deal.briefEditTitle": "Tóm lược thương vụ",
+
   "deal.briefEmpty": "Chưa có tóm lược nào",
   "deal.briefEmptyDetail":
     "Hãy nói rõ khách hàng cần gì và thế nào là thắng, để đồng nghiệp tiếp nhận không phải dựng lại từ đầu.",
-  "deal.briefSave": "Lưu tóm lược",
-  "deal.briefTooLong": "Một bản tóm lược dài nhiều nhất {max} ký tự.",
+
   "deal.motion": "Loại giao dịch",
   "deal.motionUnset": "Chưa đặt",
   "deal.motionNewBusiness": "Khách hàng mới",
@@ -2710,7 +2721,7 @@ export const vi = {
   "deal.priorityLow": "Thấp",
   "deal.acquisitionSource": "Nguồn tiếp cận",
   "deal.expectedArr": "ARR dự kiến",
-  "deal.monthlyEquivalent": "Tương đương hàng tháng",
+
   "deal.monthlyApproximate": "khoảng",
   "assignments.title": "Phụ trách",
   "assignments.noAccessNote":
@@ -3347,7 +3358,7 @@ export const vi = {
   "create.industry": "Ngành",
   "create.sizeBand": "Quy mô công ty",
   "co.address.summary": "Địa chỉ",
-  "co.address.add": "Thêm địa chỉ",
+
   "create.addressLine1": "Số nhà và tên đường",
   "create.addressLine2": "Địa chỉ bổ sung",
   "create.city": "Thành phố",
@@ -3366,23 +3377,14 @@ export const vi = {
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
   "field.addDomain": "Thêm tên miền",
-  "field.addLegalName": "Thêm tên pháp lý",
-  "field.addIndustry": "Thêm ngành",
-  "field.addLinkedinUrl": "Thêm URL LinkedIn",
+
   "field.addRegisterVat": "Thêm mã số thuế",
   "field.addRegisteredAddress": "Thêm địa chỉ đăng ký",
-  "field.addFullName": "Thêm họ và tên",
+
   "field.addTitle": "Thêm chức danh",
-  "field.addAddressLine1": "Thêm số nhà và tên đường",
-  "field.addAddressLine2": "Thêm địa chỉ dòng 2",
-  "field.addPostalCode": "Thêm mã bưu chính",
-  "field.addCity": "Thêm thành phố",
-  "field.addRegion": "Thêm bang / khu vực",
-  "field.addCountry": "Thêm mã quốc gia, ví dụ DE",
-  "field.country": "Quốc gia",
+
   "field.domain": "Tên miền",
-  "field.domainRequired":
-    "Không thể xóa tên miền tại đây — hãy dùng trình chỉnh sửa đầy đủ để xóa.",
+
   "field.emailType": "Loại",
   "field.emailWork": "Công việc",
   "field.emailPersonal": "Cá nhân",
@@ -8464,7 +8466,7 @@ export const vi = {
   "contact.page.owner": "Người phụ trách",
   "contact.page.ownerUnassigned": "Chưa giao",
   "contact.page.linkedin": "LinkedIn",
-  "contact.page.openProfile": "Mở hồ sơ",
+
   "contact.rail.detailsTitle": "Chi tiết",
   "contact.rail.archivedReadOnly":
     "Liên hệ này đã lưu trữ. Khôi phục để thay đổi bất kỳ thông tin nào tại đây.",
@@ -8531,22 +8533,23 @@ export const vi = {
   "contact.moment.rule.open_promise": "Lời hứa còn mở",
   "contact.moment.rule.public_signal": "Nói công khai",
   "contact.moment.rule.missing_next_step": "Chưa có lịch",
-  "contact.moment.rule.thin_relationship": "Chỉ một đầu mối",
+  "contact.moment.rule.thin_relationship": "Chưa ghi nhận tương tác",
   "contact.moment.rule.nothing_needed": "Không cần làm gì",
   "contact.moment.evidence.activity": "Từ một trao đổi",
   "contact.moment.evidence.task": "Từ một công việc",
   "contact.moment.evidence.relationship_change": "Từ một thay đổi trên hồ sơ",
-  "contact.today.source_one": "{count} nguồn",
-  "contact.today.source_other": "{count} nguồn",
-  "contact.today.updated": "Cập nhật {when}",
-  "contact.today.freshToday": "hôm nay",
-  "contact.today.freshYesterday": "hôm qua",
-  "contact.today.freshDaysAgo": "{count} ngày trước",
+
+  "contact.overview.detailsPermissions": "Chi tiết và quyền liên hệ",
+  "contact.overview.partial":
+    "Một số phần không khả dụng với vai trò của bạn. Tóm tắt này chỉ bao gồm các bản ghi bạn có thể xem.",
+  "contact.overview.coverage": "Dựa trên các hồ sơ bạn được phép xem.",
+  "contact.overview.about": "Về liên hệ này",
+  "contact.overview.profileOnly":
+    "Từ thông tin liên hệ đã lưu. Bổ sung ngữ cảnh khi bạn biết thêm.",
+  "contact.overview.briefFailed": "Không thể tải tóm tắt mối quan hệ.",
 
   "contact.brief.title": "Tóm tắt quan hệ",
   "contact.brief.reading": "Đang đọc mối quan hệ…",
-  "contact.brief.empty":
-    "Chưa có gì được ghi nhận để viết bản tóm tắt này từ đó.",
   "contact.brief.sourceActivity": "Cuộc trò chuyện",
   "contact.brief.sourceDeal": "Ghi chú deal",
 
@@ -8603,7 +8606,10 @@ export const vi = {
   "contact.rail.explain": "Giải thích",
   "contact.rail.direction": "Chiều",
   "contact.rail.twoWay": "Hai chiều",
-  "contact.rail.oneSided": "Một chiều",
+  "contact.rail.noDirection": "Chưa ghi nhận chiều liên hệ",
+  "contact.overview.unavailable": "Không hiển thị: {sections}.",
+  "contact.rail.inboundOnly": "Chỉ nhận",
+  "contact.rail.outboundOnly": "Chỉ gửi",
   "contact.rail.lastReply": "Hồi đáp gần nhất",
   "contact.rail.coverage": "Độ phủ",
   "contact.rail.colleagues_one": "{count} đồng nghiệp",
@@ -8626,15 +8632,12 @@ export const vi = {
   "contact.rail.repliedDaysAgo_other": "Đã hồi đáp {count} ngày trước",
   "contact.rail.singleThreaded": "Chỉ một đầu mối trong deal này",
   "contact.rail.noMeetingBooked": "Chưa đặt cuộc họp kế tiếp",
-  "contact.rail.consentTitle": "Đồng ý & kênh liên lạc",
+  "contact.rail.consentTitle": "Quyền liên lạc",
   "contact.rail.email": "Email",
   "contact.rail.phone": "Điện thoại",
   "contact.rail.noEmailAddress": "Chưa có địa chỉ",
   "contact.rail.noPhoneNumber": "Chưa có số",
   "contact.rail.channelNotDeliverable": "Không thể gửi",
-  "contact.rail.recentActivity": "Hoạt động gần đây",
-  "contact.rail.nothingCaptured": "Chưa ghi nhận gì.",
-  "contact.rail.viewAllActivity": "Xem tất cả hoạt động",
   "contact.drawer.close": "Đóng",
   "richtext.bold": "Đậm",
   "richtext.italic": "Nghiêng",

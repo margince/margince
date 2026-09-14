@@ -593,8 +593,8 @@ became a compact rail pane; the grant and withdraw table lives behind Manage.
    "Read the full briefing", written-by and write-it-again. Then any staged
    approval (dashed, Accept / Dismiss), then the reply that is owed.
 5. **Commercial.** The offers table (number, revision, status, value, sent),
-   the FX basis in the zone head, then forecast, wait-until and the custom
-   fields as rows.
+   the FX basis in the zone head, then its offer actions. Forecast and wait-until are edited in Details;
+   custom fields have their own Details section.
 6. **The buying committee.** The map (our circle, their seats, threads only to
    the engaged, a dashed ghost per coverage gap), then the stakeholder table
    with role, contact, talking, dates and edit. Add stakeholder in the zone
@@ -606,7 +606,8 @@ carries it), Related evidence, Documents.
 
 **What merged, moved or went.** The stage stepper moved beside the readings.
 Deal360, the approvals queue and the email box merged into the needs list.
-Offers, the FX line and custom fields merged into Commercial. The committee map,
+Offers and the FX line sit in Commercial. Editable fields and custom fields
+live in Details. The committee map,
 the seats and the stakeholders table merged into one zone, with the read-only
 seats list kept in the rail as the short form. Log activity became a verb, not
 a form on the page. The Documents tab keeps its full list; the rail shows the

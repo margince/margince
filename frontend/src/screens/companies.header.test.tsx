@@ -82,8 +82,7 @@ describe("CompanyScreen — a live record that is not the viewer's to change", (
     // items mount a beat apart threw here — the failure this file sees under a
     // loaded full run and never in isolation.
     const refused = [
-      await openRecordMenu(user, "edit-record"),
-      await screen.findByTestId("archive-record"),
+      await openRecordMenu(user, "archive-record"),
       await screen.findByTestId("share-record"),
     ];
     for (const control of refused) {

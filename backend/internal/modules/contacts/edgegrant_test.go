@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -81,7 +82,7 @@ func TestTheEmployerFilterBoundsTheEdgeWithTheGrant(t *testing.T) {
 	}
 }
 
-// grantVisible is the object half the contact count asks. The count is a fact
+// auth.ReadGranted is the object half the contact count asks. The count is a fact
 // about the employment PAIRS, so a caller refused the edge gets no count —
 // absent, which the field's contract description already specifies for the
 // contact grant, rather than a zero that would be a wrong number on screen.
@@ -99,7 +100,7 @@ func TestTheContactCountNeedsBothTheContactAndTheEdgeGrant(t *testing.T) {
 	}
 	for name, tc := range cases {
 		ctx := edgeGrantCtx(tc.objects)
-		got := grantVisible(ctx, "contact") && grantVisible(ctx, "relationship")
+		got := auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
 		if got != tc.want {
 			t.Errorf("%s: contact count visible = %v, want %v", name, got, tc.want)
 		}

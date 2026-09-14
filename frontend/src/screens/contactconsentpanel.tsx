@@ -1,44 +1,37 @@
 import { Mail, Phone } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId, useState } from "react";
 import type { components } from "../api/schema";
+import { useCanWriteRecord } from "../app/capability";
+import { Button, Modal, Skeleton } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
+import { ConfirmDetailsAction, ConsentSection } from "./consent";
 import { consentWord } from "./contactreadings";
 import { interactionIcon } from "./interactionchrome";
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactConsentGuard = components["schemas"]["ContactConsentGuard"];
 
-// What may be sent to this contact, and why. Extracted from contactrail.tsx
-// unchanged in behaviour.
-//
-// It is the rail's own answer, deliberately narrower than the composer's: the
-// guard answers per PURPOSE about a contact, and the composer answers about a
-// message. A panel that collapsed them would print a permission with no scope
-// on it and be contradicted by the drawer a moment later.
-
-// The action guard, not the proof ledger. It renders even on a thin record,
-// because "may I write to this contact" is a question with an answer whatever
-// else is missing.
-//
-// Every row answers ONE transport, and it answers reachability before consent.
-// A verdict presupposes somewhere to send: reporting "allowed" against mail and
-// phone for a contact captured over a chat channel — no address, no number —
-// asserted a reachability nothing in the record supports, while the transport
-// the CRM can actually reach them on had no row at all.
-//
-// The channel rows come from `contact.reachability`, the record's own read of
-// `contact_channel_identity` — the same binding the reply path resolves a
-// recipient from. They carry the correspondence verdict rather than one of
-// their own because the send gate is per PURPOSE: it resolves the contact and
-// asks the one question, so the transport never enters the answer.
+// The guard describes communication purposes; the drawer holds recorded consent.
 export function ConsentAndChannels({
   view,
   guard,
-}: Readonly<{ view: Contact360; guard: ContactConsentGuard | undefined }>) {
+  loading = false,
+  failed = false,
+  onRetry,
+}: Readonly<{
+  view: Contact360;
+  guard: ContactConsentGuard | undefined;
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
+}>) {
   const t = useT();
   const providerLabel = useProviderLabel();
+  const [manage, setManage] = useState(false);
+  const titleId = useId();
+  const mayWrite = useCanWriteRecord("contact", view.contact);
   const entries = guard?.entries ?? [];
   // WHICH email purpose. The guard answers one verdict per purpose, and taking
   // the first of them painted the Email row with whichever the server happened
@@ -57,62 +50,112 @@ export function ConsentAndChannels({
     (entry) => entry.channel === "email" && entry !== correspondence,
   );
   const phone = entries.find((entry) => entry.channel === "phone");
-  const hasEmail = (view.contact.emails?.length ?? 0) > 0;
+  const emails = view.contact.emails ?? [];
+  const hasEmail = emails.length > 0;
+  const knownRecipient =
+    emails.length === 1 || emails.some((email) => email.is_primary);
   const channels = view.contact.reachability ?? [];
   return (
     <Panel title={t("contact.rail.consentTitle")}>
       <PanelBody>
-        <ConsentRow
-          icon={<Mail size={15} aria-hidden="true" />}
-          label={correspondence?.purpose_label ?? t("contact.rail.email")}
-          reachable={hasEmail}
-          verdict={correspondence?.verdict}
-          reason={correspondence?.reason}
-          unreachableWord={t("contact.rail.noEmailAddress")}
-        />
-        <ConsentRow
-          icon={<Phone size={15} aria-hidden="true" />}
-          label={t("contact.rail.phone")}
-          reachable={(view.contact.phones?.length ?? 0) > 0}
-          verdict={phone?.verdict}
-          unreachableWord={t("contact.rail.noPhoneNumber")}
-        />
-        {/* A blocked identity still gets its row, with `reachable: false`: the
+        {loading ? (
+          <Skeleton width="100%" />
+        ) : failed ? (
+          <p role="alert">
+            {t("consent.guardFailed")}{" "}
+            <Button small variant="ghost" onClick={onRetry}>
+              {t("common.retry")}
+            </Button>
+          </p>
+        ) : (
+          <>
+            <ConsentRow
+              icon={<Mail size={15} aria-hidden="true" />}
+              label={correspondence?.purpose_label ?? t("contact.rail.email")}
+              reachable={hasEmail}
+              verdict={correspondence?.verdict}
+              reason={correspondence?.reason}
+              unreachableWord={t("contact.rail.noEmailAddress")}
+            />
+            <ConsentRow
+              icon={<Phone size={15} aria-hidden="true" />}
+              label={t("contact.rail.phone")}
+              reachable={(view.contact.phones?.length ?? 0) > 0}
+              verdict={phone?.verdict}
+              unreachableWord={t("contact.rail.noPhoneNumber")}
+            />
+            {/* A blocked identity still gets its row, with `reachable: false`: the
           conversation happened, and hiding the transport it happened on would
           answer "can I write to them" by pretending they were never here. */}
-        {channels.map((channel) => (
-          <ConsentRow
-            key={channel.provider}
-            icon={interactionIcon("message", 15)}
-            label={providerLabel(channel.provider)}
-            reachable={channel.reachable}
-            verdict={correspondence?.verdict}
-            unreachableWord={t("contact.rail.channelNotDeliverable")}
-          />
-        ))}
-        {/* Every OTHER purpose, by name. A rep who reads "Allowed" against
+            {channels.map((channel) => (
+              <ConsentRow
+                key={channel.provider}
+                icon={interactionIcon("message", 15)}
+                label={providerLabel(channel.provider)}
+                reachable={channel.reachable}
+                verdict={correspondence?.verdict}
+                unreachableWord={t("contact.rail.channelNotDeliverable")}
+              />
+            ))}
+            {/* Every OTHER purpose, by name. A rep who reads "Allowed" against
           Email and is then refused at the composer has been told two true
           things and no way to reconcile them: the grant they have is for
           correspondence and the send they tried was something else. Naming
           each purpose is what makes the two answers agree on screen. */}
-        {/* EACH PURPOSE CARRIES ITS OWN REASON, under the row it explains. The
+            {/* EACH PURPOSE CARRIES ITS OWN REASON, under the row it explains. The
           rail used to print one reason — correspondence's — for the whole
           panel, so a subject who asked us to stop marketing got a blocked row
           with nothing saying why. A refusal a rep cannot explain to the contact
           in front of them is not usable. */}
-        {hasEmail &&
-          otherPurposes.map((entry) => (
-            <ConsentRow
-              key={entry.purpose_key}
-              icon={<Mail size={15} aria-hidden="true" />}
-              label={entry.purpose_label ?? entry.purpose_key}
-              reachable
-              verdict={entry.verdict}
-              reason={entry.reason}
-              unreachableWord={t("contact.rail.noEmailAddress")}
-            />
-          ))}
+            {hasEmail &&
+              otherPurposes.map((entry) => (
+                <ConsentRow
+                  key={entry.purpose_key}
+                  icon={<Mail size={15} aria-hidden="true" />}
+                  label={entry.purpose_label ?? entry.purpose_key}
+                  reachable
+                  verdict={entry.verdict}
+                  reason={entry.reason}
+                  unreachableWord={t("contact.rail.noEmailAddress")}
+                />
+              ))}
+          </>
+        )}
+        <p className="t-caption">{t("consent.permissionScope")}</p>
+        <Button small variant="ghost" onClick={() => setManage(true)}>
+          {t("consent.manage")}
+        </Button>
       </PanelBody>
+      <ConfirmDetailsAction
+        key={view.contact.id}
+        contactId={view.contact.id}
+        mayWrite={mayWrite}
+        recipient={knownRecipient ? view.contact.primary_email : undefined}
+        unavailableReason={
+          !hasEmail ? t("contact.rail.noEmailAddress") : undefined
+        }
+      />
+      {manage && (
+        <Modal
+          open
+          onClose={() => setManage(false)}
+          labelledBy={titleId}
+          placement="right"
+        >
+          <div className="pe-drawer-title">
+            <h2 id={titleId}>{t("consent.manage")}</h2>
+            <Button small variant="ghost" onClick={() => setManage(false)}>
+              {t("common.close")}
+            </Button>
+          </div>
+          <ConsentSection
+            contactId={view.contact.id}
+            contact={view.contact}
+            showConfirm={false}
+            titleLevel={3}
+          />
+        </Modal>
+      )}
     </Panel>
   );
 }

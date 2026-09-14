@@ -51,8 +51,6 @@
 1330 frontend/src/screens/listquery.test.tsx
 1402 frontend/src/screens/listquery.tsx
 1378 frontend/src/screens/offers.tsx
-1428 frontend/src/screens/contacts.test.tsx
-850 frontend/src/screens/contactrail.tsx
 1442 frontend/src/app/agentrail.test.tsx
 1505 frontend/src/screens/onboarding-conversation/confirm-card.tsx
 1527 frontend/src/design-system/listtable.test.tsx
@@ -115,7 +113,6 @@
 676 frontend/src/screens/worklist.dispositions.tsx
 682 frontend/src/screens/contactcards.tsx
 682 frontend/src/format/format.ts
-682 frontend/src/screens/companyraildetails.tsx
 702 frontend/src/screens/settingsnav.tsx
 737 frontend/src/screens/companytoday.tsx
 737 frontend/src/screens/installation-settings.tsx
@@ -136,7 +133,6 @@
 906 frontend/src/screens/onboarding-conversation/voice-scenes.tsx
 906 frontend/src/screens/settingscatalog.ts
 919 frontend/src/screens/customfields.tsx
-940 frontend/src/screens/contacts.tsx
 941 frontend/src/screens/contactprovider.tsx
 948 frontend/src/screens/share.tsx
 965 frontend/src/screens/integrations-provider.tsx

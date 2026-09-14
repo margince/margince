@@ -83,7 +83,11 @@ func refuseStaleVisibility(
 // is a decision, and quietly answering it for somebody would hand the row to
 // whoever happened to press the button.
 func refuseUnreadableResult(current crmcontracts.Contact, in UpdateContactInput) error {
-	if in.Visibility == nil || *in.Visibility != visibilityOwner {
+	private := current.Visibility != nil && string(*current.Visibility) == visibilityOwner
+	if in.Visibility != nil {
+		private = *in.Visibility == visibilityOwner
+	}
+	if !private {
 		return nil
 	}
 	named := current.OwnerId != nil
