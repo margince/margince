@@ -111,9 +111,16 @@ jobs:
         # after it, and `kill` failing on an already-dead probe is not a failure
         # of the lane.
         run: |
-          scripts/probe-runner-pressure.sh &
-          probe=$!
-          trap 'kill "$probe" 2>/dev/null || true' EXIT
+          probe="$GITHUB_WORKSPACE/scripts/probe-runner-pressure.sh"
+          # Checked BEFORE it is backgrounded, and absolute because this lane
+          # runs from `backend/`. A `&` puts the startup failure in a subshell
+          # where `set -e` cannot see it, so a probe that cannot run would leave
+          # the shard green with no trace — which is the silent half of the
+          # problem it exists to solve, not a harmless no-op.
+          test -x "$probe"
+          "$probe" &
+          probe_pid=$!
+          trap 'kill "$probe_pid" 2>/dev/null || true' EXIT
           make test-integration
       # `!cancelled()` and not the default success(): a RED shard is exactly when
       # somebody needs this artifact, and on failure the script writes the
