@@ -182,14 +182,10 @@ h1 {
 }
 
 /* The field a gap was read off. It is the evidence, so it is shown rather than
-   summarized away — and it is machine text, so it wears a monospace face.
-
-   ui-monospace, and NOT var(--f-mono), for the same reason body reaches for
-   system-ui: that token resolves to a web font, and a web font is a network
-   request this document's empty origin allowlist can never admit. */
+   summarized away — in the document's own face, because a field name is read,
+   not run. */
 .source {
   color: var(--textMeta);
-  font-family: ui-monospace, monospace;
   font-size: var(--fs-eyebrow);
   white-space: nowrap;
 }

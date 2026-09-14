@@ -197,7 +197,7 @@ export const TableWithFields: Story = {
   ),
 };
 
-// The field table at 390px. Every row carries a fully-qualified mono key
+// The field table at 390px. Every row carries a fully-qualified key
 // (`deal.cf_deal_stage_reason`) next to a type, a version and its rename/archive
 // verbs — a long unbreakable identifier in an identity column beside an actions
 // column, which is the pairing that makes a table stop fitting. The table is

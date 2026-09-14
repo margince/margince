@@ -141,8 +141,9 @@
   resize: vertical;
 }
 
-/* What this answer will store, in the words it will be stored in. Mono and
-   verbatim: a paraphrase here would defeat the point of showing it at all. */
+/* What this answer will store, in the words it will be stored in. Verbatim, in
+   a <code> because it is a stored string: a paraphrase here would defeat the
+   point of showing it at all. */
 .rdeck-writes {
   display: flex;
   align-items: baseline;
@@ -157,7 +158,6 @@
 .rdeck-writes code {
   overflow-wrap: anywhere;
   color: var(--textPrimary);
-  font-family: var(--f-mono);
 }
 
 .rdeck-source {
@@ -167,7 +167,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--bgElevated);
-  font-family: var(--f-mono);
 }
 
 /* The way onward is a foot, not a button loose under the prose: it is the one

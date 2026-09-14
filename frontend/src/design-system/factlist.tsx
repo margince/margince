@@ -18,7 +18,7 @@ import "./factlist.css";
  * was reached, or that it is partial.
  *
  * Both sides are `ReactNode` because the real rows already carry more than
- * text: an evidence mark, a record link, a status pill, a monospace amount.
+ * text: an evidence mark, a record link, a status pill, a tabular amount.
  * Formatting stays at the call site, where the locale is.
  */
 export type Fact = Readonly<{

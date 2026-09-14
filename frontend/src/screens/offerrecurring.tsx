@@ -22,19 +22,19 @@ export function OfferTotalsPanel({ offer }: Readonly<{ offer: Offer }>) {
     <Panel title={t("offer.totals")}>
       <PanelRow>
         <span className="t-label">{t("offer.net")}</span>
-        <div className="t-mono">
+        <div className="t-num">
           {formatMoney(offer.net_minor, offer.currency, locale)}
         </div>
       </PanelRow>
       <PanelRow>
         <span className="t-label">{t("offer.tax")}</span>
-        <div className="t-mono">
+        <div className="t-num">
           {formatMoney(offer.tax_minor, offer.currency, locale)}
         </div>
       </PanelRow>
       <PanelRow>
         <span className="t-label">{t("offer.gross")}</span>
-        <div className="t-mono">
+        <div className="t-num">
           {formatMoney(offer.gross_minor, offer.currency, locale)}
         </div>
       </PanelRow>
@@ -72,12 +72,12 @@ function OfferRecurringTotals({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <PanelRow>
         <span className="t-label">{t("offer.arr")}</span>
-        <div className="t-mono">{formatMoney(arr, offer.currency, locale)}</div>
+        <div className="t-num">{formatMoney(arr, offer.currency, locale)}</div>
       </PanelRow>
       {offer.net_tcv_minor != null && (
         <PanelRow>
           <span className="t-label">{t("offer.committedNet")}</span>
-          <div className="t-mono">
+          <div className="t-num">
             {formatMoney(offer.net_tcv_minor, offer.currency, locale)}
           </div>
         </PanelRow>

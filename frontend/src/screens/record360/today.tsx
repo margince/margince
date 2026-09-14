@@ -210,7 +210,7 @@ export function FoundMove({
           <span className="co-move-by">
             <Sparkles aria-hidden="true" className="co-move-spark" />
             {t("co.suggest.byline")}
-            {when && <span className="t-mono co-move-when">{when}</span>}
+            {when && <span className="t-num co-move-when">{when}</span>}
           </span>
         )}
         <span className="co-move-ask">{title}</span>

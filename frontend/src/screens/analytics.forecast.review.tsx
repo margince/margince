@@ -251,7 +251,7 @@ function CheckRow({
             name={check.subject.label}
           />
         )}
-        <span className="num">
+        <span className="t-num">
           {formatMoneyOrAbsent(
             check.affected_minor ?? null,
             check.currency ?? "",

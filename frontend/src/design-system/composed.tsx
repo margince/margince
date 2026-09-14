@@ -1291,7 +1291,7 @@ export function GroupedTimelineList({
  * time of day. The day alone told a reader two calls happened on the 26th
  * and not which came first, or whether the reply landed an hour after the
  * ask or a working day later — the one thing a chronology is opened to
- * settle. The mono face keeps the column straight whatever each date's
+ * settle. Tabular digits keep the column straight whatever each date's
  * digits are.
  */
 function TimelineWhen({
@@ -1300,7 +1300,7 @@ function TimelineWhen({
 }: Readonly<{ atIso: string; zone: string }>) {
   const { locale } = useLocale();
   return (
-    <span className="tl-when t-mono">
+    <span className="tl-when t-num">
       {formatDate(atIso, locale, zone)}
       <span className="tl-when-time">
         {formatTimeOfDay(atIso, locale, zone)}
@@ -1506,7 +1506,7 @@ function ThreadMessage({
       </span>
       {/* Day and time both: the card's gutter carries the newest message's
           day, and an older member may be from another one. */}
-      <span className="tl-msg-when t-mono">
+      <span className="tl-msg-when t-num">
         {formatDate(entry.atIso, locale, zone)}{" "}
         {formatTimeOfDay(entry.atIso, locale, zone)}
       </span>

@@ -16,7 +16,7 @@
 
 /* A money cell that also carries the priced-of-total footnote: stacked rather
    than inline, or the two texts run together with no space between them
-   (`.t-caption`/`.t-mono` are typography-only, and a table cell does not
+   (`.t-caption`/`.t-num` are typography-only, and a table cell does not
    stack its children on its own). */
 .analytics-money-cell {
   display: flex;

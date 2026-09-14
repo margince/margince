@@ -90,12 +90,12 @@ describe("ContactLink", () => {
         kind="email"
         value="dana@brandt.example?bcc=x"
         record={dana}
-        className="link-button t-mono"
-        textClassName="t-mono"
+        className="link-button lead-email"
+        textClassName="lead-email"
       />,
     );
     expect(screen.getByText("dana@brandt.example?bcc=x").className).toBe(
-      "t-mono",
+      "lead-email",
     );
   });
 
