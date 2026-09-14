@@ -16944,6 +16944,8 @@ export interface components {
          *     `display_status` says so — the row stays, the words do not.
          */
         EmailSummary: {
+            /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
+            request_has_reminder?: boolean;
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -24690,6 +24692,11 @@ export interface components {
         };
         /** @description What a task needs. Stored as an activity of kind `task`. */
         CreateTaskRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @description What has to be done, as one line. */
             subject: string;
             /** @description Detail, if one line is not enough. */
@@ -24714,6 +24721,11 @@ export interface components {
             source: string;
         };
         CreateActivityRequest: {
+            /**
+             * Format: uuid
+             * @description Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
+             */
+            request_activity_id?: string;
             /** @enum {string} */
             kind: "email" | "call" | "meeting" | "note" | "task" | "message";
             /**
@@ -42249,6 +42261,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description The existing source-linked reminder, including an explicitly restored reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
             /** @description The task, as an activity. */
             201: {
                 headers: {
@@ -57477,6 +57498,8 @@ export interface operations {
     getDealStatus: {
         parameters: {
             query?: {
+                /** @description Refresh the card and shared action cache from current facts without model calls. Takes precedence over refresh. */
+                facts_only?: boolean;
                 /** @description Rewrite even when the fingerprint still matches. The reader asking for a second opinion. */
                 refresh?: boolean;
             };

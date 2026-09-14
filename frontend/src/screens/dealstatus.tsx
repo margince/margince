@@ -85,7 +85,7 @@ export function useDealStatusCard(dealId: string) {
     queryKey: ["deal-status", dealId],
     queryFn: async () => {
       const { data, error } = await api.GET("/deals/{id}/status", {
-        params: { path: { id: dealId } },
+        params: { path: { id: dealId }, query: { facts_only: true } },
       });
       if (error) {
         throwProblem(error, t);

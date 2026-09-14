@@ -381,12 +381,8 @@ function EmploymentRow({
   const ending =
     actions.end.isPending &&
     actions.end.variables?.relationship_id === employment.relationship_id;
-  // isPending and isError can never both hold at once (one shared mutation
-  // status behind both), so a failure that only rendered while "ending" was
-  // also true could never actually draw: pending clears before error sets.
-  // This row's own failure is instead keyed on the same identifier ending
-  // uses, just checked against isError rather than isPending, so the row
-  // that failed keeps its message once the mutation has settled.
+  // A settled mutation is no longer pending. Match errors by relationship
+  // so only the failed row keeps its message after the mutation settles.
   const endFailed =
     actions.end.isError &&
     actions.end.variables?.relationship_id === employment.relationship_id;

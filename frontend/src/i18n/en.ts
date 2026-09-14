@@ -3600,7 +3600,7 @@ export const en = {
   "co.spine.earlier_one": "{count} earlier conversation",
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",
-  "today.quiet": "Nothing here needs you today.",
+  "today.quiet": "No outstanding work found in this view.",
   "task.untitled": "Untitled task",
   "today.withheld":
     "Hidden from you: {sections}. This list is assembled without them.",

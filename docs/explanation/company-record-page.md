@@ -278,7 +278,7 @@ has focus, because a page read once on arrival goes stale silently — a stale
 "what needs you" looks like a current one. A cadence, not a stream; the
 contract serves no push. A read is live for the key it reads under
 (`isRecordRead`), not because its screen opted in, so the contact, project and
-deal records are live too — the deal's model-written *briefing* is not.
+deal records are live too — including the deal's outstanding requests and tasks. Its server-side fingerprint and model-call floor govern prose regeneration.
 
 ## The account scan
 

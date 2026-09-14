@@ -3479,7 +3479,7 @@ export const de = {
   "co.spine.earlier_one": "{count} früheres Gespräch",
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",
-  "today.quiet": "Hier braucht Sie heute nichts.",
+  "today.quiet": "In dieser Ansicht wurde keine offene Arbeit gefunden.",
   "task.untitled": "Aufgabe ohne Titel",
   "today.withheld":
     "Für Sie ausgeblendet: {sections}. Diese Liste ist ohne sie zusammengestellt.",

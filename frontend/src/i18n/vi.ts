@@ -3441,7 +3441,7 @@ export const vi = {
     "{count} cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
   "today.failed":
     "Không thể tổng hợp phần này. Phần còn lại của trang vẫn hiển thị những gì đọc được.",
-  "today.quiet": "Hôm nay ở đây không có việc gì cần bạn.",
+  "today.quiet": "Không tìm thấy công việc còn mở trong chế độ xem này.",
   "task.untitled": "Công việc chưa có tiêu đề",
   "today.withheld":
     "Ẩn với bạn: {sections}. Danh sách này được tổng hợp mà không có chúng.",
