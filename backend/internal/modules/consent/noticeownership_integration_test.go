@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -186,7 +187,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
-	before, err := e.store.ListNoticeCases(ctx, nil, 0)
+	before, _, err := e.store.ListNoticeCases(ctx, nil, nil, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}
@@ -202,7 +203,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 		t.Fatalf("excusing the duty: %v", err)
 	}
 
-	after, err := e.store.ListNoticeCases(ctx, nil, 0)
+	after, _, err := e.store.ListNoticeCases(ctx, nil, nil, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}
@@ -212,12 +213,78 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 	}
 
 	// It is still readable by name, which is what an auditor asks for.
-	closed, err := e.store.ListNoticeCases(ctx, []NoticeState{NoticeExemptWithReason}, 0)
+	closed, _, err := e.store.ListNoticeCases(ctx, []NoticeState{NoticeExemptWithReason}, nil, "")
 	if err != nil {
 		t.Fatalf("reading the excused cases: %v", err)
 	}
 	if len(closed) != 1 || closed[0].ID != id {
 		t.Errorf("asking for excused cases answered %d rows, want the one that was excused", len(closed))
+	}
+}
+
+// TestTheQueueTailIsReachableByWalkingTheCursor. A privacy officer owes every
+// duty in the queue, not only the first page of it: a case ranked past the
+// limit must be reachable by following page.next_cursor, never structurally
+// absent from every response the route can return.
+func TestTheQueueTailIsReachableByWalkingTheCursor(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+
+	seeded := map[ids.UUID]bool{}
+	for i := 0; i < 3; i++ {
+		seeded[seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})] = true
+	}
+
+	// A page smaller than the queue, so the tail lives past the first response —
+	// the shape that used to be unreachable at any limit the contract allowed.
+	one := 1
+	cursor := ""
+	walked := map[ids.UUID]bool{}
+	for pages := 0; ; pages++ {
+		if pages > len(seeded) {
+			t.Fatalf("the cursor walk did not terminate after %d pages: a queue of %d duties "+
+				"should page out, not loop", pages, len(seeded))
+		}
+		page, info, err := e.store.ListNoticeCases(ctx, nil, &one, cursor)
+		if err != nil {
+			t.Fatalf("walking the queue: %v", err)
+		}
+		if len(page) > one {
+			t.Fatalf("a page held %d duties, want at most the limit of %d", len(page), one)
+		}
+		for _, c := range page {
+			if walked[c.ID] {
+				t.Errorf("the walk served duty %s twice: a keyset boundary must not repeat a row", c.ID)
+			}
+			walked[c.ID] = true
+		}
+		if !info.HasMore {
+			break
+		}
+		if info.NextCursor == "" {
+			t.Fatal("has_more is true but next_cursor is empty: a page promising more must say where to continue")
+		}
+		cursor = info.NextCursor
+	}
+
+	for id := range seeded {
+		if !walked[id] {
+			t.Errorf("duty %s was seeded into the queue but no page of the walk ever reached it: "+
+				"the tail past the first page is exactly what a privacy officer owes and must not be lost", id)
+		}
+	}
+}
+
+// TestTheQueueRefusesAMalformedCursor. The token is client-supplied on every
+// paged read, so one that did not come from a prior response is the caller's
+// mistake — a 422, not a 500 that sends an operator looking for an outage.
+func TestTheQueueRefusesAMalformedCursor(t *testing.T) {
+	e := setupChannelConsent(t)
+	ctx := officerCtx(e)
+
+	var badCursor *storekit.MalformedCursorError
+	if _, _, err := e.store.ListNoticeCases(ctx, nil, nil, "not-a-real-token"); !errors.As(err, &badCursor) {
+		t.Fatalf("a garbage cursor answered %v, want a malformed-cursor refusal", err)
 	}
 }
 
@@ -229,7 +296,7 @@ func TestTheQueueRefusesAStateThatDoesNotExist(t *testing.T) {
 	ctx := officerCtx(e)
 
 	var verr *ValidationError
-	_, err := e.store.ListNoticeCases(ctx, []NoticeState{"overdue"}, 0)
+	_, _, err := e.store.ListNoticeCases(ctx, []NoticeState{"overdue"}, nil, "")
 	if !errors.As(err, &verr) || verr.Field != fieldState {
 		t.Fatalf("asking for a state that does not exist answered %v, want a validation error on %q",
 			err, fieldState)
@@ -243,7 +310,7 @@ func TestTheNoticeQueueIsGatedOnThePrivacyObject(t *testing.T) {
 	e := setupChannelConsent(t)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
-	if _, err := e.store.ListNoticeCases(e.ctx, nil, 0); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := e.store.ListNoticeCases(e.ctx, nil, nil, ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep reading the notice queue got %v, want permission denied", err)
 	}
 	if _, err := e.store.AssignNoticeCase(e.ctx, id, e.user); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -367,7 +434,7 @@ func TestOneDutyReadsTheSameAsItDoesInTheQueue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the duty: %v", err)
 	}
-	listed, err := e.store.ListNoticeCases(ctx, nil, 0)
+	listed, _, err := e.store.ListNoticeCases(ctx, nil, nil, "")
 	if err != nil {
 		t.Fatalf("reading the queue: %v", err)
 	}

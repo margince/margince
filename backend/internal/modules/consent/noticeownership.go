@@ -105,17 +105,17 @@ func scanNoticeCase(row pgx.Row) (NoticeCase, error) {
 // when it asks for nothing in particular. A caller that wants closed cases has
 // to name them, so a screen cannot accidentally show a duty as owed because it
 // forgot to filter.
-func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit int) ([]NoticeCase, error) {
+func (s *Store) ListNoticeCases(
+	ctx context.Context, states []NoticeState, limit *int, cursor string,
+) ([]NoticeCase, storekit.Page, error) {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, err
+		return nil, storekit.Page{}, err
 	}
-	if limit <= 0 || limit > noticeCaseListMax {
-		limit = noticeCaseListMax
-	}
+	bounded := storekit.ClampLimit(limit)
 	wanted := make([]string, 0, len(states))
 	for _, st := range states {
 		if !knownNoticeState(st) {
-			return nil, &ValidationError{Field: fieldState, Reason: "not a notice-case state"}
+			return nil, storekit.Page{}, &ValidationError{Field: fieldState, Reason: "not a notice-case state"}
 		}
 		wanted = append(wanted, string(st))
 	}
@@ -123,13 +123,31 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 		wanted = unresolvedNoticeStates()
 	}
 	var out []NoticeCase
+	var page storekit.Page
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			SELECT`+noticeCaseColumns+`
+		args := []any{wanted}
+		where := ""
+		if cursor != "" {
+			after, err := storekit.DecodeOpaque[noticeCaseCursor](cursor)
+			if err != nil {
+				return err
+			}
+			// A well-formed token is not yet a position: `null` and `{}` decode to
+			// a zero id, which would read as the top of the queue rather than the
+			// refusal it is. The id being unset is the tell this module knows.
+			if after.ID.IsZero() {
+				return &storekit.MalformedCursorError{}
+			}
+			args = append(args, after.DueAt, after.ID)
+			where = ` AND (due_at, id) > ($2, $3)`
+		}
+		args = append(args, bounded+1)
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
+			SELECT %s
 			  FROM privacy_notice_case
-			 WHERE state = ANY($1)
+			 WHERE state = ANY($1)%s
 			 ORDER BY due_at, id
-			 LIMIT $2`, wanted, limit)
+			 LIMIT $%d`, noticeCaseColumns, where, len(args)), args...)
 		if err != nil {
 			return err
 		}
@@ -141,9 +159,33 @@ func (s *Store) ListNoticeCases(ctx context.Context, states []NoticeState, limit
 			}
 			out = append(out, c)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		// One row over the page is asked for so HasMore is a fact, not a guess.
+		// The continuation carries the whole ORDER BY key: two duties can share a
+		// due_at, and a token that dropped the id would skip or repeat a case at
+		// the page boundary — the same silent-omission the queue exists to avoid.
+		if len(out) > bounded {
+			out = out[:bounded]
+			last := out[bounded-1]
+			token, err := storekit.EncodeOpaque(noticeCaseCursor{DueAt: last.DueAt, ID: last.ID})
+			if err != nil {
+				return err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: token}
+		}
+		return nil
 	})
-	return out, err
+	return out, page, err
+}
+
+// noticeCaseCursor is the position a continuation token carries: the whole
+// ORDER BY key, so a page boundary lands in the same place even when two duties
+// fall due at the same instant.
+type noticeCaseCursor struct {
+	DueAt time.Time `json:"d"`
+	ID    ids.UUID  `json:"i"`
 }
 
 // GetNoticeCase reads one duty, for a surface that opens a single case rather
@@ -177,11 +219,6 @@ func (s *Store) GetNoticeCase(ctx context.Context, id ids.UUID) (NoticeCase, err
 	})
 	return out, err
 }
-
-// noticeCaseListMax bounds the queue read. A privacy officer works a page at a
-// time, and an unbounded list over a table with one row per acquisition is a
-// read that grows with the contact book.
-const noticeCaseListMax = 200
 
 // knownNoticeState reports whether a caller-supplied state is in the
 // vocabulary, derived from noticeStates rather than listed again — a ninth

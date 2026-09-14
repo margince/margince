@@ -50540,6 +50540,17 @@ export interface operations {
             query?: {
                 /** @description Repeat to ask for several. Omitted means every unresolved state. */
                 state?: components["schemas"]["NoticeCaseState"][];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
             };
@@ -50549,7 +50560,11 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A page of notice cases. */
+            /**
+             * @description A page of notice cases, soonest deadline first. `page.has_more` says whether the queue
+             *     runs past this page and `page.next_cursor` continues it — the whole tail of owed duties
+             *     is reachable by walking, not capped at the first page.
+             */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -50557,6 +50572,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["NoticeCase"][];
+                        page: components["schemas"]["PageInfo"];
                     };
                 };
             };

@@ -92,7 +92,10 @@ function stubRoutes(
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /privacy/notice-cases") {
-        return jsonResponse({ data: [OWED] });
+        return jsonResponse({
+          data: [OWED],
+          page: { next_cursor: null, has_more: false },
+        });
       }
       if (key === "GET /users") {
         return jsonResponse({
@@ -139,6 +142,43 @@ describe("the disclosure-duty queue", () => {
     expect(listed?.url).not.toContain("state=exempt_with_reason");
   });
 
+  it("walks past the first page to reach the tail of the queue", async () => {
+    // A privacy officer owes every duty, not only the first page. When the
+    // queue runs longer than one read, the screen must follow the cursor to
+    // the rows that read could not carry — otherwise the majority of real,
+    // legally-owed duties stay invisible with no signal a tail exists.
+    const user = userEvent.setup();
+    let page = 0;
+    const sent = stubRoutes({
+      "GET /privacy/notice-cases": () => {
+        page += 1;
+        return page === 1
+          ? jsonResponse({
+              data: [OWED],
+              page: { next_cursor: "cursor-2", has_more: true },
+            })
+          : jsonResponse({
+              data: [{ ...OWED, id: "case-2" }],
+              page: { next_cursor: null, has_more: false },
+            });
+      },
+    });
+    render(<NoticeCasesCard />);
+
+    await screen.findByTestId("notice-case-case-1");
+    // The tail is not on screen until the officer asks for more.
+    expect(screen.queryByTestId("notice-case-case-2")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
+
+    // Both pages are shown together, and the second read continued from the
+    // first response's cursor rather than restarting at the top.
+    await screen.findByTestId("notice-case-case-2");
+    expect(screen.getByTestId("notice-case-case-1")).toBeInTheDocument();
+    const reads = sent.filter((s) => s.key === "GET /privacy/notice-cases");
+    expect(reads[1]?.url).toContain("cursor=cursor-2");
+  });
+
   it("marks a duty whose deadline has passed", async () => {
     stubRoutes();
     render(<NoticeCasesCard />);
@@ -158,7 +198,11 @@ describe("the disclosure-duty queue", () => {
   it("offers no actions on a duty that has already ended", async () => {
     // The server refuses both, so offering them would be a button that fails.
     stubRoutes({
-      "GET /privacy/notice-cases": () => jsonResponse({ data: [EXCUSED] }),
+      "GET /privacy/notice-cases": () =>
+        jsonResponse({
+          data: [EXCUSED],
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     render(<NoticeCasesCard />);
 
@@ -258,7 +302,10 @@ describe("the disclosure-duty queue", () => {
     // filled in, one keystroke from confirming them.
     stubRoutes({
       "GET /privacy/notice-cases": () =>
-        jsonResponse({ data: [OWED, { ...OWED, id: "case-3" }] }),
+        jsonResponse({
+          data: [OWED, { ...OWED, id: "case-3" }],
+          page: { next_cursor: null, has_more: false },
+        }),
       "POST /privacy/notice-cases/case-1/excuse": () =>
         jsonResponse({ ...OWED, state: "exempt_with_reason" }),
     });
@@ -298,7 +345,11 @@ describe("the disclosure-duty queue", () => {
 
   it("says why it is empty rather than showing nothing", async () => {
     stubRoutes({
-      "GET /privacy/notice-cases": () => jsonResponse({ data: [] }),
+      "GET /privacy/notice-cases": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     render(<NoticeCasesCard />);
 

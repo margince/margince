@@ -13888,17 +13888,22 @@ paths:
             items: { $ref: '#/components/schemas/NoticeCaseState' }
           style: form
           explode: true
+        - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: A page of notice cases.
+          description: |
+            A page of notice cases, soonest deadline first. `page.has_more` says whether the queue
+            runs past this page and `page.next_cursor` continues it — the whole tail of owed duties
+            is reachable by walking, not capped at the first page.
           content:
             application/json:
               schema:
                 type: object
-                required: [data]
+                required: [data, page]
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/NoticeCase' } }
+                  page: { $ref: '#/components/schemas/PageInfo' }
   /privacy/notice-cases/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }

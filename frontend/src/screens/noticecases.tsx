@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { type ReactNode, useMemo, useState } from "react";
-import { api } from "../api/client";
+import { api, FIRST_PAGE } from "../api/client";
 import { useCan } from "../app/capability";
 import {
   Badge,
@@ -24,6 +28,7 @@ import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import { humanizeToken } from "./audit";
 import {
+  LoadMoreButton,
   problemMessageOf,
   QueryGate,
   QueryStates,
@@ -92,14 +97,21 @@ export function NoticeCasesCard() {
   // `!canSee` alone would flash "not yours" at every officer on every load.
   const me = useMe();
 
-  const query = useQuery({
+  // Keyset "load more" over the cursor, not a single capped read: a privacy
+  // officer owes every duty in the queue, and a screen that stopped at the
+  // first page would hide the majority of them on any installation with more
+  // open duties than one page holds. The facet IS the query key, so switching
+  // it asks a new question from the top rather than appending to a stale chain.
+  const query = useInfiniteQuery({
     queryKey: ["notice-cases", facet],
     enabled: canSee,
-    queryFn: async () => {
+    initialPageParam: FIRST_PAGE,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await api.GET("/privacy/notice-cases", {
         params: {
           query: {
             limit: 50,
+            ...(pageParam ? { cursor: pageParam } : {}),
             // The facet is a SERVER-side filter, not a client re-slice: a
             // re-slice would hide rows the server never told us about and
             // make the count on screen disagree with the one the queue has.
@@ -115,9 +127,10 @@ export function NoticeCasesCard() {
       }
       return data;
     },
+    getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
 
-  const rows = query.data?.data ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ["notice-cases"] });
@@ -210,6 +223,7 @@ export function NoticeCasesCard() {
                 onExcuse={() => setExcusing(row)}
               />
             ))}
+            <LoadMoreButton query={query} />
           </SettingList>
         )}
       </QueryStates>
