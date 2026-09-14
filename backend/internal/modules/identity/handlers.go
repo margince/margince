@@ -73,6 +73,17 @@ type Handlers struct {
 	// secret. Keyed by user id rather than IP: the account is what is being
 	// guessed at, and a caller who already holds a session can change IP.
 	changeFailures *ratelimit.Limiter // 10 failures/min per user
+	// The second-factor guessing surface: /auth/mfa completes a login with a
+	// six-digit code, and the disable step-up verifies the same code behind a
+	// session. Both take the login pair's numbers — the challenge guards the
+	// same account the password does and arrives from the same anonymous edge,
+	// so a looser bound here would just move the brute force one step right.
+	// mfaFailures is keyed by the USER ID off the VERIFIED challenge signature
+	// (or the session), never off the request body: a body-chosen key would
+	// let an attacker rotate keys per guess, and an email-keyed one would let
+	// ten bogus posts lock the real owner out.
+	mfaFailures *ratelimit.Limiter // 10 failures/min per user
+	mfaPerIP    *ratelimit.Limiter // 30/min per client IP
 
 	// Issuing a set-password link is authenticated and admin-only, so these
 	// two are not anti-anonymous-abuse throttles like the pair above — they
@@ -182,6 +193,8 @@ func NewHandlers(svc *Service) Handlers {
 		resetPerEmail:         ratelimit.New(3, time.Hour),
 		resetPerIP:            ratelimit.New(30, time.Hour),
 		changeFailures:        ratelimit.New(10, time.Minute),
+		mfaFailures:           ratelimit.New(10, time.Minute),
+		mfaPerIP:              ratelimit.New(30, time.Minute),
 		passwordLinkPerActor:  ratelimit.New(20, time.Hour),
 		passwordLinkPerTarget: ratelimit.New(5, time.Hour),
 		oidcPerIP:             ratelimit.New(30, time.Minute),
@@ -200,7 +213,7 @@ func NewHandlers(svc *Service) Handlers {
 // is a reset handler whose panic would reach an operator as an opaque 500 on a
 // wipe that had otherwise finished.
 func (h *Handlers) ResetRateLimits() {
-	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.oidcPerIP, h.capabilitiesPerIP} {
+	for _, bucket := range []*ratelimit.Limiter{h.loginFailures, h.loginPerIP, h.resetPerEmail, h.resetPerIP, h.changeFailures, h.mfaFailures, h.mfaPerIP, h.oidcPerIP, h.capabilitiesPerIP} {
 		if bucket != nil {
 			bucket.Reset()
 		}

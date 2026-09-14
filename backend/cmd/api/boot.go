@@ -258,7 +258,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// The second-factor login challenge shares the OAuth state HMAC key, domain-
 	// separated by token type: a deployment that set one for its connect flows
 	// gets MFA sign-in armed too, and one that set none serves the challenge as
-	// unavailable rather than minting a token nothing can verify.
+	// unavailable rather than minting a token nothing can verify. The option is
+	// coupled to WithKeyvault inside compose (armMFAEnrolment): TOTP enrolment
+	// turns on only when BOTH the vault and a usable key exist, and a vault
+	// beside a short or absent key is reported at ERROR rather than failing the
+	// boot — a vault legitimately exists on deployments that never use MFA.
 	opts = append(opts, compose.WithMFAChallengeSigner(cfg.connectorStateKey))
 
 	// The signing key enables the mutating /webhook-subscriptions surface

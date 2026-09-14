@@ -86,19 +86,32 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 		t.Fatalf("state after confirm = %+v", s)
 	}
 
-	// Disable clears it.
+	// Disabling is a step-up: a wrong code answers the neutral 401 and leaves
+	// the factor in place — a session alone must not strip it.
+	badRec := httptest.NewRecorder()
+	h.DisableMyMfa(badRec, jsonRequest(ctx, t, http.MethodDelete, "/v1/me/mfa",
+		crmcontracts.MfaDisableRequest{Code: "000000"}))
+	if badRec.Code != http.StatusUnauthorized {
+		t.Fatalf("disable with a wrong code = %d, want 401 (body %s)", badRec.Code, badRec.Body.String())
+	}
+	if !mfaStatus(t, h, e).Enrolled {
+		t.Fatal("a refused disable still removed the factor")
+	}
+
+	// With a live proof of the factor — here a recovery code — disable clears it.
 	delRec := httptest.NewRecorder()
-	h.DisableMyMfa(delRec, httptest.NewRequest(http.MethodDelete, "/v1/me/mfa", nil).WithContext(ctx))
+	h.DisableMyMfa(delRec, jsonRequest(ctx, t, http.MethodDelete, "/v1/me/mfa",
+		crmcontracts.MfaDisableRequest{Code: codes.RecoveryCodes[0]}))
 	if delRec.Code != http.StatusNoContent {
-		t.Fatalf("disable = %d, want 204", delRec.Code)
+		t.Fatalf("disable = %d, want 204 (body %s)", delRec.Code, delRec.Body.String())
 	}
 	if mfaStatus(t, h, e).Enrolled {
 		t.Error("MFA still reads as enrolled after disable over HTTP")
 	}
 }
 
-// jsonRequest builds a POST carrying the marshalled body on the given context.
-func jsonRequest(ctx context.Context, t *testing.T, method, path string, payload crmcontracts.TotpConfirmRequest) *http.Request {
+// jsonRequest builds a request carrying the marshalled body on the given context.
+func jsonRequest[T any](ctx context.Context, t *testing.T, method, path string, payload T) *http.Request {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	if err != nil {

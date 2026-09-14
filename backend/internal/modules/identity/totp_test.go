@@ -47,21 +47,36 @@ func TestVerifyTOTPAcceptsCurrentAndAdjacentStepsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := verifyTOTPCode(secret, current, now); !ok {
+	ok, step, err := verifyTOTPCode(secret, current, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
 		t.Error("the current code was rejected")
+	}
+	// The verdict names the step it matched, because the caller's replay guard
+	// records it — a matched code with no step would leave replays acceptable.
+	if step != totpStepIndex(now) {
+		t.Errorf("the current code matched step %d, want %d", step, totpStepIndex(now))
 	}
 
 	// A code from the previous 30s step is accepted — one step of clock skew is
-	// the allowance a phone and a server drift into routinely.
+	// the allowance a phone and a server drift into routinely — and reports the
+	// EARLIER step it belongs to, not the verifier's own.
 	prev, _ := totpCodeAt(secret, now.Add(-30*time.Second), totpDigits)
-	if ok, _ := verifyTOTPCode(secret, prev, now); !ok {
+	ok, step, _ = verifyTOTPCode(secret, prev, now)
+	if !ok {
 		t.Error("a code one step old was rejected; the skew window is too tight")
+	}
+	if step != totpStepIndex(now.Add(-30*time.Second)) {
+		t.Errorf("a skewed code matched step %d, want the step it was minted in, %d",
+			step, totpStepIndex(now.Add(-30*time.Second)))
 	}
 
 	// Two steps away is outside the window and must be refused — otherwise the
 	// window is wide enough to double a code's useful life.
 	stale, _ := totpCodeAt(secret, now.Add(-60*time.Second), totpDigits)
-	if ok, _ := verifyTOTPCode(secret, stale, now); ok {
+	if ok, _, _ := verifyTOTPCode(secret, stale, now); ok {
 		t.Error("a code two steps old was accepted; the window is too wide")
 	}
 }

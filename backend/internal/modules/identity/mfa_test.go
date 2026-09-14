@@ -4,6 +4,7 @@
 package identity
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,6 +29,21 @@ func TestMFAEnrolRoutesAreTheOnlyEscapeFromConfinement(t *testing.T) {
 		if got != c.want {
 			t.Errorf("isMFAEnrolRequest(%s %s) = %v, want %v", c.method, c.path, got, c.want)
 		}
+	}
+}
+
+func TestRequireMFAPolicyCannotConfineWithoutAVault(t *testing.T) {
+	// With no vault there is no enrolment, so a require-MFA policy that still
+	// confined would trap every factorless member on routes that can only
+	// refuse. The composition root reports the misconfiguration at boot;
+	// admission must answer "not required" rather than convert it to a lockout.
+	svc := &Service{requireMFA: func(context.Context) (bool, error) { return true, nil }}
+	mandatory, err := svc.mfaMandatory(context.Background())
+	if err != nil {
+		t.Fatalf("mfaMandatory: %v", err)
+	}
+	if mandatory {
+		t.Error("require-MFA confines although no vault exists to enrol against")
 	}
 }
 

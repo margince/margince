@@ -4433,13 +4433,18 @@ public.list_member.list_member_unique UNIQUE (list_id, entity_type, entity_id)
 public.list_member_pkey CREATE UNIQUE INDEX list_member_pkey ON public.list_member USING btree (id)
 public.list_member_unique CREATE UNIQUE INDEX list_member_unique ON public.list_member USING btree (list_id, entity_type, entity_id)
 public.list_pkey CREATE UNIQUE INDEX list_pkey ON public.list USING btree (id)
+public.mfa_challenge_spent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.mfa_challenge_spent.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.mfa_challenge_spent.jti text NOT NULL gen=- def=-
+public.mfa_challenge_spent.mfa_challenge_spent_pkey PRIMARY KEY (jti)
+public.mfa_challenge_spent_pkey CREATE UNIQUE INDEX mfa_challenge_spent_pkey ON public.mfa_challenge_spent USING btree (jti)
 public.mfa_recovery_code acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.mfa_recovery_code.code_hash text NOT NULL gen=- def=-
 public.mfa_recovery_code.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.mfa_recovery_code.id uuid NOT NULL gen=- def=uuidv7()
 public.mfa_recovery_code.mfa_recovery_code_hash_key UNIQUE (code_hash)
 public.mfa_recovery_code.mfa_recovery_code_pkey PRIMARY KEY (id)
-public.mfa_recovery_code.mfa_recovery_code_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.mfa_recovery_code.mfa_recovery_code_user_id_fkey FOREIGN KEY (user_id) REFERENCES user_mfa(user_id) ON DELETE CASCADE
 public.mfa_recovery_code.used_at timestamp with time zone gen=- def=-
 public.mfa_recovery_code.user_id uuid NOT NULL gen=- def=-
 public.mfa_recovery_code_hash_key CREATE UNIQUE INDEX mfa_recovery_code_hash_key ON public.mfa_recovery_code USING btree (code_hash)
@@ -6216,6 +6221,7 @@ public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week
 public.user_mfa acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.user_mfa.confirmed_at timestamp with time zone gen=- def=-
 public.user_mfa.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.user_mfa.last_used_step bigint NOT NULL gen=- def=0
 public.user_mfa.secret_ref text NOT NULL gen=- def=-
 public.user_mfa.user_id uuid NOT NULL gen=- def=-
 public.user_mfa.user_mfa_pkey PRIMARY KEY (user_id)

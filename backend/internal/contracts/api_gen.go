@@ -31804,6 +31804,12 @@ type MfaChallenge struct {
 	MfaChallenge string `json:"mfa_challenge"`
 }
 
+// MfaDisableRequest The step-up that proves the caller holds the factor being removed, not merely a session that could have been hijacked.
+type MfaDisableRequest struct {
+	// Code A current authenticator code, or an unused recovery code.
+	Code string `json:"code"`
+}
+
 // MfaLoginRequest defines model for MfaLoginRequest.
 type MfaLoginRequest struct {
 	// Code A current authenticator code, or an unused recovery code.
@@ -46432,6 +46438,9 @@ type ImportLinkedInConnectionsMultipartRequestBody ImportLinkedInConnectionsMult
 
 // SaveMyLocaleJSONRequestBody defines body for SaveMyLocale for application/json ContentType.
 type SaveMyLocaleJSONRequestBody = SaveMyLocaleRequest
+
+// DisableMyMfaJSONRequestBody defines body for DisableMyMfa for application/json ContentType.
+type DisableMyMfaJSONRequestBody = MfaDisableRequest
 
 // ConfirmMyTotpJSONRequestBody defines body for ConfirmMyTotp for application/json ContentType.
 type ConfirmMyTotpJSONRequestBody = TotpConfirmRequest

@@ -38,6 +38,20 @@ func newTOTPSecret() (string, error) {
 	return totpEncoding.EncodeToString(buf), nil
 }
 
+// totpStepIndex is the 30-second counter a moment falls in — the value the
+// HMAC signs and the replay guard records. Unix seconds before the epoch are
+// not a real authenticator moment; clamping makes the conversion to the
+// unsigned counter provably safe rather than merely true in practice, and
+// keeps the index non-negative so it survives the round trip through a signed
+// database column.
+func totpStepIndex(t time.Time) int64 {
+	unix := t.Unix()
+	if unix < 0 {
+		unix = 0
+	}
+	return unix / int64(totpStep.Seconds())
+}
+
 // totpCodeAt is the HMAC-SHA1 of the 30-second counter under the secret,
 // dynamically truncated (RFC 4226 §5.3) to `digits` decimal digits.
 func totpCodeAt(secret string, t time.Time, digits int) (string, error) {
@@ -45,15 +59,8 @@ func totpCodeAt(secret string, t time.Time, digits int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("identity: totp secret is not base32: %w", err)
 	}
-	// The counter is the 30-second step index. Unix seconds before the epoch are
-	// not a real authenticator moment; clamping the guard makes the conversion to
-	// the unsigned counter provably safe rather than merely true in practice.
-	unix := t.Unix()
-	if unix < 0 {
-		unix = 0
-	}
 	var msg [8]byte
-	binary.BigEndian.PutUint64(msg[:], uint64(unix)/uint64(totpStep.Seconds()))
+	binary.BigEndian.PutUint64(msg[:], uint64(totpStepIndex(t)))
 	mac := hmac.New(sha1.New, key)
 	mac.Write(msg[:])
 	sum := mac.Sum(nil)
@@ -71,16 +78,21 @@ func totpCodeAt(secret string, t time.Time, digits int) (string, error) {
 
 // verifyTOTPCode accepts a code for the current 30-second step or either
 // adjacent one — one step of clock skew, which a phone and a server drift into
-// routinely — comparing in constant time so a near miss leaks nothing by timing.
-func verifyTOTPCode(secret, code string, now time.Time) (bool, error) {
+// routinely — comparing in constant time so a near miss leaks nothing by
+// timing. It also names WHICH step matched, because acceptance is not the
+// whole verdict: the caller records the step and refuses one it has already
+// honoured, which is what stops an intercepted code being replayed inside the
+// skew window. A miss reports step 0, which no recorded step is ever below.
+func verifyTOTPCode(secret, code string, now time.Time) (ok bool, step int64, err error) {
 	for _, skew := range []time.Duration{0, -totpStep, totpStep} {
-		want, err := totpCodeAt(secret, now.Add(skew), totpDigits)
+		at := now.Add(skew)
+		want, err := totpCodeAt(secret, at, totpDigits)
 		if err != nil {
-			return false, err
+			return false, 0, err
 		}
 		if subtle.ConstantTimeCompare([]byte(want), []byte(code)) == 1 {
-			return true, nil
+			return true, totpStepIndex(at), nil
 		}
 	}
-	return false, nil
+	return false, 0, nil
 }

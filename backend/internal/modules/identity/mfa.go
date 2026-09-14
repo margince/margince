@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -72,6 +73,12 @@ func (h Handlers) WithMFAVault(v keyvault.Vault) Handlers {
 // is never shown again. A caller who is already CONFIRMED must disable first —
 // silently swapping the factor would leave a member trusting an authenticator
 // that no longer guards them.
+//
+// The seal happens before the transaction (the row stores the ref), so every
+// exit that does not commit the fresh ref must destroy the blob it references:
+// a refused or failed enrolment would otherwise strand a sealed secret nothing
+// can ever reach again. A RESTARTED pending enrolment supersedes the previous
+// ref the same way, destroyed only after the commit that unreferenced it.
 func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 	human, wsID, err := s.selfWorkspace(ctx)
 	if err != nil {
@@ -85,25 +92,39 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("identity: seal totp secret: %w", err)
 	}
+	var superseded string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var confirmedAt *time.Time
-		scanErr := tx.QueryRow(ctx,
-			`SELECT confirmed_at FROM user_mfa WHERE user_id = $1`, human).Scan(&confirmedAt)
+		superseded = ""
+		prevRef, confirmedAt, _, lockErr := lockEnrolment(ctx, tx, human)
 		switch {
-		case scanErr == nil && confirmedAt != nil:
+		case errors.Is(lockErr, errMFANotEnrolled):
+			// First enrolment: nothing to supersede.
+		case lockErr != nil:
+			return lockErr
+		case confirmedAt != nil:
 			return errMFAAlreadyEnrolled
-		case scanErr != nil && !errors.Is(scanErr, pgx.ErrNoRows):
-			return scanErr
+		default:
+			superseded = prevRef
 		}
+		// last_used_step resets with the secret: a fresh secret opens a fresh
+		// step namespace, and a stale high-water mark would refuse its first code.
 		_, err := tx.Exec(ctx,
 			`INSERT INTO user_mfa (user_id, secret_ref) VALUES ($1, $2)
 			 ON CONFLICT (user_id) DO UPDATE
-			   SET secret_ref = EXCLUDED.secret_ref, confirmed_at = NULL, created_at = now()`,
+			   SET secret_ref = EXCLUDED.secret_ref, confirmed_at = NULL,
+			       last_used_step = 0, created_at = now()`,
 			human, string(ref))
 		return err
 	})
 	if err != nil {
+		// The row never took the fresh ref, so the blob it names is orphaned the
+		// moment this returns; post-commit-style detached delete, because the
+		// refusal (already-enrolled) is the authoritative outcome either way.
+		keyvault.DeleteDetached(ctx, s.vault, slog.Default(), wsID.UUID, ref, "totp-enrolment-refused")
 		return "", err
+	}
+	if superseded != "" {
+		keyvault.DeleteDetached(ctx, s.vault, slog.Default(), wsID.UUID, keyvault.Ref(superseded), "totp-enrolment-restarted")
 	}
 	return secret, nil
 }
@@ -111,14 +132,22 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 // ConfirmTOTP verifies a code against the pending secret and, on success,
 // activates the factor and issues one-time recovery codes — returned once, the
 // only moment they are shown. A wrong code leaves the enrolment pending.
-func (s *Service) ConfirmTOTP(ctx context.Context, code string) ([]string, error) {
+//
+// Success also ends every OTHER session the member holds, sparing only the one
+// whose token hashes to keepTokenHash (empty keeps none). MustEnrolMFA is
+// account-wide, so a session opened before the factor existed would gain full
+// access the instant any session confirms — including one a hijacker was
+// sitting on, which the member enrolling a factor is often reacting to. The
+// accepted step is recorded so the confirmation code cannot be replayed at the
+// first login.
+func (s *Service) ConfirmTOTP(ctx context.Context, code, keepTokenHash string) ([]string, error) {
 	human, wsID, err := s.selfWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var recovery []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		secret, confirmedAt, err := lockEnrolment(ctx, tx, human)
+		secret, confirmedAt, lastUsedStep, err := lockEnrolment(ctx, tx, human)
 		if err != nil {
 			return err
 		}
@@ -129,18 +158,23 @@ func (s *Service) ConfirmTOTP(ctx context.Context, code string) ([]string, error
 		if err != nil {
 			return fmt.Errorf("identity: open totp secret: %w", err)
 		}
-		ok, err := verifyTOTPCode(string(plain), code, s.now())
+		ok, step, err := verifyTOTPCode(string(plain), code, s.now())
 		if err != nil {
 			return err
 		}
-		if !ok {
+		if !ok || step <= lastUsedStep {
 			return errBadMFACode
 		}
-		if _, err := tx.Exec(ctx, `UPDATE user_mfa SET confirmed_at = now() WHERE user_id = $1`, human); err != nil {
+		if _, err := tx.Exec(ctx,
+			`UPDATE user_mfa SET confirmed_at = now(), last_used_step = $2 WHERE user_id = $1`,
+			human, step); err != nil {
 			return err
 		}
 		recovery, err = issueRecoveryCodes(ctx, tx, human)
 		if err != nil {
+			return err
+		}
+		if err := revokeOtherSessions(ctx, tx, human, keepTokenHash); err != nil {
 			return err
 		}
 		return logAuthEvent(ctx, tx, human, "mfa_enrolled", "authenticator confirmed and recovery codes issued")
@@ -149,6 +183,25 @@ func (s *Service) ConfirmTOTP(ctx context.Context, code string) ([]string, error
 		return nil, err
 	}
 	return recovery, nil
+}
+
+// revokeOtherSessions ends every live session of the member except the one
+// carrying keepTokenHash, and records why. Run in the confirming transaction so
+// the factor becoming live and the pre-factor sessions dying are one fact — a
+// crash between them would leave a session the new factor never vouched for.
+func revokeOtherSessions(ctx context.Context, tx pgx.Tx, userID ids.UserID, keepTokenHash string) error {
+	tag, err := tx.Exec(ctx,
+		`UPDATE session SET revoked_at = now()
+		  WHERE user_id = $1 AND revoked_at IS NULL AND token_hash <> $2`,
+		userID, keepTokenHash)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil
+	}
+	return logAuthEvent(ctx, tx, userID, "mfa_sessions_revoked",
+		"other sessions ended because a second factor was established")
 }
 
 // MFAEnrolment reports the caller's own second-factor state.
@@ -182,21 +235,40 @@ func (s *Service) MFAEnrolment(ctx context.Context) (MFAStatus, error) {
 }
 
 // DisableMFA removes the caller's own factor — the enrolment, its recovery codes
-// (the app_user cascade), and the sealed secret. Idempotent: disabling when
-// nothing is enrolled is a no-op.
-func (s *Service) DisableMFA(ctx context.Context) error {
+// (they cascade with the user_mfa row), and the sealed secret. Idempotent:
+// disabling when nothing is enrolled is a no-op.
+//
+// Removing a CONFIRMED factor is a step-up operation: code must be a current
+// authenticator code or an unused recovery code, verified in the same
+// transaction that deletes the row. A session alone must not suffice — a
+// hijacked session could otherwise strip the factor and enrol its own. A
+// pending enrolment needs no code: it guards nothing yet, and restarting an
+// enrolment already replaces it freely.
+func (s *Service) DisableMFA(ctx context.Context, code string) error {
 	human, wsID, err := s.selfWorkspace(ctx)
 	if err != nil {
 		return err
 	}
 	var ref string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		scanErr := tx.QueryRow(ctx,
-			`DELETE FROM user_mfa WHERE user_id = $1 RETURNING secret_ref`, human).Scan(&ref)
-		if errors.Is(scanErr, pgx.ErrNoRows) {
+		_, confirmedAt, _, lockErr := lockEnrolment(ctx, tx, human)
+		if errors.Is(lockErr, errMFANotEnrolled) {
 			return nil
 		}
-		if scanErr != nil {
+		if lockErr != nil {
+			return lockErr
+		}
+		if confirmedAt != nil {
+			verified, verifyErr := s.verifyMFA(ctx, tx, wsID, human, code)
+			if verifyErr != nil {
+				return verifyErr
+			}
+			if !verified {
+				return errBadMFACode
+			}
+		}
+		if scanErr := tx.QueryRow(ctx,
+			`DELETE FROM user_mfa WHERE user_id = $1 RETURNING secret_ref`, human).Scan(&ref); scanErr != nil {
 			return scanErr
 		}
 		return logAuthEvent(ctx, tx, human, "mfa_disabled", "authenticator and recovery codes removed")
@@ -205,11 +277,11 @@ func (s *Service) DisableMFA(ctx context.Context) error {
 		return err
 	}
 	if ref != "" {
-		// After the row is gone: the sealed material is unreachable now regardless,
-		// and a delete that fails must not undo the disable the member asked for.
-		if delErr := s.vault.Delete(ctx, wsID, keyvault.Ref(ref)); delErr != nil {
-			return fmt.Errorf("identity: erase sealed totp secret: %w", delErr)
-		}
+		// After the commit the row is gone and nothing references the blob; the
+		// disable the member asked for already happened, so the erase runs
+		// detached and can only ever log — failing the request here would report
+		// a disable that DID happen as one that did not.
+		keyvault.DeleteDetached(ctx, s.vault, slog.Default(), wsID.UUID, keyvault.Ref(ref), "mfa-disabled")
 	}
 	return nil
 }
@@ -233,18 +305,19 @@ func (s *Service) selfWorkspace(ctx context.Context) (ids.UserID, ids.WorkspaceI
 }
 
 // lockEnrolment reads a member's enrolment under a row lock, so a concurrent
-// confirm and disable cannot interleave.
-func lockEnrolment(ctx context.Context, tx pgx.Tx, userID ids.UserID) (secretRef string, confirmedAt *time.Time, err error) {
+// confirm and disable cannot interleave — and so two verifications of one code
+// serialize on the last_used_step high-water mark instead of both accepting it.
+func lockEnrolment(ctx context.Context, tx pgx.Tx, userID ids.UserID) (secretRef string, confirmedAt *time.Time, lastUsedStep int64, err error) {
 	scanErr := tx.QueryRow(ctx,
-		`SELECT secret_ref, confirmed_at FROM user_mfa WHERE user_id = $1 FOR UPDATE`,
-		userID).Scan(&secretRef, &confirmedAt)
+		`SELECT secret_ref, confirmed_at, last_used_step FROM user_mfa WHERE user_id = $1 FOR UPDATE`,
+		userID).Scan(&secretRef, &confirmedAt, &lastUsedStep)
 	if errors.Is(scanErr, pgx.ErrNoRows) {
-		return "", nil, errMFANotEnrolled
+		return "", nil, 0, errMFANotEnrolled
 	}
 	if scanErr != nil {
-		return "", nil, scanErr
+		return "", nil, 0, scanErr
 	}
-	return secretRef, confirmedAt, nil
+	return secretRef, confirmedAt, lastUsedStep, nil
 }
 
 // issueRecoveryCodes replaces any existing codes with a fresh set, returning the
@@ -287,10 +360,12 @@ func hasConfirmedMFA(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 
 // verifyMFA checks a second factor for a member the login flow has already
 // identified: a live authenticator code, or an unused recovery code (spent on
-// use). The recovery branch is a WRITE, so this runs in the caller's
-// transaction. A blank/short code is refused before either read.
+// use). Both branches are WRITES — an accepted authenticator code records its
+// time-step so the same code is refused a second time inside the skew window,
+// and a recovery code stamps itself spent — so this runs in the caller's
+// transaction, under the enrolment row lock.
 func (s *Service) verifyMFA(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID, code string) (bool, error) {
-	secretRef, confirmedAt, err := lockEnrolment(ctx, tx, userID)
+	secretRef, confirmedAt, lastUsedStep, err := lockEnrolment(ctx, tx, userID)
 	if err != nil {
 		return false, err
 	}
@@ -301,11 +376,20 @@ func (s *Service) verifyMFA(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID
 	if err != nil {
 		return false, fmt.Errorf("identity: open totp secret: %w", err)
 	}
-	ok, err := verifyTOTPCode(string(plain), code, s.now())
+	ok, step, err := verifyTOTPCode(string(plain), code, s.now())
 	if err != nil {
 		return false, err
 	}
 	if ok {
+		// A code from a step already honoured is a replay, refused as neutrally
+		// as a wrong code — it IS the right code, in the wrong hands or twice.
+		if step <= lastUsedStep {
+			return false, nil
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE user_mfa SET last_used_step = $2 WHERE user_id = $1`, userID, step); err != nil {
+			return false, err
+		}
 		return true, nil
 	}
 	return consumeRecoveryCode(ctx, tx, userID, code)

@@ -11,6 +11,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The mounted addresses of the routes a member confined by require-MFA may still
@@ -60,9 +61,37 @@ func (h Handlers) GetMyMfa(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DisableMyMfa implements DELETE /me/mfa.
+// DisableMyMfa implements DELETE /me/mfa. Removing a factor is a step-up
+// operation: the body must carry a current authenticator or recovery code, so a
+// borrowed session cannot strip the account of the factor guarding it. A wrong
+// code is the same neutral 401 a wrong confirmation code earns, and it spends
+// the same per-user failure budget the challenge endpoint meters — the code
+// being guessed at is the same secret, reachable from behind any hijacked
+// session.
 func (h Handlers) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
-	if err := h.svc.DisableMFA(r.Context()); err != nil {
+	id, ok := identityFrom(r.Context())
+	if !ok {
+		httperr.Unauthorized(w, r, "not signed in")
+		return
+	}
+	var req crmcontracts.MfaDisableRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if req.Code == "" {
+		httperr.Write(w, r, httperr.Validation("code", "required", "a current authenticator or recovery code is required to disable the factor"))
+		return
+	}
+	if h.mfaFailures.Blocked(id.UserID.String()) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		return
+	}
+	if err := h.svc.DisableMFA(r.Context(), req.Code); err != nil {
+		if errors.Is(err, errBadMFACode) {
+			h.mfaFailures.Record(id.UserID.String())
+			httperr.Unauthorized(w, r, "the code is not valid")
+			return
+		}
 		httperr.Write(w, r, err)
 		return
 	}
@@ -92,7 +121,10 @@ func (h Handlers) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
 }
 
 // ConfirmMyTotp implements POST /me/mfa/totp/confirm — verify a code and, on
-// success, activate the factor and hand back the one-time recovery codes.
+// success, activate the factor and hand back the one-time recovery codes. The
+// session behind THIS request is the one the service spares when it ends the
+// member's other sessions: those were opened before any factor guarded the
+// account, and the enrolment must not launder them into factor-backed ones.
 func (h Handlers) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.TotpConfirmRequest
 	if !httperr.Decode(w, r, &req) {
@@ -102,7 +134,7 @@ func (h Handlers) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("code", "required", "the authenticator code is required"))
 		return
 	}
-	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.Code)
+	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.Code, currentSessionHash(r))
 	switch {
 	case errors.Is(err, errBadMFACode):
 		httperr.Unauthorized(w, r, "the code is not valid")

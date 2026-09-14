@@ -113,7 +113,9 @@ export interface paths {
          *     with a current authenticator code — or an unused recovery code — and, on success, a
          *     session is minted and the `crm_session` cookie set, exactly as `POST /auth/login` does
          *     for a member with no second factor. A wrong code, or an expired or tampered challenge,
-         *     is a neutral 401. The challenge is short-lived; a stale one is refused.
+         *     is a neutral 401. The challenge is short-lived and SINGLE-USE: completing it spends it,
+         *     and presenting the same challenge again is refused like a wrong code. Attempts are
+         *     rate-limited the way login attempts are — per client IP, and per account on failures.
          */
         post: operations["completeMfaChallenge"];
         delete?: never;
@@ -11315,8 +11317,9 @@ export interface paths {
          *     distinct capability: the event names actor and target, and issuance is rate-limited per
          *     actor and per target — superseding the target's tokens on every issue makes an unbounded
          *     operation a denial-of-recovery primitive. AAD-PARAM-6's step-up re-authentication is the
-         *     intended preventive control and ships with the unbuilt MFA; until then the controls here
-         *     are detective and post-hoc.
+         *     intended preventive control; MFA itself now exists (and `disableMyMfa` already demands a
+         *     current code), but THIS operation does not yet re-challenge the admin, so the controls
+         *     here remain detective and post-hoc.
          *
          *     The operation deliberately does NOT accept `Idempotency-Key`: the idempotency runtime
          *     persists successful response bodies, and this body is a live credential.
@@ -14575,8 +14578,14 @@ export interface paths {
         post?: never;
         /**
          * Turn your own multi-factor authentication off.
-         * @description Removes the caller's own second factor: the enrolment, its recovery codes, and the
-         *     sealed secret. Idempotent — disabling when nothing is enrolled is a no-op.
+         * @description Removes the caller's own second factor: the enrolment, its recovery codes (they live
+         *     on the enrolment and go with it), and the sealed secret. Removing a CONFIRMED factor
+         *     is a step-up operation: `code` must be a current authenticator code or an unused
+         *     recovery code, so a borrowed session cannot strip the account of the factor guarding
+         *     it. A wrong code is the same neutral 401 a wrong confirmation code earns, and repeated
+         *     wrong codes are rate-limited per account like the sign-in challenge. Idempotent —
+         *     disabling when nothing is enrolled is a no-op, and a merely PENDING enrolment is
+         *     removed without checking the code, since it guards nothing yet.
          */
         delete: operations["disableMyMfa"];
         options?: never;
@@ -16661,6 +16670,11 @@ export interface components {
         };
         TotpConfirmRequest: {
             /** @description The current code from the authenticator being enrolled. */
+            code: string;
+        };
+        /** @description The step-up that proves the caller holds the factor being removed, not merely a session that could have been hijacked. */
+        MfaDisableRequest: {
+            /** @description A current authenticator code, or an unused recovery code. */
             code: string;
         };
         /** @description One-time recovery codes, shown exactly once at confirmation. */
@@ -58294,7 +58308,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MfaDisableRequest"];
+            };
+        };
         responses: {
             /** @description MFA is off, or was already. */
             204: {
@@ -58304,6 +58322,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["ValidationError"];
         };
     };
     startMyTotpEnrolment: {
