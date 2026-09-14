@@ -672,32 +672,26 @@
    verb, is a sentence about the whole row. It takes its own line inside it, for
    the reason above: at a sentence's natural width it set the group's width, and
    a group that wide wrapped the verbs off the identity's line — leaving the
-   record's name alone across the header with its verbs on a row of their own. */
+   record's name alone across the header with its verbs on a row of their own.
+
+   A GROUP HOLDING PROSE IS AS WIDE AS ITS VERBS, not as wide as the prose.
+   Its own line is not enough for that: a wrapping flex row is still MEASURED
+   at the sum of its items, so the sentence's natural width went into the
+   group's flex basis even though the sentence was then drawn under the verbs
+   — and every pixel of it came out of the name beside the group, which grows
+   into what the group leaves. An archived account's header cut its name to
+   three words with a hand's width of empty row between them and the verbs:
+   the width the sentence had claimed and was not standing in.
+   `contain: inline-size` keeps the sentence out of the measurement — the
+   group's basis is its verbs — while `flex-basis: 100%` still resolves against
+   the laid-out group, so the sentence takes the verbs' width and wraps within
+   it, which is what a sentence is for. */
 .record-actions > .t-caption {
   flex-basis: 100%;
+  contain: inline-size;
   order: 1;
   margin: 0;
   text-align: end;
-}
-/* And the verbs keep the row's far end whatever else is in the group: the
-   caption above sets the group's width, so without this the buttons sat at the
-   start of a group as wide as a sentence — adrift in the middle of the header
-   rather than at its edge. */
-.record-actions-inline {
-  justify-content: flex-end;
-}
-
-/* A GROUP HOLDING PROSE IS BOUNDED BY THE HEADER, not by the prose.
-   `flex-basis: 100%` gives the caption its own line INSIDE the group, and the
-   group's own width is what 100% resolves against — which the sentence set,
-   because an action row does not shrink. So a long caption widened the group
-   past the page and the record scrolled sideways by the difference.
-   `flex-shrink: 0` still holds for a row of plain verbs, which is what it was
-   written for: buttons that shrink read as a broken control. A sentence wraps
-   instead, which is what a sentence is for. */
-.record-actions-inline:has(> .t-caption) {
-  flex-shrink: 1;
-  min-inline-size: 0;
 }
 
 /* On a phone the record's verbs stick to the bottom of the viewport (plan
@@ -760,7 +754,6 @@
   .record-actions-inline {
     flex-basis: 100%;
     margin-left: 0;
-    justify-content: flex-start;
   }
   /* The bar floats over the end of the page while scrolling, so the record
      reserves room for it AND for the nav below it — without this the last row
