@@ -25,12 +25,13 @@ import (
 const stageNoticeRepair = "1789335792_stage_notices_recover_the_change_they_report.up.sql"
 
 type stageNoticeFixture struct {
-	conn         *pgx.Conn
-	ctx, human   context.Context
-	actor        ids.UserID
-	store        *notices.Store
-	event        events.Envelope
-	dealID, toID ids.UUID
+	db                   *database.DB
+	conn                 *pgx.Conn
+	ctx, human           context.Context
+	actor                ids.UserID
+	store                *notices.Store
+	event                events.Envelope
+	dealID, fromID, toID ids.UUID
 }
 
 func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stageNoticeFixture {
@@ -68,14 +69,15 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 		t.Fatal(err)
 	}
 	human := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + actor.String(), UserID: actor.UUID, Permissions: principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}}}})
-	if _, err := store.AdvanceDeal(human, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](ids.UUID(to.Id))}); err != nil {
+	mover := principal.WithActor(human, principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + e.Rep2.String(), UserID: e.Rep2, Permissions: principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}}}})
+	if _, err := store.AdvanceDeal(mover, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: ids.From[ids.StageKind](ids.UUID(to.Id))}); err != nil {
 		t.Fatal(err)
 	}
 	var event events.Envelope
 	if err := conn.QueryRow(ctx, `SELECT envelope FROM event_outbox WHERE envelope->>'type' = 'deal.stage_changed'`).Scan(&event); err != nil {
 		t.Fatal(err)
 	}
-	return stageNoticeFixture{conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
+	return stageNoticeFixture{db: db, fromID: ids.UUID(from.Id), conn: conn, ctx: ctx, human: human, actor: actor, store: notices.NewStore(db), event: event, dealID: ids.UUID(deal.Id), toID: ids.UUID(to.Id)}
 }
 
 func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
